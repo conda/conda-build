@@ -22,8 +22,8 @@ else:
 from conda.fetch import download
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
-from conda.builder.utils import tar_xf, unzip
-from conda.builder.source import SRC_CACHE
+from conda_build.utils import tar_xf, unzip
+from conda_build.source import SRC_CACHE
 from conda.compat import input, configparser, StringIO
 
 PYPI_META = """\

@@ -176,7 +176,7 @@ def build(m, get_src=True, pypi=False):
     files1 = prefix_files()
 
     if sys.platform == 'win32':
-        import conda.builder.windows as windows
+        import conda_build.windows as windows
         windows.build(m)
     else:
         env = environ.get_dict(m)

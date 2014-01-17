@@ -8,16 +8,16 @@ from glob import glob
 from subprocess import call, check_call
 from os.path import basename, join, splitext, isdir, isfile
 
-from conda.builder.config import build_prefix, build_python, PY3K
-from conda.builder import external
-from conda.builder import environ
-from conda.builder import utils
+from conda_build.config import build_prefix, build_python, PY3K
+from conda_build import external
+from conda_build import environ
+from conda_build import utils
 from conda.compat import lchmod
 
 if sys.platform.startswith('linux'):
-    from conda.builder import elf
+    from conda_build import elf
 elif sys.platform == 'darwin':
-    from conda.builder import macho
+    from conda_build import macho
 
 
 

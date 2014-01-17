@@ -9,10 +9,8 @@ from __future__ import print_function, division, absolute_import
 import sys
 import argparse
 
-from conda.cli import conda_argparse
-from conda.cli import common
+#from conda.cli import common
 import conda.config as config
-import conda
 
 
 help = "Build a package from a (conda) recipe. (ADVANCED)"
@@ -20,8 +18,11 @@ help = "Build a package from a (conda) recipe. (ADVANCED)"
 descr = help + """  For examples of recipes, see:
 https://github.com/pydata/conda-recipes"""
 
-def configure_parser(sub_parsers):
-    p = sub_parsers.add_parser('build', description=descr, help=help)
+
+def main():
+    p = argparse.ArgumentParser(
+        description='conda is a tool for managing environments and packages.'
+    )
 
     p.add_argument(
         '-c', "--check",
@@ -72,18 +73,21 @@ def configure_parser(sub_parsers):
         help="Try to build conda package from pypi")
     p.set_defaults(func=execute)
 
+    args = p.parse_args()
+    args.func(args, p)
+
 
 def handle_binstar_upload(path, args):
     import subprocess
-    from conda.builder.external import find_executable
+    from conda_build.external import find_executable
 
     if args.binstar_upload is None:
         args.yes = False
         args.dry_run = False
-        upload = common.confirm_yn(
-            args,
-            message="Do you want to upload this "
-            "package to binstar", default='yes', exit_no=False)
+#        upload = common.confirm_yn(
+#            args,
+#            message="Do you want to upload this "
+#            "package to binstar", default='yes', exit_no=False)
     else:
         upload = args.binstar_upload
 
@@ -111,7 +115,7 @@ Error: cannot locate binstar (required for upload)
 
 def check_external():
     import os
-    import conda.builder.external as external
+    import conda_build.external as external
 
     if sys.platform.startswith('linux'):
         chrpath = external.find_executable('chrpath')
@@ -133,10 +137,10 @@ def execute(args, parser):
     from os.path import abspath, isdir, isfile, join
 
     from conda.lock import Locked
-    import conda.builder.build as build
-    import conda.builder.source as source
-    from conda.builder.config import croot
-    from conda.builder.metadata import MetaData
+    import conda_build.build as build
+    import conda_build.source as source
+    from conda_build.config import croot
+    from conda_build.metadata import MetaData
 
     check_external()
 
@@ -197,40 +201,6 @@ def execute(args, parser):
 
             if binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
-
-
-def main():
-    p = conda_argparse.ArgumentParser(
-        description='conda is a tool for managing environments and packages.'
-    )
-    p.add_argument(
-        '-V', '--version',
-        action = 'version',
-        version = 'conda %s' % conda.__version__,
-    )
-    p.add_argument(
-        "--debug",
-        action = "store_true",
-        help = argparse.SUPPRESS,
-    )
-    sub_parsers = p.add_subparsers(
-        metavar = 'command',
-        dest = 'cmd',
-    )
-
-    configure_parser(sub_parsers)
-
-    try:
-        import argcomplete
-        argcomplete.autocomplete(p)
-    except ImportError:
-        pass
-    except AttributeError:
-        # On Python 3.3, argcomplete can be an empty namespace package when
-        # argcomplete is not installed. Not sure why, but this fixes it.
-        pass
-
-    args = p.parse_args()
 
 
 if __name__ == '__main__':

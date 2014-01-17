@@ -9,7 +9,7 @@ from conda.utils import memoized, md5_file
 import conda.config as config
 from conda.resolve import MatchSpec
 
-from conda.builder.config import CONDA_PY, CONDA_NPY
+from conda_build.config import CONDA_PY, CONDA_NPY
 
 
 

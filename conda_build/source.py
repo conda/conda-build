@@ -8,9 +8,9 @@ from shutil import copytree, ignore_patterns, copy2
 
 from conda.utils import hashsum_file
 from conda.fetch import download
-from conda.builder.config import croot
-from conda.builder.utils import rm_rf, tar_xf, unzip
-from conda.builder import external
+from conda_build.config import croot
+from conda_build.utils import rm_rf, tar_xf, unzip
+from conda_build import external
 
 
 SRC_CACHE = join(croot, 'src_cache')

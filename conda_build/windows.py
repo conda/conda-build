@@ -4,11 +4,11 @@ import os
 import sys
 from os.path import isdir, isfile, join
 
-from conda.builder import config
-from conda.builder import environ
-from conda.builder import source
-from conda.builder.utils import _check_call
-from conda.builder.scripts import BAT_PROXY
+from conda_build import config
+from conda_build import environ
+from conda_build import source
+from conda_build.utils import _check_call
+from conda_build.scripts import BAT_PROXY
 
 import conda.config as cc
 from conda.compat import iteritems
