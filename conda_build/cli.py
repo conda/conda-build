@@ -7,10 +7,12 @@
 from __future__ import print_function, division, absolute_import
 
 import sys
+import argparse
 
+from conda.cli import conda_argparse
 from conda.cli import common
 import conda.config as config
-
+import conda
 
 
 help = "Build a package from a (conda) recipe. (ADVANCED)"
@@ -195,3 +197,41 @@ def execute(args, parser):
 
             if binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
+
+
+def main():
+    p = conda_argparse.ArgumentParser(
+        description='conda is a tool for managing environments and packages.'
+    )
+    p.add_argument(
+        '-V', '--version',
+        action = 'version',
+        version = 'conda %s' % conda.__version__,
+    )
+    p.add_argument(
+        "--debug",
+        action = "store_true",
+        help = argparse.SUPPRESS,
+    )
+    sub_parsers = p.add_subparsers(
+        metavar = 'command',
+        dest = 'cmd',
+    )
+
+    configure_parser(sub_parsers)
+
+    try:
+        import argcomplete
+        argcomplete.autocomplete(p)
+    except ImportError:
+        pass
+    except AttributeError:
+        # On Python 3.3, argcomplete can be an empty namespace package when
+        # argcomplete is not installed. Not sure why, but this fixes it.
+        pass
+
+    args = p.parse_args()
+
+
+if __name__ == '__main__':
+    main()

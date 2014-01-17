@@ -37,7 +37,7 @@ setup(
     ],
     description = "tools for building conda packages",
     long_description = open('README.rst').read(),
-    packages = ['conda_builder'],
+    packages = ['conda_build'],
     scripts = ['bin/conda-build'],
     install_requires = ['conda'],
 )
