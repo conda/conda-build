@@ -13,10 +13,10 @@ if sys.version_info[:2] < (2, 7):
     sys.exit("conda is only meant for Python 2.7, with experimental support "
              "for python 3.  current version: %d.%d" % sys.version_info[:2])
 
-versioneer.versionfile_source = 'conda/_version.py'
-versioneer.versionfile_build = 'conda/_version.py'
-versioneer.tag_prefix = '' # tags are like 1.2.0
-versioneer.parentdir_prefix = 'conda-' # dirname like 'myproject-1.2.0'
+versioneer.versionfile_source = 'conda_build/_version.py'
+versioneer.versionfile_build = 'conda_build/_version.py'
+versioneer.tag_prefix = ''
+versioneer.parentdir_prefix = 'conda-build-'
 
 setup(
     name = "conda-build",

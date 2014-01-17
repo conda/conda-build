@@ -11,6 +11,7 @@ import argparse
 
 #from conda.cli import common
 import conda.config as config
+from conda_build import __version__
 
 
 help = "Build a package from a (conda) recipe. (ADVANCED)"
@@ -64,6 +65,11 @@ def main():
         action='store_true',
         dest='notest',
         help="do not test the package"
+    )
+    p.add_argument(
+        '-V', '--version',
+        action = 'version',
+        version = 'conda-build %s' % __version__,
     )
     p.add_argument(
         '--build-recipe',
