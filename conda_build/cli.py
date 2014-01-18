@@ -94,6 +94,7 @@ def handle_binstar_upload(path, args):
 #            args,
 #            message="Do you want to upload this "
 #            "package to binstar", default='yes', exit_no=False)
+        upload = False
     else:
         upload = args.binstar_upload
 

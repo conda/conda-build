@@ -1,4 +1,3 @@
-
 IN_LONG_VERSION_PY = True
 # This file helps to compute a version number in source trees obtained from
 # git-archive tarball (such as those provided by github's download-from-tag
@@ -36,8 +35,6 @@ def run_command(args, cwd=None, verbose=False):
         return None
     return stdout
 
-
-import sys
 import re
 import os.path
 
