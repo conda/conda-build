@@ -14,15 +14,9 @@ import conda.config as config
 from conda_build import __version__
 
 
-help = "Build a package from a (conda) recipe. (ADVANCED)"
-
-descr = help + """  For examples of recipes, see:
-https://github.com/pydata/conda-recipes"""
-
-
 def main():
     p = argparse.ArgumentParser(
-        description='conda is a tool for managing environments and packages.'
+        description='tool for building conda packages'
     )
 
     p.add_argument(
