@@ -7,7 +7,7 @@ import json
 import stat
 import shutil
 import tarfile
-from os.path import exists, isdir, islink, join
+from os.path import exists, isdir, isfile, islink, join
 import subprocess
 
 import conda.config as cc
@@ -34,6 +34,7 @@ info_dir = join(prefix, 'info')
 bldpkgs_dir = join(config.croot, cc.subdir)
 broken_dir = join(config.croot, "broken")
 
+
 def prefix_files():
     res = set()
     for root, dirs, files in os.walk(prefix):
@@ -44,6 +45,20 @@ def prefix_files():
             if islink(path):
                 res.add(path[len(prefix) + 1:])
     return res
+
+
+def create_post_scripts(m):
+    recipe_dir = m.path
+    ext = '.bat' if sys.platform == 'win32' else '.sh'
+    for tp in 'post-link', 'pre-unlink':
+        src = join(recipe_dir, tp + ext)
+        if not isfile(src):
+            continue
+        dst = join(prefix,
+                   'Scripts' if sys.platform == 'win32' else 'bin',
+                   '.%s-%s%s' % (m.name(), tp, ext))
+        shutil.copyfile(src, dst)
+        os.chmod(dst, int('755', 8))
 
 
 def have_prefix_files(files):
@@ -183,6 +198,7 @@ def build(m, get_src=True, pypi=False):
         cmd = ['/bin/bash', '-x', '-e', join(m.path, 'build.sh')]
         _check_call(cmd, env=env, cwd=source.get_dir())
 
+    create_post_scripts(m)
     create_entry_points(m.get_value('build/entry_points'))
     post_process(preserve_egg_dir=bool(
             m.get_value('build/preserve_egg_dir')))
