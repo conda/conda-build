@@ -1,9 +1,7 @@
 from __future__ import print_function, division, absolute_import
 
 import shutil
-from os.path import dirname, join
-
-
+from os.path import dirname, join, isdir
 
 def create_files(dir_path, m):
     """
@@ -16,7 +14,11 @@ def create_files(dir_path, m):
     has_tests = False
 
     for fn in m.get_value('test/files'):
-        shutil.copy(join(m.path, fn), dir_path)
+        path = join(m.path, fn)
+        if isdir(path):
+            shutil.copytree(path, join(dir_path, fn))
+        else:
+            shutil.copy(path, dir_path)
 
     with open(join(dir_path, 'run_test.py'), 'w') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
