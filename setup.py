@@ -40,6 +40,7 @@ setup(
     packages = ['conda_build'],
     scripts = ['bin/conda-build',
                'bin/conda-convert',
+               'bin/conda-index',
                'bin/conda-skeleton'],
     install_requires = ['conda'],
 )
