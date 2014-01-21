@@ -10,6 +10,7 @@ import conda.config as config
 from conda.resolve import MatchSpec
 
 from conda_build.config import CONDA_PY, CONDA_NPY
+import os
 
 
 
@@ -125,6 +126,30 @@ def check_bad_chrs(s, field):
         if c in s:
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
+def get_contents(meta_path):
+    '''
+    Get the contents of the [meta.yaml|conda.yaml] file.
+    If jinja is installed, then the template.render function is called 
+    before standard conda macro processors 
+    '''
+    try:
+        import jinja2
+        from conda.builder.jinja_context import context_processor
+    except ImportError:
+        with open(meta_path) as fd:
+            return fd.read()
+         
+    path, filename = os.path.split(meta_path)
+    loaders = [jinja2.PackageLoader('conda.builder'),
+               jinja2.FileSystemLoader(path)
+               ]
+    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
+    env.globals.update(context_processor())
+    
+    template = env.get_or_select_template(filename)
+        
+    contents = template.render(environment=env)
+    return contents 
 
 class MetaData(object):
 
@@ -133,8 +158,11 @@ class MetaData(object):
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
         if not isfile(self.meta_path):
-            sys.exit("Error: no such file: %s" % self.meta_path)
-        self.meta = parse(open(self.meta_path).read())
+            self.meta_path = join(path, 'conda.yaml')
+            if not isfile(self.meta_path):
+                sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
+
+        self.meta = parse(get_contents(self.meta_path))
 
     def get_section(self, section):
         return self.meta.get(section, {})
