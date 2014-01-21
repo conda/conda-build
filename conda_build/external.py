@@ -2,7 +2,7 @@ from __future__ import print_function, division, absolute_import
 
 import os
 import sys
-from os.path import isfile, join
+from os.path import isfile, join, expanduser
 
 import conda.config as cc
 from conda_build.config import build_prefix
@@ -28,6 +28,6 @@ def find_executable(executable):
                     return path
         else:
             path = join(dir_path, executable)
-            if isfile(path):
+            if isfile(expanduser(path)):
                 return path
     return None
