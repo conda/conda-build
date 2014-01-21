@@ -110,7 +110,7 @@ FIELDS = {
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app', 'rm_py',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_softlink'],
+              'no_softlink', 'script'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
     'test': ['requires', 'commands', 'files', 'imports'],
