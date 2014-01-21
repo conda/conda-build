@@ -24,8 +24,6 @@ def _get_python(prefix):
         res = join(prefix, 'python.exe')
     else:
         res = join(prefix, 'bin/python')
-        if PY3K:
-            res += '3'
     return res
 
 build_python = _get_python(build_prefix)
