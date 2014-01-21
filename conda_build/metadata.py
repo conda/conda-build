@@ -1,4 +1,3 @@
-from __future__ import print_function, division, absolute_import
 
 import re
 import sys
@@ -134,13 +133,14 @@ def get_contents(meta_path):
     '''
     try:
         import jinja2
-        from conda.builder.jinja_context import context_processor
     except ImportError:
         with open(meta_path) as fd:
             return fd.read()
-         
+    
+    from conda_build.jinja_context import context_processor
+     
     path, filename = os.path.split(meta_path)
-    loaders = [jinja2.PackageLoader('conda.builder'),
+    loaders = [jinja2.PackageLoader('conda_build'),
                jinja2.FileSystemLoader(path)
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))

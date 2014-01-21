@@ -6,7 +6,7 @@ Created on Jan 16, 2014
 from __future__ import print_function
 
 import os
-from conda.builder import environ
+from conda_build import environ
 import json
 _setuptools_data = None
 
