@@ -195,7 +195,15 @@ def build(m, get_src=True, pypi=False):
         windows.build(m)
     else:
         env = environ.get_dict(m)
-        cmd = ['/bin/bash', '-x', '-e', join(m.path, 'build.sh')]
+        build_file = join(m.path, 'build.sh')
+        script = m.get_value('build/script', None)
+        if script:
+            if isinstance(script, list): script = '\n'.join(script)
+            with open(build_file, 'w') as bf:
+                bf.write(script)
+            os.chmod(build_file, 0o766)
+        cmd = ['/bin/bash', '-x', '-e', build_file]
+
         _check_call(cmd, env=env, cwd=source.get_dir())
 
     create_post_scripts(m)
