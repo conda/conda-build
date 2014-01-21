@@ -29,5 +29,5 @@ def find_executable(executable):
         else:
             path = join(dir_path, executable)
             if isfile(expanduser(path)):
-                return path
+                return expanduser(path)
     return None
