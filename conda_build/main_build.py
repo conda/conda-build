@@ -65,12 +65,6 @@ def main():
         action = 'version',
         version = 'conda-build %s' % __version__,
     )
-    p.add_argument(
-        '--build-recipe',
-        action='store_true',
-        default=False,
-        dest='pypi',
-        help="Try to build conda package from pypi")
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -165,16 +159,7 @@ def execute(args, parser):
                 # See if it's a spec and the directory is in conda-recipes
                 recipe_dir = join(config.root_dir, 'conda-recipes', arg)
                 if not isdir(recipe_dir):
-                    # if --use-pypi and recipe_dir is a spec
-                    # try to create the skeleton
-                    if args.pypi:
-                        from conda.from_pypi import create_recipe
-                        try:
-                            recipe_dir = create_recipe(arg)
-                        except:
-                            recipe_dir = abspath(arg)
-                    if not isdir(recipe_dir):
-                        sys.exit("Error: no such directory: %s" % recipe_dir)
+                    sys.exit("Error: no such directory: %s" % recipe_dir)
 
             m = MetaData(recipe_dir)
             binstar_upload = False
@@ -187,14 +172,14 @@ def execute(args, parser):
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
-                build.test(m, pypi=args.pypi)
+                build.test(m)
             elif args.source:
                 source.provide(m.path, m.get_section('source'))
                 print('Source tree in:', source.get_dir())
             else:
-                build.build(m, pypi=args.pypi)
+                build.build(m)
                 if not args.notest:
-                    build.test(m, pypi=args.pypi)
+                    build.test(m)
                 binstar_upload = True
 
             if need_cleanup:

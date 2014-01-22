@@ -1,0 +1,5 @@
+2014-XX-XX   1.0.0:
+-------------------
+  * initial release
+  * includes conda-build, conda-convert, conda-index, conda-skeleton
+  * depends on new conda version 3
