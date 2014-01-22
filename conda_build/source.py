@@ -12,7 +12,6 @@ from conda_build.config import croot
 from conda_build.utils import rm_rf, tar_xf, unzip
 from conda_build import external
 
-
 SRC_CACHE = join(croot, 'src_cache')
 GIT_CACHE = join(croot, 'git_cache')
 HG_CACHE = join(croot, 'hg_cache')
@@ -68,6 +67,9 @@ def git_source(meta):
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
 
+    git = external.find_executable('git')
+    if not git:
+        sys.exit("Error: git is not installed")
     git_url = meta['git_url']
     git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
@@ -78,17 +80,17 @@ def git_source(meta):
 
     # update (or craete) the cache repo
     if isdir(cache_repo):
-        check_call(['git', 'fetch'], cwd=cache_repo)
+        check_call([git, 'fetch'], cwd=cache_repo)
     else:
-        check_call(['git', 'clone', '--mirror', git_url, cache_repo_arg])
+        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg])
         assert isdir(cache_repo)
 
     # now clone into the work directory
     checkout = meta.get('git_tag') or meta.get('git_branch') or 'master'
     print('checkout: %r' % checkout)
 
-    check_call(['git', 'clone', cache_repo_arg, WORK_DIR])
-    check_call(['git', 'checkout', checkout], cwd=WORK_DIR)
+    check_call([git, 'clone', cache_repo_arg, WORK_DIR])
+    check_call([git, 'checkout', checkout], cwd=WORK_DIR)
 
     git_info()
     return WORK_DIR
@@ -109,23 +111,26 @@ def git_info(fo=sys.stdout):
 
 
 def hg_source(meta):
+    hg = external.find_executable('hg')
+    if not hg:
+        sys.exit('Error: hg not installed')
     hg_url = meta['hg_url']
     if not isdir(HG_CACHE):
         os.makedirs(HG_CACHE)
     hg_dn = hg_url.split(':')[-1].replace('/', '_')
     cache_repo = join(HG_CACHE, hg_dn)
     if isdir(cache_repo):
-        check_call(['hg', 'pull'], cwd=cache_repo)
+        check_call([hg, 'pull'], cwd=cache_repo)
     else:
-        check_call(['hg', 'clone', hg_url, cache_repo])
+        check_call([hg, 'clone', hg_url, cache_repo])
         assert isdir(cache_repo)
 
     # now clone in to work directory
     update = meta.get('hg_tag') or 'tip'
     print('checkout: %r' % update)
 
-    check_call(['hg', 'clone', cache_repo, WORK_DIR])
-    check_call(['hg', 'update', '-C', update], cwd=WORK_DIR)
+    check_call([hg, 'clone', cache_repo, WORK_DIR])
+    check_call([hg, 'update', '-C', update], cwd=WORK_DIR)
     return WORK_DIR
 
 
@@ -134,6 +139,9 @@ def svn_source(meta):
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
 
+    svn = external.find_executable('svn')
+    if not svn:
+        sys.exit("Error: svn is not installed")
     svn_url = meta['svn_url']
     svn_revision = meta.get('svn_rev') or 'head'
     svn_ignore_externals = parse_bool(meta.get('svn_ignore_externals') or 'no')
@@ -146,9 +154,9 @@ def svn_source(meta):
     else:
         extra_args = []
     if isdir(cache_repo):
-        check_call(['svn', 'up', '-r', svn_revision] + extra_args, cwd=cache_repo)
+        check_call([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo)
     else:
-        check_call(['svn', 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo])
+        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo])
         assert isdir(cache_repo)
 
     # now copy into work directory
