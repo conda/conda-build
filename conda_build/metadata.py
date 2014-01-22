@@ -134,6 +134,8 @@ def get_contents(meta_path):
     try:
         import jinja2
     except ImportError:
+        print("There was an error importing jinja2.")
+        print("Please run `conda install jinja2` to enable this meta.yaml jinja templates")
         with open(meta_path) as fd:
             return fd.read()
     
