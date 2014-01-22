@@ -79,7 +79,7 @@ def main():
 
 
 def execute(args, parser):
-    import conda.builder.pypi as pypi
+    import conda_build.pypi as pypi
 
     if args.repo == "pypi":
         pypi.main(args, parser)
