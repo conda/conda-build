@@ -211,8 +211,6 @@ def get_pure_py_file_map(t, platform):
             else:
                 newbytes = json.dumps(newinfo)
             newmember.size = len(newbytes)
-            import pdb
-            pdb.set_trace()
             file_map['info/index.json'] = (newmember, BytesIO(newbytes))
             continue
         elif member.path == 'info/files':
