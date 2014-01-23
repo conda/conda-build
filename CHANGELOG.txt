@@ -3,3 +3,5 @@
   * initial release
   * includes conda-build, conda-convert, conda-index, conda-skeleton
   * depends on new conda version 3
+  * add ability to build packages even if there is a file with the same 
+    name in anaconda/bin
