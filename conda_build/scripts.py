@@ -5,7 +5,7 @@ import os
 import sys
 from os.path import isdir, join
 
-from conda_build.config import build_prefix, build_python
+from conda_build.config import build_installdir, build_python
 
 
 BAT_PROXY = """\
@@ -53,7 +53,7 @@ def create_entry_point(path, module, func):
 def create_entry_points(items):
     if not items:
         return
-    bin_dir = join(build_prefix, bin_dirname)
+    bin_dir = join(build_installdir, bin_dirname)
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
     for cmd, module, func in iter_entry_points(items):

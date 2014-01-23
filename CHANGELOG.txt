@@ -3,3 +3,8 @@
   * initial release
   * includes conda-build, conda-convert, conda-index, conda-skeleton
   * depends on new conda version 3
+  * add ability to install into a separate clean installdir instead of
+    _build PREFIX
+    e.g. usage: ./configure --prefix=${INSTALLDIR}
+    for python apps:
+    $PYTHON setup.py install --prefix=./ --root=${INSTALLDIR} || exit 1

@@ -6,7 +6,8 @@ from os.path import join
 
 import conda.config as cc
 
-from conda_build.config import CONDA_PY, PY3K, build_prefix, build_python
+from conda_build.config import (CONDA_PY, PY3K, build_prefix, 
+                                      build_installdir, build_python)
 from conda_build import source
 
 
@@ -20,6 +21,7 @@ def get_dict(m=None):
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = build_prefix
+    d['INSTALLDIR'] = build_installdir
     d['PYTHON'] = build_python
     d['PY3K'] = str(PY3K)
     d['STDLIB_DIR'] = stdlib_dir
