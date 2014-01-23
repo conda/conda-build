@@ -8,7 +8,7 @@ from glob import glob
 from subprocess import call, check_call
 from os.path import basename, join, splitext, isdir, isfile
 
-from conda_build.config import build_prefix, build_python, PY3K
+from conda_build.config import build_installdir, build_python, PY3K
 from conda_build import external
 from conda_build import environ
 from conda_build import utils
@@ -30,7 +30,7 @@ def is_obj(path):
 
 shebang_pat = re.compile(r'^#!.+$', re.M)
 def fix_shebang(f, osx_is_app=False):
-    path = join(build_prefix, f)
+    path = join(build_installdir, f)
     if is_obj(path):
         return
     with open(path) as fi:
@@ -42,9 +42,9 @@ def fix_shebang(f, osx_is_app=False):
     if not (m and 'python' in m.group()):
         return
 
-    py_exec = (build_prefix + '/python.app/Contents/MacOS/python'
+    py_exec = (build_installdir + '/python.app/Contents/MacOS/python'
                if sys.platform == 'darwin' and osx_is_app else
-               build_prefix + '/bin/' + basename(build_python))
+               build_installdir + '/bin/' + basename(build_python))
     new_data = shebang_pat.sub('#!' + py_exec, data, count=1)
     if new_data == data:
         return
@@ -94,7 +94,7 @@ def remove_easy_install_pth(preserve_egg_dir=False):
 
 def rm_py_along_so():
     "remove .py (.pyc) files alongside .so or .pyd files"
-    for root, dirs, files in os.walk(build_prefix):
+    for root, dirs, files in os.walk(build_installdir):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
                 name, unused_ext = splitext(fn)
@@ -126,10 +126,10 @@ def post_process(preserve_egg_dir=False):
 
 
 def osx_ch_link(path, link):
-    assert path.startswith(build_prefix + '/')
-    reldir = utils.rel_lib(path[len(build_prefix) + 1:])
+    assert path.startswith(build_installdir + '/')
+    reldir = utils.rel_lib(path[len(build_installdir) + 1:])
 
-    if link.startswith((build_prefix + '/lib', 'lib', '@executable_path/')):
+    if link.startswith((build_installdir + '/lib', 'lib', '@executable_path/')):
         return '@loader_path/%s/%s' % (reldir, basename(link))
 
     if link == '/usr/local/lib/libgcc_s.1.dylib':
@@ -151,14 +151,14 @@ def mk_relative_osx(path):
             check_call(args)
 
     for name in macho.otool(path):
-        assert not name.startswith(build_prefix), path
+        assert not name.startswith(build_installdir), path
 
 def mk_relative(f):
     assert sys.platform != 'win32'
     if f.startswith('bin/'):
         fix_shebang(f)
 
-    path = join(build_prefix, f)
+    path = join(build_installdir, f)
     if sys.platform.startswith('linux') and is_obj(path):
         rpath = '$ORIGIN/' + utils.rel_lib(f)
         chrpath = external.find_executable('chrpath')
@@ -169,12 +169,12 @@ def mk_relative(f):
 
 
 def fix_permissions(files):
-    for root, dirs, unused_files in os.walk(build_prefix):
+    for root, dirs, unused_files in os.walk(build_installdir):
         for dn in dirs:
             os.chmod(join(root, dn), int('755', 8))
 
     for f in files:
-        path = join(build_prefix, f)
+        path = join(build_installdir, f)
         st = os.lstat(path)
         lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
 

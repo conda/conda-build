@@ -17,6 +17,7 @@ else:
     croot = abspath(expanduser('~/conda-bld'))
 
 build_prefix = join(cc.envs_dirs[0], '_build')
+build_installdir = join(build_prefix, '0_installdir')
 test_prefix = join(cc.envs_dirs[0], '_test')
 
 def _get_python(prefix):

@@ -30,20 +30,21 @@ from conda_build.create_test import create_files
 
 
 prefix = config.build_prefix
-info_dir = join(prefix, 'info')
+installdir = config.build_installdir
+info_dir = join(installdir, 'info')
 bldpkgs_dir = join(config.croot, cc.subdir)
 broken_dir = join(config.croot, "broken")
 
 
 def prefix_files():
     res = set()
-    for root, dirs, files in os.walk(prefix):
+    for root, dirs, files in os.walk(installdir):
         for fn in files:
-            res.add(join(root, fn)[len(prefix) + 1:])
+            res.add(join(root, fn)[len(installdir) + 1:])
         for dn in dirs:
             path = join(root, dn)
             if islink(path):
-                res.add(path[len(prefix) + 1:])
+                res.add(path[len(installdir) + 1:])
     return res
 
 
@@ -54,7 +55,7 @@ def create_post_scripts(m):
         src = join(recipe_dir, tp + ext)
         if not isfile(src):
             continue
-        dst = join(prefix,
+        dst = join(installdir,
                    'Scripts' if sys.platform == 'win32' else 'bin',
                    '.%s-%s%s' % (m.name(), tp, ext))
         shutil.copyfile(src, dst)
@@ -65,7 +66,7 @@ def have_prefix_files(files):
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
             continue
-        path = join(prefix, f)
+        path = join(installdir, f)
         if isdir(path):
             continue
         if sys.platform != 'darwin' and islink(path):
@@ -81,10 +82,10 @@ def have_prefix_files(files):
                 data = fi.read()
         except UnicodeDecodeError:
             continue
-        if prefix not in data:
+        if installdir not in data:
             continue
         st = os.stat(path)
-        data = data.replace(prefix, prefix_placeholder)
+        data = data.replace(installdir, prefix_placeholder)
         with open(path, 'w') as fo:
             fo.write(data)
         os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
@@ -173,7 +174,8 @@ def build(m, get_src=True):
     create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
 
     print("BUILD START:", m.dist())
-
+    os.makedirs(installdir)
+    
     if get_src:
         source.provide(m.path, m.get_section('source'))
     assert isdir(source.WORK_DIR)
@@ -183,7 +185,6 @@ def build(m, get_src=True):
         print("no source")
 
     rm_rf(info_dir)
-    files1 = prefix_files()
 
     if sys.platform == 'win32':
         import conda_build.windows as windows
@@ -207,17 +208,17 @@ def build(m, get_src=True):
             m.get_value('build/preserve_egg_dir')))
 
     assert not exists(info_dir)
-    files2 = prefix_files()
+    files = prefix_files()
 
-    post_build(sorted(files2 - files1))
-    create_info_files(m, sorted(files2 - files1))
-    files3 = prefix_files()
-    fix_permissions(files3 - files1)
+    post_build(sorted(files))
+    create_info_files(m, sorted(files))
+    files = prefix_files()
+    fix_permissions(files)
 
     path = bldpkg_path(m)
     t = tarfile.open(path, 'w:bz2')
-    for f in sorted(files3 - files1):
-        t.add(join(prefix, f), f)
+    for f in sorted(files):
+        t.add(join(installdir, f), f)
     t.close()
 
     print("BUILD END:", m.dist())
