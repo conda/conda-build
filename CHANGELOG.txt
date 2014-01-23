@@ -3,3 +3,5 @@
   * initial release
   * includes conda-build, conda-convert, conda-index, conda-skeleton
   * depends on new conda version 3
+  * use the more advanced patchelf instead of chrpath
+    http://nixos.org/patchelf.html

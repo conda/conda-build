@@ -113,14 +113,13 @@ def check_external():
     import conda_build.external as external
 
     if sys.platform.startswith('linux'):
-        chrpath = external.find_executable('chrpath')
-        if chrpath is None:
+        patchelf = external.find_executable('patchelf')
+        if patchelf is None:
             sys.exit("""\
 Error:
-    Did not find 'chrpath' in: %s
-    'chrpath' is necessary for building conda packages on Linux with
-    relocatable ELF libraries.  You can install chrpath using apt-get,
-    yum or conda.
+    Did not find 'patchelf' in: %s
+    'patchelf' is necessary for building conda packages on Linux with
+    relocatable ELF libraries.  You can install patchelf using conda.
 """ % (os.pathsep.join(external.dir_paths)))
 
 
