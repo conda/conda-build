@@ -161,8 +161,10 @@ def mk_relative(f):
     path = join(build_prefix, f)
     if sys.platform.startswith('linux') and is_obj(path):
         rpath = '$ORIGIN/' + utils.rel_lib(f)
-        chrpath = external.find_executable('chrpath')
-        call([chrpath, '-r', rpath, path])
+        patchelf = external.find_executable('patchelf');
+        print('patchelf: file: %s\n    setting rpath to: %s' % 
+                                                        (path, rpath))
+        call([patchelf, '--set-rpath', rpath, path])
 
     if sys.platform == 'darwin' and is_obj(path):
         mk_relative_osx(path)
