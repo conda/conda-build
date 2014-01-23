@@ -63,7 +63,7 @@ def create_post_scripts(m):
 
 def have_prefix_files(files):
     for f in files:
-        if f.endswith(('.pyc', '.pyo', '.a')):
+        if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
         path = join(prefix, f)
         if isdir(path):
@@ -80,6 +80,8 @@ def have_prefix_files(files):
             with open(path) as fi:
                 data = fi.read()
         except UnicodeDecodeError:
+            continue
+        if '\x00' in data:
             continue
         if prefix not in data:
             continue
