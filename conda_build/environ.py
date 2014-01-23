@@ -58,7 +58,9 @@ def get_dict(m=None):
     if m:
         d['PKG_NAME'] = m.name()
         d['PKG_VERSION'] = m.version()
+        d['PKG_BUILDNUM'] = str(m.build_number())
         d['RECIPE_DIR'] = m.path
+        
 
     return d
 
