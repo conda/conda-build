@@ -54,7 +54,8 @@ def get_dict(m=None):
 
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = build_prefix + '/lib'
-
+        d['BUILD_NO_RPATH'] = 'y' if cc.build_no_rpath else 'n'
+            
     if m:
         d['PKG_NAME'] = m.name()
         d['PKG_VERSION'] = m.version()
