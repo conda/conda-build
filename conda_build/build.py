@@ -23,7 +23,7 @@ from conda_build import source
 from conda_build import tarcheck
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
-                                fix_permissions)
+                                remove_la_files, fix_permissions)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import create_files
@@ -208,7 +208,8 @@ def build(m, get_src=True):
 
     assert not exists(info_dir)
     files2 = prefix_files()
-
+    remove_la_files(files2)
+    files2 = prefix_files()
     post_build(sorted(files2 - files1))
     create_info_files(m, sorted(files2 - files1))
     files3 = prefix_files()

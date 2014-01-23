@@ -8,6 +8,8 @@ from glob import glob
 from subprocess import call, check_call
 from os.path import basename, join, splitext, isdir, isfile
 
+from conda.config import build_remove_la_files
+
 from conda_build.config import build_prefix, build_python, PY3K
 from conda_build import external
 from conda_build import environ
@@ -168,6 +170,16 @@ def mk_relative(f):
         mk_relative_osx(path)
 
 
+def remove_la_files(files):
+    if build_remove_la_files:
+        if sys.platform.startswith('linux'):
+            for f in files:
+                if f.endswith(".la"):
+                    path = join(build_prefix, f)
+                    print('remove_la_files: file: %s' % path)
+                    os.remove(path)
+                    
+                    
 def fix_permissions(files):
     for root, dirs, unused_files in os.walk(build_prefix):
         for dn in dirs:
