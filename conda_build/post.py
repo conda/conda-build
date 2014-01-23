@@ -8,6 +8,8 @@ from glob import glob
 from subprocess import call, check_call
 from os.path import basename, join, splitext, isdir, isfile
 
+from conda.config import build_no_rpath
+
 from conda_build.config import build_prefix, build_python, PY3K
 from conda_build import external
 from conda_build import environ
@@ -158,14 +160,15 @@ def mk_relative(f):
     if f.startswith('bin/'):
         fix_shebang(f)
 
-    path = join(build_prefix, f)
-    if sys.platform.startswith('linux') and is_obj(path):
-        rpath = '$ORIGIN/' + utils.rel_lib(f)
-        chrpath = external.find_executable('chrpath')
-        call([chrpath, '-r', rpath, path])
+    if build_no_rpath == False:
+        path = join(build_prefix, f)
+        if sys.platform.startswith('linux') and is_obj(path):
+            rpath = '$ORIGIN/' + utils.rel_lib(f)
+            chrpath = external.find_executable('chrpath')
+            call([chrpath, '-r', rpath, path])
 
-    if sys.platform == 'darwin' and is_obj(path):
-        mk_relative_osx(path)
+        if sys.platform == 'darwin' and is_obj(path):
+            mk_relative_osx(path)
 
 
 def fix_permissions(files):
