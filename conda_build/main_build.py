@@ -7,6 +7,7 @@
 from __future__ import print_function, division, absolute_import
 
 import sys
+import os
 import argparse
 
 #from conda.cli import common
@@ -140,6 +141,18 @@ def execute(args, parser):
     check_external()
 
     with Locked(croot):
+        # get once all recipes
+        main_recipes_dir = join(config.root_dir, 'conda-recipes')
+        all_recipies = {}
+        for root, dirs, files in os.walk(main_recipes_dir):
+            for any_dir in dirs:
+                any_dir_path = os.path.join(root, any_dir)
+                if os.path.isfile(os.path.join(any_dir_path, "meta.yaml")):
+                    if any_dir not in all_recipies:
+                        all_recipies[any_dir] = [any_dir_path]
+                    else:
+                        all_recipies[any_dir].append(any_dir_path)
+                        
         for arg in args.recipe:
             if isfile(arg):
                 if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
@@ -157,9 +170,17 @@ def execute(args, parser):
 
             if not isdir(recipe_dir):
                 # See if it's a spec and the directory is in conda-recipes
-                recipe_dir = join(config.root_dir, 'conda-recipes', arg)
-                if not isdir(recipe_dir):
-                    sys.exit("Error: no such directory: %s" % recipe_dir)
+                if arg not in all_recipies:
+                    sys.exit("Error: did not find any recipes for: "
+                    "<%s>: Recipes Root Dir: "
+                    "<%s> " % (arg, main_recipes_dir))
+                elif len(all_recipies[arg]) > 1:
+                    print('\nMultiple recipes with same name: <%s>' % arg)
+                    for xrecipe in all_recipies[arg]:
+                        print('    ', xrecipe)
+                    sys.exit('Ambiguities: specify full recipe path')
+                else:
+                    recipe_dir = abspath(all_recipies[arg])
 
             m = MetaData(recipe_dir)
             binstar_upload = False
