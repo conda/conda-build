@@ -180,7 +180,7 @@ def execute(args, parser):
                         print('    ', xrecipe)
                     sys.exit('Ambiguities: specify full recipe path')
                 else:
-                    recipe_dir = abspath(all_recipies[arg])
+                    recipe_dir = abspath(all_recipies[arg][0])
 
             m = MetaData(recipe_dir)
             binstar_upload = False
