@@ -4,3 +4,5 @@
   * includes conda-build, conda-convert, conda-index, conda-skeleton
   * depends on new conda version 3
   * add license to info/index.json object
+  * add ability to find recipes in conda-recipes subfolders: 
+    with pre-check for ambiguities
