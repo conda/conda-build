@@ -232,6 +232,7 @@ class MetaData(object):
             version = self.version(),
             build = self.build_id(),
             build_number = self.build_number(),
+            license = self.get_value('about/license'),
             platform = config.platform,
             arch = config.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
