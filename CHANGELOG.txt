@@ -1,3 +1,9 @@
+2014-XX-XX   1.0.1:
+-------------------
+  * remove fallback to <root>/conda-recipes, i.e. conda-build always
+    expects the full path to the recipe
+
+
 2014-01-24   1.0.0:
 -------------------
   * initial release
