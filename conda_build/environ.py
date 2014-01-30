@@ -42,7 +42,6 @@ def get_dict(m=None):
     else:                               # -------- Unix
         d['PATH'] = '%s/bin:%s' % (build_prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
-        d['LANG'] = 'en_US.UTF-8'
         d['PKG_CONFIG_PATH'] = join(build_prefix, 'lib', 'pkgconfig')
 
     if sys.platform == 'darwin':         # -------- OSX
