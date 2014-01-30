@@ -108,7 +108,7 @@ FIELDS = {
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
-    'build': ['number', 'string', 'entry_points', 'osx_is_app', 'rm_py',
+    'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_softlink', 'script'],
     'requirements': ['build', 'run', 'conflicts'],
