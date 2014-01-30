@@ -1,5 +1,13 @@
-2014-XX-XX   1.0.0:
+2014-XX-XX   1.0.1:
+-------------------
+  * remove fallback to <root>/conda-recipes, i.e. conda-build always
+    expects the full path to the recipe
+  * export PKG Build Number
+
+
+2014-01-24   1.0.0:
 -------------------
   * initial release
   * includes conda-build, conda-convert, conda-index, conda-skeleton
   * depends on new conda version 3
+  * add license to info/index.json object
