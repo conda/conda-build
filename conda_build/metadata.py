@@ -100,7 +100,7 @@ def parse(data):
         res[section][key] = str(res[section].get(key, ''))
     return res
 
-
+# If you update this please update the example in conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1',
@@ -128,8 +128,8 @@ def check_bad_chrs(s, field):
 def get_contents(meta_path):
     '''
     Get the contents of the [meta.yaml|conda.yaml] file.
-    If jinja is installed, then the template.render function is called 
-    before standard conda macro processors 
+    If jinja is installed, then the template.render function is called
+    before standard conda macro processors
     '''
     try:
         import jinja2
@@ -138,20 +138,20 @@ def get_contents(meta_path):
         print("Please run `conda install jinja2` to enable jinja template support")
         with open(meta_path) as fd:
             return fd.read()
-    
+
     from conda_build.jinja_context import context_processor
-     
+
     path, filename = os.path.split(meta_path)
     loaders = [jinja2.PackageLoader('conda_build'),
                jinja2.FileSystemLoader(path)
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(context_processor())
-    
+
     template = env.get_or_select_template(filename)
-        
+
     contents = template.render(environment=env)
-    return contents 
+    return contents
 
 class MetaData(object):
 
