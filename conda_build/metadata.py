@@ -108,7 +108,7 @@ FIELDS = {
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
-    'build': ['number', 'string', 'entry_points', 'osx_is_app', 'rm_py',
+    'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_softlink', 'script'],
     'requirements': ['build', 'run', 'conflicts'],
@@ -128,8 +128,8 @@ def check_bad_chrs(s, field):
 def get_contents(meta_path):
     '''
     Get the contents of the [meta.yaml|conda.yaml] file.
-    If jinja is installed, then the template.render function is called 
-    before standard conda macro processors 
+    If jinja is installed, then the template.render function is called
+    before standard conda macro processors
     '''
     try:
         import jinja2
@@ -138,20 +138,20 @@ def get_contents(meta_path):
         print("Please run `conda install jinja2` to enable jinja template support")
         with open(meta_path) as fd:
             return fd.read()
-    
+
     from conda_build.jinja_context import context_processor
-     
+
     path, filename = os.path.split(meta_path)
     loaders = [jinja2.PackageLoader('conda_build'),
                jinja2.FileSystemLoader(path)
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(context_processor())
-    
+
     template = env.get_or_select_template(filename)
-        
+
     contents = template.render(environment=env)
-    return contents 
+    return contents
 
 class MetaData(object):
 
