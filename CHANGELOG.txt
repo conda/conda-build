@@ -3,6 +3,7 @@
   * remove fallback to <root>/conda-recipes, i.e. conda-build always
     expects the full path to the recipe
   * export PKG Build Number
+  * add pre-link to package, when it is found in recipe
 
 
 2014-01-24   1.0.0:
