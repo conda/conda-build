@@ -31,6 +31,13 @@ def create_shell_files(dir_path, m):
         shutil.copy(join(m.path, name), dir_path)
         has_tests = True
 
+    with open(join(dir_path, name), 'a') as f:
+        f.write('\n\n')
+        for cmd in m.get_value('test/commands'):
+            f.write(cmd)
+            f.write('\n')
+            has_tests = True
+
     return has_tests
 
 def create_py_files(dir_path, m):
@@ -40,12 +47,6 @@ def create_py_files(dir_path, m):
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
         with open(join(dirname(__file__), 'header_test.py')) as fi:
             fo.write(fi.read() + '\n')
-
-        for cmd in m.get_value('test/commands'):
-            # Use two levels of indirection in case cmd contains quotes
-            fo.write('print(%r)\n'% ("command: %r" % cmd))
-            fo.write('call_args(%r)\n\n' % cmd)
-            has_tests = True
 
         for name in m.get_value('test/imports'):
             fo.write('print("import: %r")\n' % name)
