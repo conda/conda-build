@@ -50,7 +50,7 @@ def prefix_files():
 def create_post_scripts(m):
     recipe_dir = m.path
     ext = '.bat' if sys.platform == 'win32' else '.sh'
-    for tp in 'post-link', 'pre-unlink':
+    for tp in 'pre-link', 'post-link', 'pre-unlink':
         src = join(recipe_dir, tp + ext)
         if not isfile(src):
             continue
