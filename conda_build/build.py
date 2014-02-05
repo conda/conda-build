@@ -276,7 +276,12 @@ def test(m):
 
     if shell_files:
         if sys.platform == 'win32':
-            raise NotImplementedError("run_test.bat is not supported yet")
+            test_file = join(tmp_dir, 'run_test.bat')
+            cmd = [os.environ['COMSPEC'], '/c', test_file]
+            try:
+                subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+            except subprocess.CalledProcessError:
+                tests_failed(m)
         else:
             test_file = join(tmp_dir, 'run_test.sh')
             # TODO: Run the test/commands here instead of in run_test.py
