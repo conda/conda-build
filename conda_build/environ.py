@@ -6,7 +6,7 @@ from os.path import join
 
 import conda.config as cc
 
-from conda_build.config import CONDA_PY, PY3K, build_prefix, build_python
+from conda_build.config import CONDA_PY, PY3K, build_prefix, _get_python
 from conda_build import source
 
 
@@ -16,11 +16,15 @@ stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
 sp_dir = join(stdlib_dir, 'site-packages')
 
 
-def get_dict(m=None):
+def get_dict(m=None, prefix=build_prefix):
+    stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
+        'lib/python%s' % py_ver)
+    sp_dir = join(stdlib_dir, 'site-packages')
+    python = _get_python(prefix)
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
-    d['PREFIX'] = build_prefix
-    d['PYTHON'] = build_python
+    d['PREFIX'] = prefix
+    d['PYTHON'] = python
     d['PY3K'] = str(PY3K)
     d['STDLIB_DIR'] = stdlib_dir
     d['SP_DIR'] = sp_dir
@@ -30,19 +34,19 @@ def get_dict(m=None):
     d['SRC_DIR'] = source.get_dir()
 
     if sys.platform == 'win32':         # -------- Windows
-        d['PATH'] = (join(build_prefix, 'Library', 'bin') + ';' +
-                     join(build_prefix) + ';' +
-                     join(build_prefix, 'Scripts') + ';%PATH%')
-        d['SCRIPTS'] = join(build_prefix, 'Scripts')
-        d['LIBRARY_PREFIX'] = join(build_prefix, 'Library')
+        d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
+                     join(prefix) + ';' +
+                     join(prefix, 'Scripts') + ';%PATH%')
+        d['SCRIPTS'] = join(prefix, 'Scripts')
+        d['LIBRARY_PREFIX'] = join(prefix, 'Library')
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
 
     else:                               # -------- Unix
-        d['PATH'] = '%s/bin:%s' % (build_prefix, os.getenv('PATH'))
+        d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
-        d['PKG_CONFIG_PATH'] = join(build_prefix, 'lib', 'pkgconfig')
+        d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
@@ -52,7 +56,7 @@ def get_dict(m=None):
         d['MACOSX_DEPLOYMENT_TARGET'] = '10.5'
 
     elif sys.platform.startswith('linux'):      # -------- Linux
-        d['LD_RUN_PATH'] = build_prefix + '/lib'
+        d['LD_RUN_PATH'] = prefix + '/lib'
 
     if m:
         d['PKG_NAME'] = m.name()

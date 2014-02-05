@@ -258,6 +258,7 @@ def test(m):
     env = dict(os.environ)
     # TODO: Include all the same environment variables that are used in
     # building.
+    env.update(environ.get_dict(m, prefix=config.test_prefix))
 
     # prepend bin (or Scripts) directory
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
