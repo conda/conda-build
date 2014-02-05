@@ -1,7 +1,10 @@
 from __future__ import print_function, division, absolute_import
 
 import shutil
-from os.path import dirname, join, isdir
+import sys
+from os.path import dirname, join, isdir, exists
+
+from conda_build import config, source
 
 def create_files(dir_path, m):
     """
@@ -11,8 +14,6 @@ def create_files(dir_path, m):
     Return False, if the package has no tests (for any configuration), and
     True if it has.
     """
-    has_tests = False
-
     for fn in m.get_value('test/files'):
         path = join(m.path, fn)
         if isdir(path):
@@ -20,6 +21,20 @@ def create_files(dir_path, m):
         else:
             shutil.copy(path, dir_path)
 
+def create_shell_files(dir_path, m):
+    has_tests = False
+    if sys.platform == 'win32':
+        name = 'run_test.bat'
+    else:
+        name = 'run_test.sh'
+    if exists(join(m.path, name)):
+        shutil.copy(join(m.path, name), dir_path)
+        has_tests = True
+
+    return has_tests
+
+def create_py_files(dir_path, m):
+    has_tests = False
     with open(join(dir_path, 'run_test.py'), 'w') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
         fo.write("print('===== testing package: %s =====')\n" % m.dist())

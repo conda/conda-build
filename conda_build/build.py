@@ -26,7 +26,7 @@ from conda_build.post import (post_process, post_build, is_obj,
                                 fix_permissions)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
-from conda_build.create_test import create_files
+from conda_build.create_test import create_files, create_shell_files, create_py_files
 
 
 prefix = config.build_prefix
@@ -236,7 +236,10 @@ def test(m):
     tmp_dir = join(config.croot, 'test-tmp_dir')
     rm_rf(tmp_dir)
     os.makedirs(tmp_dir)
-    if not create_files(tmp_dir, m):
+    create_files(tmp_dir, m)
+    py_files = create_py_files(tmp_dir, m)
+    shell_files = create_shell_files(tmp_dir, m)
+    if not py_files and not shell_files:
         print("Nothing to test for:", m.dist())
         return
 
@@ -253,6 +256,9 @@ def test(m):
     create_env(config.test_prefix, specs)
 
     env = dict(os.environ)
+    # TODO: Include all the same environment variables that are used in
+    # building.
+
     # prepend bin (or Scripts) directory
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
                    env['PATH'])
@@ -261,13 +267,30 @@ def test(m):
         env[varname] = str(getattr(config, varname))
     env['PREFIX'] = config.test_prefix
 
-    try:
-        subprocess.check_call([config.test_python, join(tmp_dir, 'run_test.py')],
-            env=env, cwd=tmp_dir)
-    except subprocess.CalledProcessError:
-        if not isdir(broken_dir):
-            os.makedirs(broken_dir)
-        shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
-        sys.exit("TESTS FAILED: " + m.dist())
+    if py_files:
+        try:
+            subprocess.check_call([config.test_python, join(tmp_dir, 'run_test.py')],
+                env=env, cwd=tmp_dir)
+        except subprocess.CalledProcessError:
+            tests_failed()
+
+    if shell_files:
+        if sys.platform == 'win32':
+            raise NotImplementedError("run_test.bat is not supported yet")
+        else:
+            test_file = join(m.path, 'run_test.sh')
+            # TODO: Run the test/commands here instead of in run_test.py
+            cmd = ['/bin/bash', '-x', '-e', test_file]
+            try:
+                subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+            except subprocess.CalledProcessError:
+                tests_failed(m)
 
     print("TEST END:", m.dist())
+
+def tests_failed(m):
+    if not isdir(broken_dir):
+        os.makedirs(broken_dir)
+
+    shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
+    sys.exit("TESTS FAILED: " + m.dist())
