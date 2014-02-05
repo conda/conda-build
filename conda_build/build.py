@@ -278,7 +278,7 @@ def test(m):
         if sys.platform == 'win32':
             raise NotImplementedError("run_test.bat is not supported yet")
         else:
-            test_file = join(m.path, 'run_test.sh')
+            test_file = join(tmp_dir, 'run_test.sh')
             # TODO: Run the test/commands here instead of in run_test.py
             cmd = ['/bin/bash', '-x', '-e', test_file]
             try:
