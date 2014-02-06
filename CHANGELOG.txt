@@ -5,6 +5,13 @@
     expects the full path to the recipe
   * export PKG Build Number
   * add pre-link to package, when it is found in recipe
+  * allow to add run_test.sh or run_test.bat, which will be run automatically
+    during the test phase.
+  * Test commands from the test/commands section of meta.yaml are run from
+    bash on Linux and OS X and batch on Windows (previously they were run
+    using Python's subprocess).
+  * All environment variables from the build process are available during the
+    tests, except with the build prefix replaced with the test prefix.
 
 
 2014-01-24   1.0.0:
