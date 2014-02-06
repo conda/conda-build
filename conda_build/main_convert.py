@@ -49,11 +49,11 @@ def main():
 
     # TODO: Factor this into a subcommand, since it's python package specific
     p.add_argument(
-        'package_file',
-        metavar = 'package-file',
+        'package_files',
+        metavar = 'package-files',
         action = "store",
         nargs = '+',
-        help = "package versions to install into conda environment",
+        help = "package files to convert",
         )
     p.add_argument(
         '-p', "--platform",
@@ -107,7 +107,7 @@ path_mapping = [
 pyver_re = re.compile(r'python\s+(\d.\d)')
 
 def execute(args, parser):
-    files = args.package_file
+    files = args.package_files
 
     for file in files:
         if not file.endswith('.tar.bz2'):
