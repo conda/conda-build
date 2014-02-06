@@ -1,5 +1,6 @@
-2014-XX-XX   1.0.1:
+2014-02-XX   1.1.0:
 -------------------
+  * add ability to use templates in conda recipes
   * remove fallback to <root>/conda-recipes, i.e. conda-build always
     expects the full path to the recipe
   * export PKG Build Number
