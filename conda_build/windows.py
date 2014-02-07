@@ -10,7 +10,6 @@ from conda_build import source
 from conda_build.utils import _check_call
 from conda_build.scripts import BAT_PROXY
 
-import conda.config as cc
 from conda.compat import iteritems
 
 try:
