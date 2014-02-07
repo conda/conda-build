@@ -10,6 +10,7 @@ from conda_build import source
 from conda_build.utils import _check_call
 from conda_build.scripts import BAT_PROXY
 
+import conda.config as cc
 from conda.compat import iteritems
 
 try:
@@ -65,7 +66,7 @@ def msvc_env_cmd():
 
     return '''\
 call "%s" %s
-''' % (vcvarsall, {32: 'x86', 64: 'amd64'}[config.ARCH])
+''' % (vcvarsall, {32: 'x86', 64: 'amd64'}[cc.bits])
 
 
 def kill_processes():
