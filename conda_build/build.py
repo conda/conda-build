@@ -273,7 +273,7 @@ def test(m):
             subprocess.check_call([config.test_python, join(tmp_dir, 'run_test.py')],
                 env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
-            tests_failed()
+            tests_failed(m)
 
     if shell_files:
         if sys.platform == 'win32':
