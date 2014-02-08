@@ -80,6 +80,7 @@ test:
 about:
   home: {homeurl}
   license: {license}
+  summary: {summary}
 
 # See
 # http://docs.continuum.io/conda/build.html for
@@ -184,6 +185,7 @@ def main(args, parser):
 
 
         d['homeurl'] = data['home_page']
+        d['summary'] = data['summary']
         license_classifier = "License :: OSI Approved ::"
         licenses = [classifier.lstrip(license_classifier) for classifier in
             data['classifiers'] if classifier.startswith(license_classifier)]
