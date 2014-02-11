@@ -10,7 +10,7 @@ from os.path import (dirname, getmtime, getsize, isdir, isfile,
                      islink, join, normpath)
 
 from conda.utils import md5_file
-
+from conda import external
 
 
 def rel_lib(f):
@@ -30,7 +30,13 @@ def _check_call(args, **kwargs):
 
 def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.endswith('.tar.xz'):
-        subprocess.check_call(['unxz', '-f', '-k', tarball])
+        unxz = external.find_executable('unxz')
+        if not unxz:
+            sys.exit("""\
+unxz is required to unarchive .xz source files.
+""")
+
+        subprocess.check_call([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
     t.extractall(path=dir_path)
