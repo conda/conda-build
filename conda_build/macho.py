@@ -55,3 +55,10 @@ def install_name_change(path, cb_func):
         args = ['install_name_tool', '-change', old, new, path]
         print(' '.join(args))
         subprocess.check_call(args)
+
+
+if __name__ == '__main__':
+    import sys
+    if sys.platform == 'darwin':
+        for path in '/bin/ls', '/etc/locate.rc':
+            print(path, is_macho(path))
