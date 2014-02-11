@@ -8,7 +8,7 @@ import conda.config as cc
 
 
 CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.', '')))
-CONDA_NPY = int(os.getenv('CONDA_NPY', 17))
+CONDA_NPY = int(os.getenv('CONDA_NPY', 18))
 PY3K = int(bool(CONDA_PY >= 30))
 
 if cc.root_writable:
