@@ -10,7 +10,7 @@ from os.path import (dirname, getmtime, getsize, isdir, isfile,
                      islink, join, normpath)
 
 from conda.utils import md5_file
-from conda import external
+from conda_build import external
 
 
 def rel_lib(f):
