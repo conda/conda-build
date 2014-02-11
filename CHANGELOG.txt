@@ -4,6 +4,7 @@
   * Use MSVC 2010 for Python 3
   * Include the summary with conda skeleton pypi
   * Fix object detection on Python 3
+  * Update default CONDA_NPY to 18
 
 2014-02-06   1.1.0:
 -------------------
