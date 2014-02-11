@@ -10,11 +10,11 @@ NO_EXT = (
 )
 
 MAGIC = {
-    '\xca\xfe\xba\xbe': 'MachO-universal',
-    '\xce\xfa\xed\xfe': 'MachO-i386',
-    '\xcf\xfa\xed\xfe': 'MachO-x86_64',
-    '\xfe\xed\xfa\xce': 'MachO-ppc',
-    '\xfe\xed\xfa\xcf': 'MachO-ppc64',
+    b'\xca\xfe\xba\xbe': 'MachO-universal',
+    b'\xce\xfa\xed\xfe': 'MachO-i386',
+    b'\xcf\xfa\xed\xfe': 'MachO-x86_64',
+    b'\xfe\xed\xfa\xce': 'MachO-ppc',
+    b'\xfe\xed\xfa\xcf': 'MachO-ppc64',
 }
 
 
