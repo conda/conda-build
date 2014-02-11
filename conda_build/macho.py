@@ -28,7 +28,7 @@ def is_macho(path):
 
 def otool(path):
     "thin wrapper around otool -L"
-    lines = subprocess.check_output(['otool', '-L', path]).splitlines()
+    lines = subprocess.check_output(['otool', '-L', path]).decode('utf-8').splitlines()
     assert lines[0].startswith(path), path
     res = []
     for line in lines[1:]:
