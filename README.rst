@@ -9,8 +9,8 @@ Building Your Own Packages
 You can easily build your own packages for conda, and upload them to `Binstar
 <https://binstar.org>`_, a free service for hosting packages for conda, as
 well as other package managers.  To build a package, create a recipe.  See
-http://github.com/pydata/conda-recipes for many example recipes, and
-http://docs.continuum.io/conda/build.html for documentation on how to build
+http://github.com/conda/conda-recipes for many example recipes, and
+http://conda.pydata.org/docs/build.html for documentation on how to build
 recipes.
 
 To upload to Binstar, create an account on binstar.org.  Then, install the
@@ -42,7 +42,7 @@ to add).
 Getting Help
 ------------
 
-The documentation for conda is at http://docs.continuum.io/conda/. You can
+The documentation for conda is at http://conda.pydata.org/docs/. You can
 subscribe to the `conda mailing list
 <https://groups.google.com/a/continuum.io/forum/#!forum/conda>`_.  The source
 code and issue tracker for conda are on `GitHub <https://github.com/pydata/conda>`_.
