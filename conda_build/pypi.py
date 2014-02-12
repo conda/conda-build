@@ -196,9 +196,9 @@ def main(args, parser):
                 else:
                     # Some projects put the whole license text in this field
                     print("This is the license for %s" % package)
-                    print()
+                    print('')
                     print(data['license'])
-                    print()
+                    print('')
                     license = input("What license string should I use? ")
             else:
                 if args.noprompt:
