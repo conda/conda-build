@@ -246,9 +246,11 @@ def test(m):
     print("TEST START:", m.dist())
     rm_rf(prefix)
     rm_rf(config.test_prefix)
-    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id()),
-             # as the tests are run by python, we need to specify it
-             'python %s*' % environ.py_ver]
+    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+
+    if py_files:
+        # as the tests are run by python, we need to specify it
+        specs += ['python %s*' % environ.py_ver]
     # add packages listed in test/requires
     for spec in m.get_value('test/requires'):
         specs.append(spec)
