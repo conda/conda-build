@@ -46,12 +46,3 @@ The documentation for conda is at http://conda.pydata.org/docs/. You can
 subscribe to the `conda mailing list
 <https://groups.google.com/a/continuum.io/forum/#!forum/conda>`_.  The source
 code and issue tracker for conda are on `GitHub <https://github.com/pydata/conda>`_.
-
---------
-
-Contents:
-
-.. toctree::
-   :maxdepth: 2
-
-   miniconda.rst
