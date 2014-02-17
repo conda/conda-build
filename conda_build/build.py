@@ -31,7 +31,8 @@ from conda_build.create_test import create_files, create_shell_files, create_py_
 
 prefix = config.build_prefix
 info_dir = join(prefix, 'info')
-bldpkgs_dir = join(config.croot, cc.subdir)
+
+bldpkgs_dir = os.path.expanduser(cc.rc.get('conda-build', {}).get('build_dest', join(config.croot, cc.subdir)))
 broken_dir = join(config.croot, "broken")
 
 
