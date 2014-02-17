@@ -7,7 +7,7 @@ import json
 import stat
 import shutil
 import tarfile
-from os.path import exists, isdir, isfile, islink, join
+from os.path import exists, expanduser, isdir, isfile, islink, join
 import subprocess
 
 import conda.config as cc
@@ -23,16 +23,18 @@ from conda_build import source
 from conda_build import tarcheck
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
-                                fix_permissions)
+                              fix_permissions)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
-from conda_build.create_test import create_files, create_shell_files, create_py_files
+from conda_build.create_test import (create_files, create_shell_files,
+                                     create_py_files)
 
 
 prefix = config.build_prefix
 info_dir = join(prefix, 'info')
 
-bldpkgs_dir = os.path.expanduser(cc.rc.get('conda-build', {}).get('build_dest', join(config.croot, cc.subdir)))
+bldpkgs_dir = expanduser(cc.rc.get('conda-build',
+                     {}).get('build_dest', join(config.croot, cc.subdir)))
 broken_dir = join(config.croot, "broken")
 
 
