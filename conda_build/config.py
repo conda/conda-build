@@ -29,6 +29,9 @@ def _get_python(prefix):
 build_python = _get_python(build_prefix)
 test_python = _get_python(test_prefix)
 
+bldpkgs_dir = expanduser(cc.rc.get('conda-build',
+                           {}).get('build_dest', join(croot, cc.subdir)))
+
 
 def show():
     import conda.config as cc
@@ -37,3 +40,8 @@ def show():
     print('CONDA_NPY:', CONDA_NPY)
     print('subdir:', cc.subdir)
     print('croot:', croot)
+    print('build packages directory:', bldpkgs_dir)
+
+
+if __name__ == '__main__':
+    show()

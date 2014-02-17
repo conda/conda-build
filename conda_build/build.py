@@ -7,7 +7,7 @@ import json
 import stat
 import shutil
 import tarfile
-from os.path import exists, expanduser, isdir, isfile, islink, join
+from os.path import exists, isdir, isfile, islink, join
 import subprocess
 
 import conda.config as cc
@@ -33,8 +33,6 @@ from conda_build.create_test import (create_files, create_shell_files,
 prefix = config.build_prefix
 info_dir = join(prefix, 'info')
 
-bldpkgs_dir = expanduser(cc.rc.get('conda-build',
-                     {}).get('build_dest', join(config.croot, cc.subdir)))
 broken_dir = join(config.croot, "broken")
 
 
@@ -147,9 +145,9 @@ def create_info_files(m, files):
 
 
 def create_env(pref, specs):
-    if not isdir(bldpkgs_dir):
-        os.makedirs(bldpkgs_dir)
-    update_index(bldpkgs_dir)
+    if not isdir(config.bldpkgs_dir):
+        os.makedirs(config.bldpkgs_dir)
+    update_index(config.bldpkgs_dir)
     # remove the cache such that a refetch is made,
     # this is necessary because we add the local build repo URL
     fetch_index.cache = {}
@@ -170,7 +168,7 @@ def rm_pkgs_cache(dist):
     plan.execute_plan(rmplan)
 
 def bldpkg_path(m):
-    return join(bldpkgs_dir, '%s.tar.bz2' % m.dist())
+    return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
 def build(m, get_src=True):
@@ -229,7 +227,7 @@ def build(m, get_src=True):
 
     # we're done building, perform some checks
     tarcheck.check_all(path)
-    update_index(bldpkgs_dir)
+    update_index(config.bldpkgs_dir)
 
 
 def test(m):
