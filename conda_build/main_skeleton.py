@@ -44,15 +44,15 @@ def main():
     pypi.add_argument(
         "--all-urls",
         action = "store_true",
-        help = """Look at all urls, not just source urls. Use this if it can't
-        find the right url.""",
+        help = """Look at all URLs, not just source URLs. Use this if it can't
+        find the right URL.""",
         )
     pypi.add_argument(
         "--pypi-url",
         action = "store",
         nargs=1,
         default='http://pypi.python.org/pypi',
-        help = "Url to use for PyPI",
+        help = "URL to use for PyPI",
         )
     pypi.add_argument(
         "--no-download",
@@ -72,6 +72,51 @@ def main():
         help="""Don't prompt the user on ambiguous choices.  Instead, make the
         best possible choice and continue."""
         )
+
+    cpan = repos.add_parser(
+        "cpan",
+        help="Create recipes from packages on CPAN",
+    )
+    cpan.add_argument(
+        "packages",
+        action = "store",
+        nargs = '+',
+        help = "CPAN packages to create recipe skeletons for",
+        )
+    cpan.add_argument(
+        "--output-dir",
+        help = "Directory to write recipes to",
+        default = ".",
+        )
+    cpan.add_argument(
+        "--version",
+        help = "Version to use. Applies to all packages",
+        )
+    cpan.add_argument(
+        "--meta-cpan-url",
+        action = "store",
+        nargs=1,
+        default='http://api.metacpan.org',
+        help = "URL to use for MetaCPAN API",
+        )
+    cpan.add_argument(
+        "--no-download",
+        action = "store_false",
+        dest = "download",
+        default=True,
+        help="""Don't download the package. This will keep the recipe from
+        finding the right dependencies. WARNING: The default option downloads 
+        and temporarily installs the package with cpanm."""
+        )
+    cpan.add_argument(
+        "--no-prompt",
+        action="store_true",
+        default=False,
+        dest="noprompt",
+        help="""Don't prompt the user on ambiguous choices.  Instead, make the
+        best possible choice and continue."""
+        )
+
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -80,9 +125,12 @@ def main():
 
 def execute(args, parser):
     import conda_build.pypi as pypi
+    import conda_build.cpan as cpan
 
     if args.repo == "pypi":
         pypi.main(args, parser)
+    elif args.repo == "cpan":
+        cpan.main(args, parser)
 
 
 if __name__ == '__main__':
