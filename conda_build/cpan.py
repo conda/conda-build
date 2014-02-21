@@ -131,26 +131,28 @@ def main(args, parser):
         d['version'] = release_data['version']
 
         # Create lists of dependencies
-        build_deps = []
-        run_deps = []
+        build_deps = set()
+        run_deps = set()
         for dep_dict in release_data['dependency']:
             # Only care about requirements
             if dep_dict['relationship'] == 'requires':
                 # Handle runtime deps
                 if dep_dict['phase'] == 'runtime':
-                    run_deps.append(perl_to_conda(dep_dict['module']))
+                    dep_entry = perl_to_conda(dep_dict['module'])
                     if dep_dict['version_numified']:
-                        run_deps[-1] += ' ' + dep_dict['version']
+                        dep_entry += ' ' + dep_dict['version']
+                    run_deps.add(dep_entry)
 
                 # Handle build deps
                 else:
-                    build_deps.append(perl_to_conda(dep_dict['module']))
+                    dep_entry = perl_to_conda(dep_dict['module'])
                     if dep_dict['version_numified']:
-                        build_deps[-1] += ' ' + dep_dict['version']
+                        dep_entry += ' ' + dep_dict['version']
+                    build_deps.add(dep_entry)
 
         # Add dependencies to d
-        d['build_depends'] = indent.join([''] + build_deps)
-        d['run_depends'] = indent.join([''] + run_deps)
+        d['build_depends'] = indent.join([''] + list(build_deps))
+        d['run_depends'] = indent.join([''] + list(run_deps))
 
 
     # Write recipes
