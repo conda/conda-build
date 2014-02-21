@@ -156,13 +156,15 @@ def main(args, parser):
     # Write recipes
     for package in package_dicts:
         d = package_dicts[package]
-        makedirs(join(output_dir, packagename))
+        package_dir = join(output_dir, packagename)
+        if not exists(package_dir):
+            makedirs(package_dir)
         print("Writing recipe for %s" % packagename)
-        with open(join(output_dir, packagename, 'meta.yaml'), 'w') as f:
+        with open(join(package_dir, 'meta.yaml'), 'w') as f:
             f.write(CPAN_META.format(**d))
-        with open(join(output_dir, packagename, 'build.sh'), 'w') as f:
+        with open(join(package_dir, 'build.sh'), 'w') as f:
             f.write(CPAN_BUILD_SH.format(**d))
-        with open(join(output_dir, packagename, 'bld.bat'), 'w') as f:
+        with open(join(package_dir, 'bld.bat'), 'w') as f:
             f.write(CPAN_BLD_BAT.format(**d))
 
     print("Done")
