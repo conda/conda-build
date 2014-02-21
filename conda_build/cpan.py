@@ -126,8 +126,9 @@ def main(args, parser):
             d['homeurl'] = release_data['resources']['homepage']
         except KeyError:
             d['homeurl'] = 'http://metacpan.org/pod/' + package
-        d['summary'] = repr(release_data['abstract'])
-        d['license'] = release_data['license']
+        d['summary'] = repr(release_data['abstract']).lstrip('u')
+        d['license'] = release_data['license'][0]
+        d['version'] = release_data['version']
 
         # Create lists of dependencies
         build_deps = []
@@ -155,13 +156,13 @@ def main(args, parser):
     # Write recipes
     for package in package_dicts:
         d = package_dicts[package]
-        makedirs(join(output_dir, package.lower()))
-        print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, package.lower(), 'meta.yaml'), 'w') as f:
+        makedirs(join(output_dir, packagename))
+        print("Writing recipe for %s" % packagename)
+        with open(join(output_dir, packagename, 'meta.yaml'), 'w') as f:
             f.write(CPAN_META.format(**d))
-        with open(join(output_dir, package.lower(), 'build.sh'), 'w') as f:
+        with open(join(output_dir, packagename, 'build.sh'), 'w') as f:
             f.write(CPAN_BUILD_SH.format(**d))
-        with open(join(output_dir, package.lower(), 'bld.bat'), 'w') as f:
+        with open(join(output_dir, packagename, 'bld.bat'), 'w') as f:
             f.write(CPAN_BLD_BAT.format(**d))
 
     print("Done")
@@ -189,7 +190,7 @@ def get_release_info(cpan_url, package, version):
 
     # If the latest isn't the version we're looking for, we have to do another
     # request
-    if rel_dict['version'] != version:
+    if version is not None and rel_dict['version'] != version:
         author = rel_dict['author']
         with TmpDownload('{}/v0/release/{}/{}-{}'.format(cpan_url,
                                                          author,
@@ -230,7 +231,7 @@ def get_checksum_and_size(download_url):
                         size = line.split("=>")[1].strip("', ")
                         break
                     # This should never happen, but just in case
-                    elif line.startsiwth('}'):
+                    elif line.startswith('}'):
                         break
     return md5, size
 
