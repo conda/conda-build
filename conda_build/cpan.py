@@ -412,7 +412,8 @@ def main(args, parser):
                                                'build_depends':'',
                                                'build_comment':'# ',
                                                'test_commands':'',
-                                               'usemd5':''})
+                                               'usemd5':'',
+                                               'summary': "''"})
 
         # Fetch all metadata from CPAN
         release_data = get_release_info(args.meta_cpan_url, package,
@@ -428,7 +429,8 @@ def main(args, parser):
             d['homeurl'] = release_data['resources']['homepage']
         except KeyError:
             d['homeurl'] = 'http://metacpan.org/pod/' + package
-        d['summary'] = repr(release_data['abstract']).lstrip('u')
+        if 'abstract' in release_data:
+            d['summary'] = repr(release_data['abstract']).lstrip('u')
         d['license'] = release_data['license'][0]
         d['version'] = release_data['version']
 
@@ -504,7 +506,6 @@ def dist_for_module(cpan_url, module):
 
     return distribution
 
-@memoized
 def get_release_info(cpan_url, package, version):
     '''
     Return a dictionary of the JSON information stored at cpan.metacpan.org
@@ -548,7 +549,6 @@ def get_release_info(cpan_url, package, version):
 
     return rel_dict
 
-@memoized
 def get_checksum_and_size(download_url):
     '''
     Looks in the CHECKSUMS file in the same directory as the file specified
