@@ -7,7 +7,7 @@ import json
 import stat
 import shutil
 import tarfile
-from os.path import exists, isdir, isfile, islink, join
+from os.path import exists, isdir, isfile, islink, join, abspath
 import subprocess
 
 import conda.config as cc
@@ -28,6 +28,7 @@ from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files)
+from conda_build.metadata import MetaData
 
 
 prefix = config.build_prefix
@@ -173,7 +174,30 @@ def bldpkg_path(m):
 
 def build(m, get_src=True):
     rm_rf(prefix)
-    create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
+    try_again = True
+    while try_again:
+        try:
+            create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
+        except RuntimeError as e:
+            error_str = str(e)
+            if error_str.startswith('No packages found matching:'):
+                # Build dependency if recipe exists
+                recipe_dir = error_str.split(': ')[1]
+                if exists(recipe_dir):
+                    print(("Missing dependency {0}, but found recipe " +
+                           "directory, so building " +
+                           "{0} first").format(recipe_dir))
+                    dep_m = MetaData(os.path.abspath(recipe_dir))
+                    dep_m.check_fields()
+                    build(dep_m)
+                    # Now try again
+                    try_again = True
+                else:
+                    raise
+            else:
+                raise
+        else:
+            try_again = False
 
     print("BUILD START:", m.dist())
 
