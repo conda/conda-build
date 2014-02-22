@@ -393,6 +393,10 @@ def main(args, parser):
     processed_packages = set()
     while args.packages:
         package = args.packages.pop()
+
+        # Skip duplicates
+        if package in processed_packages:
+            continue
         processed_packages.add(package)
 
         # Convert modules into distributions
