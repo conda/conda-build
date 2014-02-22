@@ -5,6 +5,8 @@ Tools for converting CPAN packages to conda recipes.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import collections
+import functools
 import json
 import sys
 from io import open
@@ -17,6 +19,7 @@ from conda.install import rm_rf
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE
 from conda.compat import input, configparser, StringIO
+
 
 # This monstrosity is the set of everything in the Perl core as of 5.18.2
 # I also added "perl" to the list for simplicity of filtering later
@@ -350,6 +353,34 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
+
+class memoized(object):
+   '''Decorator. Caches a function's return value each time it is called.
+   If called later with the same arguments, the cached value is returned
+   (not reevaluated).
+   '''
+   def __init__(self, func):
+      self.func = func
+      self.cache = {}
+   def __call__(self, *args):
+      if not isinstance(args, collections.Hashable):
+         # uncacheable. a list, for instance.
+         # better to not cache than blow up.
+         return self.func(*args)
+      if args in self.cache:
+         return self.cache[args]
+      else:
+         value = self.func(*args)
+         self.cache[args] = value
+         return value
+   def __repr__(self):
+      '''Return the function's docstring.'''
+      return self.func.__doc__
+   def __get__(self, obj, objtype):
+      '''Support instance methods.'''
+      return functools.partial(self.__call__, obj)
+
+
 def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
@@ -448,7 +479,7 @@ def main(args, parser):
 
     print("Done")
 
-
+@memoized
 def dist_for_module(cpan_url, module):
     '''
     Given a name that could be a module or a distribution, return the
@@ -468,7 +499,7 @@ def dist_for_module(cpan_url, module):
 
     return distribution
 
-
+@memoized
 def get_release_info(cpan_url, package, version):
     '''
     Return a dictionary of the JSON information stored at cpan.metacpan.org
@@ -512,7 +543,7 @@ def get_release_info(cpan_url, package, version):
 
     return rel_dict
 
-
+@memoized
 def get_checksum_and_size(download_url):
     '''
     Looks in the CHECKSUMS file in the same directory as the file specified
