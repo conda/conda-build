@@ -472,7 +472,7 @@ def main(args, parser):
                     build_deps.add(dep_entry)
 
         # Add dependencies to d
-        d['build_depends'] = indent.join([''] + list(build_deps + run_deps))
+        d['build_depends'] = indent.join([''] + list(build_deps | run_deps))
         d['run_depends'] = indent.join([''] + list(run_deps))
         args.packages.extend(packages_to_append)
 
