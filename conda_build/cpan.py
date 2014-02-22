@@ -390,8 +390,10 @@ def main(args, parser):
     [output_dir] = args.output_dir
     indent = '\n    - '
     args.packages = list(reversed(args.packages))
+    processed_packages = set()
     while args.packages:
         package = args.packages.pop()
+        processed_packages.add(package)
 
         # Convert modules into distributions
         orig_package = package
@@ -433,6 +435,7 @@ def main(args, parser):
         # Create lists of dependencies
         build_deps = set()
         run_deps = set()
+        packages_to_append = set()
         for dep_dict in release_data['dependency']:
             # Only care about requirements
             if dep_dict['relationship'] == 'requires':
@@ -440,15 +443,16 @@ def main(args, parser):
                 orig_dist = dist_for_module(args.meta_cpan_url,
                                             dep_dict['module'])
                 # Don't add Perl built-ins, unless newer version
-                if orig_dist.lower() == 'perl' or (dep_dict['module'] in
-                                                   PERL_CORE and
-                                                   dep_dict['version'] == '0'):
+                if (orig_dist.lower() == 'perl' or
+                        orig_dist.replace('-', '::') in PERL_CORE or
+                        dep_dict['module'] in PERL_CORE):
                     continue
                 dep_entry = perl_to_conda(orig_dist)
 
                 # If recursive, check if we have a recipe for this dependency
-                if args.recursive and not exists(join(output_dir, dep_entry)):
-                    args.packages.append(orig_dist)
+                if (args.recursive and (not exists(join(output_dir, dep_entry)))
+                        and (orig_dist not in processed_packages)):
+                    packages_to_append.add(orig_dist)
 
                 if dep_dict['version_numified']:
                     dep_entry += ' ' + dep_dict['version']
@@ -464,6 +468,7 @@ def main(args, parser):
         # Add dependencies to d
         d['build_depends'] = indent.join([''] + list(build_deps))
         d['run_depends'] = indent.join([''] + list(run_deps))
+        args.packages.extend(packages_to_append)
 
         # Write recipe files
         package_dir = join(output_dir, packagename)
