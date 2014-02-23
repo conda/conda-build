@@ -353,6 +353,18 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
+CPAN_RUN_TEST_SH = """\
+#!/bin/bash
+
+# Just a simple import test
+perl -e 'use {}'
+"""
+
+CPAN_RUN_TEST_BAT = """\
+cpaperl -e 'use {}'
+if errorlevel 1 exit 1
+"""
+
 
 def main(args, parser):
     '''
@@ -460,6 +472,10 @@ def main(args, parser):
             f.write(CPAN_BUILD_SH.format(**d))
         with open(join(package_dir, 'bld.bat'), 'w') as f:
             f.write(CPAN_BLD_BAT.format(**d))
+        with open(join(package_dir, 'run_test.bat'), 'w') as f:
+            f.write(CPAN_RUN_TEST_BAT.format(orig_package))
+        with open(join(package_dir, 'run_test.sh'), 'w') as f:
+            f.write(CPAN_RUN_TEST_SH.format(orig_package))
 
     print("Done")
 
