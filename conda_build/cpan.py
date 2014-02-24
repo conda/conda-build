@@ -361,7 +361,7 @@ perl -e 'use {}'
 """
 
 CPAN_RUN_TEST_BAT = """\
-cpaperl -e 'use {}'
+perl -e 'use {}'
 if errorlevel 1 exit 1
 """
 
