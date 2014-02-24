@@ -187,7 +187,7 @@ def build(m, get_src=True):
                     print(("Missing dependency {0}, but found recipe " +
                            "directory, so building " +
                            "{0} first").format(recipe_dir))
-                    dep_m = MetaData(os.path.abspath(recipe_dir))
+                    dep_m = MetaData(abspath(recipe_dir))
                     dep_m.check_fields()
                     build(dep_m)
                     # Now try again
