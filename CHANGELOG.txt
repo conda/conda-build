@@ -1,3 +1,8 @@
+??????????   1.2.2:
+-------------------
+  * work with source files with uppercase suffixes
+
+
 2014-02-25   1.2.1:
 -------------------
   * added conda-build/build_dest option to condarc
