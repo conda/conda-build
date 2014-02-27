@@ -1,6 +1,7 @@
-??????????   1.2.2:
+2014-XX-XX   1.2.2:
 -------------------
   * work with source files with uppercase suffixes
+  * switch to from chrpath to patchelf on Linux, issue #57 
   * don't use hard-coded msvc path
 
 
