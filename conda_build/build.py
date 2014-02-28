@@ -19,7 +19,6 @@ from os.path import exists, isdir, isfile, islink, join
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
-    range = xrange
     str = unicode
 
 import conda.config as cc
