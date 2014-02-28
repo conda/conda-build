@@ -1,14 +1,25 @@
-from __future__ import print_function, division, absolute_import
+'''
+Module that does most of the heavy lifting for the ``conda build`` command.
+'''
 
-import re
-import os
-import sys
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import json
-import stat
+import os
+import re
 import shutil
-import tarfile
-from os.path import exists, isdir, isfile, islink, join
+import stat
 import subprocess
+import sys
+import tarfile
+from io import open
+from os.path import exists, isdir, isfile, islink, join
+
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    range = xrange
+    str = unicode
 
 import conda.config as cc
 import conda.plan as plan
