@@ -5,6 +5,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import locale
 import json
 import os
 import re
@@ -102,7 +103,9 @@ def have_prefix_files(files):
         if islink(path):
             continue
         try:
-            with open(path) as fi:
+            # Open with locale-preferred encoding, because we don't know for
+            # sure what it would be.
+            with open(path, encoding=locale.getpreferredencoding()) as fi:
                 data = fi.read()
         except UnicodeDecodeError:
             continue
@@ -112,7 +115,8 @@ def have_prefix_files(files):
             continue
         st = os.stat(path)
         data = data.replace(prefix, prefix_placeholder)
-        with open(path, 'w') as fo:
+        # Save with same encoding we opened it with.
+        with open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
             fo.write(data)
         os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         yield f
@@ -140,35 +144,35 @@ def create_info_files(m, files):
         else:
             shutil.copy(src_path, dst_path)
 
-    with open(join(info_dir, 'files'), 'w') as fo:
+    with open(join(info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
             if sys.platform == 'win32':
                 f = f.replace('\\', '/')
             fo.write(f + '\n')
 
-    with open(join(info_dir, 'index.json'), 'w') as fo:
+    with open(join(info_dir, 'index.json'), 'w', encoding='utf-8') as fo:
         json.dump(m.info_index(), fo, indent=2, sort_keys=True)
 
-    with open(join(info_dir, 'recipe.json'), 'w') as fo:
+    with open(join(info_dir, 'recipe.json'), 'w', encoding='utf-8') as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     if sys.platform != 'win32':
         files_with_prefix = list(have_prefix_files(files))
         if files_with_prefix:
-            with open(join(info_dir, 'has_prefix'), 'w') as fo:
+            with open(join(info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
                 for f in files_with_prefix:
                     fo.write(f + '\n')
 
     no_soft_rx = m.get_value('build/no_softlink')
     if no_soft_rx:
         pat = re.compile(no_soft_rx)
-        with open(join(info_dir, 'no_softlink'), 'w') as fo:
+        with open(join(info_dir, 'no_softlink'), 'w', encoding='utf-8') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(info_dir, 'git'), 'w') as fo:
+        with open(join(info_dir, 'git'), 'w', encoding='utf-8') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
@@ -245,8 +249,9 @@ def build(m, get_src=True):
         build_file = join(m.path, 'build.sh')
         script = m.get_value('build/script', None)
         if script:
-            if isinstance(script, list): script = '\n'.join(script)
-            with open(build_file, 'w') as bf:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+            with open(build_file, 'w', encoding='utf-8') as bf:
                 bf.write(script)
             os.chmod(build_file, 0o766)
         cmd = ['/bin/bash', '-x', '-e', build_file]
