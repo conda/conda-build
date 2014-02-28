@@ -3,11 +3,16 @@ Created on Jan 16, 2014
 
 @author: sean
 '''
-from __future__ import print_function
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
-import os
-from conda_build import environ
 import json
+import os
+import sys
+from io import open
+
+from conda_build import environ
+
 _setuptools_data = None
 
 def load_setuptools():
@@ -22,13 +27,18 @@ def load_setuptools():
         #Patch setuptools
         setuptools_setup = setuptools.setup
         setuptools.setup = setup
-        exec(open('setup.py').read())
+        exec(open('setup.py', encoding='utf-8').read())
         setuptools.setup = setuptools_setup
 
     return _setuptools_data
 
 def load_npm():
-    with open('package.json') as pkg:
+    # json module expects bytes in Python 2 and str in Python 3.
+    if sys.version_info >= (3, 0):
+        file_mode = 'w'
+    else:
+        file_mode = 'wb'
+    with open('package.json', file_mode, encoding='utf-8') as pkg:
         return json.load(pkg)
 
 def context_processor():
