@@ -48,6 +48,9 @@ broken_dir = join(config.croot, "broken")
 
 
 def prefix_files():
+    '''
+    Returns a set of all files in prefix.
+    '''
     res = set()
     for root, dirs, files in os.walk(prefix):
         for fn in files:
@@ -60,6 +63,9 @@ def prefix_files():
 
 
 def create_post_scripts(m):
+    '''
+    Create scripts to run after build step
+    '''
     recipe_dir = m.path
     ext = '.bat' if sys.platform == 'win32' else '.sh'
     for tp in 'pre-link', 'post-link', 'pre-unlink':
@@ -74,6 +80,13 @@ def create_post_scripts(m):
 
 
 def have_prefix_files(files):
+    '''
+    Yields files that contain the current prefix in them, and modifies them
+    to replace the prefix with a placeholder.
+
+    :param files: Filenames to check for instances of prefix
+    :type files: list of str
+    '''
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
@@ -106,6 +119,14 @@ def have_prefix_files(files):
 
 
 def create_info_files(m, files):
+    '''
+    Creates the metadata files that will be stored in the built package.
+
+    :param m: Package metadata
+    :type m: Metadata
+    :param files: Paths to files to include in package
+    :type files: list of str
+    '''
     recipe_dir = join(info_dir, 'recipe')
     os.makedirs(recipe_dir)
 
@@ -156,6 +177,9 @@ def create_info_files(m, files):
 
 
 def create_env(pref, specs):
+    '''
+    Create a conda envrionment for the given prefix and specs.
+    '''
     if not isdir(config.bldpkgs_dir):
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
@@ -173,16 +197,30 @@ def create_env(pref, specs):
         os.makedirs(pref)
 
 def rm_pkgs_cache(dist):
+    '''
+    Removes dist from the package cache.
+    '''
     cc.pkgs_dirs = cc.pkgs_dirs[:1]
     rmplan = ['RM_FETCHED %s' % dist,
               'RM_EXTRACTED %s' % dist]
     plan.execute_plan(rmplan)
 
 def bldpkg_path(m):
+    '''
+    Returns path to built package's tarball given its ``Metadata``.
+    '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
 def build(m, get_src=True):
+    '''
+    Build the package with the specified metadata.
+
+    :param m: Package metadata
+    :type m: Metadata
+    :param get_src: Should we download the source?
+    :type get_src: bool
+    '''
     rm_rf(prefix)
     create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
 
@@ -242,6 +280,12 @@ def build(m, get_src=True):
 
 
 def test(m):
+    '''
+    Execute any test scripts for the given package.
+
+    :param m: Package's metadata.
+    :type m: Metadata
+    '''
     # remove from package cache
     rm_pkgs_cache(m.dist())
 
@@ -309,6 +353,12 @@ def test(m):
     print("TEST END:", m.dist())
 
 def tests_failed(m):
+    '''
+    Causes conda to exit if any of the given package's tests failed.
+
+    :param m: Package's metadata
+    :type m: Metadata
+    '''
     if not isdir(broken_dir):
         os.makedirs(broken_dir)
 
