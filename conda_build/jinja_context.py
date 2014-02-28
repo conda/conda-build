@@ -38,7 +38,7 @@ def load_npm():
         file_mode = 'w'
     else:
         file_mode = 'wb'
-    with open('package.json', file_mode, encoding='utf-8') as pkg:
+    with open('package.json', file_mode) as pkg:
         return json.load(pkg)
 
 def context_processor():
