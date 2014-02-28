@@ -53,12 +53,19 @@ def fix_staged_scripts():
 
 
 def msvc_env_cmd():
-    if config.PY3K:
-        vcvarsall = (r'C:\Program Files (x86)\Microsoft Visual Studio 10.0'
-                     r'\VC\vcvarsall.bat')
+    if 'ProgramFiles(x86)' in os.environ:
+        program_files = os.environ['ProgramFiles(x86)']
     else:
-        vcvarsall = (r'C:\Program Files (x86)\Microsoft Visual Studio 9.0'
-                     r'\VC\vcvarsall.bat')
+        program_files = os.environ['ProgramFiles']
+
+    if config.PY3K:
+        vcvarsall = os.path.join(program_files, 
+                                 r'Microsoft Visual Studio 10.0'
+                                 r'\VC\vcvarsall.bat')
+    else:
+        vcvarsall = os.path.join(program_files, 
+                                 r'Microsoft Visual Studio 9.0'
+                                 r'\VC\vcvarsall.bat')
 
     if not isfile(vcvarsall):
         print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)

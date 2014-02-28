@@ -1,3 +1,15 @@
+2014-XX-XX   1.2.2:
+-------------------
+  * work with source files with uppercase suffixes
+  * switch to from chrpath to patchelf on Linux, issue #57 
+  * don't use hard-coded msvc path
+
+
+2014-02-25   1.2.1:
+-------------------
+  * added conda-build/build_dest option to condarc
+
+
 2014-02-13   1.2.0:
 -------------------
   * Make sure WORK_DIR exists
