@@ -1,4 +1,9 @@
-from __future__ import print_function, division, absolute_import
+'''
+Functions related to creating repodata index files.
+'''
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import bz2
@@ -6,6 +11,7 @@ import json
 import base64
 import hashlib
 import tarfile
+from io import open
 from os.path import isdir, join, getmtime
 
 from conda_build.utils import file_info
@@ -30,7 +36,7 @@ def write_repodata(repodata, dir_path):
     # make sure we have newline at the end
     if not data.endswith('\n'):
         data += '\n'
-    with open(join(dir_path, 'repodata.json'), 'w') as fo:
+    with open(join(dir_path, 'repodata.json'), 'w', encoding='utf-8') as fo:
         fo.write(data)
     with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
         fo.write(bz2.compress(data.encode('utf-8')))
@@ -43,7 +49,7 @@ def update_index(dir_path, verbose=False, force=False):
         index = {}
     else:
         try:
-            with open(index_path) as fi:
+            with open(index_path, encoding='utf-8') as fi:
                 index = json.load(fi)
         except IOError:
             index = {}
@@ -65,7 +71,7 @@ def update_index(dir_path, verbose=False, force=False):
             print("removing:", fn)
         del index[fn]
 
-    with open(index_path, 'w') as fo:
+    with open(index_path, 'w', encoding='utf-8') as fo:
         json.dump(index, fo, indent=2, sort_keys=True)
 
     # --- new repodata
