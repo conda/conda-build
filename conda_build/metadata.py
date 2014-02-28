@@ -1,6 +1,10 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
+import os
 import re
 import sys
+from io import open
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems
@@ -9,8 +13,10 @@ import conda.config as config
 from conda.resolve import MatchSpec
 
 from conda_build.config import CONDA_PY, CONDA_NPY
-import os
 
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    str = unicode
 
 
 def ns_cfg():
@@ -136,7 +142,7 @@ def get_contents(meta_path):
     except ImportError:
         print("There was an error importing jinja2.")
         print("Please run `conda install jinja2` to enable jinja template support")
-        with open(meta_path) as fd:
+        with open(meta_path, encoding='utf-8') as fd:
             return fd.read()
 
     from conda_build.jinja_context import context_processor
