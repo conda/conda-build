@@ -1,12 +1,15 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
+import locale
 import re
 import os
 import sys
 import stat
 from glob import glob
-from subprocess import call, check_call
 from os.path import basename, join, splitext, isdir, isfile
+from io import open
+from subprocess import call, check_call
 
 from conda_build.config import build_prefix, build_python, PY3K
 from conda_build import external
@@ -33,7 +36,7 @@ def fix_shebang(f, osx_is_app=False):
     path = join(build_prefix, f)
     if is_obj(path):
         return
-    with open(path) as fi:
+    with open(path, encoding=locale.getpreferredencoding()) as fi:
         try:
             data = fi.read()
         except UnicodeDecodeError: # file is binary
@@ -49,7 +52,7 @@ def fix_shebang(f, osx_is_app=False):
     if new_data == data:
         return
     print("updating shebang:", f)
-    with open(path, 'w') as fo:
+    with open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
         fo.write(new_data)
     os.chmod(path, int('755', 8))
 
@@ -57,7 +60,7 @@ def fix_shebang(f, osx_is_app=False):
 def write_pth(egg_path):
     fn = basename(egg_path)
     with open(join(environ.sp_dir,
-                   '%s.pth' % (fn.split('-')[0])), 'w') as fo:
+                   '%s.pth' % (fn.split('-')[0])), 'w', encoding='utf-8') as fo:
         fo.write('./%s\n' % fn)
 
 def remove_easy_install_pth(preserve_egg_dir=False):
@@ -162,7 +165,7 @@ def mk_relative(f):
     if sys.platform.startswith('linux') and is_obj(path):
         rpath = '$ORIGIN/' + utils.rel_lib(f)
         patchelf = external.find_executable('patchelf')
-        print('patchelf: file: %s\n    setting rpath to: %s' % 
+        print('patchelf: file: %s\n    setting rpath to: %s' %
               (path, rpath))
         call([patchelf, '--set-rpath', rpath, path])
 
