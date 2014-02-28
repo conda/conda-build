@@ -153,10 +153,10 @@ def create_info_files(m, files):
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     if sys.platform != 'win32':
-        prefix_files = list(have_prefix_files(files))
-        if prefix_files:
+        files_with_prefix = list(have_prefix_files(files))
+        if files_with_prefix:
             with open(join(info_dir, 'has_prefix'), 'w') as fo:
-                for f in prefix_files:
+                for f in files_with_prefix:
                     fo.write(f + '\n')
 
     no_soft_rx = m.get_value('build/no_softlink')
