@@ -143,25 +143,26 @@ def main(args, parser):
         # future packages look like they depend on distribute. Also, who knows
         # what kind of monkeypatching the setup.pys out there could be doing.
         print("WARNING: building more than one recipe at once without "
-            "--no-download is not recommended")
+              "--no-download is not recommended")
     for package in args.packages:
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package, {'packagename': package.lower(),
-                                               'run_depends':'',
-                                               'build_depends':'',
-                                               'entry_points':'',
-                                               'build_comment':'# ',
-                                               'test_commands':'', 'usemd5':'',
-                                               'entry_comment':'#',
-                                               'egg_comment':'#'})
+                                               'run_depends': '',
+                                               'build_depends': '',
+                                               'entry_points': '',
+                                               'build_comment': '# ',
+                                               'test_commands': '',
+                                               'usemd5': '',
+                                               'entry_comment': '#',
+                                               'egg_comment': '#'})
         d['import_tests'] = valid(package).lower()
         if d['import_tests'] == '':
             d['import_comment'] = '# '
         else:
             d['import_comment'] = ''
-            d['import_tests'] = indent+d['import_tests']
+            d['import_tests'] = indent + d['import_tests']
 
         if args.version:
             [version] = args.version
@@ -173,9 +174,11 @@ def main(args, parser):
         else:
             versions = client.package_releases(package)
             if not versions:
-                sys.exit("Error: Could not find any versions of package %s" % package)
+                sys.exit("Error: Could not find any versions of package %s" %
+                         package)
             if len(versions) > 1:
-                print("Warning, the following versions were found for %s" % package)
+                print("Warning, the following versions were found for %s" %
+                      package)
                 for ver in versions:
                     print(ver)
                 print("Using %s" % versions[0])
@@ -195,7 +198,8 @@ def main(args, parser):
             else:
                 sys.exit("Error: No source urls found for %s" % package)
         if len(urls) > 1 and not args.noprompt:
-            print("More than one source version is available for %s:" % package)
+            print("More than one source version is available for %s:" %
+                  package)
             for i, url in enumerate(urls):
                 print("%d: %s (%s) %s" % (i, url['url'],
                                           human_bytes(url['size']),
@@ -211,12 +215,11 @@ def main(args, parser):
         d['md5'] = urls[n]['md5_digest']
         d['filename'] = urls[n]['filename']
 
-
         d['homeurl'] = data['home_page']
         d['summary'] = repr(data['summary'])
         license_classifier = "License :: OSI Approved ::"
         licenses = [classifier.lstrip(license_classifier) for classifier in
-            data['classifiers'] if classifier.startswith(license_classifier)]
+                    data['classifiers'] if classifier.startswith(license_classifier)]
         if not licenses:
             if data['license']:
                 if args.noprompt:
@@ -232,7 +235,9 @@ def main(args, parser):
                 if args.noprompt:
                     license = "UNKNOWN"
                 else:
-                    license = input("No license could be found for %s on PyPI. What license should I use? " % package)
+                    license = input(("No license could be found for %s on " +
+                                     "PyPI. What license should I use? ") %
+                                    package)
         else:
             license = ' or '.join(licenses)
         d['license'] = license
@@ -245,7 +250,8 @@ def main(args, parser):
         # distribute itself already works by monkeypatching distutils.
         if args.download:
             import yaml
-            print("Downloading %s (use --no-download to skip this step)" % package)
+            print("Downloading %s (use --no-download to skip this step)" %
+                  package)
             tempdir = mkdtemp('conda_skeleton')
 
             if not isdir(SRC_CACHE):
@@ -278,13 +284,15 @@ def main(args, parser):
                 if entry_points:
                     if isinstance(entry_points, str):
                         # makes sure it is left-shifted
-                        newstr = "\n".join(x.strip() for x in entry_points.split('\n'))
+                        newstr = "\n".join(x.strip()
+                                           for x in entry_points.split('\n'))
                         config = configparser.ConfigParser()
                         entry_points = {}
                         try:
                             config.readfp(StringIO(newstr))
                         except Exception as err:
-                            print("WARNING: entry-points not understood: ", err)
+                            print("WARNING: entry-points not understood: ",
+                                  err)
                             print("The string was", newstr)
                             entry_points = pkginfo['entry_points']
                         else:
@@ -292,15 +300,17 @@ def main(args, parser):
                             for section in config.sections():
                                 if section in ['console_scripts', 'gui_scripts']:
                                     value = ['%s=%s' % (option, config.get(section, option))
-                                                 for option in config.options(section) ]
+                                             for option in config.options(section)]
                                     entry_points[section] = value
                     if not isinstance(entry_points, dict):
-                        print("WARNING: Could not add entry points. They were:")
+                        print(
+                            "WARNING: Could not add entry points. They were:")
                         print(entry_points)
                     else:
                         cs = entry_points.get('console_scripts', [])
-                        gs = entry_points.get('gui_scripts',[])
-                        # We have *other* kinds of entry-points so we need setuptools at run-time
+                        gs = entry_points.get('gui_scripts', [])
+                        # We have *other* kinds of entry-points so we need
+                        # setuptools at run-time
                         if not cs and not gs and len(entry_points) > 1:
                             setuptools_build = True
                             setuptools_run = True
@@ -308,7 +318,7 @@ def main(args, parser):
                             cs
                             # TODO: Use pythonw for these
                             + gs)
-                        if len(cs+gs) != 0:
+                        if len(cs + gs) != 0:
                             d['entry_points'] = indent.join([''] + entry_list)
                             d['entry_comment'] = ''
                             d['build_comment'] = ''
@@ -316,21 +326,24 @@ def main(args, parser):
 
                 if pkginfo['install_requires'] or setuptools_build or setuptools_run:
                     deps = [remove_version_information(dep).lower() for dep in
-                        pkginfo['install_requires']]
+                            pkginfo['install_requires']]
                     if 'setuptools' in deps:
                         setuptools_build = False
                         setuptools_run = False
                         d['egg_comment'] = ''
                         d['build_comment'] = ''
                     d['build_depends'] = indent.join([''] +
-                        ['setuptools']*setuptools_build + deps)
+                                                     ['setuptools'] * setuptools_build +
+                                                     deps)
                     d['run_depends'] = indent.join([''] +
-                        ['setuptools']*setuptools_run + deps)
+                                                   ['setuptools'] * setuptools_run +
+                                                   deps)
 
                 if pkginfo['packages']:
                     deps = set(pkginfo['packages'])
                     if d['import_tests']:
-                        olddeps = [x for x in d['import_tests'].split() if x != '-']
+                        olddeps = [x for x in d['import_tests'].split()
+                                   if x != '-']
                         deps = set(olddeps) | deps
                     d['import_tests'] = indent.join([''] + list(deps))
                     d['import_comment'] = ''
@@ -355,7 +368,7 @@ def main(args, parser):
 
 
 def valid(name):
-    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$",name)
+    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name)
             and not keyword.iskeyword(name)):
         return name
     else:
@@ -373,7 +386,7 @@ def unpack(src_path, tempdir):
 
 def get_dir(tempdir):
     lst = [fn for fn in listdir(tempdir) if not fn.startswith('.') and
-        isdir(join(tempdir, fn))]
+           isdir(join(tempdir, fn))]
     if len(lst) == 1:
         dir_path = join(tempdir, lst[0])
         if isdir(dir_path):
