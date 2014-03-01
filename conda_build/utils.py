@@ -1,4 +1,5 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import sys
@@ -6,10 +7,12 @@ import shutil
 import tarfile
 import zipfile
 import subprocess
+from io import open
 from os.path import (dirname, getmtime, getsize, isdir, isfile,
                      islink, join, normpath)
 
 from conda.utils import md5_file
+
 from conda_build import external
 
 
