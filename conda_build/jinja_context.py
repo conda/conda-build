@@ -11,6 +11,7 @@ import os
 import sys
 from io import open
 
+from conda.compat import PY3
 from conda_build import environ
 
 _setuptools_data = None
@@ -34,11 +35,8 @@ def load_setuptools():
 
 def load_npm():
     # json module expects bytes in Python 2 and str in Python 3.
-    if sys.version_info >= (3, 0):
-        file_mode = 'w'
-    else:
-        file_mode = 'wb'
-    with open('package.json', file_mode) as pkg:
+    mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+    with open('package.json', **mode_dict) as pkg:
         return json.load(pkg)
 
 def context_processor():

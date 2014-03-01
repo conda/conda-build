@@ -50,9 +50,10 @@ def create_py_files(dir_path, m):
     has_tests = False
     with open(join(dir_path, 'run_test.py'), 'w', encoding='utf-8') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
-        fo.write("print('===== testing package: %s =====')\n" % m.dist())
-        with open(join(dirname(__file__), 'header_test.py')) as fi:
+        with open(join(dirname(__file__), 'header_test.py'),
+                  encoding='utf-8') as fi:
             fo.write(fi.read() + '\n')
+        fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
         for name in m.get_value('test/imports'):
             fo.write('print("import: %r")\n' % name)

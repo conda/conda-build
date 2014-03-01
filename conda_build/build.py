@@ -23,15 +23,13 @@ if sys.version_info < (3, 0):
 
 import conda.config as cc
 import conda.plan as plan
-from conda.utils import url_path
 from conda.api import get_index
-from conda.install import prefix_placeholder
+from conda.compat import PY3
 from conda.fetch import fetch_index
+from conda.install import prefix_placeholder
+from conda.utils import url_path
 
-from conda_build import config
-from conda_build import environ
-from conda_build import source
-from conda_build import tarcheck
+from conda_build import config, environ, source, tarcheck
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
                               fix_permissions)
@@ -149,10 +147,12 @@ def create_info_files(m, files):
                 f = f.replace('\\', '/')
             fo.write(f + '\n')
 
-    with open(join(info_dir, 'index.json'), 'w', encoding='utf-8') as fo:
+    # Deal with Python 2 and 3's different json module type reqs
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    with open(join(info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(m.info_index(), fo, indent=2, sort_keys=True)
 
-    with open(join(info_dir, 'recipe.json'), 'w', encoding='utf-8') as fo:
+    with open(join(info_dir, 'recipe.json'), **mode_dict) as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     if sys.platform != 'win32':
@@ -310,7 +310,7 @@ def test(m):
 
     if py_files:
         # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.py_ver]
+        specs += ['python %s*' % environ.PY_VER]
     # add packages listed in test/requires
     for spec in m.get_value('test/requires'):
         specs.append(spec)
