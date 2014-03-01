@@ -4,15 +4,19 @@ Tools for converting PyPI packages to conda recipes.
 
 # Don't put print_function here, it breaks the running of setup.py for
 # packages that don't use it.
-from __future__ import division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
+import keyword
+import os
+import re
+import subprocess
 import sys
+from collections import defaultdict
+from io import open
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile
 from tempfile import mkdtemp
-from collections import defaultdict
-import keyword
-import re
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy
@@ -25,6 +29,7 @@ from conda.install import rm_rf
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE
 from conda.compat import input, configparser, StringIO
+
 
 PYPI_META = """\
 package:
@@ -110,6 +115,23 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
+DISTUTILS_PATCH = """\
+import io
+import distutils.core
+import yaml
+
+def setup(*args, **kwargs):
+    data = {{}}
+    data['install_requires'] = kwargs.get('install_requires', [])
+    data['entry_points'] = kwargs.get('entry_points', [])
+    data['packages'] = kwargs.get('packages', [])
+    with io.open(join({}, "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
+        fn.write(yaml.dump(data))
+
+distutils.core.setup = setup
+"""
+
+
 def main(args, parser):
     client = ServerProxy(args.pypi_url)
     package_dicts = {}
@@ -126,10 +148,14 @@ def main(args, parser):
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
-        d = package_dicts.setdefault(package, {'packagename':
-            package.lower(), 'run_depends':'',
-            'build_depends':'', 'entry_points':'', 'build_comment':'# ',
-            'test_commands':'', 'usemd5':'', 'entry_comment':'#', 'egg_comment':'#'})
+        d = package_dicts.setdefault(package, {'packagename': package.lower(),
+                                               'run_depends':'',
+                                               'build_depends':'',
+                                               'entry_points':'',
+                                               'build_comment':'# ',
+                                               'test_commands':'', 'usemd5':'',
+                                               'entry_comment':'#',
+                                               'egg_comment':'#'})
         d['import_tests'] = valid(package).lower()
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -142,7 +168,7 @@ def main(args, parser):
             versions = client.package_releases(package, True)
             if version not in versions:
                 sys.exit("Error: Version %s of %s is not available on PyPI."
-                    % (version, package))
+                         % (version, package))
             d['version'] = version
         else:
             versions = client.package_releases(package)
@@ -172,12 +198,14 @@ def main(args, parser):
             print("More than one source version is available for %s:" % package)
             for i, url in enumerate(urls):
                 print("%d: %s (%s) %s" % (i, url['url'],
-                    human_bytes(url['size']), url['comment_text']))
+                                          human_bytes(url['size']),
+                                          url['comment_text']))
             n = int(input("Which version should I use? "))
         else:
             n = 0
 
-        print("Using url %s (%s) for %s." % (urls[n]['url'], urls[n]['size'], package))
+        print("Using url %s (%s) for %s." % (urls[n]['url'], urls[n]['size'],
+                                             package))
 
         d['pypiurl'] = urls[n]['url']
         d['md5'] = urls[n]['md5_digest']
@@ -237,14 +265,8 @@ def main(args, parser):
                 print("done")
                 print("working in %s" % tempdir)
                 src_dir = get_dir(tempdir)
-                # TODO: Do this in a subprocess. That way would be safer (the
-                # setup.py can't mess up this code), it will allow building
-                # multiple recipes without a setuptools import messing
-                # everyone up, and it would prevent passing __future__ imports
-                # through.
-                patch_distutils(tempdir)
-                run_setuppy(src_dir)
-                with open(join(tempdir, 'pkginfo.yaml')) as fn:
+                run_setuppy(tempdir, src_dir)
+                with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
                     pkginfo = yaml.load(fn)
 
                 setuptools_build = 'setuptools' in sys.modules
@@ -292,7 +314,6 @@ def main(args, parser):
                             d['build_comment'] = ''
                             d['test_commands'] = indent.join([''] + make_entry_tests(entry_list))
 
-
                 if pkginfo['install_requires'] or setuptools_build or setuptools_run:
                     deps = [remove_version_information(dep).lower() for dep in
                         pkginfo['install_requires']]
@@ -316,20 +337,22 @@ def main(args, parser):
             finally:
                 rm_rf(tempdir)
 
-
     for package in package_dicts:
         d = package_dicts[package]
         makedirs(join(output_dir, package.lower()))
         print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, package.lower(), 'meta.yaml'),
-            'w') as f:
+        with open(join(output_dir, package.lower(), 'meta.yaml'), 'w',
+                  encoding='utf-8') as f:
             f.write(PYPI_META.format(**d))
-        with open(join(output_dir, package.lower(), 'build.sh'), 'w') as f:
+        with open(join(output_dir, package.lower(), 'build.sh'), 'w',
+                  encoding='utf-8') as f:
             f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, package.lower(), 'bld.bat'), 'w') as f:
+        with open(join(output_dir, package.lower(), 'bld.bat'), 'w',
+                  encoding='utf-8') as f:
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
+
 
 def valid(name):
     if (re.match("[_A-Za-z][_a-zA-Z0-9]*$",name)
@@ -338,6 +361,7 @@ def valid(name):
     else:
         return ''
 
+
 def unpack(src_path, tempdir):
     if src_path.endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
         tar_xf(src_path, tempdir)
@@ -345,6 +369,7 @@ def unpack(src_path, tempdir):
         unzip(src_path, tempdir)
     else:
         raise Exception("not a valid source")
+
 
 def get_dir(tempdir):
     lst = [fn for fn in listdir(tempdir) if not fn.startswith('.') and
@@ -355,36 +380,37 @@ def get_dir(tempdir):
             return dir_path
     raise Exception("could not find unpacked source dir")
 
-def patch_distutils(tempdir):
-    # Note, distribute doesn't actually patch the setup function.
-    import distutils.core
-    import yaml
 
-    def setup(*args, **kwargs):
-        data = {}
-        data['install_requires'] = kwargs.get('install_requires', [])
-        data['entry_points'] = kwargs.get('entry_points', [])
-        data['packages'] = kwargs.get('packages', [])
-        with open(join(tempdir, "pkginfo.yaml"), 'w') as fn:
-            fn.write(yaml.dump(data))
+def run_setuppy(src_dir, temp_dir):
+    '''
+    Modify setup.py to patch distutils and then run it in a subprocess.
 
-    distutils.core.setup = setup
-
-def run_setuppy(src_dir):
-    import sys
-    sys.argv = ['setup.py', 'install']
-    sys.path.insert(0, src_dir)
-    d = {'__file__': 'setup.py', '__name__': '__main__'}
+    :param src_dir: Directory containing the source code
+    :type src_dir: str
+    :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
+    :type temp_dir: str
+    '''
+    # Add lines about patching distutils to top of setup.py
+    setup_content = ''
+    with open(join(src_dir, 'setup.py'), encoding='utf-8') as setuppy:
+        setup_content = setuppy.read()
+    setup_content = DISTUTILS_PATCH.format(temp_dir) + '\n' + setup_content
+    # Save PYTHONPATH for later
+    python_path = os.environ['PYTHONPATH']
+    os.environ['PYTHONPATH'] = src_dir + ':' + python_path
     cwd = getcwd()
     chdir(src_dir)
-    with open(join(src_dir, 'setup.py')) as f:
-        exec(compile(f.read(), 'setup.py', 'exec'), d)
+    subprocess.call([sys.executable, 'setup.py', 'install'])
     chdir(cwd)
+    # Restore old PYTHONPATH
+    os.environ['PYTHONPATH'] = python_path
+
 
 def remove_version_information(pkgstr):
     # TODO: Actually incorporate the version information into the meta.yaml
     # file.
     return pkgstr.partition(' ')[0].partition('<')[0].partition('!')[0].partition('>')[0].partition('=')[0]
+
 
 def make_entry_tests(entry_list):
     tests = []
