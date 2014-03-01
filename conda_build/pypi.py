@@ -129,6 +129,7 @@ def setup(*args, **kwargs):
         fn.write(yaml.dump(data))
 
 distutils.core.setup = setup
+
 """
 
 
@@ -407,7 +408,22 @@ def run_setuppy(src_dir, temp_dir):
     setup_content = ''
     with open(join(src_dir, 'setup.py'), encoding='utf-8') as setuppy:
         setup_content = setuppy.read()
-    setup_content = DISTUTILS_PATCH.format(temp_dir) + '\n' + setup_content
+    setup_content = DISTUTILS_PATCH.format(temp_dir) + setup_content
+    with open(join(src_dir, 'setup.py'), 'w', encoding='utf-8') as setuppy:
+        saw_first_import = False
+        inserted_patch = False
+        for line in setup_content.splitlines(True):
+            stripped_line = line.strip()
+            # Ignore she-bang lines
+            if stripped_line.startswith('#!'):
+                continue
+            # Check for first regular import or __future__ imports
+            elif not stripped_line.startswith('#') and stripped_line.contains(' import '):
+                saw_first_import = True
+            # Insert patch after first blank line after imports
+            elif saw_first_import and not inserted_patch and not stripped_line:
+                setuppy.write(DISTUTILS_PATCH.format(temp_dir))
+            setuppy.write(line)
     # Save PYTHONPATH for later
     python_path = os.environ['PYTHONPATH']
     os.environ['PYTHONPATH'] = src_dir + ':' + python_path
