@@ -7,13 +7,16 @@
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import tarfile
-import re
-import pprint
-import json
 import argparse
-from os.path import abspath, expanduser, split, join
+import json
+import pprint
+import re
+import tarfile
 from argparse import RawDescriptionHelpFormatter
+from locale import getpreferredencoding
+from os.path import abspath, expanduser, split, join
+
+from conda.compat import PY3
 
 from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
                                  has_nonpy_entry_points)
@@ -55,7 +58,7 @@ def main():
         metavar='package-files',
         action="store",
         nargs='+',
-        help="package files to convert",
+        help="package files to convert"
     )
     p.add_argument(
         '-p', "--platform",
@@ -63,7 +66,7 @@ def main():
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64'],
         required=True,
-        help="Platform to convert the packages to",
+        help="Platform to convert the packages to"
     )
     p.add_argument(
         '--show-imports',
@@ -112,9 +115,13 @@ def execute(args, parser):
     files = args.package_files
 
     for file in files:
+        # Don't use byte literals for paths in Python 2
+        if not PY3:
+            file = file.decode(getpreferredencoding())
+
         if not file.endswith('.tar.bz2'):
-            raise RuntimeError(
-                "%s does not appear to be a conda package" % file)
+            raise RuntimeError("%s does not appear to be a conda package"
+                               % file)
 
         file = abspath(expanduser(file))
         t = tarfile.open(file)
@@ -128,6 +135,8 @@ def execute(args, parser):
             continue
 
         output_dir = args.output_dir
+        if not PY3:
+            output_dir = output_dir.decode(getpreferredencoding())
         file_dir, fn = split(file)
         if abspath(expanduser(output_dir)) == abspath(expanduser(file_dir)):
             raise RuntimeError(
@@ -141,6 +150,8 @@ def execute(args, parser):
         nonpy_win = False
 
         for platform in args.platforms:
+            if not PY3:
+                platform = platform.decode('utf-8')
             dest_plat = platform.split('-')[0]
             dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
 
