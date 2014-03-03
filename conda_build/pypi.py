@@ -2,8 +2,6 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
-# Don't put print_function here, it breaks the running of setup.py for
-# packages that don't use it.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -228,9 +226,9 @@ def main(args, parser):
                 else:
                     # Some projects put the whole license text in this field
                     print("This is the license for %s" % package)
-                    print('')
+                    print()
                     print(data['license'])
-                    print('')
+                    print()
                     license = input("What license string should I use? ")
             else:
                 if args.noprompt:
