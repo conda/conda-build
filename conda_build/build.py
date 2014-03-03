@@ -97,8 +97,6 @@ def have_prefix_files(files):
             continue
         if is_obj(path):
             continue
-        if islink(path):
-            continue
         try:
             # Open with locale-preferred encoding, because we don't know for
             # sure what it would be.
