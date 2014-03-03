@@ -302,8 +302,7 @@ def main(args, parser):
                                              for option in config.options(section)]
                                     entry_points[section] = value
                     if not isinstance(entry_points, dict):
-                        print(
-                            "WARNING: Could not add entry points. They were:")
+                        print("WARNING: Could not add entry points. They were:")
                         print(entry_points)
                     else:
                         cs = entry_points.get('console_scripts', [])
@@ -416,7 +415,8 @@ def run_setuppy(src_dir, temp_dir):
             if stripped_line.startswith('#!'):
                 continue
             # Check for first regular import or __future__ imports
-            elif not stripped_line.startswith('#') and stripped_line.contains(' import '):
+            elif (not stripped_line.startswith('#') and
+                    stripped_line.contains(' import ')):
                 saw_first_import = True
             # Insert patch after first blank line after imports
             elif saw_first_import and not inserted_patch and not stripped_line:
@@ -434,9 +434,17 @@ def run_setuppy(src_dir, temp_dir):
 
 
 def remove_version_information(pkgstr):
+    '''
+    :returns: A copy of pkgstr with any extra information about required
+              versions removed.
+    '''
     # TODO: Actually incorporate the version information into the meta.yaml
     # file.
-    return pkgstr.partition(' ')[0].partition('<')[0].partition('!')[0].partition('>')[0].partition('=')[0]
+    return (pkgstr.partition(' ')[0]
+                  .partition('<')[0]
+                  .partition('!')[0]
+                  .partition('>')[0]
+                  .partition('=')[0])
 
 
 def make_entry_tests(entry_list):
