@@ -270,7 +270,7 @@ def main(args, parser):
                 print("done")
                 print("working in %s" % tempdir)
                 src_dir = get_dir(tempdir)
-                run_setuppy(tempdir, src_dir)
+                run_setuppy(src_dir, tempdir)
                 with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
                     pkginfo = yaml.load(fn)
 
