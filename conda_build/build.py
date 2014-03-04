@@ -5,7 +5,6 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import locale
 import json
 import os
 import re
@@ -98,23 +97,23 @@ def have_prefix_files(files):
             continue
         if is_obj(path):
             continue
-        if islink(path):
+        # Open file as binary, since it might have any crazy encoding
+        with open(path, 'rb') as fi:
+            data = fi.read()
+        # Skip files that are truly binary
+        if b'\x00' in data:
             continue
-        try:
-            # Open with locale-preferred encoding, because we don't know for
-            # sure what it would be.
-            with open(path, encoding=locale.getpreferredencoding()) as fi:
-                data = fi.read()
-        except UnicodeDecodeError:
-            continue
-        if '\x00' in data:
-            continue
-        if prefix not in data:
+        # This may end up mixing encodings, but since paths are usually ASCII,
+        # this shouldn't be a problem very often. The only way to completely
+        # avoid this would be to use chardet (or cChardet) to detect the
+        # encoding on the fly.
+        prefix_bytes = prefix.encode('utf-8')
+        if prefix_bytes not in data:
             continue
         st = os.stat(path)
-        data = data.replace(prefix, prefix_placeholder)
-        # Save with same encoding we opened it with.
-        with open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
+        data = data.replace(prefix_bytes, prefix_placeholder.encode('utf-8'))
+        # Save as
+        with open(path, 'wb') as fo:
             fo.write(data)
         os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         yield f
