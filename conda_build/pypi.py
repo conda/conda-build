@@ -114,17 +114,27 @@ if errorlevel 1 exit 1
 """
 
 DISTUTILS_PATCH = """\
-import io
 import distutils.core
+import io
+import os.path
 import yaml
+from yaml import Loader, SafeLoader
+
+# Override the default string handling function to always return unicode
+# objects (taken from StackOverflow)
+def construct_yaml_str(self, node):
+    return self.construct_scalar(node)
+Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
+SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
 def setup(*args, **kwargs):
     data = {{}}
     data['install_requires'] = kwargs.get('install_requires', [])
     data['entry_points'] = kwargs.get('entry_points', [])
     data['packages'] = kwargs.get('packages', [])
-    with io.open(join({}, "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
-        fn.write(yaml.dump(data))
+    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
+                 encoding='utf-8') as fn:
+        fn.write(yaml.dump(data, encoding=None))
 
 distutils.core.setup = setup
 
@@ -416,11 +426,13 @@ def run_setuppy(src_dir, temp_dir):
                 continue
             # Check for first regular import or __future__ imports
             elif (not stripped_line.startswith('#') and
-                    stripped_line.contains(' import ')):
+                    (stripped_line.startswith('import') or
+                     ' import ' in stripped_line)):
                 saw_first_import = True
             # Insert patch after first blank line after imports
             elif saw_first_import and not inserted_patch and not stripped_line:
                 setuppy.write(DISTUTILS_PATCH.format(temp_dir))
+                inserted_patch = True
             setuppy.write(line)
     # Save PYTHONPATH for later
     python_path = os.environ['PYTHONPATH']
