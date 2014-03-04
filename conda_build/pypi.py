@@ -442,13 +442,18 @@ def run_setuppy(src_dir, temp_dir):
         os.environ['PYTHONPATH'] = src_dir
     cwd = getcwd()
     chdir(src_dir)
-    subprocess.call([sys.executable, 'setup.py', 'install'])
-    chdir(cwd)
-    # Restore old PYTHONPATH
-    if python_path:
-        os.environ['PYTHONPATH'] = python_path
-    else:
-        del os.environ['PYTHONPATH']
+    args = [sys.executable, 'setup.py', 'install']
+    try:
+        subprocess.check_call(args)
+    except subprocess.CalledProcessError:
+        sys.exit('Error: command failed: %s' % ' '.join(args))
+    finally:
+        chdir(cwd)
+        # Restore old PYTHONPATH
+        if python_path:
+            os.environ['PYTHONPATH'] = python_path
+        else:
+            del os.environ['PYTHONPATH']
 
 
 def remove_version_information(pkgstr):
