@@ -446,6 +446,7 @@ def run_setuppy(src_dir, temp_dir):
     try:
         subprocess.check_call(args)
     except subprocess.CalledProcessError:
+        print('$PYTHONPATH = %s' % os.environ['PYTHONPATH'])
         sys.exit('Error: command failed: %s' % ' '.join(args))
     finally:
         chdir(cwd)
