@@ -132,6 +132,7 @@ def setup(*args, **kwargs):
     data['install_requires'] = kwargs.get('install_requires', [])
     data['entry_points'] = kwargs.get('entry_points', [])
     data['packages'] = kwargs.get('packages', [])
+    data['setuptools'] = 'setuptools' in sys.modules
     with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
                  encoding='utf-8') as fn:
         fn.write(yaml.dump(data, encoding=None))
@@ -284,7 +285,7 @@ def main(args, parser):
                 with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
                     pkginfo = yaml.load(fn)
 
-                setuptools_build = 'setuptools' in sys.modules
+                setuptools_build = pkginfo['setuptools']
                 setuptools_run = False
 
                 # Look at the entry_points and construct console_script and
