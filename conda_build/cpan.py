@@ -13,13 +13,280 @@ from io import open
 from os import makedirs
 from os.path import basename, dirname, join, exists
 
-from conda.fetch import download, TmpDownload
-from conda.utils import human_bytes, hashsum_file, memoized
-from conda.install import rm_rf
-from conda_build.utils import tar_xf, unzip
-from conda_build.source import SRC_CACHE
+from conda.api import get_index
+from conda.cli import common
 from conda.compat import input, configparser, StringIO
+from conda.fetch import download, TmpDownload
+from conda.install import linked, rm_rf
+from conda.resolve import MatchSpec, Resolve
+from conda.utils import human_bytes, hashsum_file, memoized
 
+from conda_build.source import SRC_CACHE
+from conda_build.utils import tar_xf, unzip
+
+
+# This monstrosity is the set of everything in the Perl core as of 5.18.2
+# I also added "perl" to the list for simplicity of filtering later
+PERL_CORE = {'AnyDBM_File', 'App::Cpan', 'App::Prove', 'App::Prove::State',
+             'App::Prove::State::Result', 'App::Prove::State::Result::Test',
+             'Archive::Extract', 'Archive::Tar', 'Archive::Tar::Constant',
+             'Archive::Tar::File', 'Attribute::Handlers', 'AutoLoader',
+             'AutoSplit', 'B', 'B::Concise', 'B::Debug', 'B::Deparse',
+             'B::Lint', 'B::Lint::Debug', 'B::Showlex', 'B::Terse', 'B::Xref',
+             'Benchmark', 'CGI', 'CGI::Apache', 'CGI::Carp', 'CGI::Cookie',
+             'CGI::Fast', 'CGI::Pretty', 'CGI::Push', 'CGI::Switch',
+             'CGI::Util', 'CPAN', 'CPAN::Author', 'CPAN::Bundle',
+             'CPAN::CacheMgr', 'CPAN::Complete', 'CPAN::Debug',
+             'CPAN::DeferredCode', 'CPAN::Distribution', 'CPAN::Distroprefs',
+             'CPAN::Distrostatus', 'CPAN::Exception::RecursiveDependency',
+             'CPAN::Exception::blocked_urllist',
+             'CPAN::Exception::yaml_not_installed',
+             'CPAN::Exception::yaml_process_error', 'CPAN::FTP',
+             'CPAN::FTP::netrc', 'CPAN::FirstTime', 'CPAN::HTTP::Client',
+             'CPAN::HTTP::Credentials', 'CPAN::HandleConfig', 'CPAN::Index',
+             'CPAN::InfoObj', 'CPAN::Kwalify', 'CPAN::LWP::UserAgent',
+             'CPAN::Meta', 'CPAN::Meta::Converter', 'CPAN::Meta::Feature',
+             'CPAN::Meta::History', 'CPAN::Meta::Prereqs',
+             'CPAN::Meta::Requirements', 'CPAN::Meta::Spec',
+             'CPAN::Meta::Validator', 'CPAN::Meta::YAML', 'CPAN::Mirrors',
+             'CPAN::Module', 'CPAN::Nox', 'CPAN::Prompt', 'CPAN::Queue',
+             'CPAN::Shell', 'CPAN::Tarzip', 'CPAN::URL', 'CPAN::Version',
+             'CPANPLUS', 'CPANPLUS::Backend', 'CPANPLUS::Backend::RV',
+             'CPANPLUS::Config', 'CPANPLUS::Config::HomeEnv',
+             'CPANPLUS::Configure', 'CPANPLUS::Configure::Setup',
+             'CPANPLUS::Dist', 'CPANPLUS::Dist::Autobundle',
+             'CPANPLUS::Dist::Base', 'CPANPLUS::Dist::Build',
+             'CPANPLUS::Dist::Build::Constants', 'CPANPLUS::Dist::MM',
+             'CPANPLUS::Dist::Sample', 'CPANPLUS::Error', 'CPANPLUS::Internals',
+             'CPANPLUS::Internals::Constants',
+             'CPANPLUS::Internals::Constants::Report',
+             'CPANPLUS::Internals::Extract', 'CPANPLUS::Internals::Fetch',
+             'CPANPLUS::Internals::Report', 'CPANPLUS::Internals::Search',
+             'CPANPLUS::Internals::Source',
+             'CPANPLUS::Internals::Source::Memory',
+             'CPANPLUS::Internals::Source::SQLite',
+             'CPANPLUS::Internals::Source::SQLite::Tie',
+             'CPANPLUS::Internals::Utils',
+             'CPANPLUS::Internals::Utils::Autoflush', 'CPANPLUS::Module',
+             'CPANPLUS::Module::Author', 'CPANPLUS::Module::Author::Fake',
+             'CPANPLUS::Module::Checksums', 'CPANPLUS::Module::Fake',
+             'CPANPLUS::Module::Signature', 'CPANPLUS::Selfupdate',
+             'CPANPLUS::Shell', 'CPANPLUS::Shell::Classic',
+             'CPANPLUS::Shell::Default',
+             'CPANPLUS::Shell::Default::Plugins::CustomSource',
+             'CPANPLUS::Shell::Default::Plugins::Remote',
+             'CPANPLUS::Shell::Default::Plugins::Source', 'Carp', 'Carp::Heavy',
+             'Class::Struct', 'Compress::Raw::Bzip2', 'Compress::Raw::Zlib',
+             'Compress::Zlib', 'Config', 'Config::Extensions',
+             'Config::Perl::V', 'Cwd', 'DB', 'DBM_Filter',
+             'DBM_Filter::compress', 'DBM_Filter::encode', 'DBM_Filter::int32',
+             'DBM_Filter::null', 'DBM_Filter::utf8', 'DB_File', 'Data::Dumper',
+             'Devel::InnerPackage', 'Devel::PPPort', 'Devel::Peek',
+             'Devel::SelfStubber', 'Digest', 'Digest::MD5', 'Digest::SHA',
+             'Digest::base', 'Digest::file', 'DirHandle', 'Dumpvalue',
+             'DynaLoader', 'Encode', 'Encode::Alias', 'Encode::Byte',
+             'Encode::CJKConstants', 'Encode::CN', 'Encode::CN::HZ',
+             'Encode::Config', 'Encode::EBCDIC', 'Encode::Encoder',
+             'Encode::Encoding', 'Encode::GSM0338', 'Encode::Guess',
+             'Encode::JP', 'Encode::JP::H2Z', 'Encode::JP::JIS7', 'Encode::KR',
+             'Encode::KR::2022_KR', 'Encode::MIME::Header',
+             'Encode::MIME::Header::ISO_2022_JP', 'Encode::MIME::Name',
+             'Encode::Symbol', 'Encode::TW', 'Encode::Unicode',
+             'Encode::Unicode::UTF7', 'English', 'Env', 'Errno', 'Exporter',
+             'Exporter::Heavy', 'ExtUtils::CBuilder',
+             'ExtUtils::CBuilder::Base', 'ExtUtils::CBuilder::Platform::Unix',
+             'ExtUtils::CBuilder::Platform::VMS',
+             'ExtUtils::CBuilder::Platform::Windows',
+             'ExtUtils::CBuilder::Platform::Windows::BCC',
+             'ExtUtils::CBuilder::Platform::Windows::GCC',
+             'ExtUtils::CBuilder::Platform::Windows::MSVC',
+             'ExtUtils::CBuilder::Platform::aix',
+             'ExtUtils::CBuilder::Platform::cygwin',
+             'ExtUtils::CBuilder::Platform::darwin',
+             'ExtUtils::CBuilder::Platform::dec_osf',
+             'ExtUtils::CBuilder::Platform::os2', 'ExtUtils::Command',
+             'ExtUtils::Command::MM', 'ExtUtils::Constant',
+             'ExtUtils::Constant::Base', 'ExtUtils::Constant::ProxySubs',
+             'ExtUtils::Constant::Utils', 'ExtUtils::Constant::XS',
+             'ExtUtils::Embed', 'ExtUtils::Install', 'ExtUtils::Installed',
+             'ExtUtils::Liblist', 'ExtUtils::Liblist::Kid', 'ExtUtils::MM',
+             'ExtUtils::MM_AIX', 'ExtUtils::MM_Any', 'ExtUtils::MM_BeOS',
+             'ExtUtils::MM_Cygwin', 'ExtUtils::MM_DOS', 'ExtUtils::MM_Darwin',
+             'ExtUtils::MM_MacOS', 'ExtUtils::MM_NW5', 'ExtUtils::MM_OS2',
+             'ExtUtils::MM_QNX', 'ExtUtils::MM_UWIN', 'ExtUtils::MM_Unix',
+             'ExtUtils::MM_VMS', 'ExtUtils::MM_VOS', 'ExtUtils::MM_Win32',
+             'ExtUtils::MM_Win95', 'ExtUtils::MY', 'ExtUtils::MakeMaker',
+             'ExtUtils::MakeMaker::Config', 'ExtUtils::Manifest',
+             'ExtUtils::Miniperl', 'ExtUtils::Mkbootstrap',
+             'ExtUtils::Mksymlists', 'ExtUtils::Packlist', 'ExtUtils::ParseXS',
+             'ExtUtils::ParseXS::Constants', 'ExtUtils::ParseXS::CountLines',
+             'ExtUtils::ParseXS::Utilities', 'ExtUtils::Typemaps',
+             'ExtUtils::Typemaps::Cmd', 'ExtUtils::Typemaps::InputMap',
+             'ExtUtils::Typemaps::OutputMap', 'ExtUtils::Typemaps::Type',
+             'ExtUtils::XSSymSet', 'ExtUtils::testlib', 'Fatal', 'Fcntl',
+             'File::Basename', 'File::CheckTree', 'File::Compare', 'File::Copy',
+             'File::DosGlob', 'File::Fetch', 'File::Find', 'File::Glob',
+             'File::GlobMapper', 'File::Path', 'File::Spec',
+             'File::Spec::Cygwin', 'File::Spec::Epoc', 'File::Spec::Functions',
+             'File::Spec::Mac', 'File::Spec::OS2', 'File::Spec::Unix',
+             'File::Spec::VMS', 'File::Spec::Win32', 'File::Temp', 'File::stat',
+             'FileCache', 'FileHandle', 'Filter::Simple', 'Filter::Util::Call',
+             'FindBin', 'GDBM_File', 'Getopt::Long', 'Getopt::Std',
+             'HTTP::Tiny', 'Hash::Util', 'Hash::Util::FieldHash',
+             'I18N::Collate', 'I18N::LangTags', 'I18N::LangTags::Detect',
+             'I18N::LangTags::List', 'I18N::Langinfo', 'IO',
+             'IO::Compress::Adapter::Bzip2', 'IO::Compress::Adapter::Deflate',
+             'IO::Compress::Adapter::Identity', 'IO::Compress::Base',
+             'IO::Compress::Base::Common', 'IO::Compress::Bzip2',
+             'IO::Compress::Deflate', 'IO::Compress::Gzip',
+             'IO::Compress::Gzip::Constants', 'IO::Compress::RawDeflate',
+             'IO::Compress::Zip', 'IO::Compress::Zip::Constants',
+             'IO::Compress::Zlib::Constants', 'IO::Compress::Zlib::Extra',
+             'IO::Dir', 'IO::File', 'IO::Handle', 'IO::Pipe', 'IO::Poll',
+             'IO::Seekable', 'IO::Select', 'IO::Socket', 'IO::Socket::INET',
+             'IO::Socket::UNIX', 'IO::Uncompress::Adapter::Bunzip2',
+             'IO::Uncompress::Adapter::Identity',
+             'IO::Uncompress::Adapter::Inflate', 'IO::Uncompress::AnyInflate',
+             'IO::Uncompress::AnyUncompress', 'IO::Uncompress::Base',
+             'IO::Uncompress::Bunzip2', 'IO::Uncompress::Gunzip',
+             'IO::Uncompress::Inflate', 'IO::Uncompress::RawInflate',
+             'IO::Uncompress::Unzip', 'IO::Zlib', 'IPC::Cmd', 'IPC::Msg',
+             'IPC::Open2', 'IPC::Open3', 'IPC::Semaphore', 'IPC::SharedMem',
+             'IPC::SysV', 'JSON::PP', 'JSON::PP::Boolean', 'List::Util',
+             'List::Util::XS', 'Locale::Codes', 'Locale::Codes::Constants',
+             'Locale::Codes::Country', 'Locale::Codes::Country_Codes',
+             'Locale::Codes::Country_Retired', 'Locale::Codes::Currency',
+             'Locale::Codes::Currency_Codes', 'Locale::Codes::Currency_Retired',
+             'Locale::Codes::LangExt', 'Locale::Codes::LangExt_Codes',
+             'Locale::Codes::LangExt_Retired', 'Locale::Codes::LangFam',
+             'Locale::Codes::LangFam_Codes', 'Locale::Codes::LangFam_Retired',
+             'Locale::Codes::LangVar', 'Locale::Codes::LangVar_Codes',
+             'Locale::Codes::LangVar_Retired', 'Locale::Codes::Language',
+             'Locale::Codes::Language_Codes', 'Locale::Codes::Language_Retired',
+             'Locale::Codes::Script', 'Locale::Codes::Script_Codes',
+             'Locale::Codes::Script_Retired', 'Locale::Country',
+             'Locale::Currency', 'Locale::Language', 'Locale::Maketext',
+             'Locale::Maketext::Guts', 'Locale::Maketext::GutsLoader',
+             'Locale::Maketext::Simple', 'Locale::Script', 'Log::Message',
+             'Log::Message::Config', 'Log::Message::Handlers',
+             'Log::Message::Item', 'Log::Message::Simple', 'MIME::Base64',
+             'MIME::QuotedPrint', 'Math::BigFloat', 'Math::BigFloat::Trace',
+             'Math::BigInt', 'Math::BigInt::Calc', 'Math::BigInt::CalcEmu',
+             'Math::BigInt::FastCalc', 'Math::BigInt::Trace', 'Math::BigRat',
+             'Math::Complex', 'Math::Trig', 'Memoize', 'Memoize::AnyDBM_File',
+             'Memoize::Expire', 'Memoize::ExpireFile', 'Memoize::ExpireTest',
+             'Memoize::NDBM_File', 'Memoize::SDBM_File', 'Memoize::Storable',
+             'Module::Build', 'Module::Build::Base', 'Module::Build::Compat',
+             'Module::Build::Config', 'Module::Build::ConfigData',
+             'Module::Build::Cookbook', 'Module::Build::Dumper',
+             'Module::Build::ModuleInfo', 'Module::Build::Notes',
+             'Module::Build::PPMMaker', 'Module::Build::Platform::Amiga',
+             'Module::Build::Platform::Default',
+             'Module::Build::Platform::EBCDIC',
+             'Module::Build::Platform::MPEiX', 'Module::Build::Platform::MacOS',
+             'Module::Build::Platform::RiscOS', 'Module::Build::Platform::Unix',
+             'Module::Build::Platform::VMS', 'Module::Build::Platform::VOS',
+             'Module::Build::Platform::Windows', 'Module::Build::Platform::aix',
+             'Module::Build::Platform::cygwin',
+             'Module::Build::Platform::darwin', 'Module::Build::Platform::os2',
+             'Module::Build::PodParser', 'Module::Build::Version',
+             'Module::Build::YAML', 'Module::CoreList',
+             'Module::CoreList::TieHashDelta', 'Module::CoreList::Utils',
+             'Module::Load', 'Module::Load::Conditional', 'Module::Loaded',
+             'Module::Metadata', 'Module::Pluggable',
+             'Module::Pluggable::Object', 'Moped::Msg', 'NDBM_File', 'NEXT',
+             'Net::Cmd', 'Net::Config', 'Net::Domain', 'Net::FTP',
+             'Net::FTP::A', 'Net::FTP::E', 'Net::FTP::I', 'Net::FTP::L',
+             'Net::FTP::dataconn', 'Net::NNTP', 'Net::Netrc', 'Net::POP3',
+             'Net::Ping', 'Net::SMTP', 'Net::Time', 'Net::hostent',
+             'Net::netent', 'Net::protoent', 'Net::servent', 'O', 'ODBM_File',
+             'Object::Accessor', 'Opcode', 'POSIX', 'Package::Constants',
+             'Params::Check', 'Parse::CPAN::Meta', 'Perl::OSType', 'PerlIO',
+             'PerlIO::encoding', 'PerlIO::mmap', 'PerlIO::scalar',
+             'PerlIO::via', 'PerlIO::via::QuotedPrint', 'Pod::Checker',
+             'Pod::Escapes', 'Pod::Find', 'Pod::Functions',
+             'Pod::Functions::Functions', 'Pod::Html', 'Pod::InputObjects',
+             'Pod::LaTeX', 'Pod::Man', 'Pod::ParseLink', 'Pod::ParseUtils',
+             'Pod::Parser', 'Pod::Perldoc', 'Pod::Perldoc::BaseTo',
+             'Pod::Perldoc::GetOptsOO', 'Pod::Perldoc::ToANSI',
+             'Pod::Perldoc::ToChecker', 'Pod::Perldoc::ToMan',
+             'Pod::Perldoc::ToNroff', 'Pod::Perldoc::ToPod',
+             'Pod::Perldoc::ToRtf', 'Pod::Perldoc::ToTerm',
+             'Pod::Perldoc::ToText', 'Pod::Perldoc::ToTk',
+             'Pod::Perldoc::ToXml', 'Pod::PlainText', 'Pod::Select',
+             'Pod::Simple', 'Pod::Simple::BlackBox', 'Pod::Simple::Checker',
+             'Pod::Simple::Debug', 'Pod::Simple::DumpAsText',
+             'Pod::Simple::DumpAsXML', 'Pod::Simple::HTML',
+             'Pod::Simple::HTMLBatch', 'Pod::Simple::HTMLLegacy',
+             'Pod::Simple::LinkSection', 'Pod::Simple::Methody',
+             'Pod::Simple::Progress', 'Pod::Simple::PullParser',
+             'Pod::Simple::PullParserEndToken',
+             'Pod::Simple::PullParserStartToken',
+             'Pod::Simple::PullParserTextToken', 'Pod::Simple::PullParserToken',
+             'Pod::Simple::RTF', 'Pod::Simple::Search',
+             'Pod::Simple::SimpleTree', 'Pod::Simple::Text',
+             'Pod::Simple::TextContent', 'Pod::Simple::TiedOutFH',
+             'Pod::Simple::Transcode', 'Pod::Simple::TranscodeDumb',
+             'Pod::Simple::TranscodeSmart', 'Pod::Simple::XHTML',
+             'Pod::Simple::XMLOutStream', 'Pod::Text', 'Pod::Text::Color',
+             'Pod::Text::Overstrike', 'Pod::Text::Termcap', 'Pod::Usage',
+             'SDBM_File', 'Safe', 'Scalar::Util', 'Search::Dict', 'SelectSaver',
+             'SelfLoader', 'Socket', 'Storable', 'Symbol', 'Sys::Hostname',
+             'Sys::Syslog', 'Sys::Syslog::Win32', 'TAP::Base',
+             'TAP::Formatter::Base', 'TAP::Formatter::Color',
+             'TAP::Formatter::Console',
+             'TAP::Formatter::Console::ParallelSession',
+             'TAP::Formatter::Console::Session', 'TAP::Formatter::File',
+             'TAP::Formatter::File::Session', 'TAP::Formatter::Session',
+             'TAP::Harness', 'TAP::Object', 'TAP::Parser',
+             'TAP::Parser::Aggregator', 'TAP::Parser::Grammar',
+             'TAP::Parser::Iterator', 'TAP::Parser::Iterator::Array',
+             'TAP::Parser::Iterator::Process', 'TAP::Parser::Iterator::Stream',
+             'TAP::Parser::IteratorFactory', 'TAP::Parser::Multiplexer',
+             'TAP::Parser::Result', 'TAP::Parser::Result::Bailout',
+             'TAP::Parser::Result::Comment', 'TAP::Parser::Result::Plan',
+             'TAP::Parser::Result::Pragma', 'TAP::Parser::Result::Test',
+             'TAP::Parser::Result::Unknown', 'TAP::Parser::Result::Version',
+             'TAP::Parser::Result::YAML', 'TAP::Parser::ResultFactory',
+             'TAP::Parser::Scheduler', 'TAP::Parser::Scheduler::Job',
+             'TAP::Parser::Scheduler::Spinner', 'TAP::Parser::Source',
+             'TAP::Parser::SourceHandler',
+             'TAP::Parser::SourceHandler::Executable',
+             'TAP::Parser::SourceHandler::File',
+             'TAP::Parser::SourceHandler::Handle',
+             'TAP::Parser::SourceHandler::Perl',
+             'TAP::Parser::SourceHandler::RawTAP', 'TAP::Parser::Utils',
+             'TAP::Parser::YAMLish::Reader', 'TAP::Parser::YAMLish::Writer',
+             'Term::ANSIColor', 'Term::Cap', 'Term::Complete', 'Term::ReadLine',
+             'Term::UI', 'Term::UI::History', 'Test', 'Test::Builder',
+             'Test::Builder::Module', 'Test::Builder::Tester',
+             'Test::Builder::Tester::Color', 'Test::Harness', 'Test::More',
+             'Test::Simple', 'Text::Abbrev', 'Text::Balanced',
+             'Text::ParseWords', 'Text::Soundex', 'Text::Tabs', 'Text::Wrap',
+             'Thread', 'Thread::Queue', 'Thread::Semaphore', 'Tie::Array',
+             'Tie::File', 'Tie::Handle', 'Tie::Hash', 'Tie::Hash::NamedCapture',
+             'Tie::Memoize', 'Tie::RefHash', 'Tie::Scalar', 'Tie::StdHandle',
+             'Tie::SubstrHash', 'Time::HiRes', 'Time::Local', 'Time::Piece',
+             'Time::Seconds', 'Time::gmtime', 'Time::localtime', 'Time::tm',
+             'UNIVERSAL', 'Unicode', 'Unicode::Collate',
+             'Unicode::Collate::CJK::Big5', 'Unicode::Collate::CJK::GB2312',
+             'Unicode::Collate::CJK::JISX0208', 'Unicode::Collate::CJK::Korean',
+             'Unicode::Collate::CJK::Pinyin', 'Unicode::Collate::CJK::Stroke',
+             'Unicode::Collate::CJK::Zhuyin', 'Unicode::Collate::Locale',
+             'Unicode::Normalize', 'Unicode::UCD', 'User::grent', 'User::pwent',
+             'VMS::DCLsym', 'VMS::Stdio', 'Win32', 'Win32API::File',
+             'Win32API::File::ExtUtils::Myconst2perl', 'Win32CORE',
+             'XS::APItest', 'XS::Typemap', 'XSLoader', '_charnames', 'arybase',
+             'attributes', 'autodie', 'autodie::exception',
+             'autodie::exception::system', 'autodie::hints', 'autouse', 'base',
+             'bigint', 'bignum', 'bigrat', 'blib', 'bytes', 'charnames',
+             'constant', 'deprecate', 'diagnostics', 'encoding',
+             'encoding::warnings', 'feature', 'fields', 'filetest', 'if',
+             'inc::latest', 'integer', 'less', 'lib', 'locale', 'mro', 'open',
+             'ops', 'overload', 'overload::numbers', 'overloading', 'parent',
+             'perl', 'perlfaq', 're', 'sigtrap', 'sort', 'strict', 'subs',
+             'threads', 'threads::shared', 'unicore::Name', 'utf8', 'vars',
+             'version', 'vmsish', 'warnings', 'warnings::register'}
 
 CPAN_META = """\
 package:
@@ -103,11 +370,20 @@ if errorlevel 1 exit 1
 """
 
 
+def latest_perl_version(args):
+    '''
+    Returns the latest version of the perl package available
+    '''
+    r = Resolve(get_index())
+    latest_pkg = sorted(r.get_pkgs(MatchSpec('perl')))[-1]
+    return latest_pkg.version
+
+
 def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
     '''
-
+    perl_version = latest_perl_version(args)
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
@@ -170,10 +446,10 @@ def main(args, parser):
                 # Format dependency string (with Perl trailing dist comment)
                 orig_dist = dist_for_module(args.meta_cpan_url,
                                             dep_dict['module'])
-                # Don't add Perl to requirements, since it's already there
+                dep_entry = perl_to_conda(orig_dist)
+                # Skip perl as a dependency, since it's already in list
                 if orig_dist.lower() == 'perl':
                     continue
-                dep_entry = perl_to_conda(orig_dist)
 
                 # If recursive, check if we have a recipe for this dependency
                 if (args.recursive and (not exists(join(output_dir, dep_entry)))
@@ -191,9 +467,15 @@ def main(args, parser):
                 elif dep_dict['phase'] != 'develop':
                     build_deps.add(dep_entry)
 
+        # Add Perl version to core module requirements, since these may
+        # essentially be empty packages
+        if package.replace('-', '::') in PERL_CORE:
+            d['build_depends'] += ' ' + perl_version
+            d['run_depends'] += ' ' + perl_version
+
         # Add dependencies to d
-        d['build_depends'] = indent.join([''] + list(build_deps | run_deps))
-        d['run_depends'] = indent.join([''] + list(run_deps))
+        d['build_depends'] += indent.join([''] + list(build_deps | run_deps))
+        d['run_depends'] += indent.join([''] + list(run_deps))
         args.packages.extend(packages_to_append)
 
         # Write recipe files
