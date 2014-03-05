@@ -117,6 +117,7 @@ DISTUTILS_PATCH = """\
 import distutils.core
 import io
 import os.path
+import sys
 import yaml
 from yaml import Loader, SafeLoader
 
@@ -424,6 +425,9 @@ def run_setuppy(src_dir, temp_dir):
             stripped_line = line.strip()
             # Ignore she-bang lines
             if stripped_line.startswith('#!'):
+                continue
+            # Skip ez_setup lines
+            elif 'ez_setup' in stripped_line:
                 continue
             # Check for first regular import or __future__ imports
             elif (not stripped_line.startswith('#') and
