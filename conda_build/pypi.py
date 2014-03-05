@@ -117,6 +117,7 @@ DISTUTILS_PATCH = """\
 import distutils.core
 import io
 import os.path
+import sys
 import yaml
 from yaml import Loader, SafeLoader
 
@@ -132,6 +133,7 @@ def setup(*args, **kwargs):
     data['install_requires'] = kwargs.get('install_requires', [])
     data['entry_points'] = kwargs.get('entry_points', [])
     data['packages'] = kwargs.get('packages', [])
+    data['setuptools'] = 'setuptools' in sys.modules
     with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
                  encoding='utf-8') as fn:
         fn.write(yaml.dump(data, encoding=None))
@@ -284,7 +286,7 @@ def main(args, parser):
                 with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
                     pkginfo = yaml.load(fn)
 
-                setuptools_build = 'setuptools' in sys.modules
+                setuptools_build = pkginfo['setuptools']
                 setuptools_run = False
 
                 # Look at the entry_points and construct console_script and
@@ -423,6 +425,10 @@ def run_setuppy(src_dir, temp_dir):
             stripped_line = line.strip()
             # Ignore she-bang lines
             if stripped_line.startswith('#!'):
+                continue
+            # Skip ez_setup lines
+            # TODO: Generate a patch automatically for setup.py
+            elif 'ez_setup' in stripped_line:
                 continue
             # Check for first regular import or __future__ imports
             elif (not stripped_line.startswith('#') and
