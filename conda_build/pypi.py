@@ -427,6 +427,7 @@ def run_setuppy(src_dir, temp_dir):
             if stripped_line.startswith('#!'):
                 continue
             # Skip ez_setup lines
+            # TODO: Generate a patch automatically for setup.py
             elif 'ez_setup' in stripped_line:
                 continue
             # Check for first regular import or __future__ imports
