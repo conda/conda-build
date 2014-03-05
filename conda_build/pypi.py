@@ -435,26 +435,21 @@ def run_setuppy(src_dir, temp_dir):
                 inserted_patch = True
             setuppy.write(line)
     # Save PYTHONPATH for later
-    python_path = os.getenv('PYTHONPATH', '')
-    if python_path:
-        os.environ['PYTHONPATH'] = src_dir + ':' + python_path
+    env = os.environ.copy()
+    if 'PYTHONPATH' in env:
+        env['PYTHONPATH'] = src_dir + ':' + env['PYTHONPATH']
     else:
-        os.environ['PYTHONPATH'] = src_dir
+        env['PYTHONPATH'] = src_dir
     cwd = getcwd()
     chdir(src_dir)
     args = [sys.executable, 'setup.py', 'install']
     try:
-        subprocess.check_call(args)
+        subprocess.check_call(args, env=env)
     except subprocess.CalledProcessError:
-        print('$PYTHONPATH = %s' % os.environ['PYTHONPATH'])
+        print('$PYTHONPATH = %s' % env['PYTHONPATH'])
         sys.exit('Error: command failed: %s' % ' '.join(args))
     finally:
         chdir(cwd)
-        # Restore old PYTHONPATH
-        if python_path:
-            os.environ['PYTHONPATH'] = python_path
-        else:
-            del os.environ['PYTHONPATH']
 
 
 def remove_version_information(pkgstr):
