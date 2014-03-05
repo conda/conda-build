@@ -13,12 +13,16 @@ from io import open
 from os import makedirs
 from os.path import basename, dirname, join, exists
 
-from conda.fetch import download, TmpDownload
-from conda.utils import human_bytes, hashsum_file, memoized
-from conda.install import rm_rf
-from conda_build.utils import tar_xf, unzip
-from conda_build.source import SRC_CACHE
+from conda.api import get_index
+from conda.cli import common
 from conda.compat import input, configparser, StringIO
+from conda.fetch import download, TmpDownload
+from conda.install import linked, rm_rf
+from conda.resolve import MatchSpec, Resolve
+from conda.utils import human_bytes, hashsum_file, memoized
+
+from conda_build.source import SRC_CACHE
+from conda_build.utils import tar_xf, unzip
 
 
 # This monstrosity is the set of everything in the Perl core as of 5.18.2
@@ -366,11 +370,20 @@ if errorlevel 1 exit 1
 """
 
 
+def latest_perl_version(args):
+    '''
+    Returns the latest version of the perl package available
+    '''
+    r = Resolve(get_index())
+    latest_pkg = sorted(r.get_pkgs(MatchSpec('perl')))[-1]
+    return latest_pkg.version
+
+
 def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
     '''
-
+    perl_version = latest_perl_version(args)
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
@@ -433,12 +446,10 @@ def main(args, parser):
                 # Format dependency string (with Perl trailing dist comment)
                 orig_dist = dist_for_module(args.meta_cpan_url,
                                             dep_dict['module'])
-                # Don't add Perl built-ins, unless newer version
-                if (orig_dist.lower() == 'perl' or
-                        orig_dist.replace('-', '::') in PERL_CORE or
-                        dep_dict['module'] in PERL_CORE):
-                    continue
                 dep_entry = perl_to_conda(orig_dist)
+                # Skip perl as a dependency, since it's already in list
+                if orig_dist.lower() == 'perl':
+                    continue
 
                 # If recursive, check if we have a recipe for this dependency
                 if (args.recursive and (not exists(join(output_dir, dep_entry)))
@@ -456,9 +467,15 @@ def main(args, parser):
                 elif dep_dict['phase'] != 'develop':
                     build_deps.add(dep_entry)
 
+        # Add Perl version to core module requirements, since these may
+        # essentially be empty packages
+        if package.replace('-', '::') in PERL_CORE:
+            d['build_depends'] += ' ' + perl_version
+            d['run_depends'] += ' ' + perl_version
+
         # Add dependencies to d
-        d['build_depends'] = indent.join([''] + list(build_deps | run_deps))
-        d['run_depends'] = indent.join([''] + list(run_deps))
+        d['build_depends'] += indent.join([''] + list(build_deps | run_deps))
+        d['run_depends'] += indent.join([''] + list(run_deps))
         args.packages.extend(packages_to_append)
 
         # Write recipe files
