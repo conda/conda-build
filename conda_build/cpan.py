@@ -252,59 +252,6 @@ def main(args, parser):
         d['license'] = release_data['license'][0]
         d['version'] = release_data['version']
 
-        # Create lists of dependencies
-        build_deps = set()
-        run_deps = set()
-        packages_to_append = set()
-        print('Processing dependencies for %s...' % package, end='')
-        sys.stdout.flush()
-        for dep_dict in release_data['dependency']:
-            # Only care about requirements
-            if dep_dict['relationship'] == 'requires':
-                print('.', end='')
-                sys.stdout.flush()
-                # Format dependency string (with Perl trailing dist comment)
-                orig_dist = dist_for_module(args.meta_cpan_url,
-                                            dep_dict['module'])
-                dep_entry = perl_to_conda(orig_dist)
-                version_suffix = ''
-                # Skip perl as a dependency, since it's already in list
-                if orig_dist.lower() == 'perl':
-                    continue
-
-                # Add version number to dependency, if it's newer than latest
-                # we have package for.
-                if dep_dict['version'] == {'', 'undef'}:
-                    dep_dict['version'] = '0'
-                dep_version = LooseVersion(dep_dict['version'])
-                if dep_version > LooseVersion('0'):
-                    pkg_version = latest_pkg_version(dep_entry)
-                    # If we don't have a package, use core version as version
-                    if pkg_version is None:
-                        pkg_version = core_module_version(dep_entry,
-                                                          perl_version)
-                    # If no package is available at all, it's in the core, or
-                    # the latest is already good enough, don't specify version.
-                    # This is because conda doesn't support > in version
-                    # requirements.
-                    if pkg_version is not None and (dep_version > pkg_version):
-                        version_suffix = ' ' + dep_dict['version']
-
-                # If recursive, check if we have a recipe for this dependency
-                if (args.recursive and (not exists(join(output_dir, dep_entry)))
-                        and (orig_dist not in processed_packages)):
-                    packages_to_append.add(orig_dist +
-                                           version_suffix.replace(' ', '='))
-
-                # Add to appropriate dependency list
-                dep_entry += version_suffix
-                if dep_dict['phase'] == 'runtime':
-                    run_deps.add(dep_entry)
-                # Handle build deps
-                elif dep_dict['phase'] != 'develop':
-                    build_deps.add(dep_entry)
-        print('done')
-
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
         if core_version is not None and ((args.version is None) or
@@ -313,9 +260,13 @@ def main(args, parser):
             d['build_depends'] += ' ' + perl_version
             d['run_depends'] += ' ' + perl_version
             d['useurl'] = '#'
+            d['usemd5'] = '#'
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
         else:
+            build_deps, run_deps, packages_to_append = deps_for_package(
+                package, release_data, perl_version, args, output_dir,
+                processed_packages)
             d['build_depends'] += indent.join([''] + list(build_deps |
                                                           run_deps))
             d['run_depends'] += indent.join([''] + list(run_deps))
@@ -326,36 +277,109 @@ def main(args, parser):
         package_dir = join(output_dir, packagename)
         if not exists(package_dir):
             makedirs(package_dir)
-        print("Writing recipe for %s..." % packagename, end='')
+        print("Writing recipe for %s" % packagename)
         with open(join(package_dir, 'meta.yaml'), 'w') as f:
-            print('.', end='')
-            sys.stdout.flush()
             f.write(CPAN_META.format(**d))
         with open(join(package_dir, 'build.sh'), 'w') as f:
-            print('.', end='')
-            sys.stdout.flush()
             if empty_recipe:
                 f.write('#!/bin/bash\necho "Nothing to do."\n')
             else:
                 f.write(CPAN_BUILD_SH.format(**d))
         with open(join(package_dir, 'bld.bat'), 'w') as f:
-            print('.', end='')
-            sys.stdout.flush()
             if empty_recipe:
                 f.write('echo "Nothing to do."\n')
             else:
                 f.write(CPAN_BLD_BAT.format(**d))
         with open(join(package_dir, 'run_test.bat'), 'w') as f:
-            print('.', end='')
-            sys.stdout.flush()
             f.write(CPAN_RUN_TEST_BAT.format(orig_package))
         with open(join(package_dir, 'run_test.sh'), 'w') as f:
-            print('.', end='')
-            sys.stdout.flush()
             f.write(CPAN_RUN_TEST_SH.format(orig_package))
 
-    print("done")
+    print("Done")
 
+
+def deps_for_package(package, release_data, perl_version, args, output_dir,
+                     processed_packages):
+    '''
+    Build the sets of dependencies and packages we need recipes for. This should
+    only be called for non-core modules/distributions, as dependencies are
+    ignored for core modules.
+
+    :param package: Perl distribution we're checking dependencies of.
+    :type package: str
+    :param release_data: The metadata about the current release of the package.
+    :type release_data: dict
+    :param perl_version: The target version of Perl we're building this for.
+                         This only really matters for core modules.
+    :type perl_version: str
+    :param args: The command-line arguments passed to the skeleton command.
+    :type args: Namespace
+    :param output_dir: The output directory to write recipes to
+    :type output_dir: str
+    :param processed_packages: The set of packages we have built recipes for
+                               already.
+    :type processed_packages: set of str
+
+    :returns: Build dependencies, runtime dependencies, and set of packages to
+              add to list of recipes to create.
+    :rtype: 3-tuple of sets
+    '''
+
+    # Create lists of dependencies
+    build_deps = set()
+    run_deps = set()
+    packages_to_append = set()
+    print('Processing dependencies for %s...' % package, end='')
+    sys.stdout.flush()
+    for dep_dict in release_data['dependency']:
+        # Only care about requirements
+        if dep_dict['relationship'] == 'requires':
+            print('.', end='')
+            sys.stdout.flush()
+            # Format dependency string (with Perl trailing dist comment)
+            orig_dist = dist_for_module(args.meta_cpan_url,
+                                        dep_dict['module'])
+            dep_entry = perl_to_conda(orig_dist)
+            version_suffix = ''
+            # Skip perl as a dependency, since it's already in list
+            if orig_dist.lower() == 'perl':
+                continue
+
+            # Add version number to dependency, if it's newer than latest
+            # we have package for.
+            if dep_dict['version'] == {'', 'undef'}:
+                dep_dict['version'] = '0'
+            dep_version = LooseVersion(dep_dict['version'])
+            if dep_version > LooseVersion('0'):
+                pkg_version = latest_pkg_version(dep_entry)
+                # If we don't have a package, use core version as version
+                if pkg_version is None:
+                    pkg_version = core_module_version(dep_entry,
+                                                      perl_version)
+                # If no package is available at all, it's in the core, or
+                # the latest is already good enough, don't specify version.
+                # This is because conda doesn't support > in version
+                # requirements.
+                if pkg_version is not None and (dep_version > pkg_version):
+                    version_suffix = ' ' + dep_dict['version']
+
+            # If recursive, check if we have a recipe for this dependency
+            if (args.recursive and (not exists(join(output_dir, dep_entry)))
+                    and (orig_dist not in processed_packages)):
+                packages_to_append.add(orig_dist +
+                                       version_suffix.replace(' ', '='))
+
+            # Add to appropriate dependency list
+            dep_entry += version_suffix
+            if dep_dict['phase'] == 'runtime':
+                run_deps.add(dep_entry)
+            # Handle build deps
+            elif dep_dict['phase'] != 'develop':
+                build_deps.add(dep_entry)
+    print('done')
+    sys.stdout.flush()
+
+    return build_deps, run_deps, packages_to_append
 
 @memoized
 def dist_for_module(cpan_url, module):
