@@ -299,6 +299,7 @@ def main(args, parser):
                                           LooseVersion(args.version))):
             d['build_depends'] += ' ' + perl_version
             d['run_depends'] += ' ' + perl_version
+            d['useurl'] = '#'
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
         else:
