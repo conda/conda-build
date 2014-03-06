@@ -33,8 +33,8 @@ package:
   version: !!str {version}
 
 source:
-  fn: {filename}
-  url: {cpanurl}
+  {useurl}fn: {filename}
+  {useurl}url: {cpanurl}
   {usemd5}md5: {md5}
 #  patches:
    # List any patch files here
@@ -212,6 +212,7 @@ def main(args, parser):
                                                'build_comment': '# ',
                                                'test_commands': '',
                                                'usemd5': '',
+                                               'useurl': '',
                                                'summary': "''"})
 
         # Fetch all metadata from CPAN
@@ -222,11 +223,17 @@ def main(args, parser):
                                          core_version),
                                         perl_version)
 
-        d['cpanurl'] = release_data['download_url']
-        d['md5'], size = get_checksum_and_size(release_data['download_url'])
-        d['filename'] = release_data['archive']
-
-        print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
+        # If this is something we're downloading, get MD5
+        if release_data['download_url']:
+            d['cpanurl'] = release_data['download_url']
+            d['md5'], size = get_checksum_and_size(release_data['download_url'])
+            d['filename'] = release_data['archive']
+            print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
+        else:
+            d['useurl'] = '#'
+            d['cpanurl'] = ''
+            d['filename'] = ''
+            d['md5'] = ''
 
         try:
             d['homeurl'] = release_data['resources']['homepage']
@@ -389,11 +396,11 @@ def get_release_info(cpan_url, package, version, perl_version):
             if core_version is not None and (version == core_version):
                 print(("WARNING: Version {0} of {1} is not available on " +
                        "MetaCPAN, but it's a core module, so we do not " +
-                       "actually need the source file, and are putting in " +
-                       "the URL/MD5 for version {2} to finish up the " +
-                       "recipe.").format(version_str, orig_package,
-                                         rel_dict['version']))
+                       "actually need the source file, and are omitting the " +
+                       "URL/MD5 from the recipe " +
+                       "entirely.").format(version_str, orig_package))
                 rel_dict['version'] = version_str
+                rel_dict['download_url'] = ''
             else:
                 sys.exit(("Error: Version %s of %s is not available on " +
                           "MetaCPAN.") % (version_str, orig_package))
