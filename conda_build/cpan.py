@@ -181,8 +181,15 @@ def main(args, parser):
     indent = '\n    - '
     args.packages = list(reversed(args.packages))
     processed_packages = set()
+    orig_version = args.version
     while args.packages:
         package = args.packages.pop()
+        # If we're passed version in the same format as `PACKAGE=VERSION`
+        # update version
+        if '=' in package:
+            package, __, args.version = package.partition('=')
+        else:
+            args.version = orig_version
 
         # Skip duplicates
         if package in processed_packages:
@@ -197,13 +204,13 @@ def main(args, parser):
                    "outside of Perl, so we are skipping creating a recipe " +
                    "for it.").format(orig_package))
             continue
-        if package not in {orig_package, orig_package.replace('::', '-')}:
+        elif package not in {orig_package, orig_package.replace('::', '-')}:
             print(("WARNING: {0} was part of the {1} distribution, so we are " +
                    "making a recipe for {1} instead.").format(orig_package,
                                                               package))
 
-        dir_path = join(output_dir, package.lower())
         packagename = perl_to_conda(package)
+        dir_path = join(output_dir, packagename)
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package, {'packagename': packagename,
@@ -231,6 +238,7 @@ def main(args, parser):
             print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
         else:
             d['useurl'] = '#'
+            d['usemd5'] = '#'
             d['cpanurl'] = ''
             d['filename'] = ''
             d['md5'] = ''
@@ -248,9 +256,13 @@ def main(args, parser):
         build_deps = set()
         run_deps = set()
         packages_to_append = set()
+        print('Processing dependencies for %s...' % package, end='')
+        sys.stdout.flush()
         for dep_dict in release_data['dependency']:
             # Only care about requirements
             if dep_dict['relationship'] == 'requires':
+                print('.', end='')
+                sys.stdout.flush()
                 # Format dependency string (with Perl trailing dist comment)
                 orig_dist = dist_for_module(args.meta_cpan_url,
                                             dep_dict['module'])
@@ -277,7 +289,6 @@ def main(args, parser):
                     # requirements.
                     if pkg_version is not None and (dep_version > pkg_version):
                         version_suffix = ' ' + dep_dict['version']
-                        dep_entry += version_suffix
 
                 # If recursive, check if we have a recipe for this dependency
                 if (args.recursive and (not exists(join(output_dir, dep_entry)))
@@ -286,11 +297,13 @@ def main(args, parser):
                                            version_suffix.replace(' ', '='))
 
                 # Add to appropriate dependency list
+                dep_entry += version_suffix
                 if dep_dict['phase'] == 'runtime':
                     run_deps.add(dep_entry)
                 # Handle build deps
                 elif dep_dict['phase'] != 'develop':
                     build_deps.add(dep_entry)
+        print('done')
 
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
@@ -313,25 +326,35 @@ def main(args, parser):
         package_dir = join(output_dir, packagename)
         if not exists(package_dir):
             makedirs(package_dir)
-        print("Writing recipe for %s" % packagename)
+        print("Writing recipe for %s..." % packagename, end='')
         with open(join(package_dir, 'meta.yaml'), 'w') as f:
+            print('.', end='')
+            sys.stdout.flush()
             f.write(CPAN_META.format(**d))
         with open(join(package_dir, 'build.sh'), 'w') as f:
+            print('.', end='')
+            sys.stdout.flush()
             if empty_recipe:
                 f.write('#!/bin/bash\necho "Nothing to do."\n')
             else:
                 f.write(CPAN_BUILD_SH.format(**d))
         with open(join(package_dir, 'bld.bat'), 'w') as f:
+            print('.', end='')
+            sys.stdout.flush()
             if empty_recipe:
                 f.write('echo "Nothing to do."\n')
             else:
                 f.write(CPAN_BLD_BAT.format(**d))
         with open(join(package_dir, 'run_test.bat'), 'w') as f:
+            print('.', end='')
+            sys.stdout.flush()
             f.write(CPAN_RUN_TEST_BAT.format(orig_package))
         with open(join(package_dir, 'run_test.sh'), 'w') as f:
+            print('.', end='')
+            sys.stdout.flush()
             f.write(CPAN_RUN_TEST_SH.format(orig_package))
 
-    print("Done")
+    print("done")
 
 
 @memoized
@@ -340,17 +363,31 @@ def dist_for_module(cpan_url, module):
     Given a name that could be a module or a distribution, return the
     distribution.
     '''
-    # Get latest info to find author, which is necessary for retrieving a
-    # specific version
+    # First check if its already a distribution
     try:
-        with TmpDownload('{}/v0/module/{}'.format(cpan_url, module)) as json_path:
+        with TmpDownload('{}/v0/release/{}'.format(cpan_url,
+                                                   module)) as json_path:
             with open(json_path, encoding='utf-8-sig') as dist_json_file:
-                mod_dict = json.load(dist_json_file)
-    # If there was an error, just assume module was a distribution
+                rel_dict = json.load(dist_json_file)
+    # If there was an error, module may actually be a module
     except RuntimeError:
-        distribution = module
+        rel_dict = None
     else:
-        distribution = mod_dict['distribution']
+        distribution = module
+
+    # Check if
+    if rel_dict is None:
+        try:
+            with TmpDownload('{}/v0/module/{}'.format(cpan_url,
+                                                      module)) as json_path:
+                with open(json_path, encoding='utf-8-sig') as dist_json_file:
+                    mod_dict = json.load(dist_json_file)
+        # If there was an error, report it
+        except RuntimeError:
+            sys.exit(('Error: Could not find module or distribution named ' +
+                      '%s on MetaCPAN') % module)
+        else:
+            distribution = mod_dict['distribution']
 
     return distribution
 
