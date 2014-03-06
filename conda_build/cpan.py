@@ -376,8 +376,18 @@ def get_release_info(cpan_url, package, version, perl_version):
             with open(json_path, encoding='utf-8-sig') as dist_json_file:
                 rel_dict = json.load(dist_json_file)
     except RuntimeError:
-        sys.exit(("Error: Could not find any versions of package %s on " +
-                  "MetaCPAN.") % (orig_package))
+        core_version = core_module_version(orig_package, perl_version)
+        if core_version is not None and (version is None or
+                                         (version == core_version)):
+            print(("WARNING: {0} is not available on MetaCPAN, but it's a " +
+                   "core module, so we do not actually need the source file, " +
+                   "and are omitting the URL/MD5 from the recipe " +
+                   "entirely.").format(orig_package))
+            rel_dict = {'version': str(core_version), 'download_url': '',
+                        'license': ['perl_5'], 'dependency': {}}
+        else:
+            sys.exit(("Error: Could not find any versions of package %s on " +
+                      "MetaCPAN.") % (orig_package))
 
     # If the latest isn't the version we're looking for, we have to do another
     # request
