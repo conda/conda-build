@@ -6,7 +6,7 @@ from os.path import abspath, expanduser, join
 
 import conda.config as cc
 
-
+CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
 CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.', '')))
 CONDA_NPY = int(os.getenv('CONDA_NPY', 18))
 PY3K = int(bool(CONDA_PY >= 30))
@@ -26,8 +26,17 @@ def _get_python(prefix):
         res = join(prefix, 'bin/python')
     return res
 
+def _get_perl(prefix):
+    if sys.platform == 'win32':
+        res = join(prefix, 'perl.exe')
+    else:
+        res = join(prefix, 'bin/perl')
+    return res
+
 build_python = _get_python(build_prefix)
 test_python = _get_python(test_prefix)
+build_perl = _get_perl(build_prefix)
+test_perl = _get_perl(test_prefix)
 
 bldpkgs_dir = expanduser(cc.rc.get('conda-build',
                            {}).get('build_dest', join(croot, cc.subdir)))

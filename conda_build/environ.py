@@ -6,10 +6,11 @@ from os.path import join
 
 import conda.config as cc
 
-from conda_build.config import CONDA_PY, PY3K, build_prefix, _get_python
+from conda_build.config import (CONDA_PERL, CONDA_PY, PY3K, build_prefix,
+                                _get_python)
 from conda_build import source
 
-
+perl_ver =  str(CONDA_PERL)
 py_ver = '.'.join(str(CONDA_PY))
 stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % py_ver)
@@ -31,6 +32,7 @@ def get_dict(m=None, prefix=build_prefix):
     d['SYS_PREFIX'] = sys.prefix
     d['SYS_PYTHON'] = sys.executable
     d['PY_VER'] = py_ver
+    d['PERL_VER'] = perl_ver
     d['SRC_DIR'] = source.get_dir()
 
     if sys.platform == 'win32':         # -------- Windows

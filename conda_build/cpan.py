@@ -52,7 +52,10 @@ requirements:
   run:
     - perl{run_depends}
 
-# test:
+test:
+  # Perl 'use' tests
+  {import_comment}imports:{import_tests}
+
   # By default CPAN tests will be run while "building" (which just uses cpanm
   # to install)
 
@@ -94,18 +97,6 @@ if errorlevel 1 exit 1
 :: See
 :: http://docs.continuum.io/conda/build.html
 :: for a list of environment variables that are set during the build process.
-"""
-
-CPAN_RUN_TEST_SH = """\
-#!/bin/bash
-
-# Just a simple import test
-perl -e 'use {}'
-"""
-
-CPAN_RUN_TEST_BAT = """\
-perl -e 'use {}'
-if errorlevel 1 exit 1
 """
 
 
@@ -198,7 +189,7 @@ def main(args, parser):
 
         # Convert modules into distributions
         orig_package = package
-        package = dist_for_module(args.meta_cpan_url, package)
+        package = dist_for_module(args.meta_cpan_url, package, perl_version)
         if package == 'perl':
             print(("WARNING: {0} is a Perl core module that is not developed " +
                    "outside of Perl, so we are skipping creating a recipe " +
@@ -220,7 +211,8 @@ def main(args, parser):
                                                'test_commands': '',
                                                'usemd5': '',
                                                'useurl': '',
-                                               'summary': "''"})
+                                               'summary': "''",
+                                               'import_tests': ''})
 
         # Fetch all metadata from CPAN
         core_version = core_module_version(package, perl_version)
@@ -273,6 +265,14 @@ def main(args, parser):
             args.packages.extend(packages_to_append)
             empty_recipe = False
 
+        # Create import tests
+        for provided_mod in release_data['provides']:
+            d['import_tests'] += indent + provided_mod
+        if d['import_tests']:
+            d['import_comment'] = ''
+        else:
+            d['import_comment'] = '# '
+
         # Write recipe files
         package_dir = join(output_dir, packagename)
         if not exists(package_dir):
@@ -290,10 +290,6 @@ def main(args, parser):
                 f.write('echo "Nothing to do."\n')
             else:
                 f.write(CPAN_BLD_BAT.format(**d))
-        with open(join(package_dir, 'run_test.bat'), 'w') as f:
-            f.write(CPAN_RUN_TEST_BAT.format(orig_package))
-        with open(join(package_dir, 'run_test.sh'), 'w') as f:
-            f.write(CPAN_RUN_TEST_SH.format(orig_package))
 
     print("Done")
 
@@ -337,8 +333,8 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
             print('.', end='')
             sys.stdout.flush()
             # Format dependency string (with Perl trailing dist comment)
-            orig_dist = dist_for_module(args.meta_cpan_url,
-                                        dep_dict['module'])
+            orig_dist = dist_for_module(args.meta_cpan_url, dep_dict['module'],
+                                        perl_version)
             dep_entry = perl_to_conda(orig_dist)
             version_suffix = ''
             # Skip perl as a dependency, since it's already in list
@@ -382,7 +378,7 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
     return build_deps, run_deps, packages_to_append
 
 @memoized
-def dist_for_module(cpan_url, module):
+def dist_for_module(cpan_url, module, perl_version):
     '''
     Given a name that could be a module or a distribution, return the
     distribution.
@@ -408,8 +404,12 @@ def dist_for_module(cpan_url, module):
                     mod_dict = json.load(dist_json_file)
         # If there was an error, report it
         except RuntimeError:
-            sys.exit(('Error: Could not find module or distribution named ' +
-                      '%s on MetaCPAN') % module)
+            core_version = core_module_version(module, perl_version)
+            if core_version is None:
+                sys.exit(('Error: Could not find module or distribution named' +
+                          ' %s on MetaCPAN') % module)
+            else:
+                distribution = 'perl'
         else:
             distribution = mod_dict['distribution']
 
@@ -423,7 +423,7 @@ def get_release_info(cpan_url, package, version, perl_version):
     '''
     # Transform module name to dist name if necessary
     orig_package = package
-    package = dist_for_module(cpan_url, package)
+    package = dist_for_module(cpan_url, package, perl_version)
     if orig_package != package:
         print(("WARNING: %s was part of the %s distribution, so we are making" +
                " a recipe for the distribution instead.") % (orig_package,
@@ -442,7 +442,7 @@ def get_release_info(cpan_url, package, version, perl_version):
                                          (version == core_version)):
             print(("WARNING: {0} is not available on MetaCPAN, but it's a " +
                    "core module, so we do not actually need the source file, " +
-                   "and are omitting the URL/MD5 from the recipe " +
+                   "and are omitting the URL and MD5 from the recipe " +
                    "entirely.").format(orig_package))
             rel_dict = {'version': str(core_version), 'download_url': '',
                         'license': ['perl_5'], 'dependency': {}}
@@ -469,7 +469,7 @@ def get_release_info(cpan_url, package, version, perl_version):
                 print(("WARNING: Version {0} of {1} is not available on " +
                        "MetaCPAN, but it's a core module, so we do not " +
                        "actually need the source file, and are omitting the " +
-                       "URL/MD5 from the recipe " +
+                       "URL and MD5 from the recipe " +
                        "entirely.").format(version_str, orig_package))
                 rel_dict['version'] = version_str
                 rel_dict['download_url'] = ''
