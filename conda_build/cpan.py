@@ -267,11 +267,12 @@ def main(args, parser):
 
         # Create import tests
         module_prefix = package.replace('::', '-').split('-')[0]
-        for provided_mod in sorted(set(release_data['provides'])):
-            # Filter out weird modules that don't belong
-            if (provided_mod.startswith(module_prefix) and
-                    '::_' not in provided_mod):
-                d['import_tests'] += indent + provided_mod
+        if 'provides' in release_data:
+            for provided_mod in sorted(set(release_data['provides'])):
+                # Filter out weird modules that don't belong
+                if (provided_mod.startswith(module_prefix) and
+                        '::_' not in provided_mod):
+                    d['import_tests'] += indent + provided_mod
         if d['import_tests']:
             d['import_comment'] = ''
         else:
