@@ -190,6 +190,7 @@ def build(m, get_src=True):
                     dep_m = MetaData(abspath(recipe_dir))
                     dep_m.check_fields()
                     build(dep_m)
+                    test(dep_m)
                     # Now try again
                     try_again = True
                 else:
