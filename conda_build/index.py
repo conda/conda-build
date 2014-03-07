@@ -1,4 +1,9 @@
-from __future__ import print_function, division, absolute_import
+'''
+Functions related to creating repodata index files.
+'''
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import bz2
@@ -6,10 +11,11 @@ import json
 import base64
 import hashlib
 import tarfile
+from io import open
 from os.path import isdir, join, getmtime
 
 from conda_build.utils import file_info
-from conda.compat import iteritems
+from conda.compat import iteritems, PY3
 
 
 def read_index_tar(tar_path):
@@ -30,7 +36,7 @@ def write_repodata(repodata, dir_path):
     # make sure we have newline at the end
     if not data.endswith('\n'):
         data += '\n'
-    with open(join(dir_path, 'repodata.json'), 'w') as fo:
+    with open(join(dir_path, 'repodata.json'), 'w', encoding='utf-8') as fo:
         fo.write(data)
     with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
         fo.write(bz2.compress(data.encode('utf-8')))
@@ -43,9 +49,10 @@ def update_index(dir_path, verbose=False, force=False):
         index = {}
     else:
         try:
-            with open(index_path) as fi:
+            mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+            with open(index_path, **mode_dict) as fi:
                 index = json.load(fi)
-        except IOError:
+        except (IOError, ValueError):
             index = {}
 
     files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
@@ -64,8 +71,9 @@ def update_index(dir_path, verbose=False, force=False):
         if verbose:
             print("removing:", fn)
         del index[fn]
-
-    with open(index_path, 'w') as fo:
+    # Deal with Python 2 and 3's different json module type reqs
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    with open(index_path, **mode_dict) as fo:
         json.dump(index, fo, indent=2, sort_keys=True)
 
     # --- new repodata

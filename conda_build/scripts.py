@@ -1,8 +1,14 @@
-from __future__ import print_function, division, absolute_import
+'''
+Module for creating entry points and scripts for PyPI packages.
+'''
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import re
 import os
 import sys
+from io import open
 from os.path import isdir, join
 
 from conda_build.config import build_prefix, build_python
@@ -39,12 +45,12 @@ def iter_entry_points(items):
 def create_entry_point(path, module, func):
     pyscript = PY_TMPL % (module, func, func)
     if sys.platform == 'win32':
-        with open(path + '-script.py', 'w') as fo:
+        with open(path + '-script.py', 'w', encoding='utf-8') as fo:
             fo.write(pyscript)
-        with open(path + '.bat', 'w') as fo:
+        with open(path + '.bat', 'w', encoding='utf-8') as fo:
             fo.write(BAT_PROXY)
     else:
-        with open(path, 'w') as fo:
+        with open(path, 'w', encoding='utf-8') as fo:
             fo.write('#!%s\n' % build_python)
             fo.write(pyscript)
         os.chmod(path, int('755', 8))
