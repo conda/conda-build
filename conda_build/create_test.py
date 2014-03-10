@@ -79,18 +79,17 @@ def create_py_files(dir_path, m):
 
 def create_pl_files(dir_path, m):
     has_tests = False
-    with open(join(dir_path, 'run_test.pl'), 'w') as fo:
+    with open(join(dir_path, 'run_test.pl'), 'w', encoding='utf-8') as fo:
         print(r'# tests for %s (this is a generated file)' % m.dist(), file=fo)
         print(r'print("===== testing package: %s =====\n");' % m.dist(),
               file=fo)
         for name in m.get_value('test/imports'):
             print(r'print("import: %r\n");' % name, file=fo)
-            print(r'use %s;' % name, file=fo)
-            print(file=fo)
+            print('use %s;\n' % name, file=fo)
             has_tests = True
 
         try:
-            with open(join(m.path, 'run_test.pl')) as fi:
+            with open(join(m.path, 'run_test.pl'), encoding='utf-8') as fi:
                 print("# --- run_test.pl (begin) ---", file=fo)
                 fo.write(fi.read())
                 print("# --- run_test.pl (end) ---", file=fo)
