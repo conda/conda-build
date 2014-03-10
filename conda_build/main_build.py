@@ -89,16 +89,18 @@ def handle_binstar_upload(path, args):
     else:
         upload = args.binstar_upload
 
-    if not upload:
-        print("""\
+    no_upload_message = """\
 # If you want to upload this package to binstar.org later, type:
 #
 # $ binstar upload %s
-""" % path)
+""" % path
+    if not upload:
+        print(no_upload_message)
         return
 
     binstar = find_executable('binstar')
     if binstar is None:
+        print(no_upload_message)
         sys.exit('''
 Error: cannot locate binstar (required for upload)
 # Try:
@@ -108,7 +110,11 @@ Error: cannot locate binstar (required for upload)
     args = [binstar, 'upload', path]
     if config.binstar_personal:
         args += ['--personal']
-    subprocess.call(args)
+    try:
+        subprocess.call(args)
+    except:
+        print(no_upload_message)
+        raise
 
 
 def check_external():
