@@ -8,7 +8,8 @@
 Tools for converting conda packages
 
 """
-from __future__ import print_function, division
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 import re
 import tarfile
 import json
@@ -56,7 +57,8 @@ def has_nonpy_entry_points(t, unix_to_win=True, show=False):
         if m.path.startswith(bindir):
             if not unix_to_win:
                 if show:
-                    print("Entry points with Windows to Unix are not yet supported")
+                    print("Entry points with Windows to Unix are not yet " +
+                          "supported")
                 return True
             r = t.extractfile(m).read()
             try:

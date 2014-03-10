@@ -2,17 +2,19 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
-# Don't put print_function here, it breaks the running of setup.py for
-# packages that don't use it.
-from __future__ import division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
+import keyword
+import os
+import re
+import subprocess
 import sys
+from collections import defaultdict
+from io import open
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile
 from tempfile import mkdtemp
-from collections import defaultdict
-import keyword
-import re
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy
@@ -25,6 +27,7 @@ from conda.install import rm_rf
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE
 from conda.compat import input, configparser, StringIO
+
 
 PYPI_META = """\
 package:
@@ -110,6 +113,36 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
+DISTUTILS_PATCH = """\
+import distutils.core
+import io
+import os.path
+import sys
+import yaml
+from yaml import Loader, SafeLoader
+
+# Override the default string handling function to always return unicode
+# objects (taken from StackOverflow)
+def construct_yaml_str(self, node):
+    return self.construct_scalar(node)
+Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
+SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
+
+def setup(*args, **kwargs):
+    data = {{}}
+    data['install_requires'] = kwargs.get('install_requires', [])
+    data['entry_points'] = kwargs.get('entry_points', [])
+    data['packages'] = kwargs.get('packages', [])
+    data['setuptools'] = 'setuptools' in sys.modules
+    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
+                 encoding='utf-8') as fn:
+        fn.write(yaml.dump(data, encoding=None))
+
+distutils.core.setup = setup
+
+"""
+
+
 def main(args, parser):
     client = ServerProxy(args.pypi_url)
     package_dicts = {}
@@ -121,35 +154,42 @@ def main(args, parser):
         # future packages look like they depend on distribute. Also, who knows
         # what kind of monkeypatching the setup.pys out there could be doing.
         print("WARNING: building more than one recipe at once without "
-            "--no-download is not recommended")
+              "--no-download is not recommended")
     for package in args.packages:
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
-        d = package_dicts.setdefault(package, {'packagename':
-            package.lower(), 'run_depends':'',
-            'build_depends':'', 'entry_points':'', 'build_comment':'# ',
-            'test_commands':'', 'usemd5':'', 'entry_comment':'#', 'egg_comment':'#'})
+        d = package_dicts.setdefault(package, {'packagename': package.lower(),
+                                               'run_depends': '',
+                                               'build_depends': '',
+                                               'entry_points': '',
+                                               'build_comment': '# ',
+                                               'test_commands': '',
+                                               'usemd5': '',
+                                               'entry_comment': '#',
+                                               'egg_comment': '#'})
         d['import_tests'] = valid(package).lower()
         if d['import_tests'] == '':
             d['import_comment'] = '# '
         else:
             d['import_comment'] = ''
-            d['import_tests'] = indent+d['import_tests']
+            d['import_tests'] = indent + d['import_tests']
 
         if args.version:
             [version] = args.version
             versions = client.package_releases(package, True)
             if version not in versions:
                 sys.exit("Error: Version %s of %s is not available on PyPI."
-                    % (version, package))
+                         % (version, package))
             d['version'] = version
         else:
             versions = client.package_releases(package)
             if not versions:
-                sys.exit("Error: Could not find any versions of package %s" % package)
+                sys.exit("Error: Could not find any versions of package %s" %
+                         package)
             if len(versions) > 1:
-                print("Warning, the following versions were found for %s" % package)
+                print("Warning, the following versions were found for %s" %
+                      package)
                 for ver in versions:
                     print(ver)
                 print("Using %s" % versions[0])
@@ -169,26 +209,28 @@ def main(args, parser):
             else:
                 sys.exit("Error: No source urls found for %s" % package)
         if len(urls) > 1 and not args.noprompt:
-            print("More than one source version is available for %s:" % package)
+            print("More than one source version is available for %s:" %
+                  package)
             for i, url in enumerate(urls):
                 print("%d: %s (%s) %s" % (i, url['url'],
-                    human_bytes(url['size']), url['comment_text']))
+                                          human_bytes(url['size']),
+                                          url['comment_text']))
             n = int(input("Which version should I use? "))
         else:
             n = 0
 
-        print("Using url %s (%s) for %s." % (urls[n]['url'], urls[n]['size'], package))
+        print("Using url %s (%s) for %s." % (urls[n]['url'], urls[n]['size'],
+                                             package))
 
         d['pypiurl'] = urls[n]['url']
         d['md5'] = urls[n]['md5_digest']
         d['filename'] = urls[n]['filename']
 
-
         d['homeurl'] = data['home_page']
         d['summary'] = repr(data['summary'])
         license_classifier = "License :: OSI Approved ::"
         licenses = [classifier.lstrip(license_classifier) for classifier in
-            data['classifiers'] if classifier.startswith(license_classifier)]
+                    data['classifiers'] if classifier.startswith(license_classifier)]
         if not licenses:
             if data['license']:
                 if args.noprompt:
@@ -196,15 +238,17 @@ def main(args, parser):
                 else:
                     # Some projects put the whole license text in this field
                     print("This is the license for %s" % package)
-                    print('')
+                    print()
                     print(data['license'])
-                    print('')
+                    print()
                     license = input("What license string should I use? ")
             else:
                 if args.noprompt:
                     license = "UNKNOWN"
                 else:
-                    license = input("No license could be found for %s on PyPI. What license should I use? " % package)
+                    license = input(("No license could be found for %s on " +
+                                     "PyPI. What license should I use? ") %
+                                    package)
         else:
             license = ' or '.join(licenses)
         d['license'] = license
@@ -217,7 +261,8 @@ def main(args, parser):
         # distribute itself already works by monkeypatching distutils.
         if args.download:
             import yaml
-            print("Downloading %s (use --no-download to skip this step)" % package)
+            print("Downloading %s (use --no-download to skip this step)" %
+                  package)
             tempdir = mkdtemp('conda_skeleton')
 
             if not isdir(SRC_CACHE):
@@ -237,17 +282,11 @@ def main(args, parser):
                 print("done")
                 print("working in %s" % tempdir)
                 src_dir = get_dir(tempdir)
-                # TODO: Do this in a subprocess. That way would be safer (the
-                # setup.py can't mess up this code), it will allow building
-                # multiple recipes without a setuptools import messing
-                # everyone up, and it would prevent passing __future__ imports
-                # through.
-                patch_distutils(tempdir)
-                run_setuppy(src_dir)
-                with open(join(tempdir, 'pkginfo.yaml')) as fn:
+                run_setuppy(src_dir, tempdir)
+                with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
                     pkginfo = yaml.load(fn)
 
-                setuptools_build = 'setuptools' in sys.modules
+                setuptools_build = pkginfo['setuptools']
                 setuptools_run = False
 
                 # Look at the entry_points and construct console_script and
@@ -256,13 +295,15 @@ def main(args, parser):
                 if entry_points:
                     if isinstance(entry_points, str):
                         # makes sure it is left-shifted
-                        newstr = "\n".join(x.strip() for x in entry_points.split('\n'))
+                        newstr = "\n".join(x.strip()
+                                           for x in entry_points.split('\n'))
                         config = configparser.ConfigParser()
                         entry_points = {}
                         try:
                             config.readfp(StringIO(newstr))
                         except Exception as err:
-                            print("WARNING: entry-points not understood: ", err)
+                            print("WARNING: entry-points not understood: ",
+                                  err)
                             print("The string was", newstr)
                             entry_points = pkginfo['entry_points']
                         else:
@@ -270,15 +311,16 @@ def main(args, parser):
                             for section in config.sections():
                                 if section in ['console_scripts', 'gui_scripts']:
                                     value = ['%s=%s' % (option, config.get(section, option))
-                                                 for option in config.options(section) ]
+                                             for option in config.options(section)]
                                     entry_points[section] = value
                     if not isinstance(entry_points, dict):
                         print("WARNING: Could not add entry points. They were:")
                         print(entry_points)
                     else:
                         cs = entry_points.get('console_scripts', [])
-                        gs = entry_points.get('gui_scripts',[])
-                        # We have *other* kinds of entry-points so we need setuptools at run-time
+                        gs = entry_points.get('gui_scripts', [])
+                        # We have *other* kinds of entry-points so we need
+                        # setuptools at run-time
                         if not cs and not gs and len(entry_points) > 1:
                             setuptools_build = True
                             setuptools_run = True
@@ -286,57 +328,62 @@ def main(args, parser):
                             cs
                             # TODO: Use pythonw for these
                             + gs)
-                        if len(cs+gs) != 0:
+                        if len(cs + gs) != 0:
                             d['entry_points'] = indent.join([''] + entry_list)
                             d['entry_comment'] = ''
                             d['build_comment'] = ''
                             d['test_commands'] = indent.join([''] + make_entry_tests(entry_list))
 
-
                 if pkginfo['install_requires'] or setuptools_build or setuptools_run:
                     deps = [remove_version_information(dep).lower() for dep in
-                        pkginfo['install_requires']]
+                            pkginfo['install_requires']]
                     if 'setuptools' in deps:
                         setuptools_build = False
                         setuptools_run = False
                         d['egg_comment'] = ''
                         d['build_comment'] = ''
                     d['build_depends'] = indent.join([''] +
-                        ['setuptools']*setuptools_build + deps)
+                                                     ['setuptools'] * setuptools_build +
+                                                     deps)
                     d['run_depends'] = indent.join([''] +
-                        ['setuptools']*setuptools_run + deps)
+                                                   ['setuptools'] * setuptools_run +
+                                                   deps)
 
                 if pkginfo['packages']:
                     deps = set(pkginfo['packages'])
                     if d['import_tests']:
-                        olddeps = [x for x in d['import_tests'].split() if x != '-']
+                        olddeps = [x for x in d['import_tests'].split()
+                                   if x != '-']
                         deps = set(olddeps) | deps
                     d['import_tests'] = indent.join([''] + list(deps))
                     d['import_comment'] = ''
             finally:
                 rm_rf(tempdir)
 
-
     for package in package_dicts:
         d = package_dicts[package]
         makedirs(join(output_dir, package.lower()))
         print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, package.lower(), 'meta.yaml'),
-            'w') as f:
+        with open(join(output_dir, package.lower(), 'meta.yaml'), 'w',
+                  encoding='utf-8') as f:
             f.write(PYPI_META.format(**d))
-        with open(join(output_dir, package.lower(), 'build.sh'), 'w') as f:
+        with open(join(output_dir, package.lower(), 'build.sh'), 'w',
+                  encoding='utf-8') as f:
             f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, package.lower(), 'bld.bat'), 'w') as f:
+        with open(join(output_dir, package.lower(), 'bld.bat'), 'w',
+                  encoding='utf-8') as f:
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
 
+
 def valid(name):
-    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$",name)
+    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name)
             and not keyword.iskeyword(name)):
         return name
     else:
         return ''
+
 
 def unpack(src_path, tempdir):
     if src_path.endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
@@ -346,45 +393,84 @@ def unpack(src_path, tempdir):
     else:
         raise Exception("not a valid source")
 
+
 def get_dir(tempdir):
     lst = [fn for fn in listdir(tempdir) if not fn.startswith('.') and
-        isdir(join(tempdir, fn))]
+           isdir(join(tempdir, fn))]
     if len(lst) == 1:
         dir_path = join(tempdir, lst[0])
         if isdir(dir_path):
             return dir_path
     raise Exception("could not find unpacked source dir")
 
-def patch_distutils(tempdir):
-    # Note, distribute doesn't actually patch the setup function.
-    import distutils.core
-    import yaml
 
-    def setup(*args, **kwargs):
-        data = {}
-        data['install_requires'] = kwargs.get('install_requires', [])
-        data['entry_points'] = kwargs.get('entry_points', [])
-        data['packages'] = kwargs.get('packages', [])
-        with open(join(tempdir, "pkginfo.yaml"), 'w') as fn:
-            fn.write(yaml.dump(data))
+def run_setuppy(src_dir, temp_dir):
+    '''
+    Modify setup.py to patch distutils and then run it in a subprocess.
 
-    distutils.core.setup = setup
-
-def run_setuppy(src_dir):
-    import sys
-    sys.argv = ['setup.py', 'install']
-    sys.path.insert(0, src_dir)
-    d = {'__file__': 'setup.py', '__name__': '__main__'}
+    :param src_dir: Directory containing the source code
+    :type src_dir: str
+    :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
+    :type temp_dir: str
+    '''
+    # Add lines about patching distutils to top of setup.py
+    setup_content = ''
+    with open(join(src_dir, 'setup.py'), encoding='utf-8') as setuppy:
+        setup_content = setuppy.read()
+    setup_content = DISTUTILS_PATCH.format(temp_dir) + setup_content
+    with open(join(src_dir, 'setup.py'), 'w', encoding='utf-8') as setuppy:
+        saw_first_import = False
+        inserted_patch = False
+        for line in setup_content.splitlines(True):
+            stripped_line = line.strip()
+            # Ignore she-bang lines
+            if stripped_line.startswith('#!'):
+                continue
+            # Skip ez_setup lines
+            # TODO: Generate a patch automatically for setup.py
+            elif 'ez_setup' in stripped_line:
+                continue
+            # Check for first regular import or __future__ imports
+            elif (not stripped_line.startswith('#') and
+                    (stripped_line.startswith('import') or
+                     ' import ' in stripped_line)):
+                saw_first_import = True
+            # Insert patch after first blank line after imports
+            elif saw_first_import and not inserted_patch and not stripped_line:
+                setuppy.write(DISTUTILS_PATCH.format(temp_dir))
+                inserted_patch = True
+            setuppy.write(line)
+    # Save PYTHONPATH for later
+    env = os.environ.copy()
+    if 'PYTHONPATH' in env:
+        env['PYTHONPATH'] = src_dir + ':' + env['PYTHONPATH']
+    else:
+        env['PYTHONPATH'] = src_dir
     cwd = getcwd()
     chdir(src_dir)
-    with open(join(src_dir, 'setup.py')) as f:
-        exec(compile(f.read(), 'setup.py', 'exec'), d)
-    chdir(cwd)
+    args = [sys.executable, 'setup.py', 'install']
+    try:
+        subprocess.check_call(args, env=env)
+    except subprocess.CalledProcessError:
+        print('$PYTHONPATH = %s' % env['PYTHONPATH'])
+        sys.exit('Error: command failed: %s' % ' '.join(args))
+    finally:
+        chdir(cwd)
+
 
 def remove_version_information(pkgstr):
+    '''
+    :returns: A copy of pkgstr with any extra information about required
+              versions removed.
+    '''
     # TODO: Actually incorporate the version information into the meta.yaml
     # file.
-    return pkgstr.partition(' ')[0].partition('<')[0].partition('!')[0].partition('>')[0].partition('=')[0]
+    return (pkgstr.partition(' ')[0]
+                  .partition('<')[0]
+                  .partition('!')[0]
+                  .partition('>')[0]
+                  .partition('=')[0])
+
 
 def make_entry_tests(entry_list):
     tests = []

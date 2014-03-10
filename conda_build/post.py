@@ -1,12 +1,15 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
+import locale
 import re
 import os
 import sys
 import stat
 from glob import glob
-from subprocess import call, check_call
 from os.path import basename, join, splitext, isdir, isfile
+from io import open
+from subprocess import call, check_call
 
 from conda_build.config import build_prefix, build_python, PY3K
 from conda_build import external
@@ -19,6 +22,7 @@ if sys.platform.startswith('linux'):
 elif sys.platform == 'darwin':
     from conda_build import macho
 
+SHEBANG_PAT = re.compile(r'^#!.+$', re.M)
 
 
 def is_obj(path):
@@ -27,45 +31,44 @@ def is_obj(path):
                 (sys.platform == 'darwin' and macho.is_macho(path)))
 
 
-
-shebang_pat = re.compile(r'^#!.+$', re.M)
 def fix_shebang(f, osx_is_app=False):
     path = join(build_prefix, f)
     if is_obj(path):
         return
-    with open(path) as fi:
+    with open(path, encoding=locale.getpreferredencoding()) as fi:
         try:
             data = fi.read()
         except UnicodeDecodeError: # file is binary
             return
-    m = shebang_pat.match(data)
+    m = SHEBANG_PAT.match(data)
     if not (m and 'python' in m.group()):
         return
 
     py_exec = (build_prefix + '/python.app/Contents/MacOS/python'
                if sys.platform == 'darwin' and osx_is_app else
                build_prefix + '/bin/' + basename(build_python))
-    new_data = shebang_pat.sub('#!' + py_exec, data, count=1)
+    new_data = SHEBANG_PAT.sub('#!' + py_exec, data, count=1)
     if new_data == data:
         return
     print("updating shebang:", f)
-    with open(path, 'w') as fo:
+    with open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
         fo.write(new_data)
     os.chmod(path, int('755', 8))
 
 
 def write_pth(egg_path):
     fn = basename(egg_path)
-    with open(join(environ.sp_dir,
-                   '%s.pth' % (fn.split('-')[0])), 'w') as fo:
+    with open(join(environ.SP_DIR,
+                   '%s.pth' % (fn.split('-')[0])), 'w', encoding='utf-8') as fo:
         fo.write('./%s\n' % fn)
+
 
 def remove_easy_install_pth(preserve_egg_dir=False):
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
-    sp_dir = environ.sp_dir
+    sp_dir = environ.SP_DIR
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir:
@@ -104,7 +107,7 @@ def rm_py_along_so():
 
 
 def compile_missing_pyc():
-    sp_dir = environ.sp_dir
+    sp_dir = environ.SP_DIR
 
     need_compile = False
     for root, dirs, files in os.walk(sp_dir):
@@ -113,7 +116,7 @@ def compile_missing_pyc():
                 need_compile = True
     if need_compile:
         print('compiling .pyc files...')
-        utils._check_call([build_python, '-Wi', join(environ.stdlib_dir,
+        utils._check_call([build_python, '-Wi', join(environ.STDLIB_DIR,
                                                      'compileall.py'),
                            '-q', '-x', 'port_v3', sp_dir])
 
@@ -162,7 +165,7 @@ def mk_relative(f):
     if sys.platform.startswith('linux') and is_obj(path):
         rpath = '$ORIGIN/' + utils.rel_lib(f)
         patchelf = external.find_executable('patchelf')
-        print('patchelf: file: %s\n    setting rpath to: %s' % 
+        print('patchelf: file: %s\n    setting rpath to: %s' %
               (path, rpath))
         call([patchelf, '--set-rpath', rpath, path])
 

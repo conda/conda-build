@@ -1,4 +1,5 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import sys
@@ -10,29 +11,32 @@ from conda_build.config import (CONDA_PERL, CONDA_PY, PY3K, build_prefix,
                                 _get_python)
 from conda_build import source
 
-perl_ver =  str(CONDA_PERL)
-py_ver = '.'.join(str(CONDA_PY))
-stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
-                                'lib/python%s' % py_ver)
-sp_dir = join(stdlib_dir, 'site-packages')
+
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    str = unicode
+
+
+PERL_VER =  str(CONDA_PERL)
+PY_VER = '.'.join(str(CONDA_PY))
+STDLIB_DIR = join(build_prefix, 'Lib' if sys.platform == 'win32' else
+                                'lib/python%s' % PY_VER)
+SP_DIR = join(STDLIB_DIR, 'site-packages')
 
 
 def get_dict(m=None, prefix=build_prefix):
-    stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
-        'lib/python%s' % py_ver)
-    sp_dir = join(stdlib_dir, 'site-packages')
     python = _get_python(prefix)
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
     d['PY3K'] = str(PY3K)
-    d['STDLIB_DIR'] = stdlib_dir
-    d['SP_DIR'] = sp_dir
+    d['STDLIB_DIR'] = STDLIB_DIR
+    d['SP_DIR'] = SP_DIR
     d['SYS_PREFIX'] = sys.prefix
     d['SYS_PYTHON'] = sys.executable
-    d['PY_VER'] = py_ver
-    d['PERL_VER'] = perl_ver
+    d['PERL_VER'] = PERL_VER
+    d['PY_VER'] = PY_VER
     d['SRC_DIR'] = source.get_dir()
 
     if sys.platform == 'win32':         # -------- Windows

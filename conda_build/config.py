@@ -1,4 +1,9 @@
-from __future__ import print_function, division, absolute_import
+'''
+Module to store conda build settings.
+'''
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import sys

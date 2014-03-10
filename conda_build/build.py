@@ -1,27 +1,35 @@
-from __future__ import print_function, division, absolute_import
+'''
+Module that does most of the heavy lifting for the ``conda build`` command.
+'''
 
-import re
-import os
-import sys
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import json
-import stat
+import os
+import re
 import shutil
+import stat
 import subprocess
+import sys
 import tarfile
 from glob import glob
+from io import open
 from os.path import exists, isdir, isfile, islink, join, abspath
+
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    str = unicode
 
 import conda.config as cc
 import conda.plan as plan
-from conda.utils import url_path
 from conda.api import get_index
-from conda.install import prefix_placeholder
+from conda.compat import PY3
 from conda.fetch import fetch_index
+from conda.install import prefix_placeholder
+from conda.utils import url_path
 
-from conda_build import config
-from conda_build import environ
-from conda_build import source
-from conda_build import tarcheck
+from conda_build import config, environ, source, tarcheck
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
                               fix_permissions)
@@ -39,6 +47,9 @@ broken_dir = join(config.croot, "broken")
 
 
 def prefix_files():
+    '''
+    Returns a set of all files in prefix.
+    '''
     res = set()
     for root, dirs, files in os.walk(prefix):
         for fn in files:
@@ -51,6 +62,9 @@ def prefix_files():
 
 
 def create_post_scripts(m):
+    '''
+    Create scripts to run after build step
+    '''
     recipe_dir = m.path
     ext = '.bat' if sys.platform == 'win32' else '.sh'
     for tp in 'pre-link', 'post-link', 'pre-unlink':
@@ -65,6 +79,13 @@ def create_post_scripts(m):
 
 
 def have_prefix_files(files):
+    '''
+    Yields files that contain the current prefix in them, and modifies them
+    to replace the prefix with a placeholder.
+
+    :param files: Filenames to check for instances of prefix
+    :type files: list of str
+    '''
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
@@ -77,26 +98,37 @@ def have_prefix_files(files):
             continue
         if is_obj(path):
             continue
-        if islink(path):
+        # Open file as binary, since it might have any crazy encoding
+        with open(path, 'rb') as fi:
+            data = fi.read()
+        # Skip files that are truly binary
+        if b'\x00' in data:
             continue
-        try:
-            with open(path) as fi:
-                data = fi.read()
-        except UnicodeDecodeError:
-            continue
-        if '\x00' in data:
-            continue
-        if prefix not in data:
+        # This may end up mixing encodings, but since paths are usually ASCII,
+        # this shouldn't be a problem very often. The only way to completely
+        # avoid this would be to use chardet (or cChardet) to detect the
+        # encoding on the fly.
+        prefix_bytes = prefix.encode('utf-8')
+        if prefix_bytes not in data:
             continue
         st = os.stat(path)
-        data = data.replace(prefix, prefix_placeholder)
-        with open(path, 'w') as fo:
+        data = data.replace(prefix_bytes, prefix_placeholder.encode('utf-8'))
+        # Save as
+        with open(path, 'wb') as fo:
             fo.write(data)
         os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         yield f
 
 
 def create_info_files(m, files):
+    '''
+    Creates the metadata files that will be stored in the built package.
+
+    :param m: Package metadata
+    :type m: Metadata
+    :param files: Paths to files to include in package
+    :type files: list of str
+    '''
     recipe_dir = join(info_dir, 'recipe')
     os.makedirs(recipe_dir)
 
@@ -110,35 +142,37 @@ def create_info_files(m, files):
         else:
             shutil.copy(src_path, dst_path)
 
-    with open(join(info_dir, 'files'), 'w') as fo:
+    with open(join(info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
             if sys.platform == 'win32':
                 f = f.replace('\\', '/')
             fo.write(f + '\n')
 
-    with open(join(info_dir, 'index.json'), 'w') as fo:
+    # Deal with Python 2 and 3's different json module type reqs
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    with open(join(info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(m.info_index(), fo, indent=2, sort_keys=True)
 
-    with open(join(info_dir, 'recipe.json'), 'w') as fo:
+    with open(join(info_dir, 'recipe.json'), **mode_dict) as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     if sys.platform != 'win32':
-        prefix_files = list(have_prefix_files(files))
-        if prefix_files:
-            with open(join(info_dir, 'has_prefix'), 'w') as fo:
-                for f in prefix_files:
+        files_with_prefix = list(have_prefix_files(files))
+        if files_with_prefix:
+            with open(join(info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
+                for f in files_with_prefix:
                     fo.write(f + '\n')
 
     no_soft_rx = m.get_value('build/no_softlink')
     if no_soft_rx:
         pat = re.compile(no_soft_rx)
-        with open(join(info_dir, 'no_softlink'), 'w') as fo:
+        with open(join(info_dir, 'no_softlink'), 'w', encoding='utf-8') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(info_dir, 'git'), 'w') as fo:
+        with open(join(info_dir, 'git'), 'w', encoding='utf-8') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
@@ -147,6 +181,9 @@ def create_info_files(m, files):
 
 
 def create_env(pref, specs):
+    '''
+    Create a conda envrionment for the given prefix and specs.
+    '''
     if not isdir(config.bldpkgs_dir):
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
@@ -164,16 +201,30 @@ def create_env(pref, specs):
         os.makedirs(pref)
 
 def rm_pkgs_cache(dist):
+    '''
+    Removes dist from the package cache.
+    '''
     cc.pkgs_dirs = cc.pkgs_dirs[:1]
     rmplan = ['RM_FETCHED %s' % dist,
               'RM_EXTRACTED %s' % dist]
     plan.execute_plan(rmplan)
 
 def bldpkg_path(m):
+    '''
+    Returns path to built package's tarball given its ``Metadata``.
+    '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
 def build(m, get_src=True):
+    '''
+    Build the package with the specified metadata.
+
+    :param m: Package metadata
+    :type m: Metadata
+    :param get_src: Should we download the source?
+    :type get_src: bool
+    '''
     rm_rf(prefix)
     try_again = True
     while try_again:
@@ -226,8 +277,9 @@ def build(m, get_src=True):
         build_file = join(m.path, 'build.sh')
         script = m.get_value('build/script', None)
         if script:
-            if isinstance(script, list): script = '\n'.join(script)
-            with open(build_file, 'w') as bf:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+            with open(build_file, 'w', encoding='utf-8') as bf:
                 bf.write(script)
             os.chmod(build_file, 0o766)
         cmd = ['/bin/bash', '-x', '-e', build_file]
@@ -261,6 +313,12 @@ def build(m, get_src=True):
 
 
 def test(m):
+    '''
+    Execute any test scripts for the given package.
+
+    :param m: Package's metadata.
+    :type m: Metadata
+    '''
     # remove from package cache
     rm_pkgs_cache(m.dist())
 
@@ -287,10 +345,10 @@ def test(m):
 
     if py_files:
         # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.py_ver]
+        specs += ['python %s*' % environ.PY_VER]
     if pl_files:
         # as the tests are run by perl, we need to specify it
-        specs += ['perl %s*' % environ.perl_ver]
+        specs += ['perl %s*' % environ.PERL_VER]
     # add packages listed in test/requires
     for spec in m.get_value('test/requires'):
         specs.append(spec)
@@ -347,6 +405,12 @@ def test(m):
     print("TEST END:", m.dist())
 
 def tests_failed(m):
+    '''
+    Causes conda to exit if any of the given package's tests failed.
+
+    :param m: Package's metadata
+    :type m: Metadata
+    '''
     if not isdir(broken_dir):
         os.makedirs(broken_dir)
 

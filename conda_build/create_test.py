@@ -1,7 +1,13 @@
-from __future__ import print_function, division, absolute_import
+'''
+Module to handle generating test files.
+'''
+
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import shutil
 import sys
+from io import open
 from os.path import dirname, join, isdir, exists
 
 from conda_build import config, source
@@ -33,7 +39,7 @@ def create_shell_files(dir_path, m):
         shutil.copy(join(m.path, name), dir_path)
         has_tests = True
 
-    with open(join(dir_path, name), 'a') as f:
+    with open(join(dir_path, name), 'a', encoding='utf-8') as f:
         f.write('\n\n')
         for cmd in m.get_value('test/commands'):
             f.write(cmd)
@@ -45,11 +51,12 @@ def create_shell_files(dir_path, m):
 
 def create_py_files(dir_path, m):
     has_tests = False
-    with open(join(dir_path, 'run_test.py'), 'w') as fo:
+    with open(join(dir_path, 'run_test.py'), 'w', encoding='utf-8') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
-        fo.write("print('===== testing package: %s =====')\n" % m.dist())
-        with open(join(dirname(__file__), 'header_test.py')) as fi:
+        with open(join(dirname(__file__), 'header_test.py'),
+                  encoding='utf-8') as fi:
             fo.write(fi.read() + '\n')
+        fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
         for name in m.get_value('test/imports'):
             fo.write('print("import: %r")\n' % name)
@@ -58,7 +65,7 @@ def create_py_files(dir_path, m):
             has_tests = True
 
         try:
-            with open(join(m.path, 'run_test.py')) as fi:
+            with open(join(m.path, 'run_test.py'), encoding='utf-8') as fi:
                 fo.write("# --- run_test.py (begin) ---\n")
                 fo.write(fi.read())
                 fo.write("# --- run_test.py (end) ---\n")

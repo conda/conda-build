@@ -4,13 +4,16 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import sys
 import argparse
+from locale import getpreferredencoding
 
-#from conda.cli import common
 import conda.config as config
+from conda.compat import PY3
+
 from conda_build import __version__
 
 
@@ -21,38 +24,38 @@ def main():
 
     p.add_argument(
         '-c', "--check",
-        action = "store_true",
-        help = "only check (validate) the recipe",
+        action="store_true",
+        help="only check (validate) the recipe",
     )
     p.add_argument(
         "--no-binstar-upload",
-        action = "store_false",
-        help = "do not ask to upload the package to binstar",
-        dest = 'binstar_upload',
-        default = config.binstar_upload,
+        action="store_false",
+        help="do not ask to upload the package to binstar",
+        dest='binstar_upload',
+        default=config.binstar_upload,
     )
     p.add_argument(
         "--output",
-        action = "store_true",
-        help = "output the conda package filename which would have been "
+        action="store_true",
+        help="output the conda package filename which would have been "
                "created and exit",
     )
     p.add_argument(
         '-s', "--source",
-        action = "store_true",
-        help = "only obtain the source (but don't build)",
+        action="store_true",
+        help="only obtain the source (but don't build)",
     )
     p.add_argument(
         '-t', "--test",
-        action = "store_true",
-        help = "test package (assumes package is already build)",
+        action="store_true",
+        help="test package (assumes package is already build)",
     )
     p.add_argument(
         'recipe',
-        action = "store",
-        metavar = 'PATH',
-        nargs = '+',
-        help = "path to recipe directory",
+        action="store",
+        metavar='PATH',
+        nargs='+',
+        help="path to recipe directory"
     )
     p.add_argument(
         '--no-test',
@@ -62,7 +65,7 @@ def main():
     )
     p.add_argument(
         '-V', '--version',
-        action = 'version',
+        action='version',
         version = 'conda-build %s' % __version__,
     )
     p.set_defaults(func=execute)
@@ -86,16 +89,18 @@ def handle_binstar_upload(path, args):
     else:
         upload = args.binstar_upload
 
-    if not upload:
-        print("""\
+    no_upload_message = """\
 # If you want to upload this package to binstar.org later, type:
 #
 # $ binstar upload %s
-""" % path)
+""" % path
+    if not upload:
+        print(no_upload_message)
         return
 
     binstar = find_executable('binstar')
     if binstar is None:
+        print(no_upload_message)
         sys.exit('''
 Error: cannot locate binstar (required for upload)
 # Try:
@@ -105,7 +110,11 @@ Error: cannot locate binstar (required for upload)
     args = [binstar, 'upload', path]
     if config.binstar_personal:
         args += ['--personal']
-    subprocess.call(args)
+    try:
+        subprocess.call(args)
+    except:
+        print(no_upload_message)
+        raise
 
 
 def check_external():
@@ -141,6 +150,9 @@ def execute(args, parser):
 
     with Locked(croot):
         for arg in args.recipe:
+            # Don't use byte literals for paths in Python 2
+            if not PY3:
+                arg = arg.decode(getpreferredencoding())
             if isfile(arg):
                 if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
                     recipe_dir = tempfile.mkdtemp()
