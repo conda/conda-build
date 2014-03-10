@@ -84,7 +84,7 @@ def create_pl_files(dir_path, m):
         print(r'print("===== testing package: %s =====\n");' % m.dist(),
               file=fo)
         for name in m.get_value('test/imports'):
-            print(r'print("import: %r\n");' % name, file=fo)
+            print(r'print("import: %s\n");' % name, file=fo)
             print('use %s;\n' % name, file=fo)
             has_tests = True
 
