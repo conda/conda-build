@@ -311,7 +311,7 @@ def main(args, parser):
                     if d['import_tests']:
                         olddeps = [x for x in d['import_tests'].split() if x != '-']
                         deps = set(olddeps) | deps
-                    d['import_tests'] = indent.join([''] + list(deps))
+                    d['import_tests'] = indent.join([''] + sorted(deps))
                     d['import_comment'] = ''
             finally:
                 rm_rf(tempdir)
