@@ -1,17 +1,19 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import sys
+from io import open
 from os.path import isdir, isfile, join
+
+import conda.config as cc
+from conda.compat import iteritems
 
 from conda_build import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
 from conda_build.scripts import BAT_PROXY
-
-import conda.config as cc
-from conda.compat import iteritems
 
 try:
     import psutil
@@ -34,7 +36,7 @@ def fix_staged_scripts():
         if not isfile(join(scripts_dir, fn)) or '.' in fn:
             continue
 
-        with open(join(scripts_dir, fn)) as f:
+        with open(join(scripts_dir, fn), encoding='utf-8') as f:
             line = f.readline().lower()
             # If it's a #!python script
             if not (line.startswith('#!') and 'python' in line.lower()):
@@ -42,10 +44,12 @@ def fix_staged_scripts():
             print('Adjusting unix-style #! script %s, '
                   'and adding a .bat file for it' % fn)
             # copy it with a .py extension (skipping that first #! line)
-            with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
+            with open(join(scripts_dir, fn + '-script.py'), 'w',
+                      encoding='utf-8') as fo:
                 fo.write(f.read())
             # now create the batch file
-            with open(join(scripts_dir, fn + '.bat'), 'w') as fo:
+            with open(join(scripts_dir, fn + '.bat'), 'w',
+                      encoding='utf-8') as fo:
                 fo.write(BAT_PROXY)
 
         # remove the original script
@@ -59,11 +63,11 @@ def msvc_env_cmd():
         program_files = os.environ['ProgramFiles']
 
     if config.PY3K:
-        vcvarsall = os.path.join(program_files, 
+        vcvarsall = os.path.join(program_files,
                                  r'Microsoft Visual Studio 10.0'
                                  r'\VC\vcvarsall.bat')
     else:
-        vcvarsall = os.path.join(program_files, 
+        vcvarsall = os.path.join(program_files,
                                  r'Microsoft Visual Studio 9.0'
                                  r'\VC\vcvarsall.bat')
 
@@ -100,9 +104,9 @@ def build(m):
 
     src_dir = source.get_dir()
     bld_bat = join(m.path, 'bld.bat')
-    with open(bld_bat) as fi:
+    with open(bld_bat, encoding='utf-8') as fi:
         data = fi.read()
-    with open(join(src_dir, 'bld.bat'), 'w') as fo:
+    with open(join(src_dir, 'bld.bat'), 'w', encoding='utf-8') as fo:
         fo.write(msvc_env_cmd())
         # more debuggable with echo on
         fo.write('@echo on\n')

@@ -1,4 +1,5 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import sys
@@ -12,7 +13,7 @@ from conda_build.config import build_prefix
 if sys.platform == 'win32':
     dir_paths = [join(build_prefix, 'Scripts'),
                  join(cc.root_dir, 'Scripts'),
-                 'C:\cygwin\bin']
+                 'C:\\cygwin\\bin']
 else:
     dir_paths = [join(build_prefix, 'bin'),
                  join(cc.root_dir, 'bin'),]

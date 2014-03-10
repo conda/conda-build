@@ -1,16 +1,22 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
 import os
 import sys
-from subprocess import check_call, Popen, PIPE
 from os.path import join, isdir, isfile
 from shutil import copytree, ignore_patterns, copy2
+from subprocess import check_call, Popen, PIPE
 
-from conda.utils import hashsum_file
 from conda.fetch import download
+from conda.utils import hashsum_file
+
+from conda_build import external
 from conda_build.config import croot
 from conda_build.utils import rm_rf, tar_xf, unzip
-from conda_build import external
+
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    str = unicode
 
 SRC_CACHE = join(croot, 'src_cache')
 GIT_CACHE = join(croot, 'git_cache')
@@ -31,6 +37,7 @@ def get_dir():
 
 
 def download_to_cache(meta):
+    ''' Download a source to the local cache. '''
     print('Source cache directory is: %s' % SRC_CACHE)
     if not isdir(SRC_CACHE):
         os.makedirs(SRC_CACHE)
@@ -53,6 +60,7 @@ def download_to_cache(meta):
 
 
 def unpack(meta):
+    ''' Uncompress a downloaded source. '''
     src_path = download_to_cache(meta)
 
     os.makedirs(WORK_DIR)
@@ -65,7 +73,9 @@ def unpack(meta):
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
         copy2(src_path, WORK_DIR)
 
+
 def git_source(meta):
+    ''' Download a source from Git repo. '''
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
 
@@ -99,6 +109,7 @@ def git_source(meta):
 
 
 def git_info(fo=sys.stdout):
+    ''' Print info about a Git repo. '''
     assert isdir(WORK_DIR)
     for cmd, check_error in [
                 ('git log -n1', True),
@@ -106,13 +117,18 @@ def git_info(fo=sys.stdout):
                 ('git status', True)]:
         p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR)
         stdout, stderr = p.communicate()
-        if check_error and stderr and stderr.decode('utf-8').strip():
-            raise Exception("git error: %s" % stderr.decode('utf-8'))
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode('utf-8')
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode('utf-8')
+        if check_error and stderr and stderr.strip():
+            raise Exception("git error: %s" % stderr)
         fo.write('==> %s <==\n' % cmd)
-        fo.write(stdout.decode('utf-8') + '\n')
+        fo.write(stdout + '\n')
 
 
 def hg_source(meta):
+    ''' Download a source from Mercurial repo. '''
     hg = external.find_executable('hg')
     if not hg:
         sys.exit('Error: hg not installed')
@@ -138,6 +154,7 @@ def hg_source(meta):
 
 
 def svn_source(meta):
+    ''' Download a source from SVN repo. '''
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
 
@@ -158,7 +175,8 @@ def svn_source(meta):
     if isdir(cache_repo):
         check_call([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo)
     else:
-        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo])
+        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url,
+                                                                   cache_repo])
         assert isdir(cache_repo)
 
     # now copy into work directory
@@ -208,8 +226,7 @@ def provide(recipe_dir, meta, patch=True):
 
 
 if __name__ == '__main__':
-    print(provide('.', dict(
-        url = 'http://pypi.python.org/packages/source/b/bitarray/bitarray-0.8.0.tar.gz',
-        git_url = 'git@github.com:ilanschnell/bitarray.git',
-        git_tag = '0.5.2',
-    )))
+    print(provide('.',
+                  {'url': 'http://pypi.python.org/packages/source/b/bitarray/bitarray-0.8.0.tar.gz',
+                   'git_url': 'git@github.com:ilanschnell/bitarray.git',
+                   'git_tag': '0.5.2'}))
