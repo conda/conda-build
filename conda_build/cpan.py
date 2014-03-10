@@ -167,7 +167,12 @@ def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
     '''
-    perl_version = str(latest_pkg_version('perl'))
+    perl_version = latest_pkg_version('perl')
+    if perl_version is not None:
+        perl_version = str(perl_version)
+    # Default to 5.18.2 if perl is not in channels
+    else:
+        perl_version = '5.18.2'
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
@@ -239,7 +244,7 @@ def main(args, parser):
         if release_data['download_url']:
             d['cpanurl'] = release_data['download_url']
             d['md5'], size = get_checksum_and_size(release_data['download_url'])
-            d['filename'] = release_data['archive']
+            d['filename'] = basename(release_data['archive'])
             print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
         else:
             d['useurl'] = '#'
