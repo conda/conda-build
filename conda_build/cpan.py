@@ -11,6 +11,7 @@ import json
 import subprocess
 import sys
 from distutils.version import LooseVersion
+from glob import glob
 from io import open
 from os import makedirs
 from os.path import basename, dirname, join, exists
@@ -43,7 +44,7 @@ source:
 {build_comment}build:
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
-  # number: 1
+  number: 1
 
 requirements:
   build:
@@ -200,14 +201,21 @@ def main(args, parser):
                    "making a recipe for {1} instead.").format(orig_package,
                                                               package))
 
+        latest_release_data = get_release_info(args.meta_cpan_url, package,
+                                               None, perl_version)
         packagename = perl_to_conda(package)
-        dir_path = join(output_dir, packagename)
-        if exists(dir_path):
-            raise RuntimeError("directory already exists: %s" % dir_path)
+
+        # Skip duplicates
+        if ((args.version is not None and ((packagename + '-' + args.version) in
+                                           processed_packages)) or
+                ((packagename + '-' + latest_release_data['version']) in
+                 processed_packages)):
+            continue
+
         d = package_dicts.setdefault(package, {'packagename': packagename,
                                                'run_depends': '',
                                                'build_depends': '',
-                                               'build_comment': '# ',
+                                               'build_comment': '',
                                                'test_commands': '',
                                                'usemd5': '',
                                                'useurl': '',
@@ -221,6 +229,11 @@ def main(args, parser):
                                          args.version is not None else
                                          core_version),
                                         perl_version)
+        # Check if versioned recipe directory already exists
+        dir_path = join(output_dir, '-'.join((packagename,
+                                              release_data['version'])))
+        if exists(dir_path):
+            raise RuntimeError("directory already exists: %s" % dir_path)
 
         # If this is something we're downloading, get MD5
         if release_data['download_url']:
@@ -241,8 +254,12 @@ def main(args, parser):
             d['homeurl'] = 'http://metacpan.org/pod/' + package
         if 'abstract' in release_data:
             d['summary'] = repr(release_data['abstract']).lstrip('u')
-        d['license'] = release_data['license'][0]
+        d['license'] = (release_data['license'][0] if
+                        isinstance(release_data['license'], list) else
+                        release_data['license'])
         d['version'] = release_data['version']
+
+        processed_packages.add(packagename + '-' + d['version'])
 
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
@@ -278,19 +295,17 @@ def main(args, parser):
         else:
             d['import_comment'] = '# '
 
-        # Write recipe files
-        package_dir = join(output_dir, packagename)
-        if not exists(package_dir):
-            makedirs(package_dir)
-        print("Writing recipe for %s" % packagename)
-        with open(join(package_dir, 'meta.yaml'), 'w') as f:
+        # Write recipe files to a versioned directory
+        makedirs(dir_path)
+        print("Writing recipe for %s-%s" % (packagename, d['version']))
+        with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(CPAN_META.format(**d))
-        with open(join(package_dir, 'build.sh'), 'w') as f:
+        with open(join(dir_path, 'build.sh'), 'w') as f:
             if empty_recipe:
                 f.write('#!/bin/bash\necho "Nothing to do."\n')
             else:
                 f.write(CPAN_BUILD_SH.format(**d))
-        with open(join(package_dir, 'bld.bat'), 'w') as f:
+        with open(join(dir_path, 'bld.bat'), 'w') as f:
             if empty_recipe:
                 f.write('echo "Nothing to do."\n')
             else:
@@ -341,7 +356,6 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
             orig_dist = dist_for_module(args.meta_cpan_url, dep_dict['module'],
                                         perl_version)
             dep_entry = perl_to_conda(orig_dist)
-            version_suffix = ''
             # Skip perl as a dependency, since it's already in list
             if orig_dist.lower() == 'perl':
                 continue
@@ -362,16 +376,19 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
                 # This is because conda doesn't support > in version
                 # requirements.
                 if pkg_version is not None and (dep_version > pkg_version):
-                    version_suffix = ' ' + dep_dict['version']
+                    dep_entry += ' ' + dep_dict['version']
 
             # If recursive, check if we have a recipe for this dependency
-            if (args.recursive and (not exists(join(output_dir, dep_entry)))
-                    and (orig_dist not in processed_packages)):
-                packages_to_append.add(orig_dist +
-                                       version_suffix.replace(' ', '='))
+            if args.recursive:
+                # If dependency entry is versioned, make sure this is too
+                if ' ' in dep_entry:
+                    if not exists(join(output_dir, dep_entry.replace('-'))):
+                        packages_to_append.add('='.join((orig_dist,
+                                                         dep_dict['version'])))
+                elif not glob(join(output_dir, (dep_entry + '-[v0-9][0-9.]*'))):
+                    packages_to_append.add(orig_dist)
 
             # Add to appropriate dependency list
-            dep_entry += version_suffix
             if dep_dict['phase'] == 'runtime':
                 run_deps.add(dep_entry)
             # Handle build deps

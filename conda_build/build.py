@@ -6,9 +6,10 @@ import sys
 import json
 import stat
 import shutil
-import tarfile
-from os.path import exists, isdir, isfile, islink, join, abspath
 import subprocess
+import tarfile
+from glob import glob
+from os.path import exists, isdir, isfile, islink, join, abspath
 
 import conda.config as cc
 import conda.plan as plan
@@ -182,17 +183,21 @@ def build(m, get_src=True):
             error_str = str(e)
             if error_str.startswith('No packages found matching:'):
                 # Build dependency if recipe exists
-                recipe_dir = error_str.split(': ')[1]
-                if exists(recipe_dir):
-                    print(("Missing dependency {0}, but found recipe " +
-                           "directory, so building " +
-                           "{0} first").format(recipe_dir))
-                    dep_m = MetaData(abspath(recipe_dir))
-                    dep_m.check_fields()
-                    build(dep_m)
-                    test(dep_m)
-                    # Now try again
-                    try_again = True
+                dep_pkg = error_str.split(': ')[1].replace(' ', '-')
+                recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
+                if exists(dep_pkg):
+                    recipe_glob.append(dep_pkg)
+                if recipe_glob:
+                    for recipe_dir in recipe_glob:
+                        print(("Missing dependency {0}, but found recipe " +
+                               "directory, so building " +
+                               "{0} first").format(dep_pkg))
+                        dep_m = MetaData(abspath(recipe_dir))
+                        dep_m.check_fields()
+                        build(dep_m)
+                        test(dep_m)
+                        # Now try again
+                        try_again = True
                 else:
                     raise
             else:
