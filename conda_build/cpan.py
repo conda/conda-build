@@ -83,19 +83,19 @@ about:
 CPAN_BUILD_SH = """\
 #!/bin/bash
 
-# If it has Makefile.PL use that, otherwise use Build.PL
-if [[ -e Makefile.PL ]]; then
-    # Make sure this goes in site
-    perl Makefile.PL INSTALLDIRS=site
-    make
-    make test
-    make install
-elif [[ -e Build.PL ]]; then
+# If it has Build.PL use that, otherwise use Makefile.PL
+if [[ -e Build.PL ]]; then
     perl Build.PL
     ./Build
     ./Build test
     # Make sure this goes in site
     ./Build install --installdirs site
+elif [[ -e Makefile.PL ]]; then
+    # Make sure this goes in site
+    perl Makefile.PL INSTALLDIRS=site
+    make
+    make test
+    make install
 else
     echo 'Unable to find Build.PL or Makefile.PL. You need to modify build.sh.'
     exit 1
@@ -109,16 +109,8 @@ fi
 """
 
 CPAN_BLD_BAT = """\
-IF exist Makefile.PL (
-    :: Make sure this goes in site
-    perl Makefile.PL INSTALLDIRS=site
-    IF errorlevel 1 exit 1
-    make
-    IF errorlevel 1 exit 1
-    make test
-    IF errorlevel 1 exit 1
-    make install
-) ELSE IF exist Build.PL (
+:: If it has Build.PL use that, otherwise use Makefile.PL
+IF exist Build.PL (
     perl Build.PL
     IF errorlevel 1 exit 1
     Build
@@ -127,6 +119,15 @@ IF exist Makefile.PL (
     :: Make sure this goes in site
     Build install --installdirs site
     IF errorlevel 1 exit 1
+) ELSE IF exist Makefile.PL (
+    :: Make sure this goes in site
+    perl Makefile.PL INSTALLDIRS=site
+    IF errorlevel 1 exit 1
+    make
+    IF errorlevel 1 exit 1
+    make test
+    IF errorlevel 1 exit 1
+    make install
 ) ELSE (
     ECHO 'Unable to find Build.PL or Makefile.PL. You need to modify bld.bat.'
     exit 1
