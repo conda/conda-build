@@ -41,10 +41,16 @@ source:
    # List any patch files here
    # - fix.patch
 
-{build_comment}build:
+build:
   # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  number: 1
+  # number. If you're using a build string instead of a number, this is the
+  # final numeric portion of the string.
+  #
+  # If you do not include a build number or string, the build number and string
+  # default to 0.
+  #
+  # NOTE: Build strings override build numbers.
+  {build_key}: {build_value}
 
 requirements:
   build:
@@ -57,11 +63,8 @@ test:
   # Perl 'use' tests
   {import_comment}imports:{import_tests}
 
-  # By default CPAN tests will be run while "building" (which just uses cpanm
-  # to install)
-
-  # You can also put a file called run_test.py in the recipe that will be run
-  # at test time.
+  # You can also put a file called run_test.pl (or run_test.py) in the recipe
+  # that will be run at test time.
 
   # requires:
     # Put any additional test requirements here.  For example
@@ -80,7 +83,20 @@ about:
 CPAN_BUILD_SH = """\
 #!/bin/bash
 
-cpanm .
+# If it has Makefile.PL use that, otherwise use Build.PL
+if [[ -e Makefile.PL ]]; then
+    # Make sure this goes in site
+    perl Makefile.PL INSTALLDIRS=site
+    make
+    make test
+    make install
+elif [[ -e Build.PL ]]; then
+    perl Build.PL
+    ./Build
+    ./Build test
+    # Make sure this goes in site
+    ./Build install --installdirs site
+fi
 
 # Add more build steps here, if they are necessary.
 
@@ -90,8 +106,25 @@ cpanm .
 """
 
 CPAN_BLD_BAT = """\
-cpanm .
-if errorlevel 1 exit 1
+IF exist Makefile.PL (
+    :: Make sure this goes in site
+    perl Makefile.PL INSTALLDIRS=site
+    IF errorlevel 1 exit 1
+    make
+    IF errorlevel 1 exit 1
+    make test
+    IF errorlevel 1 exit 1
+    make install
+) ELSE IF exist Build.PL (
+    perl Build.PL
+    IF errorlevel 1 exit 1
+    Build
+    IF errorlevel 1 exit 1
+    Build test
+    :: Make sure this goes in site
+    Build install --installdirs site
+    IF errorlevel 1 exit 1
+)
 
 :: Add more build steps here, if they are necessary.
 
@@ -220,11 +253,12 @@ def main(args, parser):
         d = package_dicts.setdefault(package, {'packagename': packagename,
                                                'run_depends': '',
                                                'build_depends': '',
-                                               'build_comment': '',
                                                'test_commands': '',
                                                'usemd5': '',
                                                'useurl': '',
                                                'summary': "''",
+                                               'build_key': 'number',
+                                               'build_value': '1',
                                                'import_tests': ''})
 
         # Fetch all metadata from CPAN
@@ -275,6 +309,9 @@ def main(args, parser):
             d['run_depends'] += ' ' + perl_version
             d['useurl'] = '#'
             d['usemd5'] = '#'
+            d['build_value'] = 'pl_{0}_{1}'.format(perl_version,
+                                                   d['build_number'])
+            d['build_key'] = 'string'
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
         else:
