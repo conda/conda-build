@@ -83,13 +83,20 @@ def create_pl_files(dir_path, m):
         print(r'# tests for %s (this is a generated file)' % m.dist(), file=fo)
         print(r'print("===== testing package: %s =====\n");' % m.dist(),
               file=fo)
+        print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
+              file=fo)
         for name in m.get_value('test/imports'):
             print(r'print("import: %s\n");' % name, file=fo)
             print('use %s;\n' % name, file=fo)
             # Don't try to print version for complex imports
             if ' ' not in name:
-                print(("if (defined {0}->VERSION) {{\n\t" +
-                       "print('\tusing version ' . {0}->VERSION . '\n');\n" +
+                print(("if (defined {0}->VERSION) {{\n" +
+                       "\tmy $given_version = {0}->VERSION;\n" +
+                       "\t$given_version =~ s/0+$//;\n" +
+                       "\tdie('Expected version ' . $expected_version . ' but" +
+                       " found ' . $given_version) unless ($expected_version " +
+                       "eq $given_version);\n" +
+                       "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
                        "\n}}").format(name), file=fo)
             has_tests = True
 
