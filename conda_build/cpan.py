@@ -96,6 +96,9 @@ elif [[ -e Build.PL ]]; then
     ./Build test
     # Make sure this goes in site
     ./Build install --installdirs site
+else
+    echo 'Unable to find Build.PL or Makefile.PL. You need to modify build.sh.'
+    exit 1
 fi
 
 # Add more build steps here, if they are necessary.
@@ -124,6 +127,9 @@ IF exist Makefile.PL (
     :: Make sure this goes in site
     Build install --installdirs site
     IF errorlevel 1 exit 1
+) ELSE (
+    ECHO 'Unable to find Build.PL or Makefile.PL. You need to modify bld.bat.'
+    exit 1
 )
 
 :: Add more build steps here, if they are necessary.
@@ -310,7 +316,7 @@ def main(args, parser):
             d['useurl'] = '#'
             d['usemd5'] = '#'
             d['build_value'] = 'pl_{0}_{1}'.format(perl_version,
-                                                   d['build_number'])
+                                                   d['build_value'])
             d['build_key'] = 'string'
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
