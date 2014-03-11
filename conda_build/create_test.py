@@ -86,7 +86,9 @@ def create_pl_files(dir_path, m):
         for name in m.get_value('test/imports'):
             print(r'print("import: %s\n");' % name, file=fo)
             print('use %s;\n' % name, file=fo)
-            print("print('\tusing version ' . %s->VERSION . '\n');" % name, file=fo)
+            print(("if (defined {0}->VERSION) {{\n\t" +
+                   "print('\tusing version ' . {0}->VERSION . '\n');\n" +
+                   "\n}}").format(name), file=fo)
             has_tests = True
 
         try:
