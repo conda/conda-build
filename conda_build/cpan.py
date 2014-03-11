@@ -24,6 +24,7 @@ from conda.install import linked, rm_rf
 from conda.resolve import MatchSpec, Resolve
 from conda.utils import human_bytes, hashsum_file, memoized
 
+from conda_build.config import CONDA_PERL
 from conda_build.source import SRC_CACHE
 from conda_build.utils import tar_xf, unzip
 
@@ -41,16 +42,10 @@ source:
    # List any patch files here
    # - fix.patch
 
-build:
+{build_comment}build:
   # If this is a new build for the same version, increment the build
-  # number. If you're using a build string instead of a number, this is the
-  # final numeric portion of the string.
-  #
-  # If you do not include a build number or string, the build number and string
-  # default to 0.
-  #
-  # NOTE: Build strings override build numbers.
-  {build_key}: {build_value}
+  # number. If you do not include this key, it defaults to 0.
+  {build_comment}number: 1
 
 requirements:
   build:
@@ -84,13 +79,13 @@ CPAN_BUILD_SH = """\
 #!/bin/bash
 
 # If it has Build.PL use that, otherwise use Makefile.PL
-if [[ -e Build.PL ]]; then
+if [ -f Build.PL ]; then
     perl Build.PL
     ./Build
     ./Build test
     # Make sure this goes in site
     ./Build install --installdirs site
-elif [[ -e Makefile.PL ]]; then
+elif [ -f Makefile.PL ]; then
     # Make sure this goes in site
     perl Makefile.PL INSTALLDIRS=site
     make
@@ -169,7 +164,7 @@ def core_module_version(module, version):
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
     if version is None:
-        version = latest_pkg_version('perl')
+        version = LooseVersion(CONDA_PERL)
     else:
         version = LooseVersion(version)
     cmd = ['corelist', '-v', str(version), module]
@@ -207,12 +202,7 @@ def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
     '''
-    perl_version = latest_pkg_version('perl')
-    if perl_version is not None:
-        perl_version = str(perl_version)
-    # Default to 5.18.2 if perl is not in channels
-    else:
-        perl_version = '5.18.2'
+    perl_version = CONDA_PERL
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
@@ -260,12 +250,11 @@ def main(args, parser):
         d = package_dicts.setdefault(package, {'packagename': packagename,
                                                'run_depends': '',
                                                'build_depends': '',
+                                               'build_comment': '# ',
                                                'test_commands': '',
                                                'usemd5': '',
                                                'useurl': '',
                                                'summary': "''",
-                                               'build_key': 'number',
-                                               'build_value': '1',
                                                'import_tests': ''})
 
         # Fetch all metadata from CPAN
@@ -312,13 +301,8 @@ def main(args, parser):
         if core_version is not None and ((args.version is None) or
                                          (core_version >=
                                           LooseVersion(args.version))):
-            d['build_depends'] += ' ' + perl_version
-            d['run_depends'] += ' ' + perl_version
             d['useurl'] = '#'
             d['usemd5'] = '#'
-            d['build_value'] = 'pl_{0}_{1}'.format(perl_version,
-                                                   d['build_value'])
-            d['build_key'] = 'string'
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
         else:
