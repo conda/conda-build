@@ -29,6 +29,11 @@ from conda_build.source import SRC_CACHE
 from conda_build.utils import tar_xf, unzip
 
 
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    str = unicode
+
+
 CPAN_META = """\
 package:
   name: {packagename}
@@ -142,7 +147,10 @@ def latest_pkg_version(pkg):
     :returns: the latest version of the specified conda package available
     '''
     r = Resolve(get_index())
-    pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
+    try:
+        pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
+    except RuntimeError:
+        pkg_list = None
     if pkg_list:
         pkg_version = LooseVersion(pkg_list[-1].version)
     else:
@@ -169,7 +177,7 @@ def core_module_version(module, version):
         version = LooseVersion(version)
     cmd = ['corelist', '-v', str(version), module]
     try:
-        output = subprocess.check_output(cmd)
+        output = subprocess.check_output(cmd).decode('utf-8')
     except subprocess.CalledProcessError:
         sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
                   'the perl conda package installed in your default ' +
@@ -179,7 +187,7 @@ def core_module_version(module, version):
     if mod_version == 'undef':
         # Check if it's actually in core
         cmd = ['corelist', module]
-        output = subprocess.check_output(cmd)
+        output = subprocess.check_output(cmd).decode('utf-8')
         # If it's in core...
         if 'perl v' in output:
             first_version = output.partition('perl v')[2].strip()
@@ -415,7 +423,8 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
             if args.recursive:
                 # If dependency entry is versioned, make sure this is too
                 if ' ' in dep_entry:
-                    if not exists(join(output_dir, dep_entry.replace('-'))):
+                    if not exists(join(output_dir, dep_entry.replace('::',
+                                                                     '-'))):
                         packages_to_append.add('='.join((orig_dist,
                                                          dep_dict['version'])))
                 elif not glob(join(output_dir, (dep_entry + '-[v0-9][0-9.]*'))):
@@ -528,9 +537,16 @@ def get_release_info(cpan_url, package, version, perl_version):
                        "entirely.").format(version_str, orig_package))
                 rel_dict['version'] = version_str
                 rel_dict['download_url'] = ''
+            elif LooseVersion(rel_dict['version']) > version:
+                print(("WARNING: Version {0} of {1} is not available on " +
+                       "MetaCPAN, but a newer version ({2}) is, so we will " +
+                       "that instead.").format(version_str, orig_package,
+                                               rel_dict['version']))
             else:
                 sys.exit(("Error: Version %s of %s is not available on " +
-                          "MetaCPAN.") % (version_str, orig_package))
+                          "MetaCPAN. You may want to use the latest version," +
+                          " %s, instead.") % (version_str, orig_package,
+                                              rel_dict['version']))
         else:
             rel_dict = new_rel_dict
 
