@@ -93,6 +93,9 @@ def handle_binstar_upload(path, args):
 # If you want to upload this package to binstar.org later, type:
 #
 # $ binstar upload %s
+#
+# To have conda build upload to binstar automatically, use
+# $ conda config --set binstar_upload yes
 """ % path
     if not upload:
         print(no_upload_message)
