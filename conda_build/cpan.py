@@ -141,69 +141,11 @@ IF exist Build.PL (
 """
 
 
-@memoized
-def latest_pkg_version(pkg):
+class InvalidReleaseError(RuntimeError):
     '''
-    :returns: the latest version of the specified conda package available
+    An exception that is raised when a release is not available on MetaCPAN.
     '''
-    r = Resolve(get_index())
-    try:
-        pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
-    except RuntimeError:
-        pkg_list = None
-    if pkg_list:
-        pkg_version = LooseVersion(pkg_list[-1].version)
-    else:
-        pkg_version = None
-    return pkg_version
-
-
-@memoized
-def core_module_version(module, version):
-    '''
-    :param module: Name of a Perl core module
-    :type module: str
-
-    :returns: The version of the specified module that is currently available
-              in the specified version of Perl. If the version is `undef`, but
-              the module is actually part of the Perl core, the version of Perl
-              passed in will be used as the module version.
-    '''
-    # In case we were given a dist, convert to module
-    module = module.replace('-', '::')
-    if version is None:
-        version = LooseVersion(CONDA_PERL)
-    else:
-        version = LooseVersion(version)
-    cmd = ['corelist', '-v', str(version), module]
-    try:
-        output = subprocess.check_output(cmd).decode('utf-8')
-    except subprocess.CalledProcessError:
-        sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
-                  'the perl conda package installed in your default ' +
-                  'environment.') % ' '.join(cmd))
-    mod_version = output.split()[1]
-    # If undefined, that could either mean it's versionless or not in core
-    if mod_version == 'undef':
-        # Check if it's actually in core
-        cmd = ['corelist', module]
-        output = subprocess.check_output(cmd).decode('utf-8')
-        # If it's in core...
-        if 'perl v' in output:
-            first_version = output.partition('perl v')[2].strip()
-            first_version = LooseVersion(first_version)
-            # If it's newer than the specified version, return None
-            if LooseVersion(first_version) > LooseVersion(version):
-                mod_version = None
-            else:
-                mod_version = version
-        # If it's not, return None
-        else:
-            mod_version = None
-    else:
-        mod_version = LooseVersion(mod_version)
-
-    return mod_version
+    pass
 
 
 def main(args, parser):
@@ -355,6 +297,71 @@ def main(args, parser):
     print("Done")
 
 
+@memoized
+def latest_pkg_version(pkg):
+    '''
+    :returns: the latest version of the specified conda package available
+    '''
+    r = Resolve(get_index())
+    try:
+        pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
+    except RuntimeError:
+        pkg_list = None
+    if pkg_list:
+        pkg_version = LooseVersion(pkg_list[-1].version)
+    else:
+        pkg_version = None
+    return pkg_version
+
+
+@memoized
+def core_module_version(module, version):
+    '''
+    :param module: Name of a Perl core module
+    :type module: str
+
+    :returns: The version of the specified module that is currently available
+              in the specified version of Perl. If the version is `undef`, but
+              the module is actually part of the Perl core, the version of Perl
+              passed in will be used as the module version.
+    '''
+    # In case we were given a dist, convert to module
+    module = module.replace('-', '::')
+    if version is None:
+        version = LooseVersion(CONDA_PERL)
+    else:
+        version = LooseVersion(version)
+    cmd = ['corelist', '-v', str(version), module]
+    try:
+        output = subprocess.check_output(cmd).decode('utf-8')
+    except subprocess.CalledProcessError:
+        sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
+                  'the perl conda package installed in your default ' +
+                  'environment.') % ' '.join(cmd))
+    mod_version = output.split()[1]
+    # If undefined, that could either mean it's versionless or not in core
+    if mod_version == 'undef':
+        # Check if it's actually in core
+        cmd = ['corelist', module]
+        output = subprocess.check_output(cmd).decode('utf-8')
+        # If it's in core...
+        if 'perl v' in output:
+            first_version = output.partition('perl v')[2].strip()
+            first_version = LooseVersion(first_version)
+            # If it's newer than the specified version, return None
+            if LooseVersion(first_version) > LooseVersion(version):
+                mod_version = None
+            else:
+                mod_version = version
+        # If it's not, return None
+        else:
+            mod_version = None
+    else:
+        mod_version = LooseVersion(mod_version)
+
+    return mod_version
+
+
 def deps_for_package(package, release_data, perl_version, args, output_dir,
                      processed_packages):
     '''
@@ -401,11 +408,24 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
             if orig_dist.lower() == 'perl':
                 continue
 
-            # Add version number to dependency, if it's newer than latest
-            # we have package for.
-            if dep_dict['version'] == {'', 'undef'}:
+            # See if version is specified
+            if dep_dict['version'] in {'', 'undef'}:
                 dep_dict['version'] = '0'
             dep_version = LooseVersion(dep_dict['version'])
+
+            # Make sure specified version is valid
+            try:
+                get_release_info(args.meta_cpan_url, dep_dict['module'],
+                                 dep_version, perl_version, dependency=True)
+            except InvalidReleaseError:
+                print(('WARNING: The version of %s listed as a ' +
+                       'dependency for %s, %s, is not available on MetaCPAN, ' +
+                       'so we are just assuming the latest version is ' +
+                       'okay.') % (orig_dist, package, str(dep_version)))
+                dep_version = LooseVersion('0')
+
+            # Add version number to dependency, if it's newer than latest
+            # we have package for.
             if dep_version > LooseVersion('0'):
                 pkg_version = latest_pkg_version(dep_entry)
                 # If we don't have a package, use core version as version
@@ -480,7 +500,8 @@ def dist_for_module(cpan_url, module, perl_version):
     return distribution
 
 
-def get_release_info(cpan_url, package, version, perl_version):
+def get_release_info(cpan_url, package, version, perl_version,
+                     dependency=False):
     '''
     Return a dictionary of the JSON information stored at cpan.metacpan.org
     corresponding to the given package/dist/module.
@@ -488,10 +509,6 @@ def get_release_info(cpan_url, package, version, perl_version):
     # Transform module name to dist name if necessary
     orig_package = package
     package = dist_for_module(cpan_url, package, perl_version)
-    if orig_package != package:
-        print(("WARNING: %s was part of the %s distribution, so we are making" +
-               " a recipe for the distribution instead.") % (orig_package,
-                                                             package))
     package = package.replace('::', '-')
 
     # Get latest info to find author, which is necessary for retrieving a
@@ -500,7 +517,8 @@ def get_release_info(cpan_url, package, version, perl_version):
         with TmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
             with open(json_path, encoding='utf-8-sig') as dist_json_file:
                 rel_dict = json.load(dist_json_file)
-    except RuntimeError:
+                rel_dict['version'] = rel_dict['version'].lstrip('v')
+    except RuntimeError as e:
         core_version = core_module_version(orig_package, perl_version)
         if core_version is not None and (version is None or
                                          (version == core_version)):
@@ -517,7 +535,8 @@ def get_release_info(cpan_url, package, version, perl_version):
     # If the latest isn't the version we're looking for, we have to do another
     # request
     version_str = str(version)
-    if version is not None and rel_dict['version'] != version_str:
+    if (version is not None) and (version != LooseVersion('0') and
+            (rel_dict['version'] != version_str)):
         author = rel_dict['author']
         try:
             with TmpDownload('{}/v0/release/{}/{}-{}'.format(cpan_url,
@@ -526,6 +545,7 @@ def get_release_info(cpan_url, package, version, perl_version):
                                                              version_str)) as json_path:
                 with open(json_path, encoding='utf-8-sig') as dist_json_file:
                     new_rel_dict = json.load(dist_json_file)
+                    new_rel_dict['version'] = new_rel_dict['version'].lstrip()
         # Check if this is a core module, and don't die if it is
         except RuntimeError:
             core_version = core_module_version(orig_package, perl_version)
@@ -538,15 +558,18 @@ def get_release_info(cpan_url, package, version, perl_version):
                 rel_dict['version'] = version_str
                 rel_dict['download_url'] = ''
             elif LooseVersion(rel_dict['version']) > version:
-                print(("WARNING: Version {0} of {1} is not available on " +
-                       "MetaCPAN, but a newer version ({2}) is, so we will " +
-                       "that instead.").format(version_str, orig_package,
-                                               rel_dict['version']))
-            else:
-                sys.exit(("Error: Version %s of %s is not available on " +
-                          "MetaCPAN. You may want to use the latest version," +
-                          " %s, instead.") % (version_str, orig_package,
+                if not dependency:
+                    print(("WARNING: Version {0} of {1} is not available on " +
+                           "MetaCPAN, but a newer version ({2}) is, so we " +
+                           "will use that " +
+                           "instead.").format(version_str, orig_package,
                                               rel_dict['version']))
+            else:
+                raise InvalidReleaseError(("Version %s of %s is not available" +
+                                           " on MetaCPAN. You may want to use" +
+                                           " the latest version, %s, instead.")
+                                          % (version_str, orig_package,
+                                             rel_dict['version']))
         else:
             rel_dict = new_rel_dict
 
