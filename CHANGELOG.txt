@@ -1,56 +1,57 @@
-2014-XX-XX   1.3.0:
+2014-03-14   1.3.0:
 -------------------
-  * Add skeleton for CPAN Perl packages, issue #53. Unlike
+  * add skeleton for CPAN Perl packages, issue #53. Unlike
     the PyPI skeleton, it supports a --recursive option to
     also generate the recipes for all of the dependencies of
-    a given module/distribution.
-  * Add support for run_test.pl and Perl import tests when
-    building Perl packages. 
-  * Add CONDA_PERL environment variable support for
+    a given module/distribution
+  * add support for run_test.pl and Perl import tests when
+    building Perl packages
+  * add CONDA_PERL environment variable support for
     determining which version of Perl to build packages for.
     Unlike CONDA_PY, this must include the full version with
-    periods (e.g., 5.18.2).
-  * Automatically build packages for dependencies if the recipe is
+    periods (e.g., 5.18.2)
+  * automatically build packages for dependencies if the recipe is
     present in the current working directory
-  * Fix a number of Python 3 compatibility issues, issue #59
-  * Work with source files with uppercase suffixes
-  * Switch to from chrpath to patchelf on Linux, issue #57
-  * Don't use hard-coded msvc path
-  * Sort import tests from skeleton pypi
+  * fix a number of Python 3 compatibility issues, issue #59
+  * work with source files with uppercase suffixes
+  * switch to from chrpath to patchelf on Linux, issue #57
+  * don't use hard-coded msvc path
+  * sort import tests from skeleton pypi
+
 
 2014-02-25   1.2.1:
 -------------------
-  * Added conda-build/build_dest option to condarc
+  * added conda-build/build_dest option to condarc
 
 
 2014-02-13   1.2.0:
 -------------------
-  * Make sure WORK_DIR exists
-  * Use MSVC 2010 for Python 3
-  * Include the summary with conda skeleton pypi
-  * Fix object detection on Python 3
-  * Update default CONDA_NPY to 18
+  * make sure WORK_DIR exists
+  * use MSVC 2010 for Python 3
+  * include the summary with conda skeleton pypi
+  * fix object detection on Python 3
+  * update default CONDA_NPY to 18
 
 
 2014-02-06   1.1.0:
 -------------------
-  * Add ability to use templates in conda recipes
-  * Remove fallback to <root>/conda-recipes, i.e. conda-build always
+  * add ability to use templates in conda recipes
+  * remove fallback to <root>/conda-recipes, i.e. conda-build always
     expects the full path to the recipe
-  * Export PKG Build Number
-  * Add pre-link to package, when it is found in recipe
-  * Allow to add run_test.sh or run_test.bat, which will be run automatically
+  * export PKG Build Number
+  * add pre-link to package, when it is found in recipe
+  * allow to add run_test.sh or run_test.bat, which will be run automatically
     during the test phase.
   * Test commands from the test/commands section of meta.yaml are run from
     bash on Linux and OS X and batch on Windows (previously they were run
     using Python's subprocess).
-  * All environment variables from the build process are available during the
+  * all environment variables from the build process are available during the
     tests, except with the build prefix replaced with the test prefix.
 
 
 2014-01-24   1.0.0:
 -------------------
-  * Initial release
-  * Includes conda-build, conda-convert, conda-index, conda-skeleton
-  * Depends on new conda version 3
-  * Add license to info/index.json object
+  * initial release
+  * includes conda-build, conda-convert, conda-index, conda-skeleton
+  * depends on new conda version 3
+  * add license to info/index.json object
