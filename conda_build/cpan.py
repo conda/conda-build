@@ -8,285 +8,31 @@ from __future__ import (absolute_import, division, print_function,
 import collections
 import functools
 import json
+import subprocess
 import sys
+from distutils.version import LooseVersion
+from glob import glob
 from io import open
 from os import makedirs
 from os.path import basename, dirname, join, exists
 
 from conda.api import get_index
 from conda.cli import common
-from conda.compat import input, configparser, StringIO
+from conda.compat import input, configparser, StringIO, PY3
 from conda.fetch import download, TmpDownload
 from conda.install import linked, rm_rf
 from conda.resolve import MatchSpec, Resolve
 from conda.utils import human_bytes, hashsum_file, memoized
 
+from conda_build.config import CONDA_PERL
 from conda_build.source import SRC_CACHE
 from conda_build.utils import tar_xf, unzip
 
 
-# This monstrosity is the set of everything in the Perl core as of 5.18.2
-# I also added "perl" to the list for simplicity of filtering later
-PERL_CORE = {'AnyDBM_File', 'App::Cpan', 'App::Prove', 'App::Prove::State',
-             'App::Prove::State::Result', 'App::Prove::State::Result::Test',
-             'Archive::Extract', 'Archive::Tar', 'Archive::Tar::Constant',
-             'Archive::Tar::File', 'Attribute::Handlers', 'AutoLoader',
-             'AutoSplit', 'B', 'B::Concise', 'B::Debug', 'B::Deparse',
-             'B::Lint', 'B::Lint::Debug', 'B::Showlex', 'B::Terse', 'B::Xref',
-             'Benchmark', 'CGI', 'CGI::Apache', 'CGI::Carp', 'CGI::Cookie',
-             'CGI::Fast', 'CGI::Pretty', 'CGI::Push', 'CGI::Switch',
-             'CGI::Util', 'CPAN', 'CPAN::Author', 'CPAN::Bundle',
-             'CPAN::CacheMgr', 'CPAN::Complete', 'CPAN::Debug',
-             'CPAN::DeferredCode', 'CPAN::Distribution', 'CPAN::Distroprefs',
-             'CPAN::Distrostatus', 'CPAN::Exception::RecursiveDependency',
-             'CPAN::Exception::blocked_urllist',
-             'CPAN::Exception::yaml_not_installed',
-             'CPAN::Exception::yaml_process_error', 'CPAN::FTP',
-             'CPAN::FTP::netrc', 'CPAN::FirstTime', 'CPAN::HTTP::Client',
-             'CPAN::HTTP::Credentials', 'CPAN::HandleConfig', 'CPAN::Index',
-             'CPAN::InfoObj', 'CPAN::Kwalify', 'CPAN::LWP::UserAgent',
-             'CPAN::Meta', 'CPAN::Meta::Converter', 'CPAN::Meta::Feature',
-             'CPAN::Meta::History', 'CPAN::Meta::Prereqs',
-             'CPAN::Meta::Requirements', 'CPAN::Meta::Spec',
-             'CPAN::Meta::Validator', 'CPAN::Meta::YAML', 'CPAN::Mirrors',
-             'CPAN::Module', 'CPAN::Nox', 'CPAN::Prompt', 'CPAN::Queue',
-             'CPAN::Shell', 'CPAN::Tarzip', 'CPAN::URL', 'CPAN::Version',
-             'CPANPLUS', 'CPANPLUS::Backend', 'CPANPLUS::Backend::RV',
-             'CPANPLUS::Config', 'CPANPLUS::Config::HomeEnv',
-             'CPANPLUS::Configure', 'CPANPLUS::Configure::Setup',
-             'CPANPLUS::Dist', 'CPANPLUS::Dist::Autobundle',
-             'CPANPLUS::Dist::Base', 'CPANPLUS::Dist::Build',
-             'CPANPLUS::Dist::Build::Constants', 'CPANPLUS::Dist::MM',
-             'CPANPLUS::Dist::Sample', 'CPANPLUS::Error', 'CPANPLUS::Internals',
-             'CPANPLUS::Internals::Constants',
-             'CPANPLUS::Internals::Constants::Report',
-             'CPANPLUS::Internals::Extract', 'CPANPLUS::Internals::Fetch',
-             'CPANPLUS::Internals::Report', 'CPANPLUS::Internals::Search',
-             'CPANPLUS::Internals::Source',
-             'CPANPLUS::Internals::Source::Memory',
-             'CPANPLUS::Internals::Source::SQLite',
-             'CPANPLUS::Internals::Source::SQLite::Tie',
-             'CPANPLUS::Internals::Utils',
-             'CPANPLUS::Internals::Utils::Autoflush', 'CPANPLUS::Module',
-             'CPANPLUS::Module::Author', 'CPANPLUS::Module::Author::Fake',
-             'CPANPLUS::Module::Checksums', 'CPANPLUS::Module::Fake',
-             'CPANPLUS::Module::Signature', 'CPANPLUS::Selfupdate',
-             'CPANPLUS::Shell', 'CPANPLUS::Shell::Classic',
-             'CPANPLUS::Shell::Default',
-             'CPANPLUS::Shell::Default::Plugins::CustomSource',
-             'CPANPLUS::Shell::Default::Plugins::Remote',
-             'CPANPLUS::Shell::Default::Plugins::Source', 'Carp', 'Carp::Heavy',
-             'Class::Struct', 'Compress::Raw::Bzip2', 'Compress::Raw::Zlib',
-             'Compress::Zlib', 'Config', 'Config::Extensions',
-             'Config::Perl::V', 'Cwd', 'DB', 'DBM_Filter',
-             'DBM_Filter::compress', 'DBM_Filter::encode', 'DBM_Filter::int32',
-             'DBM_Filter::null', 'DBM_Filter::utf8', 'DB_File', 'Data::Dumper',
-             'Devel::InnerPackage', 'Devel::PPPort', 'Devel::Peek',
-             'Devel::SelfStubber', 'Digest', 'Digest::MD5', 'Digest::SHA',
-             'Digest::base', 'Digest::file', 'DirHandle', 'Dumpvalue',
-             'DynaLoader', 'Encode', 'Encode::Alias', 'Encode::Byte',
-             'Encode::CJKConstants', 'Encode::CN', 'Encode::CN::HZ',
-             'Encode::Config', 'Encode::EBCDIC', 'Encode::Encoder',
-             'Encode::Encoding', 'Encode::GSM0338', 'Encode::Guess',
-             'Encode::JP', 'Encode::JP::H2Z', 'Encode::JP::JIS7', 'Encode::KR',
-             'Encode::KR::2022_KR', 'Encode::MIME::Header',
-             'Encode::MIME::Header::ISO_2022_JP', 'Encode::MIME::Name',
-             'Encode::Symbol', 'Encode::TW', 'Encode::Unicode',
-             'Encode::Unicode::UTF7', 'English', 'Env', 'Errno', 'Exporter',
-             'Exporter::Heavy', 'ExtUtils::CBuilder',
-             'ExtUtils::CBuilder::Base', 'ExtUtils::CBuilder::Platform::Unix',
-             'ExtUtils::CBuilder::Platform::VMS',
-             'ExtUtils::CBuilder::Platform::Windows',
-             'ExtUtils::CBuilder::Platform::Windows::BCC',
-             'ExtUtils::CBuilder::Platform::Windows::GCC',
-             'ExtUtils::CBuilder::Platform::Windows::MSVC',
-             'ExtUtils::CBuilder::Platform::aix',
-             'ExtUtils::CBuilder::Platform::cygwin',
-             'ExtUtils::CBuilder::Platform::darwin',
-             'ExtUtils::CBuilder::Platform::dec_osf',
-             'ExtUtils::CBuilder::Platform::os2', 'ExtUtils::Command',
-             'ExtUtils::Command::MM', 'ExtUtils::Constant',
-             'ExtUtils::Constant::Base', 'ExtUtils::Constant::ProxySubs',
-             'ExtUtils::Constant::Utils', 'ExtUtils::Constant::XS',
-             'ExtUtils::Embed', 'ExtUtils::Install', 'ExtUtils::Installed',
-             'ExtUtils::Liblist', 'ExtUtils::Liblist::Kid', 'ExtUtils::MM',
-             'ExtUtils::MM_AIX', 'ExtUtils::MM_Any', 'ExtUtils::MM_BeOS',
-             'ExtUtils::MM_Cygwin', 'ExtUtils::MM_DOS', 'ExtUtils::MM_Darwin',
-             'ExtUtils::MM_MacOS', 'ExtUtils::MM_NW5', 'ExtUtils::MM_OS2',
-             'ExtUtils::MM_QNX', 'ExtUtils::MM_UWIN', 'ExtUtils::MM_Unix',
-             'ExtUtils::MM_VMS', 'ExtUtils::MM_VOS', 'ExtUtils::MM_Win32',
-             'ExtUtils::MM_Win95', 'ExtUtils::MY', 'ExtUtils::MakeMaker',
-             'ExtUtils::MakeMaker::Config', 'ExtUtils::Manifest',
-             'ExtUtils::Miniperl', 'ExtUtils::Mkbootstrap',
-             'ExtUtils::Mksymlists', 'ExtUtils::Packlist', 'ExtUtils::ParseXS',
-             'ExtUtils::ParseXS::Constants', 'ExtUtils::ParseXS::CountLines',
-             'ExtUtils::ParseXS::Utilities', 'ExtUtils::Typemaps',
-             'ExtUtils::Typemaps::Cmd', 'ExtUtils::Typemaps::InputMap',
-             'ExtUtils::Typemaps::OutputMap', 'ExtUtils::Typemaps::Type',
-             'ExtUtils::XSSymSet', 'ExtUtils::testlib', 'Fatal', 'Fcntl',
-             'File::Basename', 'File::CheckTree', 'File::Compare', 'File::Copy',
-             'File::DosGlob', 'File::Fetch', 'File::Find', 'File::Glob',
-             'File::GlobMapper', 'File::Path', 'File::Spec',
-             'File::Spec::Cygwin', 'File::Spec::Epoc', 'File::Spec::Functions',
-             'File::Spec::Mac', 'File::Spec::OS2', 'File::Spec::Unix',
-             'File::Spec::VMS', 'File::Spec::Win32', 'File::Temp', 'File::stat',
-             'FileCache', 'FileHandle', 'Filter::Simple', 'Filter::Util::Call',
-             'FindBin', 'GDBM_File', 'Getopt::Long', 'Getopt::Std',
-             'HTTP::Tiny', 'Hash::Util', 'Hash::Util::FieldHash',
-             'I18N::Collate', 'I18N::LangTags', 'I18N::LangTags::Detect',
-             'I18N::LangTags::List', 'I18N::Langinfo', 'IO',
-             'IO::Compress::Adapter::Bzip2', 'IO::Compress::Adapter::Deflate',
-             'IO::Compress::Adapter::Identity', 'IO::Compress::Base',
-             'IO::Compress::Base::Common', 'IO::Compress::Bzip2',
-             'IO::Compress::Deflate', 'IO::Compress::Gzip',
-             'IO::Compress::Gzip::Constants', 'IO::Compress::RawDeflate',
-             'IO::Compress::Zip', 'IO::Compress::Zip::Constants',
-             'IO::Compress::Zlib::Constants', 'IO::Compress::Zlib::Extra',
-             'IO::Dir', 'IO::File', 'IO::Handle', 'IO::Pipe', 'IO::Poll',
-             'IO::Seekable', 'IO::Select', 'IO::Socket', 'IO::Socket::INET',
-             'IO::Socket::UNIX', 'IO::Uncompress::Adapter::Bunzip2',
-             'IO::Uncompress::Adapter::Identity',
-             'IO::Uncompress::Adapter::Inflate', 'IO::Uncompress::AnyInflate',
-             'IO::Uncompress::AnyUncompress', 'IO::Uncompress::Base',
-             'IO::Uncompress::Bunzip2', 'IO::Uncompress::Gunzip',
-             'IO::Uncompress::Inflate', 'IO::Uncompress::RawInflate',
-             'IO::Uncompress::Unzip', 'IO::Zlib', 'IPC::Cmd', 'IPC::Msg',
-             'IPC::Open2', 'IPC::Open3', 'IPC::Semaphore', 'IPC::SharedMem',
-             'IPC::SysV', 'JSON::PP', 'JSON::PP::Boolean', 'List::Util',
-             'List::Util::XS', 'Locale::Codes', 'Locale::Codes::Constants',
-             'Locale::Codes::Country', 'Locale::Codes::Country_Codes',
-             'Locale::Codes::Country_Retired', 'Locale::Codes::Currency',
-             'Locale::Codes::Currency_Codes', 'Locale::Codes::Currency_Retired',
-             'Locale::Codes::LangExt', 'Locale::Codes::LangExt_Codes',
-             'Locale::Codes::LangExt_Retired', 'Locale::Codes::LangFam',
-             'Locale::Codes::LangFam_Codes', 'Locale::Codes::LangFam_Retired',
-             'Locale::Codes::LangVar', 'Locale::Codes::LangVar_Codes',
-             'Locale::Codes::LangVar_Retired', 'Locale::Codes::Language',
-             'Locale::Codes::Language_Codes', 'Locale::Codes::Language_Retired',
-             'Locale::Codes::Script', 'Locale::Codes::Script_Codes',
-             'Locale::Codes::Script_Retired', 'Locale::Country',
-             'Locale::Currency', 'Locale::Language', 'Locale::Maketext',
-             'Locale::Maketext::Guts', 'Locale::Maketext::GutsLoader',
-             'Locale::Maketext::Simple', 'Locale::Script', 'Log::Message',
-             'Log::Message::Config', 'Log::Message::Handlers',
-             'Log::Message::Item', 'Log::Message::Simple', 'MIME::Base64',
-             'MIME::QuotedPrint', 'Math::BigFloat', 'Math::BigFloat::Trace',
-             'Math::BigInt', 'Math::BigInt::Calc', 'Math::BigInt::CalcEmu',
-             'Math::BigInt::FastCalc', 'Math::BigInt::Trace', 'Math::BigRat',
-             'Math::Complex', 'Math::Trig', 'Memoize', 'Memoize::AnyDBM_File',
-             'Memoize::Expire', 'Memoize::ExpireFile', 'Memoize::ExpireTest',
-             'Memoize::NDBM_File', 'Memoize::SDBM_File', 'Memoize::Storable',
-             'Module::Build', 'Module::Build::Base', 'Module::Build::Compat',
-             'Module::Build::Config', 'Module::Build::ConfigData',
-             'Module::Build::Cookbook', 'Module::Build::Dumper',
-             'Module::Build::ModuleInfo', 'Module::Build::Notes',
-             'Module::Build::PPMMaker', 'Module::Build::Platform::Amiga',
-             'Module::Build::Platform::Default',
-             'Module::Build::Platform::EBCDIC',
-             'Module::Build::Platform::MPEiX', 'Module::Build::Platform::MacOS',
-             'Module::Build::Platform::RiscOS', 'Module::Build::Platform::Unix',
-             'Module::Build::Platform::VMS', 'Module::Build::Platform::VOS',
-             'Module::Build::Platform::Windows', 'Module::Build::Platform::aix',
-             'Module::Build::Platform::cygwin',
-             'Module::Build::Platform::darwin', 'Module::Build::Platform::os2',
-             'Module::Build::PodParser', 'Module::Build::Version',
-             'Module::Build::YAML', 'Module::CoreList',
-             'Module::CoreList::TieHashDelta', 'Module::CoreList::Utils',
-             'Module::Load', 'Module::Load::Conditional', 'Module::Loaded',
-             'Module::Metadata', 'Module::Pluggable',
-             'Module::Pluggable::Object', 'Moped::Msg', 'NDBM_File', 'NEXT',
-             'Net::Cmd', 'Net::Config', 'Net::Domain', 'Net::FTP',
-             'Net::FTP::A', 'Net::FTP::E', 'Net::FTP::I', 'Net::FTP::L',
-             'Net::FTP::dataconn', 'Net::NNTP', 'Net::Netrc', 'Net::POP3',
-             'Net::Ping', 'Net::SMTP', 'Net::Time', 'Net::hostent',
-             'Net::netent', 'Net::protoent', 'Net::servent', 'O', 'ODBM_File',
-             'Object::Accessor', 'Opcode', 'POSIX', 'Package::Constants',
-             'Params::Check', 'Parse::CPAN::Meta', 'Perl::OSType', 'PerlIO',
-             'PerlIO::encoding', 'PerlIO::mmap', 'PerlIO::scalar',
-             'PerlIO::via', 'PerlIO::via::QuotedPrint', 'Pod::Checker',
-             'Pod::Escapes', 'Pod::Find', 'Pod::Functions',
-             'Pod::Functions::Functions', 'Pod::Html', 'Pod::InputObjects',
-             'Pod::LaTeX', 'Pod::Man', 'Pod::ParseLink', 'Pod::ParseUtils',
-             'Pod::Parser', 'Pod::Perldoc', 'Pod::Perldoc::BaseTo',
-             'Pod::Perldoc::GetOptsOO', 'Pod::Perldoc::ToANSI',
-             'Pod::Perldoc::ToChecker', 'Pod::Perldoc::ToMan',
-             'Pod::Perldoc::ToNroff', 'Pod::Perldoc::ToPod',
-             'Pod::Perldoc::ToRtf', 'Pod::Perldoc::ToTerm',
-             'Pod::Perldoc::ToText', 'Pod::Perldoc::ToTk',
-             'Pod::Perldoc::ToXml', 'Pod::PlainText', 'Pod::Select',
-             'Pod::Simple', 'Pod::Simple::BlackBox', 'Pod::Simple::Checker',
-             'Pod::Simple::Debug', 'Pod::Simple::DumpAsText',
-             'Pod::Simple::DumpAsXML', 'Pod::Simple::HTML',
-             'Pod::Simple::HTMLBatch', 'Pod::Simple::HTMLLegacy',
-             'Pod::Simple::LinkSection', 'Pod::Simple::Methody',
-             'Pod::Simple::Progress', 'Pod::Simple::PullParser',
-             'Pod::Simple::PullParserEndToken',
-             'Pod::Simple::PullParserStartToken',
-             'Pod::Simple::PullParserTextToken', 'Pod::Simple::PullParserToken',
-             'Pod::Simple::RTF', 'Pod::Simple::Search',
-             'Pod::Simple::SimpleTree', 'Pod::Simple::Text',
-             'Pod::Simple::TextContent', 'Pod::Simple::TiedOutFH',
-             'Pod::Simple::Transcode', 'Pod::Simple::TranscodeDumb',
-             'Pod::Simple::TranscodeSmart', 'Pod::Simple::XHTML',
-             'Pod::Simple::XMLOutStream', 'Pod::Text', 'Pod::Text::Color',
-             'Pod::Text::Overstrike', 'Pod::Text::Termcap', 'Pod::Usage',
-             'SDBM_File', 'Safe', 'Scalar::Util', 'Search::Dict', 'SelectSaver',
-             'SelfLoader', 'Socket', 'Storable', 'Symbol', 'Sys::Hostname',
-             'Sys::Syslog', 'Sys::Syslog::Win32', 'TAP::Base',
-             'TAP::Formatter::Base', 'TAP::Formatter::Color',
-             'TAP::Formatter::Console',
-             'TAP::Formatter::Console::ParallelSession',
-             'TAP::Formatter::Console::Session', 'TAP::Formatter::File',
-             'TAP::Formatter::File::Session', 'TAP::Formatter::Session',
-             'TAP::Harness', 'TAP::Object', 'TAP::Parser',
-             'TAP::Parser::Aggregator', 'TAP::Parser::Grammar',
-             'TAP::Parser::Iterator', 'TAP::Parser::Iterator::Array',
-             'TAP::Parser::Iterator::Process', 'TAP::Parser::Iterator::Stream',
-             'TAP::Parser::IteratorFactory', 'TAP::Parser::Multiplexer',
-             'TAP::Parser::Result', 'TAP::Parser::Result::Bailout',
-             'TAP::Parser::Result::Comment', 'TAP::Parser::Result::Plan',
-             'TAP::Parser::Result::Pragma', 'TAP::Parser::Result::Test',
-             'TAP::Parser::Result::Unknown', 'TAP::Parser::Result::Version',
-             'TAP::Parser::Result::YAML', 'TAP::Parser::ResultFactory',
-             'TAP::Parser::Scheduler', 'TAP::Parser::Scheduler::Job',
-             'TAP::Parser::Scheduler::Spinner', 'TAP::Parser::Source',
-             'TAP::Parser::SourceHandler',
-             'TAP::Parser::SourceHandler::Executable',
-             'TAP::Parser::SourceHandler::File',
-             'TAP::Parser::SourceHandler::Handle',
-             'TAP::Parser::SourceHandler::Perl',
-             'TAP::Parser::SourceHandler::RawTAP', 'TAP::Parser::Utils',
-             'TAP::Parser::YAMLish::Reader', 'TAP::Parser::YAMLish::Writer',
-             'Term::ANSIColor', 'Term::Cap', 'Term::Complete', 'Term::ReadLine',
-             'Term::UI', 'Term::UI::History', 'Test', 'Test::Builder',
-             'Test::Builder::Module', 'Test::Builder::Tester',
-             'Test::Builder::Tester::Color', 'Test::Harness', 'Test::More',
-             'Test::Simple', 'Text::Abbrev', 'Text::Balanced',
-             'Text::ParseWords', 'Text::Soundex', 'Text::Tabs', 'Text::Wrap',
-             'Thread', 'Thread::Queue', 'Thread::Semaphore', 'Tie::Array',
-             'Tie::File', 'Tie::Handle', 'Tie::Hash', 'Tie::Hash::NamedCapture',
-             'Tie::Memoize', 'Tie::RefHash', 'Tie::Scalar', 'Tie::StdHandle',
-             'Tie::SubstrHash', 'Time::HiRes', 'Time::Local', 'Time::Piece',
-             'Time::Seconds', 'Time::gmtime', 'Time::localtime', 'Time::tm',
-             'UNIVERSAL', 'Unicode', 'Unicode::Collate',
-             'Unicode::Collate::CJK::Big5', 'Unicode::Collate::CJK::GB2312',
-             'Unicode::Collate::CJK::JISX0208', 'Unicode::Collate::CJK::Korean',
-             'Unicode::Collate::CJK::Pinyin', 'Unicode::Collate::CJK::Stroke',
-             'Unicode::Collate::CJK::Zhuyin', 'Unicode::Collate::Locale',
-             'Unicode::Normalize', 'Unicode::UCD', 'User::grent', 'User::pwent',
-             'VMS::DCLsym', 'VMS::Stdio', 'Win32', 'Win32API::File',
-             'Win32API::File::ExtUtils::Myconst2perl', 'Win32CORE',
-             'XS::APItest', 'XS::Typemap', 'XSLoader', '_charnames', 'arybase',
-             'attributes', 'autodie', 'autodie::exception',
-             'autodie::exception::system', 'autodie::hints', 'autouse', 'base',
-             'bigint', 'bignum', 'bigrat', 'blib', 'bytes', 'charnames',
-             'constant', 'deprecate', 'diagnostics', 'encoding',
-             'encoding::warnings', 'feature', 'fields', 'filetest', 'if',
-             'inc::latest', 'integer', 'less', 'lib', 'locale', 'mro', 'open',
-             'ops', 'overload', 'overload::numbers', 'overloading', 'parent',
-             'perl', 'perlfaq', 're', 'sigtrap', 'sort', 'strict', 'subs',
-             'threads', 'threads::shared', 'unicore::Name', 'utf8', 'vars',
-             'version', 'vmsish', 'warnings', 'warnings::register'}
+# Python 2.x backward compatibility
+if sys.version_info < (3, 0):
+    str = unicode
+
 
 CPAN_META = """\
 package:
@@ -294,8 +40,8 @@ package:
   version: !!str {version}
 
 source:
-  fn: {filename}
-  url: {cpanurl}
+  {useurl}fn: {filename}
+  {useurl}url: {cpanurl}
   {usemd5}md5: {md5}
 #  patches:
    # List any patch files here
@@ -304,7 +50,7 @@ source:
 {build_comment}build:
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
-  # number: 1
+  {build_comment}number: 1
 
 requirements:
   build:
@@ -313,12 +59,12 @@ requirements:
   run:
     - perl{run_depends}
 
-# test:
-  # By default CPAN tests will be run while "building" (which just uses cpanm
-  # to install)
+test:
+  # Perl 'use' tests
+  {import_comment}imports:{import_tests}
 
-  # You can also put a file called run_test.py in the recipe that will be run
-  # at test time.
+  # You can also put a file called run_test.pl (or run_test.py) in the recipe
+  # that will be run at test time.
 
   # requires:
     # Put any additional test requirements here.  For example
@@ -337,7 +83,23 @@ about:
 CPAN_BUILD_SH = """\
 #!/bin/bash
 
-cpanm .
+# If it has Build.PL use that, otherwise use Makefile.PL
+if [ -f Build.PL ]; then
+    perl Build.PL
+    ./Build
+    ./Build test
+    # Make sure this goes in site
+    ./Build install --installdirs site
+elif [ -f Makefile.PL ]; then
+    # Make sure this goes in site
+    perl Makefile.PL INSTALLDIRS=site
+    make
+    make test
+    make install
+else
+    echo 'Unable to find Build.PL or Makefile.PL. You need to modify build.sh.'
+    exit 1
+fi
 
 # Add more build steps here, if they are necessary.
 
@@ -347,8 +109,29 @@ cpanm .
 """
 
 CPAN_BLD_BAT = """\
-cpanm .
-if errorlevel 1 exit 1
+:: If it has Build.PL use that, otherwise use Makefile.PL
+IF exist Build.PL (
+    perl Build.PL
+    IF errorlevel 1 exit 1
+    Build
+    IF errorlevel 1 exit 1
+    Build test
+    :: Make sure this goes in site
+    Build install --installdirs site
+    IF errorlevel 1 exit 1
+) ELSE IF exist Makefile.PL (
+    :: Make sure this goes in site
+    perl Makefile.PL INSTALLDIRS=site
+    IF errorlevel 1 exit 1
+    make
+    IF errorlevel 1 exit 1
+    make test
+    IF errorlevel 1 exit 1
+    make install
+) ELSE (
+    ECHO 'Unable to find Build.PL or Makefile.PL. You need to modify bld.bat.'
+    exit 1
+)
 
 :: Add more build steps here, if they are necessary.
 
@@ -357,40 +140,33 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
-CPAN_RUN_TEST_SH = """\
-#!/bin/bash
 
-# Just a simple import test
-perl -e 'use {}'
-"""
-
-CPAN_RUN_TEST_BAT = """\
-perl -e 'use {}'
-if errorlevel 1 exit 1
-"""
-
-
-def latest_perl_version(args):
+class InvalidReleaseError(RuntimeError):
     '''
-    Returns the latest version of the perl package available
+    An exception that is raised when a release is not available on MetaCPAN.
     '''
-    r = Resolve(get_index())
-    latest_pkg = sorted(r.get_pkgs(MatchSpec('perl')))[-1]
-    return latest_pkg.version
+    pass
 
 
 def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
     '''
-    perl_version = latest_perl_version(args)
+    perl_version = CONDA_PERL
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
     args.packages = list(reversed(args.packages))
     processed_packages = set()
+    orig_version = args.version
     while args.packages:
         package = args.packages.pop()
+        # If we're passed version in the same format as `PACKAGE=VERSION`
+        # update version
+        if '=' in package:
+            package, __, args.version = package.partition('=')
+        else:
+            args.version = orig_version
 
         # Skip duplicates
         if package in processed_packages:
@@ -399,33 +175,63 @@ def main(args, parser):
 
         # Convert modules into distributions
         orig_package = package
-        package = dist_for_module(args.meta_cpan_url, package)
-        if package not in {orig_package, orig_package.replace('::', '-')}:
+        package = dist_for_module(args.meta_cpan_url, package, perl_version)
+        if package == 'perl':
+            print(("WARNING: {0} is a Perl core module that is not developed " +
+                   "outside of Perl, so we are skipping creating a recipe " +
+                   "for it.").format(orig_package))
+            continue
+        elif package not in {orig_package, orig_package.replace('::', '-')}:
             print(("WARNING: {0} was part of the {1} distribution, so we are " +
                    "making a recipe for {1} instead.").format(orig_package,
                                                               package))
 
-        dir_path = join(output_dir, package.lower())
+        latest_release_data = get_release_info(args.meta_cpan_url, package,
+                                               None, perl_version)
         packagename = perl_to_conda(package)
-        if exists(dir_path):
-            raise RuntimeError("directory already exists: %s" % dir_path)
+
+        # Skip duplicates
+        if ((args.version is not None and ((packagename + '-' + args.version) in
+                                           processed_packages)) or
+                ((packagename + '-' + latest_release_data['version']) in
+                 processed_packages)):
+            continue
+
         d = package_dicts.setdefault(package, {'packagename': packagename,
-                                               'run_depends':'',
-                                               'build_depends':'',
-                                               'build_comment':'# ',
-                                               'test_commands':'',
-                                               'usemd5':'',
-                                               'summary': "''"})
+                                               'run_depends': '',
+                                               'build_depends': '',
+                                               'build_comment': '# ',
+                                               'test_commands': '',
+                                               'usemd5': '',
+                                               'useurl': '',
+                                               'summary': "''",
+                                               'import_tests': ''})
 
         # Fetch all metadata from CPAN
+        core_version = core_module_version(package, perl_version)
         release_data = get_release_info(args.meta_cpan_url, package,
-                                        args.version)
+                                        (LooseVersion(args.version) if
+                                         args.version is not None else
+                                         core_version),
+                                        perl_version)
+        # Check if versioned recipe directory already exists
+        dir_path = join(output_dir, '-'.join((packagename,
+                                              release_data['version'])))
+        if exists(dir_path):
+            raise RuntimeError("directory already exists: %s" % dir_path)
 
-        d['cpanurl'] = release_data['download_url']
-        d['md5'], size = get_checksum_and_size(release_data['download_url'])
-        d['filename'] = release_data['archive']
-
-        print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
+        # If this is something we're downloading, get MD5
+        if release_data['download_url']:
+            d['cpanurl'] = release_data['download_url']
+            d['md5'], size = get_checksum_and_size(release_data['download_url'])
+            d['filename'] = basename(release_data['archive'])
+            print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
+        else:
+            d['useurl'] = '#'
+            d['usemd5'] = '#'
+            d['cpanurl'] = ''
+            d['filename'] = ''
+            d['md5'] = ''
 
         try:
             d['homeurl'] = release_data['resources']['homepage']
@@ -433,101 +239,276 @@ def main(args, parser):
             d['homeurl'] = 'http://metacpan.org/pod/' + package
         if 'abstract' in release_data:
             d['summary'] = repr(release_data['abstract']).lstrip('u')
-        d['license'] = release_data['license'][0]
+        d['license'] = (release_data['license'][0] if
+                        isinstance(release_data['license'], list) else
+                        release_data['license'])
         d['version'] = release_data['version']
 
-        # Create lists of dependencies
-        build_deps = set()
-        run_deps = set()
-        packages_to_append = set()
-        for dep_dict in release_data['dependency']:
-            # Only care about requirements
-            if dep_dict['relationship'] == 'requires':
-                # Format dependency string (with Perl trailing dist comment)
-                orig_dist = dist_for_module(args.meta_cpan_url,
-                                            dep_dict['module'])
-                dep_entry = perl_to_conda(orig_dist)
-                # Skip perl as a dependency, since it's already in list
-                if orig_dist.lower() == 'perl':
-                    continue
+        processed_packages.add(packagename + '-' + d['version'])
 
-                # If recursive, check if we have a recipe for this dependency
-                if (args.recursive and (not exists(join(output_dir, dep_entry)))
-                        and (orig_dist not in processed_packages)):
-                    packages_to_append.add(orig_dist)
+        # Add Perl version to core module requirements, since these are empty
+        # packages, unless we're newer than what's in core
+        if core_version is not None and ((args.version is None) or
+                                         (core_version >=
+                                          LooseVersion(args.version))):
+            d['useurl'] = '#'
+            d['usemd5'] = '#'
+            empty_recipe = True
+        # Add dependencies to d if not in core, or newer than what's in core
+        else:
+            build_deps, run_deps, packages_to_append = deps_for_package(
+                package, release_data, perl_version, args, output_dir,
+                processed_packages)
+            d['build_depends'] += indent.join([''] + list(build_deps |
+                                                          run_deps))
+            d['run_depends'] += indent.join([''] + list(run_deps))
+            args.packages.extend(packages_to_append)
+            empty_recipe = False
 
-                # if dep_dict['version_numified']:
-                #     dep_entry += ' ' + dep_dict['version']
-                dep_entry += ' # ' + orig_dist
+        # Create import tests
+        module_prefix = package.replace('::', '-').split('-')[0]
+        if 'provides' in release_data:
+            for provided_mod in sorted(set(release_data['provides'])):
+                # Filter out weird modules that don't belong
+                if (provided_mod.startswith(module_prefix) and
+                        '::_' not in provided_mod):
+                    d['import_tests'] += indent + provided_mod
+        if d['import_tests']:
+            d['import_comment'] = ''
+        else:
+            d['import_comment'] = '# '
 
-                # Add to appropriate dependency list
-                if dep_dict['phase'] == 'runtime':
-                    run_deps.add(dep_entry)
-                # Handle build deps
-                elif dep_dict['phase'] != 'develop':
-                    build_deps.add(dep_entry)
-
-        # Add Perl version to core module requirements, since these may
-        # essentially be empty packages
-        if package.replace('-', '::') in PERL_CORE:
-            d['build_depends'] += ' ' + perl_version
-            d['run_depends'] += ' ' + perl_version
-
-        # Add dependencies to d
-        d['build_depends'] += indent.join([''] + list(build_deps | run_deps))
-        d['run_depends'] += indent.join([''] + list(run_deps))
-        args.packages.extend(packages_to_append)
-
-        # Write recipe files
-        package_dir = join(output_dir, packagename)
-        if not exists(package_dir):
-            makedirs(package_dir)
-        print("Writing recipe for %s" % packagename)
-        with open(join(package_dir, 'meta.yaml'), 'w') as f:
+        # Write recipe files to a versioned directory
+        makedirs(dir_path)
+        print("Writing recipe for %s-%s" % (packagename, d['version']))
+        with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(CPAN_META.format(**d))
-        with open(join(package_dir, 'build.sh'), 'w') as f:
-            f.write(CPAN_BUILD_SH.format(**d))
-        with open(join(package_dir, 'bld.bat'), 'w') as f:
-            f.write(CPAN_BLD_BAT.format(**d))
-        with open(join(package_dir, 'run_test.bat'), 'w') as f:
-            f.write(CPAN_RUN_TEST_BAT.format(orig_package))
-        with open(join(package_dir, 'run_test.sh'), 'w') as f:
-            f.write(CPAN_RUN_TEST_SH.format(orig_package))
+        with open(join(dir_path, 'build.sh'), 'w') as f:
+            if empty_recipe:
+                f.write('#!/bin/bash\necho "Nothing to do."\n')
+            else:
+                f.write(CPAN_BUILD_SH.format(**d))
+        with open(join(dir_path, 'bld.bat'), 'w') as f:
+            if empty_recipe:
+                f.write('echo "Nothing to do."\n')
+            else:
+                f.write(CPAN_BLD_BAT.format(**d))
 
     print("Done")
 
+
 @memoized
-def dist_for_module(cpan_url, module):
+def latest_pkg_version(pkg):
+    '''
+    :returns: the latest version of the specified conda package available
+    '''
+    r = Resolve(get_index())
+    try:
+        pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
+    except RuntimeError:
+        pkg_list = None
+    if pkg_list:
+        pkg_version = LooseVersion(pkg_list[-1].version)
+    else:
+        pkg_version = None
+    return pkg_version
+
+
+@memoized
+def core_module_version(module, version):
+    '''
+    :param module: Name of a Perl core module
+    :type module: str
+
+    :returns: The version of the specified module that is currently available
+              in the specified version of Perl. If the version is `undef`, but
+              the module is actually part of the Perl core, the version of Perl
+              passed in will be used as the module version.
+    '''
+    # In case we were given a dist, convert to module
+    module = module.replace('-', '::')
+    if version is None:
+        version = LooseVersion(CONDA_PERL)
+    else:
+        version = LooseVersion(version)
+    cmd = ['corelist', '-v', str(version), module]
+    try:
+        output = subprocess.check_output(cmd).decode('utf-8')
+    except subprocess.CalledProcessError:
+        sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
+                  'the perl conda package installed in your default ' +
+                  'environment.') % ' '.join(cmd))
+    mod_version = output.split()[1]
+    # If undefined, that could either mean it's versionless or not in core
+    if mod_version == 'undef':
+        # Check if it's actually in core
+        cmd = ['corelist', module]
+        output = subprocess.check_output(cmd).decode('utf-8')
+        # If it's in core...
+        if 'perl v' in output:
+            first_version = output.partition('perl v')[2].strip()
+            first_version = LooseVersion(first_version)
+            # If it's newer than the specified version, return None
+            if LooseVersion(first_version) > LooseVersion(version):
+                mod_version = None
+            else:
+                mod_version = version
+        # If it's not, return None
+        else:
+            mod_version = None
+    else:
+        mod_version = LooseVersion(mod_version)
+
+    return mod_version
+
+
+def deps_for_package(package, release_data, perl_version, args, output_dir,
+                     processed_packages):
+    '''
+    Build the sets of dependencies and packages we need recipes for. This should
+    only be called for non-core modules/distributions, as dependencies are
+    ignored for core modules.
+
+    :param package: Perl distribution we're checking dependencies of.
+    :type package: str
+    :param release_data: The metadata about the current release of the package.
+    :type release_data: dict
+    :param perl_version: The target version of Perl we're building this for.
+                         This only really matters for core modules.
+    :type perl_version: str
+    :param args: The command-line arguments passed to the skeleton command.
+    :type args: Namespace
+    :param output_dir: The output directory to write recipes to
+    :type output_dir: str
+    :param processed_packages: The set of packages we have built recipes for
+                               already.
+    :type processed_packages: set of str
+
+    :returns: Build dependencies, runtime dependencies, and set of packages to
+              add to list of recipes to create.
+    :rtype: 3-tuple of sets
+    '''
+
+    # Create lists of dependencies
+    build_deps = set()
+    run_deps = set()
+    packages_to_append = set()
+    print('Processing dependencies for %s...' % package, end='')
+    sys.stdout.flush()
+    for dep_dict in release_data['dependency']:
+        # Only care about requirements
+        if dep_dict['relationship'] == 'requires':
+            print('.', end='')
+            sys.stdout.flush()
+            # Format dependency string (with Perl trailing dist comment)
+            orig_dist = dist_for_module(args.meta_cpan_url, dep_dict['module'],
+                                        perl_version)
+            dep_entry = perl_to_conda(orig_dist)
+            # Skip perl as a dependency, since it's already in list
+            if orig_dist.lower() == 'perl':
+                continue
+
+            # See if version is specified
+            if dep_dict['version'] in {'', 'undef'}:
+                dep_dict['version'] = '0'
+            dep_version = LooseVersion(dep_dict['version'])
+
+            # Make sure specified version is valid
+            try:
+                get_release_info(args.meta_cpan_url, dep_dict['module'],
+                                 dep_version, perl_version, dependency=True)
+            except InvalidReleaseError:
+                print(('WARNING: The version of %s listed as a ' +
+                       'dependency for %s, %s, is not available on MetaCPAN, ' +
+                       'so we are just assuming the latest version is ' +
+                       'okay.') % (orig_dist, package, str(dep_version)))
+                dep_version = LooseVersion('0')
+
+            # Add version number to dependency, if it's newer than latest
+            # we have package for.
+            if dep_version > LooseVersion('0'):
+                pkg_version = latest_pkg_version(dep_entry)
+                # If we don't have a package, use core version as version
+                if pkg_version is None:
+                    pkg_version = core_module_version(dep_entry,
+                                                      perl_version)
+                # If no package is available at all, it's in the core, or
+                # the latest is already good enough, don't specify version.
+                # This is because conda doesn't support > in version
+                # requirements.
+                if pkg_version is not None and (dep_version > pkg_version):
+                    dep_entry += ' ' + dep_dict['version']
+
+            # If recursive, check if we have a recipe for this dependency
+            if args.recursive:
+                # If dependency entry is versioned, make sure this is too
+                if ' ' in dep_entry:
+                    if not exists(join(output_dir, dep_entry.replace('::',
+                                                                     '-'))):
+                        packages_to_append.add('='.join((orig_dist,
+                                                         dep_dict['version'])))
+                elif not glob(join(output_dir, (dep_entry + '-[v0-9][0-9.]*'))):
+                    packages_to_append.add(orig_dist)
+
+            # Add to appropriate dependency list
+            if dep_dict['phase'] == 'runtime':
+                run_deps.add(dep_entry)
+            # Handle build deps
+            elif dep_dict['phase'] != 'develop':
+                build_deps.add(dep_entry)
+    print('done')
+    sys.stdout.flush()
+
+    return build_deps, run_deps, packages_to_append
+
+@memoized
+def dist_for_module(cpan_url, module, perl_version):
     '''
     Given a name that could be a module or a distribution, return the
     distribution.
     '''
-    # Get latest info to find author, which is necessary for retrieving a
-    # specific version
+    # First check if its already a distribution
     try:
-        with TmpDownload('{}/v0/module/{}'.format(cpan_url, module)) as json_path:
+        with TmpDownload('{}/v0/release/{}'.format(cpan_url,
+                                                   module)) as json_path:
             with open(json_path, encoding='utf-8-sig') as dist_json_file:
-                mod_dict = json.load(dist_json_file)
-    # If there was an error, just assume module was a distribution
+                rel_dict = json.load(dist_json_file)
+    # If there was an error, module may actually be a module
     except RuntimeError:
-        distribution = module
+        rel_dict = None
     else:
-        distribution = mod_dict['distribution']
+        distribution = module
+
+    # Check if
+    if rel_dict is None:
+        try:
+            with TmpDownload('{}/v0/module/{}'.format(cpan_url,
+                                                      module)) as json_path:
+                with open(json_path, encoding='utf-8-sig') as dist_json_file:
+                    mod_dict = json.load(dist_json_file)
+        # If there was an error, report it
+        except RuntimeError:
+            core_version = core_module_version(module, perl_version)
+            if core_version is None:
+                sys.exit(('Error: Could not find module or distribution named' +
+                          ' %s on MetaCPAN') % module)
+            else:
+                distribution = 'perl'
+        else:
+            distribution = mod_dict['distribution']
 
     return distribution
 
-def get_release_info(cpan_url, package, version):
+
+def get_release_info(cpan_url, package, version, perl_version,
+                     dependency=False):
     '''
     Return a dictionary of the JSON information stored at cpan.metacpan.org
     corresponding to the given package/dist/module.
     '''
     # Transform module name to dist name if necessary
     orig_package = package
-    package = dist_for_module(cpan_url, package)
-    if orig_package != package:
-        print(("WARNING: %s was part of the %s distribution, so we are making" +
-               " a recipe for the distribution instead.") % (orig_package,
-                                                             package))
+    package = dist_for_module(cpan_url, package, perl_version)
     package = package.replace('::', '-')
 
     # Get latest info to find author, which is necessary for retrieving a
@@ -536,28 +517,64 @@ def get_release_info(cpan_url, package, version):
         with TmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
             with open(json_path, encoding='utf-8-sig') as dist_json_file:
                 rel_dict = json.load(dist_json_file)
-    except RuntimeError:
-        sys.exit(("Error: Could not find any versions of package %s on " +
-                  "MetaCPAN.") % (orig_package))
+                rel_dict['version'] = rel_dict['version'].lstrip('v')
+    except RuntimeError as e:
+        core_version = core_module_version(orig_package, perl_version)
+        if core_version is not None and (version is None or
+                                         (version == core_version)):
+            print(("WARNING: {0} is not available on MetaCPAN, but it's a " +
+                   "core module, so we do not actually need the source file, " +
+                   "and are omitting the URL and MD5 from the recipe " +
+                   "entirely.").format(orig_package))
+            rel_dict = {'version': str(core_version), 'download_url': '',
+                        'license': ['perl_5'], 'dependency': {}}
+        else:
+            sys.exit(("Error: Could not find any versions of package %s on " +
+                      "MetaCPAN.") % (orig_package))
 
     # If the latest isn't the version we're looking for, we have to do another
     # request
-    if version is not None and rel_dict['version'] != version:
+    version_str = str(version)
+    if (version is not None) and (version != LooseVersion('0') and
+            (rel_dict['version'] != version_str)):
         author = rel_dict['author']
         try:
             with TmpDownload('{}/v0/release/{}/{}-{}'.format(cpan_url,
                                                              author,
                                                              package,
-                                                             version)) as json_path:
+                                                             version_str)) as json_path:
                 with open(json_path, encoding='utf-8-sig') as dist_json_file:
                     new_rel_dict = json.load(dist_json_file)
+                    new_rel_dict['version'] = new_rel_dict['version'].lstrip()
+        # Check if this is a core module, and don't die if it is
         except RuntimeError:
-            sys.exit("Error: Version %s of %s is not available on MetaCPAN."
-                      % (version, orig_package))
-
-        rel_dict = new_rel_dict
+            core_version = core_module_version(orig_package, perl_version)
+            if core_version is not None and (version == core_version):
+                print(("WARNING: Version {0} of {1} is not available on " +
+                       "MetaCPAN, but it's a core module, so we do not " +
+                       "actually need the source file, and are omitting the " +
+                       "URL and MD5 from the recipe " +
+                       "entirely.").format(version_str, orig_package))
+                rel_dict['version'] = version_str
+                rel_dict['download_url'] = ''
+            elif LooseVersion(rel_dict['version']) > version:
+                if not dependency:
+                    print(("WARNING: Version {0} of {1} is not available on " +
+                           "MetaCPAN, but a newer version ({2}) is, so we " +
+                           "will use that " +
+                           "instead.").format(version_str, orig_package,
+                                              rel_dict['version']))
+            else:
+                raise InvalidReleaseError(("Version %s of %s is not available" +
+                                           " on MetaCPAN. You may want to use" +
+                                           " the latest version, %s, instead.")
+                                          % (version_str, orig_package,
+                                             rel_dict['version']))
+        else:
+            rel_dict = new_rel_dict
 
     return rel_dict
+
 
 def get_checksum_and_size(download_url):
     '''

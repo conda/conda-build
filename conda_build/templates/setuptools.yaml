@@ -25,7 +25,7 @@ requirements:
     - setuptools
   run:
     - python
-    {% for req in data.get('install_requires') -%}
+    {% for req in data.get('install_requires', []) -%}
     - {{req}}
     {% endfor %}
     

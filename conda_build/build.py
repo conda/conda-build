@@ -13,6 +13,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+from glob import glob
 from io import open
 from os.path import exists, isdir, isfile, islink, join, abspath
 
@@ -35,7 +36,7 @@ from conda_build.post import (post_process, post_build, is_obj,
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
-                                     create_py_files)
+                                     create_py_files, create_pl_files)
 from conda_build.metadata import MetaData
 
 
@@ -225,30 +226,7 @@ def build(m, get_src=True):
     :type get_src: bool
     '''
     rm_rf(prefix)
-    try_again = True
-    while try_again:
-        try:
-            create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
-        except RuntimeError as e:
-            error_str = str(e)
-            if error_str.startswith('No packages found matching:'):
-                # Build dependency if recipe exists
-                recipe_dir = error_str.split(': ')[1]
-                if exists(recipe_dir):
-                    print(("Missing dependency {0}, but found recipe " +
-                           "directory, so building " +
-                           "{0} first").format(recipe_dir))
-                    dep_m = MetaData(abspath(recipe_dir))
-                    dep_m.check_fields()
-                    build(dep_m)
-                    # Now try again
-                    try_again = True
-                else:
-                    raise
-            else:
-                raise
-        else:
-            try_again = False
+    create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
 
     print("BUILD START:", m.dist())
 
@@ -320,9 +298,15 @@ def test(m):
     rm_rf(tmp_dir)
     os.makedirs(tmp_dir)
     create_files(tmp_dir, m)
-    py_files = create_py_files(tmp_dir, m)
+    # Make Perl or Python-specific test files
+    if m.name().startswith('perl-'):
+        pl_files = create_pl_files(tmp_dir, m)
+        py_files = False
+    else:
+        py_files = create_py_files(tmp_dir, m)
+        pl_files = False
     shell_files = create_shell_files(tmp_dir, m)
-    if not py_files and not shell_files:
+    if not (py_files or shell_files or pl_files):
         print("Nothing to test for:", m.dist())
         return
 
@@ -334,6 +318,9 @@ def test(m):
     if py_files:
         # as the tests are run by python, we need to specify it
         specs += ['python %s*' % environ.PY_VER]
+    if pl_files:
+        # as the tests are run by perl, we need to specify it
+        specs += ['perl %s*' % environ.PERL_VER]
     # add packages listed in test/requires
     for spec in m.get_value('test/requires'):
         specs.append(spec)
@@ -349,16 +336,26 @@ def test(m):
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
                    env['PATH'])
 
-    for varname in 'CONDA_PY', 'CONDA_NPY':
+    for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
         env[varname] = str(getattr(config, varname))
     env['PREFIX'] = config.test_prefix
 
     if py_files:
         try:
-            subprocess.check_call([config.test_python, join(tmp_dir, 'run_test.py')],
-                env=env, cwd=tmp_dir)
+            subprocess.check_call([config.test_python,
+                                   join(tmp_dir, 'run_test.py')],
+                                  env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
             tests_failed(m)
+
+    if pl_files:
+        try:
+            subprocess.check_call([config.test_perl,
+                                   join(tmp_dir, 'run_test.pl')],
+                                  env=env, cwd=tmp_dir)
+        except subprocess.CalledProcessError:
+            tests_failed(m)
+
 
     if shell_files:
         if sys.platform == 'win32':
