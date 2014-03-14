@@ -226,35 +226,7 @@ def build(m, get_src=True):
     :type get_src: bool
     '''
     rm_rf(prefix)
-    try_again = True
-    while try_again:
-        try:
-            create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
-        except RuntimeError as e:
-            error_str = str(e)
-            if error_str.startswith('No packages found matching:'):
-                # Build dependency if recipe exists
-                dep_pkg = error_str.split(': ')[1].replace(' ', '-')
-                recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
-                if exists(dep_pkg):
-                    recipe_glob.append(dep_pkg)
-                if recipe_glob:
-                    for recipe_dir in recipe_glob:
-                        print(("Missing dependency {0}, but found recipe " +
-                               "directory, so building " +
-                               "{0} first").format(dep_pkg))
-                        dep_m = MetaData(abspath(recipe_dir))
-                        dep_m.check_fields()
-                        build(dep_m)
-                        test(dep_m)
-                        # Now try again
-                        try_again = True
-                else:
-                    raise
-            else:
-                raise
-        else:
-            try_again = False
+    create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
 
     print("BUILD START:", m.dist())
 
