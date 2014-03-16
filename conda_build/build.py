@@ -260,8 +260,7 @@ def build(m, get_src=True):
 
     create_post_scripts(m)
     create_entry_points(m.get_value('build/entry_points'))
-    post_process(preserve_egg_dir=bool(
-            m.get_value('build/preserve_egg_dir')))
+    post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
     assert not exists(info_dir)
     files2 = prefix_files()

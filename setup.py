@@ -43,6 +43,6 @@ setup(
                'bin/conda-index',
                'bin/conda-skeleton'],
     install_requires = ['conda'],
-    
+
     package_data={'conda_build': ['templates/*']},
 )
