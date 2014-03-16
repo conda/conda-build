@@ -26,7 +26,7 @@ from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE
-from conda.compat import input, configparser, StringIO
+from conda.compat import input, configparser, StringIO, string_types
 
 
 PYPI_META = """\
@@ -335,6 +335,8 @@ def main(args, parser):
                             d['test_commands'] = indent.join([''] + make_entry_tests(entry_list))
 
                 if pkginfo['install_requires'] or setuptools_build or setuptools_run:
+                    if isinstance(pkginfo['install_requires'], string_types):
+                        pkginfo['install_requires'] = [pkginfo['install_requires']]
                     deps = [remove_version_information(dep).lower() for dep in
                             pkginfo['install_requires']]
                     if 'setuptools' in deps:

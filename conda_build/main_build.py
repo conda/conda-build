@@ -113,8 +113,6 @@ Error: cannot locate binstar (required for upload)
 ''')
     print("Uploading to binstar")
     args = [binstar, 'upload', path]
-    if config.binstar_personal:
-        args += ['--personal']
     try:
         subprocess.call(args)
     except:
