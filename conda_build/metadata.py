@@ -26,20 +26,19 @@ def construct_yaml_str(self, node):
 Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
-from conda_build.config import CONDA_PY, CONDA_NPY
+from conda_build.config import CONDA_PY, CONDA_NPY, CONDA_PERL
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
     str = unicode
 
 
-import yaml
-
 def ns_cfg():
     # Remember to update the docs of any of this changes
     plat = config.subdir
     py = CONDA_PY
     np = CONDA_NPY
+    pl = CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
     return dict(
@@ -52,6 +51,7 @@ def ns_cfg():
         win = plat.startswith('win-'),
         win32 = bool(plat == 'win-32'),
         win64 = bool(plat == 'win-64'),
+        pl = pl,
         py = py,
         py3k = bool(30 <= py < 40),
         py2k = bool(20 <= py < 30),
@@ -218,19 +218,24 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
+        name_ver_list = [('python', CONDA_PY), ('numpy', CONDA_NPY),
+                         ('perl', CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ):
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
-            for name, ver in [('python', CONDA_PY), ('numpy', CONDA_NPY)]:
+            for name, ver in name_ver_list:
                 if ms.name == name:
                     if ms.strictness != 1:
                         sys.exit("""Error:
     You cannot specify a version for package '%s' in the requirements.
-    Please use the environment variables CONDA_PY or CONDA_NPY.
+    Please use the environment variables CONDA_PY, CONDA_NPY, or CONDA_PERL.
 """ % name)
-                    ms = MatchSpec('%s %s*' % (name, '.'.join(str(ver))))
+                    str_ver = str(ver)
+                    if '.' not in str_ver:
+                        str_ver = '.'.join(str_ver)
+                    ms = MatchSpec('%s %s*' % (name, str_ver))
             res.append(ms)
         return res
 
@@ -240,11 +245,14 @@ class MetaData(object):
             check_bad_chrs(ret, 'build/string')
             return ret
         res = []
-        for name, s in (('numpy', 'np'), ('python', 'py')):
+        for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     v = ms.spec.split()[1]
-                    res.append(s + v[0] + v[2])
+                    if name != 'perl':
+                        res.append(s + v[0] + v[2])
+                    else:
+                        res.append(s + v.rstrip('*'))
                     break
         if res:
             res.append('_')

@@ -7,14 +7,17 @@ from os.path import join
 
 import conda.config as cc
 
-from conda_build.config import CONDA_PY, PY3K, build_prefix, _get_python
+from conda_build.config import (CONDA_PERL, CONDA_PY, PY3K, build_prefix,
+                                _get_python)
 from conda_build import source
+
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
     str = unicode
 
 
+PERL_VER =  str(CONDA_PERL)
 PY_VER = '.'.join(str(CONDA_PY))
 STDLIB_DIR = join(build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % PY_VER)
@@ -32,6 +35,7 @@ def get_dict(m=None, prefix=build_prefix):
     d['SP_DIR'] = SP_DIR
     d['SYS_PREFIX'] = sys.prefix
     d['SYS_PYTHON'] = sys.executable
+    d['PERL_VER'] = PERL_VER
     d['PY_VER'] = PY_VER
     d['SRC_DIR'] = source.get_dir()
 

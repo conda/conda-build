@@ -12,6 +12,7 @@ from os.path import dirname, join, isdir, exists
 
 from conda_build import config, source
 
+
 def create_files(dir_path, m):
     """
     Create the test files for pkg in the directory given.  The resulting
@@ -26,6 +27,7 @@ def create_files(dir_path, m):
             shutil.copytree(path, join(dir_path, fn))
         else:
             shutil.copy(path, dir_path)
+
 
 def create_shell_files(dir_path, m):
     has_tests = False
@@ -45,6 +47,7 @@ def create_shell_files(dir_path, m):
             has_tests = True
 
     return has_tests
+
 
 def create_py_files(dir_path, m):
     has_tests = False
@@ -70,5 +73,41 @@ def create_py_files(dir_path, m):
         except IOError:
             fo.write("# no run_test.py exists for this package\n")
         fo.write("\nprint('===== %s OK =====')\n" % m.dist())
+
+    return has_tests
+
+
+def create_pl_files(dir_path, m):
+    has_tests = False
+    with open(join(dir_path, 'run_test.pl'), 'w', encoding='utf-8') as fo:
+        print(r'# tests for %s (this is a generated file)' % m.dist(), file=fo)
+        print(r'print("===== testing package: %s =====\n");' % m.dist(),
+              file=fo)
+        print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
+              file=fo)
+        for name in m.get_value('test/imports'):
+            print(r'print("import: %s\n");' % name, file=fo)
+            print('use %s;\n' % name, file=fo)
+            # Don't try to print version for complex imports
+            if ' ' not in name:
+                print(("if (defined {0}->VERSION) {{\n" +
+                       "\tmy $given_version = {0}->VERSION;\n" +
+                       "\t$given_version =~ s/0+$//;\n" +
+                       "\tdie('Expected version ' . $expected_version . ' but" +
+                       " found ' . $given_version) unless ($expected_version " +
+                       "eq $given_version);\n" +
+                       "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
+                       "\n}}").format(name), file=fo)
+            has_tests = True
+
+        try:
+            with open(join(m.path, 'run_test.pl'), encoding='utf-8') as fi:
+                print("# --- run_test.pl (begin) ---", file=fo)
+                fo.write(fi.read())
+                print("# --- run_test.pl (end) ---", file=fo)
+            has_tests = True
+        except IOError:
+            fo.write("# no run_test.pl exists for this package\n")
+        print('\nprint("===== %s OK =====\\n");' % m.dist(), file=fo)
 
     return has_tests

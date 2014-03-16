@@ -44,6 +44,6 @@ setup(
                'bin/conda-skeleton',
                'bin/conda-pipbuild'],
     install_requires = ['conda'],
-    
+
     package_data={'conda_build': ['templates/*']},
 )

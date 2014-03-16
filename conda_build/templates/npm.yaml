@@ -11,7 +11,7 @@ build:
   number: {% block build_number -%}1{%- endblock %}
   script:
     - cd $RECIPE_DIR
-    - npm --prefix $PREFIX install . -g --production 
+    - npm --prefix $PREFIX install . -g --production
 {%- endblock %}
 {% block requirements -%}
 requirements:
