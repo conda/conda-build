@@ -289,10 +289,11 @@ def build_package(package, version=None):
     for depend in dependencies:
         if not conda_package_exists(depend):
             if ' ' in depend:
-                package, pversion = depend.split(' ')
+                this_pack, pversion = depend.split(' ')
             else:
+                this_pack = depend
                 pversion = None
-            temp = build_package(depend, pversion)
+            temp = build_package(this_pack, pversion)
     args = build_template.format(directory).split()
     print("Building conda package for {0}".format(package.lower()))
     result = subprocess.Popen(args).wait()
