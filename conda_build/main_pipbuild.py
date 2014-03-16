@@ -299,7 +299,7 @@ def build_package(package, version=None):
     if binstar_upload:
         m = MetaData(directory)
         handle_binstar_upload(build.bldpkg_path(m))
-    #rm_rf(directory)
+    rm_rf(directory)
     return result
 
 def execute(args, parser):
