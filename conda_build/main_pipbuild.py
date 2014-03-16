@@ -280,12 +280,15 @@ def make_recipe(package, version):
 
 
 def build_package(package, version=None):
+    assert ' ' not in package
     try:
-        directory = build_recipe(package, version=None)
+        directory = build_recipe(package, version=version)
         dependencies = convert_recipe(directory, package)
     except RuntimeError:
         directory, dependencies = make_recipe(package, version)
 
+    print("package = %s" % package)
+    print("   dependences = %s" % dependencies)
     for depend in dependencies:
         if not conda_package_exists(depend):
             if ' ' in depend:
@@ -315,14 +318,15 @@ def execute(args, parser):
         all_versions = False
     else:
         all_versions = True
-        version = args.release
+        version = args.release[0]
 
     releases = client.package_releases(package, all_versions)
     if not releases:
         sys.exit("Error:  PyPI does not have a package named %s" % package)
 
     if all_versions and version not in releases:
-        sys.exit("Error:  PyPI does not have version %s of package %s" % (version, package))
+        print(releases)
+        print("Warning:  PyPI does not have version %s of package %s" % (version, package))
 
 
     if all_versions:
