@@ -300,7 +300,7 @@ def build_package(package, version=None):
     args = build_template.format(directory).split()
     print("Building conda package for {0}".format(package.lower()))
     result = subprocess.Popen(args).wait()
-    if binstar_upload:
+    if result == 0 and binstar_upload:
         m = MetaData(directory)
         handle_binstar_upload(build.bldpkg_path(m))
     rm_rf(directory)
