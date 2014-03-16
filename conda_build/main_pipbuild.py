@@ -212,7 +212,9 @@ def get_all_dependencies(package, version):
     subprocess.Popen(cmd1.split()).wait()
     cmd2 = "%s/bin/pip install %s==%s" % (prefix, package, version)
     print(cmd2)
-    subprocess.Popen(cmd2.split()).wait()
+    ret = subprocess.Popen(cmd2.split()).wait()
+    if ret != 0:
+        raise RuntimeError("Could not pip install %s==%s" % (package, version))
     cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
     fid = open('__tmpfile__.py','w')
     fid.write("import pkg_resources;\n")
