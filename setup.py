@@ -41,7 +41,8 @@ setup(
     scripts = ['bin/conda-build',
                'bin/conda-convert',
                'bin/conda-index',
-               'bin/conda-skeleton'],
+               'bin/conda-skeleton',
+               'bin/conda-pipbuild'],
     install_requires = ['conda'],
     
     package_data={'conda_build': ['templates/*']},
