@@ -16,6 +16,8 @@ import yaml
 import conda.config as config
 from conda_build import __version__
 from conda.install import rm_rf
+import conda_build.build as build
+from conda_build.metadata import MetaData
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy
@@ -32,6 +34,13 @@ def main():
         "--no-binstar-upload",
         action = "store_false",
         help = "do not ask to upload the package to binstar",
+        dest = 'binstar_upload',
+        default = config.binstar_upload,
+    )
+    p.add_argument(
+        "--binstar-upload",
+        action="store_true",
+        help = "upload the package to binstar",
         dest = 'binstar_upload',
         default = config.binstar_upload,
     )
@@ -67,29 +76,8 @@ def main():
     args.func(args, p)
 
 
-def handle_binstar_upload(path, args):
-    import subprocess
+def handle_binstar_upload(path):
     from conda_build.external import find_executable
-
-    if args.binstar_upload is None:
-        args.yes = False
-        args.dry_run = False
-#        upload = common.confirm_yn(
-#            args,
-#            message="Do you want to upload this "
-#            "package to binstar", default='yes', exit_no=False)
-        upload = False
-    else:
-        upload = args.binstar_upload
-
-    if not upload:
-        print("""\
-# If you want to upload this package to binstar.org later, type:
-#
-# $ binstar upload %s
-""" % path)
-        return
-
     binstar = find_executable('binstar')
     if binstar is None:
         sys.exit('''
@@ -151,12 +139,24 @@ about:
   summary: {summary}
 """
 
-def build_recipe(package):
-    if os.path.isdir(package.lower()):
-        rm_rf(package.lower())
-    args = skeleton_template.format(package).split()
-    print("Creating standard recipe for {0}".format(package.lower()))
-    result = subprocess.check_output(args, stderr=subprocess.STDOUT)
+def build_recipe(package, version=None):
+    if version:
+        dirname = package.lower() + "-" + version
+    else:
+        dirname = package.lower()
+    if os.path.isdir(dirname):
+        rm_rf(dirname)
+    if version is None:
+        args = skeleton_template.format(package).split()
+    else:
+        args = skeleton_template_wversion.format(package, version).split()
+    print("Creating standard recipe for {0}".format(dirname))
+    try:
+        result = subprocess.check_output(args, stderr=subprocess.STDOUT)
+    except subprocess.CalledProcessError as err:
+        print(err.output)
+        raise RuntimeError((" ".join(args)))
+
     output = result.strip().split('\n')
     if output[-1] == 'Done':
         direc = output[-2].split()[-1]
@@ -203,35 +203,132 @@ def convert_recipe(direc, package):
 
     return depends
 
-def build_package(package):
-    directory = build_recipe(package)
-    dependencies = convert_recipe(directory, package)
+
+def get_all_dependencies(package, version):
+    import conda.config
+    prefix = os.path.join(conda.config.default_prefix, 'envs', '_pipbuild_')
+    cmd1 = "conda create -n _pipbuild_ --yes python pip"
+    print(cmd1)
+    subprocess.Popen(cmd1.split()).wait()
+    cmd2 = "%s/bin/pip install %s==%s" % (prefix, package, version)
+    print(cmd2)
+    subprocess.Popen(cmd2.split()).wait()
+    cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
+    fid = open('__tmpfile__.py','w')
+    fid.write("import pkg_resources;\n")
+    fid.write("reqs = pkg_resources.get_distribution('%s').requires();\n" % package)
+    fid.write("print [(req.key, req.specs) for req in reqs]\n")
+    fid.close()
+    print("Getting dependencies...")
+    output = subprocess.check_output(cmd3args)
+    deps = eval(output)
+    os.unlink('__tmpfile__.py')
+    depends = []
+    for dep in deps:
+        if len(dep[1]) == 2 and dep[1][0] == '==':
+            depends.append(dep[0] + ' ' + dep[1][1])
+        else:
+            depends.append(dep[0])
+    cmd4 = "conda remove -n _pipbuild_ --yes --all"
+    subprocess.Popen(cmd4.split()).wait()
+    return depends
+
+def make_recipe(package, version):
+    if version is None:
+        version = client.package_releases(package)[0]
+    depends = get_all_dependencies(package, version)
+    dirname = package.lower() + "-" + version
+    if os.path.isdir(dirname):
+        rm_rf(dirname)
+    os.mkdir(dirname)
+    direc = os.path.abspath(dirname)
+    build = 'pip install %s==%s\n' % (package, version)
+    # write build.sh file and bld.bat file
+    filenames = ['build.sh', 'bld.bat']
+    for name in filenames:
+        with open(os.path.join(direc, name),'w') as fid:
+            fid.write(build)
+
+    indent = '\n    - '
+    d = {}
+    d['packagename'] = package
+    d['version'] = version
+    if depends:
+        d['depends'] = indent.join([''] + depends)
+    else:
+        d['depends'] = ''
+
+    data = client.release_data(package, version)
+
+    license_classifier = "License :: OSI Approved ::"
+    licenses = [classifier.lstrip(license_classifier) for classifier in
+                    data['classifiers'] if classifier.startswith(license_classifier)]
+    if not licenses:
+        license = data['license'] or 'UNKNOWN'
+    else:
+        license = ' or '.join(licenses)
+
+    d['homeurl'] = data['home_page']
+    d['license'] = license
+    d['summary'] = repr(data['summary'])
+
+    with open(os.path.join(direc,'meta.yaml'),'w') as fid:
+        fid.write(meta_template.format(**d))
+
+    return direc, depends
+
+
+
+def build_package(package, version=None):
+    try:
+        directory = build_recipe(package, version=None)
+        dependencies = convert_recipe(directory, package)
+    except RuntimeError:
+        directory, dependencies = make_recipe(package, version)
+
     for depend in dependencies:
         if not conda_package_exists(depend):
-            temp = build_package(depend)
+            if ' ' in depend:
+                package, pversion = depend.split(' ')
+            else:
+                pversion = None
+            temp = build_package(depend, pversion)
     args = build_template.format(directory).split()
     print("Building conda package for {0}".format(package.lower()))
     result = subprocess.Popen(args).wait()
+    if binstar_upload:
+        m = MetaData(directory)
+        handle_binstar_upload(build.bldpkg_path(m))
     #rm_rf(directory)
     return result
 
 def execute(args, parser):
+    global binstar_upload
+    global client
+    binstar_upload = args.binstar_upload
 
     client = ServerProxy(args.pypi_url)
     package = args.pypi_name[0]
-    all_versions = True
     if args.release == 'latest':
+        version = None
         all_versions = False
+    else:
+        all_versions = True
+        version = args.release
 
     releases = client.package_releases(package, all_versions)
     if not releases:
-        sys.exit("Error:  PyPI does not have a package named %s" % arg)
+        sys.exit("Error:  PyPI does not have a package named %s" % package)
+
+    if all_versions and version not in releases:
+        sys.exit("Error:  PyPI does not have version %s of package %s" % (version, package))
 
 
-    build_package(package)
-
-    if args.binstar_upload:
-        handle_binstar_upload(build.bldpkg_path(m), args)
+    if all_versions:
+        build_package(package, version)
+    else:
+        version = releases[0]
+        build_package(package, version)
 
 
 if __name__ == '__main__':

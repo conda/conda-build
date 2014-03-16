@@ -457,20 +457,21 @@ def run_setuppy(src_dir, temp_dir):
     finally:
         chdir(cwd)
 
-
 def remove_version_information(pkgstr):
     '''
     :returns: A copy of pkgstr with any extra information about required
               versions removed.
     '''
     # TODO: Actually incorporate the version information into the meta.yaml
-    # file.
-    return (pkgstr.partition(' ')[0]
-                  .partition('<')[0]
-                  .partition('!')[0]
-                  .partition('>')[0]
-                  .partition('=')[0])
-
+    # file.  conda build needs to support version specs 
+    import pkg_resources
+    pp = pkg_resources.parse_requirements(pkgstr).next()
+    retstr = pp.key
+    # Only handle == version for now
+    if len(pp.specs) > 0 and len(pp.specs[0]) > 1 and pp.specs[0][0] == '==':
+        return pp.key + ' ' + pp.specs[0][1]
+    else:
+        return pp.key
 
 def make_entry_tests(entry_list):
     tests = []
