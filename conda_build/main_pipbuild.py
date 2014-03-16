@@ -166,15 +166,14 @@ def build_recipe(package, version=None):
 
 def convert_recipe(direc, package):
     print("Converting recipe in {0}".format(direc))
-    build = 'pip install %s\n' % package
+    buildstr = 'pip install %s\n' % package
     # convert build.sh file and bld.bat file
     filenames = ['build.sh', 'bld.bat']
     for name in filenames:
         with open(os.path.join(direc, name),'w') as fid:
-            fid.write(build)
+            fid.write(buildstr)
     # convert meta.yaml file
     with open(os.path.join(direc,'meta.yaml')) as fid:
-        mystr = fid.read()
         fid.seek(0)
         meta = yaml.load(fid)
 
@@ -237,7 +236,11 @@ def get_all_dependencies(package, version):
 
 def make_recipe(package, version):
     if version is None:
-        version = client.package_releases(package)[0]
+        release = client.package_releases(package)
+        if len(release) > 0:
+            version = [0]
+        else:
+            raise RuntimeError("Empty releases for %s" % package)
     depends = get_all_dependencies(package, version)
     dirname = package.lower() + "-" + version
     if os.path.isdir(dirname):
@@ -282,7 +285,10 @@ def make_recipe(package, version):
 
 
 def build_package(package, version=None):
-    assert ' ' not in package
+    if conda_package_exists(package):
+        return 0
+    if ' ' in package:
+        package, version = depend.split(' ')
     try:
         directory = build_recipe(package, version=version)
         dependencies = convert_recipe(directory, package)
@@ -291,14 +297,12 @@ def build_package(package, version=None):
 
     print("package = %s" % package)
     print("   dependences = %s" % dependencies)
+    # Dependencies will be either package_name or
+    #  package_name version_number
+    # Only == dependency specs get version numbers 
+    # All else are just handled without a version spec
     for depend in dependencies:
-        if not conda_package_exists(depend):
-            if ' ' in depend:
-                this_pack, pversion = depend.split(' ')
-            else:
-                this_pack = depend
-                pversion = None
-            temp = build_package(this_pack, pversion)
+        build_package(depend)
     args = build_template.format(directory).split()
     print("Building conda package for {0}".format(package.lower()))
     result = subprocess.Popen(args).wait()
