@@ -265,7 +265,8 @@ def build(m, get_src=True):
     assert not exists(info_dir)
     files2 = prefix_files()
 
-    post_build(sorted(files2 - files1))
+    post_build(sorted(files2 - files1),
+               binary_relocation=bool(m.get_value('build/binary_relocation', True)))
     create_info_files(m, sorted(files2 - files1))
     files3 = prefix_files()
     fix_permissions(files3 - files1)

@@ -156,10 +156,13 @@ def mk_relative_osx(path):
     for name in macho.otool(path):
         assert not name.startswith(build_prefix), path
 
-def mk_relative(f):
+def mk_relative(f, binary_relocation=True):
     assert sys.platform != 'win32'
     if f.startswith('bin/'):
         fix_shebang(f)
+
+    if not binary_relocation:
+        return
 
     path = join(build_prefix, f)
     if sys.platform.startswith('linux') and is_obj(path):
@@ -183,9 +186,9 @@ def fix_permissions(files):
         lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
 
 
-def post_build(files):
+def post_build(files, binary_relocation=True):
     print('number of files:', len(files))
     fix_permissions(files)
     for f in files:
         if sys.platform != 'win32':
-            mk_relative(f)
+            mk_relative(f, binary_relocation=binary_relocation)
