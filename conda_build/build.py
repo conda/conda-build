@@ -13,9 +13,8 @@ import stat
 import subprocess
 import sys
 import tarfile
-from glob import glob
 from io import open
-from os.path import exists, isdir, isfile, islink, join, abspath
+from os.path import exists, isdir, isfile, islink, join
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -37,7 +36,6 @@ from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
-from conda_build.metadata import MetaData
 
 
 prefix = config.build_prefix
