@@ -8,16 +8,14 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import argparse
-import os
 
 from collections import defaultdict
 
 import conda.config
 
 from conda_build.metadata import MetaData
-from conda_build.build import create_info_files, build
-from conda_build.utils import rm_rf
-import conda_build.config
+from conda_build.build import build, bldpkg_path
+from conda_build.main_build import handle_binstar_upload
 
 def main():
     p = argparse.ArgumentParser(
@@ -110,6 +108,7 @@ def execute(args, parser):
     m = MetaData.fromdict(d)
 
     build(m)
+    handle_binstar_upload(bldpkg_path(m), args)
 
 if __name__ == '__main__':
     main()

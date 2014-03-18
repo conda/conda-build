@@ -141,7 +141,7 @@ def execute(args, parser):
     import shutil
     import tarfile
     import tempfile
-    from os.path import abspath, isdir, isfile, join
+    from os.path import abspath, isdir, isfile
 
     from conda.lock import Locked
     import conda_build.build as build
