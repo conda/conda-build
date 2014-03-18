@@ -8,16 +8,14 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import argparse
-import sys
-from glob import glob
-from locale import getpreferredencoding
-from os.path import exists
+import os
 
-import conda.config as config
-from conda.compat import PY3
+import conda.config
 
-from conda_build import __version__
-
+from conda_build.metadata import MetaData
+from conda_build.build import create_info_files
+from conda_build.utils import rm_rf
+import conda_build.config
 
 def main():
     p = argparse.ArgumentParser(
@@ -30,7 +28,7 @@ def main():
         action="store_false",
         help="do not ask to upload the package to binstar",
         dest='binstar_upload',
-        default=config.binstar_upload,
+        default=conda.config.binstar_upload,
     )
     p.add_argument(
         "--output",
@@ -39,12 +37,12 @@ def main():
                "created and exit",
     )
     p.add_argument(
-        "pkg-name",
+        "name",
         action="store",
         help="name of the created package",
     )
     p.add_argument(
-        "pkg-version",
+        "version",
         action="store",
         help="version of the created package",
     )
@@ -64,6 +62,7 @@ def main():
     p.add_argument(
         "--dependencies", "-d",
         nargs='*',
+        default=(),
         help="""The dependencies of the package. To specify a version
         restriction for a dependency, wrap the dependency in quotes, like
         'package >=2.0'""",
@@ -73,6 +72,20 @@ def main():
     args = p.parse_args()
     args.func(args, p)
 
-
 def execute(args, parser):
-    pass
+    d = {'package': {}, 'build': {}, 'requirements': {}}
+    d['package']['name'] = args.name
+    d['package']['version'] = args.version
+    d['build']['number'] = args.build_number
+    # MetaData does the auto stuff if the build string is None
+    d['build']['string'] = args.build_string
+    d['requirements']['run'] = args.dependencies
+    m = MetaData.fromdict(d)
+
+    prefix = conda_build.config.build_prefix
+    rm_rf(prefix)
+    os.makedirs(prefix)
+    create_info_files(m, [], include_recipe=False)
+
+if __name__ == '__main__':
+    main()
