@@ -9,6 +9,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import argparse
 import sys
+from collections import deque
 from glob import glob
 from locale import getpreferredencoding
 from os.path import exists
@@ -152,7 +153,10 @@ def execute(args, parser):
     check_external()
 
     with Locked(croot):
-        for arg in args.recipe:
+        recipes = deque(args.recipe)
+        while recipes:
+            arg = recipes.popleft()
+            try_again = False
             # Don't use byte literals for paths in Python 2
             if not PY3:
                 arg = arg.decode(getpreferredencoding())
@@ -190,38 +194,30 @@ def execute(args, parser):
                 print('Source tree in:', source.get_dir())
             else:
                 # This loop recursively builds dependencies if recipes exist
-                try_again = True
-                while try_again:
-                    try:
-                        build.build(m)
-                    except RuntimeError as e:
-                        error_str = str(e)
-                        if error_str.startswith('No packages found matching:'):
-                            # Build dependency if recipe exists
-                            dep_pkg = error_str.split(': ')[1].replace(' ', '-')
-                            recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
-                            if exists(dep_pkg):
-                                recipe_glob.append(dep_pkg)
-                            if recipe_glob:
-                                for recipe_dir in recipe_glob:
-                                    print(("Missing dependency {0}, but found" +
-                                           " recipe directory, so building " +
-                                           "{0} first").format(dep_pkg))
-                                    dep_m = MetaData(abspath(recipe_dir))
-                                    dep_m.check_fields()
-                                    build.build(dep_m)
-                                    if not args.notest:
-                                        build.test(dep_m)
-                                    dep_bldpkg_path = build.bldpkg_path(dep_m)
-                                    handle_binstar_upload(dep_bldpkg_path, args)
-                                    # Now try again
-                                    try_again = True
-                            else:
-                                raise
+                try:
+                    build.build(m)
+                except RuntimeError as e:
+                    error_str = str(e)
+                    if error_str.startswith('No packages found matching:'):
+                        # Build dependency if recipe exists
+                        dep_pkg = error_str.split(': ')[1].replace(' ', '-')
+                        recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
+                        if exists(dep_pkg):
+                            recipe_glob.append(dep_pkg)
+                        if recipe_glob:
+                            recipes.appendleft(arg)
+                            try_again = True
+                            for recipe_dir in recipe_glob:
+                                print(("Missing dependency {0}, but found" +
+                                       " recipe directory, so building " +
+                                       "{0} first").format(dep_pkg))
+                                recipes.appendleft(recipe_dir)
                         else:
                             raise
                     else:
-                        try_again = False
+                        raise
+                if try_again:
+                    continue
 
                 if not args.notest:
                     build.test(m)
