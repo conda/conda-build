@@ -64,7 +64,7 @@ def main():
         nargs=1,
         default='http://pypi.python.org/pypi',
         help = "Url to use for PyPI",
-        ) 
+    )
     p.add_argument(
         '-V', '--version',
         action = 'version',
@@ -295,21 +295,23 @@ def build_package(package, version=None):
     except RuntimeError:
         directory, dependencies = make_recipe(package, version)
 
-    print("package = %s" % package)
-    print("   dependences = %s" % dependencies)
-    # Dependencies will be either package_name or
-    #  package_name version_number
-    # Only == dependency specs get version numbers 
-    # All else are just handled without a version spec
-    for depend in dependencies:
-        build_package(depend)
-    args = build_template.format(directory).split()
-    print("Building conda package for {0}".format(package.lower()))
-    result = subprocess.Popen(args).wait()
-    if result == 0 and binstar_upload:
-        m = MetaData(directory)
-        handle_binstar_upload(build.bldpkg_path(m))
-    rm_rf(directory)
+    try:
+        print("package = %s" % package)
+        print("   dependences = %s" % dependencies)
+        # Dependencies will be either package_name or
+        #  package_name version_number
+        # Only == dependency specs get version numbers
+        # All else are just handled without a version spec
+        for depend in dependencies:
+            build_package(depend)
+        args = build_template.format(directory).split()
+        print("Building conda package for {0}".format(package.lower()))
+        result = subprocess.Popen(args).wait()
+        if result == 0 and binstar_upload:
+            m = MetaData(directory)
+            handle_binstar_upload(build.bldpkg_path(m))
+    finally:
+        rm_rf(directory)
     return result
 
 def execute(args, parser):
@@ -333,7 +335,6 @@ def execute(args, parser):
     if all_versions and version not in releases:
         print(releases)
         print("Warning:  PyPI does not have version %s of package %s" % (version, package))
-
 
     if all_versions:
         build_package(package, version)
