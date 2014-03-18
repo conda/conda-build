@@ -188,15 +188,16 @@ def create_env(pref, specs):
     if not isdir(config.bldpkgs_dir):
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
-    # remove the cache such that a refetch is made,
-    # this is necessary because we add the local build repo URL
-    fetch_index.cache = {}
-    index = get_index([url_path(config.croot)])
+    if specs: # Don't waste time if there is nothing to do
+        # remove the cache such that a refetch is made,
+        # this is necessary because we add the local build repo URL
+        fetch_index.cache = {}
+        index = get_index([url_path(config.croot)])
 
-    cc.pkgs_dirs = cc.pkgs_dirs[:1]
-    actions = plan.install_actions(pref, index, specs)
-    plan.display_actions(actions, index)
-    plan.execute_actions(actions, index, verbose=True)
+        cc.pkgs_dirs = cc.pkgs_dirs[:1]
+        actions = plan.install_actions(pref, index, specs)
+        plan.display_actions(actions, index)
+        plan.execute_actions(actions, index, verbose=True)
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(pref):
         os.makedirs(pref)
