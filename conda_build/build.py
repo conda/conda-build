@@ -249,16 +249,17 @@ def build(m, get_src=True):
     else:
         env = environ.get_dict(m)
         build_file = join(m.path, 'build.sh')
-        script = m.get_value('build/script', None)
-        if script:
-            if isinstance(script, list):
-                script = '\n'.join(script)
-            with open(build_file, 'w', encoding='utf-8') as bf:
-                bf.write(script)
-            os.chmod(build_file, 0o766)
-        cmd = ['/bin/bash', '-x', '-e', build_file]
+        if exists(build_file):
+            script = m.get_value('build/script', None)
+            if script:
+                if isinstance(script, list):
+                    script = '\n'.join(script)
+                with open(build_file, 'w', encoding='utf-8') as bf:
+                    bf.write(script)
+                os.chmod(build_file, 0o766)
+            cmd = ['/bin/bash', '-x', '-e', build_file]
 
-        _check_call(cmd, env=env, cwd=source.get_dir())
+            _check_call(cmd, env=env, cwd=source.get_dir())
 
     create_post_scripts(m)
     create_entry_points(m.get_value('build/entry_points'))
