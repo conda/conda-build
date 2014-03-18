@@ -10,10 +10,12 @@ from __future__ import (absolute_import, division, print_function,
 import argparse
 import os
 
+from collections import defaultdict
+
 import conda.config
 
 from conda_build.metadata import MetaData
-from conda_build.build import create_info_files
+from conda_build.build import create_info_files, build
 from conda_build.utils import rm_rf
 import conda_build.config
 
@@ -29,12 +31,6 @@ def main():
         help="do not ask to upload the package to binstar",
         dest='binstar_upload',
         default=conda.config.binstar_upload,
-    )
-    p.add_argument(
-        "--output",
-        action="store_true",
-        help="output the conda package filename which would have been "
-               "created and exit",
     )
     p.add_argument(
         "name",
@@ -67,25 +63,53 @@ def main():
         restriction for a dependency, wrap the dependency in quotes, like
         'package >=2.0'""",
     )
+    p.add_argument(
+        "--home",
+        action="store",
+        help="The homepage for the metapackage"
+    )
+    p.add_argument(
+        "--license",
+        action="store",
+        help="The license of the metapackage",
+    )
+    p.add_argument(
+        "--summary",
+        action="store",
+        help="""Summary of the package.  Pass this in as a string on the command
+        line, like --summary 'A metapackage for X'. It is recommended to use
+        single quotes if you are not doing variable substitution to avoid
+        interpretation of special characters.""",
+    )
+    p.add_argument(
+        "--entry-points",
+        nargs='*',
+        default=(),
+        help="""Python entry points to create automatically. They should use the same
+        syntax as in the meta.yaml of a recipe, e.g., --entry-points
+        bsdiff4=bsdiff4.cli:main_bsdiff4 will create an entry point called
+        bsdiff4 that calls bsdiff4.cli.main_bsdiff4() """,
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
     args.func(args, p)
 
 def execute(args, parser):
-    d = {'package': {}, 'build': {}, 'requirements': {}}
+    d = defaultdict(dict)
     d['package']['name'] = args.name
     d['package']['version'] = args.version
     d['build']['number'] = args.build_number
+    d['build']['entry_points'] = args.entry_points
     # MetaData does the auto stuff if the build string is None
     d['build']['string'] = args.build_string
     d['requirements']['run'] = args.dependencies
+    d['about']['home'] = args.home
+    d['about']['license'] = args.license
+    d['about']['summary'] = args.summary
     m = MetaData.fromdict(d)
 
-    prefix = conda_build.config.build_prefix
-    rm_rf(prefix)
-    os.makedirs(prefix)
-    create_info_files(m, [], include_recipe=False)
+    build(m)
 
 if __name__ == '__main__':
     main()
