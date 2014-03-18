@@ -118,7 +118,7 @@ def have_prefix_files(files):
         yield f
 
 
-def create_info_files(m, files):
+def create_info_files(m, files, include_recipe=True):
     '''
     Creates the metadata files that will be stored in the built package.
 
@@ -126,19 +126,22 @@ def create_info_files(m, files):
     :type m: Metadata
     :param files: Paths to files to include in package
     :type files: list of str
+    :param include_recipe: Whether or not to include the recipe (True by default)
+    :type include_recipe: bool
     '''
     recipe_dir = join(info_dir, 'recipe')
     os.makedirs(recipe_dir)
 
-    for fn in os.listdir(m.path):
-        if fn.startswith('.'):
-            continue
-        src_path = join(m.path, fn)
-        dst_path = join(recipe_dir, fn)
-        if isdir(src_path):
-            shutil.copytree(src_path, dst_path)
-        else:
-            shutil.copy(src_path, dst_path)
+    if include_recipe:
+        for fn in os.listdir(m.path):
+            if fn.startswith('.'):
+                continue
+            src_path = join(m.path, fn)
+            dst_path = join(recipe_dir, fn)
+            if isdir(src_path):
+                shutil.copytree(src_path, dst_path)
+            else:
+                shutil.copy(src_path, dst_path)
 
     with open(join(info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
