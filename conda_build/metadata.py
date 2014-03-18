@@ -182,6 +182,17 @@ class MetaData(object):
 
         self.meta = parse(get_contents(self.meta_path))
 
+    @classmethod
+    def fromdict(cls, metadata):
+        """
+        Create a MetaData object from metadata dict directly.
+        """
+        m = super(MetaData, cls).__new__(cls)
+        m.path = ''
+        m.meta_path = ''
+        m.meta = metadata
+        return m
+
     def get_section(self, section):
         return self.meta.get(section, {})
 
