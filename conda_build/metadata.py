@@ -231,7 +231,7 @@ class MetaData(object):
         res = []
         name_ver_list = [('python', CONDA_PY), ('numpy', CONDA_NPY),
                          ('perl', CONDA_PERL)]
-        for spec in self.get_value('requirements/' + typ):
+        for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
