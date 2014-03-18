@@ -11,11 +11,11 @@ build:
   script:
     - cd $RECIPE_DIR
     - $PYTHON setup.py install --single-version-externally-managed --record=record.txt
-    
+
   {% block entry_points -%}
   entry_points: {{data.get('entry_points', {}).get('console_scripts', [])}}
   {%- endblock %}
-    
+
 {%- endblock %}
 
 {% block requirements -%}
@@ -28,7 +28,7 @@ requirements:
     {% for req in data.get('install_requires', []) -%}
     - {{req}}
     {% endfor %}
-    
+
 {%- endblock %}
 {% block about -%}
 about:

@@ -5,8 +5,6 @@ Tools for converting CPAN packages to conda recipes.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
-import collections
-import functools
 import json
 import subprocess
 import sys
@@ -17,16 +15,11 @@ from os import makedirs
 from os.path import basename, dirname, join, exists
 
 from conda.api import get_index
-from conda.cli import common
-from conda.compat import input, configparser, StringIO, PY3
-from conda.fetch import download, TmpDownload
-from conda.install import linked, rm_rf
+from conda.fetch import TmpDownload
 from conda.resolve import MatchSpec, Resolve
-from conda.utils import human_bytes, hashsum_file, memoized
+from conda.utils import memoized
 
 from conda_build.config import CONDA_PERL
-from conda_build.source import SRC_CACHE
-from conda_build.utils import tar_xf, unzip
 
 
 # Python 2.x backward compatibility

@@ -13,9 +13,8 @@ import stat
 import subprocess
 import sys
 import tarfile
-from glob import glob
 from io import open
-from os.path import exists, isdir, isfile, islink, join, abspath
+from os.path import exists, isdir, isfile, islink, join
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -37,7 +36,6 @@ from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
-from conda_build.metadata import MetaData
 
 
 prefix = config.build_prefix
@@ -260,13 +258,13 @@ def build(m, get_src=True):
 
     create_post_scripts(m)
     create_entry_points(m.get_value('build/entry_points'))
-    post_process(preserve_egg_dir=bool(
-            m.get_value('build/preserve_egg_dir')))
+    post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
     assert not exists(info_dir)
     files2 = prefix_files()
 
-    post_build(sorted(files2 - files1))
+    post_build(sorted(files2 - files1),
+               binary_relocation=bool(m.get_value('build/binary_relocation', True)))
     create_info_files(m, sorted(files2 - files1))
     files3 = prefix_files()
     fix_permissions(files3 - files1)

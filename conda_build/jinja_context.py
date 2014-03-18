@@ -8,7 +8,6 @@ from __future__ import (absolute_import, division, print_function,
 
 import json
 import os
-import sys
 from io import open
 
 from conda.compat import PY3
