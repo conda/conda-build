@@ -4,6 +4,7 @@
   * fix recursive conda building when dependencies are nested more than one
     level deep.
   * fix build in Windows Python 2
+  * fix skeleton pypi for packages whose setup.py has __future__ imports
 
 2014-03-14   1.3.0:
 -------------------
