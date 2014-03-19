@@ -343,6 +343,8 @@ def test(m):
         env[varname] = str(getattr(config, varname))
     env['PREFIX'] = config.test_prefix
 
+    # Python 2 Windows requires that envs variables be string, not unicode
+    env = {str(i): env[i] for i in env}
     if py_files:
         try:
             subprocess.check_call([config.test_python,
