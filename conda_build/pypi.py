@@ -465,10 +465,9 @@ def remove_version_information(pkgstr):
               versions removed.
     '''
     # TODO: Actually incorporate the version information into the meta.yaml
-    # file.  conda build needs to support version specs 
+    # file.  conda build needs to support version specs
     import pkg_resources
-    pp = pkg_resources.parse_requirements(pkgstr).next()
-    retstr = pp.key
+    pp = next(pkg_resources.parse_requirements(pkgstr))
     # Only handle == version for now
     if len(pp.specs) > 0 and len(pp.specs[0]) > 1 and pp.specs[0][0] == '==':
         return pp.key + ' ' + pp.specs[0][1]
