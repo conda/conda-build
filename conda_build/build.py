@@ -15,6 +15,7 @@ import sys
 import tarfile
 from io import open
 from os.path import exists, isdir, isfile, islink, join
+import yaml
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -142,6 +143,12 @@ def create_info_files(m, files, include_recipe=True):
                 shutil.copytree(src_path, dst_path)
             else:
                 shutil.copy(src_path, dst_path)
+
+    if isfile(join(recipe_dir, 'meta.yaml')):
+        shutil.move(join(recipe_dir, 'meta.yaml'), join(recipe_dir, 'meta.yaml.orig'))
+
+    with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
+        yaml.safe_dump(m.meta, fo)
 
     with open(join(info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
