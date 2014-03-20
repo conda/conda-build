@@ -33,7 +33,7 @@ def load_setuptools():
         setuptools.setup = setup
         exec(open('setup.py', encoding='utf-8').read())
         setuptools.setup = setuptools_setup
-	del sys.path[-1]
+        del sys.path[-1]
     return _setuptools_data
 
 def load_npm():
