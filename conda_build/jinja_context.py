@@ -24,12 +24,16 @@ def load_setuptools():
             _setuptools_data.update(kw)
 
         import setuptools
+        #Add current directory to path
+        import sys
+        sys.path.append('.')
+
         #Patch setuptools
         setuptools_setup = setuptools.setup
         setuptools.setup = setup
         exec(open('setup.py', encoding='utf-8').read())
         setuptools.setup = setuptools_setup
-
+	del sys.path[-1]
     return _setuptools_data
 
 def load_npm():
