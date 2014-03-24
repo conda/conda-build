@@ -288,7 +288,7 @@ def build_package(package, version=None):
     if conda_package_exists(package):
         return 0
     if ' ' in package:
-        package, version = depend.split(' ')
+        package, version = package.split(' ')
     try:
         directory = build_recipe(package, version=version)
         dependencies = convert_recipe(directory, package)
