@@ -450,7 +450,8 @@ def run_setuppy(src_dir, temp_dir):
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
-    create_env(build_prefix, ['python %s*' % default_python, 'pyyaml', 'setuptools'])
+    create_env(build_prefix, ['python %s*' % default_python, 'pyyaml',
+        'setuptools'], clear_cache=False)
     stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % default_python)
 

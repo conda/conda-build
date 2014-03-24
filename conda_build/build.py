@@ -188,7 +188,7 @@ def create_info_files(m, files, include_recipe=True):
                         join(info_dir, 'icon.png'))
 
 
-def create_env(pref, specs):
+def create_env(pref, specs, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -196,9 +196,10 @@ def create_env(pref, specs):
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
-        # remove the cache such that a refetch is made,
-        # this is necessary because we add the local build repo URL
-        fetch_index.cache = {}
+        if clear_cache:
+            # remove the cache such that a refetch is made,
+            # this is necessary because we add the local build repo URL
+            fetch_index.cache = {}
         index = get_index([url_path(config.croot)])
 
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
