@@ -73,6 +73,11 @@ def main():
         help="""Don't prompt the user on ambiguous choices.  Instead, make the
         best possible choice and continue."""
     )
+    pypi.add_argument(
+        "--recursive",
+        action='store_true',
+        help='Create recipes for dependencies if they do not already exist.'
+    )
 
     cpan = repos.add_parser(
         "cpan",

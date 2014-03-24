@@ -155,7 +155,8 @@ def main(args, parser):
         # what kind of monkeypatching the setup.pys out there could be doing.
         print("WARNING: building more than one recipe at once without "
               "--no-download is not recommended")
-    for package in args.packages:
+    while args.packages:
+        package = args.packages.pop()
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
@@ -353,6 +354,11 @@ def main(args, parser):
                     d['run_depends'] = indent.join([''] +
                                                    ['setuptools'] * setuptools_run +
                                                    deps)
+
+                    if args.recursive:
+                        for dep in deps:
+                            if not exists(join(output_dir, dep)):
+                                args.packages.append(dep)
 
                 if pkginfo['packages']:
                     deps = set(pkginfo['packages'])
