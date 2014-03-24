@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 import os
 import sys
 from io import open
-from os.path import isdir, isfile, join
+from os.path import isdir, isfile, join, exists
 
 import conda.config as cc
 from conda.compat import iteritems
@@ -104,18 +104,19 @@ def build(m):
 
     src_dir = source.get_dir()
     bld_bat = join(m.path, 'bld.bat')
-    with open(bld_bat, encoding='utf-8') as fi:
-        data = fi.read()
-    with open(join(src_dir, 'bld.bat'), 'w', encoding='utf-8') as fo:
-        fo.write(msvc_env_cmd())
-        # more debuggable with echo on
-        fo.write('@echo on\n')
-        for kv in iteritems(env):
-            fo.write('set %s=%s\n' % kv)
-        fo.write("REM ===== end generated header =====\n")
-        fo.write(data)
+    if exists(bld_bat):
+        with open(bld_bat, encoding='utf-8') as fi:
+            data = fi.read()
+        with open(join(src_dir, 'bld.bat'), 'w', encoding='utf-8') as fo:
+            fo.write(msvc_env_cmd())
+            # more debuggable with echo on
+            fo.write('@echo on\n')
+            for kv in iteritems(env):
+                fo.write('set %s=%s\n' % kv)
+            fo.write("REM ===== end generated header =====\n")
+            fo.write(data)
 
-    cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
-    _check_call(cmd, cwd=src_dir)
-    kill_processes()
-    fix_staged_scripts()
+        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+        _check_call(cmd, cwd=src_dir)
+        kill_processes()
+        fix_staged_scripts()

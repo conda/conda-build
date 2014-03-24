@@ -15,6 +15,7 @@ import sys
 import tarfile
 from io import open
 from os.path import exists, isdir, isfile, islink, join
+import yaml
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -118,7 +119,7 @@ def have_prefix_files(files):
         yield f
 
 
-def create_info_files(m, files):
+def create_info_files(m, files, include_recipe=True):
     '''
     Creates the metadata files that will be stored in the built package.
 
@@ -126,19 +127,28 @@ def create_info_files(m, files):
     :type m: Metadata
     :param files: Paths to files to include in package
     :type files: list of str
+    :param include_recipe: Whether or not to include the recipe (True by default)
+    :type include_recipe: bool
     '''
     recipe_dir = join(info_dir, 'recipe')
     os.makedirs(recipe_dir)
 
-    for fn in os.listdir(m.path):
-        if fn.startswith('.'):
-            continue
-        src_path = join(m.path, fn)
-        dst_path = join(recipe_dir, fn)
-        if isdir(src_path):
-            shutil.copytree(src_path, dst_path)
-        else:
-            shutil.copy(src_path, dst_path)
+    if include_recipe:
+        for fn in os.listdir(m.path):
+            if fn.startswith('.'):
+                continue
+            src_path = join(m.path, fn)
+            dst_path = join(recipe_dir, fn)
+            if isdir(src_path):
+                shutil.copytree(src_path, dst_path)
+            else:
+                shutil.copy(src_path, dst_path)
+
+    if isfile(join(recipe_dir, 'meta.yaml')):
+        shutil.move(join(recipe_dir, 'meta.yaml'), join(recipe_dir, 'meta.yaml.orig'))
+
+    with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
+        yaml.safe_dump(m.meta, fo)
 
     with open(join(info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
@@ -185,15 +195,16 @@ def create_env(pref, specs):
     if not isdir(config.bldpkgs_dir):
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
-    # remove the cache such that a refetch is made,
-    # this is necessary because we add the local build repo URL
-    fetch_index.cache = {}
-    index = get_index([url_path(config.croot)])
+    if specs: # Don't waste time if there is nothing to do
+        # remove the cache such that a refetch is made,
+        # this is necessary because we add the local build repo URL
+        fetch_index.cache = {}
+        index = get_index([url_path(config.croot)])
 
-    cc.pkgs_dirs = cc.pkgs_dirs[:1]
-    actions = plan.install_actions(pref, index, specs)
-    plan.display_actions(actions, index)
-    plan.execute_actions(actions, index, verbose=True)
+        cc.pkgs_dirs = cc.pkgs_dirs[:1]
+        actions = plan.install_actions(pref, index, specs)
+        plan.display_actions(actions, index)
+        plan.execute_actions(actions, index, verbose=True)
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(pref):
         os.makedirs(pref)
@@ -245,16 +256,17 @@ def build(m, get_src=True):
     else:
         env = environ.get_dict(m)
         build_file = join(m.path, 'build.sh')
-        script = m.get_value('build/script', None)
-        if script:
-            if isinstance(script, list):
-                script = '\n'.join(script)
-            with open(build_file, 'w', encoding='utf-8') as bf:
-                bf.write(script)
-            os.chmod(build_file, 0o766)
-        cmd = ['/bin/bash', '-x', '-e', build_file]
+        if exists(build_file):
+            script = m.get_value('build/script', None)
+            if script:
+                if isinstance(script, list):
+                    script = '\n'.join(script)
+                with open(build_file, 'w', encoding='utf-8') as bf:
+                    bf.write(script)
+                os.chmod(build_file, 0o766)
+            cmd = ['/bin/bash', '-x', '-e', build_file]
 
-        _check_call(cmd, env=env, cwd=source.get_dir())
+            _check_call(cmd, env=env, cwd=source.get_dir())
 
     create_post_scripts(m)
     create_entry_points(m.get_value('build/entry_points'))
@@ -265,7 +277,7 @@ def build(m, get_src=True):
 
     post_build(sorted(files2 - files1),
                binary_relocation=bool(m.get_value('build/binary_relocation', True)))
-    create_info_files(m, sorted(files2 - files1))
+    create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
     files3 = prefix_files()
     fix_permissions(files3 - files1)
 
@@ -338,6 +350,8 @@ def test(m):
         env[varname] = str(getattr(config, varname))
     env['PREFIX'] = config.test_prefix
 
+    # Python 2 Windows requires that envs variables be string, not unicode
+    env = {str(i): env[i] for i in env}
     if py_files:
         try:
             subprocess.check_call([config.test_python,
