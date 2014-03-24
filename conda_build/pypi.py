@@ -24,9 +24,13 @@ else:
 from conda.fetch import download
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
+from conda.config import default_python
+from conda.compat import input, configparser, StringIO, string_types
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE
-from conda.compat import input, configparser, StringIO, string_types
+from conda_build.build import create_env
+from conda_build.config import build_prefix, build_python
+
 
 
 PYPI_META = """\
@@ -464,7 +468,12 @@ def run_setuppy(src_dir, temp_dir):
         env['PYTHONPATH'] = src_dir
     cwd = getcwd()
     chdir(src_dir)
-    args = [sys.executable, 'setup.py', 'install']
+    # Do everything in the build env in case the setup.py install goes
+    # haywire.
+    # TODO: Try with another version of Python if this one fails. Some
+    # packages are Python 2 or Python 3 only.
+    create_env(build_prefix, ['python %s*' % default_python, 'pyyaml', 'setuptools'])
+    args = [build_python, 'setup.py', 'install']
     try:
         subprocess.check_call(args, env=env)
     except subprocess.CalledProcessError:
