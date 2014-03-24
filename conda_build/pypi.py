@@ -419,7 +419,6 @@ def run_setuppy(src_dir, temp_dir):
     setup_content = ''
     with open(join(src_dir, 'setup.py'), encoding='utf-8') as setuppy:
         setup_content = setuppy.read()
-    setup_content = DISTUTILS_PATCH.format(temp_dir) + setup_content
     with open(join(src_dir, 'setup.py'), 'w', encoding='utf-8') as setuppy:
         saw_first_import = False
         inserted_patch = False
