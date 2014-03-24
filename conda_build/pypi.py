@@ -229,7 +229,7 @@ def main(args, parser):
         d['homeurl'] = data['home_page']
         d['summary'] = repr(data['summary'])
         license_classifier = "License :: OSI Approved ::"
-        if data.has_key('classifiers'):
+        if 'classifiers' in data:
             licenses = [classifier.lstrip(license_classifier) for classifier in
                     data['classifiers'] if classifier.startswith(license_classifier)]
         else:
