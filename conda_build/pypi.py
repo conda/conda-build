@@ -186,6 +186,9 @@ def main(args, parser):
         else:
             versions = client.package_releases(package)
             if not versions:
+                if package.islower():
+                    args.packages.append(package.capitalize())
+                    continue
                 sys.exit("Error: Could not find any versions of package %s" %
                          package)
             if len(versions) > 1:
