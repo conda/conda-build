@@ -15,6 +15,7 @@ from io import open
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile
 from tempfile import mkdtemp
+from shutil import copy2
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy
@@ -27,11 +28,9 @@ from conda.install import rm_rf
 from conda.config import default_python
 from conda.compat import input, configparser, StringIO, string_types
 from conda_build.utils import tar_xf, unzip
-from conda_build.source import SRC_CACHE
+from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
 from conda_build.config import build_prefix, build_python
-
-
 
 PYPI_META = """\
 package:
@@ -117,35 +116,46 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
-DISTUTILS_PATCH = """\
-import distutils.core
-import io
-import os.path
-import sys
-import yaml
-from yaml import Loader, SafeLoader
-
-# Override the default string handling function to always return unicode
-# objects (taken from StackOverflow)
-def construct_yaml_str(self, node):
-    return self.construct_scalar(node)
-Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
-SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
-
-def setup(*args, **kwargs):
-    data = {{}}
-    data['install_requires'] = kwargs.get('install_requires', [])
-    data['entry_points'] = kwargs.get('entry_points', [])
-    data['packages'] = kwargs.get('packages', [])
-    data['setuptools'] = 'setuptools' in sys.modules
-    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
-                 encoding='utf-8') as fn:
-        fn.write(yaml.dump(data, encoding=None))
-
-distutils.core.setup = setup
-
-"""
-
+# Note the {} formatting bits here
+DISTUTILS_PATCH = '''\
+diff core.py core.py
+--- core.py
++++ core.py
+@@ -167,6 +167,34 @@ def setup (**attrs):
+ \n
+ # setup ()
++# ====== BEGIN CONDA SKELETON PYPI PATCH ======
++
++import distutils.core
++import io
++import os.path
++import sys
++import yaml
++from yaml import Loader, SafeLoader
++
++# Override the default string handling function to always return unicode
++# objects (taken from StackOverflow)
++def construct_yaml_str(self, node):
++    return self.construct_scalar(node)
++Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
++SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
++
++def setup(*args, **kwargs):
++    data = {{}}
++    data['install_requires'] = kwargs.get('install_requires', [])
++    data['entry_points'] = kwargs.get('entry_points', [])
++    data['packages'] = kwargs.get('packages', [])
++    data['setuptools'] = 'setuptools' in sys.modules
++    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
++                 encoding='utf-8') as fn:
++        fn.write(yaml.dump(data, encoding=None))
++
++
++# ======= END CONDA SKELETON PYPI PATCH ======
+ \n
+ def run_setup (script_name, script_args=None, stop_after="run"):
+     """Run a setup script in a somewhat controlled environment, and
+'''
 
 def main(args, parser):
     client = ServerProxy(args.pypi_url)
@@ -427,39 +437,33 @@ def get_dir(tempdir):
 
 def run_setuppy(src_dir, temp_dir):
     '''
-    Modify setup.py to patch distutils and then run it in a subprocess.
+    Patch distutils and then run setup.py in a subprocess.
 
     :param src_dir: Directory containing the source code
     :type src_dir: str
     :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
     :type temp_dir: str
     '''
-    # Add lines about patching distutils to top of setup.py
-    setup_content = ''
-    with open(join(src_dir, 'setup.py'), encoding='utf-8') as setuppy:
-        setup_content = setuppy.read()
-    with open(join(src_dir, 'setup.py'), 'w', encoding='utf-8') as setuppy:
-        saw_first_import = False
-        inserted_patch = False
-        for line in setup_content.splitlines(True):
-            stripped_line = line.strip()
-            # Ignore she-bang lines
-            if stripped_line.startswith('#!'):
-                continue
-            # Skip ez_setup lines
-            # TODO: Generate a patch automatically for setup.py
-            elif 'ez_setup' in stripped_line:
-                continue
-            # Check for first regular import or __future__ imports
-            elif (not stripped_line.startswith('#') and
-                    (stripped_line.startswith('import') or
-                     ' import ' in stripped_line)):
-                saw_first_import = True
-            # Insert patch after first blank line after imports
-            elif saw_first_import and not inserted_patch and not stripped_line:
-                setuppy.write(DISTUTILS_PATCH.format(temp_dir))
-                inserted_patch = True
-            setuppy.write(line)
+    # Do everything in the build env in case the setup.py install goes
+    # haywire.
+    # TODO: Try with another version of Python if this one fails. Some
+    # packages are Python 2 or Python 3 only.
+    create_env(build_prefix, ['python %s*' % default_python, 'pyyaml', 'setuptools'])
+    stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
+                                'lib/python%s' % default_python)
+
+    patch = join(temp_dir, 'pypi-distutils.patch')
+    with open(patch, 'w') as f:
+        f.write(DISTUTILS_PATCH.format(temp_dir))
+
+    if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
+        rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
+        copy2(join(stdlib_dir, 'distutils', 'core.py-copy'), join(stdlib_dir, 'distutils', 'core.py'))
+    else:
+        copy2(join(stdlib_dir, 'distutils', 'core.py'), join(stdlib_dir,
+            'distutils', 'core.py-copy'))
+    apply_patch(join(stdlib_dir, 'distutils'), patch)
+
     # Save PYTHONPATH for later
     env = os.environ.copy()
     if 'PYTHONPATH' in env:
@@ -468,11 +472,6 @@ def run_setuppy(src_dir, temp_dir):
         env['PYTHONPATH'] = src_dir
     cwd = getcwd()
     chdir(src_dir)
-    # Do everything in the build env in case the setup.py install goes
-    # haywire.
-    # TODO: Try with another version of Python if this one fails. Some
-    # packages are Python 2 or Python 3 only.
-    create_env(build_prefix, ['python %s*' % default_python, 'pyyaml', 'setuptools'])
     args = [build_python, 'setup.py', 'install']
     try:
         subprocess.check_call(args, env=env)
