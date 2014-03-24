@@ -266,8 +266,12 @@ def make_recipe(package, version):
     data = client.release_data(package, version)
 
     license_classifier = "License :: OSI Approved ::"
-    licenses = [classifier.lstrip(license_classifier) for classifier in
+    if data.has_key('classifiers'):
+        licenses = [classifier.lstrip(license_classifier) for classifier in
                     data['classifiers'] if classifier.startswith(license_classifier)]
+    else:
+        licenses = []
+
     if not licenses:
         license = data['license'] or 'UNKNOWN'
     else:
@@ -288,7 +292,7 @@ def build_package(package, version=None):
     if conda_package_exists(package):
         return 0
     if ' ' in package:
-        package, version = depend.split(' ')
+        package, version = package.split(' ')
     try:
         directory = build_recipe(package, version=version)
         dependencies = convert_recipe(directory, package)
