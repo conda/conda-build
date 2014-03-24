@@ -242,6 +242,9 @@ def main(args, parser):
             if data['license']:
                 if args.noprompt:
                     license = data['license']
+                elif '\n' not in data['license']:
+                    print('Using "%s" for the license' % data['license'])
+                    license = data['license']
                 else:
                     # Some projects put the whole license text in this field
                     print("This is the license for %s" % package)
