@@ -113,7 +113,7 @@ if errorlevel 1 exit 1
 :: for a list of environment variables that are set during the build process.
 """
 
-DISTUTILS_PATCH = """
+DISTUTILS_PATCH = """\
 import distutils.core
 import io
 import os.path
@@ -419,14 +419,7 @@ def run_setuppy(src_dir, temp_dir):
     setup_content = ''
     with open(join(src_dir, 'setup.py'), encoding='utf-8') as setuppy:
         setup_content = setuppy.read()
-    # Stuff that must go at the top of the file
-    top_stuff = [line for line in setup_content.split('\n') if
-        line.startswith('from __future__') or line.startswith('#!') or
-        line.startswith('# -*-')]
-    # We have to strip out __future__ imports. They can go *only* at the top.
-    setup_content = '\n'.join([line for line in setup_content.split('\n') if
-        line not in top_stuff])
-    setup_content = '\n'.join(top_stuff) + DISTUTILS_PATCH.format(temp_dir) + setup_content
+    setup_content = DISTUTILS_PATCH.format(temp_dir) + setup_content
     with open(join(src_dir, 'setup.py'), 'w', encoding='utf-8') as setuppy:
         saw_first_import = False
         inserted_patch = False
