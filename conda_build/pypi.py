@@ -201,7 +201,9 @@ def main(args, parser):
             versions = client.package_releases(package)
             if not versions:
                 if package.islower():
+                    print("%s not found, trying %s" % (package, package.capitalize()))
                     args.packages.append(package.capitalize())
+                    del package_dicts[package]
                     continue
                 sys.exit("Error: Could not find any versions of package %s" %
                          package)
