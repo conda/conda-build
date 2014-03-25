@@ -121,9 +121,8 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -167,6 +167,34 @@ def setup (**attrs):
+@@ -166,5 +167,32 @@ def setup (**attrs):
  \n
- # setup ()
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
 +import distutils.core
@@ -146,8 +145,7 @@ diff core.py core.py
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
-+    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w',
-+                 encoding='utf-8') as fn:
++    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
 +        fn.write(yaml.dump(data, encoding=None))
 +
 +
