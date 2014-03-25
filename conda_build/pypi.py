@@ -26,7 +26,7 @@ from conda.fetch import download
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda.config import default_python
-from conda.compat import input, configparser, StringIO, string_types
+from conda.compat import input, configparser, StringIO, string_types, PY3
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
@@ -462,6 +462,15 @@ def run_setuppy(src_dir, temp_dir):
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
         copy2(join(stdlib_dir, 'distutils', 'core.py-copy'), join(stdlib_dir, 'distutils', 'core.py'))
+        # Avoid race conditions. Invalidate the cache.
+        if PY3:
+            rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
+                'core.cpython-%s%s.pyc' % sys.version_info[:2]))
+            rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
+                'core.cpython-%s%s.pyo' % sys.version_info[:2]))
+        else:
+            rm_rf(join(stdlib_dir, 'distutils', 'core.pyc'))
+            rm_rf(join(stdlib_dir, 'distutils', 'core.pyo'))
     else:
         copy2(join(stdlib_dir, 'distutils', 'core.py'), join(stdlib_dir,
             'distutils', 'core.py-copy'))
