@@ -169,6 +169,8 @@ def main(args, parser):
         # what kind of monkeypatching the setup.pys out there could be doing.
         print("WARNING: building more than one recipe at once without "
               "--no-download is not recommended")
+    all_packages = client.list_packages()
+    all_packages_lower = [i.lower() for i in all_packages]
     while args.packages:
         package = args.packages.pop()
         dir_path = join(output_dir, package.lower())
@@ -200,9 +202,12 @@ def main(args, parser):
         else:
             versions = client.package_releases(package)
             if not versions:
-                if package.islower():
+                # The xmlrpc interface is case sensitive, but the index itself
+                # is apparently not (the last time I checked,
+                # len(set(all_packages_lower)) == len(set(all_packages)))
+                if package.lower() in all_packages_lower:
                     print("%s not found, trying %s" % (package, package.capitalize()))
-                    args.packages.append(package.capitalize())
+                    args.packages.append(all_packages[all_packages_lower.index(package.lower())])
                     del package_dicts[package]
                     continue
                 sys.exit("Error: Could not find any versions of package %s" %
