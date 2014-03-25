@@ -17,6 +17,8 @@
     the package from messing up the root environment.
   * conda skeleton pypi now patches distribute directly. This is more robust
     than trying to insert a patch into setup.py, as was done previously.
+  * allow to set the version post-build by writing a __conda_version__.txt
+    file to the source directory.
 
 2014-03-14   1.3.0:
 -------------------
