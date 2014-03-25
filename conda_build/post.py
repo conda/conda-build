@@ -7,7 +7,7 @@ import os
 import sys
 import stat
 from glob import glob
-from os.path import basename, join, splitext, isdir, isfile
+from os.path import basename, join, splitext, isdir, isfile, exists
 from io import open
 from subprocess import call, check_call
 
@@ -15,6 +15,7 @@ from conda_build.config import build_prefix, build_python, PY3K
 from conda_build import external
 from conda_build import environ
 from conda_build import utils
+from conda_build import source
 from conda.compat import lchmod
 
 if sys.platform.startswith('linux'):
@@ -192,3 +193,10 @@ def post_build(files, binary_relocation=True):
     for f in files:
         if sys.platform != 'win32':
             mk_relative(f, binary_relocation=binary_relocation)
+
+def get_build_metadata(m):
+    if exists(join(source.WORK_DIR, '__conda_version__.txt')):
+        with open(join(source.WORK_DIR, '__conda_version__.txt')) as f:
+            version = f.read().strip()
+            print("Setting version from __conda_version__.txt: %s" % version)
+            m.meta['package']['version'] = version

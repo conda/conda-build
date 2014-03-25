@@ -32,7 +32,7 @@ from conda.utils import url_path
 from conda_build import config, environ, source, tarcheck
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
-                              fix_permissions)
+                              fix_permissions, get_build_metadata)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
@@ -269,6 +269,7 @@ def build(m, get_src=True):
 
             _check_call(cmd, env=env, cwd=source.get_dir())
 
+    get_build_metadata(m)
     create_post_scripts(m)
     create_entry_points(m.get_value('build/entry_points'))
     post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
