@@ -294,7 +294,7 @@ def main(args, parser):
             import yaml
             print("Downloading %s (use --no-download to skip this step)" %
                   package)
-            tempdir = mkdtemp('conda_skeleton')
+            tempdir = mkdtemp('conda_skeleton_' + package)
 
             if not isdir(SRC_CACHE):
                 makedirs(SRC_CACHE)
