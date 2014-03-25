@@ -25,7 +25,6 @@ else:
 from conda.fetch import download
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
-from conda.config import default_python
 from conda.compat import input, configparser, StringIO, string_types, PY3
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
@@ -311,7 +310,7 @@ def main(args, parser):
                 print("done")
                 print("working in %s" % tempdir)
                 src_dir = get_dir(tempdir)
-                run_setuppy(src_dir, tempdir)
+                run_setuppy(src_dir, tempdir, args)
                 with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
                     pkginfo = yaml.load(fn)
 
@@ -440,7 +439,7 @@ def get_dir(tempdir):
     raise Exception("could not find unpacked source dir")
 
 
-def run_setuppy(src_dir, temp_dir):
+def run_setuppy(src_dir, temp_dir, args):
     '''
     Patch distutils and then run setup.py in a subprocess.
 
@@ -453,10 +452,10 @@ def run_setuppy(src_dir, temp_dir):
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
-    create_env(build_prefix, ['python %s*' % default_python, 'pyyaml',
+    create_env(build_prefix, ['python %s*' % args.python_version, 'pyyaml',
         'setuptools'], clear_cache=False)
     stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
-                                'lib/python%s' % default_python)
+                                'lib/python%s' % args.python_version)
 
     patch = join(temp_dir, 'pypi-distutils.patch')
     with open(patch, 'w') as f:

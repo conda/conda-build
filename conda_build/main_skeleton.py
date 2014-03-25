@@ -9,6 +9,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import argparse
 
+from conda.config import default_python
 
 def main():
     p = argparse.ArgumentParser(
@@ -78,6 +79,13 @@ def main():
         action='store_true',
         help='Create recipes for dependencies if they do not already exist.'
     )
+    pypi.add_argument(
+        "--python-version",
+        action='store',
+        default=default_python,
+        help="""Version of Python to use to run setup.py. Default is %(default)s.""",
+        choices=['2.6', '2.7', '3.3', '3.4'],
+        )
 
     cpan = repos.add_parser(
         "cpan",
