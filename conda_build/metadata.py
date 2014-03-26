@@ -308,8 +308,8 @@ class MetaData(object):
         return d
 
     def has_prefix_files(self):
-        ret = self.get_value('build/has_prefix_files')
-        if ret and not isinstance(ret, list):
+        ret = self.get_value('build/has_prefix_files', [])
+        if not isinstance(ret, list):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
         return ret
 
