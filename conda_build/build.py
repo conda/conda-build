@@ -164,12 +164,17 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(info_dir, 'recipe.json'), **mode_dict) as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
+    files_with_prefix = m.has_prefix_files()
+    for file in files_with_prefix:
+        if file not in files:
+            raise RuntimeError("file %s from build/has_prefix_files was not found" % file)
     if sys.platform != 'win32':
-        files_with_prefix = list(have_prefix_files(files))
-        if files_with_prefix:
-            with open(join(info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
-                for f in files_with_prefix:
-                    fo.write(f + '\n')
+        files_with_prefix += list(have_prefix_files(files))
+    files_with_prefix = sorted(set(files_with_prefix))
+    if files_with_prefix:
+        with open(join(info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
+            for f in files_with_prefix:
+                fo.write(f + '\n')
 
     no_soft_rx = m.get_value('build/no_softlink')
     if no_soft_rx:
