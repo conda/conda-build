@@ -26,6 +26,7 @@ from conda.fetch import download
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda.compat import input, configparser, StringIO, string_types, PY3
+from conda.cli.common import spec_from_line
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
@@ -365,8 +366,13 @@ def main(args, parser):
                 if pkginfo['install_requires'] or setuptools_build or setuptools_run:
                     if isinstance(pkginfo['install_requires'], string_types):
                         pkginfo['install_requires'] = [pkginfo['install_requires']]
-                    deps = [remove_version_information(dep).lower() for dep in
-                            pkginfo['install_requires']]
+                    deps = []
+                    for dep in pkginfo['install_requires']:
+                        spec = spec_from_line(dep)
+                        if spec is None:
+                            sys.exit("Error: Could not parse: %s" % dep)
+                        deps.append(spec)
+
                     if 'setuptools' in deps:
                         setuptools_build = False
                         setuptools_run = False
@@ -494,21 +500,6 @@ def run_setuppy(src_dir, temp_dir, args):
         sys.exit('Error: command failed: %s' % ' '.join(args))
     finally:
         chdir(cwd)
-
-def remove_version_information(pkgstr):
-    '''
-    :returns: A copy of pkgstr with any extra information about required
-              versions removed.
-    '''
-    # TODO: Actually incorporate the version information into the meta.yaml
-    # file.  conda build needs to support version specs
-    import pkg_resources
-    pp = next(pkg_resources.parse_requirements(pkgstr))
-    # Only handle == version for now
-    if len(pp.specs) > 0 and len(pp.specs[0]) > 1 and pp.specs[0][0] == '==':
-        return pp.key + ' ' + pp.specs[0][1]
-    else:
-        return pp.key
 
 def make_entry_tests(entry_list):
     tests = []
