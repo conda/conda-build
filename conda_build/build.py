@@ -17,9 +17,6 @@ from io import open
 from os.path import exists, isdir, isfile, islink, join
 import yaml
 
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
 
 import conda.config as cc
 import conda.plan as plan
@@ -358,7 +355,7 @@ def test(m):
     env['PREFIX'] = config.test_prefix
 
     # Python 2 Windows requires that envs variables be string, not unicode
-    env = {str(i): env[i] for i in env}
+    env = {str(key): str(value) for key, value in env.iteritems()}
     if py_files:
         try:
             subprocess.check_call([config.test_python,
