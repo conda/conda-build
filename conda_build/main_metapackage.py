@@ -105,6 +105,7 @@ def execute(args, parser):
     d['about']['home'] = args.home
     d['about']['license'] = args.license
     d['about']['summary'] = args.summary
+    d = dict(d)
     m = MetaData.fromdict(d)
 
     build(m)
