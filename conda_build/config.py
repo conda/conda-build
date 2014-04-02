@@ -43,8 +43,7 @@ test_python = _get_python(test_prefix)
 build_perl = _get_perl(build_prefix)
 test_perl = _get_perl(test_prefix)
 
-bldpkgs_dir = expanduser(cc.rc.get('conda-build',
-                           {}).get('build_dest', join(croot, cc.subdir)))
+bldpkgs_dir = join(croot, cc.subdir)
 
 
 def show():
