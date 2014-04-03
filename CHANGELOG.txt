@@ -1,5 +1,9 @@
 2014-04-??   1.3.2:
 -------------------
+  * allow changing conda-bld directory (which is by default <root>/conda-bld
+    when the conda root is not writable, and ~/conda-bld otherwise), to be
+    changed by CONDA_BLD_PATH environment variable or conda-build: root-dir:
+    in condarc file
   * add build/has_prefix_files
   * remove broken conda-build/build_dest
 

@@ -16,7 +16,13 @@ CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.', '')))
 CONDA_NPY = int(os.getenv('CONDA_NPY', 18))
 PY3K = int(bool(CONDA_PY >= 30))
 
-if cc.root_writable:
+_bld_root_env = os.getenv('CONDA_BLD_PATH')
+_bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+if _bld_root_env:
+    croot = abspath(expanduser(_bld_root_env))
+elif _bld_root_rc:
+    croot = abspath(expanduser(_bld_root_rc))
+elif cc.root_writable:
     croot = join(cc.root_dir, 'conda-bld')
 else:
     croot = abspath(expanduser('~/conda-bld'))
