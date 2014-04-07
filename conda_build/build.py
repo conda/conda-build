@@ -238,9 +238,9 @@ def build(m, get_src=True):
     :type get_src: bool
     '''
     rm_rf(prefix)
-    create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
 
     print("BUILD START:", m.dist())
+    create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
 
     if get_src:
         source.provide(m.path, m.get_section('source'))
