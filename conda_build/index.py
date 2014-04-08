@@ -23,7 +23,7 @@ def read_index_tar(tar_path):
         info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
         try:
             raw = t.extractfile('info/icon.png').read()
-            info['_icondata'] = base64.b64encode(raw)
+            info['_icondata'] = base64.b64encode(raw).decode('ASCII')
             info['_iconmd5'] = hashlib.md5(raw).hexdigest()
         except KeyError:
             pass
@@ -74,7 +74,7 @@ def update_index(dir_path, verbose=False, force=False):
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(index_path, **mode_dict) as fo:
-        json.dump(index, fo, indent=2, sort_keys=True)
+        json.dump(index, fo, indent=2, sort_keys=True, default=str)
 
     # --- new repodata
     icons = {}
