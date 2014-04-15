@@ -248,6 +248,10 @@ class MetaData(object):
                     if '.' not in str_ver:
                         str_ver = '.'.join(str_ver)
                     ms = MatchSpec('%s %s*' % (name, str_ver))
+            for c in '=!@#$%^&*:;"\'\\|<>?/':
+                if c in ms.name:
+                    sys.exit("Error: bad character '%s' in package name "
+                             "dependency '%s'" % (c, ms.name))
             res.append(ms)
         return res
 
