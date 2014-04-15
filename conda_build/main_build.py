@@ -71,6 +71,11 @@ def main():
         action='version',
         version = 'conda-build %s' % __version__,
     )
+    p.add_argument(
+        '-q', "--quiet",
+        action="store_true",
+        help="do not display progress bar",
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -188,14 +193,14 @@ def execute(args, parser):
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
-                build.test(m)
+                build.test(m, verbose=not args.quiet)
             elif args.source:
                 source.provide(m.path, m.get_section('source'))
                 print('Source tree in:', source.get_dir())
             else:
                 # This loop recursively builds dependencies if recipes exist
                 try:
-                    build.build(m)
+                    build.build(m, verbose=not args.quiet)
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found matching:'):
@@ -220,7 +225,7 @@ def execute(args, parser):
                     continue
 
                 if not args.notest:
-                    build.test(m)
+                    build.test(m, verbose=not args.quiet)
                 binstar_upload = True
 
             if need_cleanup:

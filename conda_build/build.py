@@ -190,7 +190,7 @@ def create_info_files(m, files, include_recipe=True):
                         join(info_dir, 'icon.png'))
 
 
-def create_env(pref, specs, clear_cache=True):
+def create_env(pref, specs, clear_cache=True, verbose=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -207,7 +207,7 @@ def create_env(pref, specs, clear_cache=True):
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(pref, index, specs)
         plan.display_actions(actions, index)
-        plan.execute_actions(actions, index, verbose=True)
+        plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(pref):
         os.makedirs(pref)
@@ -228,7 +228,7 @@ def bldpkg_path(m):
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def build(m, get_src=True):
+def build(m, get_src=True, verbose=True):
     '''
     Build the package with the specified metadata.
 
@@ -240,7 +240,7 @@ def build(m, get_src=True):
     rm_rf(prefix)
 
     print("BUILD START:", m.dist())
-    create_env(prefix, [ms.spec for ms in m.ms_depends('build')])
+    create_env(prefix, [ms.spec for ms in m.ms_depends('build')], verbose=verbose)
 
     if get_src:
         source.provide(m.path, m.get_section('source'))
@@ -298,7 +298,7 @@ def build(m, get_src=True):
     update_index(config.bldpkgs_dir)
 
 
-def test(m):
+def test(m, verbose=True):
     '''
     Execute any test scripts for the given package.
 
@@ -339,7 +339,7 @@ def test(m):
     for spec in m.get_value('test/requires'):
         specs.append(spec)
 
-    create_env(config.test_prefix, specs)
+    create_env(config.test_prefix, specs, verbose=verbose)
 
     env = dict(os.environ)
     # TODO: Include all the same environment variables that are used in
