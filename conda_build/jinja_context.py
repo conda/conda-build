@@ -12,6 +12,7 @@ from io import open
 
 from conda.compat import PY3
 from conda_build import environ
+from .environ import get_dict as get_environ
 
 _setuptools_data = None
 
@@ -44,7 +45,10 @@ def load_npm():
 
 def context_processor():
     ctx = environ.get_dict()
+    environ = dict(os.environ)
+    environ.update(get_environ())
+
     ctx.update(load_setuptools=load_setuptools,
                load_npm=load_npm,
-               environ=os.environ)
+               environ=environ)
     return ctx
