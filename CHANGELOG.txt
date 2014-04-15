@@ -1,4 +1,4 @@
-2014-04-??   1.3.2:
+2014-04-15   1.3.2:
 -------------------
   * allow changing conda-bld directory (which is by default <root>/conda-bld
     when the conda root is not writable, and ~/conda-bld otherwise), to be
@@ -8,6 +8,8 @@
   * remove broken conda-build/build_dest
   * fix build in Windows Python 2
   * add --quiet option to conda-build
+  * add check for charaters in package name dependencies
+
 
 2014-03-25   1.3.1:
 -------------------
