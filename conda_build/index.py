@@ -1,5 +1,15 @@
 '''
 Functions related to creating repodata index files.
+
+The way the icons work is the following:
+  1. the iconda image is always stored in a file named info/icon.png
+     inside the conda-package.
+  2. when the index (repodata.json) is created this file is read, and
+     instead of encoding the icons content in the repodata itself, a
+     reference is created, for example (this is in repodata.json):
+        "icon": "58c9e8a4a41c41dc796ffe680c1e02b5.png",
+  3. running the index command also creats the icons folder (next to the
+     platform specific directories)
 '''
 
 from __future__ import (absolute_import, division, print_function,
