@@ -44,7 +44,7 @@ def load_npm():
         return json.load(pkg)
 
 def context_processor():
-    ctx = environ.get_dict()
+    ctx = get_environ()
     environ = dict(os.environ)
     environ.update(get_environ())
 
