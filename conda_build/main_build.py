@@ -56,7 +56,7 @@ def main():
     p.add_argument(
         'recipe',
         action="store",
-        metavar='PATH',
+        metavar='RECIPE_PATH',
         nargs='+',
         help="path to recipe directory"
     )
