@@ -8,7 +8,7 @@ from os.path import islink, isfile
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
-    '.xml', '.png', '.jpg', '.gif',
+    '.xml', '.png', '.jpg', '.gif', '.class',
 )
 
 MAGIC = {
