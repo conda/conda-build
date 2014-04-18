@@ -173,10 +173,15 @@ def create_info_files(m, files, include_recipe=True):
             for f in files_with_prefix:
                 fo.write(f + '\n')
 
-    no_soft_rx = m.get_value('build/no_softlink')
-    if no_soft_rx:
-        pat = re.compile(no_soft_rx)
-        with open(join(info_dir, 'no_softlink'), 'w', encoding='utf-8') as fo:
+    no_link = m.get_value('build/no_link')
+    if no_link:
+        def w2rx(p):
+            return p.replace('.', r'\.').replace('*', r'.*')
+        if not isinstance(no_link, list):
+            no_link = [no_link]
+        rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
+        pat = re.compile(rx)
+        with open(join(info_dir, 'no_link'), 'w', encoding='utf-8') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')

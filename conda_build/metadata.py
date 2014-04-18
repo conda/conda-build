@@ -126,7 +126,7 @@ FIELDS = {
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_softlink', 'binary_relocation', 'script',
+              'no_link', 'binary_relocation', 'script',
               'has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
