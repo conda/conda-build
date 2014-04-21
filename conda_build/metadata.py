@@ -119,7 +119,7 @@ def parse(data):
 # If you update this please update the example in conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1',
+    'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
                'git_url', 'git_tag', 'git_branch',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
