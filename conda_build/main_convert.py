@@ -49,7 +49,9 @@ $ conda convert ~/anaconda/conda-bld/osx-64/package-1.0-py33.tar.bz2 -o . -p win
 
 def main():
     p = argparse.ArgumentParser(
-        description='various tools to convert conda packages'
+        description='various tools to convert conda packages',
+        epilog=epilog,
+        formatter_class=RawDescriptionHelpFormatter,
     )
 
     # TODO: Factor this into a subcommand, since it's python package specific
