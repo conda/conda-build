@@ -14,7 +14,8 @@ import re
 import tarfile
 from argparse import RawDescriptionHelpFormatter
 from locale import getpreferredencoding
-from os.path import abspath, expanduser, split, join
+from os.path import abspath, expanduser, split, join, exists
+from os import makedirs
 
 from conda.compat import PY3
 
@@ -26,11 +27,8 @@ epilog = """
 
 For now, it is just a tool to convert pure Python packages to other platforms.
 
-The output file name will be the same as the input filename, so the -o option
-is required, and cannot be the same directory as any of the input files.
-
-It is recommended to keep packages organized in subdirectories according to
-platform, e.g.,
+Packages are automatically organized in subdirectories according to platform,
+e.g.,
 
 osx-64/
   package-1.0-py33.tar.bz2
@@ -83,10 +81,10 @@ def main():
     )
     p.add_argument(
         '-o', '--output-dir',
-        required=True,
-        help="""Directory to write the output files (this cannot be the same
-                directory as the input file, as they will share the same
-                name)"""
+        default='.',
+        help="""Directory to write the output files. The packages will be
+        organized in platform/ subdirectories, e.g.,
+        win-32/package-1.0-py27_0.tar.bz2"""
     )
     p.add_argument(
         '-v', '--verbose',
@@ -126,71 +124,72 @@ def execute(args, parser):
                                % file)
 
         file = abspath(expanduser(file))
-        t = tarfile.open(file)
-        cext = False
-        if args.show_imports:
-            cext = has_cext(t, show=True)
+        with tarfile.open(file) as t:
+            cext = False
+            if args.show_imports:
+                cext = has_cext(t, show=True)
 
-        if not args.force and (cext or has_cext(t)):
-            print("WARNING: Package %s has C extensions, skipping. Use -f to "
-                  "force conversion." % file)
-            continue
+            if not args.force and (cext or has_cext(t)):
+                print("WARNING: Package %s has C extensions, skipping. Use -f to "
+                      "force conversion." % file)
+                continue
 
-        output_dir = args.output_dir
-        if not PY3:
-            output_dir = output_dir.decode(getpreferredencoding())
-        file_dir, fn = split(file)
-        if abspath(expanduser(output_dir)) == abspath(expanduser(file_dir)):
-            raise RuntimeError(
-                "Cannot use the same output directory as the input files.")
-
-        info = json.loads(t.extractfile('info/index.json')
-                          .read().decode('utf-8'))
-        source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
-
-        nonpy_unix = False
-        nonpy_win = False
-
-        for platform in args.platforms:
+            output_dir = args.output_dir
             if not PY3:
-                platform = platform.decode('utf-8')
-            dest_plat = platform.split('-')[0]
-            dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
+                output_dir = output_dir.decode(getpreferredencoding())
+            file_dir, fn = split(file)
 
-            if source_type == 'unix' and dest_type == 'win':
-                nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
-                                                                  unix_to_win=True,
-                                                                  show=args.verbose)
-            if source_type == 'win' and dest_type == 'unix':
-                nonpy_win = nonpy_win or has_nonpy_entry_points(t,
-                                                                unix_to_win=False,
-                                                                show=args.verbose)
+            info = json.loads(t.extractfile('info/index.json')
+                              .read().decode('utf-8'))
+            source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
 
-            if nonpy_unix and not args.force:
-                print(("WARNING: Package %s has non-Python entry points, "
-                       "skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform))
-                continue
+            nonpy_unix = False
+            nonpy_win = False
 
-            if nonpy_win and not args.force:
-                print(("WARNING: Package %s has entry points, which are not "
-                       "supported yet. Skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform))
-                continue
+            for platform in args.platforms:
+                if not PY3:
+                    platform = platform.decode('utf-8')
+                dest_plat = platform.split('-')[0]
+                dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
 
-            file_map = get_pure_py_file_map(t, platform)
 
-            if args.dry_run:
-                print("Would convert %s from %s to %s" %
-                      (file, info['platform'], dest_plat))
-                if args.verbose:
-                    pprint.pprint(file_map)
-                continue
-            else:
-                print("Converting %s from %s to %s" %
-                      (file, info['platform'], dest_plat))
+                if source_type == 'unix' and dest_type == 'win':
+                    nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
+                                                                      unix_to_win=True,
+                                                                      show=args.verbose)
+                if source_type == 'win' and dest_type == 'unix':
+                    nonpy_win = nonpy_win or has_nonpy_entry_points(t,
+                                                                    unix_to_win=False,
+                                                                    show=args.verbose)
 
-            tar_update(t, join(output_dir, fn), file_map, verbose=args.verbose)
+                if nonpy_unix and not args.force:
+                    print(("WARNING: Package %s has non-Python entry points, "
+                           "skipping %s to %s conversion. Use -f to force.") %
+                          (file, info['platform'], platform))
+                    continue
+
+                if nonpy_win and not args.force:
+                    print(("WARNING: Package %s has entry points, which are not "
+                           "supported yet. Skipping %s to %s conversion. Use -f to force.") %
+                          (file, info['platform'], platform))
+                    continue
+
+                file_map = get_pure_py_file_map(t, platform)
+
+                if args.dry_run:
+                    print("Would convert %s from %s to %s" %
+                          (file, info['platform'], dest_plat))
+                    if args.verbose:
+                        pprint.pprint(file_map)
+                    continue
+                else:
+                    print("Converting %s from %s to %s" %
+
+                          (file, info['platform'], platform))
+
+                if not exists(join(output_dir, platform)):
+                    makedirs(join(output_dir, platform))
+                tar_update(t, join(output_dir, platform, fn), file_map, verbose=args.verbose)
 
 
 if __name__ == '__main__':

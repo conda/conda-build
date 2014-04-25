@@ -147,7 +147,6 @@ def tar_update(source, dest, file_map, verbose=True):
                     t.add(file_map[p], p)
     finally:
         t.close()
-        s.close()
 
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
