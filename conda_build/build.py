@@ -142,7 +142,8 @@ def create_info_files(m, files, include_recipe=True):
                 shutil.copy(src_path, dst_path)
 
     if isfile(join(recipe_dir, 'meta.yaml')):
-        shutil.move(join(recipe_dir, 'meta.yaml'), join(recipe_dir, 'meta.yaml.orig'))
+        shutil.move(join(recipe_dir, 'meta.yaml'),
+                    join(recipe_dir, 'meta.yaml.orig'))
 
     with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
         yaml.safe_dump(m.meta, fo)
@@ -164,7 +165,8 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix = m.has_prefix_files()
     for file in files_with_prefix:
         if file not in files:
-            raise RuntimeError("file %s from build/has_prefix_files was not found" % file)
+            raise RuntimeError("file %s from build/has_prefix_files was "
+                               "not found" % file)
     if sys.platform != 'win32':
         files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
@@ -173,10 +175,15 @@ def create_info_files(m, files, include_recipe=True):
             for f in files_with_prefix:
                 fo.write(f + '\n')
 
-    no_soft_rx = m.get_value('build/no_softlink')
-    if no_soft_rx:
-        pat = re.compile(no_soft_rx)
-        with open(join(info_dir, 'no_softlink'), 'w', encoding='utf-8') as fo:
+    no_link = m.get_value('build/no_link')
+    if no_link:
+        def w2rx(p):
+            return p.replace('.', r'\.').replace('*', r'.*')
+        if not isinstance(no_link, list):
+            no_link = [no_link]
+        rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
+        pat = re.compile(rx)
+        with open(join(info_dir, 'no_link'), 'w', encoding='utf-8') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')
@@ -240,7 +247,8 @@ def build(m, get_src=True, verbose=True):
     rm_rf(prefix)
 
     print("BUILD START:", m.dist())
-    create_env(prefix, [ms.spec for ms in m.ms_depends('build')], verbose=verbose)
+    create_env(prefix, [ms.spec for ms in m.ms_depends('build')],
+               verbose=verbose)
 
     if get_src:
         source.provide(m.path, m.get_section('source'))
@@ -280,7 +288,7 @@ def build(m, get_src=True, verbose=True):
     files2 = prefix_files()
 
     post_build(sorted(files2 - files1),
-               binary_relocation=bool(m.get_value('build/binary_relocation', True)))
+          binary_relocation=bool(m.get_value('build/binary_relocation', True)))
     create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
     files3 = prefix_files()
     fix_permissions(files3 - files1)

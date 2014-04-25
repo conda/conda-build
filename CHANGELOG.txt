@@ -1,3 +1,6 @@
+  * add SHA256 support for downloaded source
+
+
 2014-04-15   1.3.2:
 -------------------
   * allow changing conda-bld directory (which is by default <root>/conda-bld
@@ -10,6 +13,9 @@
   * add --quiet option to conda-build
   * add check for characters in package name dependencies
   * add .class to the object file extension blacklist
+  * removed build/no_softlink in favor of build/no_link with list of glob
+    syntax
+
 
 2014-03-25   1.3.1:
 -------------------
