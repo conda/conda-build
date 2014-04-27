@@ -36,6 +36,8 @@ def fix_shebang(f, osx_is_app=False):
     path = join(build_prefix, f)
     if is_obj(path):
         return
+    elif os.path.islink(path):
+        return
     with open(path, encoding=locale.getpreferredencoding()) as fi:
         try:
             data = fi.read()
