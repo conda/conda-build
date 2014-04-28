@@ -241,10 +241,7 @@ class MetaData(object):
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if ms.strictness != 1:
-                        sys.exit("""Error:
-    You cannot specify a version for package '%s' in the requirements.
-    Please use the environment variables CONDA_PY, CONDA_NPY, or CONDA_PERL.
-""" % name)
+                        continue
                     str_ver = str(ver)
                     if '.' not in str_ver:
                         str_ver = '.'.join(str_ver)
