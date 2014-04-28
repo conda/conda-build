@@ -1,9 +1,12 @@
+2014-04-28   1.3.3:
+-------------------
   * add SHA256 support for downloaded source
   * conda convert now creates platform directories, like
     win-32/converted_package.tar.bz2
   * allow to specify the version of python, numpy, or perl in the meta.yaml
     (it will ignore the CONDA_PY, CONDA_NPY, or CONDA_PERL, respectively, in
     this case)
+
 
 2014-04-15   1.3.2:
 -------------------
