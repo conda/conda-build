@@ -67,6 +67,17 @@ def main():
         help="do not test the package"
     )
     p.add_argument(
+        '-b', '--build-only',
+        action="store_true",
+        help="""only run the build, without any post processing or
+        testing. Implies --no-test and --no-binstar-upload""",
+    )
+    p.add_argument(
+        '-p', '--post',
+        action="store_true",
+        help="run the post-build logic. Implies --no-test and --no-binstar-upload",
+    )
+    p.add_argument(
         '-V', '--version',
         action='version',
         version = 'conda-build %s' % __version__,
@@ -199,8 +210,18 @@ def execute(args, parser):
                 print('Source tree in:', source.get_dir())
             else:
                 # This loop recursively builds dependencies if recipes exist
+                if args.build_only:
+                    post = False
+                    args.notest = True
+                    args.binstar_upload = False
+                elif args.post:
+                    post = True
+                    args.notest = True
+                    args.binstar_upload = False
+                else:
+                    post = None
                 try:
-                    build.build(m, verbose=not args.quiet)
+                    build.build(m, verbose=not args.quiet, post=post)
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found matching:'):

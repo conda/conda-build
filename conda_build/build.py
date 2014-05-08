@@ -235,7 +235,7 @@ def bldpkg_path(m):
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def build(m, get_src=True, verbose=True):
+def build(m, get_src=True, verbose=True, post=None):
     '''
     Build the package with the specified metadata.
 
@@ -243,67 +243,81 @@ def build(m, get_src=True, verbose=True):
     :type m: Metadata
     :param get_src: Should we download the source?
     :type get_src: bool
+    :type post: bool or None. None means run the whole build. True means run
+    post only. False means stop just before the post.
     '''
-    rm_rf(prefix)
+    if post in [False, None]:
+        rm_rf(prefix)
 
-    print("BUILD START:", m.dist())
-    create_env(prefix, [ms.spec for ms in m.ms_depends('build')],
-               verbose=verbose)
+        print("BUILD START:", m.dist())
+        create_env(prefix, [ms.spec for ms in m.ms_depends('build')],
+                   verbose=verbose)
 
-    if get_src:
-        source.provide(m.path, m.get_section('source'))
-    assert isdir(source.WORK_DIR)
-    if os.listdir(source.get_dir()):
-        print("source tree in:", source.get_dir())
+        if get_src:
+            source.provide(m.path, m.get_section('source'))
+        assert isdir(source.WORK_DIR)
+        if os.listdir(source.get_dir()):
+            print("source tree in:", source.get_dir())
+        else:
+            print("no source")
+
+        rm_rf(info_dir)
+        files1 = prefix_files()
+        if post == False:
+            # Save this for later
+            with open(join(source.WORK_DIR, 'prefix_files'), 'w') as f:
+                json.dump(list(files1), f)
+
+        if sys.platform == 'win32':
+            import conda_build.windows as windows
+            windows.build(m)
+        else:
+            env = environ.get_dict(m)
+            build_file = join(m.path, 'build.sh')
+            if exists(build_file):
+                script = m.get_value('build/script', None)
+                if script:
+                    if isinstance(script, list):
+                        script = '\n'.join(script)
+                    with open(build_file, 'w', encoding='utf-8') as bf:
+                        bf.write(script)
+                    os.chmod(build_file, 0o766)
+                cmd = ['/bin/bash', '-x', '-e', build_file]
+
+                _check_call(cmd, env=env, cwd=source.get_dir())
+
+    if post in [True, None]:
+        if post == True:
+            with open(join(source.WORK_DIR, 'prefix_files')) as f:
+                files1 = set(json.load(f))
+
+        get_build_metadata(m)
+        create_post_scripts(m)
+        create_entry_points(m.get_value('build/entry_points'))
+        post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+
+        assert not exists(info_dir)
+        files2 = prefix_files()
+
+        post_build(sorted(files2 - files1),
+              binary_relocation=bool(m.get_value('build/binary_relocation', True)))
+        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        files3 = prefix_files()
+        fix_permissions(files3 - files1)
+
+        path = bldpkg_path(m)
+        t = tarfile.open(path, 'w:bz2')
+        for f in sorted(files3 - files1):
+            t.add(join(prefix, f), f)
+        t.close()
+
+        print("BUILD END:", m.dist())
+
+        # we're done building, perform some checks
+        tarcheck.check_all(path)
+        update_index(config.bldpkgs_dir)
     else:
-        print("no source")
-
-    rm_rf(info_dir)
-    files1 = prefix_files()
-
-    if sys.platform == 'win32':
-        import conda_build.windows as windows
-        windows.build(m)
-    else:
-        env = environ.get_dict(m)
-        build_file = join(m.path, 'build.sh')
-        if exists(build_file):
-            script = m.get_value('build/script', None)
-            if script:
-                if isinstance(script, list):
-                    script = '\n'.join(script)
-                with open(build_file, 'w', encoding='utf-8') as bf:
-                    bf.write(script)
-                os.chmod(build_file, 0o766)
-            cmd = ['/bin/bash', '-x', '-e', build_file]
-
-            _check_call(cmd, env=env, cwd=source.get_dir())
-
-    get_build_metadata(m)
-    create_post_scripts(m)
-    create_entry_points(m.get_value('build/entry_points'))
-    post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
-    assert not exists(info_dir)
-    files2 = prefix_files()
-
-    post_build(sorted(files2 - files1),
-          binary_relocation=bool(m.get_value('build/binary_relocation', True)))
-    create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
-    files3 = prefix_files()
-    fix_permissions(files3 - files1)
-
-    path = bldpkg_path(m)
-    t = tarfile.open(path, 'w:bz2')
-    for f in sorted(files3 - files1):
-        t.add(join(prefix, f), f)
-    t.close()
-
-    print("BUILD END:", m.dist())
-
-    # we're done building, perform some checks
-    tarcheck.check_all(path)
-    update_index(config.bldpkgs_dir)
+        print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
 def test(m, verbose=True):
