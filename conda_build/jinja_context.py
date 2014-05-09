@@ -16,7 +16,7 @@ from .environ import get_dict as get_environ
 
 _setuptools_data = None
 
-def load_setuptools():
+def load_setuptools(setup_file='setup.py'):
     global _setuptools_data
 
     if _setuptools_data is None:
@@ -32,7 +32,7 @@ def load_setuptools():
         #Patch setuptools
         setuptools_setup = setuptools.setup
         setuptools.setup = setup
-        exec(open('setup.py', encoding='utf-8').read())
+        exec(open(setup_file, encoding='utf-8').read())
         setuptools.setup = setuptools_setup
         del sys.path[-1]
     return _setuptools_data
