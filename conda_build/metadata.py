@@ -116,7 +116,8 @@ def parse(data):
         res[section][key] = str(res[section].get(key, ''))
     return res
 
-# If you update this please update the example in conda-docs/docs/source/build.rst
+# If you update this please update the example in
+# conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
@@ -126,7 +127,7 @@ FIELDS = {
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script',
+              'no_link', 'binary_relocation', 'script', 'no_arch',
               'has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
@@ -305,6 +306,8 @@ class MetaData(object):
             arch = config.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
+        if self.get_value('build/no_arch'):
+            d['platform'] = d['arch'] = None
         if self.is_app():
             d.update(self.app_meta())
         return d
