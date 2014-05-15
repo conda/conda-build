@@ -127,7 +127,7 @@ FIELDS = {
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'no_arch',
+              'no_link', 'binary_relocation', 'script', 'noarch',
               'has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
@@ -306,7 +306,7 @@ class MetaData(object):
             arch = config.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
-        if self.get_value('build/no_arch'):
+        if self.get_value('build/noarch'):
             d['platform'] = d['arch'] = None
         if self.is_app():
             d.update(self.app_meta())
