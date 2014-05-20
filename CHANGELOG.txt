@@ -1,4 +1,5 @@
   * add --build-only and --post flags to conda-build
+  * add conda convert -p all
 
 2014-04-28   1.3.3:
 -------------------
