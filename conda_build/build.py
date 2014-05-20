@@ -265,8 +265,9 @@ def build(m, get_src=True, verbose=True, post=None):
         files1 = prefix_files()
         if post == False:
             # Save this for later
-            with open(join(source.WORK_DIR, 'prefix_files'), 'w') as f:
-                json.dump(list(files1), f)
+            with open(join(source.WORK_DIR, 'prefix_files.txt'), 'w') as f:
+                f.write(u'\n'.join(sorted(list(files1))))
+                f.write(u'\n')
 
         if sys.platform == 'win32':
             import conda_build.windows as windows
@@ -288,8 +289,8 @@ def build(m, get_src=True, verbose=True, post=None):
 
     if post in [True, None]:
         if post == True:
-            with open(join(source.WORK_DIR, 'prefix_files')) as f:
-                files1 = set(json.load(f))
+            with open(join(source.WORK_DIR, 'prefix_files.txt'), 'r') as f:
+                files1 = set(f.read().splitlines())
 
         get_build_metadata(m)
         create_post_scripts(m)
