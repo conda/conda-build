@@ -256,8 +256,10 @@ def build(m, get_src=True, verbose=True, post=None):
         if get_src:
             source.provide(m.path, m.get_section('source'))
         assert isdir(source.WORK_DIR)
-        if os.listdir(source.get_dir()):
-            print("source tree in:", source.get_dir())
+        src_dir = source.get_dir()
+        contents = os.listdir(src_dir)
+        if contents:
+            print("source tree in:", src_dir)
         else:
             print("no source")
 
@@ -285,7 +287,7 @@ def build(m, get_src=True, verbose=True, post=None):
                     os.chmod(build_file, 0o766)
                 cmd = ['/bin/bash', '-x', '-e', build_file]
 
-                _check_call(cmd, env=env, cwd=source.get_dir())
+                _check_call(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
         if post == True:
