@@ -64,7 +64,7 @@ def main():
         '-p', "--platform",
         dest='platforms',
         action="append",
-        choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64'],
+        choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
         required=True,
         help="Platform to convert the packages to"
     )
@@ -146,6 +146,8 @@ def execute(args, parser):
             nonpy_unix = False
             nonpy_win = False
 
+            if 'all' in args.platforms:
+                args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
             for platform in args.platforms:
                 if not PY3:
                     platform = platform.decode('utf-8')
