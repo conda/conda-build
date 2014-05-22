@@ -35,7 +35,6 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 
-
 prefix = config.build_prefix
 info_dir = join(prefix, 'info')
 
@@ -265,7 +264,7 @@ def build(m, get_src=True, verbose=True, post=None):
 
         rm_rf(info_dir)
         files1 = prefix_files()
-        if post == False:
+        if post == False or config.use_new_rpath_logic:
             # Save this for later
             with open(join(source.WORK_DIR, 'prefix_files.txt'), 'w') as f:
                 f.write(u'\n'.join(sorted(list(files1))))
@@ -301,10 +300,24 @@ def build(m, get_src=True, verbose=True, post=None):
 
         assert not exists(info_dir)
         files2 = prefix_files()
+        new_files = sorted(files2 - files1)
+        binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
-        post_build(sorted(files2 - files1),
-              binary_relocation=bool(m.get_value('build/binary_relocation', True)))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        build_root = None
+        if config.use_new_rpath_logic or config.verify_rpaths:
+            from conda_build.dll import BuildRoot
+            build_root = BuildRoot(old_files=files1, all_files=files2)
+
+        if config.use_new_rpath_logic:
+            print("Using new RPATH logic.")
+            build_root.post_build()
+        else:
+            post_build(new_files, binary_relocation=binary_relocation)
+
+        if config.verify_rpaths and not config.use_new_rpath_logic:
+            build_root.verify()
+
+        create_info_files(m, new_files, include_recipe=bool(m.path))
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 

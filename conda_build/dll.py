@@ -1,9 +1,15 @@
 #===============================================================================
 # Imports
 #===============================================================================
+from __future__ import (
+    print_function,
+)
+
 import os
 import re
 import sys
+
+import StringIO
 
 from abc import (
     ABCMeta,
@@ -23,7 +29,13 @@ from os.path import (
     normpath,
 )
 
+from textwrap import (
+    dedent,
+)
+
 from subprocess import (
+    PIPE,
+    Popen,
     check_output,
 )
 
@@ -33,6 +45,10 @@ from collections import (
 
 from conda.utils import (
     memoize,
+)
+
+from conda_build.external import (
+    find_executable,
 )
 
 from conda_build.config import (
@@ -446,24 +462,31 @@ def parse_ldd_output(output):
 
 def relative_path(library_path, target_dir):
     """
-    >>> dll = 'lib/python2.7/site-packages/rpy2/rinterface/_rinterface.so'
-    >>> relative_path(dll, 'lib')
+    >>> p = 'lib/python2.7/site-packages/rpy2/rinterface/_rinterface.so'
+    >>> relative_path(p, 'lib')
     '../../../..'
-    >>> relative_path(dll, 'lib64/R/lib')
+    >>> relative_path(p, 'lib64/R/lib')
     '../../../../../lib64/R/lib'
-    >>> relative_path(dll, 'lib/python2.7/site-packages/rpy2/rinterface')
-    ''
+    >>> relative_path(p, 'lib/python2.7/site-packages/rpy2/rinterface')
+    '.'
+    >>> relative_path('lib64/R/bin/exec/R', 'lib64/R/lib')
+    '../../lib'
+    >>> relative_path('lib64/R/lib/libRblas.so', 'lib64/R/lib')
+    '.'
     """
     if dirname(library_path) == target_dir:
-        return ''
+        return '.'
 
     paths = [ format_file(library_path), format_dir(target_dir) ]
     root = get_root_path(paths)
 
+    #print("%s: %s: %s" % (library_path, target_dir, root))
     slashes = library_path.count('/')
     if root != '/':
         slashes -= 1
-        suffix = ''
+        suffix = target_dir.replace(root[1:-1], '')
+        if suffix:
+            slashes -= 1
     else:
         suffix = '/' + target_dir
 
@@ -471,7 +494,7 @@ def relative_path(library_path, target_dir):
 
 def get_library_dependencies(dll):
     if is_linux:
-        return parse_ldd_output(check_output(['ldd', dll]))
+        return parse_ldd_output(ldd(dll))
     else:
         raise NotImplementedError()
 
@@ -552,6 +575,122 @@ class SlotObject(object):
         )
 
 #===============================================================================
+# Process Wrappers
+#===============================================================================
+class ProcessWrapper(object):
+    def __init__(self, exe, *args, **kwds):
+        self.exe      = exe
+        self.rc       = int()
+        self.cwd      = None
+        self.wait     = True
+        self.error    = str()
+        self.output   = str()
+        self.ostream  = kwds.get('ostream', sys.stdout)
+        self.estream  = kwds.get('estream', sys.stderr)
+        self.verbose  = kwds.get('verbose', False)
+        self.safe_cmd = None
+        self.exception_class = RuntimeError
+        self.raise_exception_on_error = True
+
+    def __getattr__(self, attr):
+        if not attr.startswith('_') and not attr == 'trait_names':
+            return lambda *args, **kwds: self.execute(attr, *args, **kwds)
+        else:
+            raise AttributeError(attr)
+
+    def __call__(self, *args, **kwds):
+        return self.execute(*args, **kwds)
+
+    def build_command_line(self, exe, action, *args, **kwds):
+        cmd  = [ exe, action ]
+        for (k, v) in kwds.items():
+            cmd.append(
+                '-%s%s' % (
+                    '-' if len(k) > 1 else '', k.replace('_', '-')
+                )
+            )
+            if not isinstance(v, bool):
+                cmd.append(v)
+        cmd += list(args)
+        return cmd
+
+    def kill(self):
+        self.p.kill()
+
+    def execute(self, *args, **kwds):
+        self.rc = 0
+        self.error = ''
+        self.output = ''
+
+        self.cmd = self.build_command_line(self.exe, *args, **kwds)
+
+        if self.verbose:
+            cwd = self.cwd or os.getcwd()
+            cmd = ' '.join(self.safe_cmd or self.cmd)
+            self.ostream.write('%s>%s\n' % (cwd, cmd))
+
+        self.p = Popen(self.cmd, executable=self.exe, cwd=self.cwd,
+                       stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        if not self.wait:
+            return
+
+        self.outbuf = StringIO.StringIO()
+        self.errbuf = StringIO.StringIO()
+
+        while self.p.poll() is None:
+            out = self.p.stdout.read()
+            self.outbuf.write(out)
+            if self.verbose and out:
+                self.ostream.write(out)
+
+            err = self.p.stderr.read()
+            self.errbuf.write(err)
+            if self.verbose and err:
+                self.estream.write(err)
+
+        self.rc = self.p.returncode
+        self.error = self.errbuf.getvalue()
+        self.output = self.outbuf.getvalue()
+        if self.rc != 0 and self.raise_exception_on_error:
+            if self.error:
+                error = self.error
+            elif self.output:
+                error = 'no error info available, output:\n' + self.output
+            else:
+                error = 'no error info available'
+            printable_cmd = ' '.join(self.safe_cmd or self.cmd)
+            raise self.exception_class(printable_cmd, error)
+        if self.output and self.output.endswith('\n'):
+            self.output = self.output[:-1]
+
+        return self.process_output(self.output)
+
+    def process_output(self, output):
+        return output
+
+    def clone(self):
+        return self.__class__(self.exe)
+
+if is_linux:
+    class _patchelf(ProcessWrapper):
+        def build_command_line(self, exe, action, *args, **kwds):
+            action = '--%s' % action.replace('_', '-')
+            fn = ProcessWrapper.build_command_line
+            return fn(self, exe, action, *args, **kwds)
+
+    patchelf = _patchelf(find_executable('patchelf'))
+
+    class _ldd(ProcessWrapper):
+        def process_output(self, output):
+            return parse_ldd_output(output)
+
+    ldd = _ldd(find_executable('ldd'))
+elif is_darwin:
+    pass
+elif is_win32:
+    pass
+
+#===============================================================================
 # Dynamic Library Classes
 #===============================================================================
 class LibraryDependencies(SlotObject):
@@ -580,6 +719,14 @@ class LibraryDependencies(SlotObject):
         self.inside = inside
         self.outside = outside
         self.missing = missing
+
+class RelocationErrors(BaseException):
+    def __init__(self, errors):
+        assert errors
+        self.errors = errors
+        self.message = 'Relocation errors:\n%s\n' % (
+            '\n'.join(repr(e) for e in errors)
+        )
 
 class LinkError_RecipeCorrectButBuildScriptBroken(SlotObject, BaseException):
     __slots__ = (
@@ -617,10 +764,20 @@ class DynamicLibrary(LibraryDependencies):
         self.relative = path.replace(self.prefix, '')[1:]
         self.build_root = build_root
 
-        deps = get_library_dependencies(path)
+        self._reload_count = 0
+        self.reload()
+
+    def reload(self):
+        self._reload_count += 1
+        deps = get_library_dependencies(self.path)
         LibraryDependencies.__init__(self, deps, self.prefix)
 
-        self._check_outside_targets()
+        try:
+            self._check_outside_targets()
+        except RelocationErrors as e:
+            if self._reload_count > 1:
+                print("*** warning ***\n%s" % e.message)
+
         self._resolve_inside_and_missing_targets()
         self._resolve_relative_runtime_paths()
 
@@ -641,6 +798,7 @@ class DynamicLibrary(LibraryDependencies):
         # the less domain knowledge you need to leverage the power of conda
         # build, the more widespread the adoption.)
 
+        errors = []
         build_root = self.build_root
         for path in self.outside:
             name = basename(path)
@@ -648,13 +806,16 @@ class DynamicLibrary(LibraryDependencies):
                 cls = LinkError_RecipeCorrectButBuildScriptBroken
                 expected = build_root[name]
                 actual = path
-                raise cls(name, expected, actual)
+                errors.append(cls(name, expected, actual))
             else:
                 package = package_name_providing_link_target(name)
                 if not package:
                     continue
                 cls = LinkError_MissingPackageDependencyInRecipe
-                raise cls(name, package)
+                errors.append(cls(name, package))
+
+        if errors:
+            raise RelocationErrors(errors)
 
     def _resolve_inside_and_missing_targets(self):
 
@@ -669,7 +830,7 @@ class DynamicLibrary(LibraryDependencies):
         self.runtime_paths = rpaths
 
     def _resolve_relative_runtime_paths(self):
-        assert self.runtime_paths, repr(self)
+        #assert self.runtime_paths, repr(self)
         self.relative_runtime_paths = [
             relative_path(self.relative, target)
                 for target in self.runtime_paths
@@ -691,15 +852,68 @@ class DynamicLibrary(LibraryDependencies):
     def make_relocatable(self):
         raise NotImplementedError()
 
-    @property
-    @memoize
-    def rpath(self):
-        pass
-
-
 class LinuxDynamicLibrary(DynamicLibrary):
+
+    def ldd(self):
+        return ldd(self.path)
+
+    @property
+    def current_rpath(self):
+        return patchelf.print_rpath(self.path)
+
+    @property
+    def relocatable_rpath(self):
+        return ':'.join('$ORIGIN/%s' % p for p in self.relative_runtime_paths)
+
     def make_relocatable(self):
-        raise NotImplementedError()
+        (path, cur_rpath, new_rpath) = args = (
+            self.path,
+            self.current_rpath,
+            self.relocatable_rpath,
+        )
+
+        if cur_rpath == new_rpath:
+            assert not self.missing, (path, cur_rpath, self.missing)
+            return
+
+        msg = 'patchelf: file: %s\n    old RPATH: %s\n    new RPATH: %s'
+        print(msg % args)
+
+        patchelf.set_rpath(new_rpath, path)
+
+        # Check that RPATH was set properly.
+        cur_rpath = self.current_rpath
+        if cur_rpath != new_rpath:
+            print("warning: RPATH didn't take!?\n%r" % (
+                path,
+                cur_rpath,
+                new_rpath,
+            ))
+
+            if 0:
+                assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
+
+        # ....and that there are no missing libs.  If this fails after
+        # correcting our RPATH, it means that the target lib that was
+        # resolved via the new RPATH has got an incorrectly set RPATH.
+        # This happened with rpy2; once the new RPATH logic was in
+        # place, libR.so was getting resolved -- however, a subsequent
+        # ldd against _rinterface.so was showing libRblas.so as missing.
+        # The culprit was libR.so having an RPATH set to $ORIGIN/../../../lib
+        # instead of what it should have been: $ORIGIN/../../../lib:$ORIGIN/.
+        # The fix: rebuild R from scratch with this new dll logic in place to
+        # ensure everything gets created with the right RPATHs.
+
+        # Update: ok so it turns out all the R deps like libgfortran etc in
+        # the system package don't have the correct RPATH set so this logic is
+        # (correctly) flagging libs like /usr/lib64/libm.so.6.  Just print a
+        # warning for now.
+        try:
+            self.reload()
+        except RelocationErrors as e:
+            print("*** warning ***\n    %s" % e.message)
+
+        assert not self.missing, (path, self.missing)
 
 class DarwinDynamicLibrary(DynamicLibrary):
     def make_relocatable(self):
@@ -843,9 +1057,28 @@ class BuildRoot(SlotObject):
             dll_name in self.all_symlink_dlls
         )
 
+    def broken_libs(self):
+        missing = []
+        for dll in self.new_dlls:
+            dll.reload()
+            for lib in dll.missing:
+                missing.append((dll.relative, lib))
 
-    def run_post(self):
-        pass
+        return missing
+
+    def verify(self):
+        print('Verifying libs are relocatable...')
+        missing = self.broken_libs()
+        for m in missing:
+            (relative_path, lib) = m
+            print('warning: broken lib: %s: dependency %s not found' % m)
+
+    def make_relocatable(self):
+        for dll in self.new_dlls:
+            dll.make_relocatable()
+
+    def post_build(self):
+        self.make_relocatable()
 
 
 #===============================================================================

@@ -51,6 +51,13 @@ test_perl = _get_perl(test_prefix)
 
 bldpkgs_dir = join(croot, cc.subdir)
 
+use_new_rpath_logic = bool(cc.rc.get('use_new_rpath_logic', False))
+verify_rpaths = bool(cc.rc.get('verify_rpaths', False))
+
+if verify_rpaths:
+    if use_new_rpath_logic:
+        print('~/.condarc note: `verify_rpaths=True` has no effect '
+              'when `use_new_rpath_logic=True` is also set')
 
 def show():
     import conda.config as cc
