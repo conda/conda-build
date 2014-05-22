@@ -494,7 +494,7 @@ def relative_path(library_path, target_dir):
 
 def get_library_dependencies(dll):
     if is_linux:
-        return parse_ldd_output(ldd(dll))
+        return ldd(dll)
     else:
         raise NotImplementedError()
 
