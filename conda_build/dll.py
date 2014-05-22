@@ -884,11 +884,11 @@ class LinuxDynamicLibrary(DynamicLibrary):
         # Check that RPATH was set properly.
         cur_rpath = self.current_rpath
         if cur_rpath != new_rpath:
-            print("warning: RPATH didn't take!?\n%r" % (
+            print("warning: RPATH didn't take!?\n%r" % [
                 path,
                 cur_rpath,
                 new_rpath,
-            ))
+            ])
 
             if 0:
                 assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
