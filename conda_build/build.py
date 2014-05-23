@@ -306,7 +306,11 @@ def build(m, get_src=True, verbose=True, post=None):
         build_root = None
         if config.use_new_rpath_logic or config.verify_rpaths:
             from conda_build.dll import BuildRoot
-            build_root = BuildRoot(old_files=files1, all_files=files2)
+            build_root = BuildRoot(
+                old_files=files1,
+                all_files=files2,
+                forgiving=True,
+            )
 
         if config.use_new_rpath_logic:
             print("Using new RPATH logic.")

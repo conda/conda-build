@@ -118,6 +118,20 @@ def package_name_providing_link_target(libname):
 #===============================================================================
 # Path-related Helpers
 #===============================================================================
+def get_files(base):
+    res = set()
+    for root, dirs, files in os.walk(base):
+        for fn in files:
+            res.add(join(root, fn)[len(base) + 1:])
+        for dn in dirs:
+            #if dn == 'pkgs':
+                #import ipdb
+                #ipdb.set_trace()
+            path = join(root, dn)
+            if islink(path):
+                res.add(path[len(base) + 1:])
+    return res
+
 def get_base_dir(path):
     p = path
     pc = p.count('/')
@@ -433,7 +447,7 @@ def parse_ldd_output(output):
      ('libpthread.so.0', '/lib64/libpthread.so.0'),
      ('libc.so.6', '/lib64/libc.so.6')]
     """
-    seen = set()
+    seen = {}
     results = []
     lines = output.splitlines()
     pairs = [ line[1:].split(' => ') for line in lines ]
@@ -443,8 +457,14 @@ def parse_ldd_output(output):
             # entry (for example).
             continue
         (depname, target) = pair
-        assert depname not in seen, (depname, seen)
-        seen.add(depname)
+        if depname in seen:
+            # Seen in the wild: dependencies cropping up more than once.
+            # Make sure they have consistent target values at the very least.
+            last_target = seen[depname]
+            assert target == last_target, (target, last_target)
+        else:
+            seen[depname] = target
+
         if target.startswith(' (0x'):
             continue
         elif target == 'not found':
@@ -819,12 +839,17 @@ class DynamicLibrary(LibraryDependencies):
 
     def _resolve_inside_and_missing_targets(self):
 
-        build_root = self.build_root
         rpaths = set()
+        build_root = self.build_root
+        forgiving = build_root.forgiving
         for attr in ('inside', 'missing'):
             libs = getattr(self, attr)
             for name in libs:
-                rpaths.add(build_root[name])
+                p = build_root[name]
+                if not p:
+                    assert forgiving, p
+                else:
+                    rpaths.add(p)
                 continue
 
         self.runtime_paths = rpaths
@@ -873,7 +898,12 @@ class LinuxDynamicLibrary(DynamicLibrary):
         )
 
         if cur_rpath == new_rpath:
-            assert not self.missing, (path, cur_rpath, self.missing)
+            if self.missing:
+                args = [path, cur_rpath, self.missing]
+                if not self.build_root.forgiving:
+                    assert not self.missing, args
+                else:
+                    print("error: self.missing: %r" % args)
             return
 
         msg = 'patchelf: file: %s\n    old RPATH: %s\n    new RPATH: %s'
@@ -889,8 +919,9 @@ class LinuxDynamicLibrary(DynamicLibrary):
                 cur_rpath,
                 new_rpath,
             ])
-
-            if 0:
+            #import ipdb
+            #ipdb.set_trace()
+            if not self.build_root.forgiving:
                 assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
 
         # ....and that there are no missing libs.  If this fails after
@@ -913,7 +944,11 @@ class LinuxDynamicLibrary(DynamicLibrary):
         except RelocationErrors as e:
             print("*** warning ***\n    %s" % e.message)
 
-        assert not self.missing, (path, self.missing)
+        if self.missing:
+            if not self.build_root.forgiving:
+                assert not self.missing, (path, self.missing)
+            else:
+                print("still missing: %r" % self.missing)
 
 class DarwinDynamicLibrary(DynamicLibrary):
     def make_relocatable(self):
@@ -933,6 +968,7 @@ class Win32DynamicLibrary(DynamicLibrary):
 class BuildRoot(SlotObject):
     __slots__ = (
         'prefix',
+        'forgiving',
         'relative_start_index',
 
         'old_files',
@@ -958,13 +994,15 @@ class BuildRoot(SlotObject):
 
     _repr_exclude_ = set(__slots__[1:-1])
 
-    def __init__(self, prefix=None, old_files=None, all_files=None):
+    def __init__(self, prefix=None, old_files=None, all_files=None,
+                       forgiving=False, is_build=True):
+        self.forgiving = forgiving
         if not prefix:
             prefix = build_prefix
         self.prefix = prefix
         self.relative_start_ix = len(prefix)+1
 
-        if not old_files:
+        if not old_files and is_build:
             # Ugh, this should be abstracted into a single interface that we
             # can use from both here and post.py/build.py.  Consider that an
             # xxx todo.
@@ -975,27 +1013,37 @@ class BuildRoot(SlotObject):
         self.old_files = old_files
 
         if not all_files:
-            from conda_build.build import prefix_files
-            all_files = prefix_files()
-        self.all_files = all_files
+            all_files = get_files(self.prefix)
 
-        self.new_files = self.all_files - self.old_files
+        self.all_files = all_files
+        self.all_paths = [ join(prefix, f) for f in self.all_files ]
 
         # Nice little cyclic dependency we're introducing here on post.py
         # (which is the thing that should be calling us).
         from conda_build.post import is_obj
 
-        self.old_paths = [ join(prefix, f) for f in self.old_files ]
-        self.all_paths = [ join(prefix, f) for f in self.all_files ]
-        self.new_paths = [ join(prefix, f) for f in self.new_files ]
+        if is_build:
+            self.new_files = self.all_files - self.old_files
+        else:
+            self.new_files = self.all_files
+            self.new_paths = self.all_paths
 
-        self.old_dll_paths = set(p for p in self.old_paths if is_obj(p))
-        self.all_dll_paths = set(
-            p for p in self.all_paths
-                if p in self.old_dll_paths or is_obj(p)
-        )
 
-        self.new_dll_paths = self.all_dll_paths - self.old_dll_paths
+        if is_build:
+            self.old_paths = [ join(prefix, f) for f in self.old_files ]
+            self.old_dll_paths = set(p for p in self.old_paths if is_obj(p))
+            self.new_paths = [ join(prefix, f) for f in self.new_files ]
+            self.all_dll_paths = set(
+                p for p in self.all_paths
+                    if p in self.old_dll_paths or is_obj(p)
+            )
+            self.new_dll_paths = self.all_dll_paths - self.old_dll_paths
+        else:
+            self.old_paths = []
+            self.old_dll_paths = set()
+            self.all_dll_paths = set(p for p in self.all_paths if is_obj(p))
+            self.new_dll_paths = self.all_dll_paths
+
 
         self.all_dlls = defaultdict(list)
         for path in self.all_dll_paths:
@@ -1044,9 +1092,21 @@ class BuildRoot(SlotObject):
                 for p in sorted(self.new_dll_paths)
         ]
 
+        if is_build:
+            self.old_dlls = [
+                DynamicLibrary.create(p, build_root=self)
+                    for p in sorted(self.old_dll_paths)
+            ]
+
     def __getitem__(self, dll_name):
         targets = self.all_dlls.get(dll_name, self.all_symlink_dlls[dll_name])
-        assert len(targets) == 1, (dll_name, targets)
+        if len(targets) != 1:
+            if not self.forgiving:
+                assert len(targets) == 1, (dll_name, targets)
+            else:
+                #print("error: unresolved: %s" % dll_name)
+                return
+
         target = targets[0]
         relative_target = target[self.relative_start_ix:]
         return dirname(relative_target)
@@ -1057,24 +1117,32 @@ class BuildRoot(SlotObject):
             dll_name in self.all_symlink_dlls
         )
 
-    def broken_libs(self):
+    def broken_libs(self, dlls=None):
+        if not dlls:
+            dlls = self.new_dlls
+
         missing = []
-        for dll in self.new_dlls:
+        for dll in dlls:
             dll.reload()
             for lib in dll.missing:
                 missing.append((dll.relative, lib))
 
         return missing
 
-    def verify(self):
+    def verify(self, dlls=None):
+        if not dlls:
+            dlls = self.new_dlls
         print('Verifying libs are relocatable...')
         missing = self.broken_libs()
         for m in missing:
             (relative_path, lib) = m
             print('warning: broken lib: %s: dependency %s not found' % m)
 
-    def make_relocatable(self):
-        for dll in self.new_dlls:
+    def make_relocatable(self, dlls=None):
+        if not dlls:
+            dlls = self.new_dlls
+
+        for dll in dlls:
             dll.make_relocatable()
 
     def post_build(self):
