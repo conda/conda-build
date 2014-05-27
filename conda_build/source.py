@@ -98,11 +98,13 @@ def git_source(meta):
         assert isdir(cache_repo)
 
     # now clone into the work directory
-    checkout = meta.get('git_tag') or meta.get('git_branch') or 'master'
-    print('checkout: %r' % checkout)
+    checkout = meta.get('git_tag') or meta.get('git_branch')
+    if checkout:
+        print('checkout: %r' % checkout)
 
     check_call([git, 'clone', cache_repo_arg, WORK_DIR])
-    check_call([git, 'checkout', checkout], cwd=WORK_DIR)
+    if checkout:
+        check_call([git, 'checkout', checkout], cwd=WORK_DIR)
 
     git_info()
     return WORK_DIR
