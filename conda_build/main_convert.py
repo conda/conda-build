@@ -125,11 +125,7 @@ def execute(args, parser):
 
         file = abspath(expanduser(file))
         with tarfile.open(file) as t:
-            cext = False
-            if args.show_imports:
-                cext = has_cext(t, show=True)
-
-            if not args.force and (cext or has_cext(t)):
+            if not args.force and has_cext(t, show=args.show_imports):
                 print("WARNING: Package %s has C extensions, skipping. Use -f to "
                       "force conversion." % file)
                 continue
