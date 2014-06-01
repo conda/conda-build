@@ -984,6 +984,10 @@ class BuildRoot(SlotObject):
         'all_symlink_dll_paths',
         'new_dll_paths',
 
+        'old_non_dll_paths',
+        'new_non_dll_paths',
+        'all_non_dll_paths',
+
         'old_dlls',
         'all_dlls',
         'all_dlls_by_len',
@@ -1038,11 +1042,19 @@ class BuildRoot(SlotObject):
                     if p in self.old_dll_paths or is_obj(p)
             )
             self.new_dll_paths = self.all_dll_paths - self.old_dll_paths
+
+            self.old_non_dll_paths = set(self.old_paths) - self.old_dll_paths
+            self.new_non_dll_paths = set(self.new_paths) - self.new_dll_paths
+            self.all_non_dll_paths = set(self.all_paths) - self.all_dll_paths
         else:
             self.old_paths = []
             self.old_dll_paths = set()
             self.all_dll_paths = set(p for p in self.all_paths if is_obj(p))
             self.new_dll_paths = self.all_dll_paths
+
+            self.old_non_dll_paths = set()
+            self.all_non_dll_paths = set(self.all_paths) - self.all_dll_paths
+            self.new_non_dll_paths = self.all_non_dll_paths
 
 
         self.all_dlls = defaultdict(list)
