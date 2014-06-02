@@ -9,7 +9,7 @@ import os
 import re
 import sys
 
-import StringIO
+from conda.compat import StringIO
 
 from abc import (
     ABCMeta,
@@ -654,8 +654,8 @@ class ProcessWrapper(object):
         if not self.wait:
             return
 
-        self.outbuf = StringIO.StringIO()
-        self.errbuf = StringIO.StringIO()
+        self.outbuf = StringIO()
+        self.errbuf = StringIO()
 
         while self.p.poll() is None:
             out = self.p.stdout.read()
