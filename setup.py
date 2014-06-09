@@ -49,5 +49,5 @@ setup(
         ],
     install_requires = ['conda'],
 
-    package_data={'conda_build': ['templates/*']},
+    package_data={'conda_build': ['templates/*', 'cli-*.exe']},
 )
