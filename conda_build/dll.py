@@ -124,9 +124,6 @@ def get_files(base):
         for fn in files:
             res.add(join(root, fn)[len(base) + 1:])
         for dn in dirs:
-            #if dn == 'pkgs':
-                #import ipdb
-                #ipdb.set_trace()
             path = join(root, dn)
             if islink(path):
                 res.add(path[len(base) + 1:])
@@ -914,8 +911,6 @@ class LinuxDynamicLibrary(DynamicLibrary):
                 cur_rpath,
                 new_rpath,
             ])
-            #import ipdb
-            #ipdb.set_trace()
             if not self.build_root.forgiving:
                 assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
 
