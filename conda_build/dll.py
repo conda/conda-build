@@ -98,7 +98,7 @@ def version_combinations(s):
         return [s] if try_int(s) else None
 
     ints = s.split('.')
-    if not all(is_int(i) for i in ints):
+    if not all(i.isdigit() for i in ints):
         return None
 
     return [ '.'.join(ints[:x]) for x in reversed(range(1, len(ints)+1)) ]
