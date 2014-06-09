@@ -592,7 +592,7 @@ class ProcessWrapper(object):
 
         while self.p.poll() is None:
             out = self.p.stdout.read()
-            self.outbuf.write(out)
+            self.outbuf.write(out.decode('utf-8'))
             if self.verbose and out:
                 self.ostream.write(out)
 
