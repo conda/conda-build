@@ -8,8 +8,9 @@ from __future__ import (absolute_import, division, print_function,
 import re
 import os
 import sys
+import shutil
 from io import open
-from os.path import isdir, join
+from os.path import dirname, isdir, join
 
 from conda_build.config import build_prefix, build_python
 
@@ -47,8 +48,9 @@ def create_entry_point(path, module, func):
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w', encoding='utf-8') as fo:
             fo.write(pyscript)
-        with open(path + '.bat', 'w', encoding='utf-8') as fo:
-            fo.write(BAT_PROXY)
+        shutil.copyfile(join(dirname(__file__),
+                             'cli-%d.exe' % (8 * tuple.__itemsize__)),
+                        path + '.exe')
     else:
         with open(path, 'w', encoding='utf-8') as fo:
             fo.write('#!%s\n' % build_python)
