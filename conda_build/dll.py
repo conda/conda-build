@@ -6,7 +6,6 @@ from __future__ import (
 )
 
 import os
-import re
 import sys
 
 from conda.compat import StringIO
@@ -29,22 +28,13 @@ from os.path import (
     normpath,
 )
 
-from textwrap import (
-    dedent,
-)
-
 from subprocess import (
     PIPE,
     Popen,
-    check_output,
 )
 
 from collections import (
     defaultdict,
-)
-
-from conda.utils import (
-    memoize,
 )
 
 from conda_build.external import (
