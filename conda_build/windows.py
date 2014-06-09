@@ -3,8 +3,9 @@ from __future__ import (absolute_import, division, print_function,
 
 import os
 import sys
+import shutil
 from io import open
-from os.path import isdir, isfile, join, exists
+from os.path import dirname, isdir, isfile, join, exists
 
 import conda.config as cc
 from conda.compat import iteritems
@@ -13,7 +14,6 @@ from conda_build import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
-from conda_build.scripts import BAT_PROXY
 
 try:
     import psutil
@@ -47,10 +47,10 @@ def fix_staged_scripts():
             with open(join(scripts_dir, fn + '-script.py'), 'w',
                       encoding='utf-8') as fo:
                 fo.write(f.read())
-            # now create the batch file
-            with open(join(scripts_dir, fn + '.bat'), 'w',
-                      encoding='utf-8') as fo:
-                fo.write(BAT_PROXY)
+            # now create the .exe file
+            shutil.copyfile(join(dirname(__file__),
+                                 'cli-%d.exe' % (8 * tuple.__itemsize__)),
+                            join(scripts_dir, fn + '.exe'))
 
         # remove the original script
         os.remove(join(scripts_dir, fn))
