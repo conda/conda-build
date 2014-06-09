@@ -591,12 +591,12 @@ class ProcessWrapper(object):
         self.errbuf = StringIO()
 
         while self.p.poll() is None:
-            out = self.p.stdout.read()
-            self.outbuf.write(out.decode('utf-8'))
+            out = self.p.stdout.read().decode('utf-8')
+            self.outbuf.write(out)
             if self.verbose and out:
                 self.ostream.write(out)
 
-            err = self.p.stderr.read()
+            err = self.p.stderr.read().decode('utf-8')
             self.errbuf.write(err)
             if self.verbose and err:
                 self.estream.write(err)
