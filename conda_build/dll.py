@@ -284,11 +284,6 @@ def format_file(path):
 
 def assert_no_file_dir_clash(paths):
     """
-    >>> assert_no_file_dir_clash('lskdjf')
-    Traceback (most recent call last):
-        ...
-    AssertionError
-
     >>> assert_no_file_dir_clash(False)
     Traceback (most recent call last):
         ...
