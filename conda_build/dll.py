@@ -348,7 +348,6 @@ def get_root_path(paths):
     """
     assert (
         hasattr(paths, '__iter__')   and
-        #len(paths) >= 1              and
         all(d and d[0] == '/' for d in paths)
     )
 
