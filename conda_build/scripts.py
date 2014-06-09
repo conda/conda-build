@@ -15,12 +15,6 @@ from os.path import dirname, isdir, join
 from conda_build.config import build_prefix, build_python
 
 
-BAT_PROXY = """\
-@echo off
-set PYFILE=%~f0
-set PYFILE=%PYFILE:~0,-4%-script.py
-"%~f0\\..\\..\\python.exe" "%PYFILE%" %*
-"""
 
 PY_TMPL = """\
 if __name__ == '__main__':
