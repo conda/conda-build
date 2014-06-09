@@ -8,7 +8,7 @@ from __future__ import (
 import os
 import sys
 
-from conda.compat import StringIO
+from conda.compat import StringIO, with_metaclass
 
 from abc import (
     ABCMeta,
@@ -700,8 +700,7 @@ class LinkError_MissingPackageDependencyInRecipe(SlotObject, BaseException):
         SlotObject.__init__(self, *args)
         self.message = repr(self)
 
-class DynamicLibrary(LibraryDependencies):
-    __metaclass__ = ABCMeta
+class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     __slots__ = LibraryDependencies.__slots__ + (
         'path',
         'prefix',
