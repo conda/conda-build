@@ -94,7 +94,7 @@ def version_combinations(s):
     return [ '.'.join(ints[:x]) for x in reversed(range(1, len(ints)+1)) ]
 
 def invert_defaultdict_by_value_len(d):
-    i = defaultdict({}, list)
+    i = defaultdict(list)
     for (k, v) in d.items():
         i[len(v)].append(k)
     return i
