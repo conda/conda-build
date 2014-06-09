@@ -251,11 +251,8 @@ def format_path(path, is_dir=None):
         return '/'
 
     p = path
-    while True:
-        if re.search('//', p):
-            p = p.replace('//', '/')
-        else:
-            break
+    while '//' in p:
+        p = p.replace('//', '/')
 
     if p == '/':
         assert is_dir in (True, None)
