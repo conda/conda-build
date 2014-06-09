@@ -365,47 +365,6 @@ def get_root_path(paths):
 #===============================================================================
 # Library-related Helpers
 #===============================================================================
-def possible_link_target_names(dll):
-    """
-    >>> possible_link_target_names('libvtk.so.5.10.1')
-    ['libvtk.so.5.10.1', 'libvtk.so.5.10', 'libvtk.so.5', 'libvtk.so']
-    >>> possible_link_target_names('libQt.4.7.5.dylib')
-    ['libQt.4.7.5.dylib', 'libQt.4.7.dylib', 'libQt.4.dylib', 'libQt.dylib']
-    >>> possible_link_target_names('foo')
-    ['foo']
-    >>> possible_link_target_names('kernel32.dll')
-    ['kernel32.dll']
-    """
-
-    targets = None
-
-    if dll.endswith('.dylib') and dll.count('.') > 1:
-        # if dll = 'libQtXml.4.7.5.dylib', head = 'libQtXml', vers = '4.7.5'
-        h_ix = dll.find('.')
-        t_ix = dll.rfind('.')
-        head = dll[:h_ix]
-        vers = dll[h_ix+1:t_ix]
-
-        versions = version_combinations(vers)
-        if versions:
-            targets = [ '%s.%s.dylib' % (head, v) for v in versions ]
-            targets.append('%s.dylib' % head)
-
-    elif '.so.' in dll:
-
-        # if dll == 'libvtkverdict.so.5.10.1', tail == '5.10.1'
-        (head, sep, tail) = dll.partition('.so.')
-
-        versions = version_combinations(tail)
-        if versions:
-            targets = [ '%s.so.%s' % (head, v) for v in versions ]
-            targets.append('%s.so' % head)
-
-    if not targets:
-        targets = [dll]
-
-    return targets
-
 def parse_ldd_output(output):
     """
     >>> from pprint import pprint
