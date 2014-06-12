@@ -67,9 +67,11 @@ def create_post_scripts(m):
         src = join(recipe_dir, tp + ext)
         if not isfile(src):
             continue
-        dst = join(prefix,
-                   'Scripts' if sys.platform == 'win32' else 'bin',
-                   '.%s-%s%s' % (m.name(), tp, ext))
+        dst_dir = join(prefix,
+                       'Scripts' if sys.platform == 'win32' else 'bin')
+        if not isdir(dst_dir):
+            os.makedirs(dst_dir, int('755', 8))
+        dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
         shutil.copyfile(src, dst)
         os.chmod(dst, int('755', 8))
 
