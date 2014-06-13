@@ -53,7 +53,7 @@ def main():
         "--pypi-url",
         action="store",
         nargs=1,
-        default='http://pypi.python.org/pypi',
+        default='https://pypi.python.org/pypi',
         help="URL to use for PyPI",
     )
     pypi.add_argument(
