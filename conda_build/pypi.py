@@ -18,14 +18,17 @@ from tempfile import mkdtemp
 from shutil import copy2
 
 if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy
+    from xmlrpclib import ServerProxy, Transport
+    from urllib2 import build_opener, ProxyHandler, Request
 else:
-    from xmlrpc.client import ServerProxy
+    from xmlrpc.client import ServerProxy, Transport
+    from urllib.request import build_opener, ProxyHandler, Request
 
 from conda.fetch import download
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda.compat import input, configparser, StringIO, string_types, PY3
+from conda.config import get_proxy_servers
 from conda.cli.common import spec_from_line
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
@@ -156,7 +159,35 @@ diff core.py core.py
 '''
 
 def main(args, parser):
-    client = ServerProxy(args.pypi_url)
+    class Urllib2Transport(Transport):
+        def __init__(self, opener=None, https=False, use_datetime=0):
+            Transport.__init__(self, use_datetime)
+            self.opener = opener or build_opener()
+            self.https = https
+
+        def request(self, host, handler, request_body, verbose=0):
+            proto = ('http', 'https')[bool(self.https)]
+            req = Request('%s://%s%s' % (proto, host, handler), request_body)
+            req.add_header('User-agent', self.user_agent)
+            self.verbose = verbose
+            return self.parse_response(self.opener.open(req))
+
+
+    class HTTPProxyTransport(Urllib2Transport):
+        def __init__(self, proxies, use_datetime=0):
+            opener = build_opener(ProxyHandler(proxies))
+            Urllib2Transport.__init__(self, opener, use_datetime)
+        client = ServerProxy(args.pypi_url)
+        package_dicts = {}
+        [output_dir] = args.output_dir
+        indent = '\n    - '
+
+    proxies = get_proxy_servers()
+    if proxies:
+        transport = HTTPProxyTransport(proxies)
+    else:
+        transport = None
+    client = ServerProxy(args.pypi_url, transport=transport)
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
