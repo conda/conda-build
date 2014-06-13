@@ -5,6 +5,8 @@ Tools for converting PyPI packages to conda recipes.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import requests
+
 import keyword
 import os
 import re
@@ -19,12 +21,13 @@ from shutil import copy2
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy, Transport
-    from urllib2 import build_opener, ProxyHandler, Request
+    from urllib2 import build_opener, ProxyHandler, Request, HTTPError
 else:
     from xmlrpc.client import ServerProxy, Transport
     from urllib.request import build_opener, ProxyHandler, Request
+    from urllib.error import HTTPError
 
-from conda.fetch import download
+from conda.fetch import download, get_proxy_username_and_pass, add_username_and_pass_to_url
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda.compat import input, configparser, StringIO, string_types, PY3
@@ -173,25 +176,10 @@ def main(args, parser):
             self.verbose = verbose
             return self.parse_response(self.opener.open(req))
 
-
     class HTTPProxyTransport(Urllib2Transport):
         def __init__(self, proxies, use_datetime=0):
             opener = build_opener(ProxyHandler(proxies))
             Urllib2Transport.__init__(self, opener, use_datetime)
-        client = ServerProxy(args.pypi_url)
-        package_dicts = {}
-        [output_dir] = args.output_dir
-        indent = '\n    - '
-
-    proxies = get_proxy_servers()
-    if proxies:
-        transport = HTTPProxyTransport(proxies)
-    else:
-        transport = None
-    client = ServerProxy(args.pypi_url, transport=transport)
-    package_dicts = {}
-    [output_dir] = args.output_dir
-    indent = '\n    - '
 
     if len(args.packages) > 1 and args.download:
         # Because if a package's setup.py imports setuptools, it will make all
@@ -199,8 +187,36 @@ def main(args, parser):
         # what kind of monkeypatching the setup.pys out there could be doing.
         print("WARNING: building more than one recipe at once without "
               "--no-download is not recommended")
-    all_packages = client.list_packages()
-    all_packages_lower = [i.lower() for i in all_packages]
+
+    proxies = {}
+    while True:
+        try:
+            if not proxies:
+                proxies = get_proxy_servers()
+            print(proxies)
+            if proxies:
+                transport = HTTPProxyTransport(proxies)
+            else:
+                transport = None
+            client = ServerProxy(args.pypi_url, transport=transport)
+            package_dicts = {}
+            [output_dir] = args.output_dir
+            indent = '\n    - '
+
+            all_packages = client.list_packages()
+            all_packages_lower = [i.lower() for i in all_packages]
+        except HTTPError as e:
+            if '407' in str(e): # Is there a better way to check this?
+                scheme = requests.packages.urllib3.util.url.parse_url(args.pypi_url).scheme
+                username, passwd = get_proxy_username_and_pass(scheme)
+                proxies[scheme] = add_username_and_pass_to_url(proxies[scheme],
+                    username, passwd)
+            else:
+                raise
+        else:
+            break
+
+
     while args.packages:
         package = args.packages.pop()
         dir_path = join(output_dir, package.lower())
