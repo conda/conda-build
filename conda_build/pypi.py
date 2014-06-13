@@ -159,6 +159,7 @@ diff core.py core.py
 '''
 
 def main(args, parser):
+    # https://gist.github.com/nathforge/980961
     class Urllib2Transport(Transport):
         def __init__(self, opener=None, https=False, use_datetime=0):
             Transport.__init__(self, use_datetime)
