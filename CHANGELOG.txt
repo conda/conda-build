@@ -1,3 +1,7 @@
+???
+-------------------
+  * fix skeleton pypi behind a proxy
+
 2014-06-04   1.3.5:
 -------------------
   * the yaml script tag was only written if build.sh already existed,
