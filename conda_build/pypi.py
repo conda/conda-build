@@ -20,14 +20,16 @@ from tempfile import mkdtemp
 from shutil import copy2
 
 if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy, Transport
+    from xmlrpclib import ServerProxy, Transport, ProtocolError
     from urllib2 import build_opener, ProxyHandler, Request, HTTPError
 else:
-    from xmlrpc.client import ServerProxy, Transport
+    from xmlrpc.client import ServerProxy, Transport, ProtocolError
     from urllib.request import build_opener, ProxyHandler, Request
     from urllib.error import HTTPError
 
-from conda.fetch import download, get_proxy_username_and_pass, add_username_and_pass_to_url
+from conda.fetch import (download, get_proxy_username_and_pass,
+    add_username_and_pass_to_url, handle_proxy_407)
+from conda.connection import CondaSession
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda.compat import input, configparser, StringIO, string_types, PY3
@@ -161,25 +163,77 @@ diff core.py core.py
      """Run a setup script in a somewhat controlled environment, and
 '''
 
+# https://gist.github.com/chrisguitarguy/2354951
+class RequestsTransport(Transport):
+    """
+    Drop in Transport for xmlrpclib that uses Requests instead of httplib
+    """
+    # change our user agent to reflect Requests
+    user_agent = "Python XMLRPC with Requests (python-requests.org)"
+
+    # override this if you'd like to https
+    use_https = True
+
+    session = CondaSession()
+
+    def request(self, host, handler, request_body, verbose):
+        """
+        Make an xmlrpc request.
+        """
+        headers = {
+            'User-Agent': self.user_agent,
+            'Content-Type': 'text/xml',
+        }
+        url = self._build_url(host, handler)
+
+        try:
+            resp = self.session.post(url, data=request_body, headers=headers, proxies=self.session.proxies)
+            resp.raise_for_status()
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 407: # Proxy Authentication Required
+                handle_proxy_407(url, self.session)
+                # Try again
+                return self.request(host, handler, request_body, verbose)
+            else:
+                raise
+
+        except requests.exceptions.ConnectionError as e:
+            # requests isn't so nice here. For whatever reason, https gives this
+            # error and http gives the above error. Also, there is no status_code
+            # attribute here. We have to just check if it looks like 407.  See
+            # https://github.com/kennethreitz/requests/issues/2061.
+            if "407" in str(e): # Proxy Authentication Required
+                handle_proxy_407(url, self.session)
+                # Try again
+                return self.request(host, handler, request_body, verbose)
+            else:
+                raise
+
+        except requests.RequestException as e:
+            raise ProtocolError(url, resp.status_code, str(e), resp.headers)
+
+        else:
+            return self.parse_response(resp)
+
+    def parse_response(self, resp):
+        """
+        Parse the xmlrpc response.
+        """
+        p, u = self.getparser()
+        p.feed(resp.text)
+        p.close()
+        return u.close()
+
+    def _build_url(self, host, handler):
+        """
+        Build a url for our request based on the host, handler and use_http
+        property
+        """
+        scheme = 'https' if self.use_https else 'http'
+        return '%s://%s/%s' % (scheme, host, handler)
+
 def main(args, parser):
-    # https://gist.github.com/nathforge/980961
-    class Urllib2Transport(Transport):
-        def __init__(self, opener=None, https=False, use_datetime=0):
-            Transport.__init__(self, use_datetime)
-            self.opener = opener or build_opener()
-            self.https = https
-
-        def request(self, host, handler, request_body, verbose=0):
-            proto = ('http', 'https')[bool(self.https)]
-            req = Request('%s://%s%s' % (proto, host, handler), request_body)
-            req.add_header('User-agent', self.user_agent)
-            self.verbose = verbose
-            return self.parse_response(self.opener.open(req))
-
-    class HTTPProxyTransport(Urllib2Transport):
-        def __init__(self, proxies, use_datetime=0):
-            opener = build_opener(ProxyHandler(proxies))
-            Urllib2Transport.__init__(self, opener, use_datetime)
 
     if len(args.packages) > 1 and args.download:
         # Because if a package's setup.py imports setuptools, it will make all
@@ -188,34 +242,19 @@ def main(args, parser):
         print("WARNING: building more than one recipe at once without "
               "--no-download is not recommended")
 
-    proxies = {}
-    while True:
-        try:
-            if not proxies:
-                proxies = get_proxy_servers()
-            print(proxies)
-            if proxies:
-                transport = HTTPProxyTransport(proxies)
-            else:
-                transport = None
-            client = ServerProxy(args.pypi_url, transport=transport)
-            package_dicts = {}
-            [output_dir] = args.output_dir
-            indent = '\n    - '
+    proxies = get_proxy_servers()
 
-            all_packages = client.list_packages()
-            all_packages_lower = [i.lower() for i in all_packages]
-        except HTTPError as e:
-            if '407' in str(e): # Is there a better way to check this?
-                scheme = requests.packages.urllib3.util.url.parse_url(args.pypi_url).scheme
-                username, passwd = get_proxy_username_and_pass(scheme)
-                proxies[scheme] = add_username_and_pass_to_url(proxies[scheme],
-                    username, passwd)
-            else:
-                raise
-        else:
-            break
+    if proxies:
+        transport = RequestsTransport()
+    else:
+        transport = None
+    client = ServerProxy(args.pypi_url, transport=transport)
+    package_dicts = {}
+    [output_dir] = args.output_dir
+    indent = '\n    - '
 
+    all_packages = client.list_packages()
+    all_packages_lower = [i.lower() for i in all_packages]
 
     while args.packages:
         package = args.packages.pop()
