@@ -850,7 +850,7 @@ class LinuxDynamicLibrary(DynamicLibrary):
             # Break the hard link
             shutil.copy2(path, path + '-copy')
             os.unlink(path)
-            os.move(path + '-copy', path.rsplit('-copy', 1)[0])
+            shutil.move(path + '-copy', path.rsplit('-copy', 1)[0])
 
         patchelf.set_rpath(new_rpath, path)
 
