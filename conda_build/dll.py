@@ -7,6 +7,7 @@ from __future__ import (
 
 import os
 import sys
+import shutil
 
 from conda.compat import StringIO, with_metaclass
 
@@ -809,7 +810,8 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         return cls(*args, **kwds)
 
     @abstractmethod
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
+        # copy means break the hard link
         raise NotImplementedError()
 
 class LinuxDynamicLibrary(DynamicLibrary):
@@ -825,7 +827,7 @@ class LinuxDynamicLibrary(DynamicLibrary):
     def relocatable_rpath(self):
         return ':'.join('$ORIGIN/%s' % p for p in self.relative_runtime_paths)
 
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
         (path, cur_rpath, new_rpath) = args = (
             self.path,
             self.current_rpath,
@@ -843,6 +845,12 @@ class LinuxDynamicLibrary(DynamicLibrary):
 
         msg = 'patchelf: file: %s\n    old RPATH: %s\n    new RPATH: %s'
         print(msg % args)
+
+        if copy:
+            # Break the hard link
+            shutil.copy2(path, path + '-copy')
+            os.unlink(path)
+            os.move(path + '-copy', path.rsplit('-copy', 1)[0])
 
         patchelf.set_rpath(new_rpath, path)
 
@@ -884,11 +892,11 @@ class LinuxDynamicLibrary(DynamicLibrary):
                 print("still missing: %r" % self.missing)
 
 class DarwinDynamicLibrary(DynamicLibrary):
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
         raise NotImplementedError()
 
 class Win32DynamicLibrary(DynamicLibrary):
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
         raise NotImplementedError()
 
 #===============================================================================
@@ -1083,12 +1091,12 @@ class BuildRoot(SlotObject):
             (relative_path, lib) = m
             print('warning: broken lib: %s: dependency %s not found' % m)
 
-    def make_relocatable(self, dlls=None):
+    def make_relocatable(self, dlls=None, copy=False):
         if not dlls:
             dlls = self.new_dlls
 
         for dll in dlls:
-            dll.make_relocatable()
+            dll.make_relocatable(copy=copy)
 
     def post_build(self):
         self.make_relocatable()
