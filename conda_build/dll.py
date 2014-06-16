@@ -673,7 +673,7 @@ class LibraryDependencies(SlotObject):
         self.outside = outside
         self.missing = missing
 
-class RelocationErrors(BaseException):
+class RelocationErrors(Exception):
     def __init__(self, errors):
         assert errors
         self.errors = errors
@@ -681,7 +681,10 @@ class RelocationErrors(BaseException):
             '\n'.join(repr(e) for e in errors)
         )
 
-class LinkError_RecipeCorrectButBuildScriptBroken(SlotObject, BaseException):
+class LinkError(Exception):
+    pass
+
+class RecipeCorrectButBuildScriptBroken(SlotObject, LinkError):
     __slots__ = (
         'dependent_library_name',
         'expected_link_target',
@@ -691,7 +694,7 @@ class LinkError_RecipeCorrectButBuildScriptBroken(SlotObject, BaseException):
         SlotObject.__init__(self, *args)
         self.message = repr(self)
 
-class LinkError_MissingPackageDependencyInRecipe(SlotObject, BaseException):
+class MissingPackageDependencyInRecipe(SlotObject, LinkError):
     __slots__ = (
         'dependent_library_name',
         'missing_package_dependency',
@@ -755,7 +758,7 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         for path in self.outside:
             name = basename(path)
             if name in build_root:
-                cls = LinkError_RecipeCorrectButBuildScriptBroken
+                cls = RecipeCorrectButBuildScriptBroken
                 expected = build_root[name]
                 actual = path
                 errors.append(cls(name, expected, actual))
@@ -763,7 +766,7 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
                 package = package_name_providing_link_target(name)
                 if not package:
                     continue
-                cls = LinkError_MissingPackageDependencyInRecipe
+                cls = MissingPackageDependencyInRecipe
                 errors.append(cls(name, package))
 
         if errors:
