@@ -1,6 +1,7 @@
 ???
 -------------------
   * fix skeleton pypi behind a proxy
+  * add binary_has_prefix_files, which does a binary prefix replacement
 
 2014-06-04   1.3.5:
 -------------------
