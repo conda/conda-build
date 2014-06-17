@@ -165,10 +165,26 @@ def create_info_files(m, files, include_recipe=True):
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     files_with_prefix = m.has_prefix_files()
+    binary_files_with_prefix = m.binary_has_prefix_files()
+
     for file in files_with_prefix:
         if file not in files:
             raise RuntimeError("file %s from build/has_prefix_files was "
                                "not found" % file)
+
+    for file in binary_files_with_prefix:
+        if file not in files:
+            raise RuntimeError("file %s from build/has_prefix_files was "
+                               "not found" % file)
+        files_with_prefix.append('%s %s %s' % (prefix, 'binary', file))
+
+    if binary_files_with_prefix and len(prefix) < 100:
+        print("***WARNING*** Binary replacement can only be done in install")
+        print("prefixes that are shorter than the build prefix (the current")
+        print("build prefix is %d characters). It is recommended to build" % len(prefix))
+        print("against a larger prefix. Note that future versions of")
+        print("conda-build may do this automatically.")
+
     if sys.platform != 'win32':
         files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
