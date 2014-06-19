@@ -340,7 +340,7 @@ def main(args, parser):
         d['summary'] = repr(data['summary'])
         license_classifier = "License :: OSI Approved ::"
         if 'classifiers' in data:
-            licenses = [classifier.lstrip(license_classifier) for classifier in
+            licenses = [classifier.split(license_classifier, 1)[1] for classifier in
                     data['classifiers'] if classifier.startswith(license_classifier)]
         else:
             licenses = []
