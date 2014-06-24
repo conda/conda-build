@@ -38,6 +38,7 @@ def get_dict(m=None, prefix=build_prefix):
     d['PERL_VER'] = PERL_VER
     d['PY_VER'] = PY_VER
     d['SRC_DIR'] = source.get_dir()
+    d['LANG'] = os.environ['LANG']
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
