@@ -301,7 +301,7 @@ def build_package(package, version=None):
 
     try:
         print("package = %s" % package)
-        print("   dependences = %s" % dependencies)
+        print("   dependencies = %s" % dependencies)
         # Dependencies will be either package_name or
         #  package_name version_number
         # Only == dependency specs get version numbers

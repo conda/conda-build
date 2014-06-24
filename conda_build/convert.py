@@ -1,4 +1,4 @@
-# (c) 2012-2013 Continuum Analytics, Inc. / http://continuum.io
+# (c) 2012-2014 Continuum Analytics, Inc. / http://continuum.io
 # All Rights Reserved
 #
 # conda is distributed under the terms of the BSD 3-clause license.
@@ -16,7 +16,6 @@ import json
 
 from copy import deepcopy
 
-from conda_build.scripts import BAT_PROXY
 from conda.compat import PY3
 if PY3:
     from io import StringIO, BytesIO
@@ -24,6 +23,13 @@ else:
     from cStringIO import StringIO
     BytesIO = StringIO
 
+
+BAT_PROXY = """\
+@echo off
+set PYFILE=%~f0
+set PYFILE=%PYFILE:~0,-4%-script.py
+"%~f0\\..\\..\\python.exe" "%PYFILE%" %*
+"""
 
 libpy_pat = re.compile(
     r'(lib/python\d\.\d|Lib)'

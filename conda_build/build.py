@@ -66,9 +66,11 @@ def create_post_scripts(m):
         src = join(recipe_dir, tp + ext)
         if not isfile(src):
             continue
-        dst = join(prefix,
-                   'Scripts' if sys.platform == 'win32' else 'bin',
-                   '.%s-%s%s' % (m.name(), tp, ext))
+        dst_dir = join(prefix,
+                       'Scripts' if sys.platform == 'win32' else 'bin')
+        if not isdir(dst_dir):
+            os.makedirs(dst_dir, int('755', 8))
+        dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
         shutil.copyfile(src, dst)
         os.chmod(dst, int('755', 8))
 
@@ -162,10 +164,26 @@ def create_info_files(m, files, include_recipe=True):
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     files_with_prefix = m.has_prefix_files()
+    binary_files_with_prefix = m.binary_has_prefix_files()
+
     for file in files_with_prefix:
         if file not in files:
             raise RuntimeError("file %s from build/has_prefix_files was "
                                "not found" % file)
+
+    for file in binary_files_with_prefix:
+        if file not in files:
+            raise RuntimeError("file %s from build/has_prefix_files was "
+                               "not found" % file)
+        files_with_prefix.append('%s %s %s' % (prefix, 'binary', file))
+
+    if binary_files_with_prefix and len(prefix) < 100:
+        print("***WARNING*** Binary replacement can only be done in install")
+        print("prefixes that are shorter than the build prefix (the current")
+        print("build prefix is %d characters). It is recommended to build" % len(prefix))
+        print("against a larger prefix. Note that future versions of")
+        print("conda-build may do this automatically.")
+
     if sys.platform != 'win32':
         files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
@@ -276,14 +294,16 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             env = environ.get_dict(m)
             build_file = join(m.path, 'build.sh')
+
+            script = m.get_value('build/script', None)
+            if script:
+                if isinstance(script, list):
+                    script = '\n'.join(script)
+                with open(build_file, 'w', encoding='utf-8') as bf:
+                    bf.write(script)
+                os.chmod(build_file, 0o766)
+
             if exists(build_file):
-                script = m.get_value('build/script', None)
-                if script:
-                    if isinstance(script, list):
-                        script = '\n'.join(script)
-                    with open(build_file, 'w', encoding='utf-8') as bf:
-                        bf.write(script)
-                    os.chmod(build_file, 0o766)
                 cmd = ['/bin/bash', '-x', '-e', build_file]
 
                 _check_call(cmd, env=env, cwd=src_dir)

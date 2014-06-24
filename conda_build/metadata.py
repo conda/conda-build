@@ -129,7 +129,7 @@ FIELDS = {
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch',
-              'has_prefix_files'],
+              'has_prefix_files', 'binary_has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
     'test': ['requires', 'commands', 'files', 'imports'],
@@ -317,6 +317,12 @@ class MetaData(object):
         ret = self.get_value('build/has_prefix_files', [])
         if not isinstance(ret, list):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
+        return ret
+
+    def binary_has_prefix_files(self):
+        ret = self.get_value('build/binary_has_prefix_files', [])
+        if not isinstance(ret, list):
+            raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
         return ret
 
     def __unicode__(self):
