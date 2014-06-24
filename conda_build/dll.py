@@ -6,10 +6,10 @@ from __future__ import (
 )
 
 import os
-import re
 import sys
+import shutil
 
-import StringIO
+from conda.compat import StringIO, with_metaclass
 
 from abc import (
     ABCMeta,
@@ -29,22 +29,13 @@ from os.path import (
     normpath,
 )
 
-from textwrap import (
-    dedent,
-)
-
 from subprocess import (
     PIPE,
     Popen,
-    check_output,
 )
 
 from collections import (
     defaultdict,
-)
-
-from conda.utils import (
-    memoize,
 )
 
 from conda_build.external import (
@@ -62,7 +53,7 @@ is_linux = (sys.platform.startswith('linux'))
 is_darwin = (sys.platform == 'darwin')
 is_win32 = (sys.platform == 'win32')
 
-assert sum(int(i) for i in (is_linux, is_darwin, is_win32)) == 1
+assert sum((is_linux, is_darwin, is_win32)) == 1
 
 #===============================================================================
 # Misc Helpers
@@ -98,15 +89,15 @@ def version_combinations(s):
         return [s] if try_int(s) else None
 
     ints = s.split('.')
-    if not all(is_int(i) for i in ints):
+    if not all(i.isdigit() for i in ints):
         return None
 
     return [ '.'.join(ints[:x]) for x in reversed(range(1, len(ints)+1)) ]
 
 def invert_defaultdict_by_value_len(d):
-    i = {}
+    i = defaultdict(list)
     for (k, v) in d.items():
-        i.setdefault(len(v), []).append(k)
+        i[len(v)].append(k)
     return i
 
 def package_name_providing_link_target(libname):
@@ -124,9 +115,6 @@ def get_files(base):
         for fn in files:
             res.add(join(root, fn)[len(base) + 1:])
         for dn in dirs:
-            #if dn == 'pkgs':
-                #import ipdb
-                #ipdb.set_trace()
             path = join(root, dn)
             if islink(path):
                 res.add(path[len(base) + 1:])
@@ -249,16 +237,9 @@ def format_path(path, is_dir=None):
         is_dir in (True, False, None)
     )
 
-    if path == '/':
-        assert is_dir in (True, None)
-        return '/'
-
     p = path
-    while True:
-        if re.search('//', p):
-            p = p.replace('//', '/')
-        else:
-            break
+    while '//' in p:
+        p = p.replace('//', '/')
 
     if p == '/':
         assert is_dir in (True, None)
@@ -284,11 +265,6 @@ def format_file(path):
 
 def assert_no_file_dir_clash(paths):
     """
-    >>> assert_no_file_dir_clash('lskdjf')
-    Traceback (most recent call last):
-        ...
-    AssertionError
-
     >>> assert_no_file_dir_clash(False)
     Traceback (most recent call last):
         ...
@@ -363,7 +339,6 @@ def get_root_path(paths):
     """
     assert (
         hasattr(paths, '__iter__')   and
-        #len(paths) >= 1              and
         all(d and d[0] == '/' for d in paths)
     )
 
@@ -391,47 +366,6 @@ def get_root_path(paths):
 #===============================================================================
 # Library-related Helpers
 #===============================================================================
-def possible_link_target_names(dll):
-    """
-    >>> possible_link_target_names('libvtk.so.5.10.1')
-    ['libvtk.so.5.10.1', 'libvtk.so.5.10', 'libvtk.so.5', 'libvtk.so']
-    >>> possible_link_target_names('libQt.4.7.5.dylib')
-    ['libQt.4.7.5.dylib', 'libQt.4.7.dylib', 'libQt.4.dylib', 'libQt.dylib']
-    >>> possible_link_target_names('foo')
-    ['foo']
-    >>> possible_link_target_names('kernel32.dll')
-    ['kernel32.dll']
-    """
-
-    targets = None
-
-    if dll.endswith('.dylib') and dll.count('.') > 1:
-        # if dll = 'libQtXml.4.7.5.dylib', head = 'libQtXml', vers = '4.7.5'
-        h_ix = dll.find('.')
-        t_ix = dll.rfind('.')
-        head = dll[:h_ix]
-        vers = dll[h_ix+1:t_ix]
-
-        versions = version_combinations(vers)
-        if versions:
-            targets = [ '%s.%s.dylib' % (head, v) for v in versions ]
-            targets.append('%s.dylib' % head)
-
-    elif '.so.' in dll:
-
-        # if dll == 'libvtkverdict.so.5.10.1', tail == '5.10.1'
-        (head, sep, tail) = dll.partition('.so.')
-
-        versions = version_combinations(tail)
-        if versions:
-            targets = [ '%s.so.%s' % (head, v) for v in versions ]
-            targets.append('%s.so' % head)
-
-    if not targets:
-        targets = [dll]
-
-    return targets
-
 def parse_ldd_output(output):
     """
     >>> from pprint import pprint
@@ -557,7 +491,7 @@ class SlotObject(object):
             seen.add(key)
             setattr(self, key, value)
 
-        for (key, value) in kwds.iteritems():
+        for (key, value) in kwds.items():
             seen.add(key)
             setattr(self, key, value)
 
@@ -654,16 +588,16 @@ class ProcessWrapper(object):
         if not self.wait:
             return
 
-        self.outbuf = StringIO.StringIO()
-        self.errbuf = StringIO.StringIO()
+        self.outbuf = StringIO()
+        self.errbuf = StringIO()
 
         while self.p.poll() is None:
-            out = self.p.stdout.read()
+            out = self.p.stdout.read().decode('utf-8')
             self.outbuf.write(out)
             if self.verbose and out:
                 self.ostream.write(out)
 
-            err = self.p.stderr.read()
+            err = self.p.stderr.read().decode('utf-8')
             self.errbuf.write(err)
             if self.verbose and err:
                 self.estream.write(err)
@@ -740,7 +674,7 @@ class LibraryDependencies(SlotObject):
         self.outside = outside
         self.missing = missing
 
-class RelocationErrors(BaseException):
+class RelocationErrors(Exception):
     def __init__(self, errors):
         assert errors
         self.errors = errors
@@ -748,7 +682,10 @@ class RelocationErrors(BaseException):
             '\n'.join(repr(e) for e in errors)
         )
 
-class LinkError_RecipeCorrectButBuildScriptBroken(SlotObject, BaseException):
+class LinkError(Exception):
+    pass
+
+class RecipeCorrectButBuildScriptBroken(SlotObject, LinkError):
     __slots__ = (
         'dependent_library_name',
         'expected_link_target',
@@ -758,7 +695,7 @@ class LinkError_RecipeCorrectButBuildScriptBroken(SlotObject, BaseException):
         SlotObject.__init__(self, *args)
         self.message = repr(self)
 
-class LinkError_MissingPackageDependencyInRecipe(SlotObject, BaseException):
+class MissingPackageDependencyInRecipe(SlotObject, LinkError):
     __slots__ = (
         'dependent_library_name',
         'missing_package_dependency',
@@ -767,8 +704,7 @@ class LinkError_MissingPackageDependencyInRecipe(SlotObject, BaseException):
         SlotObject.__init__(self, *args)
         self.message = repr(self)
 
-class DynamicLibrary(LibraryDependencies):
-    __metaclass__ = ABCMeta
+class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     __slots__ = LibraryDependencies.__slots__ + (
         'path',
         'prefix',
@@ -823,7 +759,7 @@ class DynamicLibrary(LibraryDependencies):
         for path in self.outside:
             name = basename(path)
             if name in build_root:
-                cls = LinkError_RecipeCorrectButBuildScriptBroken
+                cls = RecipeCorrectButBuildScriptBroken
                 expected = build_root[name]
                 actual = path
                 errors.append(cls(name, expected, actual))
@@ -831,7 +767,7 @@ class DynamicLibrary(LibraryDependencies):
                 package = package_name_providing_link_target(name)
                 if not package:
                     continue
-                cls = LinkError_MissingPackageDependencyInRecipe
+                cls = MissingPackageDependencyInRecipe
                 errors.append(cls(name, package))
 
         if errors:
@@ -874,7 +810,8 @@ class DynamicLibrary(LibraryDependencies):
         return cls(*args, **kwds)
 
     @abstractmethod
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
+        # copy means break the hard link
         raise NotImplementedError()
 
 class LinuxDynamicLibrary(DynamicLibrary):
@@ -890,7 +827,7 @@ class LinuxDynamicLibrary(DynamicLibrary):
     def relocatable_rpath(self):
         return ':'.join('$ORIGIN/%s' % p for p in self.relative_runtime_paths)
 
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
         (path, cur_rpath, new_rpath) = args = (
             self.path,
             self.current_rpath,
@@ -909,6 +846,12 @@ class LinuxDynamicLibrary(DynamicLibrary):
         msg = 'patchelf: file: %s\n    old RPATH: %s\n    new RPATH: %s'
         print(msg % args)
 
+        if copy:
+            # Break the hard link
+            shutil.copy2(path, path + '-copy')
+            os.unlink(path)
+            shutil.move(path + '-copy', path.rsplit('-copy', 1)[0])
+
         patchelf.set_rpath(new_rpath, path)
 
         # Check that RPATH was set properly.
@@ -919,8 +862,6 @@ class LinuxDynamicLibrary(DynamicLibrary):
                 cur_rpath,
                 new_rpath,
             ])
-            #import ipdb
-            #ipdb.set_trace()
             if not self.build_root.forgiving:
                 assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
 
@@ -951,11 +892,11 @@ class LinuxDynamicLibrary(DynamicLibrary):
                 print("still missing: %r" % self.missing)
 
 class DarwinDynamicLibrary(DynamicLibrary):
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
         raise NotImplementedError()
 
 class Win32DynamicLibrary(DynamicLibrary):
-    def make_relocatable(self):
+    def make_relocatable(self, copy=False):
         raise NotImplementedError()
 
 #===============================================================================
@@ -1146,12 +1087,12 @@ class BuildRoot(SlotObject):
             (relative_path, lib) = m
             print('warning: broken lib: %s: dependency %s not found' % m)
 
-    def make_relocatable(self, dlls=None):
+    def make_relocatable(self, dlls=None, copy=False):
         if not dlls:
             dlls = self.new_dlls
 
         for dll in dlls:
-            dll.make_relocatable()
+            dll.make_relocatable(copy=copy)
 
     def post_build(self):
         self.make_relocatable()
