@@ -403,7 +403,7 @@ def test(m, verbose=True):
     env = {str(key): str(value) for key, value in env.items()}
     if py_files:
         try:
-            subprocess.check_call([config.test_python,
+            subprocess.check_call([config.test_python, '-s',
                                    join(tmp_dir, 'run_test.py')],
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
