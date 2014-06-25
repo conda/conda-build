@@ -226,7 +226,10 @@ def execute(args, parser):
                     error_str = str(e)
                     if error_str.startswith('No packages found matching:'):
                         # Build dependency if recipe exists
-                        dep_pkg = error_str.split(': ')[1].replace(' ', '-')
+                        dep_pkg = error_str.split(': ')[1]
+                        # Handle package names that contain version deps.
+                        if ' ' in dep_pkg:
+                            dep_pkg = dep_pkg.split(' ')[0]
                         recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
                         if exists(dep_pkg):
                             recipe_glob.append(dep_pkg)
