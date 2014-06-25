@@ -552,7 +552,7 @@ def run_setuppy(src_dir, temp_dir, args):
 
     patch = join(temp_dir, 'pypi-distutils.patch')
     with open(patch, 'w') as f:
-        f.write(DISTUTILS_PATCH.format(temp_dir))
+        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\','\\\\')))
 
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
