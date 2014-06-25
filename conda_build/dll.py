@@ -628,7 +628,12 @@ class ProcessWrapper(object):
 if is_linux:
     class _patchelf(ProcessWrapper):
         def build_command_line(self, exe, action, *args, **kwds):
-            action = '--%s' % action.replace('_', '-')
+            if action == 'set_rpath':
+                action = '--force-rpath'
+                args = list(args)
+                args.insert(0, '--set-rpath')
+            else:
+                action = '--%s' % action.replace('_', '-')
             fn = ProcessWrapper.build_command_line
             return fn(self, exe, action, *args, **kwds)
 
