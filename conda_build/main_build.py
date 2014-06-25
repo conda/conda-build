@@ -128,8 +128,11 @@ Error: cannot locate binstar (required for upload)
 # Try:
 # $ conda install binstar
 ''')
-    print("Uploading to binstar")
-    args = [binstar, 'upload', path]
+    binstar_user = config.rc.get('binstar_user', None)
+    if binstar_user:
+        args = [binstar, 'upload', '--user', binstar_user, path]
+    else:
+        args = [binstar, 'upload', path]
     try:
         subprocess.call(args)
     except:
