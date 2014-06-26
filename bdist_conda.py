@@ -33,6 +33,22 @@ class bdist_conda(install):
             super(bdist_conda, self).run()
             d = defaultdict(dict)
             # Insert metadata here
+            d['package']['name'] = self.distribution.metadata.name
+            d['package']['version'] = self.distribution.metadata.version
+            d['build']['number'] = 0 # TODO: Allow to set this
+            # TODO d['build']['entry_points'] = ...
+            # MetaData does the auto stuff if the build string is None
+            d['build']['string'] = None # Set automatically
+
+            # TODO: Probably needs to be parsed
+            d['requirements']['run'] = self.distribution.metadata.requires
+            d['about']['home'] = self.distribution.metadata.url
+
+            # TODO: Use similar code from skeleton pypi to get this from the
+            # classifiers
+            d['about']['license'] = self.distribution.metadata.license
+            d['about']['summary'] = self.distribution.description
+
             d = dict(d)
             m = MetaData.fromdict(d)
             # Shouldn't fail, but do you really trust the code above?
