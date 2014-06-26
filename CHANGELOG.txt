@@ -2,6 +2,8 @@
 -------------------
   * fix skeleton pypi behind a proxy
   * add binary_has_prefix_files, which does a binary prefix replacement
+  * fix skeleton pypi on Windows
+  * allow the git_url to be a relative path to the recipe directory
 
 2014-06-04   1.3.5:
 -------------------

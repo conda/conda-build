@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import os
 import sys
-from os.path import join, isdir, isfile
+from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, ignore_patterns, copy2
 from subprocess import check_call, Popen, PIPE
 
@@ -74,7 +74,7 @@ def unpack(meta):
         copy2(src_path, WORK_DIR)
 
 
-def git_source(meta):
+def git_source(meta, recipe_dir):
     ''' Download a source from Git repo. '''
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
@@ -83,7 +83,12 @@ def git_source(meta):
     if not git:
         sys.exit("Error: git is not installed")
     git_url = meta['git_url']
-    git_dn = git_url.split(':')[-1].replace('/', '_')
+    if git_url.startswith('.'):
+        # It's a relative path from the conda recipe
+        os.chdir(recipe_dir)
+        git_dn = abspath(expanduser(git_url)).replace('/', '_')
+    else:
+        git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
     if sys.platform == 'win32':
         cache_repo_arg = cache_repo_arg.replace('\\', '/')
@@ -94,7 +99,7 @@ def git_source(meta):
     if isdir(cache_repo):
         check_call([git, 'fetch'], cwd=cache_repo)
     else:
-        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg])
+        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg], cwd=recipe_dir)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -213,7 +218,7 @@ def provide(recipe_dir, meta, patch=True):
     if 'fn' in meta:
         unpack(meta)
     elif 'git_url' in meta:
-        git_source(meta)
+        git_source(meta, recipe_dir)
     elif 'hg_url' in meta:
         hg_source(meta)
     elif 'svn_url' in meta:
