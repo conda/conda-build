@@ -574,9 +574,9 @@ def run_setuppy(src_dir, temp_dir, args):
     # Save PYTHONPATH for later
     env = os.environ.copy()
     if 'PYTHONPATH' in env:
-        env['PYTHONPATH'] = str(src_dir + ':' + env['PYTHONPATH'])
+        env[str('PYTHONPATH')] = str(src_dir + ':' + env['PYTHONPATH'])
     else:
-        env['PYTHONPATH'] = str(src_dir)
+        env[str('PYTHONPATH')] = str(src_dir)
     cwd = getcwd()
     chdir(src_dir)
     args = [build_python, 'setup.py', 'install']
