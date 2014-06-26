@@ -43,9 +43,10 @@ class bdist_conda(install):
             # TODO: Probably needs to be parsed
             d['requirements']['run'] = self.distribution.metadata.requires
             d['about']['home'] = self.distribution.metadata.url
-
-            # TODO: Use similar code from skeleton pypi to get this from the
-            # classifiers
+            # Don't worry about classifiers. This isn't skeleton pypi. We
+            # don't need to make this work with random stuff in the wild. If
+            # someone writes their setup.py wrong and this doesn't work, it's
+            # their fault.
             d['about']['license'] = self.distribution.metadata.license
             d['about']['summary'] = self.distribution.description
 
