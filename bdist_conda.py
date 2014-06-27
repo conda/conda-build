@@ -23,9 +23,10 @@ class bdist_conda(install):
         super(bdist_conda, self).initialize_options()
 
     def finalize_options(self):
-        super(bdist_conda, self).finalize_options()
         if self.prefix:
             raise DistutilsOptionError("--prefix is not allowed")
+
+        super(bdist_conda, self).finalize_options()
         self.prefix = config.build_prefix
 
     def run(self):
