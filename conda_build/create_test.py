@@ -44,7 +44,7 @@ def create_shell_files(dir_path, m):
 
     with open(join(dir_path, name), 'a', encoding='utf-8') as f:
         f.write('\n\n')
-        for cmd in m.get_value('test/commands'):
+        for cmd in m.get_value('test/commands', []):
             f.write(cmd)
             f.write('\n')
             has_tests = True
@@ -61,7 +61,7 @@ def create_py_files(dir_path, m):
             fo.write(fi.read() + '\n')
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
-        for name in m.get_value('test/imports'):
+        for name in m.get_value('test/imports', []):
             fo.write('print("import: %r")\n' % name)
             fo.write('import %s\n' % name)
             fo.write('\n')
