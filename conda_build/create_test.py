@@ -21,12 +21,15 @@ def create_files(dir_path, m):
     Return False, if the package has no tests (for any configuration), and
     True if it has.
     """
-    for fn in m.get_value('test/files'):
+    has_files = False
+    for fn in m.get_value('test/files', []):
+        has_files = True
         path = join(m.path, fn)
         if isdir(path):
             shutil.copytree(path, join(dir_path, fn))
         else:
             shutil.copy(path, dir_path)
+    return has_files
 
 
 def create_shell_files(dir_path, m):
