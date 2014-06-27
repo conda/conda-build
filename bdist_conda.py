@@ -41,7 +41,8 @@ class bdist_conda(install):
             d['build']['string'] = None # Set automatically
 
             # TODO: Probably needs to be parsed
-            d['requirements']['run'] = d['requirements']['build'] = self.distribution.metadata.requires or []
+            d['requirements']['run'] = d['requirements']['build'] = \
+                (self.distribution.metadata.requires or []) + ['python']
             d['about']['home'] = self.distribution.metadata.url
             # Don't worry about classifiers. This isn't skeleton pypi. We
             # don't need to make this work with random stuff in the wild. If
