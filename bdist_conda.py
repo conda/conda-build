@@ -31,7 +31,6 @@ class bdist_conda(install):
 
     def run(self):
         with Locked(config.croot):
-            super(bdist_conda, self).run()
             d = defaultdict(dict)
             # Insert metadata here
             d['package']['name'] = self.distribution.metadata.name
@@ -55,5 +54,8 @@ class bdist_conda(install):
             m = MetaData.fromdict(d)
             # Shouldn't fail, but do you really trust the code above?
             m.check_fields()
-            build.build(m)
+            build.build(m, post=False)
+            # Do the install
+            super(bdist_conda, self).run()
+            build.build(m, post=True)
             build.test(m)
