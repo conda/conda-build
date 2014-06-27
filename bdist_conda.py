@@ -51,6 +51,9 @@ class bdist_conda(install):
             d['about']['license'] = self.distribution.metadata.license
             d['about']['summary'] = self.distribution.description
 
+            # Debugging for now. We should make this an option.
+            d['test']['imports'] = [self.distribution.metadata.name]
+
             d = dict(d)
             m = MetaData.fromdict(d)
             # Shouldn't fail, but do you really trust the code above?
