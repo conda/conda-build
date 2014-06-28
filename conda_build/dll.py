@@ -429,6 +429,16 @@ def parse_otool_shared_libraries_output(output):
             )
     ]
 
+def parse_otool_install_name_output(output):
+    """
+    >>> from pprint import pprint
+    >>> parse = parse_otool_install_name_output
+    >>> output = sample_otool_install_name_output
+    >>> pprint(parse(output))
+    'libtcl8.5.dylib'
+    """
+    return output.splitlines()[1:][0]
+
 def relative_path(library_path, target_dir):
     """
     >>> p = 'lib/python2.7/site-packages/rpy2/rinterface/_rinterface.so'
@@ -681,11 +691,18 @@ elif is_darwin:
                 action = '-L'
             elif action == 'list_load_commands':
                 action = '-l'
+            elif action == 'install_name':
+                action = '-D'
+            else:
+                raise RuntimeError("unknown action: %s" % action)
+
             return _build_cmd(self, exe, action, *args, **kwds)
 
         def process_output(self, output):
             if self.action == 'list_shared_libraries':
                 parser = parse_otool_shared_libraries_output
+            elif self.action == 'install_name':
+                parser = parse_otool_install_name_output
             elif self.action == 'list_load_commands':
                 raise NotImplementedError()
             return parser(output)
@@ -1170,6 +1187,10 @@ sample_otool_output = """\
 libgfortran.2.dylib:
 	/usr/local/lib/libgfortran.2.dylib (compatibility version 3.0.0, current version 3.0.0)
 	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 88.3.9)"""
+
+sample_otool_install_name_output = """\
+/var/folders/7t/jhrygn4x5fz8hmf974g129w00000gn/T/tmpkKMou3/lib/libtcl8.5.dylib:
+libtcl8.5.dylib"""
 
 #===============================================================================
 # Main
