@@ -1004,12 +1004,17 @@ class BuildRoot(SlotObject):
     _repr_exclude_ = set(__slots__[1:-1])
 
     def __init__(self, prefix=None, old_files=None, all_files=None,
-                       forgiving=False, is_build=True):
+                       forgiving=False, is_build=True, prefix_paths=True):
         self.forgiving = forgiving
         if not prefix:
             prefix = build_prefix
         self.prefix = prefix
         self.relative_start_ix = len(prefix)+1
+
+        if prefix_paths:
+            join_prefix = lambda f: join(prefix, f)
+        else:
+            join_prefix = lambda f: f
 
         if not old_files and is_build:
             # Ugh, this should be abstracted into a single interface that we
@@ -1025,7 +1030,7 @@ class BuildRoot(SlotObject):
             all_files = get_files(self.prefix)
 
         self.all_files = all_files
-        self.all_paths = [ join(prefix, f) for f in self.all_files ]
+        self.all_paths = [ join_prefix(f) for f in self.all_files ]
 
         # Nice little cyclic dependency we're introducing here on post.py
         # (which is the thing that should be calling us).
@@ -1039,9 +1044,9 @@ class BuildRoot(SlotObject):
 
 
         if is_build:
-            self.old_paths = [ join(prefix, f) for f in self.old_files ]
+            self.old_paths = [ join_prefix(f) for f in self.old_files ]
             self.old_dll_paths = set(p for p in self.old_paths if is_obj(p))
-            self.new_paths = [ join(prefix, f) for f in self.new_files ]
+            self.new_paths = [ join_prefix(f) for f in self.new_files ]
             self.all_dll_paths = set(
                 p for p in self.all_paths
                     if p in self.old_dll_paths or is_obj(p)
