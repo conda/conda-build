@@ -414,6 +414,21 @@ def parse_ldd_output(output):
 
     return results
 
+def parse_otool_shared_libraries_output(output):
+    """
+    >>> from pprint import pprint
+    >>> pprint(parse_otool_shared_libraries_output(sample_otool_output))
+    [('libgfortran.2.dylib', '/usr/local/lib/libgfortran.2.dylib'),
+     ('libSystem.B.dylib', '/usr/lib/libSystem.B.dylib')]
+    """
+    return [
+        (basename(path), path)
+            for path in (
+                line[1:].split(' ')[0]
+                    for line in output.splitlines()[1:]
+            )
+    ]
+
 def relative_path(library_path, target_dir):
     """
     >>> p = 'lib/python2.7/site-packages/rpy2/rinterface/_rinterface.so'
@@ -449,6 +464,8 @@ def relative_path(library_path, target_dir):
 def get_library_dependencies(dll):
     if is_linux:
         return ldd(dll)
+    elif is_darwin:
+        return otool.list_shared_libraries(dll)
     else:
         raise NotImplementedError()
 
@@ -625,6 +642,8 @@ class ProcessWrapper(object):
     def clone(self):
         return self.__class__(self.exe)
 
+_build_cmd = ProcessWrapper.build_command_line
+
 if is_linux:
     class _patchelf(ProcessWrapper):
         def build_command_line(self, exe, action, *args, **kwds):
@@ -634,8 +653,7 @@ if is_linux:
                 args.insert(0, '--set-rpath')
             else:
                 action = '--%s' % action.replace('_', '-')
-            fn = ProcessWrapper.build_command_line
-            return fn(self, exe, action, *args, **kwds)
+            return _build_cmd(self, exe, action, *args, **kwds)
 
     patchelf = _patchelf(find_executable('patchelf'))
 
@@ -644,8 +662,36 @@ if is_linux:
             return parse_ldd_output(output)
 
     ldd = _ldd(find_executable('ldd'))
+
 elif is_darwin:
-    pass
+    class _install_name_tool(ProcessWrapper):
+        def build_command_line(self, exe, action, *args, **kwds):
+            action = '-%s' % action
+            return _build_cmd(self, exe, action, *args, **kwds)
+
+    install_name_tool = (
+        _install_name_tool(find_executable('install_name_tool'))
+    )
+
+    class _otool(ProcessWrapper):
+        action = None
+        def build_command_line(self, exe, action, *args, **kwds):
+            self.action = action
+            if action == 'list_shared_libraries':
+                action = '-L'
+            elif action == 'list_load_commands':
+                action = '-l'
+            return _build_cmd(self, exe, action, *args, **kwds)
+
+        def process_output(self, output):
+            if self.action == 'list_shared_libraries':
+                parser = parse_otool_shared_libraries_output
+            elif self.action == 'list_load_commands':
+                raise NotImplementedError()
+            return parser(output)
+
+    otool = _otool(find_executable('otool'))
+
 elif is_win32:
     pass
 
@@ -1119,6 +1165,11 @@ sample_ldd_output = """
 	libpthread.so.0 => /lib64/libpthread.so.0 (0x00002aec24198000)
 	libc.so.6 => /lib64/libc.so.6 (0x00002aec243b4000)
 	/lib64/ld-linux-x86-64.so.2 (0x0000003739c00000)"""
+
+sample_otool_output = """\
+libgfortran.2.dylib:
+	/usr/local/lib/libgfortran.2.dylib (compatibility version 3.0.0, current version 3.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 88.3.9)"""
 
 #===============================================================================
 # Main
