@@ -783,10 +783,15 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     )
 
     def __init__(self, path, build_root):
-        self.path = path
         self.prefix = build_root.prefix
-        self.relative = path.replace(self.prefix, '')[1:]
         self.build_root = build_root
+
+        if not path.startswith(self.prefix):
+            self.relative = path
+            self.path = '/'.join((self.prefix, path))
+        else:
+            self.path = path
+            self.relative = path.replace(self.prefix, '')[1:]
 
         self._reload_count = 0
         self.reload()
@@ -1034,14 +1039,14 @@ class BuildRoot(SlotObject):
 
         # Nice little cyclic dependency we're introducing here on post.py
         # (which is the thing that should be calling us).
-        from conda_build.post import is_obj
+        from conda_build.post import is_obj as _is_obj
+        is_obj = lambda f: _is_obj(join(prefix, f) if f[0] != '/' else f)
 
         if is_build:
             self.new_files = self.all_files - self.old_files
         else:
             self.new_files = self.all_files
             self.new_paths = self.all_paths
-
 
         if is_build:
             self.old_paths = [ join_prefix(f) for f in self.old_files ]
