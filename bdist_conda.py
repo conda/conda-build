@@ -11,6 +11,7 @@ from distutils.command.install import install
 from distutils.errors import DistutilsOptionError
 
 from conda.lock import Locked
+from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import config, build
 
@@ -40,9 +41,12 @@ class bdist_conda(install):
             # MetaData does the auto stuff if the build string is None
             d['build']['string'] = None # Set automatically
 
-            # TODO: Probably needs to be parsed
+            # XXX: I'm not really sure if it is correct to combine requires
+            # and install_requires
             d['requirements']['run'] = d['requirements']['build'] = \
-                (self.distribution.metadata.requires or []) + ['python']
+                [spec_from_line(i) for i in
+                    (self.distribution.metadata.requires or []) +
+                    getattr(self.distribution, 'install_requires', [])] + ['python']
             d['about']['home'] = self.distribution.metadata.url
             # Don't worry about classifiers. This isn't skeleton pypi. We
             # don't need to make this work with random stuff in the wild. If
