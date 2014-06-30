@@ -6,14 +6,17 @@ from __future__ import (print_function, division, unicode_literals,
     absolute_import)
 
 from collections import defaultdict
+import configparser
 
 from distutils.command.install import install
-from distutils.errors import DistutilsOptionError
+from distutils.errors import DistutilsOptionError, DistutilsGetoptError
 
+from conda.compat import StringIO, string_types
 from conda.lock import Locked
+import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import config, build
+from conda_build import config, build, pypi
 
 # TODO: Add support for all the options that conda build has
 
@@ -54,6 +57,51 @@ class bdist_conda(install):
             # their fault.
             d['about']['license'] = self.distribution.metadata.license
             d['about']['summary'] = self.distribution.description
+
+
+        # This is similar logic from conda skeleton pypi
+        if not hasattr(self.distribution, 'entry_points'):
+            return []
+        entry_points = self.distribution.entry_points
+        if entry_points:
+            if isinstance(entry_points, string_types):
+                # makes sure it is left-shifted
+                newstr = "\n".join(x.strip()
+                                   for x in entry_points.split('\n'))
+                c = configparser.ConfigParser()
+                entry_points = {}
+                try:
+                    c.readfp(StringIO(newstr))
+                except Exception as err:
+                    # This seems to be the best error here
+                    raise DistutilsGetoptError("ERROR: entry-points not understood: " + str(err) + "\nThe string was" + newstr)
+                else:
+                    for section in config.sections():
+                        if section in ['console_scripts', 'gui_scripts']:
+                            value = ['%s=%s' % (option, config.get(section, option))
+                                     for option in config.options(section)]
+                            entry_points[section] = value
+                        else:
+                            # Make sure setuptools is added as a dependency below
+                            entry_points[section] = None
+
+            if not isinstance(entry_points, dict):
+                raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" + entry_points)
+            else:
+                cs = entry_points.get('console_scripts', [])
+                gs = entry_points.get('gui_scripts', [])
+                # We have *other* kinds of entry-points so we need
+                # setuptools at run-time
+                if not cs and not gs and len(entry_points) > 1:
+                    d['requirements']['run'].append('setuptools')
+                    d['requirements']['build'].append('setuptools')
+                entry_list = cs + gs
+                if gs and conda.config.platform == 'osx':
+                    d['build']['osx_is_app'] = True
+                if len(cs + gs) != 0:
+                    d['build']['entry_points'] = entry_list
+                    # Debugging. TODO: Make this optional
+                    d['test']['commands'] = pypi.make_entry_tests(entry_list)
 
             # Debugging for now. We should make this an option.
             d['test']['imports'] = [self.distribution.metadata.name]
