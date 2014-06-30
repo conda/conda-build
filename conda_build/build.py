@@ -337,11 +337,13 @@ def build(m, get_src=True, verbose=True, post=None):
 
         build_root = None
         if config.use_new_rpath_logic or config.verify_rpaths:
+            allow_x11 = bool(m.get_value('build/allow_x11', True))
             from conda_build.dll import BuildRoot
             build_root = BuildRoot(
                 old_files=files1,
                 all_files=files2,
                 forgiving=True,
+                allow_x11=allow_x11,
             )
 
         if config.use_new_rpath_logic:

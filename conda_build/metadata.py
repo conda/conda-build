@@ -129,7 +129,7 @@ FIELDS = {
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch',
-              'has_prefix_files', 'binary_has_prefix_files'],
+              'has_prefix_files', 'binary_has_prefix_files', 'allow_x11'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
     'test': ['requires', 'commands', 'files', 'imports'],

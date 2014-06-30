@@ -42,6 +42,11 @@ from conda_build.external import (
     find_executable,
 )
 
+from conda_build.build import (
+    LinkError,
+    LinkErrors,
+)
+
 from conda_build.config import (
     build_prefix,
 )
@@ -361,7 +366,6 @@ def get_root_path(paths):
         return '/'
 
     return format_dir('/'.join(common))
-
 
 #===============================================================================
 # Library-related Helpers
@@ -722,6 +726,10 @@ class LibraryDependencies(SlotObject):
         'missing',
     )
 
+    _repr_exclude_ = (
+        'inside',
+    )
+
     def __init__(self, deps, prefix=None):
         if not prefix:
             prefix = build_prefix
@@ -742,35 +750,26 @@ class LibraryDependencies(SlotObject):
         self.outside = outside
         self.missing = missing
 
-class RelocationErrors(Exception):
-    def __init__(self, errors):
-        assert errors
-        self.errors = errors
-        self.message = 'Relocation errors:\n%s\n' % (
-            '\n'.join(repr(e) for e in errors)
-        )
-
-class LinkError(Exception):
-    pass
-
-class RecipeCorrectButBuildScriptBroken(SlotObject, LinkError):
+class BrokenLinkage(SlotObject, LinkError):
     __slots__ = (
+        'library',
         'dependent_library_name',
-        'expected_link_target',
-        'actual_link_target',
     )
     def __init__(self, *args):
         SlotObject.__init__(self, *args)
         self.message = repr(self)
 
-class MissingPackageDependencyInRecipe(SlotObject, LinkError):
+class ExternalLinkage(BrokenLinkage):
     __slots__ = (
-        'dependent_library_name',
-        'missing_package_dependency',
+        BrokenLinkage.__slots__ +
+        ('actual_link_target',)
     )
-    def __init__(self, *args):
-        SlotObject.__init__(self, *args)
-        self.message = repr(self)
+
+class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
+    __slots__ = (
+        ExternalLinkage.__slots__ +
+        ('expected_link_target',)
+    )
 
 class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     __slots__ = LibraryDependencies.__slots__ + (
@@ -778,6 +777,14 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         'prefix',
         'relative',
         'build_root',
+        'link_errors',
+        'runtime_paths',
+        'relative_runtime_paths',
+    )
+
+    _repr_exclude_ = (
+        'build_root',
+        'link_errors',
         'runtime_paths',
         'relative_runtime_paths',
     )
@@ -785,6 +792,9 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     def __init__(self, path, build_root):
         self.prefix = build_root.prefix
         self.build_root = build_root
+        self.link_errors = []
+        self.runtime_paths = None
+        self.relative_runtime_paths = None
 
         if not path.startswith(self.prefix):
             self.relative = path
@@ -797,20 +807,17 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         self.reload()
 
     def reload(self):
+        self.link_errors = []
         self._reload_count += 1
         deps = get_library_dependencies(self.path)
         LibraryDependencies.__init__(self, deps, self.prefix)
 
-        try:
-            self._check_outside_targets()
-        except RelocationErrors as e:
-            if self._reload_count > 1:
-                print("*** warning ***\n%s" % e.message)
-
-        self._resolve_inside_and_missing_targets()
+        self._process_outside_targets()
+        self._process_missing_targets()
+        self._resolve_inside_targets()
         self._resolve_relative_runtime_paths()
 
-    def _check_outside_targets(self):
+    def _process_outside_targets(self):
         # For targets outside the build root, we want to make sure the target
         # isn't something that should actually be linking to within the build
         # prefix.  For now, we just check for targets that also appear in the
@@ -826,50 +833,45 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         # harnessed to build tools that help automate the writing of recipes;
         # the less domain knowledge you need to leverage the power of conda
         # build, the more widespread the adoption.)
+        #
+        # Update: initial work has been done to detect whether or not a
+        # library is being provided by a conda package.  However, it will be
+        # better to keep this logic separate, so, for now, we accumulate link
+        # errors and assume someone downstream will handle it if they want to.
 
-        errors = []
         build_root = self.build_root
+        link_errors = self.link_errors
         for path in self.outside:
             name = basename(path)
+            if self.allowed_outside(name):
+                continue
+            args = (self, name, path)
+            cls = ExternalLinkage
             if name in build_root:
+                args = args + (expected,)
                 cls = RecipeCorrectButBuildScriptBroken
-                expected = build_root[name]
-                actual = path
-                errors.append(cls(name, expected, actual))
-            else:
-                package = package_name_providing_link_target(name)
-                if not package:
-                    continue
-                cls = MissingPackageDependencyInRecipe
-                errors.append(cls(name, package))
+            link_errors.append(cls(*args))
 
-        if errors:
-            raise RelocationErrors(errors)
+    def _process_missing_targets(self):
+        for name in self.missing:
+            self.link_errors.append(BrokenLinkage(self, name))
 
-    def _resolve_inside_and_missing_targets(self):
-
+    def _resolve_inside_targets(self):
         rpaths = set()
         build_root = self.build_root
-        forgiving = build_root.forgiving
-        for attr in ('inside', 'missing'):
-            libs = getattr(self, attr)
-            for name in libs:
-                p = build_root[name]
-                if not p:
-                    assert forgiving, p
-                else:
-                    rpaths.add(p)
-                continue
+        link_errors = self.link_errors
+        for name in self.inside:
+            rpath = build_root[name]
+            assert rpath
+            rpaths.add(rpath)
 
         self.runtime_paths = rpaths
 
     def _resolve_relative_runtime_paths(self):
-        #assert self.runtime_paths, repr(self)
         self.relative_runtime_paths = [
             relative_path(self.relative, target)
                 for target in self.runtime_paths
         ]
-
 
     @classmethod
     def create(cls, *args, **kwds):
@@ -883,11 +885,40 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         return cls(*args, **kwds)
 
     @abstractmethod
+    def allowed_outside(self, path):
+        """
+        This method is invoked for each library being linked to outside of the
+        build prefix (e.g. /usr/lib64/libc.so.6).  Subclasses should implement
+        and return True/False depending on whether that is an approved library
+        to live outside.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def make_relocatable(self, copy=False):
         # copy means break the hard link
         raise NotImplementedError()
 
 class LinuxDynamicLibrary(DynamicLibrary):
+    external = (
+        'libc.so',
+        'libdl.so',
+        'librt.so',
+        'libncurses.so',
+        'libpthread.so',
+        'ld-linux-x86-64.so',
+    )
+
+    x11 = (
+        'libX',
+        'libfontconfig',
+    )
+
+    def allowed_outside(self, name):
+        if name.startswith(self.x11):
+            return bool(self.build_root.allow_x11)
+        else:
+            return name.startswith(self.external)
 
     def ldd(self):
         return ldd(self.path)
@@ -953,16 +984,11 @@ class LinuxDynamicLibrary(DynamicLibrary):
         # the system package don't have the correct RPATH set so this logic is
         # (correctly) flagging libs like /usr/lib64/libm.so.6.  Just print a
         # warning for now.
-        try:
-            self.reload()
-        except RelocationErrors as e:
-            print("*** warning ***\n    %s" % e.message)
 
-        if self.missing:
-            if not self.build_root.forgiving:
-                assert not self.missing, (path, self.missing)
-            else:
-                print("still missing: %r" % self.missing)
+        # Update 2: plan is to handle these link errors elsewhere, so, just
+        # calling self.reload() is enough for now.  We'll assume downstream
+        # can take care of it.
+        self.reload()
 
 class DarwinDynamicLibrary(DynamicLibrary):
     def make_relocatable(self, copy=False):
@@ -979,6 +1005,8 @@ class BuildRoot(SlotObject):
     __slots__ = (
         'prefix',
         'forgiving',
+        'allow_x11',
+        'link_errors',
         'relative_start_index',
 
         'old_files',
@@ -1006,15 +1034,18 @@ class BuildRoot(SlotObject):
         'new_dlls',
     )
 
-    _repr_exclude_ = set(__slots__[1:-1])
+    _repr_exclude_ = set(__slots__[4:-1])
 
     def __init__(self, prefix=None, old_files=None, all_files=None,
-                       forgiving=False, is_build=True, prefix_paths=True):
+                       forgiving=False, is_build=True, prefix_paths=True,
+                       allow_x11=None):
         self.forgiving = forgiving
         if not prefix:
             prefix = build_prefix
         self.prefix = prefix
         self.relative_start_ix = len(prefix)+1
+        self.allow_x11 = allow_x11
+        self.link_errors = None
 
         if prefix_paths:
             join_prefix = lambda f: join(prefix, f)
@@ -1144,26 +1175,15 @@ class BuildRoot(SlotObject):
             dll_name in self.all_symlink_dlls
         )
 
-    def broken_libs(self, dlls=None):
-        if not dlls:
-            dlls = self.new_dlls
+    def verify(self):
+        link_errors = []
+        for dll in self.new_dlls:
+            if dll.link_errors:
+                link_errors += dll.link_errors
 
-        missing = []
-        for dll in dlls:
-            dll.reload()
-            for lib in dll.missing:
-                missing.append((dll.relative, lib))
-
-        return missing
-
-    def verify(self, dlls=None):
-        if not dlls:
-            dlls = self.new_dlls
-        print('Verifying libs are relocatable...')
-        missing = self.broken_libs()
-        for m in missing:
-            (relative_path, lib) = m
-            print('warning: broken lib: %s: dependency %s not found' % m)
+        self.link_errors = link_errors
+        if self.link_errors:
+            raise LinkErrors(self)
 
     def make_relocatable(self, dlls=None, copy=False):
         if not dlls:
@@ -1174,6 +1194,7 @@ class BuildRoot(SlotObject):
 
     def post_build(self):
         self.make_relocatable()
+        self.verify()
 
 
 #===============================================================================
