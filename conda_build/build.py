@@ -40,6 +40,18 @@ info_dir = join(prefix, 'info')
 
 broken_dir = join(config.croot, "broken")
 
+class LinkError(Exception):
+    pass
+
+class LinkErrors(Exception):
+    def __init__(self, build_root):
+        self.build_root = build_root
+        errors = build_root.link_errors
+        assert errors
+        self.errors = errors
+        self.message = 'Link errors:\n%s\n' % (
+            '\n'.join('    %s' % repr(e) for e in errors)
+        )
 
 def prefix_files():
     '''

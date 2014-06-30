@@ -225,6 +225,20 @@ def execute(args, parser):
                     post = None
                 try:
                     build.build(m, verbose=not args.quiet, post=post)
+                except build.LinkErrors as e:
+                    from conda_build import config
+                    if config.ignore_link_errors:
+                        print('Ignoring link errors:\n%s\n' % repr(e))
+                    else:
+                        handler = config.link_errors_handler
+                        if handler:
+                            h = handler(m, e, recipes)
+                            if not h.try_again:
+                                raise e
+                            else:
+                                continue
+                        else:
+                            raise e
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found matching:'):
