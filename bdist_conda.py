@@ -32,7 +32,7 @@ class bdist_conda(install):
     def run(self):
         with Locked(config.croot):
             d = defaultdict(dict)
-            # Insert metadata here
+            # Needs to be lowercase
             d['package']['name'] = self.distribution.metadata.name
             d['package']['version'] = self.distribution.metadata.version
             d['build']['number'] = 0 # TODO: Allow to set this
