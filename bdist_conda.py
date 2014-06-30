@@ -100,6 +100,8 @@ class bdist_conda(install):
                         # Debugging. TODO: Make this optional
                         d['test']['commands'] = pypi.make_entry_tests(entry_list)
 
+            if 'setuptools' in d['requirements']['run']:
+                d['build']['preserve_egg_dir'] = True
             # Debugging for now. We should make this an option.
             d['test']['imports'] = [self.distribution.metadata.name]
 
