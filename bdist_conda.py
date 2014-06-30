@@ -102,8 +102,11 @@ class bdist_conda(install):
 
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
+
             # Debugging for now. We should make this an option.
             d['test']['imports'] = [self.distribution.metadata.name]
+            if self.distribution.packages:
+                d['test']['imports'].extend(self.distribution.packages)
 
             d = dict(d)
             m = MetaData.fromdict(d)
