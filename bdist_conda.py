@@ -36,7 +36,7 @@ class CondaDistribution(Distribution):
     # attr: default
     conda_attrs = {
         # XXX: Should this rather be a command line option?
-        'conda_build_num': 0,
+        'conda_buildnum': 0,
         }
 
     def __init__(self, attrs=None):
@@ -78,7 +78,7 @@ class bdist_conda(install):
             # Needs to be lowercase
             d['package']['name'] = self.distribution.metadata.name
             d['package']['version'] = self.distribution.metadata.version
-            d['build']['number'] = self.distribution.metadata.conda_build_num
+            d['build']['number'] = self.distribution.metadata.conda_buildnum
 
             # MetaData does the auto stuff if the build string is None
             d['build']['string'] = None # Set automatically
