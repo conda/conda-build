@@ -27,6 +27,9 @@ class CondaDistribution(Distribution):
 
     This class is required if you want to pass any bdist_conda specific
     options to setup().  To use, set distclass=CondaDistribution in setup().
+
+    If you use setuptools, be sure to import setuptools before importing
+    distutils.commands.bdist_conda.
     """
     # Unfortunately, there's no way to warn the users that they need to use
     # distclass=CondaDistribution when they try to use a conda option to
