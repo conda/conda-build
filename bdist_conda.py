@@ -10,6 +10,7 @@ import configparser
 
 from distutils.command.install import install
 from distutils.errors import DistutilsOptionError, DistutilsGetoptError
+from distutils.dist import Distribution
 
 from conda.compat import StringIO, string_types
 from conda.lock import Locked
@@ -20,11 +21,40 @@ from conda_build import config, build, pypi
 
 # TODO: Add support for all the options that conda build has
 
+class CondaDistribution(Distribution):
+    """
+    Distribution subclass that supports bdist_conda options
+
+    This class is required if you want to pass any bdist_conda specific
+    options to setup().  To use, set distclass=CondaDistribution in setup().
+    """
+    # Unfortunately, there's no way to warn the users that they need to use
+    # distclass=CondaDistribution when they try to use a conda option to
+    # setup(). Distribution.__init__ will just print a warning when it sees an
+    # attr it doesn't recognize, and then it is discarded.
+
+    # attr: default
+    conda_attrs = {
+        # XXX: Should this rather be a command line option?
+        'conda_build_num': 0,
+        }
+
+    def __init__(self, attrs=None):
+        given_attrs = {}
+        # We need to remove the attrs so that Distribution.__init__ doesn't
+        # warn about them.
+        if attrs:
+            for attr in self.conda_attrs:
+                if attr in attrs:
+                    given_attrs[attr] = attrs.pop(attr)
+
+        super(CondaDistribution, self).__init__(attrs)
+
+        for attr in self.conda_attrs:
+            setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
+
 class bdist_conda(install):
     description = "create a conda package"
-
-    def initialize_options(self):
-        super(bdist_conda, self).initialize_options()
 
     def finalize_options(self):
         opt_dict = self.distribution.get_option_dict('install')
@@ -34,13 +64,22 @@ class bdist_conda(install):
         super(bdist_conda, self).finalize_options()
 
     def run(self):
+        # Make sure the metadata has the conda attributes, even if the
+        # distclass isn't CondaDistribution. We primarily do this to simplify
+        # the code below.
+
+        for attr in CondaDistribution.conda_attrs:
+            if not hasattr(self.distribution.metadata, attr):
+                setattr(self.distribution.metadata, attr,
+                    CondaDistribution.conda_attrs[attr])
+
         with Locked(config.croot):
             d = defaultdict(dict)
             # Needs to be lowercase
             d['package']['name'] = self.distribution.metadata.name
             d['package']['version'] = self.distribution.metadata.version
-            d['build']['number'] = 0 # TODO: Allow to set this
-            # TODO d['build']['entry_points'] = ...
+            d['build']['number'] = self.distribution.metadata.conda_build_num
+
             # MetaData does the auto stuff if the build string is None
             d['build']['string'] = None # Set automatically
 
