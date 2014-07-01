@@ -848,6 +848,7 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
             args = (self, name, path)
             cls = ExternalLinkage
             if name in build_root:
+                expected = build_root[name]
                 args = args + (expected,)
                 cls = RecipeCorrectButBuildScriptBroken
             link_errors.append(cls(*args))
