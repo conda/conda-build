@@ -142,7 +142,7 @@ class bdist_conda(install):
                 # tests_require is the one that is officially supported by
                 # setuptools.
                 d['test']['requires'] = [spec_from_line(i) for i in
-                    self.distribution.tests_require]
+                    self.distribution.tests_require or []]
 
             d['about']['home'] = self.distribution.metadata.url
             # Don't worry about classifiers. This isn't skeleton pypi. We
