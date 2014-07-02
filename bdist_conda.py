@@ -121,7 +121,15 @@ class bdist_conda(install):
             d['requirements']['run'] = d['requirements']['build'] = \
                 [spec_from_line(i) for i in
                     (self.distribution.metadata.requires or []) +
-                    (getattr(self.distribution, 'install_requires', []) or [])] + ['python']
+                    (getattr(self.distribution, 'install_requires', []) or
+                        [])] + ['python']
+            if hasattr(self.distribution, 'tests_require'):
+                # A lot of packages use extras_require['test'], but
+                # tests_require is the one that is officially supported by
+                # setuptools.
+                d['test']['requires'] = [spec_from_line(i) for i in
+                    self.distribution.tests_require]
+
             d['about']['home'] = self.distribution.metadata.url
             # Don't worry about classifiers. This isn't skeleton pypi. We
             # don't need to make this work with random stuff in the wild. If
