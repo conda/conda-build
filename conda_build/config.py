@@ -51,7 +51,7 @@ test_perl = _get_perl(test_prefix)
 
 bldpkgs_dir = join(croot, cc.subdir)
 
-use_new_rpath_logic = bool(cc.rc.get('use_new_rpath_logic', False))
+use_new_rpath_logic = bool(cc.rc.get('use_new_rpath_logic', True))
 verify_rpaths = bool(cc.rc.get('verify_rpaths', False))
 
 if verify_rpaths:
@@ -74,7 +74,7 @@ def resolve_link_error_handler():
     return getattr(module, callname)
 
 link_errors_handler = resolve_link_error_handler()
-ignore_link_errors = cc.rc.get('ignore_link_errors', True)
+ignore_link_errors = cc.rc.get('ignore_link_errors', False)
 
 if ignore_link_errors and link_errors_handler:
     print('~/.condarc note: `link_errors_handler` has no effect '
