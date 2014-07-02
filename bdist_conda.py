@@ -38,7 +38,6 @@ class CondaDistribution(Distribution):
 
     # attr: default
     conda_attrs = {
-        # XXX: Should this rather be a command line option?
         'conda_buildnum': 0,
         }
 
@@ -59,6 +58,10 @@ class CondaDistribution(Distribution):
 class bdist_conda(install):
     description = "create a conda package"
 
+    def initialize_options(self):
+        super(bdist_conda, self).initialize_options()
+        self.buildnum = None
+
     def finalize_options(self):
         opt_dict = self.distribution.get_option_dict('install')
         if self.prefix:
@@ -75,6 +78,9 @@ class bdist_conda(install):
             if not hasattr(self.distribution.metadata, attr):
                 setattr(self.distribution.metadata, attr,
                     CondaDistribution.conda_attrs[attr])
+
+        if self.buildnum is not None:
+            self.distribution.metadata.conda_buildnum = self.buildnum
 
         with Locked(config.croot):
             d = defaultdict(dict)
@@ -159,3 +165,15 @@ class bdist_conda(install):
             super(bdist_conda, self).run()
             build.build(m, post=True)
             build.test(m)
+
+# Distutils looks for user_options on the class (not instance).  It also
+# requires that it is an instance of list. So we do this here because we want
+# to keep the options from the superclass (and because I don't feel like
+# making a metaclass just to make this work).
+
+bdist_conda.user_options.extend([
+    ('buildnum=', None, '''The build number of
+    the conda package. Defaults to 0, or the conda_buildnum specified in the
+    setup() function. The command line flag overrides the option to
+    setup().'''),
+    ])
