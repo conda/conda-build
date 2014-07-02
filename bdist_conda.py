@@ -30,6 +30,22 @@ class CondaDistribution(Distribution):
 
     If you use setuptools, be sure to import setuptools before importing
     distutils.commands.bdist_conda.
+
+    Options that can be passed to setup() (must include
+    distclass=CondaDistribution):
+
+    - conda_buildnum: The build number. Defaults to 0. Can be overridden on
+      the command line with the --buildnum flag.
+    - conda_import_tests: Whether to automatically run import tests. The
+      default is True, which runs import tests for the all the modules in
+      "packages". Also allowed are False, which runs no tests, or a list of
+      module names to be tested on import.
+
+    Command line options:
+
+    --buildnum: Set the build number. Defaults to the conda_buildnum passed to
+      setup(), or 0. Overrides any conda_buildnum passed to setup().
+
     """
     # Unfortunately, there's no way to warn the users that they need to use
     # distclass=CondaDistribution when they try to use a conda option to
