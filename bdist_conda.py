@@ -61,6 +61,14 @@ class CondaDistribution(Distribution):
       setuptools or has a setuptools entry_points other than console_scripts
       and gui_scripts.
 
+    - conda_features: List of features for the package. See the features
+      section of the conda build documentation for more information about
+      features in conda.
+
+    - conda_track_features: List of features that this package should track
+      (enable when installed).  See the features section of the conda build
+      documentation for more information about features in conda.
+
     Command line options:
 
     --buildnum: Set the build number. Defaults to the conda_buildnum passed to
@@ -80,6 +88,8 @@ class CondaDistribution(Distribution):
         'conda_command_tests': True,
         'conda_binary_relocation': True,
         'conda_preserve_egg_dir': None,
+        'conda_features': None,
+        'conda_track_features': None,
         }
 
     def __init__(self, attrs=None):
@@ -136,6 +146,8 @@ class bdist_conda(install):
 
             d['build']['binary_relocation'] = self.distribution.metadata.conda_binary_relocation
             d['build']['preserve_egg_dir'] = self.distribution.metadata.conda_preserve_egg_dir
+            d['build']['features'] = self.distribution.metadata.conda_features
+            d['build']['track_features'] = self.distribution.metadata.conda_track_features
 
             # XXX: I'm not really sure if it is correct to combine requires
             # and install_requires
