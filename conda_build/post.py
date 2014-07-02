@@ -192,6 +192,8 @@ def fix_permissions(files):
 def post_build(files, binary_relocation=True):
     print('number of files:', len(files))
     fix_permissions(files)
+    if not binary_relocation:
+        print("Skipping binary relocation logic")
     for f in files:
         if sys.platform != 'win32':
             mk_relative(f, binary_relocation=binary_relocation)
