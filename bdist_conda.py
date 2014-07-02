@@ -18,6 +18,7 @@ import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import config, build, pypi
+from conda_build.main_build import handle_binstar_upload
 
 # TODO: Add support for all the options that conda build has
 
@@ -112,6 +113,7 @@ class bdist_conda(install):
     def initialize_options(self):
         super(bdist_conda, self).initialize_options()
         self.buildnum = None
+        self.binstar_upload = False
 
     def finalize_options(self):
         opt_dict = self.distribution.get_option_dict('install')
@@ -241,6 +243,18 @@ class bdist_conda(install):
             super(bdist_conda, self).run()
             build.build(m, post=True)
             build.test(m)
+            if self.binstar_upload:
+                class args:
+                    binstar_upload = self.binstar_upload
+                handle_binstar_upload(build.bldpkg_path(m), args)
+            else:
+                no_upload_message = """\
+# If you want to upload this package to binstar.org later, type:
+#
+# $ binstar upload %s
+""" % build.bldpkg_path(m)
+                print(no_upload_message)
+
 
 # Distutils looks for user_options on the class (not instance).  It also
 # requires that it is an instance of list. So we do this here because we want
@@ -252,4 +266,7 @@ bdist_conda.user_options.extend([
     the conda package. Defaults to 0, or the conda_buildnum specified in the
     setup() function. The command line flag overrides the option to
     setup().'''),
+    ('binstar-upload', None, """Upload the finished package to binstar"""),
     ])
+
+bdist_conda.boolean_options.extend(['binstar-upload'])
