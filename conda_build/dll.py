@@ -992,10 +992,16 @@ class LinuxDynamicLibrary(DynamicLibrary):
         self.reload()
 
 class DarwinDynamicLibrary(DynamicLibrary):
+    def allowed_outside(self, path):
+        raise NotImplementedError()
+
     def make_relocatable(self, copy=False):
         raise NotImplementedError()
 
 class Win32DynamicLibrary(DynamicLibrary):
+    def allowed_outside(self, path):
+        raise NotImplementedError()
+
     def make_relocatable(self, copy=False):
         raise NotImplementedError()
 
