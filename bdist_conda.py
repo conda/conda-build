@@ -37,6 +37,10 @@ class CondaDistribution(Distribution):
     - conda_buildnum: The build number. Defaults to 0. Can be overridden on
       the command line with the --buildnum flag.
 
+    - conda_buildstr: The build string. Default is generated automatically
+      from the Python version, NumPy version if relevant, and the build
+      number, like py34_0.
+
     - conda_import_tests: Whether to automatically run import tests. The
       default is True, which runs import tests for the all the modules in
       "packages". Also allowed are False, which runs no tests, or a list of
@@ -61,6 +65,7 @@ class CondaDistribution(Distribution):
     # attr: default
     conda_attrs = {
         'conda_buildnum': 0,
+        'conda_buildstr': None,
         'conda_import_tests': True,
         'conda_command_tests': True,
         }
@@ -103,6 +108,7 @@ class bdist_conda(install):
                 setattr(self.distribution.metadata, attr,
                     CondaDistribution.conda_attrs[attr])
 
+        # The command line takes precedence
         if self.buildnum is not None:
             self.distribution.metadata.conda_buildnum = self.buildnum
 
@@ -114,7 +120,7 @@ class bdist_conda(install):
             d['build']['number'] = self.distribution.metadata.conda_buildnum
 
             # MetaData does the auto stuff if the build string is None
-            d['build']['string'] = None # Set automatically
+            d['build']['string'] = self.distribution.metadata.conda_buildstr
 
             # XXX: I'm not really sure if it is correct to combine requires
             # and install_requires
