@@ -55,6 +55,7 @@ class CondaDistribution(Distribution):
     # attr: default
     conda_attrs = {
         'conda_buildnum': 0,
+        'conda_import_tests': True,
         }
 
     def __init__(self, attrs=None):
@@ -167,10 +168,14 @@ class bdist_conda(install):
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
 
-            # Debugging for now. We should make this an option.
-            d['test']['imports'] = [self.distribution.metadata.name]
-            if self.distribution.packages:
-                d['test']['imports'].extend(self.distribution.packages)
+
+            if self.distribution.metadata.conda_import_tests:
+                if self.distribution.metadata.conda_import_tests == True:
+                    d['test']['imports'] = [self.distribution.metadata.name]
+                    if self.distribution.packages:
+                        d['test']['imports'].extend(self.distribution.packages)
+                else:
+                    d['test']['imports'] = self.distribution.metadata.conda_import_tests
 
             d = dict(d)
             m = MetaData.fromdict(d)
