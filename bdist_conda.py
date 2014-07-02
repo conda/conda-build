@@ -36,10 +36,16 @@ class CondaDistribution(Distribution):
 
     - conda_buildnum: The build number. Defaults to 0. Can be overridden on
       the command line with the --buildnum flag.
+
     - conda_import_tests: Whether to automatically run import tests. The
       default is True, which runs import tests for the all the modules in
       "packages". Also allowed are False, which runs no tests, or a list of
       module names to be tested on import.
+
+    - conda_command_tests: Command line tests to run. Default is True, which
+      runs ``command --help`` for each ``command`` in the console_scripts and
+      gui_scripts entry_points. Also allowed are False, which doesn't run any
+      command tests, or a list of command tests to run.
 
     Command line options:
 
@@ -56,6 +62,7 @@ class CondaDistribution(Distribution):
     conda_attrs = {
         'conda_buildnum': 0,
         'conda_import_tests': True,
+        'conda_command_tests': True,
         }
 
     def __init__(self, attrs=None):
@@ -162,8 +169,8 @@ class bdist_conda(install):
                         d['build']['osx_is_app'] = True
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list
-                        # Debugging. TODO: Make this optional
-                        d['test']['commands'] = pypi.make_entry_tests(entry_list)
+                        if self.distribution.metadata.conda_command_tests == True:
+                            d['test']['commands'] = pypi.make_entry_tests(entry_list)
 
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
@@ -176,6 +183,11 @@ class bdist_conda(install):
                         d['test']['imports'].extend(self.distribution.packages)
                 else:
                     d['test']['imports'] = self.distribution.metadata.conda_import_tests
+
+            if (self.distribution.metadata.conda_command_tests and not
+                isinstance(self.distribution.metadata.conda_command_tests,
+                bool)):
+                d['test']['commands'] = self.distribution.metadata.conda_command_tests
 
             d = dict(d)
             m = MetaData.fromdict(d)
