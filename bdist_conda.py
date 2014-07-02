@@ -125,35 +125,37 @@ class bdist_conda(install):
         # distclass isn't CondaDistribution. We primarily do this to simplify
         # the code below.
 
+        metadata = metadata
+
         for attr in CondaDistribution.conda_attrs:
-            if not hasattr(self.distribution.metadata, attr):
-                setattr(self.distribution.metadata, attr,
+            if not hasattr(metadata, attr):
+                setattr(metadata, attr,
                     CondaDistribution.conda_attrs[attr])
 
         # The command line takes precedence
         if self.buildnum is not None:
-            self.distribution.metadata.conda_buildnum = self.buildnum
+            metadata.conda_buildnum = self.buildnum
 
         with Locked(config.croot):
             d = defaultdict(dict)
             # Needs to be lowercase
-            d['package']['name'] = self.distribution.metadata.name
-            d['package']['version'] = self.distribution.metadata.version
-            d['build']['number'] = self.distribution.metadata.conda_buildnum
+            d['package']['name'] = metadata.name
+            d['package']['version'] = metadata.version
+            d['build']['number'] = metadata.conda_buildnum
 
             # MetaData does the auto stuff if the build string is None
-            d['build']['string'] = self.distribution.metadata.conda_buildstr
+            d['build']['string'] = metadata.conda_buildstr
 
-            d['build']['binary_relocation'] = self.distribution.metadata.conda_binary_relocation
-            d['build']['preserve_egg_dir'] = self.distribution.metadata.conda_preserve_egg_dir
-            d['build']['features'] = self.distribution.metadata.conda_features
-            d['build']['track_features'] = self.distribution.metadata.conda_track_features
+            d['build']['binary_relocation'] = metadata.conda_binary_relocation
+            d['build']['preserve_egg_dir'] = metadata.conda_preserve_egg_dir
+            d['build']['features'] = metadata.conda_features
+            d['build']['track_features'] = metadata.conda_track_features
 
             # XXX: I'm not really sure if it is correct to combine requires
             # and install_requires
             d['requirements']['run'] = d['requirements']['build'] = \
                 [spec_from_line(i) for i in
-                    (self.distribution.metadata.requires or []) +
+                    (metadata.requires or []) +
                     (getattr(self.distribution, 'install_requires', []) or
                         [])] + ['python']
             if hasattr(self.distribution, 'tests_require'):
@@ -163,12 +165,12 @@ class bdist_conda(install):
                 d['test']['requires'] = [spec_from_line(i) for i in
                     self.distribution.tests_require or []]
 
-            d['about']['home'] = self.distribution.metadata.url
+            d['about']['home'] = metadata.url
             # Don't worry about classifiers. This isn't skeleton pypi. We
             # don't need to make this work with random stuff in the wild. If
             # someone writes their setup.py wrong and this doesn't work, it's
             # their fault.
-            d['about']['license'] = self.distribution.metadata.license
+            d['about']['license'] = metadata.license
             d['about']['summary'] = self.distribution.description
 
             # This is similar logic from conda skeleton pypi
@@ -176,8 +178,8 @@ class bdist_conda(install):
             if entry_points:
                 if isinstance(entry_points, string_types):
                     # makes sure it is left-shifted
-                    newstr = "\n".join(x.strip()
-                                       for x in entry_points.split('\n'))
+                    newstr = "\n".join(x.strip() for x in
+                        entry_points.split('\n'))
                     c = configparser.ConfigParser()
                     entry_points = {}
                     try:
@@ -210,25 +212,25 @@ class bdist_conda(install):
                         d['build']['osx_is_app'] = True
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list
-                        if self.distribution.metadata.conda_command_tests == True:
+                        if metadata.conda_command_tests == True:
                             d['test']['commands'] = pypi.make_entry_tests(entry_list)
 
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
 
 
-            if self.distribution.metadata.conda_import_tests:
-                if self.distribution.metadata.conda_import_tests == True:
-                    d['test']['imports'] = [self.distribution.metadata.name]
+            if metadata.conda_import_tests:
+                if metadata.conda_import_tests == True:
+                    d['test']['imports'] = [metadata.name]
                     if self.distribution.packages:
                         d['test']['imports'].extend(self.distribution.packages)
                 else:
-                    d['test']['imports'] = self.distribution.metadata.conda_import_tests
+                    d['test']['imports'] = metadata.conda_import_tests
 
-            if (self.distribution.metadata.conda_command_tests and not
-                isinstance(self.distribution.metadata.conda_command_tests,
+            if (metadata.conda_command_tests and not
+                isinstance(metadata.conda_command_tests,
                 bool)):
-                d['test']['commands'] = self.distribution.metadata.conda_command_tests
+                d['test']['commands'] = metadata.conda_command_tests
 
             d = dict(d)
             m = MetaData.fromdict(d)
