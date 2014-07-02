@@ -125,7 +125,7 @@ class bdist_conda(install):
         # distclass isn't CondaDistribution. We primarily do this to simplify
         # the code below.
 
-        metadata = metadata
+        metadata = self.distribution.metadata
 
         for attr in CondaDistribution.conda_attrs:
             if not hasattr(metadata, attr):
