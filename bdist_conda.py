@@ -51,6 +51,11 @@ class CondaDistribution(Distribution):
       gui_scripts entry_points. Also allowed are False, which doesn't run any
       command tests, or a list of command tests to run.
 
+    - conda_binary_relocation: Whether binary files should be made relocatable
+      (using install_name_tool on OS X or patchelf on Linux). The default is
+      True. See the "making # packages relocatable" section in the conda build
+      documentation for more information on this.
+
     Command line options:
 
     --buildnum: Set the build number. Defaults to the conda_buildnum passed to
@@ -68,6 +73,7 @@ class CondaDistribution(Distribution):
         'conda_buildstr': None,
         'conda_import_tests': True,
         'conda_command_tests': True,
+        'conda_binary_relocation': True,
         }
 
     def __init__(self, attrs=None):
@@ -121,6 +127,8 @@ class bdist_conda(install):
 
             # MetaData does the auto stuff if the build string is None
             d['build']['string'] = self.distribution.metadata.conda_buildstr
+
+            d['build']['binary_relocation'] = self.distribution.metadata.conda_binary_relocation
 
             # XXX: I'm not really sure if it is correct to combine requires
             # and install_requires
