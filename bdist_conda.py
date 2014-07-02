@@ -56,6 +56,11 @@ class CondaDistribution(Distribution):
       True. See the "making # packages relocatable" section in the conda build
       documentation for more information on this.
 
+    - conda_preserve_egg_dir: Whether to preserve the egg directory as
+      installed by setuptools.  The default is True if the package depends on
+      setuptools or has a setuptools entry_points other than console_scripts
+      and gui_scripts.
+
     Command line options:
 
     --buildnum: Set the build number. Defaults to the conda_buildnum passed to
@@ -74,6 +79,7 @@ class CondaDistribution(Distribution):
         'conda_import_tests': True,
         'conda_command_tests': True,
         'conda_binary_relocation': True,
+        'conda_preserve_egg_dir': None,
         }
 
     def __init__(self, attrs=None):
@@ -129,6 +135,7 @@ class bdist_conda(install):
             d['build']['string'] = self.distribution.metadata.conda_buildstr
 
             d['build']['binary_relocation'] = self.distribution.metadata.conda_binary_relocation
+            d['build']['preserve_egg_dir'] = self.distribution.metadata.conda_preserve_egg_dir
 
             # XXX: I'm not really sure if it is correct to combine requires
             # and install_requires
