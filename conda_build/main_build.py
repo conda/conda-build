@@ -235,9 +235,7 @@ def execute(args, parser):
                         handler = config.link_errors_handler
                         if handler:
                             h = handler(m, e, recipes)
-                            if not h.try_again:
-                                raise e
-                            else:
+                            if h.try_again:
                                 continue
                         else:
                             raise e
