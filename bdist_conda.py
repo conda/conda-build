@@ -106,7 +106,7 @@ class CondaDistribution(Distribution):
             # Distribution is an old-style class in Python 3
             Distribution.__init__(self, attrs)
         else:
-            super(CondaDistribution, self).__init__(attrs)
+            super().__init__(attrs)
 
         for attr in self.conda_attrs:
             setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
@@ -119,7 +119,7 @@ class bdist_conda(install):
             # Command is an old-style class in Python 2
             install.initialize_options(self)
         else:
-            super(bdist_conda, self).initialize_options()
+            super().initialize_options()
         self.buildnum = None
         self.binstar_upload = False
 
@@ -132,7 +132,7 @@ class bdist_conda(install):
             # Command is an old-style class in Python 2
             install.finalize_options(self)
         else:
-            super(bdist_conda, self).finalize_options()
+            super().finalize_options()
 
     def run(self):
         # Make sure the metadata has the conda attributes, even if the
@@ -256,7 +256,7 @@ class bdist_conda(install):
                 # Command is an old-style class in Python 2
                 install.run(self)
             else:
-                super(bdist_conda, self).run()
+                super().run()
             build.build(m, post=True)
             build.test(m)
             if self.binstar_upload:
