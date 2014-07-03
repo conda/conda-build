@@ -6,13 +6,13 @@ from __future__ import (print_function, division, unicode_literals,
     absolute_import)
 
 from collections import defaultdict
-import configparser
 
 from distutils.command.install import install
 from distutils.errors import DistutilsOptionError, DistutilsGetoptError
 from distutils.dist import Distribution
 
-from conda.compat import StringIO, string_types
+from conda.compat import (StringIO, string_types, configparser, PY3, text_type
+as unicode)
 from conda.lock import Locked
 import conda.config
 from conda.cli.common import spec_from_line
@@ -102,7 +102,11 @@ class CondaDistribution(Distribution):
                 if attr in attrs:
                     given_attrs[attr] = attrs.pop(attr)
 
-        super(CondaDistribution, self).__init__(attrs)
+        if not PY3:
+            # Distribution is an old-style class in Python 3
+            Distribution.__init__(self, attrs)
+        else:
+            super(CondaDistribution, self).__init__(attrs)
 
         for attr in self.conda_attrs:
             setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
@@ -111,7 +115,11 @@ class bdist_conda(install):
     description = "create a conda package"
 
     def initialize_options(self):
-        super(bdist_conda, self).initialize_options()
+        if not PY3:
+            # Command is an old-style class in Python 2
+            install.initialize_options(self)
+        else:
+            super(bdist_conda, self).initialize_options()
         self.buildnum = None
         self.binstar_upload = False
 
@@ -120,7 +128,11 @@ class bdist_conda(install):
         if self.prefix:
             raise DistutilsOptionError("--prefix is not allowed")
         opt_dict['prefix'] = ("bdist_conda", config.build_prefix)
-        super(bdist_conda, self).finalize_options()
+        if not PY3:
+            # Command is an old-style class in Python 2
+            install.finalize_options(self)
+        else:
+            super(bdist_conda, self).finalize_options()
 
     def run(self):
         # Make sure the metadata has the conda attributes, even if the
@@ -215,7 +227,7 @@ class bdist_conda(install):
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list
                         if metadata.conda_command_tests == True:
-                            d['test']['commands'] = pypi.make_entry_tests(entry_list)
+                            d['test']['commands'] = list(map(unicode, pypi.make_entry_tests(entry_list)))
 
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
@@ -232,7 +244,7 @@ class bdist_conda(install):
             if (metadata.conda_command_tests and not
                 isinstance(metadata.conda_command_tests,
                 bool)):
-                d['test']['commands'] = metadata.conda_command_tests
+                d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
             d = dict(d)
             m = MetaData.fromdict(d)
@@ -240,7 +252,11 @@ class bdist_conda(install):
             m.check_fields()
             build.build(m, post=False)
             # Do the install
-            super(bdist_conda, self).run()
+            if not PY3:
+                # Command is an old-style class in Python 2
+                install.run(self)
+            else:
+                super(bdist_conda, self).run()
             build.build(m, post=True)
             build.test(m)
             if self.binstar_upload:
@@ -261,12 +277,14 @@ class bdist_conda(install):
 # to keep the options from the superclass (and because I don't feel like
 # making a metaclass just to make this work).
 
+# We have to call str() on the options because our import of
+# __future__.unicode_literals breaks distutils.fancy_getopt in Python 2.
 bdist_conda.user_options.extend([
-    ('buildnum=', None, '''The build number of
+    (str('buildnum='), None, str('''The build number of
     the conda package. Defaults to 0, or the conda_buildnum specified in the
     setup() function. The command line flag overrides the option to
-    setup().'''),
-    ('binstar-upload', None, """Upload the finished package to binstar"""),
+    setup().''')),
+    (str('binstar-upload'), None, ("""Upload the finished package to binstar""")),
     ])
 
-bdist_conda.boolean_options.extend(['binstar-upload'])
+bdist_conda.boolean_options.extend([str('binstar-upload')])
