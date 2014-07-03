@@ -2,6 +2,7 @@
 -------------------
   * add bdist_conda
   * fix features and track_features
+  * detect files with the build prefix automatically on Windows
 
 2014-07-01   1.4.0:
 -------------------
