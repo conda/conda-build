@@ -307,6 +307,10 @@ class MetaData(object):
             arch = config.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
+        if self.get_value('build/features'):
+            d['features'] = ' '.join(self.get_value('build/features'))
+        if self.get_value('build/track_features'):
+            d['track_features'] = ' '.join(self.get_value('build/track_features'))
         if self.get_value('build/noarch'):
             d['platform'] = d['arch'] = None
         if self.is_app():

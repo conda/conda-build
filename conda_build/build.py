@@ -381,7 +381,7 @@ def test(m, verbose=True):
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.PERL_VER]
     # add packages listed in test/requires
-    for spec in m.get_value('test/requires'):
+    for spec in m.get_value('test/requires', []):
         specs.append(spec)
 
     create_env(config.test_prefix, specs, verbose=verbose)

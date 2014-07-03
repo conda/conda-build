@@ -406,7 +406,7 @@ def main(args, parser):
                 setuptools_run = False
 
                 # Look at the entry_points and construct console_script and
-                #  gui_scripts entry_points for conda and
+                #  gui_scripts entry_points for conda
                 entry_points = pkginfo['entry_points']
                 if entry_points:
                     if isinstance(entry_points, str):
