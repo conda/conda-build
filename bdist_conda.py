@@ -54,7 +54,7 @@ class CondaDistribution(Distribution):
 
     - conda_binary_relocation: Whether binary files should be made relocatable
       (using install_name_tool on OS X or patchelf on Linux). The default is
-      True. See the "making # packages relocatable" section in the conda build
+      True. See the "making packages relocatable" section in the conda build
       documentation for more information on this.
 
     - conda_preserve_egg_dir: Whether to preserve the egg directory as
