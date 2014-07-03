@@ -905,6 +905,7 @@ class LinuxDynamicLibrary(DynamicLibrary):
         'libc.so',
         'libdl.so',
         'librt.so',
+        'libexpat.so',
         'libncurses.so',
         'libpthread.so',
         'ld-linux-x86-64.so',
