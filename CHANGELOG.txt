@@ -1,3 +1,8 @@
+...
+-------------------
+  * add bdist_conda
+  * fix features and track_features
+
 2014-07-01   1.4.0:
 -------------------
   * fix skeleton pypi behind a proxy
