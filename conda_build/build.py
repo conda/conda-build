@@ -94,7 +94,7 @@ def have_prefix_files(files):
             # OSX does not allow hard-linking symbolic links, so we cannot
             # skip symbolic links (as we can on Linux)
             continue
-        if is_obj(path):
+        if sys.platform != 'win32' and is_obj(path):
             continue
         # Open file as binary, since it might have any crazy encoding
         with open(path, 'rb') as fi:
