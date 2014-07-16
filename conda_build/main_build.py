@@ -16,6 +16,7 @@ from os.path import exists
 
 import conda.config as config
 from conda.compat import PY3
+from conda.cli.main import args_func
 
 from conda_build import __version__
 
@@ -90,7 +91,7 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def handle_binstar_upload(path, args):

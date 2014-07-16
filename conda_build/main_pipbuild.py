@@ -14,6 +14,7 @@ import yaml
 
 #from conda.cli import common
 import conda.config as config
+from conda.cli.main import args_func
 from conda_build import __version__
 from conda.install import rm_rf
 import conda_build.build as build
@@ -73,7 +74,7 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def handle_binstar_upload(path):

@@ -18,6 +18,7 @@ from os.path import abspath, expanduser, split, join, exists
 from os import makedirs
 
 from conda.compat import PY3
+from conda.cli.main import args_func
 
 from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
                                  has_nonpy_entry_points)
@@ -101,7 +102,7 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 path_mapping = [# (unix, windows)
