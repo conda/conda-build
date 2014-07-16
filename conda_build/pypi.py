@@ -474,6 +474,7 @@ def main(args, parser):
 
                     if args.recursive:
                         for dep in deps:
+                            dep = dep.split()[0]
                             if not exists(join(output_dir, dep)):
                                 args.packages.append(dep)
 
