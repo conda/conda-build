@@ -235,9 +235,8 @@ class bdist_conda(install):
 
             if metadata.conda_import_tests:
                 if metadata.conda_import_tests is True:
-                    d['test']['imports'] = [metadata.name]
                     if self.distribution.packages:
-                        d['test']['imports'].extend(self.distribution.packages)
+                        d['test']['imports'] = self.distribution.packages
                 else:
                     d['test']['imports'] = metadata.conda_import_tests
 
