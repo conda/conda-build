@@ -90,17 +90,17 @@ def main():
     )
     p.add_argument(
         '--python',
-        action="store",
+        action="append",
         help="Set the python version used by conda build",
     )
     p.add_argument(
         '--perl',
-        action="store",
+        action="append",
         help="Set the python version used by conda build",
     )
     p.add_argument(
         '--numpy',
-        action="store",
+        action="append",
         help="Set the python version used by conda build",
     )
     p.set_defaults(func=execute)
@@ -186,21 +186,31 @@ def execute(args, parser):
     check_external()
 
     if args.python:
-        if args.python == 'all':
+        if args.python == ['all']:
             for py in [26, 27, 33, 34]:
-                args.python = str(py)
+                args.python = [str(py)]
                 execute(args, parser)
             return
-        conda_build.config.CONDA_PY = int(args.python.replace('.', ''))
+        if len(args.python) > 1:
+            for py in args.python[:]:
+                args.python = [py]
+                execute(args, parser)
+        else:
+            conda_build.config.CONDA_PY = int(args.python[0].replace('.', ''))
     if args.perl:
         conda_build.config.CONDA_PERL = args.perl
     if args.numpy:
-        if args.numpy == 'all':
+        if args.numpy == ['all']:
             for npy in [16, 17, 18]:
-                args.numpy = str(npy)
+                args.numpy = [str(npy)]
                 execute(args, parser)
             return
-        conda_build.config.CONDA_NPY = int(args.numpy.replace('.', ''))
+        if len(args.numpy) > 1:
+            for npy in args.numpy[:]:
+                args.numpy = [npy]
+                execute(args, parser)
+        else:
+            conda_build.config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
 
     with Locked(croot):
         recipes = deque(args.recipe)
