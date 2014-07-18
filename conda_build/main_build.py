@@ -186,10 +186,20 @@ def execute(args, parser):
     check_external()
 
     if args.python:
+        if args.python == 'all':
+            for py in [26, 27, 33, 34]:
+                args.python = str(py)
+                execute(args, parser)
+            return
         conda_build.config.CONDA_PY = int(args.python.replace('.', ''))
     if args.perl:
         conda_build.config.CONDA_PERL = args.perl
     if args.numpy:
+        if args.numpy == 'all':
+            for npy in [16, 17, 18]:
+                args.numpy = str(npy)
+                execute(args, parser)
+            return
         conda_build.config.CONDA_NPY = int(args.numpy.replace('.', ''))
 
     with Locked(croot):
