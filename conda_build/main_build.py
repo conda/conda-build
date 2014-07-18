@@ -88,6 +88,21 @@ def main():
         action="store_true",
         help="do not display progress bar",
     )
+    p.add_argument(
+        '--python',
+        action="store",
+        help="Set the python version used by conda build",
+    )
+    p.add_argument(
+        '--perl',
+        action="store",
+        help="Set the python version used by conda build",
+    )
+    p.add_argument(
+        '--numpy',
+        action="store",
+        help="Set the python version used by conda build",
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -164,10 +179,18 @@ def execute(args, parser):
     from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
+    import conda_build.config
     from conda_build.config import croot
     from conda_build.metadata import MetaData
 
     check_external()
+
+    if args.python:
+        conda_build.config.CONDA_PY = int(args.python.replace('.', ''))
+    if args.perl:
+        conda_build.config.CONDA_PERL = args.perl
+    if args.numpy:
+        conda_build.config.CONDA_NPY = int(args.numpy.replace('.', ''))
 
     with Locked(croot):
         recipes = deque(args.recipe)
