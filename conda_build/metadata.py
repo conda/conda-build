@@ -26,7 +26,7 @@ def construct_yaml_str(self, node):
 Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
-from conda_build.config import CONDA_PY, CONDA_NPY, CONDA_PERL
+import conda_build.config
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -36,9 +36,9 @@ if sys.version_info < (3, 0):
 def ns_cfg():
     # Remember to update the docs of any of this changes
     plat = config.subdir
-    py = CONDA_PY
-    np = CONDA_NPY
-    pl = CONDA_PERL
+    py = conda_build.config.CONDA_PY
+    np = conda_build.config.CONDA_NPY
+    pl = conda_build.config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
     return dict(
@@ -236,8 +236,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', CONDA_PY), ('numpy', CONDA_NPY),
-                         ('perl', CONDA_PERL)]
+        name_ver_list = [('python', conda_build.config.CONDA_PY), ('numpy', conda_build.config.CONDA_NPY),
+                         ('perl', conda_build.config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)

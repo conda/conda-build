@@ -375,10 +375,10 @@ def test(m, verbose=True):
 
     if py_files:
         # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.PY_VER]
+        specs += ['python %s*' % environ.get_py_ver()]
     if pl_files:
         # as the tests are run by perl, we need to specify it
-        specs += ['perl %s*' % environ.PERL_VER]
+        specs += ['perl %s*' % environ.get_perl_ver()]
     # add packages listed in test/requires
     for spec in m.get_value('test/requires', []):
         specs.append(spec)
