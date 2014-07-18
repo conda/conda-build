@@ -226,7 +226,7 @@ class bdist_conda(install):
                         d['build']['osx_is_app'] = True
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list
-                        if metadata.conda_command_tests == True:
+                        if metadata.conda_command_tests is True:
                             d['test']['commands'] = list(map(unicode, pypi.make_entry_tests(entry_list)))
 
             if 'setuptools' in d['requirements']['run']:
@@ -234,10 +234,9 @@ class bdist_conda(install):
 
 
             if metadata.conda_import_tests:
-                if metadata.conda_import_tests == True:
-                    d['test']['imports'] = [metadata.name]
+                if metadata.conda_import_tests is True:
                     if self.distribution.packages:
-                        d['test']['imports'].extend(self.distribution.packages)
+                        d['test']['imports'] = self.distribution.packages
                 else:
                     d['test']['imports'] = metadata.conda_import_tests
 
