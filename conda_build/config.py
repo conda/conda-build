@@ -14,8 +14,9 @@ import conda.config as cc
 # These are mutated by things like conda build --python. Don't import them
 # directly. Rather, access conda_build.config.CONDA_PY, etc.
 CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
-CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.', '')))
-CONDA_NPY = int(os.getenv('CONDA_NPY', 18))
+CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
+    '')).replace('.', ''))
+CONDA_NPY = int(os.getenv('CONDA_NPY', '18').replace('.', ''))
 
 
 PY3K = int(bool(CONDA_PY >= 30))
