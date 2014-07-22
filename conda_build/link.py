@@ -101,7 +101,6 @@ class LinkErrorHandler(object):
         # them in actionable bins.  Time to go through and action them!
         msgs = []
         if self.new_library_recipe_needed:
-            iset_trace()
             msgs.append(
                 'Error: external linkage detected to packages with no known '
                 'conda equivalents:\n    %s\n' % (
