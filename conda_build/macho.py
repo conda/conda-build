@@ -56,8 +56,16 @@ def install_name_change(path, cb_func):
     for old, new in changes:
         args = ['install_name_tool', '-change', old, new, path]
         print(' '.join(args))
-        subprocess.check_call(args)
-
+        p = subprocess.Popen(args, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if "Mach-O dynamic shared library stub file" in stderr:
+            print("Skipping Mach-O dynamic shared library stub file %s" % path)
+            pass
+        else:
+            print(stderr, file=sys.stderr)
+        if p.returncode:
+            raise RuntimeError("install_name_tool failed with exit status %d"
+                % p.returncode)
 
 if __name__ == '__main__':
     import sys
