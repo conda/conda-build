@@ -93,39 +93,8 @@ class LinkErrorHandler(object):
 
             dependencies[depname] = depvers
 
-        from ronda.model import Packages
         for (name, path) in self.extern.items():
-            package = Packages.providing(name)
-            if not package:
-                # If there's no known package providing this library, we're
-                # going to need to create a new conda package for it.
-                self.new_library_recipe_needed.append(path)
-                continue
-
-            package_name = package.name
-            if not package_name in dependencies:
-                # This should be the most desirable situation: the wrong
-                # package is being linked to simply because the dependency
-                # is missing from the recipe.
-                self.recipe_needs_build_dependency_added.append(package_name)
-                continue
-
-
-            # If the dependency *is* already there... then the build flags are
-            # probably broken (LDFLAGS probably doesn't have -L$PREFIX/lib).
-            # Assuming we implement support for automatically setting various
-            # compiler flags before kicking off the build... this one will be
-            # harder to fix automatically (if it happens even with correct
-            # LDFLAGS set).  Also, libraries that trigger this path seem like
-            # they would have already triggered the self.broken path earlier;
-            # in fact, let's set a breakpoint if we hit this.  I'm curious to
-            # see what will.
-            iset_trace()
-            print('name: %s, path: %s, package: %s' % (
-                name,
-                path,
-                package,
-            ))
+            self.new_library_recipe_needed.append(path)
 
     def process_action_items(self):
         # Ok, we've categorized all the link errors by this stage and placed
