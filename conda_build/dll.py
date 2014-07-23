@@ -1108,20 +1108,22 @@ class BuildRoot(SlotObject):
             self.new_non_dll_paths = self.all_non_dll_paths
 
 
-        self.all_dlls = defaultdict(list)
-        for path in self.all_dll_paths:
-            name = basename(path)
-            self.all_dlls[name].append(path)
+        def create_path_list_lookup(path_list):
+            path_list_lookup = defaultdict(list)
+            for path in path_list:
+                name = basename(path)
+                path_list_lookup[name].append(path)
+            return path_list_lookup
+
+        self.all_dlls = create_path_list_lookup(self.all_dll_paths)
 
         self.all_symlink_dll_paths = [
             p for p in self.all_paths
                 if islink(p) and basename(readlink(p)) in self.all_dlls
         ]
 
-        self.all_symlink_dlls = defaultdict(list)
-        for path in self.all_symlink_dll_paths:
-            name = basename(path)
-            self.all_symlink_dlls[name].append(path)
+        self.all_symlink_dlls = create_path_list_lookup(
+                self.all_symlink_dll_paths)
 
         # Invert both dicts such that the keys become the length of the lists;
         # in a perfect world, there would only be one key, [1], which means
