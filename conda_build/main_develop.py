@@ -12,6 +12,8 @@ import sys
 from os.path import join, isdir, abspath, expanduser
 
 from conda.cli.common import add_parser_prefix, get_prefix
+from conda.cli.main import args_func
+
 from conda.install import linked
 
 def main():
@@ -33,7 +35,7 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def execute(args, parser):

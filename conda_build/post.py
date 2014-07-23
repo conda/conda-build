@@ -61,7 +61,7 @@ def fix_shebang(f, osx_is_app=False):
 
 def write_pth(egg_path):
     fn = basename(egg_path)
-    with open(join(environ.SP_DIR,
+    with open(join(environ.get_sp_dir(),
                    '%s.pth' % (fn.split('-')[0])), 'w', encoding='utf-8') as fo:
         fo.write('./%s\n' % fn)
 
@@ -71,7 +71,7 @@ def remove_easy_install_pth(preserve_egg_dir=False):
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
-    sp_dir = environ.SP_DIR
+    sp_dir = environ.get_sp_dir()
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir:
@@ -110,7 +110,7 @@ def rm_py_along_so():
 
 
 def compile_missing_pyc():
-    sp_dir = environ.SP_DIR
+    sp_dir = environ.get_sp_dir()
 
     need_compile = False
     for root, dirs, files in os.walk(sp_dir):
@@ -192,6 +192,8 @@ def fix_permissions(files):
 def post_build(files, binary_relocation=True):
     print('number of files:', len(files))
     fix_permissions(files)
+    if not binary_relocation:
+        print("Skipping binary relocation logic")
     for f in files:
         if sys.platform != 'win32':
             mk_relative(f, binary_relocation=binary_relocation)

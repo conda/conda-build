@@ -21,12 +21,15 @@ def create_files(dir_path, m):
     Return False, if the package has no tests (for any configuration), and
     True if it has.
     """
-    for fn in m.get_value('test/files'):
+    has_files = False
+    for fn in m.get_value('test/files', []):
+        has_files = True
         path = join(m.path, fn)
         if isdir(path):
             shutil.copytree(path, join(dir_path, fn))
         else:
             shutil.copy(path, dir_path)
+    return has_files
 
 
 def create_shell_files(dir_path, m):
@@ -41,7 +44,7 @@ def create_shell_files(dir_path, m):
 
     with open(join(dir_path, name), 'a', encoding='utf-8') as f:
         f.write('\n\n')
-        for cmd in m.get_value('test/commands'):
+        for cmd in m.get_value('test/commands', []):
             f.write(cmd)
             f.write('\n')
             has_tests = True
@@ -58,7 +61,7 @@ def create_py_files(dir_path, m):
             fo.write(fi.read() + '\n')
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
-        for name in m.get_value('test/imports'):
+        for name in m.get_value('test/imports', []):
             fo.write('print("import: %r")\n' % name)
             fo.write('import %s\n' % name)
             fo.write('\n')

@@ -7,7 +7,8 @@ from os.path import join
 
 import conda.config as cc
 
-from conda_build.config import (CONDA_PERL, CONDA_PY, PY3K, build_prefix,
+import conda_build.config
+from conda_build.config import (PY3K, build_prefix,
                                 _get_python)
 from conda_build import source
 
@@ -17,14 +18,29 @@ if sys.version_info < (3, 0):
     str = unicode
 
 
-PERL_VER =  str(CONDA_PERL)
-PY_VER = '.'.join(str(CONDA_PY))
-STDLIB_DIR = join(build_prefix, 'Lib' if sys.platform == 'win32' else
-                                'lib/python%s' % PY_VER)
-SP_DIR = join(STDLIB_DIR, 'site-packages')
+def get_perl_ver():
+    return str(conda_build.config.CONDA_PERL)
 
+def get_py_ver():
+    return '.'.join(str(conda_build.config.CONDA_PY))
+
+def get_stdlib_dir():
+    return join(build_prefix, 'Lib' if sys.platform == 'win32' else
+                                'lib/python%s' % get_py_ver())
+
+def get_sp_dir():
+    return join(STDLIB_DIR, 'site-packages')
+
+# The UPPERCASE names are here for backwards compatibility. They will not
+# change correctly if conda_build.config.CONDA_PY changes. Use get_py_ver(),
+# etc. instead.
+PERL_VER = get_perl_ver()
+PY_VER = get_py_ver()
+STDLIB_DIR = get_stdlib_dir()
+SP_DIR = get_sp_dir()
 
 def get_dict(m=None, prefix=build_prefix):
+
     python = _get_python(prefix)
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)

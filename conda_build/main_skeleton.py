@@ -10,6 +10,7 @@ from __future__ import (absolute_import, division, print_function,
 import argparse
 
 from conda.config import default_python
+from conda.cli.main import args_func
 
 def main():
     p = argparse.ArgumentParser(
@@ -121,7 +122,7 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def execute(args, parser):

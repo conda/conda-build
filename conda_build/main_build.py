@@ -16,6 +16,7 @@ from os.path import exists
 
 import conda.config as config
 from conda.compat import PY3
+from conda.cli.main import args_func
 
 from conda_build import __version__
 
@@ -87,10 +88,25 @@ def main():
         action="store_true",
         help="do not display progress bar",
     )
+    p.add_argument(
+        '--python',
+        action="append",
+        help="Set the python version used by conda build",
+    )
+    p.add_argument(
+        '--perl',
+        action="append",
+        help="Set the python version used by conda build",
+    )
+    p.add_argument(
+        '--numpy',
+        action="append",
+        help="Set the python version used by conda build",
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def handle_binstar_upload(path, args):
@@ -166,12 +182,40 @@ def execute(args, parser):
     from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
+    import conda_build.config
     from conda_build.config import croot
     from conda_build.metadata import MetaData
 
     from conda_build.dll import LinkErrors
 
     check_external()
+
+    if args.python:
+        if args.python == ['all']:
+            for py in [26, 27, 33, 34]:
+                args.python = [str(py)]
+                execute(args, parser)
+            return
+        if len(args.python) > 1:
+            for py in args.python[:]:
+                args.python = [py]
+                execute(args, parser)
+        else:
+            conda_build.config.CONDA_PY = int(args.python[0].replace('.', ''))
+    if args.perl:
+        conda_build.config.CONDA_PERL = args.perl
+    if args.numpy:
+        if args.numpy == ['all']:
+            for npy in [16, 17, 18]:
+                args.numpy = [str(npy)]
+                execute(args, parser)
+            return
+        if len(args.numpy) > 1:
+            for npy in args.numpy[:]:
+                args.numpy = [npy]
+                execute(args, parser)
+        else:
+            conda_build.config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
 
     with Locked(croot):
         recipes = deque(args.recipe)

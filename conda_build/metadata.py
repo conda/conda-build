@@ -26,7 +26,7 @@ def construct_yaml_str(self, node):
 Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
-from conda_build.config import CONDA_PY, CONDA_NPY, CONDA_PERL
+import conda_build.config
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -36,9 +36,9 @@ if sys.version_info < (3, 0):
 def ns_cfg():
     # Remember to update the docs of any of this changes
     plat = config.subdir
-    py = CONDA_PY
-    np = CONDA_NPY
-    pl = CONDA_PERL
+    py = conda_build.config.CONDA_PY
+    np = conda_build.config.CONDA_NPY
+    pl = conda_build.config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
     return dict(
@@ -96,6 +96,9 @@ def parse(data):
     # ensure the result is a dict
     if res is None:
         res = {}
+    for field in FIELDS:
+        if field in res and not isinstance(res[field], dict):
+            raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
                   'build/entry_points',
@@ -233,8 +236,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', CONDA_PY), ('numpy', CONDA_NPY),
-                         ('perl', CONDA_PERL)]
+        name_ver_list = [('python', conda_build.config.CONDA_PY), ('numpy', conda_build.config.CONDA_NPY),
+                         ('perl', conda_build.config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -266,6 +269,9 @@ class MetaData(object):
                 if ms.name == name:
                     v = ms.spec.split()[1]
                     if name != 'perl':
+                        if len(v.replace('*', '').replace('.', '')) != 2:
+                            raise RuntimeError("python and numpy versions should only be major.minor, like 2.7. Got %s." % v.replace('*', ''))
+
                         res.append(s + v[0] + v[2])
                     else:
                         res.append(s + v.rstrip('*'))
@@ -307,6 +313,10 @@ class MetaData(object):
             arch = config.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
+        if self.get_value('build/features'):
+            d['features'] = ' '.join(self.get_value('build/features'))
+        if self.get_value('build/track_features'):
+            d['track_features'] = ' '.join(self.get_value('build/track_features'))
         if self.get_value('build/noarch'):
             d['platform'] = d['arch'] = None
         if self.is_app():

@@ -105,7 +105,7 @@ def have_prefix_files(files):
             # OSX does not allow hard-linking symbolic links, so we cannot
             # skip symbolic links (as we can on Linux)
             continue
-        if is_obj(path):
+        if sys.platform != 'win32' and is_obj(path):
             continue
         # Open file as binary, since it might have any crazy encoding
         with open(path, 'rb') as fi:
@@ -196,8 +196,7 @@ def create_info_files(m, files, include_recipe=True):
         print("against a larger prefix. Note that future versions of")
         print("conda-build may do this automatically.")
 
-    if sys.platform != 'win32':
-        files_with_prefix += list(have_prefix_files(files))
+    files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
     if files_with_prefix:
         with open(join(info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
@@ -407,12 +406,12 @@ def test(m, verbose=True):
 
     if py_files:
         # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.PY_VER]
+        specs += ['python %s*' % environ.get_py_ver()]
     if pl_files:
         # as the tests are run by perl, we need to specify it
-        specs += ['perl %s*' % environ.PERL_VER]
+        specs += ['perl %s*' % environ.get_perl_ver()]
     # add packages listed in test/requires
-    for spec in m.get_value('test/requires'):
+    for spec in m.get_value('test/requires', []):
         specs.append(spec)
 
     create_env(config.test_prefix, specs, verbose=verbose)

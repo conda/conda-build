@@ -406,7 +406,7 @@ def main(args, parser):
                 setuptools_run = False
 
                 # Look at the entry_points and construct console_script and
-                #  gui_scripts entry_points for conda and
+                #  gui_scripts entry_points for conda
                 entry_points = pkginfo['entry_points']
                 if entry_points:
                     if isinstance(entry_points, str):
@@ -474,6 +474,7 @@ def main(args, parser):
 
                     if args.recursive:
                         for dep in deps:
+                            dep = dep.split()[0]
                             if not exists(join(output_dir, dep)):
                                 args.packages.append(dep)
 

@@ -1,3 +1,10 @@
+2014-07-03   1.5.0:
+-------------------
+  * add bdist_conda
+  * fix features and track_features
+  * detect files with the build prefix automatically on Windows
+
+
 2014-07-01   1.4.0:
 -------------------
   * fix skeleton pypi behind a proxy
