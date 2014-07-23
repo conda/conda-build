@@ -1083,11 +1083,6 @@ class BuildRoot(SlotObject):
 
         if is_build:
             self.new_files = self.all_files - self.old_files
-        else:
-            self.new_files = self.all_files
-            self.new_paths = self.all_paths
-
-        if is_build:
             self.old_paths = [ join_prefix(f) for f in self.old_files ]
             self.old_dll_paths = set(p for p in self.old_paths if is_obj(p))
             self.new_paths = [ join_prefix(f) for f in self.new_files ]
@@ -1101,6 +1096,8 @@ class BuildRoot(SlotObject):
             self.new_non_dll_paths = set(self.new_paths) - self.new_dll_paths
             self.all_non_dll_paths = set(self.all_paths) - self.all_dll_paths
         else:
+            self.new_files = self.all_files
+            self.new_paths = self.all_paths
             self.old_paths = []
             self.old_dll_paths = set()
             self.all_dll_paths = set(p for p in self.all_paths if is_obj(p))
