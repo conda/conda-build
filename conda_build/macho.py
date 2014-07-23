@@ -58,6 +58,7 @@ def install_name_change(path, cb_func):
         print(' '.join(args))
         p = subprocess.Popen(args, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
             pass
