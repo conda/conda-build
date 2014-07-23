@@ -61,7 +61,7 @@ def install_name_change(path, cb_func):
         stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
-            pass
+            continue
         else:
             print(stderr, file=sys.stderr)
         if p.returncode:
