@@ -87,10 +87,11 @@ def get_dict(m=None, prefix=build_prefix):
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
 
-        print("checking %s" % os.path.join(d["SRC_DIR"], ".git"))
-        if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-            print(get_git_build_info(d["SRC_DIR"]))
-            d.update(**get_git_build_info(d["SRC_DIR"]))
+    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
+        d.update(**get_git_build_info(d['SRC_DIR']))
+        if 'GIT_BUILD_HASH' in d:
+            d['GIT_BUILD_STR'] = '{}_{}'.format(d['GIT_BUILD_NUMBER'],
+                                                d['GIT_BUILD_HASH'])
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
