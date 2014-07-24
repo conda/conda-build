@@ -276,7 +276,8 @@ def execute(args, parser):
                     if config.ignore_link_errors:
                         print('Ignoring link errors:\n%s\n' % repr(e))
                     else:
-                        handler = config.link_errors_handler
+                        from conda_build.link import handle_link_errors
+                        handler = handle_link_errors
                         if handler:
                             h = handler(m, e, recipes)
                             if h.try_again:
