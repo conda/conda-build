@@ -41,7 +41,7 @@ def get_git_build_info(src_dir):
     output = process.communicate()[0].strip()
     parts = output.rsplit('-', 2)
     parts_length = len(parts)
-    if parts_length is 3:
+    if parts_length == 3:
         d.update(dict(zip(keys, parts)))
 
     if key_name('NUMBER') in d and key_name('HASH') in d:
