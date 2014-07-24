@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 import subprocess
 from io import open
 from os.path import islink, isfile
-
+import sys
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
@@ -58,9 +58,10 @@ def install_name_change(path, cb_func):
         print(' '.join(args))
         p = subprocess.Popen(args, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
-            pass
+            continue
         else:
             print(stderr, file=sys.stderr)
         if p.returncode:
