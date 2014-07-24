@@ -282,11 +282,10 @@ def build(m, get_src=True, verbose=True, post=None):
 
         rm_rf(info_dir)
         files1 = prefix_files()
-        if post == False:
-            # Save this for later
-            with open(join(source.WORK_DIR, 'prefix_files.txt'), 'w') as f:
-                f.write(u'\n'.join(sorted(list(files1))))
-                f.write(u'\n')
+        # Save this for later
+        with open(join(source.WORK_DIR, 'prefix_files.txt'), 'w') as f:
+            f.write(u'\n'.join(sorted(list(files1))))
+            f.write(u'\n')
 
         if sys.platform == 'win32':
             import conda_build.windows as windows
