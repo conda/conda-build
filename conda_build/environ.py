@@ -49,7 +49,6 @@ def get_git_build_info(src_dir):
     if key_name('NUMBER') in d and key_name('HASH') in d:
         d[key_name('STR')] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])
-    print(d)
     return d
 
 # The UPPERCASE names are here for backwards compatibility. They will not
