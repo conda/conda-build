@@ -37,7 +37,7 @@ def get_git_build_info(src_dir):
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                               stdout=subprocess.PIPE)
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = process.communicate()[0].strip()
     parts = output.rsplit('-', 2)
     parts_length = len(parts)
