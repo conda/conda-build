@@ -34,8 +34,8 @@ def get_sp_dir():
 
 def get_git_build_info(src_dir):
     d = {}
-    key_name = lambda a: "GIT_BUILD_{}".format(a)
-    keys = [key_name("VERSION"), key_name("NUMBER"), key_name("HASH")]
+    key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
+    keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE)
     output = process.communicate()[0].strip()
@@ -45,7 +45,7 @@ def get_git_build_info(src_dir):
         d.update(dict(zip(keys, parts)))
 
     if key_name('NUMBER') in d and key_name('HASH') in d:
-        d[key_name('STR')] = '{}_{}'.format(d[key_name('NUMBER')],
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])
     return d
 
