@@ -2,6 +2,7 @@
 # Imports
 #=============================================================================
 import sys
+from __future__ import print_function
 
 #=============================================================================
 # Helpers
@@ -82,7 +83,13 @@ class LinkErrorHandler(object):
                 # this breakpoint (I want to poke around and see examples of
                 # when this gets hit before writing version-spec handling
                 # code).
-                import pdb; pdb.set_trace()
+                print(
+                        "Found dependency with version spec appended\n"
+                        "Entering debugger for closer inspection\n"
+                        )
+                import pdb
+                dbg = pdb.Pdb()
+                dbg.set_trace()
                 depname = dependency[:ix]
                 depvers = dependency[ix+1:]
             else:
