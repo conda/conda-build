@@ -1,3 +1,12 @@
+...................
+-------------------
+  * don't fail on MachO stub files on OS X
+  * add some git describe related environment variables when the source is a
+    git repository
+  * add --python and --numpy flags to conda build, which do the same thing as
+    setting CONDA_PY and CONDA_NPY
+  * allow a . in CONDA_PY and CONDA_NPY
+
 2014-07-03   1.5.0:
 -------------------
   * add bdist_conda
