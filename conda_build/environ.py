@@ -32,22 +32,19 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(STDLIB_DIR, 'site-packages')
 
-def get_git_build_number(src_dir):
-    log_count = "git log --oneline HEAD 2> /dev/null | wc -l | sed -e 's/ *//' || 1"
-    describe = "git describe --tags HEAD 2> /dev/null"
-    fake_describe = "echo \"initial-$({log_count})-hash\"".format(
-        log_count=log_count
-    )
-    extract_number = "awk -F '-' '{print $2}'"
-    command = "$(({describe} || {fake_describe}) | {extract_number})".format(
-        describe=describe,
-        fake_describe=fake_describe,
-        extract_number=extract_number
-    )
-
-    process = subprocess.Popen("echo {}".format(command),
-                               stdout=subprocess.PIPE, shell=True)
-    return process.communicate()[0].strip()
+def get_git_build_info(src_dir):
+    key_name = lambda a: "GIT_BUILD_{}".format(a)
+    keys = [key_name("VERSION"), key_name("NUMBER"), key_name("HASH")]
+    process = subprocess.Popen(["git", "describe", "--tags", "HEAD"],
+                               stdout=subprocess.PIPE)
+    output = process.communicate()[0].strip()
+    parts = output.rsplit('-', 2)
+    parts_length = len(parts)
+    if parts_length is 3:
+        return dict(zip(keys, parts))
+    elif parts_length is 1:
+        return dict(zip(keys, [parts[0], "0", ""]))
+    return {}
 
 # The UPPERCASE names are here for backwards compatibility. They will not
 # change correctly if conda_build.config.CONDA_PY changes. Use get_py_ver(),
@@ -90,8 +87,10 @@ def get_dict(m=None, prefix=build_prefix):
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
 
+        print("checking %s" % os.path.join(d["SRC_DIR"], ".git"))
         if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-            d['GIT_BUILD_NUMBER'] = get_git_build_number(d['SRC_DIR'])
+            print(get_git_build_info(d["SRC_DIR"]))
+            d.update(**get_git_build_info(d["SRC_DIR"]))
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
