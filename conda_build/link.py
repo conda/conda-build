@@ -83,15 +83,19 @@ class LinkErrorHandler(object):
                 # this breakpoint (I want to poke around and see examples of
                 # when this gets hit before writing version-spec handling
                 # code).
+                depname = dependency[:ix]
+                depvers = dependency[ix+1:]
                 print(
-                        "Found dependency with version spec appended\n"
-                        "Entering debugger for closer inspection\n"
-                        )
+                    "Found dependency with version spec appended:\n"
+                    "    %s -> %s\n"
+                    "Entering debugger for closer inspection.\n" % (
+                        depname,
+                        depvers,
+                    )
+                )
                 import pdb
                 dbg = pdb.Pdb()
                 dbg.set_trace()
-                depname = dependency[:ix]
-                depvers = dependency[ix+1:]
             else:
                 depname = dependency
                 depvers = None
