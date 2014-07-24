@@ -9,7 +9,7 @@ import stat
 from glob import glob
 from os.path import basename, join, splitext, isdir, isfile, exists
 from io import open
-from subprocess import call, check_call
+from subprocess import call, check_call, Popen, PIPE
 
 from conda_build.config import build_prefix, build_python, PY3K
 from conda_build import external
@@ -154,7 +154,17 @@ def mk_relative_osx(path):
         if names:
             args = ['install_name_tool', '-id', basename(names[0]), path]
             print(' '.join(args))
-            check_call(args)
+            p = Popen(args, stderr=PIPE)
+            stdout, stderr = p.communicate()
+            stderr = stderr.decode('utf-8')
+            if "Mach-O dynamic shared library stub file" in stderr:
+                print("Skipping Mach-O dynamic shared library stub file %s" % path)
+                return
+            else:
+                print(stderr, file=sys.stderr)
+                if p.returncode:
+                    raise RuntimeError("install_name_tool failed with exit status %d"
+                % p.returncode)
 
     for name in macho.otool(path):
         assert not name.startswith(build_prefix), path
