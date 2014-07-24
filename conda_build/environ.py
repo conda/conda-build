@@ -33,7 +33,7 @@ def get_sp_dir():
     return join(STDLIB_DIR, 'site-packages')
 
 def get_git_build_info(src_dir):
-    d = {'GIT_BUILD': '1'}
+    d = {}
     key_name = lambda a: "GIT_BUILD_{}".format(a)
     keys = [key_name("VERSION"), key_name("NUMBER"), key_name("HASH")]
     process = subprocess.Popen(["git", "describe", "--tags", "HEAD"],
