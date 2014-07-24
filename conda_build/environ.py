@@ -33,6 +33,7 @@ def get_sp_dir():
     return join(STDLIB_DIR, 'site-packages')
 
 def get_git_build_info(src_dir):
+    d = {'GIT_BUILD': True}
     key_name = lambda a: "GIT_BUILD_{}".format(a)
     keys = [key_name("VERSION"), key_name("NUMBER"), key_name("HASH")]
     process = subprocess.Popen(["git", "describe", "--tags", "HEAD"],
@@ -41,10 +42,15 @@ def get_git_build_info(src_dir):
     parts = output.rsplit('-', 2)
     parts_length = len(parts)
     if parts_length is 3:
-        return dict(zip(keys, parts))
+        d.update(dict(zip(keys, parts)))
     elif parts_length is 1:
-        return dict(zip(keys, [parts[0], "0", ""]))
-    return {}
+        d.update(dict(zip(keys, [parts[0], "0", ""])))
+
+    if key_name('NUMBER') in d and key_name('HASH') in d:
+        d[key_name('STR')] = '{}_{}'.format(d[key_name('NUMBER')],
+                                            d[key_name('HASH')])
+    print(d)
+    return d
 
 # The UPPERCASE names are here for backwards compatibility. They will not
 # change correctly if conda_build.config.CONDA_PY changes. Use get_py_ver(),
@@ -89,9 +95,6 @@ def get_dict(m=None, prefix=build_prefix):
 
     if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
         d.update(**get_git_build_info(d['SRC_DIR']))
-        if 'GIT_BUILD_HASH' in d:
-            d['GIT_BUILD_STR'] = '{}_{}'.format(d['GIT_BUILD_NUMBER'],
-                                                d['GIT_BUILD_HASH'])
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
