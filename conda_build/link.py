@@ -106,16 +106,6 @@ class LinkErrorHandler(object):
                 )
             )
 
-        deps = self.recipe_needs_build_dependency_added
-        if deps:
-            msgs.append(
-                'Error: the recipe %s needs to have one or more runtime '
-                'dependencies added to it:\n    %s\n' % (
-                    self.metadata.meta_path,
-                    '\n'.join('    - %s' % d for d in deps),
-                )
-            )
-
         assert msgs
         sys.stderr.write('\n'.join(msgs) + '\n')
         sys.exit(1)
