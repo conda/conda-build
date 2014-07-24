@@ -6,6 +6,7 @@
   * add --python and --numpy flags to conda build, which do the same thing as
     setting CONDA_PY and CONDA_NPY
   * allow a . in CONDA_PY and CONDA_NPY
+  * correctly catch RuntimeError
 
 2014-07-03   1.5.0:
 -------------------
