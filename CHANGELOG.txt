@@ -7,6 +7,9 @@
     setting CONDA_PY and CONDA_NPY
   * allow a . in CONDA_PY and CONDA_NPY
   * correctly catch RuntimeError
+  * fix an issue building some packages on Windows
+  * make skeleton pypi --recursive work with versioned dependencies
+  * some additional type checking for meta.yaml
 
 2014-07-03   1.5.0:
 -------------------
