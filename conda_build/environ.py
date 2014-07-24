@@ -36,15 +36,13 @@ def get_git_build_info(src_dir):
     d = {}
     key_name = lambda a: "GIT_BUILD_{}".format(a)
     keys = [key_name("VERSION"), key_name("NUMBER"), key_name("HASH")]
-    process = subprocess.Popen(["git", "describe", "--tags", "HEAD"],
+    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE)
     output = process.communicate()[0].strip()
     parts = output.rsplit('-', 2)
     parts_length = len(parts)
     if parts_length is 3:
         d.update(dict(zip(keys, parts)))
-    elif parts_length is 1:
-        d.update(dict(zip(keys, [parts[0], "0", ""])))
 
     if key_name('NUMBER') in d and key_name('HASH') in d:
         d[key_name('STR')] = '{}_{}'.format(d[key_name('NUMBER')],
