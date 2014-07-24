@@ -77,6 +77,9 @@ def get_dict(m=None, prefix=build_prefix):
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
 
+    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
+        d.update(**get_git_build_info(d['SRC_DIR']))
+
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
                      join(prefix) + ';' +
@@ -91,9 +94,6 @@ def get_dict(m=None, prefix=build_prefix):
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
-
-    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-        d.update(**get_git_build_info(d['SRC_DIR']))
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
