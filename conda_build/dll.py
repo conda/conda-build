@@ -963,11 +963,84 @@ class LinuxDynamicLibrary(DynamicLibrary):
         # Check that RPATH was set properly.
         cur_rpath = self.current_rpath
         if cur_rpath != new_rpath:
-            print("warning: RPATH didn't take!?\n%r" % [
-                path,
-                cur_rpath,
-                new_rpath,
-            ])
+            # Ok, we've seen some oddities on CentOS 5 where the RPATH just
+            # doesn't seem to take.  That is, the patchelf.set_rpath() call
+            # above completes just fine, but self.current_rpath (which calls
+            # patchelf.read_rpath()) doesn't reflect the new RPATH.  However,
+            # it appears the RPATH *is* actually set correctly -- at least, we
+            # think it is.  (Which would suggest a kernel race bug in the
+            # filesystem/cache/memory-management parts, one would think.)
+            #
+            # That's a bit wishy-washy.  It'd be nice to conclusively know
+            # that the RPATH *does* get set correctly, it just sometimes
+            # doesn't get reported immediately as being set correctly.  So,
+            # the plan is... let's do a little loop that tries re-checking the
+            # RPATH a few more times.  If it's still not set at the end, break
+            # into a debugger, which, if nothing else, is a convenient way to
+            # pause execution so that we could start a separate shell and call
+            # patchelf/readelf manually.  If *they* report the RPATH not being
+            # set properly, that's just as interesting/useful as the opposite.
+
+            # Update: with the code below in place, it appears that the theory
+            # above is correct: RPATH is being set just fine, there's just a
+            # race issue with regards to a subsequent patchelf.read_rpath()
+            # invocation returning the old RPATH instead of the new one.
+            #
+            # The uname output from the Linux VM I tested this on:
+            #   Linux centos5x64.home.trent.me 2.6.18-371.el5 #1 SMP \
+            #   Tue Oct 1 08:35:08 EDT 2013 x86_64 x86_64 x86_64 GNU/Linux
+            #
+            # I would see this output every 5-6 times I'd run the post logic
+            # against a pre-built r:
+            #
+            # patchelf: file: /home/r/miniconda/envs/_build/lib64/R/modules/lapack.so
+            #     old RPATH: /home/r/miniconda/envs/_build/lib
+            #     new RPATH: $ORIGIN/../../../lib
+            # [attempt: 1]: warning: RPATH didn't take, retrying after 1s...
+            #     path: /home/r/miniconda/envs/_build/lib64/R/modules/lapack.so
+            #     cur_rpath:
+            #     new_rpath: $ORIGIN/../../../lib
+            # [attempt: 1]: success: RPATH change detected
+            #
+            # Every time it happened, it was against a different file, and it
+            # only took one attempt for the new RPATH to be run.  Definitely a
+            # race issue IMO.
+            #
+            # Let's leave all this commentary and re-try code in place, as
+            # it'll be a useful reference for people down the track that run
+            # into this problem.
+
+            def print_rpath_attempt():
+                print(
+                    "%s: warning: RPATH didn't take, retrying after %ds...\n"
+                    "    path: %s\n"
+                    "    cur_rpath: %s\n"
+                    "    new_rpath: %s" % (
+                        prefix,
+                        nap,
+                        path,
+                        cur_rpath,
+                        new_rpath,
+                    )
+                )
+
+            import time
+            for (attempt, nap) in enumerate((1, 2, 4, 8), 1):
+                prefix = "[attempt: %d]" % attempt
+                print_rpath_attempt()
+                time.sleep(nap)
+                cur_rpath = self.current_rpath
+                if cur_rpath == new_rpath:
+                    print("%s: success: RPATH change detected" % prefix)
+                    correct = True
+                    break
+
+            if not correct:
+                print("Failed to set RPATH.  See what patchelf/readelf says.")
+                import pdb
+                dbg = pdb.Pdb()
+                dbg.set_trace()
+
             if not self.build_root.forgiving:
                 assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
 
