@@ -14,7 +14,7 @@ import yaml
 
 #from conda.cli import common
 import conda.config as config
-from conda.cli.main import args_func
+from conda_build.main_build import args_func
 from conda_build import __version__
 from conda.install import rm_rf
 import conda_build.build as build

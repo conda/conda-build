@@ -12,7 +12,7 @@ import sys
 from os.path import join, isdir, abspath, expanduser
 
 from conda.cli.common import add_parser_prefix, get_prefix
-from conda.cli.main import args_func
+from conda_build.main_build import args_func
 
 from conda.install import linked
 

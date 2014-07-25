@@ -10,7 +10,7 @@ from __future__ import (absolute_import, division, print_function,
 import argparse
 
 from conda.config import default_python
-from conda.cli.main import args_func
+from conda_build.main_build import args_func
 
 def main():
     p = argparse.ArgumentParser(
