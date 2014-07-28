@@ -984,7 +984,8 @@ class LinuxDynamicLibrary(DynamicLibrary):
             # Update: with the code below in place, it appears that the theory
             # above is correct: RPATH is being set just fine, there's just a
             # race issue with regards to a subsequent patchelf.read_rpath()
-            # invocation returning the old RPATH instead of the new one.
+            # invocation returning the old RPATH instead of the new one (or in
+            # some cases, just returns an empty RPATH).
             #
             # The uname output from the Linux VM I tested this on:
             #   Linux centos5x64.home.trent.me 2.6.18-371.el5 #1 SMP \
