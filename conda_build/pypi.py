@@ -547,7 +547,7 @@ def run_setuppy(src_dir, temp_dir, args):
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
     create_env(build_prefix, ['python %s*' % args.python_version, 'pyyaml',
-        'setuptools'], clear_cache=False)
+        'setuptools', 'numpy'], clear_cache=False)
     stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % args.python_version)
 
