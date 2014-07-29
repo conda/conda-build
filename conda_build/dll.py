@@ -497,7 +497,7 @@ class SlotObject(object):
     def __init__(self, *args, **kwds):
         seen = set()
         slots = list(self.__slots__)
-        args = [ a for a in args ]
+        args = list(args)
         while args:
             (key, value) = (slots.pop(0), args.pop(0))
             seen.add(key)
