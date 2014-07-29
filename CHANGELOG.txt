@@ -1,4 +1,4 @@
-...................
+2014-07-29   1.6.0:
 -------------------
   * don't fail on MachO stub files on OS X
   * add some git describe related environment variables when the source is a
