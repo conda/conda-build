@@ -39,6 +39,7 @@ def get_git_build_info(src_dir):
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output = process.communicate()[0].strip()
+    output = output.decode('utf-8')
     parts = output.rsplit('-', 2)
     parts_length = len(parts)
     if parts_length == 3:
