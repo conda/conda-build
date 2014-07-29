@@ -715,18 +715,7 @@ class LibraryDependencies(SlotObject):
         if not prefix:
             prefix = build_prefix
 
-        inside = set()
-        outside = set()
-        missing = set()
-
-        for (depname, target) in deps:
-            if not target:
-                missing.add(depname)
-            elif target.startswith(prefix):
-                inside.add(depname)
-            else:
-                outside.add(target)
-
+        inside, outside, missing = categorize_dependencies(prefix)
         self.inside = inside
         self.outside = outside
         self.missing = missing
