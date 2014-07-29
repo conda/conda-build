@@ -61,6 +61,11 @@ bldpkgs_dir = join(croot, cc.subdir)
 
 use_new_rpath_logic = bool(cc.rc.get('use_new_rpath_logic', True))
 
+def import_name_from_module(modulename, callname):
+    import importlib
+    module = importlib.import_module(modulename)
+    return getattr(module, callname)
+
 def resolve_link_error_handler():
     # Can be any callable qualified Python name (class or function).
     n = cc.rc.get('link_errors_handler', 'conda_build.link.LinkErrorHandler')
@@ -68,10 +73,9 @@ def resolve_link_error_handler():
     ix = n.rfind('.')
     callname = n[ix+1:]
     modulename = n[:ix]
+    link_errors_handler = import_name_from_module(modulename, callname)
+    return link_errors_handler
 
-    import importlib
-    module = importlib.import_module(modulename)
-    return getattr(module, callname)
 
 link_errors_handler = resolve_link_error_handler()
 ignore_link_errors = cc.rc.get('ignore_link_errors', False)
