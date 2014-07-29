@@ -830,18 +830,22 @@ class ExternalLinkage(BrokenLinkage):
     @staticmethod
     def summary_message():
         if is_linux:
-            return (
+            msg = (
                 "Broken linkage errors are usually caused by conda build "
                 "incorrectly setting the RPATH during post-build processing "
                 "steps.  This will typically only happen during development "
                 "of conda build.  If you're running into these errors trying "
                 "to build conda packages, there is something in your "
                 "environment adversely affecting our RPATH logic. "
-                "See http://conda.pydata.org/docs/link-errors.html#broken "
-                "for more information."
             )
         else:
             raise NotImplementedError()
+
+        return (
+            "%s\n\nSee http://conda.pydata.org/docs/link-errors.html#broken "
+            "for more information." % msg
+        )
+
 
 
 class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
