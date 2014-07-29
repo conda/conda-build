@@ -16,7 +16,6 @@ from os.path import exists
 
 import conda.config as config
 from conda.compat import PY3
-from conda.cli.main import args_func
 
 from conda_build import __version__
 
@@ -320,6 +319,25 @@ def execute(args, parser):
             if binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
 
+
+def args_func(args, p):
+    try:
+        args.func(args, p)
+    except RuntimeError as e:
+        sys.exit("Error: %s" % e)
+    except Exception as e:
+        if e.__class__.__name__ not in ('ScannerError', 'ParserError'):
+            message = """\
+An unexpected error has occurred, please consider sending the
+following traceback to the conda GitHub issue tracker at:
+
+    https://github.com/conda/conda-build/issues
+
+Include the output of the command 'conda info' in your report.
+
+"""
+            print(message, file=sys.stderr)
+        raise  # as if we did not catch it
 
 if __name__ == '__main__':
     main()

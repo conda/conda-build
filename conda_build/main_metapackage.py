@@ -12,7 +12,7 @@ import argparse
 from collections import defaultdict
 
 import conda.config
-from conda.cli.main import args_func
+from conda_build.main_build import args_func
 
 from conda_build.metadata import MetaData
 from conda_build.build import build, bldpkg_path

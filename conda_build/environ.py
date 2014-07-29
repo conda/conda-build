@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 import os
 import sys
 from os.path import join
+import subprocess
 
 import conda.config as cc
 
@@ -31,6 +32,23 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(STDLIB_DIR, 'site-packages')
 
+def get_git_build_info(src_dir):
+    d = {}
+    key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
+    keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
+    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = process.communicate()[0].strip()
+    parts = output.rsplit('-', 2)
+    parts_length = len(parts)
+    if parts_length == 3:
+        d.update(dict(zip(keys, parts)))
+
+    if key_name('NUMBER') in d and key_name('HASH') in d:
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
+                                            d[key_name('HASH')])
+    return d
+
 # The UPPERCASE names are here for backwards compatibility. They will not
 # change correctly if conda_build.config.CONDA_PY changes. Use get_py_ver(),
 # etc. instead.
@@ -56,6 +74,9 @@ def get_dict(m=None, prefix=build_prefix):
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
+
+    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
+        d.update(**get_git_build_info(d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
