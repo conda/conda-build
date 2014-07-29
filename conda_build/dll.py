@@ -125,25 +125,6 @@ def get_files(base):
                 res.add(path[len(base) + 1:])
     return res
 
-def get_base_dir(path):
-    p = path
-    pc = p.count('/')
-    assert p and p[0] == '/' and pc >= 1
-    if p == '/' or pc == 1 or (pc == 2 and p[-1] == '/'):
-        return '/'
-
-    assert pc >= 2
-    return dirname(p[:-1] if p[-1] == '/' else p) + '/'
-
-def reduce_path(p):
-    assert p and p[0] == '/'
-    r = list()
-    end = p.rfind('/')
-    while end != -1:
-        r.append(p[:end+1])
-        end = p.rfind('/', 0, end)
-    return r
-
 def join_path(*args):
     return abspath(normpath(join(*args)))
 
