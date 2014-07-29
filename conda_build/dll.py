@@ -829,6 +829,10 @@ class ExternalLinkage(BrokenLinkage):
 
     @staticmethod
     def summary_message():
+        # FIXME: remove this method?
+        #        if this summary_message is same as BrokenLinkage, we can just
+        #        fall back to BrokenLinkage's method.  If not, we should change
+        #        the string below.  Perhaps the appended html link as well
         if is_linux:
             msg = (
                 "Broken linkage errors are usually caused by conda build "
