@@ -41,10 +41,16 @@ info_dir = join(prefix, 'info')
 broken_dir = join(config.croot, "broken")
 
 class LinkError(Exception):
-    pass
+    # fatal, when set to True, indicates that this link error can't be ignored
+    # by the --ignore-link-errors command line argument or ignore_link_errors
+    # in ~/.condarc.  General rule of thumb: use `fatal = True` if there is no
+    # possible way this package will work, e.g. there is a library being
+    # reported as 'not found' by ldd.
+    fatal = True
 
 class LinkErrors(Exception):
     def __init__(self, build_root):
+        self.allow_ignore_link_errors = None
         self.build_root = build_root
         errors = build_root.link_errors
         assert errors

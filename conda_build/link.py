@@ -4,23 +4,37 @@
 from __future__ import print_function
 import sys
 
-#=============================================================================
-# Helpers
-#=============================================================================
+from abc import (
+    ABCMeta,
+    abstractmethod,
+)
 
-def handle_link_errors(metadata, exc, recipes):
-    return LinkErrorHandler(metadata, exc, recipes)
+from textwrap import dedent
+
+#=============================================================================
+# Globals
+#=============================================================================
+final_message = dedent("""
+    See http://conda.pydata.org/docs/link-errors.html for more info.
+
+    Tip: run `conda build --ignore-link-errors` to ignore these errors and
+    build the package anyway.  Note that the resulting package will not work
+    if you install it on a different system *unless* that system also has all
+    of the libraries listed above installed.
+""")
 
 #=============================================================================
 # Classes
 #=============================================================================
-class LinkErrorHandler(object):
+class BaseLinkErrorHandler(object):
     try_again = False
+    allow_ignore_errors = True
 
-    def __init__(self, metadata, exception, recipes):
+    def __init__(self, metadata, exception, recipes, ignore_link_errors=False):
         self.metadata = metadata
         self.exception = exception
         self.recipes = recipes
+        self.ignore_link_errors = ignore_link_errors
 
         self.errors = exception.errors
 
@@ -31,8 +45,33 @@ class LinkErrorHandler(object):
         self.new_library_recipe_needed = []
         self.recipe_needs_build_dependency_added = []
 
+    def handle(self):
         self.categorize_errors()
-        self.process_action_items()
+        self.process_errors()
+        self.finalize()
+
+        if not self.ignore_link_errors:
+            sys.exit(1)
+
+    def finalize(self):
+        """
+        Called after all errors have been processed.  Intended to be used to
+        print a final message informing the user of possible options for
+        resolving link issues.
+        """
+        sys.stderr.write(final_message + '\n')
+
+    @abstractmethod
+    def categorize_errors(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def process_errors(self):
+        raise NotImplementedError()
+
+
+class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
+    try_again = False
 
     def categorize_errors(self):
         # We can't import conda_build.dll in the global scope because the
@@ -42,6 +81,7 @@ class LinkErrorHandler(object):
         from conda_build.dll import (
             BrokenLinkage,
             ExternalLinkage,
+            RecipeCorrectButBuildScriptBroken,
         )
 
         for error in self.errors:
@@ -61,65 +101,46 @@ class LinkErrorHandler(object):
         for name in self.extern.keys():
             assert name not in self.broken, (name, self.broken)
 
-        for name in self.broken:
-            assert name not in self.extern, (name, self.extern)
-
         # Broken library links (e.g. ldd returned 'not found') need to be
         # fixed via proper compilation flags, usually.  Either that, or the
-        # RPATH logic is busted.
+        # RPATH logic is busted.  Either way, broken libraries trump all other
+        # link errors -- the resulting package absolutely will not load
+        # correctly.
+        if self.broken:
+            for name in self.broken:
+                assert name not in self.extern, (name, self.extern)
 
-        # (Should we be using metadata.info_index()['depends'] for this, or
-        #  metadata.ms_spec()?  What's the difference?)
-        dependencies = {}
-        dependency_names = self.metadata.info_index()['depends']
+            # This message could be improved with some more information about
+            # what was being li
+            msg = (
+                'Fatal error: broken linkage detected:\n    %s\n'
 
-        # How external links are handled depends on whether or not there's a
-        # known package that provides that file and whether or not there's
-        # already a dependency for that package in the recipe.
-        for dependency in dependency_names:
-            ix = dependency.find(' ')
-            if ix != -1:
-                # I presume dependencies with version specs appended will hit
-                # this breakpoint (I want to poke around and see examples of
-                # when this gets hit before writing version-spec handling
-                # code).
-                depname = dependency[:ix]
-                depvers = dependency[ix+1:]
-                print(
-                    "Found dependency with version spec appended:\n"
-                    "    %s -> %s\n"
-                    "Entering debugger for closer inspection.\n" % (
-                        depname,
-                        depvers,
-                    )
-                )
-                import pdb
-                dbg = pdb.Pdb()
-                dbg.set_trace()
-            else:
-                depname = dependency
-                depvers = None
-
-            dependencies[depname] = depvers
+            )
 
         for (name, path) in self.extern.items():
             self.new_library_recipe_needed.append(path)
 
-    def process_action_items(self):
-        # Ok, we've categorized all the link errors by this stage and placed
-        # them in actionable bins.  Time to go through and action them!
+    def process_errors(self):
+        # Post-processing of errors after they've been categorized.
         msgs = []
         if self.new_library_recipe_needed:
             msgs.append(
-                'Error: external linkage detected to packages with no known '
-                'conda equivalents:\n    %s\n' % (
+                'Error: external linkage detected to libraries living outside '
+                'the build root:\n    %s\n' % (
                     '\n   '.join(self.new_library_recipe_needed)
                 )
             )
 
+        if self.broken:
+            msgs.append(
+                'Error: broken linkage detected for the following
+
+            )
+        for name in self.broken
+
         assert msgs
         sys.stderr.write('\n'.join(msgs) + '\n')
-        sys.exit(1)
+        self.error_messages = msgs
 
 
 # vim:set ts=8 sw=4 sts=4 tw=78 et:

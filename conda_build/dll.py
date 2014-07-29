@@ -755,15 +755,94 @@ class BrokenLinkage(SlotObject, LinkError):
         'library',
         'dependent_library_name',
     )
+
+    prefix = "Broken dynamic library linkage detected:"
+
     def __init__(self, *args):
         SlotObject.__init__(self, *args)
-        self.message = repr(self)
+        # xxx: make __repr__() use this instead?  Main use case is for each
+        # type of error (i.e. BrokenLinkage), print out the prefix, then all
+        # affected files, then the summary.  This will probably be done at the
+        # LinkErrors class level maybe?  Dunno', hadn't thought that far
+        # through.
+        self.full_message = '\n'.join(
+            self.prefix,
+            self.description,
+            self.summary_message()
+        )
+
+    @property
+    def description(self):
+        return "    %s can't find link target '%s'" % (
+            self.library,
+            self.dependent_library_name,
+        )
+
+    # xxx todo:
+    def __repr__(self):
+        return (
+            "Broken dynamic library linkage detected:\n"
+            "    %s: wants to link to %s, but can't find it" % (
+                self.library,
+                self.dependent_library_name,
+            )
+        )
+
+    @staticmethod
+    def summary_message():
+        msg = None
+        if is_linux:
+            msg = (
+                "Broken linkage errors are usually caused by conda build "
+                "incorrectly setting the RPATH during post-build processing "
+                "steps.  This will typically only happen during development "
+                "of conda build.  If you're running into these errors trying "
+                "to build conda packages, there is something in your "
+                "environment adversely affecting our RPATH logic."
+            )
+        else:
+            raise NotImplementedError()
+
+        return (
+            "%s\n\nSee http://conda.pydata.org/docs/link-errors.html#broken "
+            "for more information." % msg
+        )
 
 class ExternalLinkage(BrokenLinkage):
+    # External linkage is the only link error we allow people to ignore via
+    # --ignore-external-linkage-errors.
+    fatal = False
+
     __slots__ = (
         BrokenLinkage.__slots__ +
         ('actual_link_target',)
     )
+
+    def __repr__(self):
+        return (
+            "External linkage detected:\n"
+            "    %s: wants to link to %s, but can't find it" % (
+                self.library,
+                self.dependent_library_name,
+            )
+        )
+
+    @staticmethod
+    def summary_message():
+        if is_linux:
+            return (
+                "Broken linkage errors are usually caused by conda build "
+                "incorrectly setting the RPATH during post-build processing "
+                "steps.  This will typically only happen during development "
+                "of conda build.  If you're running into these errors trying "
+                "to build conda packages, there is something in your "
+                "environment adversely affecting our RPATH logic. "
+                "See http://conda.pydata.org/docs/link-errors.html#broken "
+                "for more information."
+            )
+        else:
+            raise NotImplementedError()
+
 
 class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
     __slots__ = (

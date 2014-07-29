@@ -102,6 +102,16 @@ def main():
         action="append",
         help="Set the python version used by conda build",
     )
+    p.add_argument(
+        '-I', '--ignore-link-errors',
+        action='store_true',
+        help=(
+            "Ignore any link errors that are detected during post-build "
+            "processing (such as linking to libraries outside of the build "
+            "prefix, which can cause issues when trying to use the package "
+            "on other platforms)"
+        )
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -272,7 +282,19 @@ def execute(args, parser):
                     build.build(m, verbose=not args.quiet, post=post)
                 except build.LinkErrors as e:
                     from conda_build import config
-                    if config.ignore_link_errors:
+                    ignore_link_errors = args.ignore_link_errors
+                    if not ignore_link_errors:
+                        ignore_link_errors = config.ignore_link_errors
+
+                    # We always handle link errors.  By default, we use our
+                    # simple handler in link.py, however, this can be
+                    # customized via the conda config property
+                    # 'link_error_handler'.  See conda_build.config for more
+                    # info.  Note that we pass the 'ignore_link_errors' as an
+                    # argument to the handler -- we don't use it to discern
+                    # whether or not to call the handler.
+                    handler = config.link_error_handler
+                    if not args.ignore_link_errors:
                         print('Ignoring link errors:\n%s\n' % repr(e))
                     else:
                         from conda_build.link import handle_link_errors
