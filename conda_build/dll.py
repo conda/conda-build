@@ -115,6 +115,9 @@ def package_name_providing_link_target(libname):
 # Path-related Helpers
 #===============================================================================
 def get_files(base):
+    '''
+    Returns a set of all files in given base.
+    '''
     res = set()
     for root, dirs, files in os.walk(base):
         for fn in files:
