@@ -171,8 +171,6 @@ def mk_relative_osx(path):
 
 def mk_relative(f, binary_relocation=True):
     assert sys.platform != 'win32'
-    if f.startswith('bin/'):
-        fix_shebang(f)
 
     if not binary_relocation:
         return
@@ -199,14 +197,21 @@ def fix_permissions(files):
         lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
 
 
-def post_build(files, binary_relocation=True):
+def post_build(m, files):
     print('number of files:', len(files))
     fix_permissions(files)
+
+    if sys.platform == 'win32':
+        return
+
+    binary_relocation = bool(m.get_value('build/binary_relocation', True))
     if not binary_relocation:
         print("Skipping binary relocation logic")
+    osx_is_app = bool(m.get_value('build/osx_is_app', False))
     for f in files:
-        if sys.platform != 'win32':
-            mk_relative(f, binary_relocation=binary_relocation)
+        if f.startswith('bin/'):
+            fix_shebang(f, osx_is_app=osx_is_app)
+        mk_relative(f, binary_relocation=binary_relocation)
 
 def get_build_metadata(m):
     if exists(join(source.WORK_DIR, '__conda_version__.txt')):
