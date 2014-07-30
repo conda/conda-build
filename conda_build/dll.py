@@ -703,6 +703,12 @@ elif is_win32:
 # Dynamic Library Classes
 #===============================================================================
 class LibraryDependencies(SlotObject):
+    """ Base class to categorize status of dependences
+
+    possibilities are dependency doesn't exist or it exists either inside or
+    outside of build_prefix
+    """
+
     __slots__ = (
         'inside',
         'outside',
