@@ -59,6 +59,10 @@ class LinkErrors(Exception):
             '\n'.join('    %s' % repr(e) for e in errors)
         )
 
+def ensure_dir(dir, *args):
+    if not isdir(dir):
+        os.makedirs(dir, *args)
+
 def prefix_files():
     '''
     Returns a set of all files in prefix.
@@ -86,8 +90,7 @@ def create_post_scripts(m):
             continue
         dst_dir = join(prefix,
                        'Scripts' if sys.platform == 'win32' else 'bin')
-        if not isdir(dst_dir):
-            os.makedirs(dst_dir, int('755', 8))
+        ensure_dir(dst_dir, int('755', 8))
         dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
         shutil.copyfile(src, dst)
         os.chmod(dst, int('755', 8))
@@ -235,8 +238,7 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
-    if not isdir(config.bldpkgs_dir):
-        os.makedirs(config.bldpkgs_dir)
+    ensure_dir(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
         if clear_cache:
@@ -250,8 +252,7 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
-    if not isdir(pref):
-        os.makedirs(pref)
+    ensure_dir(pref)
 
 def rm_pkgs_cache(dist):
     '''
@@ -479,8 +480,7 @@ def tests_failed(m):
     :param m: Package's metadata
     :type m: Metadata
     '''
-    if not isdir(broken_dir):
-        os.makedirs(broken_dir)
+    ensure_dir(broken_dir)
 
     shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
