@@ -67,16 +67,8 @@ def prefix_files():
     '''
     Returns a set of all files in prefix.
     '''
-    res = set()
-    for root, dirs, files in os.walk(prefix):
-        for fn in files:
-            res.add(join(root, fn)[len(prefix) + 1:])
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path[len(prefix) + 1:])
-    return res
-
+    from conda_build.dll import get_files
+    return get_files(prefix)
 
 def create_post_scripts(m):
     '''
