@@ -135,10 +135,9 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
 
         if self.broken:
             msgs.append(
-                'Error: broken linkage detected for the following
-
+                'Error: broken linkage detected for the following packages: '
+                '%s' % ', '.join(self.broken)
             )
-        for name in self.broken
 
         assert msgs
         sys.stderr.write('\n'.join(msgs) + '\n')
