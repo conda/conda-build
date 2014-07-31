@@ -746,10 +746,11 @@ class BrokenLinkage(SlotObject, LinkError):
         # affected files, then the summary.  This will probably be done at the
         # LinkErrors class level maybe?  Dunno', hadn't thought that far
         # through.
-        self.full_message = '\n'.join(
+        self.full_message = '\n'.join([
             self.prefix,
             self.description,
-            self.summary_message()
+            self.summary_message(),
+            ]
         )
 
     @property
