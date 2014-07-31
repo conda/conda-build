@@ -1,3 +1,7 @@
+2014-.............:
+-------------------
+  * better install_requires parsing for skeleton pypi
+
 2014-07-29   1.6.1:
 -------------------
   * fix an issue building with a git repository in Python 3
