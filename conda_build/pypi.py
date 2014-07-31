@@ -454,11 +454,17 @@ def main(args, parser):
                     if isinstance(pkginfo['install_requires'], string_types):
                         pkginfo['install_requires'] = [pkginfo['install_requires']]
                     deps = []
-                    for dep in pkginfo['install_requires']:
-                        spec = spec_from_line(dep)
-                        if spec is None:
-                            sys.exit("Error: Could not parse: %s" % dep)
-                        deps.append(spec)
+                    for deptext in pkginfo['install_requires']:
+                        # Every item may be a single requirement
+                        #  or a multiline requirements string...
+                        for dep in deptext.split('\n'):
+                            #... and may also contain comments...
+                            dep = dep.split('#')[0].strip()
+                            if dep: #... and empty (or comment only) lines
+                                spec = spec_from_line(dep)
+                                if spec is None:
+                                    sys.exit("Error: Could not parse: %s" % dep)
+                                deps.append(spec)
 
                     if 'setuptools' in deps:
                         setuptools_build = False
