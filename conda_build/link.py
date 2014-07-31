@@ -11,6 +11,8 @@ from abc import (
 
 from textwrap import dedent
 
+from conda.compat import with_metaclass
+
 #=============================================================================
 # Globals
 #=============================================================================
