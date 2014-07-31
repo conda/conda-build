@@ -295,6 +295,9 @@ def execute(args, parser):
                     # whether or not to call the handler.
                     handler = config.link_error_handler
                     if not args.ignore_link_errors:
+                        # FIXME: per the comment above, we should NOT have this
+                        # if statement.   We should be passing
+                        # args.ignore_link_errors to handler
                         print('Ignoring link errors:\n%s\n' % repr(e))
                     else:
                         if handler:
