@@ -117,7 +117,10 @@ def parse(data):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
-        res[section][key] = str(res[section].get(key, ''))
+        val = res[section].get(key, '')
+        if val is None:
+            val = ''
+        res[section][key] = str(val)
     return res
 
 # If you update this please update the example in
@@ -187,6 +190,12 @@ class MetaData(object):
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
+        self.meta = parse(get_contents(self.meta_path))
+
+    def parse_again(self):
+        """Redo parsing for key-value pairs that are not initialized in the
+        first pass.
+        """
         self.meta = parse(get_contents(self.meta_path))
 
     @classmethod
