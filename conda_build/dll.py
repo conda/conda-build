@@ -802,6 +802,13 @@ class BrokenLinkage(SlotObject, LinkError):
         )
 
 class ExternalLinkage(BrokenLinkage):
+    ''' A non-fatal linkage to a library that exists outside of the lib dir
+
+    FIXME: do slots need to be documented?
+    FIXME: language in __repr__ can't be right, can it?  We can find it, its
+    just outside of prefix dir
+    '''
+
     # External linkage is the only link error we allow people to ignore via
     # --ignore-external-linkage-errors.
     fatal = False
