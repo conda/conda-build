@@ -49,6 +49,18 @@ class LinkError(Exception):
     fatal = True
 
 class LinkErrors(Exception):
+    ''' Convert a BuildRoot's link_errors into a single message
+
+    The main purpose is to process the build_root instance's link_errors into a
+    single message.
+
+    Attributes:
+        message: concatenation of 'repr' of each build_root.link_errors element
+        build_root: copy of build_root
+        errors: copy of build_root.link_errors
+        allow_ignore_link_errors: ???
+    '''
+
     def __init__(self, build_root):
         self.allow_ignore_link_errors = None
         self.build_root = build_root
