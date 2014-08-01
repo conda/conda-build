@@ -33,6 +33,10 @@ def get_sp_dir():
     return join(STDLIB_DIR, 'site-packages')
 
 def get_git_build_info(src_dir):
+    # cd to the src_dir
+    cwd = os.getcwd()
+    os.chdir(src_dir)
+
     d = {}
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
@@ -48,6 +52,9 @@ def get_git_build_info(src_dir):
     if key_name('NUMBER') in d and key_name('HASH') in d:
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])
+
+    # return the original cwd
+    os.chdir(cwd)
     return d
 
 # The UPPERCASE names are here for backwards compatibility. They will not
