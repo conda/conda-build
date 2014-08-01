@@ -951,7 +951,6 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     def _resolve_inside_targets(self):
         rpaths = set()
         build_root = self.build_root
-        link_errors = self.link_errors
         for name in self.inside:
             rpath = build_root[name]
             assert rpath
