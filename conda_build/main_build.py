@@ -163,8 +163,8 @@ def check_external():
 Error:
     Did not find 'patchelf' in: %s
     'patchelf' is necessary for building conda packages on Linux with
-    relocatable ELF libraries.  You can install patchelf using apt-get,
-    yum or conda.
+    relocatable ELF libraries.  You can install patchelf using conda install
+    patchelf.
 """ % (os.pathsep.join(external.dir_paths)))
 
 
