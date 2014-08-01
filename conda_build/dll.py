@@ -732,6 +732,17 @@ class LibraryDependencies(SlotObject):
         self.missing = missing
 
 class BrokenLinkage(SlotObject, LinkError):
+    ''' Provide informative methods and members related to 'LinkError's
+
+    Attributes:
+        prefix: FIXME: where is this populated?
+        library: FIXME: where is this populated?
+        dependent_library_name: FIXME: where is this populated?
+        description: property to give a concise summary of this particular
+            LinkError.
+
+    '''
+
     __slots__ = (
         'library',
         'dependent_library_name',
