@@ -487,7 +487,11 @@ def categorize_dependencies(deps, build_root):
 # Helper Classes
 #===============================================================================
 class SlotObject(object):
-    """ Representation of classes via _to_dict, __repr__ which have slots defined """
+    ''' Helper base class to provide representation of super classes
+
+    Representation is specified by __slots__ and
+    _to_dict_{prefix,suffix,exclude}_ and enacted by __repr__ and _to_dict
+    '''
 
     # Subclasses need to define __slots__
     _default_ = None
