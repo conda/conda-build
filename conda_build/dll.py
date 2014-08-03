@@ -460,6 +460,11 @@ def relative_path(library_path, target_dir):
     return normpath(slashes * '../') + suffix
 
 def get_library_dependencies(dll):
+    ''' Given a library path, return a list of paths to libraries linked
+
+    Dispatch to the OS approriate shared library tool
+    '''
+
     if is_linux:
         return ldd(dll)
     elif is_darwin:
