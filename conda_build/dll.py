@@ -903,6 +903,9 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     )
 
     def __init__(self, path, build_root):
+        ''' rely on call to self.reload() to call LibraryDependencies.__init__
+        '''
+
         self.prefix = build_root.prefix
         self.build_root = build_root
         self.link_errors = []
