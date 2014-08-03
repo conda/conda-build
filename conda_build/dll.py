@@ -553,6 +553,11 @@ class SlotObject(object):
 # Process Wrappers
 #===============================================================================
 class ProcessWrapper(object):
+    ''' Helper base class to provide execute a command in the OS shell
+
+    Executes the specified command and returns stdout
+    '''
+
     def __init__(self, exe, *args, **kwds):
         self.exe      = exe
         self.rc       = int()
