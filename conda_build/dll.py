@@ -558,7 +558,7 @@ class SlotObject(object):
 # Process Wrappers
 #===============================================================================
 class ProcessWrapper(object):
-    ''' Helper base class to provide execute a command in the OS shell
+    ''' Helper class to execute a command in the OS shell
 
     Executes the specified command and returns stdout
     '''
