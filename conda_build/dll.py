@@ -987,6 +987,9 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
             link_errors.append(cls(*args))
 
     def _process_missing_targets(self):
+        ''' Update 'link_errors' to account for broken linkages
+        '''
+
         for name in self.missing:
             self.link_errors.append(BrokenLinkage(self, name))
 
