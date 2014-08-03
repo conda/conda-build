@@ -1366,6 +1366,12 @@ class BuildRoot(SlotObject):
             ]
 
     def __getitem__(self, dll_name):
+        ''' Return relative path to folder containing the specified dependency
+
+        If multiple possibilities exist *and* not self.forgiving, raise an
+        assertion error
+        '''
+
         targets = self.all_dlls.get(dll_name, self.all_symlink_dlls[dll_name])
         if len(targets) != 1:
             if not self.forgiving:
