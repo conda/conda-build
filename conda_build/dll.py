@@ -994,6 +994,11 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
             self.link_errors.append(BrokenLinkage(self, name))
 
     def _resolve_inside_targets(self):
+        ''' set 'runtime_paths'
+
+        to unique list of runtime dependencies inside build root
+        '''
+
         build_root = self.build_root
         rpaths = set(map(build_root.__getitem__, self.inside))
         assert all(rpaths)
