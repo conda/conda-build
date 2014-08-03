@@ -868,6 +868,18 @@ class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
     )
 
 class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
+    ''' Representation of a library and its dependencies
+
+    Attributes:
+        prefix: prefix to library paths considered to be 'inside'
+        build_root: BuildRoot that contains this DynamicLibrary
+        link_errors: list of 'LinkError's due to *this* libraries dependencies
+        runtime_paths: list of paths to dependencies *inside* build root
+        relative_runtime_paths: relative paths to each element of runtime_paths
+        relative: relative path to the build dir
+        path: absolute path to the build dir
+    '''
+
     __slots__ = LibraryDependencies.__slots__ + (
         'path',
         'prefix',
