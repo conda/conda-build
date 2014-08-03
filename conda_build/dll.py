@@ -116,7 +116,7 @@ def package_name_providing_link_target(libname):
 #===============================================================================
 def get_files(base):
     '''
-    Returns a set of all files in given base.
+    Use os.walk to create a set of all files inside a path
     '''
     res = set()
     for root, dirs, files in os.walk(base):
