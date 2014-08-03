@@ -48,6 +48,11 @@ class BaseLinkErrorHandler(object):
         self.recipe_needs_build_dependency_added = []
 
     def handle(self):
+        ''' Coordinate the method calls to handle link errors
+
+        The primary external method of BaseLinkErrorHandler
+        '''
+
         self.categorize_errors()
         self.process_errors()
         self.finalize()
