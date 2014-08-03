@@ -53,14 +53,14 @@ class BaseLinkErrorHandler(object):
         The primary external method of BaseLinkErrorHandler
         '''
 
-        self.categorize_errors()
-        self.process_errors()
-        self.finalize()
+        self._categorize_errors()
+        self._process_errors()
+        self._finalize()
 
         if not self.ignore_link_errors:
             sys.exit(1)
 
-    def finalize(self):
+    def _finalize(self):
         """
         Called after all errors have been processed.  Intended to be used to
         print a final message informing the user of possible options for
@@ -69,18 +69,18 @@ class BaseLinkErrorHandler(object):
         sys.stderr.write(final_message + '\n')
 
     @abstractmethod
-    def categorize_errors(self):
+    def _categorize_errors(self):
         raise NotImplementedError()
 
     @abstractmethod
-    def process_errors(self):
+    def _process_errors(self):
         raise NotImplementedError()
 
 
 class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
     try_again = False
 
-    def categorize_errors(self):
+    def _categorize_errors(self):
         # We can't import conda_build.dll in the global scope because the
         # import order actually has us indirectly being imported by it (via
         # conda_build.config.resolve_link_error_handler()).  So, we import it
@@ -127,7 +127,7 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         for (name, path) in self.extern.items():
             self.new_library_recipe_needed.append(path)
 
-    def process_errors(self):
+    def _process_errors(self):
         # Post-processing of errors after they've been categorized.
         msgs = []
         if self.new_library_recipe_needed:
