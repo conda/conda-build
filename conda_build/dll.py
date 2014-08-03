@@ -717,8 +717,10 @@ elif is_win32:
 class LibraryDependencies(SlotObject):
     """ Base class to categorize status of dependencies
 
-    possibilities are dependency doesn't exist or it exists either inside or
-    outside of build_prefix
+    Attributes:
+        inside: satisfied dependencies whose path starts with prefix
+        outside: satisfied dependencies whose path does not start with prefix
+        missing: unsatisfied dependencies (whose path doesn't exist)
     """
 
     __slots__ = (
