@@ -951,6 +951,8 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         self._resolve_relative_runtime_paths()
 
     def _process_outside_targets(self):
+        ''' Update 'link_errors' to account for external linkages
+        '''
         # For targets outside the build root, we want to make sure the target
         # isn't something that should actually be linking to within the build
         # prefix.  For now, we just check for targets that also appear in the
