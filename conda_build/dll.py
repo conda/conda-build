@@ -1005,6 +1005,9 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         self.runtime_paths = rpaths
 
     def _resolve_relative_runtime_paths(self):
+        ''' set 'relative_runtime_paths'
+        '''
+
         self.relative_runtime_paths = [
             relative_path(self.relative, target)
                 for target in self.runtime_paths
