@@ -934,6 +934,12 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         self.reload()
 
     def reload(self):
+        ''' Reprocess dependencies for link errors and runtime paths
+
+        Based on a freshly read list of dependencies and resulting
+        LibraryDependencies' {inside, outside, missing} fields.
+        '''
+
         self.link_errors = []
         self._reload_count += 1
         deps = get_library_dependencies(self.path)
