@@ -872,6 +872,9 @@ class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
 class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     ''' Representation of a library and its dependencies
 
+    Utilizes LibraryDependencies superclass to categorize dependencies as one of
+    {inside, outside, missing}.
+
     Attributes:
         prefix: prefix to library paths considered to be 'inside'
         build_root: BuildRoot that contains this DynamicLibrary
