@@ -96,6 +96,7 @@ class BrokenLinkage(SlotObject, LinkError):
     @staticmethod
     def summary_message():
         msg = None
+        from conda_build.dll import is_linux
         if is_linux:
             msg = (
                 "Broken linkage errors are usually caused by conda build "
@@ -145,6 +146,7 @@ class ExternalLinkage(BrokenLinkage):
         #        if this summary_message is same as BrokenLinkage, we can just
         #        fall back to BrokenLinkage's method.  If not, we should change
         #        the string below.  Perhaps the appended html link as well
+        from conda_build.dll import is_linux
         if is_linux:
             msg = (
                 "Broken linkage errors are usually caused by conda build "
