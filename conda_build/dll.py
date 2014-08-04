@@ -47,12 +47,6 @@ from conda_build.build import (
     LinkErrors,
 )
 
-from conda_build.link import (
-    BrokenLinkage,
-    ExternalLinkage,
-    RecipeCorrectButBuildScriptBroken,
-)
-
 from conda_build.config import (
     build_prefix,
 )
@@ -855,6 +849,10 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
 
         build_root = self.build_root
         link_errors = self.link_errors
+        from conda_build.link import (
+                ExternalLinkage,
+                RecipeCorrectButBuildScriptBroken,
+                )
         for path in self.outside:
             name = basename(path)
             if self.allowed_outside(name):
@@ -871,6 +869,7 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         ''' Update 'link_errors' to account for broken linkages
         '''
 
+        from conda_build.link import BrokenLinkage
         for name in self.missing:
             self.link_errors.append(BrokenLinkage(self, name))
 
