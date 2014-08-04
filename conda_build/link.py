@@ -114,8 +114,6 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # link errors -- the resulting package absolutely will not load
         # correctly.
         if self.broken:
-            for name in self.broken:
-                assert name not in self.extern, (name, self.extern)
 
             # This message could be improved with some more information about
             # what was being li
