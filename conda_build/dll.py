@@ -44,8 +44,13 @@ from conda_build.external import (
 )
 
 from conda_build.build import (
-    LinkError,
     LinkErrors,
+)
+
+from conda_build.link import (
+    BrokenLinkage,
+    ExternalLinkage,
+    RecipeCorrectButBuildScriptBroken,
 )
 
 from conda_build.config import (
@@ -747,133 +752,6 @@ class LibraryDependencies(SlotObject):
         self.inside = inside
         self.outside = outside
         self.missing = missing
-
-class BrokenLinkage(SlotObject, LinkError):
-    ''' Provide informative methods and members related to 'LinkError's
-
-    Attributes:
-        prefix: FIXME: where is this populated?
-        library: FIXME: where is this populated?
-        dependent_library_name: FIXME: where is this populated?
-        description: property to give a concise summary of this particular
-            LinkError.
-
-    '''
-
-    __slots__ = (
-        'library',
-        'dependent_library_name',
-    )
-
-    prefix = "Broken dynamic library linkage detected:"
-
-    def __init__(self, *args):
-        SlotObject.__init__(self, *args)
-        # xxx: make __repr__() use this instead?  Main use case is for each
-        # type of error (i.e. BrokenLinkage), print out the prefix, then all
-        # affected files, then the summary.  This will probably be done at the
-        # LinkErrors class level maybe?  Dunno', hadn't thought that far
-        # through.
-        self.full_message = '\n'.join([
-            self.prefix,
-            self.description,
-            self.summary_message(),
-            ]
-        )
-
-    @property
-    def description(self):
-        return "    %s can't find link target '%s'" % (
-            self.library,
-            self.dependent_library_name,
-        )
-
-    # xxx todo:
-    def __repr__(self):
-        return (
-            "Broken dynamic library linkage detected:\n"
-            "    %s: wants to link to %s, but can't find it" % (
-                self.library,
-                self.dependent_library_name,
-            )
-        )
-
-    @staticmethod
-    def summary_message():
-        msg = None
-        if is_linux:
-            msg = (
-                "Broken linkage errors are usually caused by conda build "
-                "incorrectly setting the RPATH during post-build processing "
-                "steps.  This will typically only happen during development "
-                "of conda build.  If you're running into these errors trying "
-                "to build conda packages, there is something in your "
-                "environment adversely affecting our RPATH logic."
-            )
-        else:
-            raise NotImplementedError()
-
-        return (
-            "%s\n\nSee http://conda.pydata.org/docs/link-errors.html#broken "
-            "for more information." % msg
-        )
-
-class ExternalLinkage(BrokenLinkage):
-    ''' A non-fatal linkage to a library that exists outside of the lib dir
-
-    FIXME: do slots need to be documented?
-    FIXME: language in __repr__ can't be right, can it?  We can find it, its
-    just outside of prefix dir
-    '''
-
-    # External linkage is the only link error we allow people to ignore via
-    # --ignore-external-linkage-errors.
-    fatal = False
-
-    __slots__ = (
-        BrokenLinkage.__slots__ +
-        ('actual_link_target',)
-    )
-
-    def __repr__(self):
-        return (
-            "External linkage detected:\n"
-            "    %s: wants to link to %s, but can't find it" % (
-                self.library,
-                self.dependent_library_name,
-            )
-        )
-
-    @staticmethod
-    def summary_message():
-        # FIXME: remove this method?
-        #        if this summary_message is same as BrokenLinkage, we can just
-        #        fall back to BrokenLinkage's method.  If not, we should change
-        #        the string below.  Perhaps the appended html link as well
-        if is_linux:
-            msg = (
-                "Broken linkage errors are usually caused by conda build "
-                "incorrectly setting the RPATH during post-build processing "
-                "steps.  This will typically only happen during development "
-                "of conda build.  If you're running into these errors trying "
-                "to build conda packages, there is something in your "
-                "environment adversely affecting our RPATH logic. "
-            )
-        else:
-            raise NotImplementedError()
-
-        return (
-            "%s\n\nSee http://conda.pydata.org/docs/link-errors.html#broken "
-            "for more information." % msg
-        )
-
-
-
-class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
-    __slots__ = (
-        ExternalLinkage.__slots__ +
-        ('expected_link_target',)
-    )
 
 class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     ''' Representation of a library and its dependencies
