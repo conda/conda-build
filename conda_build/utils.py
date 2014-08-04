@@ -16,6 +16,15 @@ from conda.utils import md5_file
 from conda_build import external
 
 
+#===============================================================================
+# Globals
+#===============================================================================
+is_linux = (sys.platform.startswith('linux'))
+is_darwin = (sys.platform == 'darwin')
+is_win32 = (sys.platform == 'win32')
+assert sum((is_linux, is_darwin, is_win32)) == 1
+
+
 def rel_lib(f):
     assert not f.startswith('/')
     if f.startswith('lib/'):

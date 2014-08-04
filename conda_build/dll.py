@@ -39,6 +39,12 @@ from collections import (
     defaultdict,
 )
 
+from conda_build.utils import (
+    is_linux,
+    is_darwin,
+    is_win32,
+)
+
 from conda_build.external import (
     find_executable,
 )
@@ -46,15 +52,6 @@ from conda_build.external import (
 from conda_build.config import (
     build_prefix,
 )
-
-#===============================================================================
-# Globals
-#===============================================================================
-is_linux = (sys.platform.startswith('linux'))
-is_darwin = (sys.platform == 'darwin')
-is_win32 = (sys.platform == 'win32')
-
-assert sum((is_linux, is_darwin, is_win32)) == 1
 
 #===============================================================================
 # Misc Helpers
