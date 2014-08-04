@@ -12,6 +12,7 @@ from abc import (
 from textwrap import dedent
 
 from conda.compat import with_metaclass
+from conda_build.dll import SlotObject
 
 #=============================================================================
 # Globals
