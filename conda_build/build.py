@@ -71,12 +71,14 @@ class LinkErrors(Exception):
     def __init__(self, build_root):
         self.allow_ignore_link_errors = None
         self.build_root = build_root
-        errors = build_root.link_errors
-        assert errors
-        self.errors = errors
-        self.message = 'Link errors:\n%s\n' % (
-            '\n'.join('    %s' % repr(e) for e in errors)
-        )
+        self.errors = build_root.link_errors
+        assert self.errors
+        #
+        def errors_to_str(errors):
+            error_to_str = lambda error: '    %s' % repr(error)
+            errors_as_str = '\n'.join(map(error_to_str, errors))
+            return 'Link errors:\n%s\n' % errors_as_str
+        self.message = errors_to_str(errors)
 
 def ensure_dir(dir, *args):
     if not isdir(dir):
