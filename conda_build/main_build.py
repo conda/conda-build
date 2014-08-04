@@ -280,7 +280,7 @@ def execute(args, parser):
                     post = None
                 try:
                     build.build(m, verbose=not args.quiet, post=post)
-                except build.LinkErrors as e:
+                except LinkErrors as e:
                     from conda_build import config
                     ignore_link_errors = args.ignore_link_errors
                     if not ignore_link_errors:
