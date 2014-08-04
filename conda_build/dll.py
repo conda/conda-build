@@ -43,10 +43,6 @@ from conda_build.external import (
     find_executable,
 )
 
-from conda_build.build import (
-    LinkErrors,
-)
-
 from conda_build.config import (
     build_prefix,
 )
@@ -1287,6 +1283,7 @@ class BuildRoot(SlotObject):
         self.link_errors = reduce(operator.add, link_errors, [])
 
         if self.link_errors:
+            from conda_build.link import LinkErrors
             raise LinkErrors(self)
 
     def make_relocatable(self, dlls=None, copy=False):
