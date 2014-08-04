@@ -195,7 +195,7 @@ def execute(args, parser):
     from conda_build.config import croot
     from conda_build.metadata import MetaData
 
-    from conda_build.dll import LinkErrors
+    from conda_build.link import LinkErrors
 
     check_external()
 
