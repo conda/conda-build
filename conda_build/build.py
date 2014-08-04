@@ -77,7 +77,7 @@ class LinkErrors(Exception):
             error_to_str = lambda error: '    %s' % repr(error)
             errors_as_str = '\n'.join(map(error_to_str, errors))
             return 'Link errors:\n%s\n' % errors_as_str
-        self.message = errors_to_str(errors)
+        self.message = errors_to_str(self.errors)
 
 def ensure_dir(dir, *args):
     if not isdir(dir):
