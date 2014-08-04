@@ -28,6 +28,21 @@ final_message = dedent("""
 #=============================================================================
 # Classes
 #=============================================================================
+class LinkError(Exception):
+    ''' Base class for Exceptions related to library linkages
+
+    fatal, when set to True, indicates that this link error can't be ignored
+    by the --ignore-link-errors command line argument or ignore_link_errors
+    in ~/.condarc.  General rule of thumb: use `fatal = True` if there is no
+    possible way this package will work, e.g. there is a library being
+    reported as 'not found' by ldd.
+
+    Atributes:
+        fatal: should this LinkError preclude a successful build
+    '''
+
+    fatal = True
+
 class BrokenLinkage(SlotObject, LinkError):
     ''' Provide informative methods and members related to 'LinkError's
 
@@ -154,6 +169,30 @@ class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
         ExternalLinkage.__slots__ +
         ('expected_link_target',)
     )
+
+class LinkErrors(Exception):
+    ''' LinkErrors allows reporting multiple 'LinkError's simultaneously
+
+    Converts a BuildRoot's link_errors into a single message
+
+    Attributes:
+        message: concatenation of 'repr' of each build_root.link_errors element
+        build_root: copy of build_root
+        errors: copy of build_root.link_errors
+        allow_ignore_link_errors: ???
+    '''
+
+    def __init__(self, build_root):
+        self.allow_ignore_link_errors = None
+        self.build_root = build_root
+        self.errors = build_root.link_errors
+        assert self.errors
+        #
+        def errors_to_str(errors):
+            error_to_str = lambda error: '    %s' % repr(error)
+            errors_as_str = '\n'.join(map(error_to_str, errors))
+            return 'Link errors:\n%s\n' % errors_as_str
+        self.message = errors_to_str(self.errors)
 
 class BaseLinkErrorHandler(object):
     try_again = False
