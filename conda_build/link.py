@@ -102,11 +102,14 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
                 assert isinstance(error, BrokenLinkage)
                 self.broken.add(name)
 
+        def assert_disjoint(left, right):
+            intersection = set(left).intersection(right)
+            assert not intersection, (intersection, left, right)
+
         # Check that there's no overlap between libraries being reported as
         # broken and extern at the same time.  (It's actually pretty
         # impressive if you've managed to get a build into that state.)
-        for name in self.extern.keys():
-            assert name not in self.broken, (name, self.broken)
+        assert_disjoint(self.extern.keys(), self.broken)
 
         # Broken library links (e.g. ldd returned 'not found') need to be
         # fixed via proper compilation flags, usually.  Either that, or the
