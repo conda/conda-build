@@ -56,7 +56,9 @@ class LinkError(Exception):
     fatal = True
 
 class LinkErrors(Exception):
-    ''' Convert a BuildRoot's link_errors into a single message
+    ''' LinkErrors allows reporting multiple 'LinkError's simultaneously
+
+    Converts a BuildRoot's link_errors into a single message
 
     Attributes:
         message: concatenation of 'repr' of each build_root.link_errors element
