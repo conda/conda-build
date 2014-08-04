@@ -13,7 +13,6 @@ from os.path import (dirname, getmtime, getsize, isdir, isfile,
 
 from conda.utils import md5_file
 
-from conda_build import external
 
 
 #===============================================================================
@@ -42,6 +41,7 @@ def _check_call(args, **kwargs):
 
 def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.endswith('.tar.xz'):
+        from conda_build import external
         unxz = external.find_executable('unxz')
         if not unxz:
             sys.exit("""\
