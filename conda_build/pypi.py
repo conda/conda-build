@@ -129,7 +129,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,32 @@ def setup (**attrs):
+@@ -166,5 +167,33 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -150,6 +150,7 @@ diff core.py core.py
 +def setup(*args, **kwargs):
 +    data = {{}}
 +    data['install_requires'] = kwargs.get('install_requires', [])
++    data['extras_require'] = kwargs.get('extras_require', {{}})
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
@@ -258,6 +259,13 @@ def main(args, parser):
 
     while args.packages:
         package = args.packages.pop()
+        # Look for package[extra,...] features spec:
+        match_extras = re.match(r'^([^[]+)\[([^]]+)\]$', package)
+        if match_extras:
+            package, extras = match_extras.groups()
+            extras = extras.split(',')
+        else:
+            extras = []
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
@@ -450,11 +458,25 @@ def main(args, parser):
                             d['build_comment'] = ''
                             d['test_commands'] = indent.join([''] + make_entry_tests(entry_list))
 
-                if pkginfo['install_requires'] or setuptools_build or setuptools_run:
-                    if isinstance(pkginfo['install_requires'], string_types):
-                        pkginfo['install_requires'] = [pkginfo['install_requires']]
+                # Extract requested extra feature requirements...
+                if args.all_extras:
+                    extras_require = pkginfo['extras_require'].values()
+                else:
+                    try:
+                        extras_require = [pkginfo['extras_require'][x] for x in extras]
+                    except KeyError:
+                        sys.exit("Error: Invalid extra features: [%s]"
+                             % ','.join(extras))
+                #... and collect all needed requirement specs in a single list:
+                requires = []
+                for specs in [pkginfo['install_requires']] + extras_require:
+                    if isinstance(specs, string_types):
+                        requires.append(specs)
+                    else:
+                        requires.extend(specs)
+                if requires or setuptools_build or setuptools_run:
                     deps = []
-                    for deptext in pkginfo['install_requires']:
+                    for deptext in requires:
                         # Every item may be a single requirement
                         #  or a multiline requirements string...
                         for dep in deptext.split('\n'):

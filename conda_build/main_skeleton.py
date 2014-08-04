@@ -29,7 +29,8 @@ def main():
         "packages",
         action="store",
         nargs='+',
-        help="PyPi packages to create recipe skeletons for",
+        help="""PyPi packages to create recipe skeletons for.
+                You can also specify package[extra,...] features.""",
     )
     pypi.add_argument(
         "--output-dir",
@@ -74,6 +75,12 @@ def main():
         dest="noprompt",
         help="""Don't prompt the user on ambiguous choices.  Instead, make the
         best possible choice and continue."""
+    )
+    pypi.add_argument(
+        "--all-extras",
+        action="store_true",
+        default=False,
+        help="Add all extra feature requirements. Applies to all packages.",
     )
     pypi.add_argument(
         "--recursive",
