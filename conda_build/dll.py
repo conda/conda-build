@@ -1285,7 +1285,7 @@ class BuildRoot(SlotObject):
     def verify(self):
         get_dll_link_errors = lambda dll: dll.link_errors
         link_errors = map(get_dll_link_errors, self.new_dlls)
-        self.link_errors = reduce(operator.add, link_errors)
+        self.link_errors = reduce(operator.add, link_errors, [])
 
         if self.link_errors:
             raise LinkErrors(self)
