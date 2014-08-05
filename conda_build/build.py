@@ -38,6 +38,7 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.dll import DynamicLibrary
+from conda_build.link import LinkErrors
 
 prefix = config.build_prefix
 info_dir = join(prefix, 'info')
@@ -240,7 +241,6 @@ class BuildRoot(SlotObject):
         self.link_errors = reduce(operator.add, link_errors, [])
 
         if self.link_errors:
-            from conda_build.link import LinkErrors
             raise LinkErrors(self)
 
     def make_relocatable(self, dlls=None, copy=False):
