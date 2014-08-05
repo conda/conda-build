@@ -1,4 +1,4 @@
-2014-.............:
+2014-08-05   1.7.0:
 -------------------
   * better install_requires parsing for skeleton pypi
   * the build environment from conda-build is now called
