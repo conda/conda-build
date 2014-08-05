@@ -28,7 +28,7 @@ WORK_DIR = join(croot, 'work')
 def get_dir():
     if not isdir(WORK_DIR):
         os.makedirs(WORK_DIR)
-    lst = [fn for fn in os.listdir(WORK_DIR) if not (fn.startswith('.') or fn.startswith('prefix_files.txt'))]
+    lst = [fn for fn in os.listdir(WORK_DIR) if not fn.startswith('.')]
     if len(lst) == 1:
         dir_path = join(WORK_DIR, lst[0])
         if isdir(dir_path):
