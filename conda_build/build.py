@@ -178,13 +178,6 @@ def create_info_files(m, files, include_recipe=True):
                                "not found" % file)
         files_with_prefix.append('%s %s %s' % (prefix, 'binary', file))
 
-    if binary_files_with_prefix and len(prefix) < 100:
-        print("***WARNING*** Binary replacement can only be done in install")
-        print("prefixes that are shorter than the build prefix (the current")
-        print("build prefix is %d characters). It is recommended to build" % len(prefix))
-        print("against a larger prefix. Note that future versions of")
-        print("conda-build may do this automatically.")
-
     files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
     if files_with_prefix:
