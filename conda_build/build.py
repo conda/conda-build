@@ -259,12 +259,20 @@ def build(m, get_src=True, verbose=True, post=None):
     if post in [False, None]:
         rm_rf(prefix)
 
-        print("BUILD START:", m.dist())
+        # Display the name only
+        # Version number could be missing due to dependency on source info.
+        print("BUILD START:", m.name())
         create_env(prefix, [ms.spec for ms in m.ms_depends('build')],
                    verbose=verbose)
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
+            # Parse our metadata again because we did not initialize the source
+            # information before.
+            m.parse_again()
+
+        print("Package:", m.dist())
+
         assert isdir(source.WORK_DIR)
         src_dir = source.get_dir()
         contents = os.listdir(src_dir)
