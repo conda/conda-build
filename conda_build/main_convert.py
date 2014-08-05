@@ -146,6 +146,10 @@ def execute(args, parser):
             if 'all' in args.platforms:
                 args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
             for platform in args.platforms:
+                if abspath(expanduser(join(output_dir, platform, fn))) == file:
+                    print("Skipping %s/%s. Same as input file" % (platform,
+                        fn))
+                    continue
                 if not PY3:
                     platform = platform.decode('utf-8')
                 dest_plat = platform.split('-')[0]
