@@ -1,8 +1,17 @@
+import os
 import unittest
 import operator
 from os.path import join
 #
+from conda_build.link import (
+        ExternalLinkage,
+        RecipeCorrectButBuildScriptBroken,
+        BrokenLinkage,
+)
+
 from conda_build.dll import (
+        find_executable,
+        ProcessWrapper,
         LibraryDependencies,
         DynamicLibrary,
         LinuxDynamicLibrary,
@@ -28,6 +37,62 @@ class TestLibraryDependencies(unittest.TestCase):
         self.assertSetEqual(inside_set, ld.inside)
         self.assertSetEqual(outside_set, ld.outside)
         self.assertSetEqual(missing_set, ld.missing)
+
+
+class TestDynamicLibrary(unittest.TestCase):
+
+    def build_dynamic_library(self):
+        from conda_build.build import BuildRoot
+        build_root = BuildRoot()
+        def get_something_in_build_root():
+            # FIXME: how to make this OS agnostic?
+            _find = ProcessWrapper(find_executable('find'))
+            found_python = _find(build_root.prefix, '-name', 'python')
+            return found_python
+        # FIXME: test more than Linux
+        something_in_build_root = get_something_in_build_root()
+        dynamic_library = LinuxDynamicLibrary(something_in_build_root,
+                build_root)
+        dynamic_library.link_errors = []
+        dynamic_library.inside = set()
+        dynamic_library.outside = set()
+        dynamic_library.missing = set()
+        return dynamic_library
+
+    def test_construction(self):
+        assert self.build_dynamic_library()
+
+    def test_process_outside_targets(self):
+        # FIXME: test allowed_outside
+        dl = self.build_dynamic_library()
+        # now munge dynamic_library.{inside,outside,missing} for our purposes
+        dl.outside = set(['external_linkage.so'])
+        dl._process_outside_targets()
+        is_external_linkage = lambda obj: isinstance(obj, ExternalLinkage)
+        assert all(map(is_external_linkage, dl.link_errors))
+        assert len(dl.link_errors) == len(dl.outside)
+
+    def test_process_missing_targets(self):
+        dl = self.build_dynamic_library()
+        # now munge dynamic_library.{inside,outside,missing} for our purposes
+        # FIXME: IMPLEMENT!
+        assert False
+
+    def test_arbitrate_realtive(self):
+        arbitrate_relative = DynamicLibrary.arbitrate_relative
+        prefix = '/some/absolute'
+        relative_path = 'dep.so'
+        absolute_path = join(prefix, relative_path)
+        correct = [absolute_path, relative_path]
+        # test absolute
+        output = arbitrate_relative(absolute_path, prefix)
+        self.assertListEqual(correct, list(output))
+        # test relative
+        output = arbitrate_relative(relative_path, prefix)
+        self.assertListEqual(correct, list(output))
+        # demonstrate failure of trailing slash in prefix
+        output = arbitrate_relative(relative_path, prefix + '/')
+        self.assertNotEqual(correct, list(output))
 
 
 if __name__ == '__main__':
