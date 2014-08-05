@@ -731,22 +731,20 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         self.link_errors = []
         self.runtime_paths = None
         self.relative_runtime_paths = None
-
-        def arbitrate_relative(path, prefix):
-            is_absolute = path.startswith(prefix)
-            if is_absolute:
-                path = path
-                relative = path.replace(prefix, '')[1:]
-            else:
-                relative = path
-                path = '/'.join((prefix, path))
-            return path, relative
-        path, relative = arbitrate_relative(path, self.prefix)
-        self.path = path
-        self.relative = relative
-
+        self.path, self.relative = self.arbitrate_relative(path, self.prefix)
         self._reload_count = 0
         self.reload()
+
+    @staticmethod
+    def arbitrate_relative(path, prefix):
+        is_absolute = path.startswith(prefix)
+        if is_absolute:
+            path = path
+            relative = path.replace(prefix, '')[1:]
+        else:
+            relative = path
+            path = '/'.join((prefix, path))
+        return path, relative
 
     def reload(self):
         ''' Reprocess dependencies for link errors and runtime paths
