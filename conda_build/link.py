@@ -231,7 +231,7 @@ class BaseLinkErrorHandler(object):
         self._process_errors()
         self._finalize()
 
-        if not self.ignore_link_errors:
+        if self.broken or not self.ignore_link_errors:
             sys.exit(1)
 
     def _finalize(self):
