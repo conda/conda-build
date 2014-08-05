@@ -255,6 +255,11 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
     try_again = False
 
     def _categorize_errors(self):
+        ''' Create a single unified message to show to the user
+
+        To avoid repeating messages for the same depedeny.
+        '''
+
         for error in self.errors:
             name = error.dependent_library_name
             self.names.add(name)
