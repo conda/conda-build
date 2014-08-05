@@ -56,12 +56,6 @@ class TestLinkErrors(unittest.TestCase):
         link_errors = LinkErrors(build_root)
         assert link_errors.message
 
-class TestBaseLinkErrorHandler(unittest.TestCase):
-
-    # FIXME: these tests are relatively trivial, is more required?
-    def test_summary_message(self):
-        pass
-
 class TestLinkErrorHandler(unittest.TestCase):
 
     # FIXME: these tests are relatively trivial, is more required?
