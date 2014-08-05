@@ -668,6 +668,17 @@ class LibraryDependencies(SlotObject):
     )
 
     def __init__(self, deps, prefix=None):
+        ''' Init LibraryDependencies with categorization of dependencies
+
+        Dependencies are one of {inside, outside, missing}.
+
+        Args:
+            deps: List of tuples, each tuple is (depname, path_to_depname).  If
+                path_to_depname is None, the depedency is missing
+            prefix: String of path to build prefix.  Paths that start with
+                prefix are considered "inside"
+        '''
+
         if not prefix:
             prefix = build_prefix
 
