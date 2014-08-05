@@ -177,7 +177,7 @@ def mk_relative(f, binary_relocation=True):
 
     path = join(build_prefix, f)
     if sys.platform.startswith('linux') and is_obj(path):
-        rpath = '${ORIGIN}/' + utils.rel_lib(f)
+        rpath = '$ORIGIN/' + utils.rel_lib(f)
         patchelf = external.find_executable('patchelf')
         print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
         call([patchelf, '--set-rpath', rpath, path])
