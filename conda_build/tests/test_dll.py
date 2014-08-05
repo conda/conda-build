@@ -64,13 +64,30 @@ class TestDynamicLibrary(unittest.TestCase):
 
     def test_process_outside_targets(self):
         # FIXME: test allowed_outside
-        dl = self.build_dynamic_library()
-        # now munge dynamic_library.{inside,outside,missing} for our purposes
-        dl.outside = set(['external_linkage.so'])
-        dl._process_outside_targets()
-        is_external_linkage = lambda obj: isinstance(obj, ExternalLinkage)
-        assert all(map(is_external_linkage, dl.link_errors))
-        assert len(dl.link_errors) == len(dl.outside)
+        outside_set = set(['external_linkage.so'])
+
+        def test_external_linkage():
+            dl = self.build_dynamic_library()
+            # now munge dynamic_library.{inside,outside,missing} for our purposes
+            dl.outside = outside_set.copy()
+            dl._process_outside_targets()
+            is_correct_type = lambda obj: isinstance(obj, ExternalLinkage)
+            assert all(map(is_correct_type, dl.link_errors))
+            assert len(dl.link_errors) == len(outside_set)
+
+        def test_recipe_correct_but_build_script_broken():
+            dl = self.build_dynamic_library()
+            # now munge dynamic_library.{inside,outside,missing} for our purposes
+            dl.outside = outside_set.copy()
+            dl.build_root = dict.fromkeys(dl.outside)
+            dl._process_outside_targets()
+            is_correct_type = lambda obj: \
+                    isinstance(obj, RecipeCorrectButBuildScriptBroken)
+            assert all(map(is_correct_type, dl.link_errors))
+            assert len(dl.link_errors) == len(outside_set)
+
+        test_external_linkage()
+        test_recipe_correct_but_build_script_broken()
 
     def test_process_missing_targets(self):
         dl = self.build_dynamic_library()
