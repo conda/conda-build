@@ -467,21 +467,6 @@ def get_library_dependencies(dll):
     else:
         raise NotImplementedError()
 
-def categorize_dependencies(deps, build_root):
-    inside = set()
-    outside = set()
-    missing = set()
-
-    for (depname, target) in deps:
-        if not target:
-            missing.add(depname)
-        elif target.startswith(build_root):
-            inside.add(depname)
-        else:
-            outside.add(depname)
-
-    return (inside, outside, missing)
-
 
 #===============================================================================
 # Process Wrappers
@@ -682,10 +667,27 @@ class LibraryDependencies(SlotObject):
         if not prefix:
             prefix = build_prefix
 
-        inside, outside, missing = categorize_dependencies(deps, prefix)
+        inside, outside, missing = self.categorize_dependencies(deps, prefix)
         self.inside = inside
         self.outside = outside
         self.missing = missing
+
+    @staticmethod
+    def categorize_dependencies(deps, build_root):
+        inside = set()
+        outside = set()
+        missing = set()
+
+        for (depname, target) in deps:
+            if not target:
+                missing.add(depname)
+            elif target.startswith(build_root):
+                inside.add(depname)
+            else:
+                outside.add(depname)
+
+        return (inside, outside, missing)
+
 
 class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
     ''' Representation of a library and its dependencies
