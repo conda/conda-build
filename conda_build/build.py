@@ -118,6 +118,7 @@ class BuildRoot(SlotObject):
         self.old_files = old_files
 
         if not all_files:
+            from conda_build.dll import get_files
             all_files = get_files(self.prefix)
 
         self.all_files = all_files
