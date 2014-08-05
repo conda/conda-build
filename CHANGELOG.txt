@@ -1,6 +1,17 @@
 2014-.............:
 -------------------
   * better install_requires parsing for skeleton pypi
+  * the build environment from conda-build is now called
+    _build____________________________________________________________________________________________________.
+    This is so that recipes with binary_has_prefix_files build against a
+    sufficiently long prefix.
+  * don't overwrite the input file in convert
+  * fix a bug related to the prefix_files.txt file
+  * show the download bytes in human form in skeleton pypi
+  * make patchelf error message clearer
+  * fix some issues with the git describe environment variables
+  * improve shebang line modifications with python.app
+  * show the download bytes in human form in skeleton pypi
 
 2014-07-29   1.6.1:
 -------------------
@@ -25,7 +36,6 @@
   * add bdist_conda
   * fix features and track_features
   * detect files with the build prefix automatically on Windows
-
 
 2014-07-01   1.4.0:
 -------------------
