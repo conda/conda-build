@@ -282,8 +282,8 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # impressive if you've managed to get a build into that state.)
         assert_disjoint(self.extern.keys(), self.broken)
 
-        for (name, path) in self.extern.items():
-            self.new_library_recipe_needed.append(path)
+        extern_paths = self.extern.values()
+        self.new_library_recipe_needed.extend(extern_paths)
 
     def _process_errors(self):
         # Post-processing of errors after they've been categorized.
