@@ -65,9 +65,31 @@ class TestLinkErrors(unittest.TestCase):
         assert link_errors.message
 
 class TestLinkErrorHandler(unittest.TestCase):
+    ''' BaseLinkErrorHandler expects constructor args metadata, exception, recipes
+    it uses exception.errors
+    '''
+
+    def make_linkerrors(self):
+        # make some 'LinkError's
+        # rcbbsb = RecipeCorrectButBuildScriptBroken(<stuff>)
+        broken_linkage = BrokenLinkage('to', 'from')
+        external_linkage = ExternalLinkage('to', 'from', 'actual')
+        _link_errors = [broken_linkage, external_linkage]
+        # pack them into a build_root
+        build_root = BuildRoot()
+        build_root.link_errors = _link_errors
+        return LinkErrors(build_root)
 
     def test_categorize_errors(self):
-        pass
+        ''' uses self.errors as a list of {ExternalLinkage, BrokenLnkage}
+            modifies extern, broken, names, new_library_recipe_needed
+        '''
+        # FIXME: actually test _categorize_errors
+        assert self.make_linkerrors()
 
     def test_process_errors(self):
-        pass
+        ''' uses self.new_library_recipe_needed, self.broken
+            modifes error_messages
+        '''
+        # FIXME: actually test _process_errors
+        assert self.make_linkerrors()
