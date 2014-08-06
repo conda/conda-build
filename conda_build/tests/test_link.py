@@ -17,33 +17,42 @@ from conda_build.link import (
 
 class TestLinkError(unittest.TestCase, LinkError):
 
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        LinkError.__init__(self, *args, **kwargs)
+
     def test_default_fatal(self):
         assert self.fatal
 
-class TestBrokenLinkage(unittest.TestCase):
+class TestBrokenLinkage(TestLinkError, BrokenLinkage):
+    # subclass TestLinkError to ensure fatal
 
-    # FIXME: these tests are relatively trivial, is more required?
+    def __init__(self, *args, **kwargs):
+        TestLinkError.__init__(self, *args, **kwargs)
+        BrokenLinkage.__init__(self, *args, **kwargs)
+
     def test_full_message(self):
-        broken_linkage = BrokenLinkage()
-        assert broken_linkage.full_message
+        assert self.full_message
 
-class TestExternalLinkage(unittest.TestCase):
+class TestExternalLinkage(unittest.TestCase, ExternalLinkage):
 
-    # FIXME: these tests are relatively trivial, is more required?
+    def __init__(self, *args, **kwargs):
+        unittest.TestCase.__init__(self, *args, **kwargs)
+        ExternalLinkage.__init__(self, *args, **kwargs)
+
     def test_full_message(self):
-        external_linkage = ExternalLinkage()
-        assert external_linkage.full_message
+        assert self.full_message
 
-class TestRecipeCorrectButBuildScriptBroken(unittest.TestCase):
+class TestRecipeCorrectButBuildScriptBroken(TestLinkError,
+        RecipeCorrectButBuildScriptBroken):
+    # subclass TestLinkError to ensure fatal
 
-    # FIXME: these tests are relatively trivial, is more required?
-    def test_full_message(self):
-        thing = RecipeCorrectButBuildScriptBroken()
-        assert thing.full_message
+    def __init__(self, *args, **kwargs):
+        TestLinkError.__init__(self, *args, **kwargs)
+        RecipeCorrectButBuildScriptBroken.__init__(self, *args, **kwargs)
 
 class TestLinkErrors(unittest.TestCase):
 
-    # FIXME: these tests are relatively trivial, is more required?
     def test_has_errors(self):
         build_root = BuildRoot()
         make_link_errors = lambda: LinkErrors(build_root)
@@ -57,7 +66,6 @@ class TestLinkErrors(unittest.TestCase):
 
 class TestLinkErrorHandler(unittest.TestCase):
 
-    # FIXME: these tests are relatively trivial, is more required?
     def test_summary_message(self):
         pass
 
