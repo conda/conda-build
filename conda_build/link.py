@@ -55,9 +55,10 @@ class BrokenLinkage(SlotObject, LinkError):
     ''' Provide informative methods and members related to 'LinkError's
 
     Attributes:
-        prefix: FIXME: where is this populated?
-        library: FIXME: where is this populated?
-        dependent_library_name: FIXME: where is this populated?
+        prefix: preamble to BrokenLinkage error message
+        library: target library (library linked to) that has issues
+        dependent_library_name: originating library (library linked from) that
+            has issues
         description: property to give a concise summary of this particular
             LinkError.
 
