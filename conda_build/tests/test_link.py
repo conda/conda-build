@@ -66,6 +66,8 @@ class TestLinkErrors(unittest.TestCase):
 
 class TestLinkErrorHandler(unittest.TestCase):
 
-    def test_summary_message(self):
+    def test_categorize_errors(self):
         pass
 
+    def test_process_errors(self):
+        pass
