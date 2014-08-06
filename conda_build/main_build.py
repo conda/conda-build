@@ -299,6 +299,11 @@ def execute(args, parser):
                         # if statement.   We should be passing
                         # args.ignore_link_errors to handler
                         print('Ignoring link errors:\n%s\n' % repr(e))
+                        # FIXME: when pystan build got here, its repr was
+                        #           'LinkErrors()'
+                        #        it should probably have been more than that
+                        #        so determine what it sould have been and make
+                        #        it so!
                     else:
                         if handler:
                             h = handler(m, e, recipes)
