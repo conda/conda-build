@@ -15,11 +15,10 @@ from conda_build.link import (
 )
 
 
-class TestLinkError(unittest.TestCase):
+class TestLinkError(unittest.TestCase, LinkError):
 
     def test_default_fatal(self):
-        link_error = LinkError()
-        assert link_error.fatal
+        assert self.fatal
 
 class TestBrokenLinkage(unittest.TestCase):
 
