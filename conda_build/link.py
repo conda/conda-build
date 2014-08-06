@@ -283,7 +283,7 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
     def _process_errors(self):
         ''' Create a single unified message to show to the user
 
-        To avoid repeating messages for the same depedeny.
+        To avoid repeating messages for the same depedency.
         '''
 
         # Post-processing of errors after they've been categorized.
