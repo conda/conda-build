@@ -72,8 +72,8 @@ class TestLinkErrorHandler(unittest.TestCase):
     def make_linkerrors(self):
         # make some 'LinkError's
         # rcbbsb = RecipeCorrectButBuildScriptBroken(<stuff>)
-        broken_linkage = BrokenLinkage('to', 'from')
-        external_linkage = ExternalLinkage('to', 'from', 'actual')
+        broken_linkage = BrokenLinkage('to1', 'from1')
+        external_linkage = ExternalLinkage('to2', 'from2', 'actual2')
         _link_errors = [broken_linkage, external_linkage]
         # pack them into a build_root
         build_root = BuildRoot()
