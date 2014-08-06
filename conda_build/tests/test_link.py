@@ -91,8 +91,22 @@ class TestLinkErrorHandler(unittest.TestCase):
         ''' uses self.errors as a list of {ExternalLinkage, BrokenLnkage}
             modifies extern, broken, names, new_library_recipe_needed
         '''
-        # FIXME: actually test _categorize_errors
-        assert self.make_linkerrors()
+
+        num_broken = 1
+        num_external = 1
+        linkerrors = self.make_linkerrors(num_broken=num_broken,
+                num_external=num_external)
+        link_error_handler = LinkErrorHandler(metadata=None,
+                exception=linkerrors, recipes=None)
+        link_error_handler._categorize_errors()
+        assert link_error_handler.names
+        assert len(link_error_handler.names) == num_broken + num_external
+        assert link_error_handler.broken
+        assert len(link_error_handler.broken) == num_broken
+        assert link_error_handler.extern
+        assert len(link_error_handler.extern) == num_external
+        assert link_error_handler.new_library_recipe_needed
+        assert len(link_error_handler.new_library_recipe_needed) == num_external
 
     def test_process_errors(self):
         ''' uses self.new_library_recipe_needed, self.broken
