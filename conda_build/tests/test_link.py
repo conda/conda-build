@@ -119,6 +119,8 @@ class TestLinkErrorHandler(unittest.TestCase):
         for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1)]:
             link_error_handler = self.make_linkerrorhandler(
                     num_broken=num_broken, num_external=num_external)
-            link_error_handler._categorize_errors()
+            link_error_handler.new_library_recipe_needed = map(str,
+                    range(num_external))
+            link_error_handler.broken = map(str, range(num_broken))
             link_error_handler._process_errors()
             assert len(link_error_handler.error_messages) == num_broken + num_external
