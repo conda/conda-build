@@ -38,22 +38,24 @@ class TestLibraryDependencies(unittest.TestCase):
         self.assertSetEqual(outside_set, ld.outside)
         self.assertSetEqual(missing_set, ld.missing)
 
+def get_something_in_prefix(prefix):
+    from conda_build.build import create_env
+    create_env(prefix, ['python'], verbose=True)
+    # FIXME: how to make this OS agnostic?
+    _find = ProcessWrapper(find_executable('find'))
+    found_python = _find(prefix, '-name', 'python')
+    assert found_python
+    return found_python
 
 class TestDynamicLibrary(unittest.TestCase):
 
     def build_dynamic_library(self):
         from conda_build.build import BuildRoot
         build_root = BuildRoot()
-        def get_something_in_build_root():
-            # FIXME: how to make this OS agnostic?
-            _find = ProcessWrapper(find_executable('find'))
-            found_python = _find(build_root.prefix, '-name', 'python')
-            assert found_python
-            return found_python
+        something_in_prefix = get_something_in_prefix(build_root.prefix)
         # FIXME: test more than Linux
-        something_in_build_root = get_something_in_build_root()
-        dynamic_library = LinuxDynamicLibrary(something_in_build_root,
-                build_root)
+        dynamic_library = LinuxDynamicLibrary(something_in_prefix, build_root)
+        # clear it out
         dynamic_library.link_errors = []
         dynamic_library.inside = set()
         dynamic_library.outside = set()
