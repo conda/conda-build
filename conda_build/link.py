@@ -252,6 +252,11 @@ class BaseLinkErrorHandler(object):
         raise NotImplementedError()
 
 
+def assert_disjoint(left, right):
+    intersection = set(left).intersection(right)
+    assert not intersection, (intersection, left, right)
+
+
 class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
     try_again = False
 
@@ -271,10 +276,6 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
             else:
                 assert isinstance(error, BrokenLinkage)
                 self.broken.add(name)
-
-        def assert_disjoint(left, right):
-            intersection = set(left).intersection(right)
-            assert not intersection, (intersection, left, right)
 
         # Check that there's no overlap between libraries being reported as
         # broken and extern at the same time.  (It's actually pretty
