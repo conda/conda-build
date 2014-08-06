@@ -220,6 +220,7 @@ class BaseLinkErrorHandler(object):
 
         self.new_library_recipe_needed = []
         self.recipe_needs_build_dependency_added = []
+        self.error_messages = []
 
     def handle(self):
         ''' Coordinate the method calls to handle link errors
@@ -280,20 +281,6 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # impressive if you've managed to get a build into that state.)
         assert_disjoint(self.extern.keys(), self.broken)
 
-        # Broken library links (e.g. ldd returned 'not found') need to be
-        # fixed via proper compilation flags, usually.  Either that, or the
-        # RPATH logic is busted.  Either way, broken libraries trump all other
-        # link errors -- the resulting package absolutely will not load
-        # correctly.
-        if self.broken:
-
-            # This message could be improved with some more information about
-            # what was being li
-            msg = (
-                'Fatal error: broken linkage detected:\n    %s\n'
-
-            )
-
         for (name, path) in self.extern.items():
             self.new_library_recipe_needed.append(path)
 
@@ -301,22 +288,33 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # Post-processing of errors after they've been categorized.
         msgs = []
         if self.new_library_recipe_needed:
-            msgs.append(
-                'Error: external linkage detected to libraries living outside '
-                'the build root:\n    %s\n' % (
-                    '\n   '.join(self.new_library_recipe_needed)
-                )
+            error_str = '\n   '.join(self.new_library_recipe_needed)
+            msg_template =  (
+                    'Error: external linkage detected to libraries living outside '
+                    'the build root:\n    %s\n'
             )
+            msg = msg_template % error_str
+            msgs.append(msg)
 
+        # Broken library links (e.g. ldd returned 'not found') need to be
+        # fixed via proper compilation flags, usually.  Either that, or the
+        # RPATH logic is busted.  Either way, broken libraries trump all other
+        # link errors -- the resulting package absolutely will not load
+        # correctly.
         if self.broken:
-            msgs.append(
-                'Error: broken linkage detected for the following packages: '
-                '%s' % ', '.join(self.broken)
+            # This message could be improved with some more information about
+            # what was being li
+            error_str = '\n    '.join(self.broken)
+            msg_template = (
+                'Fatal error: broken linkage detected for the following '
+                'packages:\n    %s\n'
             )
+            msg = msg_template % error_str
+            msgs.append(msg)
 
         assert msgs
         sys.stderr.write('\n'.join(msgs) + '\n')
-        self.error_messages = msgs
+        self.error_messages += msgs
 
 
 # vim:set ts=8 sw=4 sts=4 tw=78 et:
