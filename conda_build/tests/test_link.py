@@ -117,5 +117,15 @@ class TestLinkErrorHandler(unittest.TestCase):
         ''' uses self.new_library_recipe_needed, self.broken
             modifes error_messages
         '''
-        # FIXME: actually test _process_errors
-        assert self.make_linkerrors()
+        link_error_handler = self.make_linkerrorhandler(
+                num_broken=1, num_external=1)
+        # if we don't categorize errors, then new_library_recipe_needed and
+        # broken  are empty
+        self.assertRaises(AssertionError, link_error_handler._process_errors)
+        #
+        for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1)]:
+            link_error_handler = self.make_linkerrorhandler(
+                    num_broken=num_broken, num_external=num_external)
+            link_error_handler._categorize_errors()
+            link_error_handler._process_errors()
+            assert len(link_error_handler.error_messages) == num_broken + num_external
