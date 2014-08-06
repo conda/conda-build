@@ -172,7 +172,7 @@ class ExternalLinkage(BrokenLinkage):
 
 
 
-class RecipeCorrectButBuildScriptBroken(ExternalLinkage):
+class RecipeCorrectButBuildScriptBroken(BrokenLinkage):
     __slots__ = (
         ExternalLinkage.__slots__ +
         ('expected_link_target',)
