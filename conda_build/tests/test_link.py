@@ -69,12 +69,19 @@ class TestLinkErrorHandler(unittest.TestCase):
     it uses exception.errors
     '''
 
-    def make_linkerrors(self):
+    def make_linkerrors(self, num_broken=1, num_external=1):
         # make some 'LinkError's
         # rcbbsb = RecipeCorrectButBuildScriptBroken(<stuff>)
-        broken_linkage = BrokenLinkage('to1', 'from1')
-        external_linkage = ExternalLinkage('to2', 'from2', 'actual2')
-        _link_errors = [broken_linkage, external_linkage]
+        def make_broken_linkage(idx):
+            return BrokenLinkage('to%s' % idx, 'from%s' % idx)
+        def make_external_linkage(idx):
+            return ExternalLinkage('to%s' % idx, 'from%s' % idx,
+                    'actual%s' % idx)
+        broken_ids = range(0, num_broken)
+        external_ids= range(num_broken, num_broken + num_external)
+        _link_errors = []
+        _link_errors += map(make_broken_linkage, broken_ids)
+        _link_errors += map(make_external_linkage, external_ids)
         # pack them into a build_root
         build_root = BuildRoot()
         build_root.link_errors = _link_errors
