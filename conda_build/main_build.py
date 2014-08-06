@@ -293,7 +293,7 @@ def execute(args, parser):
                     # info.  Note that we pass the 'ignore_link_errors' as an
                     # argument to the handler -- we don't use it to discern
                     # whether or not to call the handler.
-                    handler = config.link_error_handler
+                    handler = config.link_errors_handler
                     if not args.ignore_link_errors:
                         # FIXME: per the comment above, we should NOT have this
                         # if statement.   We should be passing
