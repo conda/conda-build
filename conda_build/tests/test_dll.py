@@ -48,6 +48,7 @@ class TestDynamicLibrary(unittest.TestCase):
             # FIXME: how to make this OS agnostic?
             _find = ProcessWrapper(find_executable('find'))
             found_python = _find(build_root.prefix, '-name', 'python')
+            assert found_python
             return found_python
         # FIXME: test more than Linux
         something_in_build_root = get_something_in_build_root()
