@@ -94,6 +94,13 @@ class SlotObject(object):
 
     Representation is specified by __slots__ and
     _to_dict_{prefix,suffix,exclude}_ and enacted by __repr__ and _to_dict
+
+    Subclasses will often have an __init__ that looks like
+        def __init__(self, *args):
+    because the SlotObject must be initialized like
+        SlotObject.__init__(self, *args)
+    with *args passed in the same order as __slots__ names them
+
     '''
 
     # Subclasses need to define __slots__
