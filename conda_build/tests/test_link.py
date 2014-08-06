@@ -95,10 +95,6 @@ class TestLinkErrorHandler(unittest.TestCase):
         return link_error_handler
 
     def test_categorize_errors(self):
-        ''' uses self.errors as a list of {ExternalLinkage, BrokenLnkage}
-            modifies extern, broken, names, new_library_recipe_needed
-        '''
-
         num_broken = 1
         num_external = 1
         link_error_handler = self.make_linkerrorhandler(num_broken=num_broken,
@@ -114,9 +110,6 @@ class TestLinkErrorHandler(unittest.TestCase):
         assert len(link_error_handler.new_library_recipe_needed) == num_external
 
     def test_process_errors(self):
-        ''' uses self.new_library_recipe_needed, self.broken
-            modifes error_messages
-        '''
         link_error_handler = self.make_linkerrorhandler(
                 num_broken=1, num_external=1)
         # if we don't categorize errors, then new_library_recipe_needed and
