@@ -289,8 +289,8 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # Post-processing of errors after they've been categorized.
         msgs = []
         if self.new_library_recipe_needed:
-            error_str = '\n   '.join(self.new_library_recipe_needed)
-            msg_template =  (
+            error_str = '\n    '.join(self.new_library_recipe_needed)
+            msg_template = (
                     'Error: external linkage detected to libraries living outside '
                     'the build root:\n    %s\n'
             )
