@@ -174,6 +174,9 @@ class ExternalLinkage(BrokenLinkage):
 
 
 class RecipeCorrectButBuildScriptBroken(BrokenLinkage):
+    # FIXME: should I inherit from ExternalLinkage?
+    # If so, I need to set fatal back to True
+    # If not, then my __slots__ should extend BrokenLinkage, not ExternalLnkage
     __slots__ = (
         ExternalLinkage.__slots__ +
         ('expected_link_target',)
