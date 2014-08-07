@@ -95,8 +95,10 @@ class TestDynamicLibrary(unittest.TestCase):
     def test_process_missing_targets(self):
         dl = self.build_dynamic_library()
         # now munge dynamic_library.{inside,outside,missing} for our purposes
-        # FIXME: IMPLEMENT!
-        assert False
+        num_missing = 5
+        dl.missing = map(str, range(num_missing))
+        dl._process_missing_targets()
+        self.assertEqual(len(dl.link_errors), num_missing)
 
     def test_arbitrate_realtive(self):
         arbitrate_relative = DynamicLibrary.arbitrate_relative
