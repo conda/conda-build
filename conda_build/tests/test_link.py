@@ -129,3 +129,8 @@ class TestLinkErrorHandler(unittest.TestCase):
             link_error_handler._process_errors()
             self.assertEqual(len(link_error_handler.error_messages),
                     bool(num_broken) + bool(num_external))
+
+    def test_handle(self):
+        link_error_handler = self.make_linkerrorhandler(
+                num_broken=2, num_external=3)
+        link_error_handler.handle(simulate=True)
