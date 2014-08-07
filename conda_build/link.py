@@ -277,7 +277,7 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         self.extern = external_list
         self.broken = broken_list
         self.new_library_recipe_needed = [
-                _broke for _broke in self.broken
+                _ext for _ext in self.extern
                 ]
 
     def _process_errors(self):
