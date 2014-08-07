@@ -152,24 +152,7 @@ class ExternalLinkage(BrokenLinkage):
         #        if this summary_message is same as BrokenLinkage, we can just
         #        fall back to BrokenLinkage's method.  If not, we should change
         #        the string below.  Perhaps the appended html link as well
-        if is_linux:
-            msg = (
-                "Broken linkage errors are usually caused by conda build "
-                "incorrectly setting the RPATH during post-build processing "
-                "steps.  This will typically only happen during development "
-                "of conda build.  If you're running into these errors trying "
-                "to build conda packages, there is something in your "
-                "environment adversely affecting our RPATH logic. "
-            )
-        else:
-            raise NotImplementedError()
-
-        return (
-            "%s\n\nSee http://conda.pydata.org/docs/link-errors.html#broken "
-            "for more information." % msg
-        )
-
-
+        return BrokenLinkage.summary_message()
 
 class RecipeCorrectButBuildScriptBroken(BrokenLinkage):
     # FIXME: should I inherit from ExternalLinkage?
