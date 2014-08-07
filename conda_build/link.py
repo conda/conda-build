@@ -225,7 +225,8 @@ class BaseLinkErrorHandler(object):
         self._process_errors()
         self._finalize()
 
-        if self.broken or not self.ignore_link_errors:
+        exit_on_extern = self.extern and not self.ignore_link_errors
+        if self.broken or exit_on_extern:
             sys.exit(1)
 
     def _finalize(self):
