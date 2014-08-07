@@ -116,7 +116,7 @@ class TestLinkErrorHandler(unittest.TestCase):
         link_error_handler = self.make_linkerrorhandler(
                 num_broken=1, num_external=1)
         # if we don't categorize errors, then new_library_recipe_needed and
-        # broken  are empty
+        # broken are empty
         self.assertRaises(AssertionError, link_error_handler._process_errors)
         #
         for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1)]:
