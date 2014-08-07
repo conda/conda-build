@@ -137,13 +137,17 @@ class ExternalLinkage(BrokenLinkage):
         ('actual_link_target',)
     )
 
-    def __repr__(self):
-        return (
-            "External linkage detected:\n"
-            "    %s: wants to link to %s, but can't find it" % (
+    prefix = "External linkage detected:"
+    link = (
+            "\nSee http://conda.pydata.org/docs/link-errors.html#external "
+            "for more information."
+    )
+
+    @property
+    def description(self):
+        return '    %s is linking to library outside of build path: %s' % (
                 self.library,
-                self.dependent_library_name,
-            )
+                self.actual_link_target,
         )
 
     @staticmethod
