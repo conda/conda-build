@@ -78,7 +78,7 @@ class TestLinkErrorHandler(unittest.TestCase):
             return ExternalLinkage('to%s' % idx, 'from%s' % idx,
                     'actual%s' % idx)
         broken_ids = range(0, num_broken)
-        external_ids= range(num_broken, num_broken + num_external)
+        external_ids = range(num_broken, num_broken + num_external)
         _link_errors = []
         _link_errors += map(make_broken_linkage, broken_ids)
         _link_errors += map(make_external_linkage, external_ids)
