@@ -64,6 +64,13 @@ class TestLinkErrors(unittest.TestCase):
         link_errors = LinkErrors(build_root)
         assert link_errors.message
 
+
+def make_broken_linkage(idx):
+    return BrokenLinkage('to%s' % idx, 'from%s' % idx)
+def make_external_linkage(idx):
+    return ExternalLinkage('to%s' % idx, 'from%s' % idx,
+            'actual%s' % idx)
+
 class TestLinkErrorHandler(unittest.TestCase):
     ''' BaseLinkErrorHandler expects constructor args metadata, exception, recipes
     it uses exception.errors
@@ -72,11 +79,6 @@ class TestLinkErrorHandler(unittest.TestCase):
     def make_linkerrors(self, num_broken=1, num_external=1):
         # make some 'LinkError's
         # rcbbsb = RecipeCorrectButBuildScriptBroken(<stuff>)
-        def make_broken_linkage(idx):
-            return BrokenLinkage('to%s' % idx, 'from%s' % idx)
-        def make_external_linkage(idx):
-            return ExternalLinkage('to%s' % idx, 'from%s' % idx,
-                    'actual%s' % idx)
         broken_ids = range(0, num_broken)
         external_ids = range(num_broken, num_broken + num_external)
         _link_errors = []
@@ -119,8 +121,9 @@ class TestLinkErrorHandler(unittest.TestCase):
         for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1)]:
             link_error_handler = self.make_linkerrorhandler(
                     num_broken=num_broken, num_external=num_external)
-            link_error_handler.new_library_recipe_needed = map(str,
+            link_error_handler.extern = map(make_external_linkage,
                     range(num_external))
-            link_error_handler.broken = map(str, range(num_broken))
+            link_error_handler.broken = map(make_broken_linkage,
+                    range(num_broken))
             link_error_handler._process_errors()
             assert len(link_error_handler.error_messages) == num_broken + num_external
