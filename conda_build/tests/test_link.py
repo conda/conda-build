@@ -98,8 +98,8 @@ class TestLinkErrorHandler(unittest.TestCase):
         return link_error_handler
 
     def test_categorize_errors(self):
-        num_broken = 1
-        num_external = 1
+        num_broken = 2
+        num_external = 3
         link_error_handler = self.make_linkerrorhandler(num_broken=num_broken,
                 num_external=num_external)
         link_error_handler._categorize_errors()
