@@ -82,13 +82,16 @@ class BrokenLinkage(SlotObject, LinkError):
         # affected files, then the summary.  This will probably be done at the
         # LinkErrors class level maybe?  Dunno', hadn't thought that far
         # through.
-        self.full_message = '\n'.join([
-            self.prefix,
-            self.description,
-            self.summary_message(),
-            self.link,
-            ]
-        )
+        self.full_message = self.make_full_message(self.description)
+
+    @classmethod
+    def make_full_message(cls, description):
+        return '\n'.join([
+            cls.prefix,
+            description,
+            cls.summary_message(),
+            cls.link,
+            ])
 
     @property
     def description(self):
