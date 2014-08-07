@@ -273,7 +273,7 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # impressive if you've managed to get a build into that state.)
         assert_disjoint(external_names, broken_names)
 
-        self.names = external_names + broken_names
+        self.names = set(external_names + broken_names)
         self.extern = external_list
         self.broken = broken_list
         self.new_library_recipe_needed = [
