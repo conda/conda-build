@@ -101,6 +101,9 @@ class BrokenLinkage(SlotObject, LinkError):
     def __repr__(self):
         return '\n'.join([self.prefix, self.description])
 
+    def __str__(self):
+        return repr(self)
+
     @staticmethod
     def summary_message():
         msg = None
