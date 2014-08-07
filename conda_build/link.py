@@ -70,6 +70,10 @@ class BrokenLinkage(SlotObject, LinkError):
     )
 
     prefix = "Broken dynamic library linkage detected:"
+    link = (
+            "\nSee http://conda.pydata.org/docs/link-errors.html#broken "
+            "for more information."
+    )
 
     def __init__(self, *args):
         SlotObject.__init__(self, *args)
@@ -82,6 +86,7 @@ class BrokenLinkage(SlotObject, LinkError):
             self.prefix,
             self.description,
             self.summary_message(),
+            self.link,
             ]
         )
 
@@ -116,11 +121,7 @@ class BrokenLinkage(SlotObject, LinkError):
             )
         else:
             raise NotImplementedError()
-
-        return (
-            "%s\n\nSee http://conda.pydata.org/docs/link-errors.html#broken "
-            "for more information." % msg
-        )
+        return msg
 
 class ExternalLinkage(BrokenLinkage):
     ''' A non-fatal linkage to a library that exists outside of the lib dir
