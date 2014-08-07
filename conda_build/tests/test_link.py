@@ -127,4 +127,5 @@ class TestLinkErrorHandler(unittest.TestCase):
             link_error_handler.broken = map(make_broken_linkage,
                     range(num_broken))
             link_error_handler._process_errors()
-            assert len(link_error_handler.error_messages) == num_broken + num_external
+            self.assertEqual(len(link_error_handler.error_messages),
+                    bool(num_broken) + bool(num_external))
