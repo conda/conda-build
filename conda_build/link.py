@@ -215,7 +215,7 @@ class BaseLinkErrorHandler(object):
         self.recipe_needs_build_dependency_added = []
         self.error_messages = []
 
-    def handle(self):
+    def handle(self, simulate=False):
         ''' Coordinate the method calls to handle link errors
 
         The primary external method of BaseLinkErrorHandler
@@ -227,7 +227,8 @@ class BaseLinkErrorHandler(object):
 
         exit_on_extern = self.extern and not self.ignore_link_errors
         if self.broken or exit_on_extern:
-            sys.exit(1)
+            if not simulate:
+                sys.exit(1)
 
     def _finalize(self):
         """
