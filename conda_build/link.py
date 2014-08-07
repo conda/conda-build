@@ -99,13 +99,7 @@ class BrokenLinkage(SlotObject, LinkError):
 
     # xxx todo:
     def __repr__(self):
-        return (
-            "Broken dynamic library linkage detected:\n"
-            "    %s: wants to link to %s, but can't find it" % (
-                self.library,
-                self.dependent_library_name,
-            )
-        )
+        return '\n'.join([self.prefix, self.description])
 
     @staticmethod
     def summary_message():
