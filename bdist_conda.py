@@ -232,11 +232,10 @@ class bdist_conda(install):
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
 
-
             if metadata.conda_import_tests:
                 if metadata.conda_import_tests is True:
-                    if self.distribution.packages:
-                        d['test']['imports'] = self.distribution.packages
+                    d['test']['imports'] = ((self.distribution.packages or [])
+                                            + (self.distribution.py_modules or []))
                 else:
                     d['test']['imports'] = metadata.conda_import_tests
 
