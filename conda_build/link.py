@@ -253,24 +253,29 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
     try_again = False
 
     def _categorize_errors(self):
-        for error in self.errors:
-            name = error.dependent_library_name
-            self.names.add(name)
-            # ExternalLinkage needs to come before BrokenLinkage as it derives
-            # from it.
-            if isinstance(error, ExternalLinkage):
-                self.extern[name] = error.actual_link_target
-            else:
-                assert isinstance(error, BrokenLinkage)
-                self.broken.add(name)
+        get_name = lambda error: error.dependent_library_name
+        is_external = lambda error: isinstance(error, ExternalLinkage)
+        is_not_external = lambda error: not is_external(error)
+        is_broken = lambda error: isinstance(error, BrokenLinkage)
 
+        external_list = filter(is_external, self.errors)
+        # broken is not external because external derives from broken
+        broken_list = filter(is_not_external, self.errors)
+        external_names = map(get_name, external_list)
+        broken_names = map(get_name, broken_list)
+
+        assert all(map(is_broken, broken_list))
         # Check that there's no overlap between libraries being reported as
         # broken and extern at the same time.  (It's actually pretty
         # impressive if you've managed to get a build into that state.)
-        assert_disjoint(self.extern.keys(), self.broken)
+        assert_disjoint(external_names, broken_names)
 
-        extern_paths = self.extern.values()
-        self.new_library_recipe_needed.extend(extern_paths)
+        self.names = external_names + broken_names
+        self.extern = external_list
+        self.broken = broken_list
+        self.new_library_recipe_needed = [
+                _broke for _broke in self.broken
+                ]
 
     def _process_errors(self):
         ''' Create a single unified message to show to the user
@@ -280,14 +285,10 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
 
         # Post-processing of errors after they've been categorized.
         msgs = []
-        if self.new_library_recipe_needed:
-            error_str = '\n    '.join(self.new_library_recipe_needed)
-            msg_template = (
-                'Error: external linkage detected to libraries living outside '
-                'the build root:\n    %s\n'
-            )
-            msg = msg_template % error_str
-            msgs.append(msg)
+        if self.extern:
+            description = '\n'.join(map(str, self.extern))
+            full_message = ExternalLinkage.make_full_message(description)
+            msgs.append(full_message)
 
         # Broken library links (e.g. ldd returned 'not found') need to be
         # fixed via proper compilation flags, usually.  Either that, or the
@@ -297,16 +298,13 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         if self.broken:
             # This message could be improved with some more information about
             # what was being li
-            error_str = '\n    '.join(self.broken)
-            msg_template = (
-                'Fatal error: broken linkage detected for the following '
-                'packages:\n    %s\n'
-            )
-            msg = msg_template % error_str
-            msgs.append(msg)
+            description = '\n'.join(map(str, self.broken))
+            full_message = BrokenLinkage.make_full_message(description)
+            msgs.append(full_message)
 
         assert msgs
-        sys.stderr.write('\n'.join(msgs) + '\n')
+        header = "\n\nCONDA BUILD\n"
+        sys.stderr.write(header + '\n'.join(msgs) + '\n')
         self.error_messages += msgs
 
 
