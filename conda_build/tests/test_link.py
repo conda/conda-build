@@ -119,7 +119,7 @@ class TestLinkErrorHandler(unittest.TestCase):
         # broken are empty
         self.assertRaises(AssertionError, link_error_handler._process_errors)
         #
-        for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1)]:
+        for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1), (2, 3)]:
             link_error_handler = self.make_linkerrorhandler(
                     num_broken=num_broken, num_external=num_external)
             link_error_handler.extern = map(make_external_linkage,
