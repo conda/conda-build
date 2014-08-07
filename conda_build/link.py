@@ -307,7 +307,7 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
 
         assert msgs
         header = "\n\nCONDA BUILD\n"
-        sys.stderr.write(header + '\n'.join(msgs) + '\n')
+        sys.stderr.write(header + '\n\n\n'.join(msgs) + '\n')
         self.error_messages += msgs
 
 
