@@ -56,7 +56,8 @@ class TestLinkErrors(unittest.TestCase):
     def test_has_errors(self):
         build_root = BuildRoot()
         make_link_errors = lambda: LinkErrors(build_root)
-        self.assertRaises(AssertionError, make_link_errors)
+        with self.assertRaises(AssertionError):
+            LinkErrors(build_root)
 
     def test_message(self):
         build_root = BuildRoot()
