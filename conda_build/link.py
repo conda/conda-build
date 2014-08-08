@@ -238,7 +238,12 @@ class BaseLinkErrorHandler(object):
         exit_on_extern = self.extern and not self.ignore_link_errors
         if self.broken or exit_on_extern:
             if not simulate:
-                sys.exit(1)
+                #sys.exit(1)
+                sys.exit('''
+CONDA BUILD: linkage issues detected
+Build failed!!!
+EXITING!!!
+''')
 
     def _finalize(self):
         """
