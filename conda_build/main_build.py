@@ -307,6 +307,7 @@ def execute(args, parser):
                     else:
                         if handler:
                             h = handler(m, e, recipes)
+                            h.handle()
                             if h.try_again:
                                 continue
                         else:
