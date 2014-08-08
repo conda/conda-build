@@ -145,11 +145,16 @@ def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
     macho.install_name_change(path, osx_ch_link)
 
-    if path.endswith('.dylib'):
+    if path.endswith(('.dylib', '.so')):
         # note that not every MachO binaries is a "dynamically linked shared
         # library" which have an identification name, a .so C extensions
         # extensions is a "bundle".  One can verify this using the "file"
         # command.
+        if path.endswith('.so'):
+            p = Popen(['file', path], stdout=PIPE)
+            stdout, stderr = p.communicate()
+            if "dynamically linked shared library" not in stdout:
+                assert_relative_osx(path)
         names = macho.otool(path)
         if names:
             args = ['install_name_tool', '-id', basename(names[0]), path]
@@ -166,6 +171,9 @@ def mk_relative_osx(path):
                     raise RuntimeError("install_name_tool failed with exit status %d"
                 % p.returncode)
 
+    assert_relative_osx(path)
+
+def assert_relative_osx(path):
     for name in macho.otool(path):
         assert not name.startswith(build_prefix), path
 
