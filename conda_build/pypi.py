@@ -460,7 +460,7 @@ def main(args, parser):
 
                 # Extract requested extra feature requirements...
                 if args.all_extras:
-                    extras_require = pkginfo['extras_require'].values()
+                    extras_require = list(pkginfo['extras_require'].values())
                 else:
                     try:
                         extras_require = [pkginfo['extras_require'][x] for x in extras]
