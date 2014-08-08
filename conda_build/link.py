@@ -106,7 +106,7 @@ class BrokenLinkage(SlotObject, LinkError):
         return '%s(%s)' % (super_repr, self.description)
 
     def __str__(self):
-        return repr(self)
+        return '    %s: %s' % (self.__class__.__name__, self.description.lstrip())
 
     @staticmethod
     def summary_message():
