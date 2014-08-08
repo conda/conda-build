@@ -102,8 +102,8 @@ class BrokenLinkage(SlotObject, LinkError):
 
     # xxx todo:
     def __repr__(self):
-        # return '\n'.join([self.prefix, self.description])
-        return self.description
+        super_repr = super(BrokenLinkage, self).__repr__()
+        return '%s(%s)' % (super_repr, self.description)
 
     def __str__(self):
         return repr(self)
