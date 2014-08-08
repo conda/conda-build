@@ -153,6 +153,7 @@ def mk_relative_osx(path):
         if path.endswith('.so'):
             p = Popen(['file', path], stdout=PIPE)
             stdout, stderr = p.communicate()
+            stdout = stdout.decode('utf-8')
             if "dynamically linked shared library" not in stdout:
                 assert_relative_osx(path)
         names = macho.otool(path)
