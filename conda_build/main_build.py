@@ -293,7 +293,7 @@ def execute(args, parser):
                     # info.  Note that we pass the 'ignore_link_errors' as an
                     # argument to the handler -- we don't use it to discern
                     # whether or not to call the handler.
-                    handler = config.link_errors_handler
+                    handler_cls = config.link_errors_handler
                     if args.ignore_link_errors:
                         # FIXME: per the comment above, we should NOT have this
                         # if statement.   We should be passing
@@ -305,10 +305,10 @@ def execute(args, parser):
                         #        so determine what it sould have been and make
                         #        it so!
                     else:
-                        if handler:
-                            h = handler(m, e, recipes)
-                            h.handle()
-                            if h.try_again:
+                        if handler_cls:
+                            handler = handler_cls(m, e, recipes)
+                            handler.handle()
+                            if handler.try_again:
                                 continue
                         else:
                             raise e
