@@ -206,7 +206,7 @@ class BaseLinkErrorHandler(object):
     try_again = False
     allow_ignore_errors = True
 
-    def __init__(self, metadata, exception, recipes, ignore_link_errors=False):
+    def __init__(self, metadata, exception, recipes, ignore_link_errors=True):
         self.metadata = metadata
         self.exception = exception
         self.recipes = recipes
