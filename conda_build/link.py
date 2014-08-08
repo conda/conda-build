@@ -207,6 +207,9 @@ class BaseLinkErrorHandler(object):
     allow_ignore_errors = True
 
     def __init__(self, metadata, exception, recipes, ignore_link_errors=True):
+        # FIXME: name ignore_link_errors something more descriptive
+        #        perhaps ignore_extern_errors since we allow external linkages
+        #        but never allow missing linkages
         self.metadata = metadata
         self.exception = exception
         self.recipes = recipes
