@@ -195,6 +195,13 @@ class LinkErrors(Exception):
             return 'Link errors:\n%s\n' % errors_as_str
         self.message = errors_to_str(self.errors)
 
+    def __repr__(self):
+        super_repr = super(LinkErrors, self).__repr__()
+        return '%s(%s)' % (super_repr, self.message)
+
+    def __str__(self):
+        return repr(self)
+
 class BaseLinkErrorHandler(object):
     try_again = False
     allow_ignore_errors = True
