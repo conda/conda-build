@@ -74,6 +74,15 @@ class BrokenLinkage(SlotObject, LinkError):
             "\nSee http://conda.pydata.org/docs/link-errors.html#broken "
             "for more information."
     )
+    _summary_message = (
+        "Broken linkage errors are usually caused by conda build "
+        "incorrectly setting the RPATH during post-build processing "
+        "steps.  This will typically only happen during development "
+        "of conda build.  If you're running into these errors trying "
+        "to build conda packages, there is something in your "
+        "environment adversely affecting our RPATH logic."
+    )
+
 
     def __init__(self, *args):
         SlotObject.__init__(self, *args)
@@ -112,14 +121,7 @@ class BrokenLinkage(SlotObject, LinkError):
     def summary_message():
         msg = None
         if is_linux:
-            msg = (
-                "Broken linkage errors are usually caused by conda build "
-                "incorrectly setting the RPATH during post-build processing "
-                "steps.  This will typically only happen during development "
-                "of conda build.  If you're running into these errors trying "
-                "to build conda packages, there is something in your "
-                "environment adversely affecting our RPATH logic."
-            )
+            msg = BrokenLinkage._summary_message
         else:
             raise NotImplementedError()
         return msg
@@ -146,6 +148,12 @@ class ExternalLinkage(BrokenLinkage):
             "\nSee http://conda.pydata.org/docs/link-errors.html#external "
             "for more information."
     )
+    _summary_message = (
+        # FIXME: get proper language from Trent
+        "Packages with External linkage errors are okay to run with locally "
+        "but are not reliably deployable on other machines "
+    )
+
 
     @property
     def description(self):
@@ -160,7 +168,12 @@ class ExternalLinkage(BrokenLinkage):
         #        if this summary_message is same as BrokenLinkage, we can just
         #        fall back to BrokenLinkage's method.  If not, we should change
         #        the string below.  Perhaps the appended html link as well
-        return BrokenLinkage.summary_message()
+        msg = None
+        if is_linux:
+            msg = ExternalLinkage._summary_message
+        else:
+            raise NotImplementedError()
+        return msg
 
 class RecipeCorrectButBuildScriptBroken(BrokenLinkage):
     # FIXME: should I inherit from ExternalLinkage?
