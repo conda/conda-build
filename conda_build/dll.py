@@ -870,6 +870,15 @@ class LinuxDynamicLibrary(DynamicLibrary):
         'libfontconfig',
     )
 
+    def __init__(self, path, build_root, extra_external=None):
+        extra_external = build_root.extra_external
+        if extra_external:
+            assert not isinstance(extra_external, str)
+            self.external += tuple(extra_external)
+            print('LinuxDynamicLibrary.__init__: external = %s' %
+                    str(self.external))
+        super(LinuxDynamicLibrary, self).__init__(path, build_root)
+
     def allowed_outside(self, name):
         if name.startswith(self.x11):
             return bool(self.build_root.allow_x11)

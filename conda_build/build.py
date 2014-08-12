@@ -93,13 +93,14 @@ class BuildRoot(SlotObject):
 
     def __init__(self, prefix=None, old_files=None, all_files=None,
                        forgiving=False, is_build=True, prefix_paths=True,
-                       allow_x11=None):
+                       allow_x11=None, extra_external=None):
         self.forgiving = forgiving
         if not prefix:
             prefix = config.build_prefix
         self.prefix = prefix
         self.relative_start_ix = len(prefix)+1
         self.allow_x11 = allow_x11
+        self.extra_external = extra_external
         self.link_errors = None
 
         if prefix_paths:
@@ -532,11 +533,13 @@ def build(m, get_src=True, verbose=True, post=None):
         build_root = None
         if config.use_new_rpath_logic or config.verify_rpaths:
             allow_x11 = bool(m.get_value('build/allow_x11', True))
+            extra_external = m.get_value('build/extra_external', None)
             build_root = BuildRoot(
                 old_files=files1,
                 all_files=files2,
                 forgiving=True,
                 allow_x11=allow_x11,
+                extra_external=extra_external,
             )
 
         if config.use_new_rpath_logic:
