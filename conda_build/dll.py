@@ -732,6 +732,7 @@ class DynamicLibrary(with_metaclass(ABCMeta, LibraryDependencies)):
         self.runtime_paths = None
         self.relative_runtime_paths = None
         self.path, self.relative = self.arbitrate_relative(path, self.prefix)
+        self.name = basename(self.path)
         self._reload_count = 0
         self.reload()
 
