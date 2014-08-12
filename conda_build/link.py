@@ -24,14 +24,7 @@ from conda_build.utils import (
 #=============================================================================
 # Globals
 #=============================================================================
-final_message = dedent("""
-    See http://conda.pydata.org/docs/link-errors.html for more info.
-
-    Tip: run `conda build --ignore-link-errors` to ignore these errors and
-    build the package anyway.  Note that the resulting package will not work
-    if you install it on a different system *unless* that system also has all
-    of the libraries listed above installed.
-""")
+final_message = None
 
 #=============================================================================
 # Classes
@@ -71,7 +64,7 @@ class BrokenLinkage(SlotObject, LinkError):
 
     prefix = "Broken dynamic library linkage detected:"
     link = (
-            "\nSee http://conda.pydata.org/docs/link-errors.html#broken "
+            "See http://conda.pydata.org/docs/link-errors.html#broken "
             "for more information."
     )
     _summary_message = (
@@ -144,16 +137,19 @@ class ExternalLinkage(BrokenLinkage):
     )
 
     prefix = "External linkage detected:"
-    link = (
-            "\nSee http://conda.pydata.org/docs/link-errors.html#external "
-            "for more information."
-    )
-    _summary_message = (
-        # FIXME: get proper language from Trent
-        "Packages with External linkage errors are okay to run with locally "
-        "but are not reliably deployable on other machines "
-    )
 
+    link = (
+            'See http://conda.pydata.org/docs/link-errors.html#external '
+            'for more information.'
+            )
+
+    # FIXME: get proper language from Trent
+    _summary_message = dedent('''
+        Tip: run `conda build --ignore-link-errors` to ignore these errors and
+        build the package anyway.  Note that the resulting package will not work
+        if you install it on a different system *unless* that system also has all
+        of the libraries listed above installed.
+    ''').strip()
 
     @property
     def description(self):
@@ -263,8 +259,9 @@ class BaseLinkErrorHandler(object):
         Called after all errors have been processed.  Intended to be used to
         print a final message informing the user of possible options for
         resolving link issues.
-        sys.stderr.write(final_message + '\n')
         '''
+        if final_message:
+            sys.stderr.write(final_message + '\n')
 
     @abstractmethod
     def _categorize_errors(self):
