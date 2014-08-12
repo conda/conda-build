@@ -875,8 +875,6 @@ class LinuxDynamicLibrary(DynamicLibrary):
         if extra_external:
             assert not isinstance(extra_external, str)
             self.external += tuple(extra_external)
-            print('LinuxDynamicLibrary.__init__: external = %s' %
-                    str(self.external))
         super(LinuxDynamicLibrary, self).__init__(path, build_root)
 
     def allowed_outside(self, name):
