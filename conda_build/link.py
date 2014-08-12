@@ -67,14 +67,14 @@ class BrokenLinkage(SlotObject, LinkError):
             "See http://conda.pydata.org/docs/link-errors.html#broken "
             "for more information."
     )
-    _summary_message = (
-        "Broken linkage errors are usually caused by conda build "
-        "incorrectly setting the RPATH during post-build processing "
-        "steps.  This will typically only happen during development "
-        "of conda build.  If you're running into these errors trying "
-        "to build conda packages, there is something in your "
-        "environment adversely affecting our RPATH logic."
-    )
+    _summary_message = dedent('''
+        Broken linkage errors are usually caused by conda build
+        incorrectly setting the RPATH during post-build processing
+        steps.  This will typically only happen during development
+        of conda build.  If you're running into these errors trying
+        to build conda packages, there is something in your
+        environment adversely affecting our RPATH logic.
+    ''').strip()
 
 
     def __init__(self, *args):
