@@ -88,7 +88,7 @@ class BrokenLinkage(SlotObject, LinkError):
 
     @classmethod
     def make_full_message(cls, description):
-        return '\n'.join([
+        return '\n\n'.join([
             cls.prefix,
             description,
             cls.summary_message(),
