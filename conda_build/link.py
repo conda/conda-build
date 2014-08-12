@@ -259,12 +259,12 @@ EXITING!!!
 ''')
 
     def _finalize(self):
-        """
+        '''
         Called after all errors have been processed.  Intended to be used to
         print a final message informing the user of possible options for
         resolving link issues.
-        """
         sys.stderr.write(final_message + '\n')
+        '''
 
     @abstractmethod
     def _categorize_errors(self):
