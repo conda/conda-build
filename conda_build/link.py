@@ -98,8 +98,8 @@ class BrokenLinkage(SlotObject, LinkError):
     @property
     def description(self):
         return "    %s can't find link target '%s'" % (
+            self.library.name,
             self.dependent_library_name,
-            self.library,
         )
 
     # xxx todo:
@@ -154,7 +154,7 @@ class ExternalLinkage(BrokenLinkage):
     @property
     def description(self):
         return '    %s is linking to library outside of build path: %s' % (
-                self.dependent_library_name,
+                self.library.name,
                 self.actual_link_target,
         )
 
