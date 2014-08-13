@@ -67,14 +67,25 @@ class BrokenLinkage(SlotObject, LinkError):
             "See http://conda.pydata.org/docs/link-errors.html#broken "
             "for more information."
     )
-    _summary_message = dedent('''
+    _reasons = [
+            '\t- when a library is both a build and a run requirement,\n'
+            '\t\tbut only added as one of the two in meta.yaml\n'
+            '\t\t(esp. libgfortran)',
+            '\t- during development of conda build',
+            ]
+    _summary_message = '\n'.join([
+        dedent('''
         Broken linkage errors are usually caused by conda build
         incorrectly setting the RPATH during post-build processing
-        steps.  This will typically only happen during development
-        of conda build.  If you're running into these errors trying
+        steps.  This will typically happen
+        ''').strip(),
+        '\n'.join(_reasons),
+        dedent('''
+        If you're running into these errors trying
         to build conda packages, there is something in your
         environment adversely affecting our RPATH logic.
-    ''').strip()
+        ''').strip()
+        ])
 
 
     def __init__(self, *args):
