@@ -17,7 +17,7 @@ from conda_build import external
 
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
-rm_rf
+
 
 def rel_lib(f):
     assert not f.startswith('/')
