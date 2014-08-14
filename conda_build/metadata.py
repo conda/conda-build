@@ -137,7 +137,8 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch',
               'has_prefix_files', 'binary_has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
-    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
+    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
+            'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
     'about': ['home', 'license', 'summary'],
 }
@@ -305,7 +306,8 @@ class MetaData(object):
         for field, key in [('app/entry', 'app_entry'),
                            ('app/type', 'app_type'),
                            ('app/cli_opts', 'app_cli_opts'),
-                           ('app/summary', 'summary')]:
+                           ('app/summary', 'summary'),
+                           ('app/own_environment', 'app_own_environment')]:
             value = self.get_value(field)
             if value:
                 d[key] = value
