@@ -998,10 +998,12 @@ class LinuxDynamicLibrary(DynamicLibrary):
                     break
 
             if not correct:
-                print("Failed to set RPATH.  See what patchelf/readelf says.")
-                import pdb
-                dbg = pdb.Pdb()
-                dbg.set_trace()
+                msg = "Failed to set RPATH.  See what patchelf/readelf says."
+                print(msg)
+                sys.exit(dedent('''
+                    CONDA BUILD: %s
+                    EXITING!!!
+                    ''' % msg)).strip()
 
             if not self.build_root.forgiving:
                 assert cur_rpath == new_rpath, (path, cur_rpath, new_rpath)
