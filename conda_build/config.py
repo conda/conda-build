@@ -11,63 +11,86 @@ from os.path import abspath, expanduser, join
 
 import conda.config as cc
 
-# These are mutated by things like conda build --python. Don't import them
-# directly. Rather, access conda_build.config.CONDA_PY, etc.
-CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
-CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
-    '')).replace('.', ''))
-CONDA_NPY = int(os.getenv('CONDA_NPY', '18').replace('.', ''))
+# We fake a module here so that we can mutate things and have them propagate
+# (we can't have @property methods on a module object), while still keeping
+# backwards compatibility with the API. Don't import things from this module
+# directly using from conda_build.config import CONDA_PY. Rather, access
+# conda_build.config.CONDA_PY, etc.
 
+module = type(os)
 
-PY3K = int(bool(CONDA_PY >= 30))
+class Config(module):
+    __file__ = __path__ = __file__
+    __package__ = __package__
+    __doc__ = __doc__
 
-def get_conda_py():
-    return CONDA_PY
+    CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
+    CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
+        '')).replace('.', ''))
+    CONDA_NPY = int(os.getenv('CONDA_NPY', '18').replace('.', ''))
 
-_bld_root_env = os.getenv('CONDA_BLD_PATH')
-_bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
-if _bld_root_env:
-    croot = abspath(expanduser(_bld_root_env))
-elif _bld_root_rc:
-    croot = abspath(expanduser(_bld_root_rc))
-elif cc.root_writable:
-    croot = join(cc.root_dir, 'conda-bld')
-else:
-    croot = abspath(expanduser('~/conda-bld'))
+    PY3K = int(bool(CONDA_PY >= 30))
 
-build_prefix = join(cc.envs_dirs[0], '_build'+'_'*100)
-test_prefix = join(cc.envs_dirs[0], '_test')
+    def get_conda_py(self):
+        return self.CONDA_PY
 
-def _get_python(prefix):
-    if sys.platform == 'win32':
-        res = join(prefix, 'python.exe')
+    _bld_root_env = os.getenv('CONDA_BLD_PATH')
+    _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+    if _bld_root_env:
+        croot = abspath(expanduser(_bld_root_env))
+    elif _bld_root_rc:
+        croot = abspath(expanduser(_bld_root_rc))
+    elif cc.root_writable:
+        croot = join(cc.root_dir, 'conda-bld')
     else:
-        res = join(prefix, 'bin/python')
-    return res
+        croot = abspath(expanduser('~/conda-bld'))
 
-def _get_perl(prefix):
-    if sys.platform == 'win32':
-        res = join(prefix, 'perl.exe')
-    else:
-        res = join(prefix, 'bin/perl')
-    return res
+    build_prefix = join(cc.envs_dirs[0], '_build'+'_')
+    test_prefix = join(cc.envs_dirs[0], '_test')
 
-build_python = _get_python(build_prefix)
-test_python = _get_python(test_prefix)
-build_perl = _get_perl(build_prefix)
-test_perl = _get_perl(test_prefix)
+    def _get_python(self, prefix):
+        if sys.platform == 'win32':
+            res = join(prefix, 'python.exe')
+        else:
+            res = join(prefix, 'bin/python')
+        return res
 
-bldpkgs_dir = join(croot, cc.subdir)
+    def _get_perl(self, prefix):
+        if sys.platform == 'win32':
+            res = join(prefix, 'perl.exe')
+        else:
+            res = join(prefix, 'bin/perl')
+        return res
 
+    @property
+    def build_python(self):
+        return self._get_python(self.build_prefix)
+
+    @property
+    def test_python(self):
+        return self._get_python(self.test_prefix)
+
+    @property
+    def build_perl(self):
+        return self._get_perl(self.build_prefix)
+
+    @property
+    def test_perl(self):
+        return self._get_perl(self.test_prefix)
+
+    bldpkgs_dir = join(croot, cc.subdir)
+
+m = Config('conda_build.config')
+sys.modules['conda_build.config'] = m
 
 def show():
     import conda.config as cc
 
-    print('CONDA_PY:', CONDA_PY)
-    print('CONDA_NPY:', CONDA_NPY)
+    print('CONDA_PY:', m.CONDA_PY)
+    print('CONDA_NPY:', m.CONDA_NPY)
     print('subdir:', cc.subdir)
-    print('croot:', croot)
-    print('build packages directory:', bldpkgs_dir)
+    print('croot:', m.croot)
+    print('build packages directory:', m.bldpkgs_dir)
 
 
 if __name__ == '__main__':

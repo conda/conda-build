@@ -12,7 +12,7 @@ import shutil
 from io import open
 from os.path import dirname, isdir, join
 
-from conda_build.config import build_prefix, build_python
+import conda_build.config as config
 
 
 
@@ -47,7 +47,7 @@ def create_entry_point(path, module, func):
                         path + '.exe')
     else:
         with open(path, 'w', encoding='utf-8') as fo:
-            fo.write('#!%s\n' % build_python)
+            fo.write('#!%s\n' % config.build_python)
             fo.write(pyscript)
         os.chmod(path, int('755', 8))
 
@@ -55,7 +55,7 @@ def create_entry_point(path, module, func):
 def create_entry_points(items):
     if not items:
         return
-    bin_dir = join(build_prefix, bin_dirname)
+    bin_dir = join(config.build_prefix, bin_dirname)
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
     for cmd, module, func in iter_entry_points(items):

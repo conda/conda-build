@@ -11,7 +11,7 @@ from os.path import basename, join, splitext, isdir, isfile, exists
 from io import open
 from subprocess import call, check_call, Popen, PIPE
 
-from conda_build.config import build_prefix, build_python, PY3K
+import conda_build.config as config
 from conda_build import external
 from conda_build import environ
 from conda_build import utils
@@ -33,7 +33,7 @@ def is_obj(path):
 
 
 def fix_shebang(f, osx_is_app=False):
-    path = join(build_prefix, f)
+    path = join(config.build_prefix, f)
     if is_obj(path):
         return
     elif os.path.islink(path):
@@ -47,9 +47,9 @@ def fix_shebang(f, osx_is_app=False):
     if not (m and 'python' in m.group()):
         return
 
-    py_exec = ('/bin/bash ' + build_prefix + '/bin/python.app'
+    py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
-               build_prefix + '/bin/' + basename(build_python))
+               config.build_prefix + '/bin/' + basename(config.build_python))
     new_data = SHEBANG_PAT.sub('#!' + py_exec, data, count=1)
     if new_data == data:
         return
@@ -100,7 +100,7 @@ def remove_easy_install_pth(preserve_egg_dir=False):
 
 def rm_py_along_so():
     "remove .py (.pyc) files alongside .so or .pyd files"
-    for root, dirs, files in os.walk(build_prefix):
+    for root, dirs, files in os.walk(config.build_prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
                 name, unused_ext = splitext(fn)
@@ -119,7 +119,7 @@ def compile_missing_pyc():
                 need_compile = True
     if need_compile:
         print('compiling .pyc files...')
-        utils._check_call([build_python, '-Wi', join(environ.STDLIB_DIR,
+        utils._check_call([config.build_python, '-Wi', join(environ.STDLIB_DIR,
                                                      'compileall.py'),
                            '-q', '-x', 'port_v3', sp_dir])
 
@@ -127,15 +127,15 @@ def compile_missing_pyc():
 def post_process(preserve_egg_dir=False):
     remove_easy_install_pth(preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
-    if not PY3K:
+    if not config.PY3K:
         compile_missing_pyc()
 
 
 def osx_ch_link(path, link):
-    assert path.startswith(build_prefix + '/')
-    reldir = utils.rel_lib(path[len(build_prefix) + 1:])
+    assert path.startswith(config.build_prefix + '/')
+    reldir = utils.rel_lib(path[len(config.build_prefix) + 1:])
 
-    if link.startswith((build_prefix + '/lib', 'lib', '@executable_path/')):
+    if link.startswith((config.build_prefix + '/lib', 'lib', '@executable_path/')):
         return '@loader_path/%s/%s' % (reldir, basename(link))
 
     if link == '/usr/local/lib/libgcc_s.1.dylib':
@@ -167,7 +167,7 @@ def mk_relative_osx(path):
                 % p.returncode)
 
     for name in macho.otool(path):
-        assert not name.startswith(build_prefix), path
+        assert not name.startswith(config.build_prefix), path
 
 def mk_relative(f, binary_relocation=True):
     assert sys.platform != 'win32'
@@ -175,7 +175,7 @@ def mk_relative(f, binary_relocation=True):
     if not binary_relocation:
         return
 
-    path = join(build_prefix, f)
+    path = join(config.build_prefix, f)
     if sys.platform.startswith('linux') and is_obj(path):
         rpath = '$ORIGIN/' + utils.rel_lib(f)
         patchelf = external.find_executable('patchelf')
@@ -187,12 +187,12 @@ def mk_relative(f, binary_relocation=True):
 
 
 def fix_permissions(files):
-    for root, dirs, unused_files in os.walk(build_prefix):
+    for root, dirs, unused_files in os.walk(config.build_prefix):
         for dn in dirs:
             os.chmod(join(root, dn), int('755', 8))
 
     for f in files:
-        path = join(build_prefix, f)
+        path = join(config.build_prefix, f)
         st = os.lstat(path)
         lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
 
