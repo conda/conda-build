@@ -11,18 +11,18 @@ from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
-from conda_build.config import croot
+import conda_build.config as config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
     str = unicode
 
-SRC_CACHE = join(croot, 'src_cache')
-GIT_CACHE = join(croot, 'git_cache')
-HG_CACHE = join(croot, 'hg_cache')
-SVN_CACHE = join(croot, 'svn_cache')
-WORK_DIR = join(croot, 'work')
+SRC_CACHE = join(config.croot, 'src_cache')
+GIT_CACHE = join(config.croot, 'git_cache')
+HG_CACHE = join(config.croot, 'hg_cache')
+SVN_CACHE = join(config.croot, 'svn_cache')
+WORK_DIR = join(config.croot, 'work')
 
 
 def get_dir():

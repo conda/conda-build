@@ -8,9 +8,8 @@ import subprocess
 
 import conda.config as cc
 
-import conda_build.config
-from conda_build.config import (PY3K, build_prefix,
-                                _get_python)
+import conda_build.config as config
+
 from conda_build import source
 
 
@@ -20,13 +19,13 @@ if sys.version_info < (3, 0):
 
 
 def get_perl_ver():
-    return str(conda_build.config.CONDA_PERL)
+    return str(config.CONDA_PERL)
 
 def get_py_ver():
-    return '.'.join(str(conda_build.config.CONDA_PY))
+    return '.'.join(str(config.CONDA_PY))
 
 def get_stdlib_dir():
-    return join(build_prefix, 'Lib' if sys.platform == 'win32' else
+    return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % get_py_ver())
 
 def get_sp_dir():
@@ -65,14 +64,14 @@ PY_VER = get_py_ver()
 STDLIB_DIR = get_stdlib_dir()
 SP_DIR = get_sp_dir()
 
-def get_dict(m=None, prefix=build_prefix):
+def get_dict(m=None, prefix=config.build_prefix):
 
-    python = _get_python(prefix)
+    python = config.build_python
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
-    d['PY3K'] = str(PY3K)
+    d['PY3K'] = str(config.PY3K)
     d['STDLIB_DIR'] = STDLIB_DIR
     d['SP_DIR'] = SP_DIR
     d['SYS_PREFIX'] = sys.prefix

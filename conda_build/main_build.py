@@ -182,7 +182,6 @@ def execute(args, parser):
     import conda_build.build as build
     import conda_build.source as source
     import conda_build.config
-    from conda_build.config import croot
     from conda_build.metadata import MetaData
 
     check_external()
@@ -214,7 +213,7 @@ def execute(args, parser):
         else:
             conda_build.config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
 
-    with Locked(croot):
+    with Locked(conda_build.config.croot):
         recipes = deque(args.recipe)
         while recipes:
             arg = recipes.popleft()

@@ -15,7 +15,9 @@ import conda.config as cc
 # (we can't have @property methods on a module object), while still keeping
 # backwards compatibility with the API. Don't import things from this module
 # directly using from conda_build.config import CONDA_PY. Rather, access
-# conda_build.config.CONDA_PY, etc.
+# conda_build.config.CONDA_PY, etc.  It is also a bad idea to "save" an
+# attribute of this module for later, like build_prefix =
+# conda_build.config.build_prefix, as that won't reflect any mutated changes. 
 
 module = type(os)
 
@@ -77,6 +79,14 @@ class Config(module):
     @property
     def test_perl(self):
         return self._get_perl(self.test_prefix)
+
+    @property
+    def info_dir(self):
+        return join(self.build_prefix, 'info')
+
+    @property
+    def broken_dir(self):
+        return join(self.croot, "broken")
 
     bldpkgs_dir = join(croot, cc.subdir)
 

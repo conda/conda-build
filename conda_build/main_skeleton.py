@@ -136,9 +136,9 @@ def execute(args, parser):
     import conda_build.pypi as pypi
     import conda_build.cpan as cpan
     from conda.lock import Locked
-    from conda_build.config import croot
+    import conda_build.config
 
-    with Locked(croot):
+    with Locked(conda_build.config.croot):
         if args.repo == "pypi":
             pypi.main(args, parser)
         elif args.repo == "cpan":
