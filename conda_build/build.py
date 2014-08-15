@@ -250,7 +250,17 @@ def build(m, get_src=True, verbose=True, post=None):
     post only. False means stop just before the post.
     '''
     if post in [False, None]:
-        rm_rf(prefix)
+        rm_rf(config.build_prefix)
+        rm_rf(config.build_prefix + '_'*100)
+
+        if m.binary_has_prefix_files():
+            # We must use a long prefix here as the package will only be
+            # installable into prefixes shorter than this one.
+            config.build_prefix += '_'*100
+        else:
+            # In case there are multiple builds in the same process
+            if config.build_prefix.endswith('_'*100):
+                config.build_prefix = config.build_prefix[:-100]
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
