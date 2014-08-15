@@ -27,8 +27,7 @@ else:
     from urllib.request import build_opener, ProxyHandler, Request
     from urllib.error import HTTPError
 
-from conda.fetch import (download, get_proxy_username_and_pass,
-    add_username_and_pass_to_url, handle_proxy_407)
+from conda.fetch import (download, handle_proxy_407)
 from conda.connection import CondaSession
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
