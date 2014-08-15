@@ -45,7 +45,7 @@ class Config(module):
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
-    build_prefix = join(cc.envs_dirs[0], '_build'+'_')
+    build_prefix = join(cc.envs_dirs[0], '_build'+'_'*100)
     test_prefix = join(cc.envs_dirs[0], '_test')
 
     def _get_python(self, prefix):
