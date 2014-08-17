@@ -188,7 +188,7 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 print('Warning: prefix %s not found in %s' % (prefix, file))
         else:
-            print('Warning: prefix %s not found in %s' % (prefix, file)
+            print('Warning: prefix %s not found in %s' % (prefix, file))
 
     files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
