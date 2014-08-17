@@ -17,7 +17,7 @@ import conda.config as cc
 # directly using from conda_build.config import CONDA_PY. Rather, access
 # conda_build.config.CONDA_PY, etc.  It is also a bad idea to "save" an
 # attribute of this module for later, like build_prefix =
-# conda_build.config.build_prefix, as that won't reflect any mutated changes. 
+# conda_build.config.build_prefix, as that won't reflect any mutated changes.
 
 module = type(os)
 
@@ -47,7 +47,9 @@ class Config(module):
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
-    build_prefix = join(cc.envs_dirs[0], '_build')
+    short_build_prefix = join(cc.envs_dirs[0], '_build')
+    long_build_prefix = _build_prefix + (80-len(build_prefix))*'_'
+    use_long_build_prefix = False
     test_prefix = join(cc.envs_dirs[0], '_test')
 
     def _get_python(self, prefix):
@@ -63,6 +65,12 @@ class Config(module):
         else:
             res = join(prefix, 'bin/perl')
         return res
+
+    @property
+    def build_prefix(self):
+        if self.use_long_build_prefix:
+            return self.long_build_prefix
+        return self.short_build_prefix
 
     @property
     def build_python(self):
