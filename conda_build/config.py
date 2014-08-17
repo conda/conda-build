@@ -48,7 +48,7 @@ class Config(module):
         croot = abspath(expanduser('~/conda-bld'))
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = _build_prefix + (80-len(build_prefix))*'_'
+    long_build_prefix = short_build_prefix + (80-len(build_prefix))*'_'
     use_long_build_prefix = False
     test_prefix = join(cc.envs_dirs[0], '_test')
 
