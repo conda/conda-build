@@ -264,7 +264,7 @@ def build(m, get_src=True, verbose=True, post=None):
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
-        print("BUILD START:", m.name())
+        print("BUILD START:", m.dist())
         create_env(config.build_prefix, [ms.spec for ms in m.ms_depends('build')],
                    verbose=verbose)
 
