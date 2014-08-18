@@ -8,7 +8,7 @@ import subprocess
 
 import conda.config as cc
 
-import conda_build.config as config
+from conda_build.config import config
 
 from conda_build import source
 
@@ -57,7 +57,7 @@ def get_git_build_info(src_dir):
     return d
 
 # The UPPERCASE names are here for backwards compatibility. They will not
-# change correctly if conda_build.config.CONDA_PY changes. Use get_py_ver(),
+# change correctly if conda_build.config.config.CONDA_PY changes. Use get_py_ver(),
 # etc. instead.
 PERL_VER = get_perl_ver()
 PY_VER = get_py_ver()

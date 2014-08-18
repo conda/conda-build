@@ -11,7 +11,7 @@ from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
-import conda_build.config as config
+from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
 # Python 2.x backward compatibility

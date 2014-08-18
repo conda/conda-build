@@ -11,7 +11,7 @@ from os.path import basename, join, splitext, isdir, isfile, exists
 from io import open
 from subprocess import call, Popen, PIPE
 
-import conda_build.config as config
+from conda_build.config import config
 from conda_build import external
 from conda_build import environ
 from conda_build import utils

@@ -6,7 +6,7 @@ import sys
 from os.path import isfile, join, expanduser
 
 import conda.config as cc
-import conda_build.config as config
+from conda_build.config import config
 
 
 

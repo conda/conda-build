@@ -37,7 +37,7 @@ from conda.cli.common import spec_from_line
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
-import conda_build.config as config
+from conda_build.config import config
 
 PYPI_META = """\
 package:

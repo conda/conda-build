@@ -10,9 +10,6 @@ import sys
 from io import open
 from os.path import dirname, join, isdir, exists
 
-from conda_build import config, source
-
-
 def create_files(dir_path, m):
     """
     Create the test files for pkg in the directory given.  The resulting

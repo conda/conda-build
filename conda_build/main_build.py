@@ -181,7 +181,7 @@ def execute(args, parser):
     from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
-    import conda_build.config
+    from conda_build.config import config
     from conda_build.metadata import MetaData
 
     check_external()
@@ -197,9 +197,9 @@ def execute(args, parser):
                 args.python = [py]
                 execute(args, parser)
         else:
-            conda_build.config.CONDA_PY = int(args.python[0].replace('.', ''))
+            config.CONDA_PY = int(args.python[0].replace('.', ''))
     if args.perl:
-        conda_build.config.CONDA_PERL = args.perl
+        config.CONDA_PERL = args.perl
     if args.numpy:
         if args.numpy == ['all']:
             for npy in [16, 17, 18]:
@@ -211,9 +211,9 @@ def execute(args, parser):
                 args.numpy = [npy]
                 execute(args, parser)
         else:
-            conda_build.config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
+            config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
 
-    with Locked(conda_build.config.croot):
+    with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
             arg = recipes.popleft()

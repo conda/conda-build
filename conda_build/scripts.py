@@ -12,7 +12,7 @@ import shutil
 from io import open
 from os.path import dirname, isdir, join
 
-import conda_build.config as config
+from conda_build.config import config
 
 
 

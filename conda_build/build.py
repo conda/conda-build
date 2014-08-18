@@ -26,7 +26,8 @@ from conda.fetch import fetch_index
 from conda.install import prefix_placeholder
 from conda.utils import url_path
 
-from conda_build import config, environ, source, tarcheck
+from conda_build import environ, source, tarcheck
+from conda_build.config import config
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
                               fix_permissions, get_build_metadata)

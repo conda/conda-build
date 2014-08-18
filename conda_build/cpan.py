@@ -19,7 +19,7 @@ from conda.fetch import TmpDownload
 from conda.resolve import MatchSpec, Resolve
 from conda.utils import memoized
 
-import conda_build.config
+from conda_build.config import config
 
 
 # Python 2.x backward compatibility
@@ -145,7 +145,7 @@ def main(args, parser):
     '''
     Creates a bunch of CPAN conda recipes.
     '''
-    perl_version = conda_build.config.CONDA_PERL
+    perl_version = config.CONDA_PERL
     package_dicts = {}
     [output_dir] = args.output_dir
     indent = '\n    - '
@@ -321,7 +321,7 @@ def core_module_version(module, version):
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
     if version is None:
-        version = LooseVersion(conda_build.config.CONDA_PERL)
+        version = LooseVersion(config.CONDA_PERL)
     else:
         version = LooseVersion(version)
     cmd = ['corelist', '-v', str(version), module]

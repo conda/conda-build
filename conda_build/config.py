@@ -11,17 +11,10 @@ from os.path import abspath, expanduser, join
 
 import conda.config as cc
 
-# We fake a module here so that we can mutate things and have them propagate
-# (we can't have @property methods on a module object), while still keeping
-# backwards compatibility with the API. Don't import things from this module
-# directly using from conda_build.config import CONDA_PY. Rather, access
-# conda_build.config.CONDA_PY, etc.  It is also a bad idea to "save" an
-# attribute of this module for later, like build_prefix =
-# conda_build.config.build_prefix, as that won't reflect any mutated changes. 
+# Don't "save" an attribute of this module for later, like build_prefix =
+# conda_build.config.config.build_prefix, as that won't reflect any mutated changes.
 
-module = type(os)
-
-class Config(module):
+class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
     __doc__ = __doc__
@@ -90,8 +83,7 @@ class Config(module):
 
     bldpkgs_dir = join(croot, cc.subdir)
 
-m = Config('conda_build.config')
-sys.modules['conda_build.config'] = m
+config = Config()
 
 def show():
     import conda.config as cc
