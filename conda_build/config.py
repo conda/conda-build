@@ -40,7 +40,9 @@ class Config(object):
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
-    build_prefix = join(cc.envs_dirs[0], '_build')
+    short_build_prefix = join(cc.envs_dirs[0], '_build')
+    long_build_prefix = short_build_prefix + (80-len(short_build_prefix))*'_'
+    use_long_build_prefix = False
     test_prefix = join(cc.envs_dirs[0], '_test')
 
     def _get_python(self, prefix):
@@ -56,6 +58,12 @@ class Config(object):
         else:
             res = join(prefix, 'bin/perl')
         return res
+
+    @property
+    def build_prefix(self):
+        if self.use_long_build_prefix:
+            return self.long_build_prefix
+        return self.short_build_prefix
 
     @property
     def build_python(self):

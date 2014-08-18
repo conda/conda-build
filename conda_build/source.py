@@ -204,7 +204,11 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    if sys.platform == 'win32':
+        # without --binary flag CR will be stripped and patch will fail
+        check_call([patch, '-p0', '--binary', '-i', path], cwd=src_dir)
+    else:
+        check_call([patch, '-p0', '-i', path], cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):
