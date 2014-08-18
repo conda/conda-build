@@ -237,7 +237,6 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-
 def build(m, get_src=True, verbose=True, post=None):
     '''
     Build the package with the specified metadata.
@@ -250,22 +249,22 @@ def build(m, get_src=True, verbose=True, post=None):
     post only. False means stop just before the post.
     '''
     if post in [False, None]:
-        rm_rf(config.build_prefix)
-        rm_rf(config.build_prefix + '_'*100)
+        rm_rf(config.short_build_prefix)
+        rm_rf(config.long_build_prefix)
 
         if m.binary_has_prefix_files():
             # We must use a long prefix here as the package will only be
             # installable into prefixes shorter than this one.
-            config.build_prefix += '_'*100
+            config.use_long_build_prefix = True
         else:
             # In case there are multiple builds in the same process
-            if config.build_prefix.endswith('_'*100):
-                config.build_prefix = config.build_prefix[:-100]
+            config.use_long_build_prefix = False
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
-        create_env(config.build_prefix, [ms.spec for ms in m.ms_depends('build')],
+        create_env(config.build_prefix,
+                   [ms.spec for ms in m.ms_depends('build')],
                    verbose=verbose)
 
         if get_src:
