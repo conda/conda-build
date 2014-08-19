@@ -197,6 +197,8 @@ class MetaData(object):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
         """
+        if not self.meta_path:
+            return
         self.meta = parse(get_contents(self.meta_path))
 
     @classmethod
