@@ -1,6 +1,7 @@
 .....
 -------------------
   * add --all-extras flag to skeleton pypi
+  * fix to allow specification of full major.micro.minor for numpy, python, and perl
 
 2014-08-05   1.7.0:
 -------------------

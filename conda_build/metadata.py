@@ -281,9 +281,8 @@ class MetaData(object):
                 if ms.name == name:
                     v = ms.spec.split()[1]
                     if name != 'perl':
-                        if len(v.replace('*', '').replace('.', '')) != 2:
-                            raise RuntimeError("python and numpy versions should only be major.minor, like 2.7. Got %s." % v.replace('*', ''))
-
+                        if len(v.replace('*', '').replace('.', '')) < 2:
+                            raise RuntimeError("python and numpy versions should have at least major.minor, like 2.7. Got %s." % v.replace('*', ''))
                         res.append(s + v[0] + v[2])
                     else:
                         res.append(s + v.rstrip('*'))
