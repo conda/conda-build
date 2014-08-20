@@ -281,6 +281,8 @@ class MetaData(object):
             for ms in self.ms_depends():
                 if ms.name == name:
                     v = ms.spec.split()[1]
+                    if ',' in v or '|' in v:
+                        break
                     if name != 'perl':
                         match = version_re.match(v)
                         if match:
