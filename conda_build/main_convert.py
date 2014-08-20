@@ -11,6 +11,7 @@ import argparse
 import json
 import pprint
 import re
+import sys
 import tarfile
 from argparse import RawDescriptionHelpFormatter
 from locale import getpreferredencoding
@@ -66,7 +67,6 @@ def main():
         dest='platforms',
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
-        required=True,
         help="Platform to convert the packages to"
     )
     p.add_argument(
@@ -113,6 +113,9 @@ pyver_re = re.compile(r'python\s+(\d.\d)')
 
 
 def conda_convert(file, args):
+    if args.platforms is None:
+        sys.exit('Error: --platform option required for conda package conversion')
+
     with tarfile.open(file) as t:
         if not args.force and has_cext(t, show=args.show_imports):
             print("WARNING: Package %s has C extensions, skipping. Use -f to "
@@ -135,8 +138,7 @@ def conda_convert(file, args):
             args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
         for platform in args.platforms:
             if abspath(expanduser(join(output_dir, platform, fn))) == file:
-                print("Skipping %s/%s. Same as input file" % (platform,
-                    fn))
+                print("Skipping %s/%s. Same as input file" % (platform, fn))
                 continue
             if not PY3:
                 platform = platform.decode('utf-8')
@@ -189,12 +191,12 @@ def execute(args, parser):
         if not PY3:
             file = file.decode(getpreferredencoding())
 
-        if not file.endswith('.tar.bz2'):
-            raise RuntimeError("%s does not appear to be a conda package"
-                               % file)
-
         file = abspath(expanduser(file))
-        conda_convert(file, args)
+        if file.endswith('.tar.bz2'):
+            conda_convert(file, args)
+
+        else:
+            raise RuntimeError("cannot convert: %s" % file)
 
 
 if __name__ == '__main__':
