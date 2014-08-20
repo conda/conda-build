@@ -42,6 +42,8 @@ class Config(object):
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
     long_build_prefix = short_build_prefix + (80-len(short_build_prefix))*'_'
+    # XXX: Make this None to be more rigorous about requiring the build_prefix
+    # to be known before it is used.
     use_long_build_prefix = False
     test_prefix = join(cc.envs_dirs[0], '_test')
 
@@ -61,6 +63,8 @@ class Config(object):
 
     @property
     def build_prefix(self):
+        if self.use_long_build_prefix is None:
+            raise Exception("I don't know which build prefix to use yet")
         if self.use_long_build_prefix:
             return self.long_build_prefix
         return self.short_build_prefix

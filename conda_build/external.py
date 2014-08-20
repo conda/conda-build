@@ -8,19 +8,17 @@ from os.path import isfile, join, expanduser
 import conda.config as cc
 from conda_build.config import config
 
-
-
-if sys.platform == 'win32':
-    dir_paths = [join(config.build_prefix, 'Scripts'),
-                 join(cc.root_dir, 'Scripts'),
-                 'C:\\cygwin\\bin']
-else:
-    dir_paths = [join(config.build_prefix, 'bin'),
-                 join(cc.root_dir, 'bin'),]
-
-dir_paths.extend(os.environ['PATH'].split(os.pathsep))
-
 def find_executable(executable):
+    if sys.platform == 'win32':
+        dir_paths = [join(config.build_prefix, 'Scripts'),
+                     join(cc.root_dir, 'Scripts'),
+                     'C:\\cygwin\\bin']
+    else:
+        dir_paths = [join(config.build_prefix, 'bin'),
+                     join(cc.root_dir, 'bin'),]
+
+    dir_paths.extend(os.environ['PATH'].split(os.pathsep))
+
     for dir_path in dir_paths:
         if sys.platform == 'win32':
             for ext in  '.exe', '.bat', '':
