@@ -1,7 +1,10 @@
-.....
+2014-08-20   1.7.1:
 -------------------
   * add --all-extras flag to skeleton pypi
-  * fix to allow specification of full major.micro.minor for numpy, python, and perl
+  * fix to allow specification of full major.micro.minor for numpy, python,
+    and perl (only add the build string if it is an exact major.minor or
+    major.minor.patch version. If it is an inequality, it is not added)
+
 
 2014-08-05   1.7.0:
 -------------------
