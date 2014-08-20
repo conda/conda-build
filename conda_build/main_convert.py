@@ -15,7 +15,7 @@ import sys
 import tarfile
 from argparse import RawDescriptionHelpFormatter
 from locale import getpreferredencoding
-from os.path import abspath, expanduser, split, join, exists
+from os.path import abspath, expanduser, isdir, join, split
 from os import makedirs
 
 from conda.compat import PY3
@@ -122,9 +122,6 @@ def conda_convert(file, args):
                   "force conversion." % file)
             return
 
-        output_dir = args.output_dir
-        if not PY3:
-            output_dir = output_dir.decode(getpreferredencoding())
         file_dir, fn = split(file)
 
         info = json.loads(t.extractfile('info/index.json')
@@ -137,7 +134,8 @@ def conda_convert(file, args):
         if 'all' in args.platforms:
             args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
         for platform in args.platforms:
-            if abspath(expanduser(join(output_dir, platform, fn))) == file:
+            output_dir = join(args.output_dir, platform)
+            if abspath(expanduser(join(output_dir, fn))) == file:
                 print("Skipping %s/%s. Same as input file" % (platform, fn))
                 continue
             if not PY3:
@@ -178,9 +176,9 @@ def conda_convert(file, args):
                 print("Converting %s from %s to %s" %
                       (file, info['platform'], platform))
 
-            if not exists(join(output_dir, platform)):
-                makedirs(join(output_dir, platform))
-            tar_update(t, join(output_dir, platform, fn), file_map, verbose=args.verbose)
+            if not isdir(output_dir):
+                makedirs(output_dir)
+            tar_update(t, join(output_dir, fn), file_map, verbose=args.verbose)
 
 
 def execute(args, parser):
