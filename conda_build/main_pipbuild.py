@@ -264,6 +264,8 @@ def make_recipe(package, version):
         d['depends'] = ''
 
     data = client.release_data(package, version)
+    if not data:
+        raise RuntimeError("Cannot get data for %s-%s" % (package, version))
 
     license_classifier = "License :: OSI Approved ::"
     if data.has_key('classifiers'):
@@ -273,7 +275,7 @@ def make_recipe(package, version):
         licenses = []
 
     if not licenses:
-        license = data['license'] or 'UNKNOWN'
+        license = data.get('license','UNKNOWN') or 'UNKNOWN'
     else:
         license = ' or '.join(licenses)
 
