@@ -64,7 +64,9 @@ PY_VER = get_py_ver()
 STDLIB_DIR = get_stdlib_dir()
 SP_DIR = get_sp_dir()
 
-def get_dict(m=None, prefix=config.build_prefix):
+def get_dict(m=None, prefix=None):
+    if not prefix:
+        prefix = config.build_prefix
 
     python = config.build_python
     d = {'CONDA_BUILD': '1'}
