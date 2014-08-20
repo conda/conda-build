@@ -68,6 +68,11 @@ def get_dict(m=None, prefix=None):
     if not prefix:
         prefix = config.build_prefix
 
+    PERL_VER = get_perl_ver()
+    PY_VER = get_py_ver()
+    STDLIB_DIR = get_stdlib_dir()
+    SP_DIR = get_sp_dir()
+
     python = config.build_python
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
