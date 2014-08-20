@@ -9,7 +9,7 @@ from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3
 from conda.utils import memoized, md5_file
-import conda.config as config
+import conda.config as cc
 from conda.resolve import MatchSpec
 
 try:
@@ -26,7 +26,7 @@ def construct_yaml_str(self, node):
 Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
-from conda_build.config import CONDA_PY, CONDA_NPY, CONDA_PERL
+from conda_build.config import config
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -35,10 +35,10 @@ if sys.version_info < (3, 0):
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
-    plat = config.subdir
-    py = CONDA_PY
-    np = CONDA_NPY
-    pl = CONDA_PERL
+    plat = cc.subdir
+    py = config.CONDA_PY
+    np = config.CONDA_NPY
+    pl = config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
     return dict(
@@ -58,6 +58,7 @@ def ns_cfg():
         py26 = bool(py == 26),
         py27 = bool(py == 27),
         py33 = bool(py == 33),
+        py34 = bool(py == 34),
         np = np,
     )
 
@@ -95,6 +96,9 @@ def parse(data):
     # ensure the result is a dict
     if res is None:
         res = {}
+    for field in FIELDS:
+        if field in res and not isinstance(res[field], dict):
+            raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
                   'build/entry_points',
@@ -113,23 +117,28 @@ def parse(data):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
-        res[section][key] = str(res[section].get(key, ''))
+        val = res[section].get(key, '')
+        if val is None:
+            val = ''
+        res[section][key] = str(val)
     return res
 
-# If you update this please update the example in conda-docs/docs/source/build.rst
+# If you update this please update the example in
+# conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1',
+    'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
                'git_url', 'git_tag', 'git_branch',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_softlink', 'binary_relocation', 'script',
-              'has_prefix_files'],
+              'no_link', 'binary_relocation', 'script', 'noarch',
+              'has_prefix_files', 'binary_has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
-    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
+    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
+            'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
     'about': ['home', 'license', 'summary'],
 }
@@ -151,8 +160,8 @@ def get_contents(meta_path):
     try:
         import jinja2
     except ImportError:
-        print("There was an error importing jinja2.")
-        print("Please run `conda install jinja2` to enable jinja template support")
+        print("There was an error importing jinja2.", file=sys.stderr)
+        print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)
         with open(meta_path, encoding='utf-8') as fd:
             return fd.read()
 
@@ -164,6 +173,7 @@ def get_contents(meta_path):
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(context_processor())
+    env.globals.update(ns_cfg())
 
     template = env.get_or_select_template(filename)
 
@@ -181,6 +191,14 @@ class MetaData(object):
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
+        self.meta = parse(get_contents(self.meta_path))
+
+    def parse_again(self):
+        """Redo parsing for key-value pairs that are not initialized in the
+        first pass.
+        """
+        if not self.meta_path:
+            return
         self.meta = parse(get_contents(self.meta_path))
 
     @classmethod
@@ -230,8 +248,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', CONDA_PY), ('numpy', CONDA_NPY),
-                         ('perl', CONDA_PERL)]
+        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
+                         ('perl', config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -240,14 +258,15 @@ class MetaData(object):
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if ms.strictness != 1:
-                        sys.exit("""Error:
-    You cannot specify a version for package '%s' in the requirements.
-    Please use the environment variables CONDA_PY, CONDA_NPY, or CONDA_PERL.
-""" % name)
+                        continue
                     str_ver = str(ver)
                     if '.' not in str_ver:
                         str_ver = '.'.join(str_ver)
                     ms = MatchSpec('%s %s*' % (name, str_ver))
+            for c in '=!@#$%^&*:;"\'\\|<>?/':
+                if c in ms.name:
+                    sys.exit("Error: bad character '%s' in package name "
+                             "dependency '%s'" % (c, ms.name))
             res.append(ms)
         return res
 
@@ -262,6 +281,9 @@ class MetaData(object):
                 if ms.name == name:
                     v = ms.spec.split()[1]
                     if name != 'perl':
+                        if len(v.replace('*', '').replace('.', '')) != 2:
+                            raise RuntimeError("python and numpy versions should only be major.minor, like 2.7. Got %s." % v.replace('*', ''))
+
                         res.append(s + v[0] + v[2])
                     else:
                         res.append(s + v.rstrip('*'))
@@ -286,7 +308,8 @@ class MetaData(object):
         for field, key in [('app/entry', 'app_entry'),
                            ('app/type', 'app_type'),
                            ('app/cli_opts', 'app_cli_opts'),
-                           ('app/summary', 'summary')]:
+                           ('app/summary', 'summary'),
+                           ('app/own_environment', 'app_own_environment')]:
             value = self.get_value(field)
             if value:
                 d[key] = value
@@ -299,10 +322,16 @@ class MetaData(object):
             build = self.build_id(),
             build_number = self.build_number(),
             license = self.get_value('about/license'),
-            platform = config.platform,
-            arch = config.arch_name,
+            platform = cc.platform,
+            arch = cc.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
+        if self.get_value('build/features'):
+            d['features'] = ' '.join(self.get_value('build/features'))
+        if self.get_value('build/track_features'):
+            d['track_features'] = ' '.join(self.get_value('build/track_features'))
+        if self.get_value('build/noarch'):
+            d['platform'] = d['arch'] = None
         if self.is_app():
             d.update(self.app_meta())
         return d
@@ -311,6 +340,12 @@ class MetaData(object):
         ret = self.get_value('build/has_prefix_files', [])
         if not isinstance(ret, list):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
+        return ret
+
+    def binary_has_prefix_files(self):
+        ret = self.get_value('build/binary_has_prefix_files', [])
+        if not isinstance(ret, list):
+            raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
         return ret
 
     def __unicode__(self):

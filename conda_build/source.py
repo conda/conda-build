@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import os
 import sys
-from os.path import join, isdir, isfile
+from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, ignore_patterns, copy2
 from subprocess import check_call, Popen, PIPE
 
@@ -11,18 +11,18 @@ from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
-from conda_build.config import croot
+from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
     str = unicode
 
-SRC_CACHE = join(croot, 'src_cache')
-GIT_CACHE = join(croot, 'git_cache')
-HG_CACHE = join(croot, 'hg_cache')
-SVN_CACHE = join(croot, 'svn_cache')
-WORK_DIR = join(croot, 'work')
+SRC_CACHE = join(config.croot, 'src_cache')
+GIT_CACHE = join(config.croot, 'git_cache')
+HG_CACHE = join(config.croot, 'hg_cache')
+SVN_CACHE = join(config.croot, 'svn_cache')
+WORK_DIR = join(config.croot, 'work')
 
 
 def get_dir():
@@ -51,7 +51,7 @@ def download_to_cache(meta):
         print('Downloading source to cache: %s' % fn)
         download(meta['url'], path)
 
-    for tp in 'md5', 'sha1':
+    for tp in 'md5', 'sha1', 'sha256':
         if meta.get(tp) and hashsum_file(path, tp) != meta[tp]:
             raise RuntimeError("%s mismatch: '%s' != '%s'" %
                                (tp.upper(), hashsum_file(path, tp), meta[tp]))
@@ -74,7 +74,7 @@ def unpack(meta):
         copy2(src_path, WORK_DIR)
 
 
-def git_source(meta):
+def git_source(meta, recipe_dir):
     ''' Download a source from Git repo. '''
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
@@ -83,7 +83,12 @@ def git_source(meta):
     if not git:
         sys.exit("Error: git is not installed")
     git_url = meta['git_url']
-    git_dn = git_url.split(':')[-1].replace('/', '_')
+    if git_url.startswith('.'):
+        # It's a relative path from the conda recipe
+        os.chdir(recipe_dir)
+        git_dn = abspath(expanduser(git_url)).replace('/', '_')
+    else:
+        git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
     if sys.platform == 'win32':
         cache_repo_arg = cache_repo_arg.replace('\\', '/')
@@ -94,15 +99,17 @@ def git_source(meta):
     if isdir(cache_repo):
         check_call([git, 'fetch'], cwd=cache_repo)
     else:
-        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg])
+        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg], cwd=recipe_dir)
         assert isdir(cache_repo)
 
     # now clone into the work directory
-    checkout = meta.get('git_tag') or meta.get('git_branch') or 'master'
-    print('checkout: %r' % checkout)
+    checkout = meta.get('git_tag') or meta.get('git_branch')
+    if checkout:
+        print('checkout: %r' % checkout)
 
     check_call([git, 'clone', cache_repo_arg, WORK_DIR])
-    check_call([git, 'checkout', checkout], cwd=WORK_DIR)
+    if checkout:
+        check_call([git, 'checkout', checkout], cwd=WORK_DIR)
 
     git_info()
     return WORK_DIR
@@ -197,7 +204,11 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    if sys.platform == 'win32':
+        # without --binary flag CR will be stripped and patch will fail
+        check_call([patch, '-p0', '--binary', '-i', path], cwd=src_dir)
+    else:
+        check_call([patch, '-p0', '-i', path], cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):
@@ -211,7 +222,7 @@ def provide(recipe_dir, meta, patch=True):
     if 'fn' in meta:
         unpack(meta)
     elif 'git_url' in meta:
-        git_source(meta)
+        git_source(meta, recipe_dir)
     elif 'hg_url' in meta:
         hg_source(meta)
     elif 'svn_url' in meta:

@@ -10,6 +10,7 @@ from __future__ import (absolute_import, division, print_function,
 import argparse
 
 from conda.config import default_python
+from conda_build.main_build import args_func
 
 def main():
     p = argparse.ArgumentParser(
@@ -28,7 +29,8 @@ def main():
         "packages",
         action="store",
         nargs='+',
-        help="PyPi packages to create recipe skeletons for",
+        help="""PyPi packages to create recipe skeletons for.
+                You can also specify package[extra,...] features.""",
     )
     pypi.add_argument(
         "--output-dir",
@@ -53,7 +55,7 @@ def main():
         "--pypi-url",
         action="store",
         nargs=1,
-        default='http://pypi.python.org/pypi',
+        default='https://pypi.python.org/pypi',
         help="URL to use for PyPI",
     )
     pypi.add_argument(
@@ -73,6 +75,12 @@ def main():
         dest="noprompt",
         help="""Don't prompt the user on ambiguous choices.  Instead, make the
         best possible choice and continue."""
+    )
+    pypi.add_argument(
+        "--all-extras",
+        action="store_true",
+        default=False,
+        help="Add all extra feature requirements. Applies to all packages.",
     )
     pypi.add_argument(
         "--recursive",
@@ -121,16 +129,16 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def execute(args, parser):
     import conda_build.pypi as pypi
     import conda_build.cpan as cpan
     from conda.lock import Locked
-    from conda_build.config import croot
+    from conda_build.config import config
 
-    with Locked(croot):
+    with Locked(config.croot):
         if args.repo == "pypi":
             pypi.main(args, parser)
         elif args.repo == "cpan":

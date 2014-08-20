@@ -12,6 +12,7 @@ import argparse
 from collections import defaultdict
 
 import conda.config
+from conda_build.main_build import args_func
 
 from conda_build.metadata import MetaData
 from conda_build.build import build, bldpkg_path
@@ -91,7 +92,7 @@ def main():
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 def execute(args, parser):
     d = defaultdict(dict)

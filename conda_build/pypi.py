@@ -5,6 +5,8 @@ Tools for converting PyPI packages to conda recipes.
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
+import requests
+
 import keyword
 import os
 import re
@@ -18,19 +20,24 @@ from tempfile import mkdtemp
 from shutil import copy2
 
 if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy
+    from xmlrpclib import ServerProxy, Transport, ProtocolError
+    from urllib2 import build_opener, ProxyHandler, Request, HTTPError
 else:
-    from xmlrpc.client import ServerProxy
+    from xmlrpc.client import ServerProxy, Transport, ProtocolError
+    from urllib.request import build_opener, ProxyHandler, Request
+    from urllib.error import HTTPError
 
-from conda.fetch import download
+from conda.fetch import (download, handle_proxy_407)
+from conda.connection import CondaSession
 from conda.utils import human_bytes, hashsum_file
 from conda.install import rm_rf
 from conda.compat import input, configparser, StringIO, string_types, PY3
+from conda.config import get_proxy_servers
 from conda.cli.common import spec_from_line
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
-from conda_build.config import build_prefix, build_python
+from conda_build.config import config
 
 PYPI_META = """\
 package:
@@ -121,7 +128,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,32 @@ def setup (**attrs):
+@@ -166,5 +167,33 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -142,6 +149,7 @@ diff core.py core.py
 +def setup(*args, **kwargs):
 +    data = {{}}
 +    data['install_requires'] = kwargs.get('install_requires', [])
++    data['extras_require'] = kwargs.get('extras_require', {{}})
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
@@ -155,11 +163,77 @@ diff core.py core.py
      """Run a setup script in a somewhat controlled environment, and
 '''
 
+# https://gist.github.com/chrisguitarguy/2354951
+class RequestsTransport(Transport):
+    """
+    Drop in Transport for xmlrpclib that uses Requests instead of httplib
+    """
+    # change our user agent to reflect Requests
+    user_agent = "Python XMLRPC with Requests (python-requests.org)"
+
+    # override this if you'd like to https
+    use_https = True
+
+    session = CondaSession()
+
+    def request(self, host, handler, request_body, verbose):
+        """
+        Make an xmlrpc request.
+        """
+        headers = {
+            'User-Agent': self.user_agent,
+            'Content-Type': 'text/xml',
+        }
+        url = self._build_url(host, handler)
+
+        try:
+            resp = self.session.post(url, data=request_body, headers=headers, proxies=self.session.proxies)
+            resp.raise_for_status()
+
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 407: # Proxy Authentication Required
+                handle_proxy_407(url, self.session)
+                # Try again
+                return self.request(host, handler, request_body, verbose)
+            else:
+                raise
+
+        except requests.exceptions.ConnectionError as e:
+            # requests isn't so nice here. For whatever reason, https gives this
+            # error and http gives the above error. Also, there is no status_code
+            # attribute here. We have to just check if it looks like 407.  See
+            # https://github.com/kennethreitz/requests/issues/2061.
+            if "407" in str(e): # Proxy Authentication Required
+                handle_proxy_407(url, self.session)
+                # Try again
+                return self.request(host, handler, request_body, verbose)
+            else:
+                raise
+
+        except requests.RequestException as e:
+            raise ProtocolError(url, resp.status_code, str(e), resp.headers)
+
+        else:
+            return self.parse_response(resp)
+
+    def parse_response(self, resp):
+        """
+        Parse the xmlrpc response.
+        """
+        p, u = self.getparser()
+        p.feed(resp.text)
+        p.close()
+        return u.close()
+
+    def _build_url(self, host, handler):
+        """
+        Build a url for our request based on the host, handler and use_http
+        property
+        """
+        scheme = 'https' if self.use_https else 'http'
+        return '%s://%s/%s' % (scheme, host, handler)
+
 def main(args, parser):
-    client = ServerProxy(args.pypi_url)
-    package_dicts = {}
-    [output_dir] = args.output_dir
-    indent = '\n    - '
 
     if len(args.packages) > 1 and args.download:
         # Because if a package's setup.py imports setuptools, it will make all
@@ -167,10 +241,30 @@ def main(args, parser):
         # what kind of monkeypatching the setup.pys out there could be doing.
         print("WARNING: building more than one recipe at once without "
               "--no-download is not recommended")
+
+    proxies = get_proxy_servers()
+
+    if proxies:
+        transport = RequestsTransport()
+    else:
+        transport = None
+    client = ServerProxy(args.pypi_url, transport=transport)
+    package_dicts = {}
+    [output_dir] = args.output_dir
+    indent = '\n    - '
+
     all_packages = client.list_packages()
     all_packages_lower = [i.lower() for i in all_packages]
+
     while args.packages:
         package = args.packages.pop()
+        # Look for package[extra,...] features spec:
+        match_extras = re.match(r'^([^[]+)\[([^]]+)\]$', package)
+        if match_extras:
+            package, extras = match_extras.groups()
+            extras = extras.split(',')
+        else:
+            extras = []
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
@@ -242,7 +336,7 @@ def main(args, parser):
         else:
             n = 0
 
-        print("Using url %s (%s) for %s." % (urls[n]['url'], urls[n]['size'],
+        print("Using url %s (%s) for %s." % (urls[n]['url'], human_bytes(urls[n]['size']),
                                              package))
 
         d['pypiurl'] = urls[n]['url']
@@ -253,7 +347,7 @@ def main(args, parser):
         d['summary'] = repr(data['summary'])
         license_classifier = "License :: OSI Approved ::"
         if 'classifiers' in data:
-            licenses = [classifier.lstrip(license_classifier) for classifier in
+            licenses = [classifier.split(license_classifier, 1)[1] for classifier in
                     data['classifiers'] if classifier.startswith(license_classifier)]
         else:
             licenses = []
@@ -319,7 +413,7 @@ def main(args, parser):
                 setuptools_run = False
 
                 # Look at the entry_points and construct console_script and
-                #  gui_scripts entry_points for conda and
+                #  gui_scripts entry_points for conda
                 entry_points = pkginfo['entry_points']
                 if entry_points:
                     if isinstance(entry_points, str):
@@ -363,15 +457,35 @@ def main(args, parser):
                             d['build_comment'] = ''
                             d['test_commands'] = indent.join([''] + make_entry_tests(entry_list))
 
-                if pkginfo['install_requires'] or setuptools_build or setuptools_run:
-                    if isinstance(pkginfo['install_requires'], string_types):
-                        pkginfo['install_requires'] = [pkginfo['install_requires']]
+                # Extract requested extra feature requirements...
+                if args.all_extras:
+                    extras_require = list(pkginfo['extras_require'].values())
+                else:
+                    try:
+                        extras_require = [pkginfo['extras_require'][x] for x in extras]
+                    except KeyError:
+                        sys.exit("Error: Invalid extra features: [%s]"
+                             % ','.join(extras))
+                #... and collect all needed requirement specs in a single list:
+                requires = []
+                for specs in [pkginfo['install_requires']] + extras_require:
+                    if isinstance(specs, string_types):
+                        requires.append(specs)
+                    else:
+                        requires.extend(specs)
+                if requires or setuptools_build or setuptools_run:
                     deps = []
-                    for dep in pkginfo['install_requires']:
-                        spec = spec_from_line(dep)
-                        if spec is None:
-                            sys.exit("Error: Could not parse: %s" % dep)
-                        deps.append(spec)
+                    for deptext in requires:
+                        # Every item may be a single requirement
+                        #  or a multiline requirements string...
+                        for dep in deptext.split('\n'):
+                            #... and may also contain comments...
+                            dep = dep.split('#')[0].strip()
+                            if dep: #... and empty (or comment only) lines
+                                spec = spec_from_line(dep)
+                                if spec is None:
+                                    sys.exit("Error: Could not parse: %s" % dep)
+                                deps.append(spec)
 
                     if 'setuptools' in deps:
                         setuptools_build = False
@@ -387,6 +501,7 @@ def main(args, parser):
 
                     if args.recursive:
                         for dep in deps:
+                            dep = dep.split()[0]
                             if not exists(join(output_dir, dep)):
                                 args.packages.append(dep)
 
@@ -458,14 +573,14 @@ def run_setuppy(src_dir, temp_dir, args):
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
-    create_env(build_prefix, ['python %s*' % args.python_version, 'pyyaml',
-        'setuptools'], clear_cache=False)
-    stdlib_dir = join(build_prefix, 'Lib' if sys.platform == 'win32' else
+    create_env(config.build_prefix, ['python %s*' % args.python_version, 'pyyaml',
+        'setuptools', 'numpy'], clear_cache=False)
+    stdlib_dir = join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % args.python_version)
 
     patch = join(temp_dir, 'pypi-distutils.patch')
     with open(patch, 'w') as f:
-        f.write(DISTUTILS_PATCH.format(temp_dir))
+        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\','\\\\')))
 
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
@@ -487,12 +602,12 @@ def run_setuppy(src_dir, temp_dir, args):
     # Save PYTHONPATH for later
     env = os.environ.copy()
     if 'PYTHONPATH' in env:
-        env['PYTHONPATH'] = src_dir + ':' + env['PYTHONPATH']
+        env[str('PYTHONPATH')] = str(src_dir + ':' + env['PYTHONPATH'])
     else:
-        env['PYTHONPATH'] = src_dir
+        env[str('PYTHONPATH')] = str(src_dir)
     cwd = getcwd()
     chdir(src_dir)
-    args = [build_python, 'setup.py', 'install']
+    args = [config.build_python, 'setup.py', 'install']
     try:
         subprocess.check_call(args, env=env)
     except subprocess.CalledProcessError:

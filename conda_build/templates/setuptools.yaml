@@ -37,6 +37,10 @@ about:
 {%- endblock %}
 {% block test -%}
 test:
+  requires:
+    {% for req in data.get('tests_require', []) -%}
+    - {{req}}
+    {% endfor %}
   imports: {{data.get('packages')}}
 {%- endblock -%}
 {%- endblock %}

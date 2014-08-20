@@ -56,7 +56,7 @@ def main():
     p.add_argument(
         'recipe',
         action="store",
-        metavar='PATH',
+        metavar='RECIPE_PATH',
         nargs='+',
         help="path to recipe directory"
     )
@@ -67,14 +67,48 @@ def main():
         help="do not test the package"
     )
     p.add_argument(
+        '-b', '--build-only',
+        action="store_true",
+        help="""only run the build, without any post processing or
+        testing. Implies --no-test and --no-binstar-upload""",
+    )
+    p.add_argument(
+        '-p', '--post',
+        action="store_true",
+        help="run the post-build logic. Implies --no-test and --no-binstar-upload",
+    )
+    p.add_argument(
         '-V', '--version',
         action='version',
         version = 'conda-build %s' % __version__,
     )
+    p.add_argument(
+        '-q', "--quiet",
+        action="store_true",
+        help="do not display progress bar",
+    )
+    p.add_argument(
+        '--python',
+        action="append",
+        help="Set the Python version used by conda build",
+        metavar="PYTHON_VER",
+    )
+    p.add_argument(
+        '--perl',
+        action="append",
+        help="Set the Perl version used by conda build",
+        metavar="PERL_VER",
+    )
+    p.add_argument(
+        '--numpy',
+        action="append",
+        help="Set the NumPy version used by conda build",
+        metavar="NUMPY_VER",
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args.func(args, p)
+    args_func(args, p)
 
 
 def handle_binstar_upload(path, args):
@@ -132,8 +166,8 @@ def check_external():
 Error:
     Did not find 'patchelf' in: %s
     'patchelf' is necessary for building conda packages on Linux with
-    relocatable ELF libraries.  You can install patchelf using apt-get,
-    yum or conda.
+    relocatable ELF libraries.  You can install patchelf using conda install
+    patchelf.
 """ % (os.pathsep.join(external.dir_paths)))
 
 
@@ -147,12 +181,39 @@ def execute(args, parser):
     from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
-    from conda_build.config import croot
+    from conda_build.config import config
     from conda_build.metadata import MetaData
 
     check_external()
 
-    with Locked(croot):
+    if args.python:
+        if args.python == ['all']:
+            for py in [26, 27, 33, 34]:
+                args.python = [str(py)]
+                execute(args, parser)
+            return
+        if len(args.python) > 1:
+            for py in args.python[:]:
+                args.python = [py]
+                execute(args, parser)
+        else:
+            config.CONDA_PY = int(args.python[0].replace('.', ''))
+    if args.perl:
+        config.CONDA_PERL = args.perl
+    if args.numpy:
+        if args.numpy == ['all']:
+            for npy in [16, 17, 18]:
+                args.numpy = [str(npy)]
+                execute(args, parser)
+            return
+        if len(args.numpy) > 1:
+            for npy in args.numpy[:]:
+                args.numpy = [npy]
+                execute(args, parser)
+        else:
+            config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
+
+    with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
             arg = recipes.popleft()
@@ -188,19 +249,32 @@ def execute(args, parser):
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
-                build.test(m)
+                build.test(m, verbose=not args.quiet)
             elif args.source:
                 source.provide(m.path, m.get_section('source'))
                 print('Source tree in:', source.get_dir())
             else:
                 # This loop recursively builds dependencies if recipes exist
+                if args.build_only:
+                    post = False
+                    args.notest = True
+                    args.binstar_upload = False
+                elif args.post:
+                    post = True
+                    args.notest = True
+                    args.binstar_upload = False
+                else:
+                    post = None
                 try:
-                    build.build(m)
+                    build.build(m, verbose=not args.quiet, post=post)
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found matching:'):
                         # Build dependency if recipe exists
-                        dep_pkg = error_str.split(': ')[1].replace(' ', '-')
+                        dep_pkg = error_str.split(': ')[1]
+                        # Handle package names that contain version deps.
+                        if ' ' in dep_pkg:
+                            dep_pkg = dep_pkg.split(' ')[0]
                         recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
                         if exists(dep_pkg):
                             recipe_glob.append(dep_pkg)
@@ -220,7 +294,7 @@ def execute(args, parser):
                     continue
 
                 if not args.notest:
-                    build.test(m)
+                    build.test(m, verbose=not args.quiet)
                 binstar_upload = True
 
             if need_cleanup:
@@ -229,6 +303,25 @@ def execute(args, parser):
             if binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
 
+
+def args_func(args, p):
+    try:
+        args.func(args, p)
+    except RuntimeError as e:
+        sys.exit("Error: %s" % e)
+    except Exception as e:
+        if e.__class__.__name__ not in ('ScannerError', 'ParserError'):
+            message = """\
+An unexpected error has occurred, please consider sending the
+following traceback to the conda GitHub issue tracker at:
+
+    https://github.com/conda/conda-build/issues
+
+Include the output of the command 'conda info' in your report.
+
+"""
+            print(message, file=sys.stderr)
+        raise  # as if we did not catch it
 
 if __name__ == '__main__':
     main()

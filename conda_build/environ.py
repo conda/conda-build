@@ -4,11 +4,12 @@ from __future__ import (absolute_import, division, print_function,
 import os
 import sys
 from os.path import join
+import subprocess
 
 import conda.config as cc
 
-from conda_build.config import (CONDA_PERL, CONDA_PY, PY3K, build_prefix,
-                                _get_python)
+from conda_build.config import config
+
 from conda_build import source
 
 
@@ -17,20 +18,60 @@ if sys.version_info < (3, 0):
     str = unicode
 
 
-PERL_VER =  str(CONDA_PERL)
-PY_VER = '.'.join(str(CONDA_PY))
-STDLIB_DIR = join(build_prefix, 'Lib' if sys.platform == 'win32' else
-                                'lib/python%s' % PY_VER)
-SP_DIR = join(STDLIB_DIR, 'site-packages')
+def get_perl_ver():
+    return str(config.CONDA_PERL)
 
+def get_py_ver():
+    return '.'.join(str(config.CONDA_PY))
 
-def get_dict(m=None, prefix=build_prefix):
-    python = _get_python(prefix)
+def get_stdlib_dir():
+    return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
+                                'lib/python%s' % get_py_ver())
+
+def get_sp_dir():
+    return join(STDLIB_DIR, 'site-packages')
+
+def get_git_build_info(src_dir):
+    # cd to the src_dir
+    cwd = os.getcwd()
+    os.chdir(src_dir)
+
+    d = {}
+    key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
+    keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
+    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output = process.communicate()[0].strip()
+    output = output.decode('utf-8')
+    parts = output.rsplit('-', 2)
+    parts_length = len(parts)
+    if parts_length == 3:
+        d.update(dict(zip(keys, parts)))
+
+    if key_name('NUMBER') in d and key_name('HASH') in d:
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
+                                            d[key_name('HASH')])
+
+    # return the original cwd
+    os.chdir(cwd)
+    return d
+
+# The UPPERCASE names are here for backwards compatibility. They will not
+# change correctly if conda_build.config.config.CONDA_PY changes. Use get_py_ver(),
+# etc. instead.
+PERL_VER = get_perl_ver()
+PY_VER = get_py_ver()
+STDLIB_DIR = get_stdlib_dir()
+SP_DIR = get_sp_dir()
+
+def get_dict(m=None, prefix=config.build_prefix):
+
+    python = config.build_python
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
-    d['PY3K'] = str(PY3K)
+    d['PY3K'] = str(config.PY3K)
     d['STDLIB_DIR'] = STDLIB_DIR
     d['SP_DIR'] = SP_DIR
     d['SYS_PREFIX'] = sys.prefix
@@ -38,6 +79,11 @@ def get_dict(m=None, prefix=build_prefix):
     d['PERL_VER'] = PERL_VER
     d['PY_VER'] = PY_VER
     d['SRC_DIR'] = source.get_dir()
+    if "LANG" in os.environ:
+        d['LANG'] = os.environ['LANG']
+
+    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
+        d.update(**get_git_build_info(d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
