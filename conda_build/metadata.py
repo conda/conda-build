@@ -276,14 +276,15 @@ class MetaData(object):
             check_bad_chrs(ret, 'build/string')
             return ret
         res = []
+        version_re = re.compile(r'(?:==)?(\d)\.(\d)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     v = ms.spec.split()[1]
                     if name != 'perl':
-                        if len(v.replace('*', '').replace('.', '')) < 2:
-                            raise RuntimeError("python and numpy versions should have at least major.minor, like 2.7. Got %s." % v.replace('*', ''))
-                        res.append(s + v[0] + v[2])
+                        match = version_re.match(v)
+                        if match:
+                            res.append(s + match.group(1) + match.group(2))
                     else:
                         res.append(s + v.rstrip('*'))
                     break
