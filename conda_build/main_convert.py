@@ -197,9 +197,13 @@ def execute(args, parser):
             from conda_build.convert_gohlke import convert
 
             if args.platforms:
-                sys.exit('Error: --platform not allowed for Gohlke package '
-                         'conversion')
+                raise RuntimeError('--platform option not allowed for Gohlke '
+                                   '.exe package conversion')
             convert(file, args.output_dir, verbose=args.verbose)
+
+        elif file.endswith('.whl'):
+            raise RuntimeError('Conversion from wheel packages is not '
+                               'implemented yet, stay tuned.')
 
         else:
             raise RuntimeError("cannot convert: %s" % file)
