@@ -59,7 +59,7 @@ def repack(src_path, t, verbose=False):
             raise RuntimeError("Don't know how to handle file %s" % src)
 
         if verbose:
-            print('  %s -> %s' % (src, dst))
+            print('    %s -> %s' % (src, dst))
         zinfo = z.getinfo(src)
         zdata = z.read(src)
         ti = tarfile.TarInfo(dst)
@@ -101,4 +101,8 @@ def convert(path, repo_dir='.', verbose=False):
     repack(path, t, verbose)
     write_info(t, info)
     t.close()
+    if verbose:
+        from pprint import pprint
+        pprint(info)
+
     print("Wrote: %s" % output_path)
