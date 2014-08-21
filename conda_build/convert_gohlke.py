@@ -26,7 +26,7 @@ file_map = [
     ('PLATLIB/', 'Lib/site-packages/'),
     ('PURELIB/', 'Lib/site-packages/'),
     ('SCRIPTS/', 'Scripts/'),
-    ('DATA/Lib/site-packages/', 'Lib/site-packages/'),
+    ('DATA/', ''),
 ]
 
 
