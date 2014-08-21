@@ -69,14 +69,6 @@ def repack(src_path, t, verbose=False):
     z.close()
 
 
-def get_files(dir_path):
-    res = set()
-    for root, dirs, files in os.walk(dir_path):
-        for fn in files:
-            res.add(join(root, fn)[len(dir_path) + 1:])
-    return sorted(res)
-
-
 def write_info(t, info):
     tmp_dir = tempfile.mkdtemp()
     with open(join(tmp_dir, 'files'), 'w') as fo:
