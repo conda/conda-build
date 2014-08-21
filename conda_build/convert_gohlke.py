@@ -1,10 +1,12 @@
 import re
 import json
 import os
+import calendar
 import shutil
 import tarfile
 import tempfile
 import zipfile
+from cStringIO import StringIO
 from os.path import abspath, basename, dirname, isdir, join
 
 
@@ -39,25 +41,26 @@ def info_from_fn(fn):
     }
 
 
-def extract(src_path, dir_path):
+def repack(src_path, t, verbose=False):
     z = zipfile.ZipFile(src_path)
     for src in z.namelist():
         if src.endswith(('/', '\\')):
             continue
         for a, b in file_map:
             if src.startswith(a):
-                dst = abspath(join(dir_path, b + src[len(a):]))
+                dst = b + src[len(a):]
                 break
         else:
             raise RuntimeError("Don't know how to handle file %s" % src)
 
-        dst_dir = dirname(dst)
-        #print 'file %r to %r' % (src, dst_dir)
-        if not isdir(dst_dir):
-            os.makedirs(dst_dir)
-        data = z.read(src)
-        with open(dst, 'wb') as fi:
-            fi.write(data)
+        if verbose:
+            print '  %r -> %r' % (src, dst)
+        zinfo = z.getinfo(src)
+        zdata = z.read(src)
+        ti = tarfile.TarInfo(dst)
+        ti.size = len(zdata)
+        ti.mtime = calendar.timegm(zinfo.date_time)
+        t.addfile(ti, StringIO(zdata))
     z.close()
 
 
@@ -69,29 +72,24 @@ def get_files(dir_path):
     return sorted(res)
 
 
-def write_info(dir_path, files, info):
-    info_dir = join(dir_path, 'info')
-    os.mkdir(info_dir)
-    with open(join(info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write('%s\n' % f)
-    with open(join(info_dir, 'index.json'), 'w') as fo:
+def write_info(t, info):
+    tmp_dir = tempfile.mkdtemp()
+    with open(join(tmp_dir, 'files'), 'w') as fo:
+        for m in t.getmembers():
+            fo.write('%s\n' % m.path)
+    with open(join(tmp_dir, 'index.json'), 'w') as fo:
         json.dump(info, fo, indent=2, sort_keys=True)
-    for fn in os.listdir(info_dir):
-        files.append('info/' + fn)
+    for fn in os.listdir(tmp_dir):
+        t.add(join(tmp_dir, fn), 'info/' + fn)
+    shutil.rmtree(tmp_dir)
 
 
-def convert(path, repo_dir='.'):
+def convert(path, repo_dir='.', verbose=False):
     fn = basename(path)
     info = info_from_fn(fn)
     if info is None:
          print("WARNING: Invalid .exe filename '%s', skipping" % fn)
          return
-
-    tmp_dir = tempfile.mkdtemp()
-    extract(path, tmp_dir)
-    files = get_files(tmp_dir)
-    write_info(tmp_dir, files, info)
 
     output_dir = join(repo_dir, subdir_map[info['arch']])
     if not isdir(output_dir):
@@ -100,9 +98,7 @@ def convert(path, repo_dir='.'):
                        '%(name)s-%(version)s-%(build)s.tar.bz2' % info)
 
     t = tarfile.open(output_path, 'w:bz2')
-    for f in files:
-        t.add(join(tmp_dir, f), f)
+    repack(path, t, verbose)
+    write_info(t, info)
     t.close()
-
     print("Wrote: %s" % output_path)
-    shutil.rmtree(tmp_dir)
