@@ -9,7 +9,7 @@ from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3
 from conda.utils import memoized, md5_file
-import conda.config as config
+import conda.config as cc
 from conda.resolve import MatchSpec
 
 try:
@@ -26,7 +26,7 @@ def construct_yaml_str(self, node):
 Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
-import conda_build.config
+from conda_build.config import config
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -35,10 +35,10 @@ if sys.version_info < (3, 0):
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
-    plat = config.subdir
-    py = conda_build.config.CONDA_PY
-    np = conda_build.config.CONDA_NPY
-    pl = conda_build.config.CONDA_PERL
+    plat = cc.subdir
+    py = config.CONDA_PY
+    np = config.CONDA_NPY
+    pl = config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
     return dict(
@@ -137,7 +137,8 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch',
               'has_prefix_files', 'binary_has_prefix_files'],
     'requirements': ['build', 'run', 'conflicts'],
-    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
+    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
+            'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
     'about': ['home', 'license', 'summary'],
 }
@@ -196,6 +197,8 @@ class MetaData(object):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
         """
+        if not self.meta_path:
+            return
         self.meta = parse(get_contents(self.meta_path))
 
     @classmethod
@@ -245,8 +248,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', conda_build.config.CONDA_PY), ('numpy', conda_build.config.CONDA_NPY),
-                         ('perl', conda_build.config.CONDA_PERL)]
+        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
+                         ('perl', config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -273,17 +276,19 @@ class MetaData(object):
             check_bad_chrs(ret, 'build/string')
             return ret
         res = []
+        version_re = re.compile(r'(?:==)?(\d)\.(\d)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     v = ms.spec.split()[1]
+                    if ',' in v or '|' in v:
+                        break
                     if name != 'perl':
-                        if len(v.replace('*', '').replace('.', '')) != 2:
-                            raise RuntimeError("python and numpy versions should only be major.minor, like 2.7. Got %s." % v.replace('*', ''))
-
-                        res.append(s + v[0] + v[2])
+                        match = version_re.match(v)
+                        if match:
+                            res.append(s + match.group(1) + match.group(2))
                     else:
-                        res.append(s + v.rstrip('*'))
+                        res.append(s + v.strip('*>=!<'))
                     break
         if res:
             res.append('_')
@@ -305,7 +310,8 @@ class MetaData(object):
         for field, key in [('app/entry', 'app_entry'),
                            ('app/type', 'app_type'),
                            ('app/cli_opts', 'app_cli_opts'),
-                           ('app/summary', 'summary')]:
+                           ('app/summary', 'summary'),
+                           ('app/own_environment', 'app_own_environment')]:
             value = self.get_value(field)
             if value:
                 d[key] = value
@@ -318,8 +324,8 @@ class MetaData(object):
             build = self.build_id(),
             build_number = self.build_number(),
             license = self.get_value('about/license'),
-            platform = config.platform,
-            arch = config.arch_name,
+            platform = cc.platform,
+            arch = cc.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):

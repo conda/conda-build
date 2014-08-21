@@ -8,9 +8,8 @@ import subprocess
 
 import conda.config as cc
 
-import conda_build.config
-from conda_build.config import (PY3K, build_prefix,
-                                _get_python)
+from conda_build.config import config
+
 from conda_build import source
 
 
@@ -20,17 +19,17 @@ if sys.version_info < (3, 0):
 
 
 def get_perl_ver():
-    return str(conda_build.config.CONDA_PERL)
+    return str(config.CONDA_PERL)
 
 def get_py_ver():
-    return '.'.join(str(conda_build.config.CONDA_PY))
+    return '.'.join(str(config.CONDA_PY))
 
 def get_stdlib_dir():
-    return join(build_prefix, 'Lib' if sys.platform == 'win32' else
+    return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % get_py_ver())
 
 def get_sp_dir():
-    return join(STDLIB_DIR, 'site-packages')
+    return join(get_stdlib_dir(), 'site-packages')
 
 def get_git_build_info(src_dir):
     # cd to the src_dir
@@ -57,28 +56,22 @@ def get_git_build_info(src_dir):
     os.chdir(cwd)
     return d
 
-# The UPPERCASE names are here for backwards compatibility. They will not
-# change correctly if conda_build.config.CONDA_PY changes. Use get_py_ver(),
-# etc. instead.
-PERL_VER = get_perl_ver()
-PY_VER = get_py_ver()
-STDLIB_DIR = get_stdlib_dir()
-SP_DIR = get_sp_dir()
+def get_dict(m=None, prefix=None):
+    if not prefix:
+        prefix = config.build_prefix
 
-def get_dict(m=None, prefix=build_prefix):
-
-    python = _get_python(prefix)
+    python = config.build_python
     d = {'CONDA_BUILD': '1'}
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
-    d['PY3K'] = str(PY3K)
-    d['STDLIB_DIR'] = STDLIB_DIR
-    d['SP_DIR'] = SP_DIR
+    d['PY3K'] = str(config.PY3K)
+    d['STDLIB_DIR'] = get_stdlib_dir()
+    d['SP_DIR'] = get_sp_dir()
     d['SYS_PREFIX'] = sys.prefix
     d['SYS_PYTHON'] = sys.executable
-    d['PERL_VER'] = PERL_VER
-    d['PY_VER'] = PY_VER
+    d['PERL_VER'] = get_perl_ver()
+    d['PY_VER'] = get_py_ver()
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']

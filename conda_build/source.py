@@ -11,18 +11,18 @@ from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
-from conda_build.config import croot
+from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
     str = unicode
 
-SRC_CACHE = join(croot, 'src_cache')
-GIT_CACHE = join(croot, 'git_cache')
-HG_CACHE = join(croot, 'hg_cache')
-SVN_CACHE = join(croot, 'svn_cache')
-WORK_DIR = join(croot, 'work')
+SRC_CACHE = join(config.croot, 'src_cache')
+GIT_CACHE = join(config.croot, 'git_cache')
+HG_CACHE = join(config.croot, 'hg_cache')
+SVN_CACHE = join(config.croot, 'svn_cache')
+WORK_DIR = join(config.croot, 'work')
 
 
 def get_dir():
@@ -204,7 +204,11 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    if sys.platform == 'win32':
+        # without --binary flag CR will be stripped and patch will fail
+        check_call([patch, '-p0', '--binary', '-i', path], cwd=src_dir)
+    else:
+        check_call([patch, '-p0', '-i', path], cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):
