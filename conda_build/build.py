@@ -174,14 +174,26 @@ def create_info_files(m, files, include_recipe=True):
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
             # to worry about nested quotes.
-            files_with_prefix.append('"%s" %s "%s"' % (config.build_prefix,
-                'binary', file))
+            fmt_str = '"%s" %s "%s"'
         else:
             # Don't do it everywhere because paths on Unix can contain quotes,
             # and we don't have a good method of escaping, and because older
             # versions of conda don't support quotes in has_prefix
-            files_with_prefix.append('%s %s %s' % (config.build_prefix,
-                'binary', file))
+            fmt_str = '%s %s %s'
+        prefix = config.build_prefix
+        with open(os.path.join(prefix, file), 'rb') as f:
+            data = f.read()
+        if prefix.encode('utf-8') in data:
+            files_with_prefix.append(fmt_str % (prefix, 'binary', file))
+        elif sys.platform == 'win32':
+            # some windows libraries encode prefix with unix path separators
+            alt_p = prefix.replace('\\', '/')
+            if alt_p.encode('utf-8') in data:
+                files_with_prefix.append(fmt_str % (alt_p, 'binary', file))
+            else:
+                print('Warning: prefix %s not found in %s' % (prefix, file))
+        else:
+            print('Warning: prefix %s not found in %s' % (prefix, file))
 
     files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
