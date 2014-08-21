@@ -1,13 +1,18 @@
 import re
 import json
 import os
+import sys
 import calendar
 import shutil
 import tarfile
 import tempfile
 import zipfile
-from cStringIO import StringIO
 from os.path import basename, isdir, join
+
+if sys.version_info[0] == 2:
+    from cStringIO import StringIO as BytesIO
+else:
+    from io import BytesIO
 
 
 fn_pat = re.compile(
@@ -60,7 +65,7 @@ def repack(src_path, t, verbose=False):
         ti = tarfile.TarInfo(dst)
         ti.size = len(zdata)
         ti.mtime = calendar.timegm(zinfo.date_time)
-        t.addfile(ti, StringIO(zdata))
+        t.addfile(ti, BytesIO(zdata))
     z.close()
 
 
