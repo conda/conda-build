@@ -1,7 +1,8 @@
 2014-XX-XX   1.8.0:
 -------------------
-  * add ability to convert Golkes packages into conda packages,
-    use "conda convert <Gohlke>.exe"
+  * add ability to convert Golke's Windows packages into conda
+    packages, use "conda convert <Gohlke>.exe".  See also:
+    http://www.lfd.uci.edu/~gohlke/pythonlibs/
 
 
 2014-08-20   1.7.1:
