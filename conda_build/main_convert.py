@@ -197,8 +197,9 @@ def execute(args, parser):
             from conda_build.convert_gohlke import convert
 
             if args.platforms:
-                sys.exit('Error: --platform not allowed for Gohlke package conversion')
-            convert(file, args.output_dir)
+                sys.exit('Error: --platform not allowed for Gohlke package '
+                         'conversion')
+            convert(file, args.output_dir, verbose=args.verbose)
 
         else:
             raise RuntimeError("cannot convert: %s" % file)

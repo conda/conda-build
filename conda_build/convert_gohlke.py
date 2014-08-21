@@ -7,7 +7,7 @@ import tarfile
 import tempfile
 import zipfile
 from cStringIO import StringIO
-from os.path import abspath, basename, dirname, isdir, join
+from os.path import basename, isdir, join
 
 
 fn_pat = re.compile(
@@ -54,7 +54,7 @@ def repack(src_path, t, verbose=False):
             raise RuntimeError("Don't know how to handle file %s" % src)
 
         if verbose:
-            print '  %r -> %r' % (src, dst)
+            print('  %s -> %s' % (src, dst))
         zinfo = z.getinfo(src)
         zdata = z.read(src)
         ti = tarfile.TarInfo(dst)
@@ -85,17 +85,20 @@ def write_info(t, info):
 
 
 def convert(path, repo_dir='.', verbose=False):
-    fn = basename(path)
-    info = info_from_fn(fn)
+    fn1 = basename(path)
+    info = info_from_fn(fn1)
     if info is None:
-         print("WARNING: Invalid .exe filename '%s', skipping" % fn)
+         print("WARNING: Invalid .exe filename '%s', skipping" % fn1)
          return
+    fn2 = '%(name)s-%(version)s-%(build)s.tar.bz2' % info
+    subdir = subdir_map[info['arch']]
+    if verbose:
+        print('%s -> %s/%s' % (fn1, subdir, fn2))
 
-    output_dir = join(repo_dir, subdir_map[info['arch']])
+    output_dir = join(repo_dir, subdir)
     if not isdir(output_dir):
         os.makedirs(output_dir)
-    output_path = join(output_dir,
-                       '%(name)s-%(version)s-%(build)s.tar.bz2' % info)
+    output_path = join(output_dir, fn2)
 
     t = tarfile.open(output_path, 'w:bz2')
     repack(path, t, verbose)
