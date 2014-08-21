@@ -8,7 +8,8 @@ import zipfile
 from os.path import abspath, basename, dirname, isdir, join
 
 
-fn_pat = re.compile(r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d)\.(\d)\.exe')
+fn_pat = re.compile(
+    r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d)\.(\d)\.exe$')
 
 arch_map = {'win32': 'x86', 'win-amd64': 'x86_64'}
 
@@ -68,18 +69,9 @@ def get_files(dir_path):
     return sorted(res)
 
 
-def convert(file, output_repo='.'):
-    fn1 = basename(file)
-    info = info_from_fn(fn1)
-    if info is None:
-         print("WARNING: Invalid .exe filename '%s', skipping" % fn1)
-         return
-
-    tmp_dir = tempfile.mkdtemp()
-    extract(file, tmp_dir)
-    info_dir = join(tmp_dir, 'info')
+def write_info(dir_path, files, info):
+    info_dir = join(dir_path, 'info')
     os.mkdir(info_dir)
-    files = get_files(tmp_dir)
     with open(join(info_dir, 'files'), 'w') as fo:
         for f in files:
             fo.write('%s\n' % f)
@@ -88,11 +80,24 @@ def convert(file, output_repo='.'):
     for fn in os.listdir(info_dir):
         files.append('info/' + fn)
 
-    output_dir = join(output_repo, subdir_map[info['arch']])
+
+def convert(path, repo_dir='.'):
+    fn = basename(path)
+    info = info_from_fn(fn)
+    if info is None:
+         print("WARNING: Invalid .exe filename '%s', skipping" % fn)
+         return
+
+    tmp_dir = tempfile.mkdtemp()
+    extract(path, tmp_dir)
+    files = get_files(tmp_dir)
+    write_info(tmp_dir, files, info)
+
+    output_dir = join(repo_dir, subdir_map[info['arch']])
     if not isdir(output_dir):
         os.makedirs(output_dir)
-    fn2 = '%(name)s-%(version)s-%(build)s.tar.bz2' % info
-    output_path = join(output_dir, fn2)
+    output_path = join(output_dir,
+                       '%(name)s-%(version)s-%(build)s.tar.bz2' % info)
 
     t = tarfile.open(output_path, 'w:bz2')
     for f in files:
