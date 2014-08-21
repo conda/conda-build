@@ -9,7 +9,7 @@ from os.path import abspath, basename, dirname, isdir, join
 
 
 fn_pat = re.compile(
-    r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d)\.(\d)\.exe$')
+    r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d\.\d)\.exe$')
 
 arch_map = {'win32': 'x86', 'win-amd64': 'x86_64'}
 
@@ -27,7 +27,7 @@ def info_from_fn(fn):
     m = fn_pat.match(fn)
     if m is None:
          return
-    py_ver = '%s.%s' % (m.group(4), m.group(5))
+    py_ver = m.group(4)
     return {
         "name": m.group(1).lower(),
         "version": m.group(2),
