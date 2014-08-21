@@ -46,6 +46,7 @@ setup(
         'bin/conda-skeleton',
         'bin/conda-pipbuild',
         'bin/conda-metapackage',
+        'bin/conda-develop',
         ],
     install_requires = ['conda'],
 
