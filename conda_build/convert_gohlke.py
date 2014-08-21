@@ -8,13 +8,23 @@ import zipfile
 from os.path import abspath, basename, dirname, isdir, join
 
 
+arch_map = {'win32': 'x86', 'win-amd64': 'x86_64'}
+
+subdir_map = {'x86': 'win-32', 'x86_64': 'win-64'}
+
+file_map = [
+    ('PLATLIB/', 'Lib/site-packages/'),
+    ('PURELIB/', 'Lib/site-packages/'),
+    ('SCRIPTS/', 'Scripts/'),
+    ('DATA/Lib/site-packages/', 'Lib/site-packages/'),
+]
+
 
 def info_from_fn(fn):
     pat = re.compile(r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d)\.(\d)\.exe')
     m = pat.match(fn)
     if m is None:
          return
-    arch_map = {'win32': 'x86', 'win-amd64': 'x86_64'}
     py_ver = '%s.%s' % (m.group(4), m.group(5))
     return {
         "name": m.group(1).lower(),
@@ -28,12 +38,6 @@ def info_from_fn(fn):
 
 
 def extract(src_path, dir_path):
-    file_map = [
-        ('PLATLIB/', 'Lib/site-packages/'),
-        ('PURELIB/', 'Lib/site-packages/'),
-        ('SCRIPTS/', 'Scripts/'),
-        ('DATA/Lib/site-packages/', 'Lib/site-packages/'),
-    ]
     z = zipfile.ZipFile(src_path)
     for src in z.namelist():
         if src.endswith(('/', '\\')):
@@ -83,7 +87,6 @@ def convert(file, output_repo='.'):
     for fn in os.listdir(info_dir):
         files.append('info/' + fn)
 
-    subdir_map = {'x86': 'win-32', 'x86_64': 'win-64'}
     output_dir = join(output_repo, subdir_map[info['arch']])
     if not isdir(output_dir):
         os.makedirs(output_dir)
