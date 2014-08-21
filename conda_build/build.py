@@ -170,7 +170,18 @@ def create_info_files(m, files, include_recipe=True):
         if file not in files:
             raise RuntimeError("file %s from build/has_prefix_files was "
                                "not found" % file)
-        files_with_prefix.append('%s %s %s' % (config.build_prefix, 'binary', file))
+        if sys.platform == 'win32':
+            # Paths on Windows can contain spaces, so we need to quote the
+            # paths. Fortunately they can't contain quotes, so we don't have
+            # to worry about nested quotes.
+            files_with_prefix.append('"%s" %s "%s"' % (config.build_prefix,
+                'binary', file))
+        else:
+            # Don't do it everywhere because paths on Unix can contain quotes,
+            # and we don't have a good method of escaping, and because older
+            # versions of conda don't support quotes in has_prefix
+            files_with_prefix.append('%s %s %s' % (config.build_prefix,
+                'binary', file))
 
     files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
