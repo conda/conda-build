@@ -8,6 +8,8 @@ import zipfile
 from os.path import abspath, basename, dirname, isdir, join
 
 
+fn_pat = re.compile(r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d)\.(\d)\.exe')
+
 arch_map = {'win32': 'x86', 'win-amd64': 'x86_64'}
 
 subdir_map = {'x86': 'win-32', 'x86_64': 'win-64'}
@@ -21,8 +23,7 @@ file_map = [
 
 
 def info_from_fn(fn):
-    pat = re.compile(r'([\w\.-]+)-([\w\.]+)\.(win32|win-amd64)-py(\d)\.(\d)\.exe')
-    m = pat.match(fn)
+    m = fn_pat.match(fn)
     if m is None:
          return
     py_ver = '%s.%s' % (m.group(4), m.group(5))
