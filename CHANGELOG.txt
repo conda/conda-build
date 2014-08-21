@@ -1,3 +1,9 @@
+2014-XX-XX   1.8.0:
+-------------------
+  * add ability to convert Golkes packages into conda packages,
+    use "conda convert <Gohlke>.exe"
+
+
 2014-08-20   1.7.1:
 -------------------
   * add --all-extras flag to skeleton pypi
