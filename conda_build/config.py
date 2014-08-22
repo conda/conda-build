@@ -1,7 +1,6 @@
 '''
 Module to store conda build settings.
 '''
-
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
@@ -12,7 +11,8 @@ from os.path import abspath, expanduser, join
 import conda.config as cc
 
 # Don't "save" an attribute of this module for later, like build_prefix =
-# conda_build.config.config.build_prefix, as that won't reflect any mutated changes.
+# conda_build.config.config.build_prefix, as that won't reflect any mutated
+# changes.
 
 class Config(object):
     __file__ = __path__ = __file__
@@ -99,14 +99,13 @@ config = Config()
 
 croot = config.croot
 
-def show():
-    import conda.config as cc
 
-    print('CONDA_PY:', m.CONDA_PY)
-    print('CONDA_NPY:', m.CONDA_NPY)
+def show():
+    print('CONDA_PY:', config.CONDA_PY)
+    print('CONDA_NPY:', config.CONDA_NPY)
     print('subdir:', cc.subdir)
-    print('croot:', m.croot)
-    print('build packages directory:', m.bldpkgs_dir)
+    print('croot:', croot)
+    print('build packages directory:', config.bldpkgs_dir)
 
 
 if __name__ == '__main__':
