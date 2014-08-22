@@ -95,7 +95,7 @@ def git_source(meta, recipe_dir):
         if os.getenv('USERNAME') == 'builder':
             cache_repo_arg = '/cygdrive/c/' + cache_repo_arg[3:]
 
-    # update (or craete) the cache repo
+    # update (or create) the cache repo
     if isdir(cache_repo):
         check_call([git, 'fetch'], cwd=cache_repo)
     else:
@@ -118,11 +118,16 @@ def git_source(meta, recipe_dir):
 def git_info(fo=sys.stdout):
     ''' Print info about a Git repo. '''
     assert isdir(WORK_DIR)
+
+    # Ensure to explicitly set GIT_DIR as some Linux machines will not
+    # properly execute without it.
+    env = os.environ.copy()
+    env['GIT_DIR'] = join(WORK_DIR, '.git')
     for cmd, check_error in [
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),
                 ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR)
+        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
         stdout, stderr = p.communicate()
         if isinstance(stdout, bytes):
             stdout = stdout.decode('utf-8')
