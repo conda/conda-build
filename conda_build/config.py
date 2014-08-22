@@ -97,6 +97,8 @@ class Config(object):
 
 config = Config()
 
+croot = config.croot
+
 def show():
     import conda.config as cc
 
