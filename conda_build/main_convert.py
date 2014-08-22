@@ -70,6 +70,13 @@ def main():
         help="Platform to convert the packages to"
     )
     p.add_argument(
+        "--dependencies", "-d",
+        nargs='*',
+        help="""The dependencies of the package. To specify a version
+        restriction for a dependency, wrap the dependency in quotes, like
+        'package >=2.0'""",
+    )
+    p.add_argument(
         '--show-imports',
         action='store_true',
         default=False,
@@ -199,7 +206,8 @@ def execute(args, parser):
             if args.platforms:
                 raise RuntimeError('--platform option not allowed for Gohlke '
                                    '.exe package conversion')
-            convert(file, args.output_dir, verbose=args.verbose)
+            convert(file, args.output_dir, add_depends=args.dependencies,
+                    verbose=args.verbose)
 
         elif file.endswith('.whl'):
             raise RuntimeError('Conversion from wheel packages is not '
