@@ -32,15 +32,15 @@ def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
 def get_git_build_info(src_dir):
-    # cd to the src_dir
-    cwd = os.getcwd()
-    os.chdir(src_dir)
+    env = os.environ.copy()
+    env['GIT_DIR'] = join(src_dir, '.git')
 
     d = {}
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
     parts = output.rsplit('-', 2)
@@ -52,8 +52,6 @@ def get_git_build_info(src_dir):
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])
 
-    # return the original cwd
-    os.chdir(cwd)
     return d
 
 def get_dict(m=None, prefix=None):
