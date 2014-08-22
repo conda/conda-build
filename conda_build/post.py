@@ -121,8 +121,8 @@ def compile_missing_pyc():
                 break
     if need_compile:
         print('compiling .pyc files...')
-        utils._check_call([config.build_python, '-Wi', join(stdlib_dir,
-                                                     'compileall.py'),
+        utils._check_call([config.build_python, '-Wi',
+                           join(stdlib_dir, 'compileall.py'),
                            '-q', '-x', 'port_v3', sp_dir])
 
 
@@ -137,7 +137,8 @@ def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
     reldir = utils.rel_lib(path[len(config.build_prefix) + 1:])
 
-    if link.startswith((config.build_prefix + '/lib', 'lib', '@executable_path/')):
+    if link.startswith((config.build_prefix + '/lib', 'lib',
+                        '@executable_path/')):
         return '@loader_path/%s/%s' % (reldir, basename(link))
 
     if link == '/usr/local/lib/libgcc_s.1.dylib':
