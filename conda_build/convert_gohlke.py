@@ -81,7 +81,7 @@ def write_info(t, info):
     shutil.rmtree(tmp_dir)
 
 
-def convert(path, repo_dir='.', verbose=False):
+def convert(path, repo_dir='.', add_depends=None, verbose=False):
     fn1 = basename(path)
     info = info_from_fn(fn1)
     if info is None:
@@ -91,6 +91,9 @@ def convert(path, repo_dir='.', verbose=False):
     subdir = subdir_map[info['arch']]
     if verbose:
         print('%s -> %s/%s' % (fn1, subdir, fn2))
+
+    if add_depends:
+        info['depends'].extend(add_depends)
 
     output_dir = join(repo_dir, subdir)
     if not isdir(output_dir):

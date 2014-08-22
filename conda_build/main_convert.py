@@ -27,7 +27,11 @@ from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
 
 epilog = """
 
-For now, it is just a tool to convert pure Python packages to other platforms.
+Tool to convert packages
+------------------------
+
+Convert pure Python packages to other platforms, and to convert Gohlke's
+.exe packages into conda packages.
 
 Packages are automatically organized in subdirectories according to platform,
 e.g.,
@@ -42,8 +46,12 @@ Examples:
 Convert a package built with conda build to Windows 64-bit, and place the
 resulting package in the current directory (supposing a default Anaconda
 install on Mac OS X):
+$ conda convert package-1.0-py33.tar.bz2 -p win-64
 
-$ conda convert ~/anaconda/conda-bld/osx-64/package-1.0-py33.tar.bz2 -o . -p win-64
+Convert a .exe to a conda package, and add make it depend on numpy 1.8 or
+higher:
+$ conda convert cvxopt-1.1.7.win-amd64-py2.7.exe -d 'numpy >=1.8'
+
 """
 
 
@@ -68,6 +76,13 @@ def main():
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
         help="Platform to convert the packages to"
+    )
+    p.add_argument(
+        "--dependencies", "-d",
+        nargs='*',
+        help="""Additional (besides python) dependencies of the converted
+        package.  To specify a version restriction for a dependency, wrap
+        the dependency in quotes, like 'package >=2.0'""",
     )
     p.add_argument(
         '--show-imports',
@@ -199,7 +214,8 @@ def execute(args, parser):
             if args.platforms:
                 raise RuntimeError('--platform option not allowed for Gohlke '
                                    '.exe package conversion')
-            convert(file, args.output_dir, verbose=args.verbose)
+            convert(file, args.output_dir, add_depends=args.dependencies,
+                    verbose=args.verbose)
 
         elif file.endswith('.whl'):
             raise RuntimeError('Conversion from wheel packages is not '
