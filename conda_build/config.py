@@ -41,7 +41,7 @@ class Config(object):
         croot = abspath(expanduser('~/conda-bld'))
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = short_build_prefix + (80-len(short_build_prefix))*'_'
+    long_build_prefix = (short_build_prefix + 8 * '_PLACEHOLD')[:80]
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False

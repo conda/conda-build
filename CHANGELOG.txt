@@ -6,6 +6,7 @@
   * handle spaces on Windows better
   * add croot to the module level of conda_build.config for backwards
     compatibility
+  * changed extra long preifx for building to _PLACEHOLD...
 
 
 2014-08-20   1.7.1:
@@ -20,8 +21,7 @@
 2014-08-05   1.7.0:
 -------------------
   * better install_requires parsing for skeleton pypi
-  * the build environment from conda-build is now called
-    _build____________________________________________________________________________________________________.
+  * the build environment from conda-build is now called _build___...
     This is so that recipes with binary_has_prefix_files build against a
     sufficiently long prefix.
   * don't overwrite the input file in convert
