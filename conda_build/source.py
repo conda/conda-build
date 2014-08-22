@@ -95,7 +95,7 @@ def git_source(meta, recipe_dir):
         if os.getenv('USERNAME') == 'builder':
             cache_repo_arg = '/cygdrive/c/' + cache_repo_arg[3:]
 
-    # update (or craete) the cache repo
+    # update (or create) the cache repo
     if isdir(cache_repo):
         check_call([git, 'fetch'], cwd=cache_repo)
     else:
