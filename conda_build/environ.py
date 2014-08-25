@@ -33,7 +33,7 @@ def get_sp_dir():
 
 def get_git_build_info(src_dir):
     env = os.environ.copy()
-    env['GIT_DIR'] = join(src_dir, '.git')
+    env[str('GIT_DIR')] = join(src_dir, '.git')
 
     d = {}
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
