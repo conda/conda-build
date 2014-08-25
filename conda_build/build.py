@@ -109,6 +109,8 @@ def have_prefix_files(files):
         with open(path, 'wb') as fo:
             fo.write(data)
         os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+        if sys.platform == 'win32':
+            f = f.replace('\\', '/')
         yield f
 
 
