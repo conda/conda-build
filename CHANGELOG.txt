@@ -1,3 +1,8 @@
+...
+-------------------
+  * has_prefix paths must always use /, even on Windows
+
+
 2014-08-22   1.8.0:
 -------------------
   * add ability to convert Golke's Windows packages into conda
@@ -6,7 +11,7 @@
   * handle spaces on Windows better
   * add croot to the module level of conda_build.config for backwards
     compatibility
-  * changed extra long preifx for building to _placehold...
+  * changed extra long prefix for building to _placehold...
 
 
 2014-08-20   1.7.1:
