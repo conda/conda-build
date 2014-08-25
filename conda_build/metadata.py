@@ -344,12 +344,18 @@ class MetaData(object):
         ret = self.get_value('build/has_prefix_files', [])
         if not isinstance(ret, list):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
+        if sys.platform == 'win32':
+            if any('\\' in i for i in ret):
+                raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])
         if not isinstance(ret, list):
             raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
+        if sys.platform == 'win32':
+            if any('\\' in i for i in ret):
+                raise RuntimeError("build/binary_has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
 
     def __unicode__(self):
