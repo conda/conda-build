@@ -336,7 +336,8 @@ def main(args, parser):
         else:
             n = 0
 
-        print("Using url %s (%s) for %s." % (urls[n]['url'], human_bytes(urls[n]['size']),
+        print("Using url %s (%s) for %s." % (urls[n]['url'],
+                                             human_bytes(urls[n]['size'] or 0),
                                              package))
 
         d['pypiurl'] = urls[n]['url']
