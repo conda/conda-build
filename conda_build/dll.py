@@ -987,6 +987,7 @@ class LinuxDynamicLibrary(DynamicLibrary):
                 )
 
             import time
+            correct = False
             for (attempt, nap) in enumerate((1, 2, 4, 8), 1):
                 prefix = "[attempt: %d]" % attempt
                 print_rpath_attempt()
