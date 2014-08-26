@@ -80,10 +80,8 @@ def install_name_change(path, cb_func):
         stdout, stderr = p.communicate()
         stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
-            sys.exit("install_name_tool cannot modify Mach-O dynamic "
-                "shared library stub files. Try using "
-                "binary_has_prefix_files: %s\nOriginal error message:\n%s"
-                % (path, stderr))
+            print("Skipping Mach-O dynamic shared library stub file %s" % path)
+            continue
         else:
             print(stderr, file=sys.stderr)
         if p.returncode:
