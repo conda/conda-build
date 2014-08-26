@@ -269,7 +269,7 @@ def execute(args, parser):
                     build.build(m, verbose=not args.quiet, post=post)
                 except RuntimeError as e:
                     error_str = str(e)
-                    if error_str.startswith('No packages found matching:'):
+                    if error_str.startswith('No packages found'):
                         # Build dependency if recipe exists
                         dep_pkg = error_str.split(': ')[1]
                         # Handle package names that contain version deps.
