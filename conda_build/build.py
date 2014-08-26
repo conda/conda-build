@@ -322,9 +322,9 @@ def have_prefix_files(files):
         st = os.stat(path)
         data = data.replace(prefix_bytes, prefix_placeholder.encode('utf-8'))
         # Save as
+        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         with open(path, 'wb') as fo:
             fo.write(data)
-        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         yield f
 
 
