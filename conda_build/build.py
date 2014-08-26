@@ -146,10 +146,12 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
         yaml.safe_dump(m.meta, fo)
 
+    if sys.platform == 'win32':
+        for i, f in enumerate(files):
+            files[i] = f.replace('\\', '/')
+
     with open(join(config.info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
-            if sys.platform == 'win32':
-                f = f.replace('\\', '/')
             fo.write(f + '\n')
 
     # Deal with Python 2 and 3's different json module type reqs
