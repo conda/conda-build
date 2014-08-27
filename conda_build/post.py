@@ -146,7 +146,7 @@ def osx_ch_link(path, link):
 
 def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
-    macho.install_name_change(path, osx_ch_link)
+    s = macho.install_name_change(path, osx_ch_link)
 
     if macho.is_dylib(path):
         names = macho.otool(path)
@@ -165,7 +165,10 @@ def mk_relative_osx(path):
                     raise RuntimeError("install_name_tool failed with exit status %d"
                 % p.returncode)
 
-    assert_relative_osx(path)
+    if s:
+        # Skip for stub files, which have to use binary_has_prefix_files to be
+        # made relocatable.
+        assert_relative_osx(path)
 
 def assert_relative_osx(path):
     for name in macho.otool(path):
