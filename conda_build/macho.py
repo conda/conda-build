@@ -45,7 +45,8 @@ def is_macho(path):
 def is_dylib(path):
     with open(path, 'rb') as fi:
         # file type indicated by fourth 32-bit constant in the mach header
-        return FILETYPE[fi.read(16)[-4:]] == 'MH_DYLIB'
+        header = fi.read(16)[-4:]
+        return header in FILETYPE and FILETYPE[header] == 'MH_DYLIB'
 
 
 def otool(path):
