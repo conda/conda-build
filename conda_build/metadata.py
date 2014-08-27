@@ -180,18 +180,33 @@ def get_contents(meta_path):
     contents = template.render(environment=env)
     return contents
 
+def read_requirements(requirements_file):
+    """
+    Parse a requirements file into a list
+    """
+    requirements = []
+    with open(requirements_file) as fd:
+        data = fd.read()
+
+    for line in data.split('\n'):
+        if not line.strip() or line.strip().startswith('#'):
+            continue
+        requirements.append(line)
+
+    return requirements
 class MetaData(object):
 
     def __init__(self, path):
         assert isdir(path)
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
+        self.requirements_path = join(path, 'requirements.txt')
         if not isfile(self.meta_path):
             self.meta_path = join(path, 'conda.yaml')
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
-        self.meta = parse(get_contents(self.meta_path))
+        self.parse_again()
 
     def parse_again(self):
         """Redo parsing for key-value pairs that are not initialized in the
@@ -200,6 +215,11 @@ class MetaData(object):
         if not self.meta_path:
             return
         self.meta = parse(get_contents(self.meta_path))
+
+        if isfile(self.requirements_path):
+            self.meta.setdefault('requirements', {})
+            self.meta['requirements']['run'] = read_requirements(self.requirements_path)
+
 
     @classmethod
     def fromdict(cls, metadata):
