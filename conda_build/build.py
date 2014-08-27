@@ -78,6 +78,10 @@ def have_prefix_files(files):
     :param files: Filenames to check for instances of prefix
     :type files: list of str
     '''
+    prefix_bytes = config.build_prefix.encode('utf-8')
+    placeholder_bytes = prefix_placeholder.encode('utf-8')
+    alt_prefix_bytes = prefix_bytes.replace(b'\\', b'/')
+    alt_placeholder_bytes = placeholder_bytes.replace(b'\\', b'/')
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
@@ -100,11 +104,14 @@ def have_prefix_files(files):
         # this shouldn't be a problem very often. The only way to completely
         # avoid this would be to use chardet (or cChardet) to detect the
         # encoding on the fly.
-        prefix_bytes = config.build_prefix.encode('utf-8')
-        if prefix_bytes not in data:
+        if prefix_bytes in data:
+            data = data.replace(prefix_bytes, placeholder_bytes)
+        elif (sys.platform == 'win32') and (alt_prefix_bytes in data):
+            # some windows libraries use unix-style path separators
+            data = data.replace(alt_prefix_bytes, alt_placeholder_bytes)
+        else:
             continue
         st = os.stat(path)
-        data = data.replace(prefix_bytes, prefix_placeholder.encode('utf-8'))
         # Save as
         with open(path, 'wb') as fo:
             fo.write(data)
