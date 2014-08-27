@@ -11,6 +11,7 @@ from conda.compat import iteritems, PY3
 from conda.utils import memoized, md5_file
 import conda.config as cc
 from conda.resolve import MatchSpec
+from conda.cli.common import specs_from_url
 
 try:
     import yaml
@@ -180,18 +181,20 @@ def get_contents(meta_path):
     contents = template.render(environment=env)
     return contents
 
+
 class MetaData(object):
 
     def __init__(self, path):
         assert isdir(path)
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
+        self.requirements_path = join(path, 'requirements.txt')
         if not isfile(self.meta_path):
             self.meta_path = join(path, 'conda.yaml')
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
-        self.meta = parse(get_contents(self.meta_path))
+        self.parse_again()
 
     def parse_again(self):
         """Redo parsing for key-value pairs that are not initialized in the
@@ -200,6 +203,12 @@ class MetaData(object):
         if not self.meta_path:
             return
         self.meta = parse(get_contents(self.meta_path))
+
+        if isfile(self.requirements_path):
+            self.meta.setdefault('requirements', {})
+            run_requirements = specs_from_url(self.requirements_path)
+            self.meta['requirements']['run'] = run_requirements
+
 
     @classmethod
     def fromdict(cls, metadata):
