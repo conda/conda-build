@@ -29,10 +29,6 @@ SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
 from conda_build.config import config
 
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
-
 
 def ns_cfg():
     # Remember to update the docs of any of this changes

@@ -13,11 +13,6 @@ from conda_build.config import config
 from conda_build import source
 
 
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
-
-
 def get_perl_ver():
     return str(config.CONDA_PERL)
 
