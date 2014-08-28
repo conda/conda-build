@@ -180,7 +180,7 @@ def create_info_files(m, files, include_recipe=True):
         # make sure we found all of the files expected
         temp = [f for (p,m,f) in files_with_prefix if m == 'binary']
         for f in binary_has_prefix_files:
-            if f not in files_with_prefix:
+            if f not in temp:
                 raise RuntimeError("binary file %s from "
                                    "binary_has_prefix_files not found" % f)
 
