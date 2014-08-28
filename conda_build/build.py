@@ -30,7 +30,11 @@ from conda.install import prefix_placeholder
 from conda.utils import url_path
 
 from conda_build import environ, source, tarcheck
-from conda_build.config import config
+from conda_build.config import (
+    config,
+    verify_rpaths,
+    use_new_rpath_logic,
+)
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
                               fix_permissions, get_build_metadata)
@@ -574,7 +578,7 @@ def build(m, get_src=True, verbose=True, post=None):
         binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
         build_root = None
-        if config.use_new_rpath_logic or config.verify_rpaths:
+        if use_new_rpath_logic or verify_rpaths:
             allow_x11 = bool(m.get_value('build/allow_x11', True))
             extra_external = m.get_value('build/extra_external', None)
             build_root = BuildRoot(
@@ -585,13 +589,13 @@ def build(m, get_src=True, verbose=True, post=None):
                 extra_external=extra_external,
             )
 
-        if config.use_new_rpath_logic:
+        if use_new_rpath_logic:
             print("Using new RPATH logic.")
             build_root.post_build()
         else:
             post_build(new_files, binary_relocation=binary_relocation)
 
-        if config.verify_rpaths and not config.use_new_rpath_logic:
+        if verify_rpaths and not use_new_rpath_logic:
             build_root.verify()
 
         create_info_files(m, new_files, include_recipe=bool(m.path))
