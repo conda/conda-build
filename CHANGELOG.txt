@@ -1,4 +1,47 @@
-...................
+...
+-------------------
+  * has_prefix paths must always use /, even on Windows
+
+
+2014-08-22   1.8.0:
+-------------------
+  * add ability to convert Golke's Windows packages into conda
+    packages, use "conda convert <Gohlke>.exe".  See also:
+    http://www.lfd.uci.edu/~gohlke/pythonlibs/
+  * handle spaces on Windows better
+  * add croot to the module level of conda_build.config for backwards
+    compatibility
+  * changed extra long prefix for building to _placehold...
+
+
+2014-08-20   1.7.1:
+-------------------
+  * add --all-extras flag to skeleton pypi
+  * automatically use the long or short build prefix as needed
+  * fix to allow specification of full major.micro.minor for numpy, python,
+    and perl (only add the build string if it is an exact major.minor or
+    major.minor.patch version. If it is an inequality, it is not added)
+
+
+2014-08-05   1.7.0:
+-------------------
+  * better install_requires parsing for skeleton pypi
+  * the build environment from conda-build is now called _build___...
+    This is so that recipes with binary_has_prefix_files build against a
+    sufficiently long prefix.
+  * don't overwrite the input file in convert
+  * fix a bug related to the prefix_files.txt file
+  * show the download bytes in human form in skeleton pypi
+  * make patchelf error message clearer
+  * fix some issues with the git describe environment variables
+  * improve shebang line modifications with python.app
+  * show the download bytes in human form in skeleton pypi
+
+2014-07-29   1.6.1:
+-------------------
+  * fix an issue building with a git repository in Python 3
+
+2014-07-29   1.6.0:
 -------------------
   * don't fail on MachO stub files on OS X
   * add some git describe related environment variables when the source is a
@@ -10,13 +53,13 @@
   * fix an issue building some packages on Windows
   * make skeleton pypi --recursive work with versioned dependencies
   * some additional type checking for meta.yaml
+  * always include numpy in skeleton pypi
 
 2014-07-03   1.5.0:
 -------------------
   * add bdist_conda
   * fix features and track_features
   * detect files with the build prefix automatically on Windows
-
 
 2014-07-01   1.4.0:
 -------------------

@@ -11,18 +11,18 @@ from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
-from conda_build.config import croot
+from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
     str = unicode
 
-SRC_CACHE = join(croot, 'src_cache')
-GIT_CACHE = join(croot, 'git_cache')
-HG_CACHE = join(croot, 'hg_cache')
-SVN_CACHE = join(croot, 'svn_cache')
-WORK_DIR = join(croot, 'work')
+SRC_CACHE = join(config.croot, 'src_cache')
+GIT_CACHE = join(config.croot, 'git_cache')
+HG_CACHE = join(config.croot, 'hg_cache')
+SVN_CACHE = join(config.croot, 'svn_cache')
+WORK_DIR = join(config.croot, 'work')
 
 
 def get_dir():
@@ -95,7 +95,7 @@ def git_source(meta, recipe_dir):
         if os.getenv('USERNAME') == 'builder':
             cache_repo_arg = '/cygdrive/c/' + cache_repo_arg[3:]
 
-    # update (or craete) the cache repo
+    # update (or create) the cache repo
     if isdir(cache_repo):
         check_call([git, 'fetch'], cwd=cache_repo)
     else:
@@ -118,11 +118,16 @@ def git_source(meta, recipe_dir):
 def git_info(fo=sys.stdout):
     ''' Print info about a Git repo. '''
     assert isdir(WORK_DIR)
+
+    # Ensure to explicitly set GIT_DIR as some Linux machines will not
+    # properly execute without it.
+    env = os.environ.copy()
+    env['GIT_DIR'] = join(WORK_DIR, '.git')
     for cmd, check_error in [
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),
                 ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR)
+        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
         stdout, stderr = p.communicate()
         if isinstance(stdout, bytes):
             stdout = stdout.decode('utf-8')
@@ -204,7 +209,11 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    if sys.platform == 'win32':
+        # without --binary flag CR will be stripped and patch will fail
+        check_call([patch, '-p0', '--binary', '-i', path], cwd=src_dir)
+    else:
+        check_call([patch, '-p0', '-i', path], cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):

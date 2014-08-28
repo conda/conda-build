@@ -17,7 +17,8 @@ from conda.lock import Locked
 import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import config, build, pypi
+from conda_build import build, pypi
+from conda_build.config import config
 from conda_build.main_build import handle_binstar_upload
 
 # TODO: Add support for all the options that conda build has
@@ -232,11 +233,10 @@ class bdist_conda(install):
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
 
-
             if metadata.conda_import_tests:
                 if metadata.conda_import_tests is True:
-                    if self.distribution.packages:
-                        d['test']['imports'] = self.distribution.packages
+                    d['test']['imports'] = ((self.distribution.packages or [])
+                                            + (self.distribution.py_modules or []))
                 else:
                     d['test']['imports'] = metadata.conda_import_tests
 

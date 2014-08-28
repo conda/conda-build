@@ -23,6 +23,9 @@ is_darwin = (sys.platform == 'darwin')
 is_win32 = (sys.platform == 'win32')
 assert sum((is_linux, is_darwin, is_win32)) == 1
 
+# Backwards compatibility import. Do not remove.
+from conda.install import rm_rf
+
 
 def rel_lib(f):
     assert not f.startswith('/')
@@ -67,17 +70,6 @@ def unzip(zip_path, dir_path):
         with open(path, 'wb') as fo:
             fo.write(z.read(name))
     z.close()
-
-
-def rm_rf(path):
-    if islink(path) or isfile(path):
-        os.unlink(path)
-
-    elif isdir(path):
-        if sys.platform == 'win32':
-            subprocess.check_call(['cmd', '/c', 'rd', '/s', '/q', path])
-        else:
-            shutil.rmtree(path)
 
 
 def file_info(path):

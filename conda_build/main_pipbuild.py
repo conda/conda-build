@@ -13,7 +13,7 @@ import subprocess
 import yaml
 
 #from conda.cli import common
-import conda.config as config
+import conda.config as cc
 from conda_build.main_build import args_func
 from conda_build import __version__
 from conda.install import rm_rf
@@ -36,14 +36,14 @@ def main():
         action = "store_false",
         help = "do not ask to upload the package to binstar",
         dest = 'binstar_upload',
-        default = config.binstar_upload,
+        default = cc.binstar_upload,
     )
     p.add_argument(
         "--binstar-upload",
         action="store_true",
         help = "upload the package to binstar",
         dest = 'binstar_upload',
-        default = config.binstar_upload,
+        default = cc.binstar_upload,
     )
     p.add_argument(
         'pypi_name',
@@ -265,6 +265,8 @@ def make_recipe(package, version):
         d['depends'] = ''
 
     data = client.release_data(package, version)
+    if not data:
+        raise RuntimeError("Cannot get data for %s-%s" % (package, version))
 
     license_classifier = "License :: OSI Approved ::"
     if data.has_key('classifiers'):
@@ -274,7 +276,7 @@ def make_recipe(package, version):
         licenses = []
 
     if not licenses:
-        license = data['license'] or 'UNKNOWN'
+        license = data.get('license','UNKNOWN') or 'UNKNOWN'
     else:
         license = ' or '.join(licenses)
 

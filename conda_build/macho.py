@@ -19,6 +19,20 @@ MAGIC = {
     b'\xfe\xed\xfa\xcf': 'MachO-ppc64',
 }
 
+FILETYPE = {
+    b'\x01\x00\x00\x00': 'MH_OBJECT',
+    b'\x02\x00\x00\x00': 'MH_EXECUTE',
+    b'\x03\x00\x00\x00': 'MH_FVMLIB',
+    b'\x04\x00\x00\x00': 'MH_CORE',
+    b'\x05\x00\x00\x00': 'MH_PRELOAD',
+    b'\x06\x00\x00\x00': 'MH_DYLIB',
+    b'\x07\x00\x00\x00': 'MH_DYLINKER',
+    b'\x08\x00\x00\x00': 'MH_BUNDLE',
+    b'\x09\x00\x00\x00': 'MH_DYLIB_STUB',
+    b'\x0a\x00\x00\x00': 'MH_DSYM',
+    b'\x0b\x00\x00\x00': 'MH_KEXT_BUNDLE',
+}
+
 
 def is_macho(path):
     if path.endswith(NO_EXT) or islink(path) or not isfile(path):
@@ -26,6 +40,13 @@ def is_macho(path):
     with open(path, 'rb') as fi:
         head = fi.read(4)
     return bool(head in MAGIC)
+
+
+def is_dylib(path):
+    with open(path, 'rb') as fi:
+        # file type indicated by fourth 32-bit constant in the mach header
+        header = fi.read(16)[-4:]
+        return header in FILETYPE and FILETYPE[header] == 'MH_DYLIB'
 
 
 def otool(path):
@@ -53,6 +74,7 @@ def install_name_change(path, cb_func):
         if new_link:
             changes.append((link, new_link))
 
+    ret = True
     for old, new in changes:
         args = ['install_name_tool', '-change', old, new, path]
         print(' '.join(args))
@@ -61,12 +83,14 @@ def install_name_change(path, cb_func):
         stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
+            ret = False
             continue
         else:
             print(stderr, file=sys.stderr)
         if p.returncode:
             raise RuntimeError("install_name_tool failed with exit status %d"
                 % p.returncode)
+    return ret
 
 if __name__ == '__main__':
     import sys

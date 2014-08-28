@@ -10,7 +10,7 @@ from os.path import dirname, isdir, isfile, join, exists
 import conda.config as cc
 from conda.compat import iteritems
 
-from conda_build import config
+from conda_build.config import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call

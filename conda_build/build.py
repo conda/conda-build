@@ -29,7 +29,8 @@ from conda.fetch import fetch_index
 from conda.install import prefix_placeholder
 from conda.utils import url_path
 
-from conda_build import config, environ, source, tarcheck
+from conda_build import environ, source, tarcheck
+from conda_build.config import config
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
                               fix_permissions, get_build_metadata)
@@ -42,8 +43,6 @@ from conda_build.link import LinkErrors
 
 prefix = config.build_prefix
 info_dir = join(prefix, 'info')
-
-broken_dir = join(config.croot, "broken")
 
 
 def invert_defaultdict_by_value_len(d):
@@ -278,7 +277,7 @@ def create_post_scripts(m):
         src = join(recipe_dir, tp + ext)
         if not isfile(src):
             continue
-        dst_dir = join(prefix,
+        dst_dir = join(config.build_prefix,
                        'Scripts' if sys.platform == 'win32' else 'bin')
         ensure_dir(dst_dir, int('755', 8))
         dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
@@ -294,10 +293,14 @@ def have_prefix_files(files):
     :param files: Filenames to check for instances of prefix
     :type files: list of str
     '''
+    prefix_bytes = config.build_prefix.encode('utf-8')
+    placeholder_bytes = prefix_placeholder.encode('utf-8')
+    alt_prefix_bytes = prefix_bytes.replace(b'\\', b'/')
+    alt_placeholder_bytes = placeholder_bytes.replace(b'\\', b'/')
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
-        path = join(prefix, f)
+        path = join(config.build_prefix, f)
         if isdir(path):
             continue
         if sys.platform != 'darwin' and islink(path):
@@ -316,15 +319,20 @@ def have_prefix_files(files):
         # this shouldn't be a problem very often. The only way to completely
         # avoid this would be to use chardet (or cChardet) to detect the
         # encoding on the fly.
-        prefix_bytes = prefix.encode('utf-8')
-        if prefix_bytes not in data:
+        if prefix_bytes in data:
+            data = data.replace(prefix_bytes, placeholder_bytes)
+        elif (sys.platform == 'win32') and (alt_prefix_bytes in data):
+            # some windows libraries use unix-style path separators
+            data = data.replace(alt_prefix_bytes, alt_placeholder_bytes)
+        else:
             continue
         st = os.stat(path)
-        data = data.replace(prefix_bytes, prefix_placeholder.encode('utf-8'))
         # Save as
         os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         with open(path, 'wb') as fo:
             fo.write(data)
+        if sys.platform == 'win32':
+            f = f.replace('\\', '/')
         yield f
 
 
@@ -339,7 +347,7 @@ def create_info_files(m, files, include_recipe=True):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
-    recipe_dir = join(info_dir, 'recipe')
+    recipe_dir = join(config.info_dir, 'recipe')
     os.makedirs(recipe_dir)
 
     if include_recipe:
@@ -360,18 +368,20 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
         yaml.safe_dump(m.meta, fo)
 
-    with open(join(info_dir, 'files'), 'w', encoding='utf-8') as fo:
+    if sys.platform == 'win32':
+        for i, f in enumerate(files):
+            files[i] = f.replace('\\', '/')
+
+    with open(join(config.info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
-            if sys.platform == 'win32':
-                f = f.replace('\\', '/')
             fo.write(f + '\n')
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
-    with open(join(info_dir, 'index.json'), **mode_dict) as fo:
+    with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(m.info_index(), fo, indent=2, sort_keys=True)
 
-    with open(join(info_dir, 'recipe.json'), **mode_dict) as fo:
+    with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     files_with_prefix = m.has_prefix_files()
@@ -386,19 +396,35 @@ def create_info_files(m, files, include_recipe=True):
         if file not in files:
             raise RuntimeError("file %s from build/has_prefix_files was "
                                "not found" % file)
-        files_with_prefix.append('%s %s %s' % (prefix, 'binary', file))
-
-    if binary_files_with_prefix and len(prefix) < 100:
-        print("***WARNING*** Binary replacement can only be done in install")
-        print("prefixes that are shorter than the build prefix (the current")
-        print("build prefix is %d characters). It is recommended to build" % len(prefix))
-        print("against a larger prefix. Note that future versions of")
-        print("conda-build may do this automatically.")
+        if sys.platform == 'win32':
+            # Paths on Windows can contain spaces, so we need to quote the
+            # paths. Fortunately they can't contain quotes, so we don't have
+            # to worry about nested quotes.
+            fmt_str = '"%s" %s "%s"'
+        else:
+            # Don't do it everywhere because paths on Unix can contain quotes,
+            # and we don't have a good method of escaping, and because older
+            # versions of conda don't support quotes in has_prefix
+            fmt_str = '%s %s %s'
+        prefix = config.build_prefix
+        with open(os.path.join(prefix, file), 'rb') as f:
+            data = f.read()
+        if prefix.encode('utf-8') in data:
+            files_with_prefix.append(fmt_str % (prefix, 'binary', file))
+        elif sys.platform == 'win32':
+            # some windows libraries encode prefix with unix path separators
+            alt_p = prefix.replace('\\', '/')
+            if alt_p.encode('utf-8') in data:
+                files_with_prefix.append(fmt_str % (alt_p, 'binary', file))
+            else:
+                print('Warning: prefix %s not found in %s' % (prefix, file))
+        else:
+            print('Warning: prefix %s not found in %s' % (prefix, file))
 
     files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
     if files_with_prefix:
-        with open(join(info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
             for f in files_with_prefix:
                 fo.write(f + '\n')
 
@@ -410,18 +436,18 @@ def create_info_files(m, files, include_recipe=True):
             no_link = [no_link]
         rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
         pat = re.compile(rx)
-        with open(join(info_dir, 'no_link'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'no_link'), 'w', encoding='utf-8') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(info_dir, 'git'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
-                        join(info_dir, 'icon.png'))
+                        join(config.info_dir, 'icon.png'))
 
 
 def create_env(pref, specs, clear_cache=True, verbose=True):
@@ -459,7 +485,6 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-
 def build(m, get_src=True, verbose=True, post=None):
     '''
     Build the package with the specified metadata.
@@ -472,14 +497,32 @@ def build(m, get_src=True, verbose=True, post=None):
     post only. False means stop just before the post.
     '''
     if post in [False, None]:
-        rm_rf(prefix)
+        rm_rf(config.short_build_prefix)
+        rm_rf(config.long_build_prefix)
 
+        if m.binary_has_prefix_files():
+            # We must use a long prefix here as the package will only be
+            # installable into prefixes shorter than this one.
+            config.use_long_build_prefix = True
+        else:
+            # In case there are multiple builds in the same process
+            config.use_long_build_prefix = False
+
+        # Display the name only
+        # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
-        create_env(prefix, [ms.spec for ms in m.ms_depends('build')],
+        create_env(config.build_prefix,
+                   [ms.spec for ms in m.ms_depends('build')],
                    verbose=verbose)
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
+            # Parse our metadata again because we did not initialize the source
+            # information before.
+            m.parse_again()
+
+        print("Package:", m.dist())
+
         assert isdir(source.WORK_DIR)
         src_dir = source.get_dir()
         contents = os.listdir(src_dir)
@@ -488,10 +531,10 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             print("no source")
 
-        rm_rf(info_dir)
+        rm_rf(config.info_dir)
         files1 = prefix_files()
         # Save this for later
-        with open(join(source.WORK_DIR, 'prefix_files.txt'), 'w') as f:
+        with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
@@ -517,7 +560,7 @@ def build(m, get_src=True, verbose=True, post=None):
 
     if post in [True, None]:
         if post == True:
-            with open(join(source.WORK_DIR, 'prefix_files.txt'), 'r') as f:
+            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
                 files1 = set(f.read().splitlines())
 
         get_build_metadata(m)
@@ -525,7 +568,7 @@ def build(m, get_src=True, verbose=True, post=None):
         create_entry_points(m.get_value('build/entry_points'))
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
-        assert not exists(info_dir)
+        assert not exists(config.info_dir)
         files2 = prefix_files()
         new_files = sorted(files2 - files1)
         binary_relocation = bool(m.get_value('build/binary_relocation', True))
@@ -558,7 +601,7 @@ def build(m, get_src=True, verbose=True, post=None):
         path = bldpkg_path(m)
         t = tarfile.open(path, 'w:bz2')
         for f in sorted(files3 - files1):
-            t.add(join(prefix, f), f)
+            t.add(join(config.build_prefix, f), f)
         t.close()
 
         print("BUILD END:", m.dist())
@@ -597,7 +640,7 @@ def test(m, verbose=True):
         return
 
     print("TEST START:", m.dist())
-    rm_rf(prefix)
+    rm_rf(config.build_prefix)
     rm_rf(config.test_prefix)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
@@ -644,7 +687,6 @@ def test(m, verbose=True):
         except subprocess.CalledProcessError:
             tests_failed(m)
 
-
     if shell_files:
         if sys.platform == 'win32':
             test_file = join(tmp_dir, 'run_test.bat')
@@ -671,7 +713,6 @@ def tests_failed(m):
     :param m: Package's metadata
     :type m: Metadata
     '''
-    ensure_dir(broken_dir)
-
-    shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
+    ensure_dir(config.broken_dir)
+    shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())

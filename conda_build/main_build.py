@@ -90,17 +90,20 @@ def main():
     p.add_argument(
         '--python',
         action="append",
-        help="Set the python version used by conda build",
+        help="Set the Python version used by conda build",
+        metavar="PYTHON_VER",
     )
     p.add_argument(
         '--perl',
         action="append",
-        help="Set the python version used by conda build",
+        help="Set the Perl version used by conda build",
+        metavar="PERL_VER",
     )
     p.add_argument(
         '--numpy',
         action="append",
-        help="Set the python version used by conda build",
+        help="Set the NumPy version used by conda build",
+        metavar="NUMPY_VER",
     )
     p.add_argument(
         '-I', '--ignore-link-errors',
@@ -176,8 +179,8 @@ def check_external():
 Error:
     Did not find 'patchelf' in: %s
     'patchelf' is necessary for building conda packages on Linux with
-    relocatable ELF libraries.  You can install patchelf using apt-get,
-    yum or conda.
+    relocatable ELF libraries.  You can install patchelf using conda install
+    patchelf.
 """ % (os.pathsep.join(external.dir_paths)))
 
 
@@ -191,8 +194,7 @@ def execute(args, parser):
     from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
-    import conda_build.config
-    from conda_build.config import croot
+    from conda_build.config import config
     from conda_build.metadata import MetaData
 
     from conda_build.link import LinkErrors
@@ -210,9 +212,9 @@ def execute(args, parser):
                 args.python = [py]
                 execute(args, parser)
         else:
-            conda_build.config.CONDA_PY = int(args.python[0].replace('.', ''))
+            config.CONDA_PY = int(args.python[0].replace('.', ''))
     if args.perl:
-        conda_build.config.CONDA_PERL = args.perl
+        config.CONDA_PERL = args.perl
     if args.numpy:
         if args.numpy == ['all']:
             for npy in [16, 17, 18]:
@@ -224,9 +226,9 @@ def execute(args, parser):
                 args.numpy = [npy]
                 execute(args, parser)
         else:
-            conda_build.config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
+            config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
 
-    with Locked(croot):
+    with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
             arg = recipes.popleft()
@@ -314,7 +316,7 @@ def execute(args, parser):
                             raise e
                 except RuntimeError as e:
                     error_str = str(e)
-                    if error_str.startswith('No packages found matching:'):
+                    if error_str.startswith('No packages found'):
                         # Build dependency if recipe exists
                         dep_pkg = error_str.split(': ')[1]
                         # Handle package names that contain version deps.

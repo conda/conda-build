@@ -9,8 +9,9 @@ from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3
 from conda.utils import memoized, md5_file
-import conda.config as config
+import conda.config as cc
 from conda.resolve import MatchSpec
+from conda.cli.common import specs_from_url
 
 try:
     import yaml
@@ -26,7 +27,7 @@ def construct_yaml_str(self, node):
 Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
-import conda_build.config
+from conda_build.config import config
 
 # Python 2.x backward compatibility
 if sys.version_info < (3, 0):
@@ -35,10 +36,10 @@ if sys.version_info < (3, 0):
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
-    plat = config.subdir
-    py = conda_build.config.CONDA_PY
-    np = conda_build.config.CONDA_NPY
-    pl = conda_build.config.CONDA_PERL
+    plat = cc.subdir
+    py = config.CONDA_PY
+    np = config.CONDA_NPY
+    pl = config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
     return dict(
@@ -117,7 +118,10 @@ def parse(data):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
-        res[section][key] = str(res[section].get(key, ''))
+        val = res[section].get(key, '')
+        if val is None:
+            val = ''
+        res[section][key] = str(val)
     return res
 
 # If you update this please update the example in
@@ -135,7 +139,8 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'allow_x11',
               'extra_external'],
     'requirements': ['build', 'run', 'conflicts'],
-    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts'],
+    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
+            'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
     'about': ['home', 'license', 'summary'],
 }
@@ -177,18 +182,34 @@ def get_contents(meta_path):
     contents = template.render(environment=env)
     return contents
 
+
 class MetaData(object):
 
     def __init__(self, path):
         assert isdir(path)
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
+        self.requirements_path = join(path, 'requirements.txt')
         if not isfile(self.meta_path):
             self.meta_path = join(path, 'conda.yaml')
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
+        self.parse_again()
+
+    def parse_again(self):
+        """Redo parsing for key-value pairs that are not initialized in the
+        first pass.
+        """
+        if not self.meta_path:
+            return
         self.meta = parse(get_contents(self.meta_path))
+
+        if isfile(self.requirements_path):
+            self.meta.setdefault('requirements', {})
+            run_requirements = specs_from_url(self.requirements_path)
+            self.meta['requirements']['run'] = run_requirements
+
 
     @classmethod
     def fromdict(cls, metadata):
@@ -229,6 +250,8 @@ class MetaData(object):
 
     def version(self):
         res = self.get_value('package/version')
+        if res is None:
+            sys.exit("Error: package/version missing in: %r" % self.meta_path)
         check_bad_chrs(res, 'package/version')
         return res
 
@@ -237,8 +260,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', conda_build.config.CONDA_PY), ('numpy', conda_build.config.CONDA_NPY),
-                         ('perl', conda_build.config.CONDA_PERL)]
+        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
+                         ('perl', config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -265,17 +288,19 @@ class MetaData(object):
             check_bad_chrs(ret, 'build/string')
             return ret
         res = []
+        version_re = re.compile(r'(?:==)?(\d)\.(\d)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     v = ms.spec.split()[1]
+                    if ',' in v or '|' in v:
+                        break
                     if name != 'perl':
-                        if len(v.replace('*', '').replace('.', '')) != 2:
-                            raise RuntimeError("python and numpy versions should only be major.minor, like 2.7. Got %s." % v.replace('*', ''))
-
-                        res.append(s + v[0] + v[2])
+                        match = version_re.match(v)
+                        if match:
+                            res.append(s + match.group(1) + match.group(2))
                     else:
-                        res.append(s + v.rstrip('*'))
+                        res.append(s + v.strip('*>=!<'))
                     break
         if res:
             res.append('_')
@@ -297,7 +322,8 @@ class MetaData(object):
         for field, key in [('app/entry', 'app_entry'),
                            ('app/type', 'app_type'),
                            ('app/cli_opts', 'app_cli_opts'),
-                           ('app/summary', 'summary')]:
+                           ('app/summary', 'summary'),
+                           ('app/own_environment', 'app_own_environment')]:
             value = self.get_value(field)
             if value:
                 d[key] = value
@@ -310,8 +336,8 @@ class MetaData(object):
             build = self.build_id(),
             build_number = self.build_number(),
             license = self.get_value('about/license'),
-            platform = config.platform,
-            arch = config.arch_name,
+            platform = cc.platform,
+            arch = cc.arch_name,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):
@@ -328,12 +354,18 @@ class MetaData(object):
         ret = self.get_value('build/has_prefix_files', [])
         if not isinstance(ret, list):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
+        if sys.platform == 'win32':
+            if any('\\' in i for i in ret):
+                raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])
         if not isinstance(ret, list):
             raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
+        if sys.platform == 'win32':
+            if any('\\' in i for i in ret):
+                raise RuntimeError("build/binary_has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
 
     def __unicode__(self):

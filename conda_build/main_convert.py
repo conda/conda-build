@@ -11,11 +11,12 @@ import argparse
 import json
 import pprint
 import re
+import sys
+import os
 import tarfile
 from argparse import RawDescriptionHelpFormatter
 from locale import getpreferredencoding
-from os.path import abspath, expanduser, split, join, exists
-from os import makedirs
+from os.path import abspath, expanduser, isdir, join, split
 
 from conda.compat import PY3
 from conda_build.main_build import args_func
@@ -26,7 +27,11 @@ from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
 
 epilog = """
 
-For now, it is just a tool to convert pure Python packages to other platforms.
+Tool to convert packages
+------------------------
+
+Convert pure Python packages to other platforms, and to convert Gohlke's
+.exe packages into conda packages.
 
 Packages are automatically organized in subdirectories according to platform,
 e.g.,
@@ -41,8 +46,12 @@ Examples:
 Convert a package built with conda build to Windows 64-bit, and place the
 resulting package in the current directory (supposing a default Anaconda
 install on Mac OS X):
+$ conda convert package-1.0-py33.tar.bz2 -p win-64
 
-$ conda convert ~/anaconda/conda-bld/osx-64/package-1.0-py33.tar.bz2 -o . -p win-64
+Convert a .exe to a conda package, and add make it depend on numpy 1.8 or
+higher:
+$ conda convert cvxopt-1.1.7.win-amd64-py2.7.exe -d 'numpy >=1.8'
+
 """
 
 
@@ -66,8 +75,14 @@ def main():
         dest='platforms',
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
-        required=True,
         help="Platform to convert the packages to"
+    )
+    p.add_argument(
+        "--dependencies", "-d",
+        nargs='*',
+        help="""Additional (besides python) dependencies of the converted
+        package.  To specify a version restriction for a dependency, wrap
+        the dependency in quotes, like 'package >=2.0'""",
     )
     p.add_argument(
         '--show-imports',
@@ -112,6 +127,75 @@ path_mapping = [# (unix, windows)
 pyver_re = re.compile(r'python\s+(\d.\d)')
 
 
+def conda_convert(file, args):
+    if args.platforms is None:
+        sys.exit('Error: --platform option required for conda package conversion')
+
+    with tarfile.open(file) as t:
+        if not args.force and has_cext(t, show=args.show_imports):
+            print("WARNING: Package %s has C extensions, skipping. Use -f to "
+                  "force conversion." % file)
+            return
+
+        file_dir, fn = split(file)
+
+        info = json.loads(t.extractfile('info/index.json')
+                          .read().decode('utf-8'))
+        source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
+
+        nonpy_unix = False
+        nonpy_win = False
+
+        if 'all' in args.platforms:
+            args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
+        for platform in args.platforms:
+            output_dir = join(args.output_dir, platform)
+            if abspath(expanduser(join(output_dir, fn))) == file:
+                print("Skipping %s/%s. Same as input file" % (platform, fn))
+                continue
+            if not PY3:
+                platform = platform.decode('utf-8')
+            dest_plat = platform.split('-')[0]
+            dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
+
+            if source_type == 'unix' and dest_type == 'win':
+                nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
+                                                                  unix_to_win=True,
+                                                                  show=args.verbose)
+            if source_type == 'win' and dest_type == 'unix':
+                nonpy_win = nonpy_win or has_nonpy_entry_points(t,
+                                                                unix_to_win=False,
+                                                                show=args.verbose)
+
+            if nonpy_unix and not args.force:
+                print(("WARNING: Package %s has non-Python entry points, "
+                       "skipping %s to %s conversion. Use -f to force.") %
+                      (file, info['platform'], platform))
+                continue
+
+            if nonpy_win and not args.force:
+                print(("WARNING: Package %s has entry points, which are not "
+                       "supported yet. Skipping %s to %s conversion. Use -f to force.") %
+                      (file, info['platform'], platform))
+                continue
+
+            file_map = get_pure_py_file_map(t, platform)
+
+            if args.dry_run:
+                print("Would convert %s from %s to %s" %
+                      (file, info['platform'], dest_plat))
+                if args.verbose:
+                    pprint.pprint(file_map)
+                continue
+            else:
+                print("Converting %s from %s to %s" %
+                      (file, info['platform'], platform))
+
+            if not isdir(output_dir):
+                os.makedirs(output_dir)
+            tar_update(t, join(output_dir, fn), file_map, verbose=args.verbose)
+
+
 def execute(args, parser):
     files = args.package_files
 
@@ -120,75 +204,25 @@ def execute(args, parser):
         if not PY3:
             file = file.decode(getpreferredencoding())
 
-        if not file.endswith('.tar.bz2'):
-            raise RuntimeError("%s does not appear to be a conda package"
-                               % file)
-
         file = abspath(expanduser(file))
-        with tarfile.open(file) as t:
-            if not args.force and has_cext(t, show=args.show_imports):
-                print("WARNING: Package %s has C extensions, skipping. Use -f to "
-                      "force conversion." % file)
-                continue
+        if file.endswith('.tar.bz2'):
+            conda_convert(file, args)
 
-            output_dir = args.output_dir
-            if not PY3:
-                output_dir = output_dir.decode(getpreferredencoding())
-            file_dir, fn = split(file)
+        elif file.endswith('.exe'):
+            from conda_build.convert_gohlke import convert
 
-            info = json.loads(t.extractfile('info/index.json')
-                              .read().decode('utf-8'))
-            source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
+            if args.platforms:
+                raise RuntimeError('--platform option not allowed for Gohlke '
+                                   '.exe package conversion')
+            convert(file, args.output_dir, add_depends=args.dependencies,
+                    verbose=args.verbose)
 
-            nonpy_unix = False
-            nonpy_win = False
+        elif file.endswith('.whl'):
+            raise RuntimeError('Conversion from wheel packages is not '
+                               'implemented yet, stay tuned.')
 
-            if 'all' in args.platforms:
-                args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
-            for platform in args.platforms:
-                if not PY3:
-                    platform = platform.decode('utf-8')
-                dest_plat = platform.split('-')[0]
-                dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
-
-
-                if source_type == 'unix' and dest_type == 'win':
-                    nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
-                                                                      unix_to_win=True,
-                                                                      show=args.verbose)
-                if source_type == 'win' and dest_type == 'unix':
-                    nonpy_win = nonpy_win or has_nonpy_entry_points(t,
-                                                                    unix_to_win=False,
-                                                                    show=args.verbose)
-
-                if nonpy_unix and not args.force:
-                    print(("WARNING: Package %s has non-Python entry points, "
-                           "skipping %s to %s conversion. Use -f to force.") %
-                          (file, info['platform'], platform))
-                    continue
-
-                if nonpy_win and not args.force:
-                    print(("WARNING: Package %s has entry points, which are not "
-                           "supported yet. Skipping %s to %s conversion. Use -f to force.") %
-                          (file, info['platform'], platform))
-                    continue
-
-                file_map = get_pure_py_file_map(t, platform)
-
-                if args.dry_run:
-                    print("Would convert %s from %s to %s" %
-                          (file, info['platform'], dest_plat))
-                    if args.verbose:
-                        pprint.pprint(file_map)
-                    continue
-                else:
-                    print("Converting %s from %s to %s" %
-
-                          (file, info['platform'], platform))
-
-                if not exists(join(output_dir, platform)):
-                    makedirs(join(output_dir, platform))
-                tar_update(t, join(output_dir, platform, fn), file_map, verbose=args.verbose)
+        else:
+            raise RuntimeError("cannot convert: %s" % file)
 
 
 if __name__ == '__main__':
