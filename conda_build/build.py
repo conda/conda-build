@@ -75,22 +75,12 @@ def have_prefix_files(files):
     to replace the prefix with a placeholder.
 
     :param files: Filenames to check for instances of prefix
-    :type files: list of str
+    :type files: list of tuples containing strings (prefix, mode, filename)
     '''
     prefix = config.build_prefix
     prefix_bytes = prefix.encode('utf-8')
     alt_prefix = prefix.replace('\\', '/')
     alt_prefix_bytes = alt_prefix.encode('utf-8')
-    if sys.platform == 'win32':
-        # Paths on Windows can contain spaces, so we need to quote the
-        # paths. Fortunately they can't contain quotes, so we don't have
-        # to worry about nested quotes.
-        fmt_str = '"%s" %s "%s"'
-    else:
-        # Don't do it everywhere because paths on Unix can contain quotes,
-        # and we don't have a good method of escaping, and because older
-        # versions of conda don't support quotes in has_prefix
-        fmt_str = '%s %s %s'
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
@@ -107,10 +97,10 @@ def have_prefix_files(files):
             data = fi.read()
         mode = 'binary' if b'\x00' in data else 'text'
         if prefix_bytes in data:
-            yield fmt_str % (prefix, mode, f)
+            yield (prefix, mode, f)
         elif (sys.platform == 'win32') and (alt_prefix_bytes in data):
             # some windows libraries use unix-style path separators
-            yield fmt_str % (alt_prefix, mode, f)
+            yield (alt_prefix, mode, f)
         else:
             continue
 
@@ -165,9 +155,26 @@ def create_info_files(m, files, include_recipe=True):
 
     files_with_prefix = sorted(have_prefix_files(files))
     if files_with_prefix:
+        auto_detect = m.get_value('detect_files_with_prefix')
+        binary_has_prefix_files = m.binary_has_prefix_files()
+        if sys.platform == 'win32':
+            # Paths on Windows can contain spaces, so we need to quote the
+            # paths. Fortunately they can't contain quotes, so we don't have
+            # to worry about nested quotes.
+            fmt_str = '"%s" %s "%s"\n'
+        else:
+            # Don't do it everywhere because paths on Unix can contain quotes,
+            # and we don't have a good method of escaping, and because older
+            # versions of conda don't support quotes in has_prefix
+            fmt_str = '%s %s %s\n'
         with open(join(config.info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
-            for f in files_with_prefix:
-                fo.write(f + '\n')
+            for pfix, mode, fn in files_with_prefix:
+                if (auto_detect or (mode == 'text') or
+                    ((mode == 'binary') and (fn in binary_has_prefix_files))):
+                    print("Hard-coded path found in %s" % fn)
+                    fo.write(fmt_str % (pfix, mode, fn))
+                else:
+                    print("Hard-coded path ignored in %s" % fn)
 
     no_link = m.get_value('build/no_link')
     if no_link:
