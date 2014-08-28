@@ -154,9 +154,9 @@ def create_info_files(m, files, include_recipe=True):
             fo.write(f + '\n')
 
     files_with_prefix = sorted(have_prefix_files(files))
+    binary_has_prefix_files = m.binary_has_prefix_files()
     if files_with_prefix:
         auto_detect = m.get_value('detect_binary_files_with_prefix')
-        binary_has_prefix_files = m.binary_has_prefix_files()
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -175,6 +175,14 @@ def create_info_files(m, files, include_recipe=True):
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Hard-coded path ignored in %s" % fn)
+
+    if binary_has_prefix_files:
+        # make sure we found all of the files expected
+        temp = [f for (p,m,f) in files_with_prefix if m == 'binary']
+        for f in binary_has_prefix_files:
+            if f not in files_with_prefix:
+                raise RuntimeError("binary file %s from "
+                                   "binary_has_prefix_files not found" % f)
 
     no_link = m.get_value('build/no_link')
     if no_link:
