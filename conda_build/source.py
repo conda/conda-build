@@ -120,6 +120,7 @@ def git_info(fo=sys.stdout):
     # properly execute without it.
     env = os.environ.copy()
     env['GIT_DIR'] = join(WORK_DIR, '.git')
+    env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),
