@@ -155,7 +155,7 @@ def create_info_files(m, files, include_recipe=True):
 
     files_with_prefix = sorted(have_prefix_files(files))
     if files_with_prefix:
-        auto_detect = m.get_value('detect_files_with_prefix')
+        auto_detect = m.get_value('detect_binary_files_with_prefix')
         binary_has_prefix_files = m.binary_has_prefix_files()
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
