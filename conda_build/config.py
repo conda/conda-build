@@ -40,11 +40,7 @@ class Config(object):
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
-    short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = (short_build_prefix + 8 * '_placehold')[:80]
-    # XXX: Make this None to be more rigorous about requiring the build_prefix
-    # to be known before it is used.
-    use_long_build_prefix = False
+    build_prefix = (join(cc.envs_dirs[0], '_build') +8*'_placehold')[:80]
     test_prefix = join(cc.envs_dirs[0], '_test')
 
     def _get_python(self, prefix):
@@ -60,14 +56,6 @@ class Config(object):
         else:
             res = join(prefix, 'bin/perl')
         return res
-
-    @property
-    def build_prefix(self):
-        if self.use_long_build_prefix is None:
-            raise Exception("I don't know which build prefix to use yet")
-        if self.use_long_build_prefix:
-            return self.long_build_prefix
-        return self.short_build_prefix
 
     @property
     def build_python(self):
