@@ -51,7 +51,7 @@ from conda_build.external import (
 )
 
 from conda_build.config import (
-    build_prefix,
+    config,
 )
 
 from conda_build.link import (
@@ -665,7 +665,7 @@ class LibraryDependencies(SlotObject):
         '''
 
         if not prefix:
-            prefix = build_prefix
+            prefix = config.build_prefix
 
         inside, outside, missing = self.categorize_dependencies(deps, prefix)
         self.inside = inside
