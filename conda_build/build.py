@@ -171,10 +171,10 @@ def create_info_files(m, files, include_recipe=True):
             for pfix, mode, fn in files_with_prefix:
                 if (auto_detect or (mode == 'text') or
                     ((mode == 'binary') and (fn in binary_has_prefix_files))):
-                    print("Hard-coded path found in %s" % fn)
+                    print("Registered hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
-                    print("Hard-coded path ignored in %s" % fn)
+                    print("Ignored hard-coded path in %s" % fn)
 
     if binary_has_prefix_files:
         # make sure we found all of the files expected
