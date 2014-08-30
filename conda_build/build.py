@@ -23,6 +23,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
+from conda.install import prefix_placeholder
 from conda.utils import url_path
 
 from conda_build import environ, source, tarcheck
@@ -81,6 +82,7 @@ def have_prefix_files(files):
     prefix_bytes = prefix.encode('utf-8')
     alt_prefix = prefix.replace('\\', '/')
     alt_prefix_bytes = alt_prefix.encode('utf-8')
+    prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
@@ -98,11 +100,11 @@ def have_prefix_files(files):
         mode = 'binary' if b'\x00' in data else 'text'
         if prefix_bytes in data:
             yield (prefix, mode, f)
-        elif (sys.platform == 'win32') and (alt_prefix_bytes in data):
+        if (sys.platform == 'win32') and (alt_prefix_bytes in data):
             # some windows libraries use unix-style path separators
             yield (alt_prefix, mode, f)
-        else:
-            continue
+        if prefix_placeholder_bytes in data:
+            yield (prefix_placeholder, mode, f)
 
 
 def create_info_files(m, files, include_recipe=True):
