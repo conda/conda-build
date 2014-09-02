@@ -116,7 +116,7 @@ class BuildRoot(SlotObject):
             # can use from both here and post.py/build.py.  Consider that an
             # xxx todo.
             from conda_build import source
-            path = join(source.WORK_DIR, 'prefix_files.txt')
+            path = join(config.croot, 'prefix_files.txt')
             with open(path, 'r') as f:
                 old_files = set(l for l in f.read().splitlines() if l)
         self.old_files = old_files
