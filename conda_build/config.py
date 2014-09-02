@@ -118,11 +118,7 @@ def resolve_link_error_handler():
 link_errors_handler = resolve_link_error_handler()
 ignore_link_errors = cc.rc.get('ignore_link_errors', False)
 
-verify_rpaths = bool(cc.rc.get('verify_rpaths', False))
-if verify_rpaths:
-    if use_new_rpath_logic:
-        print('~/.condarc note: `verify_rpaths=True` has no effect '
-              'when `use_new_rpath_logic=True` is also set')
+verify_rpaths = True
 
 config = Config()
 
