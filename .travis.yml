@@ -20,7 +20,6 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda install pytest requests
-  - python setup.py install
   - conda info -a
 
 script: py.test
