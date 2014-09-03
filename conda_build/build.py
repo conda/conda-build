@@ -388,8 +388,7 @@ def create_info_files(m, files, include_recipe=True):
     dump_meta_yaml(recipe_dir, m)
 
     if sys.platform == 'win32':
-        for i, f in enumerate(files):
-            files[i] = f.replace('\\', '/')
+        files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
