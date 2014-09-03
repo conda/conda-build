@@ -272,6 +272,16 @@ def get_prefix_files():
     from conda_build.dll import get_files
     return get_files(prefix)
 
+def read_prefix_files():
+    with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
+        prefix_files = set(f.read().splitlines())
+    return prefix_files
+
+def write_prefix_files(prefix_files):
+    with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
+        f.write(u'\n'.join(sorted(list(prefix_files))))
+        f.write(u'\n')
+
 def create_post_scripts(m):
     '''
     Create scripts to run after build step
@@ -539,9 +549,7 @@ def build(m, get_src=True, verbose=True, post=None):
         rm_rf(config.info_dir)
         pre_build_prefix_files = get_prefix_files()
         # Save this for later
-        with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
-            f.write(u'\n'.join(sorted(list(pre_build_prefix_files))))
-            f.write(u'\n')
+        write_prefix_files(pre_build_prefix_files)
 
         if sys.platform == 'win32':
             import conda_build.windows as windows
@@ -564,8 +572,7 @@ def build(m, get_src=True, verbose=True, post=None):
                 _check_call(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
-        with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-            pre_build_prefix_files = set(f.read().splitlines())
+        pre_build_prefix_files = read_prefix_files()
 
         get_build_metadata(m)
         create_post_scripts(m)
