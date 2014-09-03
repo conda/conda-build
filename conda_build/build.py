@@ -627,9 +627,9 @@ def build(m, get_src=True, verbose=True, post=None):
 
 def fake_out_previous_build():
     create_env(pref=config.build_prefix, specs=['python'], verbose=False)
-    _prefix_files = prefix_files()
+    prefix_files = get_prefix_files()
     with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
-        f.write(u'\n'.join(sorted(list(_prefix_files))))
+        f.write(u'\n'.join(sorted(list(prefix_files))))
         f.write(u'\n')
 
 def test(m, verbose=True):
