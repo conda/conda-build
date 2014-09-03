@@ -363,6 +363,13 @@ def create_info_files(m, files, include_recipe=True):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
+    def dump_meta_yaml(recipe_dir, m):
+        filename = join(recipe_dir, 'meta.yaml')
+        if isfile(filename):
+            shutil.move(filename, filename + '.orig')
+        with open(filename, 'w', encoding='utf-8') as fh:
+            yaml.safe_dump(m.meta, fh)
+
     recipe_dir = join(config.info_dir, 'recipe')
     os.makedirs(recipe_dir)
 
@@ -377,12 +384,8 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    if isfile(join(recipe_dir, 'meta.yaml')):
-        shutil.move(join(recipe_dir, 'meta.yaml'),
-                    join(recipe_dir, 'meta.yaml.orig'))
 
-    with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
-        yaml.safe_dump(m.meta, fo)
+    dump_meta_yaml(recipe_dir, m)
 
     if sys.platform == 'win32':
         for i, f in enumerate(files):
