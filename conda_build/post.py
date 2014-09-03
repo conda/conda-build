@@ -210,14 +210,14 @@ def post_build(m, files):
         return
 
     binary_relocation = bool(m.get_value('build/binary_relocation', True))
-    if not binary_relocation:
+    if binary_relocation:
+        osx_is_app = bool(m.get_value('build/osx_is_app', False))
+        for f in files:
+            if f.startswith('bin/'):
+                fix_shebang(f, osx_is_app=osx_is_app)
+            mk_relative(f, binary_relocation=binary_relocation)
+    else:
         print("Skipping binary relocation logic")
-        # FIXME: is this failing to actually skip?  Should have return here?
-    osx_is_app = bool(m.get_value('build/osx_is_app', False))
-    for f in files:
-        if f.startswith('bin/'):
-            fix_shebang(f, osx_is_app=osx_is_app)
-        mk_relative(f, binary_relocation=binary_relocation)
 
 def get_build_metadata(m):
     if exists(join(source.WORK_DIR, '__conda_version__.txt')):
