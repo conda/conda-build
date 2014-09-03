@@ -537,10 +537,10 @@ def build(m, get_src=True, verbose=True, post=None):
             print("no source")
 
         rm_rf(config.info_dir)
-        files1 = prefix_files()
+        pre_build_prefix_files = prefix_files()
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
-            f.write(u'\n'.join(sorted(list(files1))))
+            f.write(u'\n'.join(sorted(list(pre_build_prefix_files))))
             f.write(u'\n')
 
         if sys.platform == 'win32':
@@ -566,7 +566,7 @@ def build(m, get_src=True, verbose=True, post=None):
     if post in [True, None]:
         if post == True:
             with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                files1 = set(f.read().splitlines())
+                pre_build_prefix_files = set(f.read().splitlines())
 
         get_build_metadata(m)
         create_post_scripts(m)
@@ -574,8 +574,8 @@ def build(m, get_src=True, verbose=True, post=None):
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         assert not exists(config.info_dir)
-        files2 = prefix_files()
-        new_files = sorted(files2 - files1)
+        pre_post_prefix_files = prefix_files()
+        new_files = sorted(pre_post_prefix_files - pre_build_prefix_files)
         binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
         build_root = None
@@ -583,8 +583,8 @@ def build(m, get_src=True, verbose=True, post=None):
             allow_x11 = bool(m.get_value('build/allow_x11', True))
             extra_external = m.get_value('build/extra_external', None)
             build_root = BuildRoot(
-                old_files=files1,
-                all_files=files2,
+                old_files=pre_build_prefix_files,
+                all_files=pre_post_prefix_files,
                 forgiving=True,
                 allow_x11=allow_x11,
                 extra_external=extra_external,
@@ -600,12 +600,12 @@ def build(m, get_src=True, verbose=True, post=None):
             build_root.verify()
 
         create_info_files(m, new_files, include_recipe=bool(m.path))
-        files3 = prefix_files()
-        fix_permissions(files3 - files1)
+        post_post_prefix_files = prefix_files()
+        fix_permissions(post_post_prefix_files - pre_build_prefix_files)
 
         path = bldpkg_path(m)
         t = tarfile.open(path, 'w:bz2')
-        for f in sorted(files3 - files1):
+        for f in sorted(post_post_prefix_files - pre_build_prefix_files):
             t.add(join(config.build_prefix, f), f)
         t.close()
 
