@@ -265,7 +265,7 @@ def ensure_dir(dir, *args):
     if not isdir(dir):
         os.makedirs(dir, *args)
 
-def prefix_files():
+def get_prefix_files():
     '''
     Returns a set of all files in prefix.
     '''
@@ -537,7 +537,7 @@ def build(m, get_src=True, verbose=True, post=None):
             print("no source")
 
         rm_rf(config.info_dir)
-        pre_build_prefix_files = prefix_files()
+        pre_build_prefix_files = get_prefix_files()
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(pre_build_prefix_files))))
@@ -573,7 +573,7 @@ def build(m, get_src=True, verbose=True, post=None):
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         assert not exists(config.info_dir)
-        pre_post_prefix_files = prefix_files()
+        pre_post_prefix_files = get_prefix_files()
         new_files = sorted(pre_post_prefix_files - pre_build_prefix_files)
         binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
@@ -599,7 +599,7 @@ def build(m, get_src=True, verbose=True, post=None):
             build_root.verify()
 
         create_info_files(m, new_files, include_recipe=bool(m.path))
-        post_post_prefix_files = prefix_files()
+        post_post_prefix_files = get_prefix_files()
         fix_permissions(post_post_prefix_files - pre_build_prefix_files)
 
         path = bldpkg_path(m)
