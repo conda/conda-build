@@ -116,10 +116,7 @@ class BuildRoot(SlotObject):
             # Ugh, this should be abstracted into a single interface that we
             # can use from both here and post.py/build.py.  Consider that an
             # xxx todo.
-            from conda_build import source
-            path = join(config.croot, 'prefix_files.txt')
-            with open(path, 'r') as f:
-                old_files = set(l for l in f.read().splitlines() if l)
+            old_files = read_prefix_files()
         self.old_files = old_files
 
         if not all_files:
