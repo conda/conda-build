@@ -598,6 +598,8 @@ def build(m, get_src=True, verbose=True, post=None):
         if use_new_rpath_logic:
             print("Using new RPATH logic.")
             build_root.post_build()
+            # TODO: verify that we don't still need to run post.post_build
+            #       if not, where does fix_shebang get called?
         else:
             post_build(m, new_files)
 
