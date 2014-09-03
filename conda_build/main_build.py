@@ -181,7 +181,7 @@ Error:
     'patchelf' is necessary for building conda packages on Linux with
     relocatable ELF libraries.  You can install patchelf using conda install
     patchelf.
-""" % (os.pathsep.join(external.dir_paths)))
+""" % (os.pathsep.join(external.get_dir_paths())))
 
 
 def execute(args, parser):
