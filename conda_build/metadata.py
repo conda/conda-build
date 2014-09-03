@@ -7,7 +7,7 @@ import sys
 from io import open
 from os.path import isdir, isfile, join
 
-from conda.compat import iteritems, PY3
+from conda.compat import iteritems, PY3, text_type
 from conda.utils import memoized, md5_file
 import conda.config as cc
 from conda.resolve import MatchSpec
@@ -28,10 +28,6 @@ Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
 from conda_build.config import config
-
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
 
 
 def ns_cfg():
@@ -121,7 +117,7 @@ def parse(data):
         val = res[section].get(key, '')
         if val is None:
             val = ''
-        res[section][key] = str(val)
+        res[section][key] = text_type(val)
     return res
 
 # If you update this please update the example in
@@ -241,7 +237,7 @@ class MetaData(object):
         res = self.get_value('package/name')
         if not res:
             sys.exit('Error: package/name missing in: %r' % self.meta_path)
-        res = str(res)
+        res = text_type(res)
         if res != res.lower():
             sys.exit('Error: package/name must be lowercase, got: %r' % res)
         check_bad_chrs(res, 'package/name')
@@ -270,7 +266,7 @@ class MetaData(object):
                 if ms.name == name:
                     if ms.strictness != 1:
                         continue
-                    str_ver = str(ver)
+                    str_ver = text_type(ver)
                     if '.' not in str_ver:
                         str_ver = '.'.join(str_ver)
                     ms = MatchSpec('%s %s*' % (name, str_ver))
@@ -371,7 +367,7 @@ class MetaData(object):
         '''
         String representation of the MetaData.
         '''
-        return str(self.__dict__)
+        return text_type(self.__dict__)
 
     def __str__(self):
         if PY3:

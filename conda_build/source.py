@@ -14,9 +14,6 @@ from conda_build import external
 from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
@@ -123,6 +120,7 @@ def git_info(fo=sys.stdout):
     # properly execute without it.
     env = os.environ.copy()
     env['GIT_DIR'] = join(WORK_DIR, '.git')
+    env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),

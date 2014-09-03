@@ -22,11 +22,6 @@ from conda.utils import memoized
 from conda_build.config import config
 
 
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
-
-
 CPAN_META = """\
 package:
   name: {packagename}
