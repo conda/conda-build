@@ -212,6 +212,7 @@ def post_build(m, files):
     binary_relocation = bool(m.get_value('build/binary_relocation', True))
     if not binary_relocation:
         print("Skipping binary relocation logic")
+        # FIXME: is this failing to actually skip?  Should have return here?
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
     for f in files:
         if f.startswith('bin/'):
