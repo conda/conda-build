@@ -1,4 +1,4 @@
-...
+2014-09-03   1.8.1:
 -------------------
   * has_prefix paths must always use /, even on Windows
   * fix bug in Windows Python 2
@@ -8,6 +8,7 @@
   * fix recursive package building
   * handle empty data size in pypi
   * allow an explicitly set empty version string
+
 
 2014-08-22   1.8.0:
 -------------------
