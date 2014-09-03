@@ -504,7 +504,7 @@ def bldpkg_path(m):
 def write_package_bz2(path, package_files):
     with tarfile.open(path, 'w:bz2') as fh:
         for f in sorted(package_files):
-            t.add(join(config.build_prefix, f), f)
+            fh.add(join(config.build_prefix, f), f)
 
 def build(m, get_src=True, verbose=True, post=None):
     '''
