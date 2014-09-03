@@ -97,7 +97,7 @@ class TestDynamicLibrary(unittest.TestCase):
         dl = self.build_dynamic_library()
         # now munge dynamic_library.{inside,outside,missing} for our purposes
         num_missing = 5
-        dl.missing = map(str, range(num_missing))
+        dl.missing = list(map(str, range(num_missing)))
         dl._process_missing_targets()
         self.assertEqual(len(dl.link_errors), num_missing)
 

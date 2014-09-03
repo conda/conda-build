@@ -83,8 +83,8 @@ class TestLinkErrorHandler(unittest.TestCase):
         broken_ids = range(0, num_broken)
         external_ids = range(num_broken, num_broken + num_external)
         _link_errors = []
-        _link_errors += map(make_broken_linkage, broken_ids)
-        _link_errors += map(make_external_linkage, external_ids)
+        _link_errors += list(map(make_broken_linkage, broken_ids))
+        _link_errors += list(map(make_external_linkage, external_ids))
         # pack them into a build_root
         build_root = BuildRoot()
         build_root.link_errors = _link_errors
@@ -122,10 +122,10 @@ class TestLinkErrorHandler(unittest.TestCase):
         for (num_broken, num_external) in [(0, 1), (1, 0), (1, 1), (2, 3)]:
             link_error_handler = self.make_linkerrorhandler(
                     num_broken=num_broken, num_external=num_external)
-            link_error_handler.extern = map(make_external_linkage,
-                    range(num_external))
-            link_error_handler.broken = map(make_broken_linkage,
-                    range(num_broken))
+            link_error_handler.extern = list(map(make_external_linkage,
+                    range(num_external)))
+            link_error_handler.broken = list(map(make_broken_linkage,
+                    range(num_broken)))
             link_error_handler._process_errors()
             self.assertEqual(len(link_error_handler.error_messages),
                     bool(num_broken) + bool(num_external))
