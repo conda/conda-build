@@ -278,6 +278,11 @@ def write_prefix_files(prefix_files):
         f.write(u'\n'.join(sorted(list(prefix_files))))
         f.write(u'\n')
 
+def get_new_prefix_files():
+    old_prefix_files = read_prefix_files()
+    new_prefix_files = get_prefix_files()
+    return sorted(new_prefix_files - old_prefix_files)
+
 def create_post_scripts(m):
     '''
     Create scripts to run after build step
@@ -580,8 +585,7 @@ def build(m, get_src=True, verbose=True, post=None):
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         assert not exists(config.info_dir)
-        pre_post_prefix_files = get_prefix_files()
-        new_files = sorted(pre_post_prefix_files - pre_build_prefix_files)
+        new_files = get_new_prefix_files()
 
         build_root = None
         if use_new_rpath_logic or verify_rpaths:
@@ -607,8 +611,7 @@ def build(m, get_src=True, verbose=True, post=None):
             build_root.verify()
 
         create_info_files(m, new_files, include_recipe=bool(m.path))
-        post_post_prefix_files = get_prefix_files()
-        package_files = post_post_prefix_files - pre_build_prefix_files
+        package_files = get_new_prefix_files()
         fix_permissions(package_files)
         path = bldpkg_path(m)
         write_package_bz2(path, package_files)
