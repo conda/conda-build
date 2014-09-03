@@ -1,7 +1,13 @@
 ...
 -------------------
   * has_prefix paths must always use /, even on Windows
-
+  * fix bug in Windows Python 2
+  * add .travis.yml
+  * allow recipes to use requirements.txt
+  * fix building a package that has Mach-O stub files
+  * fix recursive package building
+  * handle empty data size in pypi
+  * allow an explicitly set empty version string
 
 2014-08-22   1.8.0:
 -------------------
