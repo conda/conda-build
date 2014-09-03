@@ -584,7 +584,6 @@ def build(m, get_src=True, verbose=True, post=None):
         assert not exists(config.info_dir)
         pre_post_prefix_files = get_prefix_files()
         new_files = sorted(pre_post_prefix_files - pre_build_prefix_files)
-        binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
         build_root = None
         if use_new_rpath_logic or verify_rpaths:
@@ -602,7 +601,7 @@ def build(m, get_src=True, verbose=True, post=None):
             print("Using new RPATH logic.")
             build_root.post_build()
         else:
-            post_build(new_files, binary_relocation=binary_relocation)
+            post_build(m, new_files)
 
         if verify_rpaths and not use_new_rpath_logic:
             build_root.verify()
