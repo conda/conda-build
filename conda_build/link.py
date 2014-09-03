@@ -297,11 +297,11 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         is_not_external = lambda error: not is_external(error)
         is_broken = lambda error: isinstance(error, BrokenLinkage)
 
-        external_list = filter(is_external, self.errors)
+        external_list = list(filter(is_external, self.errors))
         # broken is not external because external derives from broken
-        broken_list = filter(is_not_external, self.errors)
-        external_names = map(get_name, external_list)
-        broken_names = map(get_name, broken_list)
+        broken_list = list(filter(is_not_external, self.errors))
+        external_names = list(map(get_name, external_list))
+        broken_names = list(map(get_name, broken_list))
 
         assert all(map(is_broken, broken_list))
         # Check that there's no overlap between libraries being reported as
@@ -309,7 +309,7 @@ class LinkErrorHandler(with_metaclass(ABCMeta, BaseLinkErrorHandler)):
         # impressive if you've managed to get a build into that state.)
         assert_disjoint(external_names, broken_names)
 
-        self.names = set(list(external_names) + list(broken_names))
+        self.names = set(external_names + broken_names)
         self.extern = external_list
         self.broken = broken_list
         self.new_library_recipe_needed = [
