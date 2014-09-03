@@ -1,6 +1,7 @@
 import os
 import unittest
 import operator
+import functools
 from os.path import join
 #
 from conda_build.link import (
@@ -32,7 +33,7 @@ class TestLibraryDependencies(unittest.TestCase):
                 [(depname, join(not_prefix, depname)) for depname in outside_set],
                 [(depname, None) for depname in missing_set],
         ]
-        deps = reduce(operator.add, deps_list, [])
+        deps = functools.reduce(operator.add, deps_list, [])
         ld = LibraryDependencies(deps, prefix)
         self.assertSetEqual(inside_set, ld.inside)
         self.assertSetEqual(outside_set, ld.outside)
