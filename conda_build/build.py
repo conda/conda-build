@@ -515,6 +515,7 @@ def build(m, get_src=True, verbose=True, post=None):
     if post in [False, None]:
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
+        rm_rf(config.info_dir)
 
         if m.binary_has_prefix_files():
             # We must use a long prefix here as the package will only be
@@ -547,9 +548,7 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             print("no source")
 
-        rm_rf(config.info_dir)
         pre_build_prefix_files = get_prefix_files()
-        # Save this for later
         write_prefix_files(pre_build_prefix_files)
 
         if sys.platform == 'win32':
