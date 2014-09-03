@@ -564,9 +564,8 @@ def build(m, get_src=True, verbose=True, post=None):
                 _check_call(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
-        if post == True:
-            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                pre_build_prefix_files = set(f.read().splitlines())
+        with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
+            pre_build_prefix_files = set(f.read().splitlines())
 
         get_build_metadata(m)
         create_post_scripts(m)
