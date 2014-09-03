@@ -500,6 +500,11 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
+def write_package_bz2(path, package_files):
+    with tarfile.open(path, 'w:bz2') as fh:
+        for f in sorted(package_files):
+            t.add(join(config.build_prefix, f), f)
+
 def build(m, get_src=True, verbose=True, post=None):
     '''
     Build the package with the specified metadata.
@@ -607,13 +612,10 @@ def build(m, get_src=True, verbose=True, post=None):
 
         create_info_files(m, new_files, include_recipe=bool(m.path))
         post_post_prefix_files = get_prefix_files()
-        fix_permissions(post_post_prefix_files - pre_build_prefix_files)
-
+        package_files = post_post_prefix_files - pre_build_prefix_files
+        fix_permissions(package_files)
         path = bldpkg_path(m)
-        t = tarfile.open(path, 'w:bz2')
-        for f in sorted(post_post_prefix_files - pre_build_prefix_files):
-            t.add(join(config.build_prefix, f), f)
-        t.close()
+        write_package_bz2(path, package_files)
 
         print("BUILD END:", m.dist())
 
