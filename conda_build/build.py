@@ -47,7 +47,6 @@ from conda_build.dll import DynamicLibrary
 from conda_build.link import LinkErrors
 
 prefix = config.build_prefix
-info_dir = join(prefix, 'info')
 
 
 def invert_defaultdict_by_value_len(d):
