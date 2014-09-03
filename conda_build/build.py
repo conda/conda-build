@@ -585,6 +585,7 @@ def build(m, get_src=True, verbose=True, post=None):
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         assert not exists(config.info_dir)
+        all_files = get_prefix_files()
         new_files = get_new_prefix_files()
 
         build_root = None
@@ -593,7 +594,7 @@ def build(m, get_src=True, verbose=True, post=None):
             extra_external = m.get_value('build/extra_external', None)
             build_root = BuildRoot(
                 old_files=pre_build_prefix_files,
-                all_files=pre_post_prefix_files,
+                all_files=all_files,
                 forgiving=True,
                 allow_x11=allow_x11,
                 extra_external=extra_external,
