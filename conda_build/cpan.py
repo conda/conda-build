@@ -2,8 +2,7 @@
 Tools for converting CPAN packages to conda recipes.
 """
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import json
 import subprocess

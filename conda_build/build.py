@@ -2,8 +2,7 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import json
 import os

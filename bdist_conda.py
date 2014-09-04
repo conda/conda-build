@@ -2,8 +2,7 @@
 bdist_conda
 
 """
-from __future__ import (print_function, division, unicode_literals,
-    absolute_import)
+from __future__ import print_function, division, unicode_literals
 
 from collections import defaultdict
 
@@ -276,8 +275,6 @@ class bdist_conda(install):
 # to keep the options from the superclass (and because I don't feel like
 # making a metaclass just to make this work).
 
-# We have to call str() on the options because our import of
-# __future__.unicode_literals breaks distutils.fancy_getopt in Python 2.
 bdist_conda.user_options.extend([
     (str('buildnum='), None, str('''The build number of
     the conda package. Defaults to 0, or the conda_buildnum specified in the

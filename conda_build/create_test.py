@@ -2,8 +2,7 @@
 Module to handle generating test files.
 '''
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import shutil
 import sys
