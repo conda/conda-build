@@ -14,6 +14,13 @@ from conda_build.link import (
     LinkErrorHandler,
 )
 
+from conda_build.build import (
+    fake_out_previous_build
+)
+
+
+fake_out_previous_build()
+
 
 class TestLinkError(unittest.TestCase, LinkError):
 

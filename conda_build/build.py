@@ -617,6 +617,12 @@ def build(m, get_src=True, verbose=True, post=None):
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
+def fake_out_previous_build():
+    create_env(pref=config.build_prefix, specs=None, verbose=False)
+    _prefix_files = prefix_files()
+    with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
+        f.write(u'\n'.join(sorted(list(_prefix_files))))
+        f.write(u'\n')
 
 def test(m, verbose=True):
     '''

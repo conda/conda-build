@@ -20,6 +20,13 @@ from conda_build.dll import (
         Win32DynamicLibrary,
 )
 
+from conda_build.build import (
+    fake_out_previous_build
+)
+
+
+fake_out_previous_build()
+
 
 class TestLibraryDependencies(unittest.TestCase):
     def test_proper_construction(self):
