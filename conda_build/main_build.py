@@ -104,6 +104,16 @@ def main():
         help="Set the NumPy version used by conda build",
         metavar="NUMPY_VER",
     )
+    p.add_argument(
+        '-I', '--ignore-link-errors',
+        action='store_true',
+        help=(
+            "Ignore any link errors that are detected during post-build "
+            "processing (such as linking to libraries outside of the build "
+            "prefix, which can cause issues when trying to use the package "
+            "on other platforms)"
+        )
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -145,8 +155,11 @@ Error: cannot locate binstar (required for upload)
 # Try:
 # $ conda install binstar
 ''')
-    print("Uploading to binstar")
-    args = [binstar, 'upload', path]
+    binstar_user = config.rc.get('binstar_user', None)
+    if binstar_user:
+        args = [binstar, 'upload', '--user', binstar_user, path]
+    else:
+        args = [binstar, 'upload', path]
     try:
         subprocess.call(args)
     except:
@@ -167,7 +180,7 @@ Error:
     'patchelf' is necessary for building conda packages on Linux with
     relocatable ELF libraries.  You can install patchelf using conda install
     patchelf.
-""" % (os.pathsep.join(external.dir_paths)))
+""" % (os.pathsep.join(external.get_dir_paths())))
 
 
 def execute(args, parser):
@@ -182,6 +195,8 @@ def execute(args, parser):
     import conda_build.source as source
     from conda_build.config import config
     from conda_build.metadata import MetaData
+
+    from conda_build.link import LinkErrors
 
     check_external()
 
@@ -266,6 +281,38 @@ def execute(args, parser):
                     post = None
                 try:
                     build.build(m, verbose=not args.quiet, post=post)
+                except LinkErrors as e:
+                    from conda_build import config
+                    ignore_link_errors = args.ignore_link_errors
+                    if not ignore_link_errors:
+                        ignore_link_errors = config.ignore_link_errors
+
+                    # We always handle link errors.  By default, we use our
+                    # simple handler in link.py, however, this can be
+                    # customized via the conda config property
+                    # 'link_error_handler'.  See conda_build.config for more
+                    # info.  Note that we pass the 'ignore_link_errors' as an
+                    # argument to the handler -- we don't use it to discern
+                    # whether or not to call the handler.
+                    handler_cls = config.link_errors_handler
+                    if args.ignore_link_errors:
+                        # FIXME: per the comment above, we should NOT have this
+                        # if statement.   We should be passing
+                        # args.ignore_link_errors to handler
+                        print('Ignoring link errors:\n%s\n' % repr(e))
+                        # FIXME: when pystan build got here, its repr was
+                        #           'LinkErrors()'
+                        #        it should probably have been more than that
+                        #        so determine what it sould have been and make
+                        #        it so!
+                    else:
+                        if handler_cls:
+                            handler = handler_cls(m, e, recipes)
+                            handler.handle()
+                            if handler.try_again:
+                                continue
+                        else:
+                            raise e
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found'):

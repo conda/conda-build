@@ -9,12 +9,16 @@ import os
 import re
 import shutil
 import stat
+import operator
+import functools
 import subprocess
 import sys
 import tarfile
 from io import open
-from os.path import exists, isdir, isfile, islink, join
+from os import readlink
+from os.path import exists, isdir, isfile, islink, join, basename, dirname
 import yaml
+from collections import defaultdict
 
 
 import conda.config as cc
@@ -26,29 +30,246 @@ from conda.install import prefix_placeholder
 from conda.utils import url_path
 
 from conda_build import environ, source, tarcheck
-from conda_build.config import config
+from conda_build.config import (
+    config,
+    verify_rpaths,
+    use_new_rpath_logic,
+)
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build, is_obj,
                               fix_permissions, get_build_metadata)
-from conda_build.utils import rm_rf, _check_call
+from conda_build.utils import rm_rf, _check_call, SlotObject
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
+from conda_build.dll import DynamicLibrary
+from conda_build.link import LinkErrors
+
+prefix = config.build_prefix
+info_dir = join(prefix, 'info')
+
+
+def invert_defaultdict_by_value_len(d):
+    i = defaultdict(list)
+    for (k, v) in d.items():
+        i[len(v)].append(k)
+    return i
+
+
+#===============================================================================
+# Build Root Classes
+#===============================================================================
+class BuildRoot(SlotObject):
+    __slots__ = (
+        'prefix',
+        'forgiving',
+        'allow_x11',
+        'link_errors',
+        'relative_start_index',
+
+        'old_files',
+        'all_files',
+        'new_files',
+
+        'old_paths',
+        'all_paths',
+        'new_paths',
+
+        'old_dll_paths',
+        'all_dll_paths',
+        'all_symlink_dll_paths',
+        'new_dll_paths',
+
+        'old_non_dll_paths',
+        'new_non_dll_paths',
+        'all_non_dll_paths',
+
+        'old_dlls',
+        'all_dlls',
+        'all_dlls_by_len',
+        'all_symlink_dlls',
+        'all_symlink_dlls_by_len',
+        'new_dlls',
+    )
+
+    _repr_exclude_ = set(__slots__[4:-1])
+
+    def __init__(self, prefix=None, old_files=None, all_files=None,
+                       forgiving=False, is_build=True, prefix_paths=True,
+                       allow_x11=None, extra_external=None):
+        self.forgiving = forgiving
+        if not prefix:
+            prefix = config.build_prefix
+        self.prefix = prefix
+        self.relative_start_ix = len(prefix)+1
+        self.allow_x11 = allow_x11
+        self.extra_external = extra_external
+        self.link_errors = None
+
+        if prefix_paths:
+            join_prefix = lambda f: join(prefix, f)
+        else:
+            join_prefix = lambda f: f
+
+        if not old_files and is_build:
+            # Ugh, this should be abstracted into a single interface that we
+            # can use from both here and post.py/build.py.  Consider that an
+            # xxx todo.
+            from conda_build import source
+            path = join(config.croot, 'prefix_files.txt')
+            with open(path, 'r') as f:
+                old_files = set(l for l in f.read().splitlines() if l)
+        self.old_files = old_files
+
+        if not all_files:
+            from conda_build.dll import get_files
+            all_files = get_files(self.prefix)
+
+        self.all_files = all_files
+        self.all_paths = [ join_prefix(f) for f in self.all_files ]
+
+        # Nice little cyclic dependency we're introducing here on post.py
+        # (which is the thing that should be calling us).
+        from conda_build.post import is_obj as _is_obj
+        is_obj = lambda f: _is_obj(join(prefix, f) if f[0] != '/' else f)
+
+        if is_build:
+            self.new_files = self.all_files - self.old_files
+            self.old_paths = [ join_prefix(f) for f in self.old_files ]
+            self.old_dll_paths = set(p for p in self.old_paths if is_obj(p))
+            self.new_paths = [ join_prefix(f) for f in self.new_files ]
+            self.all_dll_paths = set(
+                p for p in self.all_paths
+                    if p in self.old_dll_paths or is_obj(p)
+            )
+            self.new_dll_paths = self.all_dll_paths - self.old_dll_paths
+
+            self.old_non_dll_paths = set(self.old_paths) - self.old_dll_paths
+            self.new_non_dll_paths = set(self.new_paths) - self.new_dll_paths
+            self.all_non_dll_paths = set(self.all_paths) - self.all_dll_paths
+        else:
+            self.new_files = self.all_files
+            self.new_paths = self.all_paths
+            self.old_paths = []
+            self.old_dll_paths = set()
+            self.all_dll_paths = set(p for p in self.all_paths if is_obj(p))
+            self.new_dll_paths = self.all_dll_paths
+
+            self.old_non_dll_paths = set()
+            self.all_non_dll_paths = set(self.all_paths) - self.all_dll_paths
+            self.new_non_dll_paths = self.all_non_dll_paths
+
+
+        def create_path_list_lookup(path_list):
+            path_list_lookup = defaultdict(list)
+            for path in path_list:
+                name = basename(path)
+                path_list_lookup[name].append(path)
+            return path_list_lookup
+
+        self.all_dlls = create_path_list_lookup(self.all_dll_paths)
+
+        self.all_symlink_dll_paths = [
+            p for p in self.all_paths
+                if islink(p) and basename(readlink(p)) in self.all_dlls
+        ]
+
+        self.all_symlink_dlls = create_path_list_lookup(
+                self.all_symlink_dll_paths)
+
+        # Invert both dicts such that the keys become the length of the lists;
+        # in a perfect world, there would only be one key, [1], which means
+        # all the target filenames were unique within the entire build root.
+        #
+        # R has one with two:
+        #
+        #    In [75]: br.all_dlls_by_len.keys()
+        #    Out[75]: [1, 2]
+        #
+        #    In [76]: br.all_dlls_by_len[2]
+        #    Out[76]: [u'Rscript']
+        #
+        #    In [77]: br.all_dlls['Rscript']
+        #    Out[77]:
+        #    [u'/home/r/miniconda/envs/_build/bin/Rscript',
+        #     u'/home/r/miniconda/envs/_build/lib64/R/bin/Rscript']
+        #
+        # In the case above, we can ignore this one, as nothing links to
+        # Rscript directly (technically, it's an executable, but is_elf()
+        # can't distinguish between exe and .so).  If libR.so was showing
+        # two hits, that's a much bigger problem (we'll trap that via an
+        # assert in our __getitem__()).
+        self.all_dlls_by_len = invert_defaultdict_by_value_len(self.all_dlls)
+        self.all_symlink_dlls_by_len = (
+            invert_defaultdict_by_value_len(self.all_symlink_dlls)
+        )
+
+        self.new_dlls = [
+            DynamicLibrary.create(p, build_root=self)
+                for p in sorted(self.new_dll_paths)
+        ]
+
+        if is_build:
+            self.old_dlls = [
+                DynamicLibrary.create(p, build_root=self)
+                    for p in sorted(self.old_dll_paths)
+            ]
+
+    def __getitem__(self, dll_name):
+        ''' Return relative path to folder containing the specified dependency
+
+        If multiple possibilities exist *and* not self.forgiving, raise an
+        assertion error
+        '''
+
+        targets = self.all_dlls.get(dll_name, self.all_symlink_dlls[dll_name])
+        if len(targets) != 1:
+            if not self.forgiving:
+                assert len(targets) == 1, (dll_name, targets)
+            else:
+                #print("error: unresolved: %s" % dll_name)
+                return
+
+        target = targets[0]
+        relative_target = target[self.relative_start_ix:]
+        return dirname(relative_target)
+
+    def __contains__(self, dll_name):
+        return (
+            dll_name in self.all_dlls or
+            dll_name in self.all_symlink_dlls
+        )
+
+    def verify(self):
+        get_dll_link_errors = lambda dll: dll.link_errors
+        link_errors = map(get_dll_link_errors, self.new_dlls)
+        self.link_errors = functools.reduce(operator.add, link_errors, [])
+
+        if self.link_errors:
+            raise LinkErrors(self)
+
+    def make_relocatable(self, dlls=None, copy=False):
+        if not dlls:
+            dlls = self.new_dlls
+
+        for dll in dlls:
+            dll.make_relocatable(copy=copy)
+
+    def post_build(self):
+        self.make_relocatable()
+        self.verify()
+
+
+def ensure_dir(dir, *args):
+    if not isdir(dir):
+        os.makedirs(dir, *args)
 
 def prefix_files():
     '''
     Returns a set of all files in prefix.
     '''
-    res = set()
-    for root, dirs, files in os.walk(config.build_prefix):
-        for fn in files:
-            res.add(join(root, fn)[len(config.build_prefix) + 1:])
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path[len(config.build_prefix) + 1:])
-    return res
-
+    from conda_build.dll import get_files
+    return get_files(prefix)
 
 def create_post_scripts(m):
     '''
@@ -62,8 +283,7 @@ def create_post_scripts(m):
             continue
         dst_dir = join(config.build_prefix,
                        'Scripts' if sys.platform == 'win32' else 'bin')
-        if not isdir(dst_dir):
-            os.makedirs(dst_dir, int('755', 8))
+        ensure_dir(dst_dir, int('755', 8))
         dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
         shutil.copyfile(src, dst)
         os.chmod(dst, int('755', 8))
@@ -112,9 +332,9 @@ def have_prefix_files(files):
             continue
         st = os.stat(path)
         # Save as
+        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         with open(path, 'wb') as fo:
             fo.write(data)
-        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
         if sys.platform == 'win32':
             f = f.replace('\\', '/')
         yield f
@@ -238,8 +458,7 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
-    if not isdir(config.bldpkgs_dir):
-        os.makedirs(config.bldpkgs_dir)
+    ensure_dir(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
         if clear_cache:
@@ -253,8 +472,7 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
-    if not isdir(pref):
-        os.makedirs(pref)
+    ensure_dir(pref)
 
 def rm_pkgs_cache(dist):
     '''
@@ -356,9 +574,31 @@ def build(m, get_src=True, verbose=True, post=None):
 
         assert not exists(config.info_dir)
         files2 = prefix_files()
+        new_files = sorted(files2 - files1)
+        binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
-        post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        build_root = None
+        if use_new_rpath_logic or verify_rpaths:
+            allow_x11 = bool(m.get_value('build/allow_x11', True))
+            extra_external = m.get_value('build/extra_external', None)
+            build_root = BuildRoot(
+                old_files=files1,
+                all_files=files2,
+                forgiving=True,
+                allow_x11=allow_x11,
+                extra_external=extra_external,
+            )
+
+        if use_new_rpath_logic:
+            print("Using new RPATH logic.")
+            build_root.post_build()
+        else:
+            post_build(new_files, binary_relocation=binary_relocation)
+
+        if verify_rpaths and not use_new_rpath_logic:
+            build_root.verify()
+
+        create_info_files(m, new_files, include_recipe=bool(m.path))
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 
@@ -376,6 +616,12 @@ def build(m, get_src=True, verbose=True, post=None):
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
+def fake_out_previous_build():
+    create_env(pref=config.build_prefix, specs=['python'], verbose=False)
+    _prefix_files = prefix_files()
+    with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
+        f.write(u'\n'.join(sorted(list(_prefix_files))))
+        f.write(u'\n')
 
 def test(m, verbose=True):
     '''
@@ -477,8 +723,6 @@ def tests_failed(m):
     :param m: Package's metadata
     :type m: Metadata
     '''
-    if not isdir(config.broken_dir):
-        os.makedirs(config.broken_dir)
-
+    ensure_dir(config.broken_dir)
     shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())

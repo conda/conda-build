@@ -7,7 +7,8 @@ from os.path import isfile, join, expanduser
 import conda.config as cc
 from conda_build.config import config
 
-def find_executable(executable):
+def get_dir_paths():
+    dir_paths = None
     if sys.platform == 'win32':
         dir_paths = [join(config.build_prefix, 'Scripts'),
                      join(cc.root_dir, 'Scripts'),
@@ -17,6 +18,11 @@ def find_executable(executable):
                      join(cc.root_dir, 'bin'),]
 
     dir_paths.extend(os.environ['PATH'].split(os.pathsep))
+    return dir_paths
+
+def find_executable(executable):
+
+    dir_paths = get_dir_paths()
 
     for dir_path in dir_paths:
         if sys.platform == 'win32':

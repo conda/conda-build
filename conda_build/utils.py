@@ -12,7 +12,15 @@ from os.path import (dirname, getmtime, getsize, isdir, isfile,
 
 from conda.utils import md5_file
 
-from conda_build import external
+
+
+#===============================================================================
+# Globals
+#===============================================================================
+is_linux = (sys.platform.startswith('linux'))
+is_darwin = (sys.platform == 'darwin')
+is_win32 = (sys.platform == 'win32')
+assert sum((is_linux, is_darwin, is_win32)) == 1
 
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
@@ -35,6 +43,7 @@ def _check_call(args, **kwargs):
 
 def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.endswith('.tar.xz'):
+        from conda_build import external
         unxz = external.find_executable('unxz')
         if not unxz:
             sys.exit("""\
@@ -66,3 +75,79 @@ def file_info(path):
     return {'size': getsize(path),
             'md5': md5_file(path),
             'mtime': getmtime(path)}
+
+
+#===============================================================================
+# Helper Classes
+#===============================================================================
+class SlotObject(object):
+    ''' Helper base class to provide representation of subclasses
+
+    Representation is specified by __slots__ and
+    _to_dict_{prefix,suffix,exclude}_ and enacted by __repr__ and _to_dict
+
+    Subclasses will often have an __init__ that looks like
+        def __init__(self, *args):
+    because the SlotObject must be initialized like
+        SlotObject.__init__(self, *args)
+    with *args passed in the same order as __slots__ names them
+
+    '''
+
+    # Subclasses need to define __slots__
+    _default_ = None
+
+    _to_dict_prefix_ = ''
+    _to_dict_suffix_ = ''
+    _to_dict_exclude_ = set()
+
+    # Defaults to _to_dict_exclude_ if not set.
+    _repr_exclude_ = set()
+
+    def __init__(self, *args, **kwds):
+        seen = set()
+        slots = list(self.__slots__)
+        args = list(args)
+        while args:
+            (key, value) = (slots.pop(0), args.pop(0))
+            seen.add(key)
+            setattr(self, key, value)
+
+        for (key, value) in kwds.items():
+            seen.add(key)
+            setattr(self, key, value)
+
+        for slot in self.__slots__:
+            if slot not in seen:
+                setattr(self, slot, self._default_)
+
+        return
+
+    def _to_dict(self, prefix=None, suffix=None, exclude=None):
+        prefix = prefix or self._to_dict_prefix_
+        suffix = suffix or self._to_dict_suffix_
+        exclude = exclude or self._to_dict_exclude_
+        return {
+            '%s%s%s' % (prefix, key, suffix): getattr(self, key)
+                for key in self.__slots__
+                     if key not in exclude
+        }
+
+    def __repr__(self):
+        slots = self.__slots__
+        exclude = self._repr_exclude_ or self._to_dict_exclude_
+
+        q = lambda v: v if (not v or isinstance(v, int)) else '"%s"' % v
+        return "<%s %s>" % (
+            self.__class__.__name__,
+            ', '.join(
+                '%s=%s' % (k, q(v))
+                    for (k, v) in (
+                        (k, getattr(self, k))
+                            for k in slots
+                                if k not in exclude
+                    )
+                )
+        )
+
+

@@ -94,6 +94,26 @@ class Config(object):
 
     bldpkgs_dir = join(croot, cc.subdir)
 
+
+def import_name_from_module(import_name):
+    def parse_import_name(import_name):
+        # Can be any callable qualified Python name (class or function).
+        assert '.' in import_name
+        ix = import_name.rfind('.')
+        modulename, callname = import_name[:ix], import_name[ix+1:]
+        return modulename, callname
+    import importlib
+    modulename, callname = parse_import_name(import_name)
+    module = importlib.import_module(modulename)
+    return getattr(module, callname)
+
+
+verify_rpaths = True
+ignore_link_errors = cc.rc.get('ignore_link_errors', False)
+use_new_rpath_logic = bool(cc.rc.get('use_new_rpath_logic', True))
+link_errors_handler_name = cc.rc.get('link_errors_handler', 'conda_build.link.LinkErrorHandler')
+link_errors_handler = import_name_from_module(link_errors_handler_name)
+
 config = Config()
 
 croot = config.croot
