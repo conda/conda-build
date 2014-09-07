@@ -284,18 +284,13 @@ def execute(args, parser):
                     build.build(m, verbose=not args.quiet, post=post)
                 except LinkErrors as e:
                     from conda_build import config
-                    ignore_link_errors = args.ignore_link_errors
-                    if not ignore_link_errors:
-                        ignore_link_errors = config.ignore_link_errors
+                    ignore_link_errors = args.ignore_link_errors or \
+                            config.ignore_link_errors
 
-                    # We always handle link errors.  By default, we use our
-                    # simple handler in link.py, however, this can be
-                    # customized via the conda config property
-                    # 'link_error_handler'.  See conda_build.config for more
-                    # info.  Note that we pass the 'ignore_link_errors' as an
-                    # argument to the handler -- we don't use it to discern
-                    # whether or not to call the handler.
-                    handler_cls = config.link_errors_handler
+                    # By default, we use our simple handler in link.py,
+                    # however, this can be customized via the conda config
+                    # property 'link_error_handler'.  See conda_build.config
+                    # for more info.
                     if args.ignore_link_errors:
                         # FIXME: per the comment above, we should NOT have this
                         # if statement.   We should be passing
@@ -307,6 +302,7 @@ def execute(args, parser):
                         #        so determine what it sould have been and make
                         #        it so!
                     else:
+                        handler_cls = config.link_errors_handler
                         if handler_cls:
                             handler = handler_cls(m, e, recipes)
                             handler.handle()
