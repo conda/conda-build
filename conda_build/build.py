@@ -257,6 +257,17 @@ class BuildRoot(SlotObject):
         self.verify()
 
 
+def make_build_root(m, **kwargs):
+    build_root_kwargs = dict(
+        forgiving=True,
+        all_files=get_prefix_files(),
+        old_files=read_prefix_files(),
+        allow_x11=bool(m.get_value('build/allow_x11', True)),
+        extra_external=m.get_value('build/extra_external', None),
+    )
+    build_root_kwargs.update(kwargs)
+    return BuildRoot(**build_root_kwargs)
+
 def ensure_dir(dir, *args):
     if not isdir(dir):
         os.makedirs(dir, *args)
@@ -583,9 +594,6 @@ def build(m, get_src=True, verbose=True, post=None):
             non_windows_build(m, src_dir)
 
     if post in [True, None]:
-        pre_build_prefix_files = read_prefix_files()
-
-
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
@@ -594,16 +602,9 @@ def build(m, get_src=True, verbose=True, post=None):
 
 
         new_files = get_new_prefix_files()
-        build_root_kwargs = dict(
-            forgiving=True,
-            all_files=get_prefix_files(),
-            old_files=pre_build_prefix_files,
-            allow_x11=bool(m.get_value('build/allow_x11', True)),
-            extra_external=m.get_value('build/extra_external', None),
-        )
         if use_new_rpath_logic:
             print("Using new RPATH logic.")
-            build_root = BuildRoot(**build_root_kwargs)
+            build_root = make_build_root(m)
             build_root.post_build()
             # TODO: verify that we don't still need to run post.post_build
             #       if not, where does fix_shebang get called?
@@ -611,7 +612,7 @@ def build(m, get_src=True, verbose=True, post=None):
             post_build(m, new_files)
 
         if verify_rpaths and not use_new_rpath_logic:
-            build_root = BuildRoot(**build_root_kwargs)
+            build_root = make_build_root(m)
             build_root.verify()
 
 
