@@ -585,29 +585,25 @@ def build(m, get_src=True, verbose=True, post=None):
     if post in [True, None]:
         pre_build_prefix_files = read_prefix_files()
 
+
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
         assert not exists(config.info_dir)
 
-        build_root = None
-        if use_new_rpath_logic or verify_rpaths:
-            all_files = get_prefix_files()
-            allow_x11 = bool(m.get_value('build/allow_x11', True))
-            extra_external = m.get_value('build/extra_external', None)
-            build_root = BuildRoot(
-                old_files=pre_build_prefix_files,
-                all_files=all_files,
-                forgiving=True,
-                allow_x11=allow_x11,
-                extra_external=extra_external,
-            )
 
         new_files = get_new_prefix_files()
+        build_root_kwargs = dict(
+            forgiving=True,
+            all_files=get_prefix_files(),
+            old_files=pre_build_prefix_files,
+            allow_x11=bool(m.get_value('build/allow_x11', True)),
+            extra_external=m.get_value('build/extra_external', None),
+        )
         if use_new_rpath_logic:
             print("Using new RPATH logic.")
+            build_root = BuildRoot(**build_root_kwargs)
             build_root.post_build()
             # TODO: verify that we don't still need to run post.post_build
             #       if not, where does fix_shebang get called?
@@ -615,7 +611,9 @@ def build(m, get_src=True, verbose=True, post=None):
             post_build(m, new_files)
 
         if verify_rpaths and not use_new_rpath_logic:
+            build_root = BuildRoot(**build_root_kwargs)
             build_root.verify()
+
 
         create_info_files(m, new_files, include_recipe=bool(m.path))
         package_files = get_new_prefix_files()
@@ -623,8 +621,8 @@ def build(m, get_src=True, verbose=True, post=None):
         path = bldpkg_path(m)
         write_package_bz2(path, package_files)
 
-        print("BUILD END:", m.dist())
 
+        print("BUILD END:", m.dist())
         # we're done building, perform some checks
         tarcheck.check_all(path)
         update_index(config.bldpkgs_dir)
