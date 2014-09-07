@@ -588,11 +588,10 @@ def build(m, get_src=True, verbose=True, post=None):
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         assert not exists(config.info_dir)
-        all_files = get_prefix_files()
-        new_files = get_new_prefix_files()
 
         build_root = None
         if use_new_rpath_logic or verify_rpaths:
+            all_files = get_prefix_files()
             allow_x11 = bool(m.get_value('build/allow_x11', True))
             extra_external = m.get_value('build/extra_external', None)
             build_root = BuildRoot(
@@ -609,6 +608,7 @@ def build(m, get_src=True, verbose=True, post=None):
             # TODO: verify that we don't still need to run post.post_build
             #       if not, where does fix_shebang get called?
         else:
+            new_files = get_new_prefix_files()
             post_build(m, new_files)
 
         if verify_rpaths and not use_new_rpath_logic:
