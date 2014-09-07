@@ -33,7 +33,6 @@ from conda.utils import url_path
 from conda_build import environ, source, tarcheck
 from conda_build.config import (
     config,
-    verify_rpaths,
     use_new_rpath_logic,
 )
 from conda_build.scripts import create_entry_points, bin_dirname
@@ -610,8 +609,6 @@ def build(m, get_src=True, verbose=True, post=None):
             #       if not, where does fix_shebang get called?
         else:
             post_build(m, new_files)
-
-        if verify_rpaths and not use_new_rpath_logic:
             build_root = make_build_root(m)
             build_root.verify()
 
