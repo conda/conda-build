@@ -726,6 +726,7 @@ def test(m, verbose=True):
             except subprocess.CalledProcessError:
                 tests_failed(m)
 
+    make_build_root(m).verify()
     print("TEST END:", m.dist())
 
 def tests_failed(m):
