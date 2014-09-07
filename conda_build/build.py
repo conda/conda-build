@@ -520,11 +520,23 @@ def build(m, get_src=True, verbose=True, post=None):
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     '''
-    if post in [False, None]:
-        rm_rf(config.short_build_prefix)
-        rm_rf(config.long_build_prefix)
-        rm_rf(config.info_dir)
 
+    def non_windows_build(m, src_dir):
+        env = environ.get_dict(m)
+        build_file = join(m.path, 'build.sh')
+        script = m.get_value('build/script', None)
+        if script:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+            with open(build_file, 'w', encoding='utf-8') as bf:
+                bf.write(script)
+            os.chmod(build_file, 0o766)
+
+        if exists(build_file):
+            cmd = ['/bin/bash', '-x', '-e', build_file]
+            _check_call(cmd, env=env, cwd=src_dir)
+
+    if post in [False, None]:
         if m.binary_has_prefix_files():
             # We must use a long prefix here as the package will only be
             # installable into prefixes shorter than this one.
@@ -532,22 +544,28 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             # In case there are multiple builds in the same process
             config.use_long_build_prefix = False
-
         # Display the name only
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
+
+
+        # prepare file system
+        rm_rf(config.short_build_prefix)
+        rm_rf(config.long_build_prefix)
+        rm_rf(config.info_dir)
         create_env(config.build_prefix,
                    [ms.spec for ms in m.ms_depends('build')],
                    verbose=verbose)
-
         if get_src:
             source.provide(m.path, m.get_section('source'))
             # Parse our metadata again because we did not initialize the source
             # information before.
             m.parse_again()
+        pre_build_prefix_files = get_prefix_files()
+        write_prefix_files(pre_build_prefix_files)
+
 
         print("Package:", m.dist())
-
         assert isdir(source.WORK_DIR)
         src_dir = source.get_dir()
         contents = os.listdir(src_dir)
@@ -556,28 +574,13 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             print("no source")
 
-        pre_build_prefix_files = get_prefix_files()
-        write_prefix_files(pre_build_prefix_files)
 
+        # actually do build
         if sys.platform == 'win32':
             import conda_build.windows as windows
             windows.build(m)
         else:
-            env = environ.get_dict(m)
-            build_file = join(m.path, 'build.sh')
-
-            script = m.get_value('build/script', None)
-            if script:
-                if isinstance(script, list):
-                    script = '\n'.join(script)
-                with open(build_file, 'w', encoding='utf-8') as bf:
-                    bf.write(script)
-                os.chmod(build_file, 0o766)
-
-            if exists(build_file):
-                cmd = ['/bin/bash', '-x', '-e', build_file]
-
-                _check_call(cmd, env=env, cwd=src_dir)
+            non_windows_build(m, src_dir)
 
     if post in [True, None]:
         pre_build_prefix_files = read_prefix_files()
