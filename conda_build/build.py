@@ -370,10 +370,7 @@ def create_info_files(m, files, include_recipe=True):
         with open(filename, 'w', encoding='utf-8') as fh:
             yaml.safe_dump(m.meta, fh)
 
-    recipe_dir = join(config.info_dir, 'recipe')
-    os.makedirs(recipe_dir)
-
-    if include_recipe:
+    def copy_recipe(m, recipe_dir):
         for fn in os.listdir(m.path):
             if fn.startswith('.'):
                 continue
@@ -384,6 +381,10 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
+    recipe_dir = join(config.info_dir, 'recipe')
+    os.makedirs(recipe_dir)
+    if include_recipe:
+        copy_recipe(m, recipe_dir)
 
     dump_meta_yaml(recipe_dir, m)
 
