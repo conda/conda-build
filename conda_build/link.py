@@ -200,11 +200,9 @@ class LinkErrors(Exception):
         message: concatenation of 'repr' of each build_root.link_errors element
         build_root: copy of build_root
         errors: copy of build_root.link_errors
-        allow_ignore_link_errors: ???
     '''
 
     def __init__(self, build_root):
-        self.allow_ignore_link_errors = None
         self.build_root = build_root
         self.errors = build_root.link_errors
         assert self.errors
@@ -224,7 +222,6 @@ class LinkErrors(Exception):
 
 class BaseLinkErrorHandler(object):
     try_again = False
-    allow_ignore_errors = True
 
     def __init__(self, metadata, exception, recipes, ignore_link_errors=True):
         # FIXME: name ignore_link_errors something more descriptive
