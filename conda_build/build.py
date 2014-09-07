@@ -602,13 +602,13 @@ def build(m, get_src=True, verbose=True, post=None):
                 extra_external=extra_external,
             )
 
+        new_files = get_new_prefix_files()
         if use_new_rpath_logic:
             print("Using new RPATH logic.")
             build_root.post_build()
             # TODO: verify that we don't still need to run post.post_build
             #       if not, where does fix_shebang get called?
         else:
-            new_files = get_new_prefix_files()
             post_build(m, new_files)
 
         if verify_rpaths and not use_new_rpath_logic:
