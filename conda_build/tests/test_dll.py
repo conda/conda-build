@@ -52,7 +52,7 @@ def get_something_in_prefix(prefix):
     # FIXME: how to make this OS agnostic?
     _find = ProcessWrapper(find_executable('find'))
     found_python = _find(join(prefix, 'bin'), '-name', 'python')
-    assert found_python
+    assert found_python, (os.listdir(prefix), os.listdir(join(prefix, 'bin')))
     return found_python
 
 class TestDynamicLibrary(unittest.TestCase):
