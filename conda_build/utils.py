@@ -17,6 +17,19 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 
+def copy_into(src, dst):
+    "Copy all the files and directories in src to the directory dst"
+
+    tocopy = os.listdir(src)
+    for afile in tocopy:
+        srcname = os.path.join(src, afile)
+        dstname = os.path.join(dst, afile)
+
+        if os.path.isdir(srcname):
+            shutil.copytree(srcname, dstname)
+        else:
+            shutil.copy2(srcname, dstname)
+
 
 def rel_lib(f):
     assert not f.startswith('/')

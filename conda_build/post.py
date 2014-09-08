@@ -88,7 +88,14 @@ def remove_easy_install_pth(preserve_egg_dir=False):
                 if fn == '__pycache__':
                     utils.rm_rf(join(egg_path, fn))
                 else:
-                    os.rename(join(egg_path, fn), join(sp_dir, fn))
+                    # this might be a name-space package
+                    # so the package directory already exists
+                    # from another installed dependency
+                    if os.path.exists(join(sp_dir, fn)):
+                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn))
+                        utils.rm_rf(join(egg_path, fn))
+                    else:
+                        os.rename(join(egg_path, fn), join(sp_dir, fn))
 
         elif isfile(egg_path):
             print('found egg:', egg_path)
