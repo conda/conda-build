@@ -4,5 +4,5 @@ set -e
 set -x
 
 for recipe in */*; do
-    conda build $recipe
+    conda build --no-binstar-upload $recipe
 done
