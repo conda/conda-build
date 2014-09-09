@@ -109,7 +109,6 @@ def import_name_from_module(import_name):
     return getattr(module, callname)
 
 
-verify_rpaths = True
 ignore_link_errors = cc.rc.get('ignore_link_errors', False)
 use_new_rpath_logic = bool(cc.rc.get('use_new_rpath_logic', True))
 link_errors_handler_name = cc.rc.get('link_errors_handler', 'conda_build.link.LinkErrorHandler')

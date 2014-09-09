@@ -33,7 +33,6 @@ from conda.utils import url_path
 from conda_build import environ, source, tarcheck
 from conda_build.config import (
     config,
-    verify_rpaths,
     use_new_rpath_logic,
 )
 from conda_build.scripts import create_entry_points, bin_dirname
@@ -47,7 +46,6 @@ from conda_build.dll import DynamicLibrary
 from conda_build.link import LinkErrors
 
 prefix = config.build_prefix
-info_dir = join(prefix, 'info')
 
 
 def invert_defaultdict_by_value_len(d):
@@ -116,10 +114,7 @@ class BuildRoot(SlotObject):
             # Ugh, this should be abstracted into a single interface that we
             # can use from both here and post.py/build.py.  Consider that an
             # xxx todo.
-            from conda_build import source
-            path = join(config.croot, 'prefix_files.txt')
-            with open(path, 'r') as f:
-                old_files = set(l for l in f.read().splitlines() if l)
+            old_files = read_prefix_files()
         self.old_files = old_files
 
         if not all_files:
@@ -261,16 +256,42 @@ class BuildRoot(SlotObject):
         self.verify()
 
 
+def make_build_root(m, **kwargs):
+    build_root_kwargs = dict(
+        forgiving=True,
+        all_files=get_prefix_files(),
+        old_files=read_prefix_files(),
+        allow_x11=bool(m.get_value('build/allow_x11', True)),
+        extra_external=m.get_value('build/extra_external', None),
+    )
+    build_root_kwargs.update(kwargs)
+    return BuildRoot(**build_root_kwargs)
+
 def ensure_dir(dir, *args):
     if not isdir(dir):
         os.makedirs(dir, *args)
 
-def prefix_files():
+def get_prefix_files():
     '''
     Returns a set of all files in prefix.
     '''
     from conda_build.dll import get_files
     return get_files(prefix)
+
+def read_prefix_files():
+    with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
+        prefix_files = set(f.read().splitlines())
+    return prefix_files
+
+def write_prefix_files(prefix_files):
+    with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
+        f.write(u'\n'.join(sorted(list(prefix_files))))
+        f.write(u'\n')
+
+def get_new_prefix_files():
+    old_prefix_files = read_prefix_files()
+    new_prefix_files = get_prefix_files()
+    return sorted(new_prefix_files - old_prefix_files)
 
 def create_post_scripts(m):
     '''
@@ -352,10 +373,14 @@ def create_info_files(m, files, include_recipe=True):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
-    recipe_dir = join(config.info_dir, 'recipe')
-    os.makedirs(recipe_dir)
+    def dump_meta_yaml(recipe_dir, m):
+        filename = join(recipe_dir, 'meta.yaml')
+        if isfile(filename):
+            shutil.move(filename, filename + '.orig')
+        with open(filename, 'w', encoding='utf-8') as fh:
+            yaml.safe_dump(m.meta, fh)
 
-    if include_recipe:
+    def copy_recipe(m, recipe_dir):
         for fn in os.listdir(m.path):
             if fn.startswith('.'):
                 continue
@@ -366,16 +391,15 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    if isfile(join(recipe_dir, 'meta.yaml')):
-        shutil.move(join(recipe_dir, 'meta.yaml'),
-                    join(recipe_dir, 'meta.yaml.orig'))
+    recipe_dir = join(config.info_dir, 'recipe')
+    os.makedirs(recipe_dir)
+    if include_recipe:
+        copy_recipe(m, recipe_dir)
 
-    with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
-        yaml.safe_dump(m.meta, fo)
+    dump_meta_yaml(recipe_dir, m)
 
     if sys.platform == 'win32':
-        for i, f in enumerate(files):
-            files[i] = f.replace('\\', '/')
+        files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w', encoding='utf-8') as fo:
         for f in files:
@@ -490,6 +514,11 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
+def write_package_bz2(path, package_files):
+    with tarfile.open(path, 'w:bz2') as fh:
+        for f in sorted(package_files):
+            fh.add(join(config.build_prefix, f), f)
+
 def build(m, get_src=True, verbose=True, post=None):
     '''
     Build the package with the specified metadata.
@@ -501,10 +530,23 @@ def build(m, get_src=True, verbose=True, post=None):
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     '''
-    if post in [False, None]:
-        rm_rf(config.short_build_prefix)
-        rm_rf(config.long_build_prefix)
 
+    def non_windows_build(m, src_dir):
+        env = environ.get_dict(m)
+        build_file = join(m.path, 'build.sh')
+        script = m.get_value('build/script', None)
+        if script:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+            with open(build_file, 'w', encoding='utf-8') as bf:
+                bf.write(script)
+            os.chmod(build_file, 0o766)
+
+        if exists(build_file):
+            cmd = ['/bin/bash', '-x', '-e', build_file]
+            _check_call(cmd, env=env, cwd=src_dir)
+
+    if post in [False, None]:
         if m.binary_has_prefix_files():
             # We must use a long prefix here as the package will only be
             # installable into prefixes shorter than this one.
@@ -512,22 +554,28 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             # In case there are multiple builds in the same process
             config.use_long_build_prefix = False
-
         # Display the name only
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
+
+
+        # prepare file system
+        rm_rf(config.short_build_prefix)
+        rm_rf(config.long_build_prefix)
+        rm_rf(config.info_dir)
         create_env(config.build_prefix,
                    [ms.spec for ms in m.ms_depends('build')],
                    verbose=verbose)
-
         if get_src:
             source.provide(m.path, m.get_section('source'))
             # Parse our metadata again because we did not initialize the source
             # information before.
             m.parse_again()
+        pre_build_prefix_files = get_prefix_files()
+        write_prefix_files(pre_build_prefix_files)
+
 
         print("Package:", m.dist())
-
         assert isdir(source.WORK_DIR)
         src_dir = source.get_dir()
         contents = os.listdir(src_dir)
@@ -536,81 +584,43 @@ def build(m, get_src=True, verbose=True, post=None):
         else:
             print("no source")
 
-        rm_rf(config.info_dir)
-        files1 = prefix_files()
-        # Save this for later
-        with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
-            f.write(u'\n'.join(sorted(list(files1))))
-            f.write(u'\n')
 
+        # actually do build
         if sys.platform == 'win32':
             import conda_build.windows as windows
             windows.build(m)
         else:
-            env = environ.get_dict(m)
-            build_file = join(m.path, 'build.sh')
-
-            script = m.get_value('build/script', None)
-            if script:
-                if isinstance(script, list):
-                    script = '\n'.join(script)
-                with open(build_file, 'w', encoding='utf-8') as bf:
-                    bf.write(script)
-                os.chmod(build_file, 0o766)
-
-            if exists(build_file):
-                cmd = ['/bin/bash', '-x', '-e', build_file]
-
-                _check_call(cmd, env=env, cwd=src_dir)
+            non_windows_build(m, src_dir)
 
     if post in [True, None]:
-        if post == True:
-            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                files1 = set(f.read().splitlines())
-
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
         post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
         assert not exists(config.info_dir)
-        files2 = prefix_files()
-        new_files = sorted(files2 - files1)
-        binary_relocation = bool(m.get_value('build/binary_relocation', True))
 
-        build_root = None
-        if use_new_rpath_logic or verify_rpaths:
-            allow_x11 = bool(m.get_value('build/allow_x11', True))
-            extra_external = m.get_value('build/extra_external', None)
-            build_root = BuildRoot(
-                old_files=files1,
-                all_files=files2,
-                forgiving=True,
-                allow_x11=allow_x11,
-                extra_external=extra_external,
-            )
 
+        new_files = get_new_prefix_files()
         if use_new_rpath_logic:
             print("Using new RPATH logic.")
+            build_root = make_build_root(m)
             build_root.post_build()
+            # TODO: verify that we don't still need to run post.post_build
+            #       if not, where does fix_shebang get called?
         else:
-            post_build(new_files, binary_relocation=binary_relocation)
-
-        if verify_rpaths and not use_new_rpath_logic:
+            post_build(m, new_files)
+            build_root = make_build_root(m)
             build_root.verify()
 
-        create_info_files(m, new_files, include_recipe=bool(m.path))
-        files3 = prefix_files()
-        fix_permissions(files3 - files1)
 
+        create_info_files(m, new_files, include_recipe=bool(m.path))
+        package_files = get_new_prefix_files()
+        fix_permissions(package_files)
         path = bldpkg_path(m)
-        t = tarfile.open(path, 'w:bz2')
-        for f in sorted(files3 - files1):
-            t.add(join(config.build_prefix, f), f)
-        t.close()
+        write_package_bz2(path, package_files)
+
 
         print("BUILD END:", m.dist())
-
         # we're done building, perform some checks
         tarcheck.check_all(path)
         update_index(config.bldpkgs_dir)
@@ -619,10 +629,8 @@ def build(m, get_src=True, verbose=True, post=None):
 
 def fake_out_previous_build():
     create_env(pref=config.build_prefix, specs=['python'], verbose=False)
-    _prefix_files = prefix_files()
-    with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
-        f.write(u'\n'.join(sorted(list(_prefix_files))))
-        f.write(u'\n')
+    prefix_files = get_prefix_files()
+    write_prefix_files(prefix_files)
 
 def test(m, verbose=True):
     '''
@@ -715,6 +723,7 @@ def test(m, verbose=True):
             except subprocess.CalledProcessError:
                 tests_failed(m)
 
+    make_build_root(m).verify()
     print("TEST END:", m.dist())
 
 def tests_failed(m):

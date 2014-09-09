@@ -51,8 +51,8 @@ def get_something_in_prefix(prefix):
     create_env(prefix, ['python'], verbose=True)
     # FIXME: how to make this OS agnostic?
     _find = ProcessWrapper(find_executable('find'))
-    found_python = _find(prefix, '-name', 'python')
-    assert found_python
+    found_python = _find(join(prefix, 'bin'), '-name', 'python')
+    assert found_python, (os.listdir(prefix), os.listdir(join(prefix, 'bin')))
     return found_python
 
 class TestDynamicLibrary(unittest.TestCase):

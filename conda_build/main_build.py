@@ -283,37 +283,24 @@ def execute(args, parser):
                 try:
                     build.build(m, verbose=not args.quiet, post=post)
                 except LinkErrors as e:
+                    # By default, we use our simple handler in link.py,
+                    # however, this can be customized via the conda config
+                    # property 'link_error_handler'.  See conda_build.config
+                    # for more info.
                     from conda_build import config
-                    ignore_link_errors = args.ignore_link_errors
-                    if not ignore_link_errors:
-                        ignore_link_errors = config.ignore_link_errors
-
-                    # We always handle link errors.  By default, we use our
-                    # simple handler in link.py, however, this can be
-                    # customized via the conda config property
-                    # 'link_error_handler'.  See conda_build.config for more
-                    # info.  Note that we pass the 'ignore_link_errors' as an
-                    # argument to the handler -- we don't use it to discern
-                    # whether or not to call the handler.
                     handler_cls = config.link_errors_handler
-                    if args.ignore_link_errors:
-                        # FIXME: per the comment above, we should NOT have this
-                        # if statement.   We should be passing
-                        # args.ignore_link_errors to handler
-                        print('Ignoring link errors:\n%s\n' % repr(e))
-                        # FIXME: when pystan build got here, its repr was
-                        #           'LinkErrors()'
-                        #        it should probably have been more than that
-                        #        so determine what it sould have been and make
-                        #        it so!
+                    if handler_cls:
+                        # Note that we pass the 'ignore_link_errors' as an
+                        # argument to the handler -- we don't use it to discern
+                        # whether or not to call the handler.
+                        ignore_link_errors = args.ignore_link_errors or \
+                                config.ignore_link_errors
+                        handler = handler_cls(m, e, recipes, ignore_link_errors)
+                        handler.handle()
+                        if handler.try_again:
+                            continue
                     else:
-                        if handler_cls:
-                            handler = handler_cls(m, e, recipes)
-                            handler.handle()
-                            if handler.try_again:
-                                continue
-                        else:
-                            raise e
+                        raise e
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found'):
