@@ -22,7 +22,9 @@ install:
   - conda install pytest requests
   - conda info -a
 
-script: py.test
+script:
+  - py.test
+  - test-recipes/build_recipes.sh
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb
