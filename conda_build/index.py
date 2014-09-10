@@ -27,7 +27,7 @@ def write_repodata(repodata, dir_path):
     if not data.endswith('\n'):
         data += '\n'
     with open(join(dir_path, 'repodata.json'), 'w', encoding='utf-8') as fo:
-        fo.write(data)
+        fo.write(data.encode('utf-8'))
     with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
         fo.write(bz2.compress(data.encode('utf-8')))
 
