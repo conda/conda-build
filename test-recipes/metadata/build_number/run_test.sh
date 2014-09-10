@@ -3,4 +3,4 @@ conda list -p $PREFIX --canonical
 [ "$(conda list -p $PREFIX --canonical)" = "conda-build-test-build-number-1.0-1" ]
 
 cat $PREFIX/conda-meta/conda-build-test-build-number-1.0-1.json
-[ "$(cat $PREFIX/conda-meta/conda-build-test-build-number-1.0-1.json | grep build_number)" = '  "build_number": 1,' ]
+cat $PREFIX/conda-meta/conda-build-test-build-number-1.0-1.json | grep '"build_number": 1'
