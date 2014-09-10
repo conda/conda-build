@@ -6,7 +6,6 @@ import shutil
 import tarfile
 import zipfile
 import subprocess
-from io import open
 from os.path import (dirname, getmtime, getsize, isdir, isfile,
                      islink, join, normpath)
 

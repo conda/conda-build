@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-from io import open
 from os.path import islink, isfile
 
 

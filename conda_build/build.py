@@ -12,7 +12,6 @@ import stat
 import subprocess
 import sys
 import tarfile
-from io import open
 from os.path import exists, isdir, isfile, islink, join
 import yaml
 
@@ -149,14 +148,14 @@ def create_info_files(m, files, include_recipe=True):
         shutil.move(join(recipe_dir, 'meta.yaml'),
                     join(recipe_dir, 'meta.yaml.orig'))
 
-    with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
+    with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
         yaml.safe_dump(m.meta, fo)
 
     if sys.platform == 'win32':
         for i, f in enumerate(files):
             files[i] = f.replace('\\', '/')
 
-    with open(join(config.info_dir, 'files'), 'w', encoding='utf-8') as fo:
+    with open(join(config.info_dir, 'files'), 'w') as fo:
         for f in files:
             fo.write(f + '\n')
 
@@ -208,7 +207,7 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix += list(have_prefix_files(files))
     files_with_prefix = sorted(set(files_with_prefix))
     if files_with_prefix:
-        with open(join(config.info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for f in files_with_prefix:
                 fo.write(f + '\n')
 
@@ -220,13 +219,13 @@ def create_info_files(m, files, include_recipe=True):
             no_link = [no_link]
         rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
         pat = re.compile(rx)
-        with open(join(config.info_dir, 'no_link'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'no_link'), 'w') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'git'), 'w') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
@@ -335,7 +334,7 @@ def build(m, get_src=True, verbose=True, post=None):
             if script:
                 if isinstance(script, list):
                     script = '\n'.join(script)
-                with open(build_file, 'w', encoding='utf-8') as bf:
+                with open(build_file, 'w') as bf:
                     bf.write(script)
                 os.chmod(build_file, 0o766)
 

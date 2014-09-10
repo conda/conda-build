@@ -7,7 +7,7 @@ import sys
 import stat
 from glob import glob
 from os.path import basename, join, splitext, isdir, isfile, exists
-from io import open
+import io
 from subprocess import call, Popen, PIPE
 
 from conda_build.config import config
@@ -37,7 +37,7 @@ def fix_shebang(f, osx_is_app=False):
         return
     elif os.path.islink(path):
         return
-    with open(path, encoding=locale.getpreferredencoding()) as fi:
+    with io.open(path, encoding=locale.getpreferredencoding()) as fi:
         try:
             data = fi.read()
         except UnicodeDecodeError: # file is binary
@@ -53,7 +53,7 @@ def fix_shebang(f, osx_is_app=False):
     if new_data == data:
         return
     print("updating shebang:", f)
-    with open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
+    with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
         fo.write(new_data)
     os.chmod(path, int('755', 8))
 
@@ -61,7 +61,7 @@ def fix_shebang(f, osx_is_app=False):
 def write_pth(egg_path):
     fn = basename(egg_path)
     with open(join(environ.get_sp_dir(),
-                   '%s.pth' % (fn.split('-')[0])), 'w', encoding='utf-8') as fo:
+                   '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
 

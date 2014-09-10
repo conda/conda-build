@@ -8,14 +8,10 @@ import os
 import bz2
 import json
 import tarfile
-from io import open
 from os.path import join, getmtime
 
 from conda_build.utils import file_info
 from conda.compat import PY3
-
-if PY3:
-    unicode = str
 
 def read_index_tar(tar_path):
     with tarfile.open(tar_path) as t:
@@ -28,8 +24,8 @@ def write_repodata(repodata, dir_path):
     # make sure we have newline at the end
     if not data.endswith('\n'):
         data += '\n'
-    with open(join(dir_path, 'repodata.json'), 'w', encoding='utf-8') as fo:
-        fo.write(unicode(data))
+    with open(join(dir_path, 'repodata.json'), 'w') as fo:
+        fo.write(data)
     with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
         fo.write(bz2.compress(data.encode('utf-8')))
 

@@ -9,9 +9,9 @@ import subprocess
 import sys
 from distutils.version import LooseVersion
 from glob import glob
-from io import open
 from os import makedirs
 from os.path import basename, dirname, join, exists
+import io
 
 from conda.api import get_index
 from conda.fetch import TmpDownload
@@ -458,7 +458,7 @@ def dist_for_module(cpan_url, module, perl_version):
     try:
         with TmpDownload('{}/v0/release/{}'.format(cpan_url,
                                                    module)) as json_path:
-            with open(json_path, encoding='utf-8-sig') as dist_json_file:
+            with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
                 rel_dict = json.load(dist_json_file)
     # If there was an error, module may actually be a module
     except RuntimeError:
@@ -471,7 +471,7 @@ def dist_for_module(cpan_url, module, perl_version):
         try:
             with TmpDownload('{}/v0/module/{}'.format(cpan_url,
                                                       module)) as json_path:
-                with open(json_path, encoding='utf-8-sig') as dist_json_file:
+                with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
                     mod_dict = json.load(dist_json_file)
         # If there was an error, report it
         except RuntimeError:
@@ -502,7 +502,7 @@ def get_release_info(cpan_url, package, version, perl_version,
     # specific version
     try:
         with TmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
-            with open(json_path, encoding='utf-8-sig') as dist_json_file:
+            with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
                 rel_dict = json.load(dist_json_file)
                 rel_dict['version'] = rel_dict['version'].lstrip('v')
     except RuntimeError as e:
@@ -530,7 +530,7 @@ def get_release_info(cpan_url, package, version, perl_version,
                                                              author,
                                                              package,
                                                              version_str)) as json_path:
-                with open(json_path, encoding='utf-8-sig') as dist_json_file:
+                with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
                     new_rel_dict = json.load(dist_json_file)
                     new_rel_dict['version'] = new_rel_dict['version'].lstrip()
         # Check if this is a core module, and don't die if it is
