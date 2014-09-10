@@ -29,3 +29,6 @@ script:
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb
+
+git:
+  depth: 10000
