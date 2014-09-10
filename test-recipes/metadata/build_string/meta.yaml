@@ -1,0 +1,6 @@
+package:
+  name: conda-build-test-build-string
+  version: 1.0
+
+build:
+  string: abc

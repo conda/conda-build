@@ -1,0 +1,6 @@
+package:
+  name: conda-build-test-build-number
+  version: 1.0
+
+build:
+  number: 1

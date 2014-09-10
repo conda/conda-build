@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
-from io import open
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -158,7 +157,7 @@ def get_contents(meta_path):
     except ImportError:
         print("There was an error importing jinja2.", file=sys.stderr)
         print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)
-        with open(meta_path, encoding='utf-8') as fd:
+        with open(meta_path) as fd:
             return fd.read()
 
     from conda_build.jinja_context import context_processor

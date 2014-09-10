@@ -1,0 +1,12 @@
+package:
+  name: conda-build-test-source-hg
+  version: 1.0
+
+source:
+  hg_url: https://bitbucket.org/asmeurer/conda-build-hg-test
+  hg_tag: test
+
+requirements:
+  build:
+    # To test the conda_build version
+    - python

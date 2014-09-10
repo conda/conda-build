@@ -189,7 +189,7 @@ def svn_source(meta):
         assert isdir(cache_repo)
 
     # now copy into work directory
-    copytree(cache_repo, WORK_DIR, ignore=ignore_patterns(".svn"))
+    copytree(cache_repo, WORK_DIR)
     return WORK_DIR
 
 
