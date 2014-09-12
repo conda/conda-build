@@ -201,7 +201,7 @@ def execute(args, parser):
         config.CONDA_PERL = args.perl
     if args.numpy:
         if args.numpy == ['all']:
-            for npy in [16, 17, 18]:
+            for npy in [16, 17, 18, 19]:
                 args.numpy = [str(npy)]
                 execute(args, parser)
             return
