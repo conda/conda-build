@@ -1,8 +1,7 @@
 '''
 Module to store conda build settings.
 '''
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -22,7 +21,7 @@ class Config(object):
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
-    CONDA_NPY = int(os.getenv('CONDA_NPY', '18').replace('.', ''))
+    CONDA_NPY = int(os.getenv('CONDA_NPY', '19').replace('.', ''))
 
     PY3K = int(bool(CONDA_PY >= 30))
 

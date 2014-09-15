@@ -1,0 +1,14 @@
+package:
+  name: conda-build-test-source-url
+  version: 1.0
+
+source:
+  fn: conda-build-1.8.1.tar.gz
+  url: https://github.com/conda/conda-build/archive/1.8.1.tar.gz
+  md5: 0bf1f3598a659a0e8fb5ee6bbb3fd9fd
+  sha1: c464a8995ad6bbf0480abd2883876cc9b4913fa7
+  sha256: f82b0bd5c809c9a7c7256c26364a0065e57732788b7a74c7ea2169135ed2f598
+
+requirements:
+  build:
+    - python

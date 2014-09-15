@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -9,6 +8,9 @@ import conda.config as cc
 from conda_build.config import config
 
 def find_executable(executable):
+    # dir_paths is referenced as a module-level variable 
+    #  in other code
+    global dir_paths
     if sys.platform == 'win32':
         dir_paths = [join(config.build_prefix, 'Scripts'),
                      join(cc.root_dir, 'Scripts'),

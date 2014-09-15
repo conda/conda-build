@@ -3,12 +3,10 @@ Created on Jan 16, 2014
 
 @author: sean
 '''
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import json
 import os
-from io import open
 
 from conda.compat import PY3
 from conda_build import environ
@@ -32,7 +30,7 @@ def load_setuptools(setup_file='setup.py'):
         #Patch setuptools
         setuptools_setup = setuptools.setup
         setuptools.setup = setup
-        exec(open(setup_file, encoding='utf-8').read())
+        exec(open(setup_file).read())
         setuptools.setup = setuptools_setup
         del sys.path[-1]
     return _setuptools_data

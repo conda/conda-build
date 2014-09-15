@@ -2,12 +2,11 @@
 Module to handle generating test files.
 '''
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import shutil
 import sys
-from io import open
+
 from os.path import dirname, join, isdir, exists
 
 def create_files(dir_path, m):
@@ -39,7 +38,7 @@ def create_shell_files(dir_path, m):
         shutil.copy(join(m.path, name), dir_path)
         has_tests = True
 
-    with open(join(dir_path, name), 'a', encoding='utf-8') as f:
+    with open(join(dir_path, name), 'a') as f:
         f.write('\n\n')
         for cmd in m.get_value('test/commands', []):
             f.write(cmd)
@@ -51,10 +50,9 @@ def create_shell_files(dir_path, m):
 
 def create_py_files(dir_path, m):
     has_tests = False
-    with open(join(dir_path, 'run_test.py'), 'w', encoding='utf-8') as fo:
+    with open(join(dir_path, 'run_test.py'), 'w') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
-        with open(join(dirname(__file__), 'header_test.py'),
-                  encoding='utf-8') as fi:
+        with open(join(dirname(__file__), 'header_test.py')) as fi:
             fo.write(fi.read() + '\n')
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
@@ -65,7 +63,7 @@ def create_py_files(dir_path, m):
             has_tests = True
 
         try:
-            with open(join(m.path, 'run_test.py'), encoding='utf-8') as fi:
+            with open(join(m.path, 'run_test.py')) as fi:
                 fo.write("# --- run_test.py (begin) ---\n")
                 fo.write(fi.read())
                 fo.write("# --- run_test.py (end) ---\n")
@@ -79,7 +77,7 @@ def create_py_files(dir_path, m):
 
 def create_pl_files(dir_path, m):
     has_tests = False
-    with open(join(dir_path, 'run_test.pl'), 'w', encoding='utf-8') as fo:
+    with open(join(dir_path, 'run_test.pl'), 'w') as fo:
         print(r'# tests for %s (this is a generated file)' % m.dist(), file=fo)
         print(r'print("===== testing package: %s =====\n");' % m.dist(),
               file=fo)
@@ -101,7 +99,7 @@ def create_pl_files(dir_path, m):
             has_tests = True
 
         try:
-            with open(join(m.path, 'run_test.pl'), encoding='utf-8') as fi:
+            with open(join(m.path, 'run_test.pl')) as fi:
                 print("# --- run_test.pl (begin) ---", file=fo)
                 fo.write(fi.read())
                 print("# --- run_test.pl (end) ---", file=fo)

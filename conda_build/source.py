@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -14,9 +13,6 @@ from conda_build import external
 from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip
 
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
@@ -123,6 +119,7 @@ def git_info(fo=sys.stdout):
     # properly execute without it.
     env = os.environ.copy()
     env['GIT_DIR'] = join(WORK_DIR, '.git')
+    env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),
@@ -192,7 +189,7 @@ def svn_source(meta):
         assert isdir(cache_repo)
 
     # now copy into work directory
-    copytree(cache_repo, WORK_DIR, ignore=ignore_patterns(".svn"))
+    copytree(cache_repo, WORK_DIR)
     return WORK_DIR
 
 
@@ -209,11 +206,7 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    if sys.platform == 'win32':
-        # without --binary flag CR will be stripped and patch will fail
-        check_call([patch, '-p0', '--binary', '-i', path], cwd=src_dir)
-    else:
-        check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    check_call([patch, '-p0', '-i', path], cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):

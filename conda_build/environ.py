@@ -1,5 +1,4 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -11,11 +10,6 @@ import conda.config as cc
 from conda_build.config import config
 
 from conda_build import source
-
-
-# Python 2.x backward compatibility
-if sys.version_info < (3, 0):
-    str = unicode
 
 
 def get_perl_ver():
@@ -33,11 +27,12 @@ def get_sp_dir():
 
 def get_git_build_info(src_dir):
     env = os.environ.copy()
-    env[str('GIT_DIR')] = join(src_dir, '.git')
+    env['GIT_DIR'] = join(src_dir, '.git')
 
     d = {}
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
+    env = {str(key): str(value) for key, value in env.items()}
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                env=env)

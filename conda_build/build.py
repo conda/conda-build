@@ -2,8 +2,7 @@
 Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import json
 import os
@@ -13,7 +12,6 @@ import stat
 import subprocess
 import sys
 import tarfile
-from io import open
 from os.path import exists, isdir, isfile, islink, join
 import yaml
 
@@ -194,13 +192,13 @@ def create_info_files(m, files, include_recipe=True):
             no_link = [no_link]
         rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
         pat = re.compile(rx)
-        with open(join(config.info_dir, 'no_link'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'no_link'), 'w') as fo:
             for f in files:
                 if pat.match(f):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'git'), 'w') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
@@ -310,7 +308,7 @@ def build(m, get_src=True, verbose=True, post=None):
             if script:
                 if isinstance(script, list):
                     script = '\n'.join(script)
-                with open(build_file, 'w', encoding='utf-8') as bf:
+                with open(build_file, 'w') as bf:
                     bf.write(script)
                 os.chmod(build_file, 0o766)
 

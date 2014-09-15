@@ -1,10 +1,8 @@
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
 import shutil
-from io import open
 from os.path import dirname, isdir, isfile, join, exists
 
 import conda.config as cc
@@ -36,7 +34,7 @@ def fix_staged_scripts():
         if not isfile(join(scripts_dir, fn)) or '.' in fn:
             continue
 
-        with open(join(scripts_dir, fn), encoding='utf-8') as f:
+        with open(join(scripts_dir, fn)) as f:
             line = f.readline().lower()
             # If it's a #!python script
             if not (line.startswith('#!') and 'python' in line.lower()):
@@ -44,8 +42,7 @@ def fix_staged_scripts():
             print('Adjusting unix-style #! script %s, '
                   'and adding a .bat file for it' % fn)
             # copy it with a .py extension (skipping that first #! line)
-            with open(join(scripts_dir, fn + '-script.py'), 'w',
-                      encoding='utf-8') as fo:
+            with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
                 fo.write(f.read())
             # now create the .exe file
             shutil.copyfile(join(dirname(__file__),
@@ -105,9 +102,9 @@ def build(m):
     src_dir = source.get_dir()
     bld_bat = join(m.path, 'bld.bat')
     if exists(bld_bat):
-        with open(bld_bat, encoding='utf-8') as fi:
+        with open(bld_bat) as fi:
             data = fi.read()
-        with open(join(src_dir, 'bld.bat'), 'w', encoding='utf-8') as fo:
+        with open(join(src_dir, 'bld.bat'), 'w') as fo:
             fo.write(msvc_env_cmd())
             # more debuggable with echo on
             fo.write('@echo on\n')

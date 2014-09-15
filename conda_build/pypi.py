@@ -2,8 +2,7 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
+from __future__ import absolute_import, division, print_function
 
 import requests
 
@@ -13,7 +12,6 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
-from io import open
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile
 from tempfile import mkdtemp
@@ -407,7 +405,7 @@ def main(args, parser):
                 print("working in %s" % tempdir)
                 src_dir = get_dir(tempdir)
                 run_setuppy(src_dir, tempdir, args)
-                with open(join(tempdir, 'pkginfo.yaml'), encoding='utf-8') as fn:
+                with open(join(tempdir, 'pkginfo.yaml')) as fn:
                     pkginfo = yaml.load(fn)
 
                 setuptools_build = pkginfo['setuptools']
@@ -521,14 +519,11 @@ def main(args, parser):
         d = package_dicts[package]
         makedirs(join(output_dir, package.lower()))
         print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, package.lower(), 'meta.yaml'), 'w',
-                  encoding='utf-8') as f:
+        with open(join(output_dir, package.lower(), 'meta.yaml'), 'w') as f:
             f.write(PYPI_META.format(**d))
-        with open(join(output_dir, package.lower(), 'build.sh'), 'w',
-                  encoding='utf-8') as f:
+        with open(join(output_dir, package.lower(), 'build.sh'), 'w') as f:
             f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, package.lower(), 'bld.bat'), 'w',
-                  encoding='utf-8') as f:
+        with open(join(output_dir, package.lower(), 'bld.bat'), 'w') as f:
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
