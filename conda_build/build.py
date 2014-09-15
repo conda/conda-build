@@ -134,7 +134,7 @@ def create_info_files(m, files, include_recipe=True):
         shutil.move(join(recipe_dir, 'meta.yaml'),
                     join(recipe_dir, 'meta.yaml.orig'))
 
-    with open(join(recipe_dir, 'meta.yaml'), 'w', encoding='utf-8') as fo:
+    with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
         yaml.safe_dump(m.meta, fo)
 
     # Deal with Python 2 and 3's different json module type reqs
@@ -149,7 +149,7 @@ def create_info_files(m, files, include_recipe=True):
         # make sure we use '/' path separators in metadata
         files = [f.replace('\\', '/') for f in files]
 
-    with open(join(config.info_dir, 'files'), 'w', encoding='utf-8') as fo:
+    with open(join(config.info_dir, 'files'), 'w') as fo:
         for f in files:
             fo.write(f + '\n')
 
@@ -167,7 +167,7 @@ def create_info_files(m, files, include_recipe=True):
             # and we don't have a good method of escaping, and because older
             # versions of conda don't support quotes in has_prefix
             fmt_str = '%s %s %s\n'
-        with open(join(config.info_dir, 'has_prefix'), 'w', encoding='utf-8') as fo:
+        with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
                 if (auto_detect or (mode == 'text') or
                     ((mode == 'binary') and (fn in binary_has_prefix_files))):
