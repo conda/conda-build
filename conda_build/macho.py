@@ -53,7 +53,7 @@ def otool(path):
     assert lines[0].startswith(path), path
     res = []
     for line in lines[1:]:
-        assert line[0] == '\t'
+        assert line[0] == '\t', path
         res.append(line.split()[0])
     return res
 
