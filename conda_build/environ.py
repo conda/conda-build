@@ -140,10 +140,8 @@ def get_git_info(repo):
     env['GIT_DIR'] = repo
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
-    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    output = subprocess.check_output(["git", "describe", "--tags", "--long", "HEAD"],
                                env=env, cwd=os.path.dirname(repo))
-    output = process.communicate()[0].strip()
     output = output.decode('utf-8')
 
     parts = output.rsplit('-', 2)
@@ -151,10 +149,8 @@ def get_git_info(repo):
         d.update(dict(zip(keys, parts)))
 
     # get the _full_ hash of the current HEAD
-    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
-                               cwd=os.path.dirname(repo))
-    output = process.communicate()[0].strip()
+    output = subprocess.check_output(["git", "rev-parse", "HEAD"],
+                                     env=env, cwd=os.path.dirname(repo))
     output = output.decode('utf-8')
 
     d['GIT_FULL_HASH'] = output
@@ -163,6 +159,30 @@ def get_git_info(repo):
         d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
                                             d["GIT_DESCRIBE_HASH"])
 
+    return d
+
+
+def get_hg_build_info(repo):
+    env = os.environ.copy()
+    env['HG_DIR'] = repo
+    env = {str(key): str(value) for key, value in env.items()}
+
+    d = {}
+    cmd = ["hg", "log", "--template",
+           "{rev}|{node|short}|{latesttag}|{latesttagdistance}|{branch}",
+           "--rev", "."]
+    output = subprocess.check_output(cmd, env=env, cwd=os.path.dirname(repo))
+    output = output.decode('utf-8')
+    rev, short_id, tag, distance, branch = output.split('|')
+    if tag != 'null':
+        d['HG_LATEST_TAG'] = tag
+    if branch == "":
+        branch = 'default'
+    d['HG_BRANCH'] = branch
+    d['HG_NUM_ID'] = rev
+    d['HG_LATEST_TAG_DISTANCE'] = distance
+    d['HG_SHORT_ID'] = short_id
+    d['HG_BUILD_STR'] = '{}_{}'.format(d['HG_NUM_ID'], d['HG_SHORT_ID'])
     return d
 
 
@@ -257,6 +277,8 @@ def meta_vars(meta, config):
             d[var_name] = value
 
     git_dir = join(source.get_dir(config), '.git')
+    hg_dir = join(source.get_dir(config), '.hg')
+
     if not isinstance(git_dir, str):
         # On Windows, subprocess env can't handle unicode.
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
@@ -279,6 +301,9 @@ def meta_vars(meta, config):
 
         if _x or meta.get_value('source/path'):
             d.update(get_git_info(git_dir))
+
+    elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):
+        d.update(get_hg_build_info(hg_dir))
 
     d['PKG_NAME'] = meta.name()
     d['PKG_VERSION'] = meta.version()
