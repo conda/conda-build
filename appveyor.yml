@@ -25,8 +25,9 @@ install:
   - C:\Miniconda\python.exe setup.py install
   - C:\Miniconda\Scripts\conda info -a
   - C:\Miniconda\Scripts\conda list
+  - set PATH="C:\Miniconda;C:\Miniconda\Scripts;%PATH"
 
 test_script:
   - cd test-recipes\metadata
   # This will be effectively a no-op for recipes without bld.bat
-  - for /D %%f in (*) do (C:\Miniconda\Scripts\conda build --no-binstar-upload %%~nf)
+  - for /D %%f in (*) do (conda build --no-binstar-upload %%~nf)
