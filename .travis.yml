@@ -24,7 +24,7 @@ install:
   - conda info -a
 
 script:
-  # - py.test tests
+  - py.test tests
   - test-recipes/build_recipes.sh
 
 notifications:

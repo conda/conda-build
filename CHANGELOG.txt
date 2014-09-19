@@ -1,3 +1,13 @@
+2014-09-19   1.8.2:
+-------------------
+  * add substantially more tests
+  * add ability to set additional rpath directories using build/rpaths
+  * patch command on windows no-longer takes the --binary option
+  * fix post processing so that name-space packages can be 'flattened' into
+    a single directory
+  * don't remove the .svn directory when doing a svn checkout
+
+
 2014-09-03   1.8.1:
 -------------------
   * has_prefix paths must always use /, even on Windows
