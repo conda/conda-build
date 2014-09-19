@@ -187,9 +187,8 @@ def mk_relative(m, f):
         return
 
     if sys.platform.startswith('linux'):
-        rpath = ':'.join(
-            '$ORIGIN/' + utils.relative(f, d) for d in
-            (m.get_value('build/rpaths', ['lib']) if m else ['lib']))
+        rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in
+                         m.get_value('build/rpaths', ['lib']))
         patchelf = external.find_executable('patchelf')
         print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
         call([patchelf, '--set-rpath', rpath, path])
