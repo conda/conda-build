@@ -60,7 +60,8 @@ def get_hg_build_info(src_dir):
            "--rev", "."]
     process = subprocess.Popen(cmd,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=env)
+                               env=env,
+                               cwd=src_dir)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
     rev, short_id, tag, distance, branch = output.split('|')
