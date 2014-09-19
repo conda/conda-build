@@ -3,5 +3,4 @@ package:
   version: 1.0
 
 build:
-  has_prefix_files:
-    - has-prefix
+  detect_binary_files_with_prefix: true
