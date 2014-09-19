@@ -180,24 +180,21 @@ def assert_relative_osx(path):
     for name in macho.otool(path):
         assert not name.startswith(config.build_prefix), path
 
-def mk_relative(f, binary_relocation=True, m=None):
+def mk_relative(m, f):
     assert sys.platform != 'win32'
-
-    if not binary_relocation:
+    path = join(config.build_prefix, f)
+    if not is_obj(path):
         return
 
-    path = join(config.build_prefix, f)
-    if sys.platform.startswith('linux') and is_obj(path):
-        if m and m.get_value('build/rpaths'):
-            rpath = ':'.join('$ORIGIN/' + utils.relative(f, d)
-                             for d in m.get_value('build/rpaths'))
-        else:
-            rpath = '$ORIGIN/' + utils.relative(f)
+    if sys.platform.startswith('linux'):
+        rpath = ':'.join(
+            '$ORIGIN/' + utils.relative(f, d) for d in
+            (m.get_value('build/rpaths', ['lib']) if m else ['lib']))
         patchelf = external.find_executable('patchelf')
         print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
         call([patchelf, '--set-rpath', rpath, path])
 
-    if sys.platform == 'darwin' and is_obj(path):
+    elif sys.platform == 'darwin':
         mk_relative_osx(path)
 
 
@@ -226,7 +223,8 @@ def post_build(m, files):
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, osx_is_app=osx_is_app)
-        mk_relative(f, binary_relocation=binary_relocation, m)
+        if binary_relocation:
+            mk_relative(m, f)
 
 def get_build_metadata(m):
     if exists(join(source.WORK_DIR, '__conda_version__.txt')):
