@@ -45,11 +45,17 @@ class TestUtils(unittest.TestCase):
 
     def test_relative_subdirs(self):
         for d, f, r in [
-            ('lib/sub', 'bin/somedir/cmd', '../../lib/sub'),
-            ('lib/sub', 'bin/python', '../lib/sub'),
             ('lib/sub', 'lib/sub/libhdf5.so', '.'),
+            ('lib/sub', 'bin/python', '../lib/sub'),
+            ('lib/sub', 'bin/somedir/cmd', '../../lib/sub'),
             ('a/b/c', 'a/b/c/libhdf5.so', '.'),
-            ('a/b/c/d', 'a/b/x/y/libhdf5.so', '../../c/d'),
-            ('a/b/c/d', 'a/b/c/y/libhdf5.so', '../d'),
+            ('a/b/c', 'a/b/x/libhdf5.so', '../c'),
+            ('a/b/c', 'a/x/x/libhdf5.so', '../../b/c'),
+            ('a/b/c', 'x/x/x/libhdf5.so', '../../../a/b/c'),
+            ('a/b/c/d', 'a/b/c/d/libhdf5.so', '.'),
+            ('a/b/c/d', 'a/b/c/x/libhdf5.so', '../d'),
+            ('a/b/c/d', 'a/b/x/x/libhdf5.so', '../../c/d'),
+            ('a/b/c/d', 'a/x/x/x/libhdf5.so', '../../../b/c/d'),
+            ('a/b/c/d', 'x/x/x/x/libhdf5.so', '../../../../a/b/c/d'),
             ]:
             self.assertEqual(utils.relative(f, d), r)
