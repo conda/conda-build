@@ -30,12 +30,17 @@ def copy_into(src, dst):
             shutil.copy2(srcname, dstname)
 
 
-def rel_lib(f):
-    assert not f.startswith('/')
-    if f.startswith('lib/'):
-        return normpath((f.count('/') - 1) * '../')
-    else:
-        return normpath(f.count('/') * '../') + '/lib'
+def relative(f, d='lib'):
+    assert not f.startswith('/'), f
+    assert not d.startswith('/'), d
+    d = d.strip('/').split('/')
+    f = dirname(f).split('/')
+    if f == ['']:
+        return '.' if d == ['.'] else ('./' + '/'.join(d))
+    while d and f and d[0] == f[0]:
+        d.pop(0)
+        f.pop(0)
+    return normpath((len(f) * '../') + '/'.join(d))
 
 
 def _check_call(args, **kwargs):
