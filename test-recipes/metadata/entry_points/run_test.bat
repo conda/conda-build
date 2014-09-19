@@ -1,9 +1,8 @@
-rem Won't be found because there are no shebang lines on Windows
-
-rem python test-script-setup.py
-rem if errorlevel 1 exit 1
-rem python test-script-setup.py | grep "Test script setup\.py"
-rem if errorlevel 1 exit 1
+rem We have to use the absolute path because there is no "shebang line" in Windows
+python "%PREFIX%\Scripts\test-script-setup.py"
+if errorlevel 1 exit 1
+python "%PREFIX%\Scripts\test-script-setup.py" | grep "Test script setup\.py"
+if errorlevel 1 exit 1
 
 test-script-manual
 if errorlevel 1 exit 1
