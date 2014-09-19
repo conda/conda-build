@@ -1,0 +1,32 @@
+# Tell appveyor to not use msbuild
+build: false
+
+environment:
+  matrix:
+    - PYTHON: 2.7
+    - PYTHON: 3.4
+
+platform:
+  - x86
+  - x64
+
+init:
+  - "ECHO %PYTHON%"
+  - ps: if($env:PYTHON -eq "2.7" -and $env:Platform -eq "x64"){Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda-3.5.5-Windows-x86_64.exe' C:\Miniconda.exe; echo "Done"}
+  - ps: if($env:PYTHON -eq "2.7" -and $env:Platform -eq "x86"){Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda-3.5.5-Windows-x86.exe' C:\Miniconda.exe; echo "Done"}
+  - ps: if($env:PYTHON -eq "3.4" -and $env:Platform -eq "x64"){Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda3-3.5.5-Windows-x86_64.exe' C:\Miniconda.exe; echo "Done"}
+  - ps: if($env:PYTHON -eq "3.4" -and $env:Platform -eq "x86"){Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda3-3.5.5-Windows-x86.exe' C:\Miniconda.exe; echo "Done"}
+  - cmd: C:\Miniconda.exe /S /D=C:\Miniconda
+  - ps: ls C:\Miniconda/Scripts
+  - C:\Miniconda\Scripts\conda config --set always_yes yes
+  - C:\Miniconda\Scripts\conda install pytest requests conda-build --quiet
+
+install:
+  - C:\Miniconda\python.exe setup.py install
+  - C:\Miniconda\Scripts\conda info -a
+  - C:\Miniconda\Scripts\conda list
+
+test_script:
+  - cd test-recipes\metadata
+  # This will be effectively a no-op for recipes without bld.bat
+  - for /D %%f in (*) do (C:\Miniconda\Scripts\conda-build --no-binstar-upload %%~nf)
