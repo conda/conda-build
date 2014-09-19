@@ -38,6 +38,22 @@ def rel_lib(f):
         return normpath(f.count('/') * '../') + '/lib'
 
 
+def relative(f, d):
+    assert not f.startswith('/'), f
+    assert not d.startswith('/'), d
+    d = d.strip('/').split('/')
+    f = dirname(f).split('/')
+    if f == ['']:
+        return './' + normpath('/'.join(d))
+    while True:
+        if d and f and d[0] == f[0]:
+            d.pop(0)
+            f.pop(0)
+        else:
+            break
+    return normpath((len(f) * '../') + '/'.join(d))
+
+
 def _check_call(args, **kwargs):
     try:
         subprocess.check_call(args, **kwargs)
@@ -78,3 +94,33 @@ def file_info(path):
     return {'size': getsize(path),
             'md5': md5_file(path),
             'mtime': getmtime(path)}
+
+
+if __name__ == '__main__':
+    for f, r in [
+        ('bin/python', '../lib'),
+        ('lib/libhdf5.so', '.'),
+        ('lib/python2.6/foobar.so', '..'),
+        ('lib/python2.6/lib-dynload/zlib.so', '../..'),
+        ('lib/python2.6/site-packages/pyodbc.so', '../..'),
+        ('lib/python2.6/site-packages/bsdiff4/core.so', '../../..'),
+        ('xyz', './lib'),
+        ('bin/somedir/cmd', '../../lib'),
+        ]:
+        res = rel_lib(f)
+        assert res == r, '%r != %r' % (res, r)
+
+    for d, f, r in [
+        ('lib', 'bin/python', '../lib'),
+        ('lib', 'lib/libhdf5.so', '.'),
+        ('lib', 'lib/python2.6/foobar.so', '..'),
+        ('lib', 'lib/python2.6/lib-dynload/zlib.so', '../..'),
+        ('lib', 'lib/python2.6/site-packages/pyodbc.so', '../..'),
+        ('lib', 'lib/python2.6/site-packages/bsdiff3/core.so', '../../..'),
+        ('lib', 'xyz', './lib'),
+        ('lib', 'bin/somedir/cmd', '../../lib'),
+        ('lib/sub', 'bin/python', '../lib/sub'),
+        ('lib/sub', 'lib/sub/libhdf5.so', '.'),
+        ]:
+        res = relative(f, d)
+        assert res == r, '%r != %r' % (res, r)
