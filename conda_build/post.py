@@ -141,7 +141,7 @@ def post_process(preserve_egg_dir=False):
 
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
-    reldir = utils.rel_lib(path[len(config.build_prefix) + 1:])
+    reldir = utils.relative(path[len(config.build_prefix) + 1:])
 
     if link.startswith((config.build_prefix + '/lib', 'lib',
                         '@executable_path/')):
@@ -192,7 +192,7 @@ def mk_relative(f, binary_relocation=True, m=None):
             rpath = ':'.join('$ORIGIN/' + utils.relative(f, d)
                              for d in m.get_value('build/rpaths'))
         else:
-            rpath = '$ORIGIN/' + utils.rel_lib(f)
+            rpath = '$ORIGIN/' + utils.relative(f)
         patchelf = external.find_executable('patchelf')
         print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
         call([patchelf, '--set-rpath', rpath, path])

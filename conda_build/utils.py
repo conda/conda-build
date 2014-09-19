@@ -30,15 +30,7 @@ def copy_into(src, dst):
             shutil.copy2(srcname, dstname)
 
 
-def rel_lib(f):
-    assert not f.startswith('/')
-    if f.startswith('lib/'):
-        return normpath((f.count('/') - 1) * '../')
-    else:
-        return normpath(f.count('/') * '../') + '/lib'
-
-
-def relative(f, d):
+def relative(f, d='lib'):
     assert not f.startswith('/'), f
     assert not d.startswith('/'), d
     d = d.strip('/').split('/')
@@ -107,7 +99,7 @@ if __name__ == '__main__':
         ('xyz', './lib'),
         ('bin/somedir/cmd', '../../lib'),
         ]:
-        res = rel_lib(f)
+        res = relative(f)
         assert res == r, '%r != %r' % (res, r)
 
     for d, f, r in [
@@ -119,8 +111,12 @@ if __name__ == '__main__':
         ('lib', 'lib/python2.6/site-packages/bsdiff3/core.so', '../../..'),
         ('lib', 'xyz', './lib'),
         ('lib', 'bin/somedir/cmd', '../../lib'),
+        ('lib', 'bin/somedir/somedir2/cmd', '../../../lib'),
+        ('lib/sub', 'bin/somedir/cmd', '../../lib/sub'),
         ('lib/sub', 'bin/python', '../lib/sub'),
         ('lib/sub', 'lib/sub/libhdf5.so', '.'),
+        ('a/b/c', 'a/b/c/libhdf5.so', '.'),
+        ('a/b/c/d', 'a/b/x/y/libhdf5.so', '../../c/d'),
         ]:
         res = relative(f, d)
         assert res == r, '%r != %r' % (res, r)
