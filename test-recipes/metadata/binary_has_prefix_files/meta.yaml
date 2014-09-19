@@ -1,5 +1,5 @@
 package:
-  name: conda-build-test-has-prefix-files
+  name: conda-build-test-binary-has-prefix-files
   version: 1.0
 
 build:

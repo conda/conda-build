@@ -1,5 +1,5 @@
 package:
-  name: conda-build-test-has-prefix-files
+  name: conda-build-test-detect-binary-files-with-prefix
   version: 1.0
 
 build:
