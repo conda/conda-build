@@ -37,12 +37,9 @@ def relative(f, d='lib'):
     f = dirname(f).split('/')
     if f == ['']:
         return './' + normpath('/'.join(d))
-    while True:
-        if d and f and d[0] == f[0]:
-            d.pop(0)
-            f.pop(0)
-        else:
-            break
+    while d and f and d[0] == f[0]:
+        d.pop(0)
+        f.pop(0)
     return normpath((len(f) * '../') + '/'.join(d))
 
 
