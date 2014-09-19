@@ -36,7 +36,7 @@ def relative(f, d='lib'):
     d = d.strip('/').split('/')
     f = dirname(f).split('/')
     if f == ['']:
-        return './' + normpath('/'.join(d))
+        return './' + '/'.join(d)
     while d and f and d[0] == f[0]:
         d.pop(0)
         f.pop(0)
@@ -83,37 +83,3 @@ def file_info(path):
     return {'size': getsize(path),
             'md5': md5_file(path),
             'mtime': getmtime(path)}
-
-
-if __name__ == '__main__':
-    for f, r in [
-        ('bin/python', '../lib'),
-        ('lib/libhdf5.so', '.'),
-        ('lib/python2.6/foobar.so', '..'),
-        ('lib/python2.6/lib-dynload/zlib.so', '../..'),
-        ('lib/python2.6/site-packages/pyodbc.so', '../..'),
-        ('lib/python2.6/site-packages/bsdiff4/core.so', '../../..'),
-        ('xyz', './lib'),
-        ('bin/somedir/cmd', '../../lib'),
-        ]:
-        res = relative(f)
-        assert res == r, '%r != %r' % (res, r)
-
-    for d, f, r in [
-        ('lib', 'bin/python', '../lib'),
-        ('lib', 'lib/libhdf5.so', '.'),
-        ('lib', 'lib/python2.6/foobar.so', '..'),
-        ('lib', 'lib/python2.6/lib-dynload/zlib.so', '../..'),
-        ('lib', 'lib/python2.6/site-packages/pyodbc.so', '../..'),
-        ('lib', 'lib/python2.6/site-packages/bsdiff3/core.so', '../../..'),
-        ('lib', 'xyz', './lib'),
-        ('lib', 'bin/somedir/cmd', '../../lib'),
-        ('lib', 'bin/somedir/somedir2/cmd', '../../../lib'),
-        ('lib/sub', 'bin/somedir/cmd', '../../lib/sub'),
-        ('lib/sub', 'bin/python', '../lib/sub'),
-        ('lib/sub', 'lib/sub/libhdf5.so', '.'),
-        ('a/b/c', 'a/b/c/libhdf5.so', '.'),
-        ('a/b/c/d', 'a/b/x/y/libhdf5.so', '../../c/d'),
-        ]:
-        res = relative(f, d)
-        assert res == r, '%r != %r' % (res, r)
