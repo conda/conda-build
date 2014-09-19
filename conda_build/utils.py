@@ -30,6 +30,7 @@ def copy_into(src, dst):
 
 
 def relative(f, d='lib'):
+    assert sys.platform != 'win32'
     assert not f.startswith('/'), f
     assert not d.startswith('/'), d
     d = d.strip('/').split('/')
