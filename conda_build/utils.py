@@ -36,7 +36,7 @@ def relative(f, d='lib'):
     d = d.strip('/').split('/')
     f = dirname(f).split('/')
     if f == ['']:
-        return './' + '/'.join(d)
+        return '.' if d == ['.'] else ('./' + '/'.join(d))
     while d and f and d[0] == f[0]:
         d.pop(0)
         f.pop(0)

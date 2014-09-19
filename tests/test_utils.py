@@ -28,7 +28,7 @@ class TestUtils(unittest.TestCase):
             ('lib', 'lib/python2.6/site-packages/pyodbc.so', '../..'),
             ('lib', 'lib/python2.6/site-packages/bsdiff3/core.so', '../../..'),
             ('lib', 'xyz', './lib'),
-            #('.', 'xyz', '.'),
+            ('.', 'xyz', '.'),
             ('.', 'bin/xyz', '..'),
             ('.', 'a/b/xyz', '../..'),
             ('lib', 'bin/somedir/cmd', '../../lib'),
