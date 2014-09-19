@@ -6,8 +6,7 @@ import shutil
 import tarfile
 import zipfile
 import subprocess
-from os.path import (dirname, getmtime, getsize, isdir, isfile,
-                     islink, join, normpath)
+from os.path import dirname, getmtime, getsize, isdir, join, normpath
 
 from conda.utils import md5_file
 

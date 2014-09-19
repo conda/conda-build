@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
+import sys
 import subprocess
 from os.path import islink, isfile
-import sys
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
@@ -91,7 +91,6 @@ def install_name_change(path, cb_func):
     return ret
 
 if __name__ == '__main__':
-    import sys
     if sys.platform == 'darwin':
         for path in '/bin/ls', '/etc/locate.rc':
             print(path, is_macho(path))
