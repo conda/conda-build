@@ -175,28 +175,25 @@ def create_info_files(m, files, include_recipe=True):
                     # should be treated as a regular text replacement
                     print("Registered hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, 'text', fn))
-                elif (auto_detect or (mode == 'text') or
-                    ((mode == 'binary') and (fn in binary_has_prefix_files))):
+                    text_has_prefix_files.remove(fn)
+                elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
+                    print("Registered hard-coded path in %s" % fn)
+                    fo.write(fmt_str % (pfix, mode, fn))
+                    binary_has_prefix_files.remove(fn)
+                elif (auto_detect or (mode == 'text')):
                     print("Registered hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
 
-    if text_has_prefix_files:
-        # make sure we found all of the files expected
-        temp = [fn for (pfix, mode, fn) in files_with_prefix]
-        for f in text_has_prefix_files:
-            if f not in temp:
-                raise RuntimeError("text file %s from "
-                                   "has_prefix_files not found" % f)
-    if binary_has_prefix_files:
-        # make sure we found all of the files expected
-        temp = [fn for (pfix, mode, fn) in files_with_prefix
-                if mode == 'binary']
-        for f in binary_has_prefix_files:
-            if f not in temp:
-                raise RuntimeError("binary file %s from "
-                                   "binary_has_prefix_files not found" % f)
+    # make sure we found all of the files expected
+    errstr = ""
+    for f in text_has_prefix_files:
+        errstr += "%s from has_prefix_files not registered\n" % f
+    for f in binary_has_prefix_files:
+        errstr += "%s from binary_has_prefix_files not registered" % f
+    if errstr:
+        raise RuntimeError(errstr)
 
     no_link = m.get_value('build/no_link')
     if no_link:
