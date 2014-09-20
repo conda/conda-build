@@ -187,8 +187,8 @@ def create_info_files(m, files, include_recipe=True):
         temp = [fn for (pfix, mode, fn) in files_with_prefix]
         for f in text_has_prefix_files:
             if f not in temp:
-                raise RuntimeError("binary file %s from "
-                                   "binary_has_prefix_files not found" % f)
+                raise RuntimeError("text file %s from "
+                                   "has_prefix_files not found" % f)
     if binary_has_prefix_files:
         # make sure we found all of the files expected
         temp = [fn for (pfix, mode, fn) in files_with_prefix
