@@ -171,8 +171,7 @@ def create_info_files(m, files, include_recipe=True):
         with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
                 if (fn in text_has_prefix_files):
-                    # file may be identified as binary, but recipe declares it
-                    # should be treated as a regular text replacement
+                    # register for text replacement, regardless of mode
                     print("Registered hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, 'text', fn))
                     text_has_prefix_files.remove(fn)
@@ -191,7 +190,7 @@ def create_info_files(m, files, include_recipe=True):
     for f in text_has_prefix_files:
         errstr += "%s from has_prefix_files not registered\n" % f
     for f in binary_has_prefix_files:
-        errstr += "%s from binary_has_prefix_files not registered" % f
+        errstr += "%s from binary_has_prefix_files not registered\n" % f
     if errstr:
         raise RuntimeError(errstr)
 
