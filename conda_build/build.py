@@ -155,6 +155,7 @@ def create_info_files(m, files, include_recipe=True):
 
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
+    text_has_prefix_files = m.has_prefix_files()
     if files_with_prefix:
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
@@ -169,13 +170,25 @@ def create_info_files(m, files, include_recipe=True):
             fmt_str = '%s %s %s\n'
         with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-                if (auto_detect or (mode == 'text') or
+                if (fn in text_has_prefix_files):
+                    # file may be identified as binary, but recipe declares it
+                    # should be treated as a regular text replacement
+                    print("Registered hard-coded path in %s" % fn)
+                    fo.write(fmt_str % (pfix, 'text', fn))
+                elif (auto_detect or (mode == 'text') or
                     ((mode == 'binary') and (fn in binary_has_prefix_files))):
                     print("Registered hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
 
+    if text_has_prefix_files:
+        # make sure we found all of the files expected
+        temp = [fn for (pfix, mode, fn) in files_with_prefix]
+        for f in text_has_prefix_files:
+            if f not in temp:
+                raise RuntimeError("binary file %s from "
+                                   "binary_has_prefix_files not found" % f)
     if binary_has_prefix_files:
         # make sure we found all of the files expected
         temp = [fn for (pfix, mode, fn) in files_with_prefix
