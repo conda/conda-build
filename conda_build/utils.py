@@ -6,7 +6,7 @@ import shutil
 import tarfile
 import zipfile
 import subprocess
-from os.path import dirname, getmtime, getsize, isdir, join, normpath
+from os.path import dirname, getmtime, getsize, isdir, join
 
 from conda.utils import md5_file
 
@@ -30,17 +30,18 @@ def copy_into(src, dst):
 
 
 def relative(f, d='lib'):
-    assert sys.platform != 'win32'
     assert not f.startswith('/'), f
     assert not d.startswith('/'), d
     d = d.strip('/').split('/')
+    if d == ['.']:
+        d = []
     f = dirname(f).split('/')
     if f == ['']:
-        return '.' if d == ['.'] else ('./' + '/'.join(d))
+        f = []
     while d and f and d[0] == f[0]:
         d.pop(0)
         f.pop(0)
-    return normpath((len(f) * '../') + '/'.join(d))
+    return '/'.join(((['..'] * len(f)) if f else ['.']) + d)
 
 
 def _check_call(args, **kwargs):
