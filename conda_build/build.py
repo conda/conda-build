@@ -12,6 +12,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import fnmatch
 from os.path import exists, isdir, isfile, islink, join
 import yaml
 
@@ -168,7 +169,10 @@ def create_info_files(m, files, include_recipe=True):
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     files_with_prefix = m.has_prefix_files()
-    binary_files_with_prefix = m.binary_has_prefix_files()
+    binary_files_with_prefix_patterns = m.binary_has_prefix_files()
+    binary_files_with_prefix = [
+        filename for pattern in binary_files_with_prefix_patterns
+        for filename in fnmatch.filter(files, pattern)]
 
     for file in files_with_prefix:
         if file not in files:
