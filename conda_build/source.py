@@ -99,7 +99,8 @@ def git_source(meta, recipe_dir):
         assert isdir(cache_repo)
 
     # now clone into the work directory
-    checkout = meta.get('git_tag') or meta.get('git_branch')
+    checkout = (meta.get('git_tag') or meta.get('git_branch')
+                or meta.get('git_sha1'))
     if checkout:
         print('checkout: %r' % checkout)
 

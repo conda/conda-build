@@ -108,7 +108,8 @@ def parse(data):
             res[section][key] = []
     # ensure those are strings
     for field in ('package/version', 'build/string', 'source/svn_rev',
-                  'source/git_tag', 'source/git_branch', 'source/md5'):
+                  'source/git_tag', 'source/git_branch', 'source/md5',
+                  'source/git_sha1'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -123,7 +124,7 @@ def parse(data):
 FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
-               'git_url', 'git_tag', 'git_branch',
+               'git_url', 'git_tag', 'git_branch', 'git_sha1',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
