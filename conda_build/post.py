@@ -143,8 +143,11 @@ def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
     reldir = utils.relative(path[len(config.build_prefix) + 1:])
 
-    if link.startswith((config.build_prefix + '/lib', 'lib',
-                        '@executable_path/')):
+    prefix_lib = config.build_prefix + '/lib'
+    if link.startswith(prefix_lib):
+        return '@loader_path/%s/%s' % (reldir, link[len(prefix_lib) + 1:])
+
+    if link.startswith(('lib', '@executable_path/')):
         return '@loader_path/%s/%s' % (reldir, basename(link))
 
     if link == '/usr/local/lib/libgcc_s.1.dylib':
