@@ -237,13 +237,6 @@ class RequestsTransport(Transport):
 
 def main(args, parser):
 
-    if len(args.packages) > 1 and args.download:
-        # Because if a package's setup.py imports setuptools, it will make all
-        # future packages look like they depend on distribute. Also, who knows
-        # what kind of monkeypatching the setup.pys out there could be doing.
-        print("WARNING: building more than one recipe at once without "
-              "--no-download is not recommended")
-
     proxies = get_proxy_servers()
 
     if proxies:
