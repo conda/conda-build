@@ -172,15 +172,15 @@ def create_info_files(m, files, include_recipe=True):
             for pfix, mode, fn in files_with_prefix:
                 if (fn in text_has_prefix_files):
                     # register for text replacement, regardless of mode
-                    print("Registered hard-coded path in %s" % fn)
+                    print("Detected hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, 'text', fn))
                     text_has_prefix_files.remove(fn)
                 elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
-                    print("Registered hard-coded path in %s" % fn)
+                    print("Detected hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                     binary_has_prefix_files.remove(fn)
                 elif (auto_detect or (mode == 'text')):
-                    print("Registered hard-coded path in %s" % fn)
+                    print("Detected hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
@@ -188,9 +188,9 @@ def create_info_files(m, files, include_recipe=True):
     # make sure we found all of the files expected
     errstr = ""
     for f in text_has_prefix_files:
-        errstr += "%s from has_prefix_files not registered\n" % f
+        errstr += "Did not detect hard-coded path in %s from has_prefix_files\n" % f
     for f in binary_has_prefix_files:
-        errstr += "%s from binary_has_prefix_files not registered\n" % f
+        errstr += "Did not detect hard-coded path in %s from binary_has_prefix_files\n" % f
     if errstr:
         raise RuntimeError(errstr)
 
