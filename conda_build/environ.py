@@ -30,6 +30,7 @@ def get_git_build_info(src_dir):
     env['GIT_DIR'] = join(src_dir, '.git')
 
     d = {}
+    # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     env = {str(key): str(value) for key, value in env.items()}
@@ -42,7 +43,14 @@ def get_git_build_info(src_dir):
     parts_length = len(parts)
     if parts_length == 3:
         d.update(dict(zip(keys, parts)))
-
+    # get the _full_ hash of the current HEAD
+    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env)
+    output = process.communicate()[0].strip()
+    output = output.decode('utf-8')
+    d['GIT_FULL_HASH'] = output
+    # set up the build string
     if key_name('NUMBER') in d and key_name('HASH') in d:
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])

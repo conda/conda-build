@@ -108,7 +108,8 @@ def parse(data):
             res[section][key] = []
     # ensure those are strings
     for field in ('package/version', 'build/string', 'source/svn_rev',
-                  'source/git_tag', 'source/git_branch', 'source/md5'):
+                  'source/git_tag', 'source/git_branch', 'source/md5',
+                  'source/git_rev'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -116,14 +117,65 @@ def parse(data):
         if val is None:
             val = ''
         res[section][key] = text_type(val)
-    return res
+    return sanitize(res)
+
+
+def sanitize(meta):
+    """
+    Sanitize the meta-data to remove aliases/handle deprecation
+
+    """
+    # make a copy to avoid side-effects
+    meta = dict(meta)
+    sanitize_funs = [('source', _git_clean), ]
+    for section, func in sanitize_funs:
+        if section in meta:
+            meta[section] = func(meta[section])
+    return meta
+
+
+def _git_clean(source_meta):
+    """
+    Reduce the redundancy in git specification by removing git_tag and
+    git_branch.
+
+    If one is specified, copy to git_rev.
+
+    If more than one field is used to specified, exit
+    and complain.
+    """
+
+    git_rev_tags_old = ('git_branch', 'git_tag')
+    git_rev = 'git_rev'
+
+    git_rev_tags = (git_rev,) + git_rev_tags_old
+
+    has_rev_tags = tuple(bool(source_meta[tag]) for
+                          tag in git_rev_tags)
+    if sum(has_rev_tags) > 1:
+        msg = "Error: mulitple git_revs:"
+        msg += ', '.join("{}".format(key) for key, has in
+                         zip(git_rev_tags, has_rev_tags) if has)
+        sys.exit(msg)
+
+    # make a copy of the input so we have no side-effects
+    ret_meta = dict(source_meta)
+    # loop over the old versions
+    for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
+        # update if needed
+        if has:
+            ret_meta[git_rev_tags[0]] = ret_meta[key]
+        # and remove
+        del ret_meta[key]
+
+    return ret_meta
 
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
-               'git_url', 'git_tag', 'git_branch',
+               'git_url', 'git_tag', 'git_branch', 'git_rev',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
@@ -139,6 +191,7 @@ FIELDS = {
     'about': ['home', 'license', 'summary'],
 }
 
+
 def check_bad_chrs(s, field):
     bad_chrs = '=!@#$%^&*:;"\'\\|<>?/ '
     if field in ('package/version', 'build/string'):
@@ -146,6 +199,7 @@ def check_bad_chrs(s, field):
     for c in bad_chrs:
         if c in s:
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
+
 
 def get_contents(meta_path):
     '''
@@ -204,7 +258,6 @@ class MetaData(object):
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
 
-
     @classmethod
     def fromdict(cls, metadata):
         """
@@ -213,7 +266,7 @@ class MetaData(object):
         m = super(MetaData, cls).__new__(cls)
         m.path = ''
         m.meta_path = ''
-        m.meta = metadata
+        m.meta = sanitize(metadata)
         return m
 
     def get_section(self, section):
