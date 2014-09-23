@@ -505,7 +505,7 @@ def main(args, parser):
                         d['summary'] = "Summary of the package"
                         d['summary_comment'] = '#'
 
-                license_classifier = "License :: OSI Approved ::"
+                license_classifier = "License :: OSI Approved :: "
                 if 'classifiers' in pkginfo:
                     licenses = [classifier.split(license_classifier, 1)[1] for
                         classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
