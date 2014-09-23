@@ -4,4 +4,4 @@ package:
 
 build:
   has_prefix_files:
-    - has-prefix
+    - binary-has-prefix

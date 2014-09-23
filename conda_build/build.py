@@ -74,16 +74,17 @@ def have_prefix_files(files):
     to replace the prefix with a placeholder.
 
     :param files: Filenames to check for instances of prefix
-    :type files: list of str
+    :type files: list of tuples containing strings (prefix, mode, filename)
     '''
-    prefix_bytes = config.build_prefix.encode('utf-8')
-    placeholder_bytes = prefix_placeholder.encode('utf-8')
-    alt_prefix_bytes = prefix_bytes.replace(b'\\', b'/')
-    alt_placeholder_bytes = placeholder_bytes.replace(b'\\', b'/')
+    prefix = config.build_prefix
+    prefix_bytes = prefix.encode('utf-8')
+    alt_prefix = prefix.replace('\\', '/')
+    alt_prefix_bytes = alt_prefix.encode('utf-8')
+    prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
-        path = join(config.build_prefix, f)
+        path = join(prefix, f)
         if isdir(path):
             continue
         if sys.platform != 'darwin' and islink(path):
@@ -92,31 +93,16 @@ def have_prefix_files(files):
             continue
         if sys.platform != 'win32' and is_obj(path):
             continue
-        # Open file as binary, since it might have any crazy encoding
         with open(path, 'rb') as fi:
             data = fi.read()
-        # Skip files that are truly binary
-        if b'\x00' in data:
-            continue
-        # This may end up mixing encodings, but since paths are usually ASCII,
-        # this shouldn't be a problem very often. The only way to completely
-        # avoid this would be to use chardet (or cChardet) to detect the
-        # encoding on the fly.
+        mode = 'binary' if b'\x00' in data else 'text'
         if prefix_bytes in data:
-            data = data.replace(prefix_bytes, placeholder_bytes)
-        elif (sys.platform == 'win32') and (alt_prefix_bytes in data):
+            yield (prefix, mode, f)
+        if (sys.platform == 'win32') and (alt_prefix_bytes in data):
             # some windows libraries use unix-style path separators
-            data = data.replace(alt_prefix_bytes, alt_placeholder_bytes)
-        else:
-            continue
-        st = os.stat(path)
-        # Save as
-        with open(path, 'wb') as fo:
-            fo.write(data)
-        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
-        if sys.platform == 'win32':
-            f = f.replace('\\', '/')
-        yield f
+            yield (alt_prefix, mode, f)
+        if prefix_placeholder_bytes in data:
+            yield (prefix_placeholder, mode, f)
 
 
 def create_info_files(m, files, include_recipe=True):
@@ -151,14 +137,6 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
         yaml.safe_dump(m.meta, fo)
 
-    if sys.platform == 'win32':
-        for i, f in enumerate(files):
-            files[i] = f.replace('\\', '/')
-
-    with open(join(config.info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write(f + '\n')
-
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
@@ -167,49 +145,54 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
-    files_with_prefix = m.has_prefix_files()
-    binary_files_with_prefix = m.binary_has_prefix_files()
+    if sys.platform == 'win32':
+        # make sure we use '/' path separators in metadata
+        files = [f.replace('\\', '/') for f in files]
 
-    for file in files_with_prefix:
-        if file not in files:
-            raise RuntimeError("file %s from build/has_prefix_files was "
-                               "not found" % file)
+    with open(join(config.info_dir, 'files'), 'w') as fo:
+        for f in files:
+            fo.write(f + '\n')
 
-    for file in binary_files_with_prefix:
-        if file not in files:
-            raise RuntimeError("file %s from build/has_prefix_files was "
-                               "not found" % file)
+    files_with_prefix = sorted(have_prefix_files(files))
+    binary_has_prefix_files = m.binary_has_prefix_files()
+    text_has_prefix_files = m.has_prefix_files()
+    if files_with_prefix:
+        auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
             # to worry about nested quotes.
-            fmt_str = '"%s" %s "%s"'
+            fmt_str = '"%s" %s "%s"\n'
         else:
             # Don't do it everywhere because paths on Unix can contain quotes,
             # and we don't have a good method of escaping, and because older
             # versions of conda don't support quotes in has_prefix
-            fmt_str = '%s %s %s'
-        prefix = config.build_prefix
-        with open(os.path.join(prefix, file), 'rb') as f:
-            data = f.read()
-        if prefix.encode('utf-8') in data:
-            files_with_prefix.append(fmt_str % (prefix, 'binary', file))
-        elif sys.platform == 'win32':
-            # some windows libraries encode prefix with unix path separators
-            alt_p = prefix.replace('\\', '/')
-            if alt_p.encode('utf-8') in data:
-                files_with_prefix.append(fmt_str % (alt_p, 'binary', file))
-            else:
-                print('Warning: prefix %s not found in %s' % (prefix, file))
-        else:
-            print('Warning: prefix %s not found in %s' % (prefix, file))
-
-    files_with_prefix += list(have_prefix_files(files))
-    files_with_prefix = sorted(set(files_with_prefix))
-    if files_with_prefix:
+            fmt_str = '%s %s %s\n'
         with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
-            for f in files_with_prefix:
-                fo.write(f + '\n')
+            for pfix, mode, fn in files_with_prefix:
+                if (fn in text_has_prefix_files):
+                    # register for text replacement, regardless of mode
+                    print("Registered hard-coded path in %s" % fn)
+                    fo.write(fmt_str % (pfix, 'text', fn))
+                    text_has_prefix_files.remove(fn)
+                elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
+                    print("Registered hard-coded path in %s" % fn)
+                    fo.write(fmt_str % (pfix, mode, fn))
+                    binary_has_prefix_files.remove(fn)
+                elif (auto_detect or (mode == 'text')):
+                    print("Registered hard-coded path in %s" % fn)
+                    fo.write(fmt_str % (pfix, mode, fn))
+                else:
+                    print("Ignored hard-coded path in %s" % fn)
+
+    # make sure we found all of the files expected
+    errstr = ""
+    for f in text_has_prefix_files:
+        errstr += "%s from has_prefix_files not registered\n" % f
+    for f in binary_has_prefix_files:
+        errstr += "%s from binary_has_prefix_files not registered\n" % f
+    if errstr:
+        raise RuntimeError(errstr)
 
     no_link = m.get_value('build/no_link')
     if no_link:
@@ -285,7 +268,8 @@ def build(m, get_src=True, verbose=True, post=None):
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
 
-        if m.binary_has_prefix_files():
+        if (m.get_value('build/detect_binary_files_with_prefix')
+            or m.binary_has_prefix_files()):
             # We must use a long prefix here as the package will only be
             # installable into prefixes shorter than this one.
             config.use_long_build_prefix = True
