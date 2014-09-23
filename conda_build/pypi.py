@@ -89,9 +89,9 @@ test:
     # - nose
 
 about:
-  home: {homeurl}
+  {home_comment}home: {homeurl}
   license: {license}
-  summary: {summary}
+  {summary_comment}summary: {summary}
 
 # See
 # http://docs.continuum.io/conda/build.html for
@@ -126,7 +126,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,33 @@ def setup (**attrs):
+@@ -166,5 +167,34 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -151,6 +151,7 @@ diff core.py core.py
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
++    data.update(kwargs)
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
 +        fn.write(yaml.dump(data, encoding=None))
 +
@@ -266,15 +267,20 @@ def main(args, parser):
         dir_path = join(output_dir, package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
-        d = package_dicts.setdefault(package, {'packagename': package.lower(),
-                                               'run_depends': '',
-                                               'build_depends': '',
-                                               'entry_points': '',
-                                               'build_comment': '# ',
-                                               'test_commands': '',
-                                               'usemd5': '',
-                                               'entry_comment': '#',
-                                               'egg_comment': '#'})
+        d = package_dicts.setdefault(package,
+            {
+                'packagename': package.lower(),
+                'run_depends': '',
+                'build_depends': '',
+                'entry_points': '',
+                'build_comment': '# ',
+                'test_commands': '',
+                'usemd5': '',
+                'entry_comment': '#',
+                'egg_comment': '#',
+                'summary_comment': '',
+                'home_comment': '',
+            })
         d['import_tests'] = valid(package).lower()
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -342,38 +348,6 @@ def main(args, parser):
         d['md5'] = urls[n]['md5_digest']
         d['filename'] = urls[n]['filename']
 
-        d['homeurl'] = data['home_page']
-        d['summary'] = repr(data['summary'])
-        license_classifier = "License :: OSI Approved ::"
-        if 'classifiers' in data:
-            licenses = [classifier.split(license_classifier, 1)[1] for classifier in
-                    data['classifiers'] if classifier.startswith(license_classifier)]
-        else:
-            licenses = []
-        if not licenses:
-            if data['license']:
-                if args.noprompt:
-                    license = data['license']
-                elif '\n' not in data['license']:
-                    print('Using "%s" for the license' % data['license'])
-                    license = data['license']
-                else:
-                    # Some projects put the whole license text in this field
-                    print("This is the license for %s" % package)
-                    print()
-                    print(data['license'])
-                    print()
-                    license = input("What license string should I use? ")
-            else:
-                if args.noprompt:
-                    license = "UNKNOWN"
-                else:
-                    license = input(("No license could be found for %s on " +
-                                     "PyPI. What license should I use? ") %
-                                    package)
-        else:
-            license = ' or '.join(licenses)
-        d['license'] = license
 
         # Unfortunately, two important pieces of metadata are only stored in
         # the package itself: the dependencies, and the entry points (if the
@@ -512,6 +486,59 @@ def main(args, parser):
                         deps = set(olddeps) | deps
                     d['import_tests'] = indent.join([''] + sorted(deps))
                     d['import_comment'] = ''
+
+                if 'home_page' in pkginfo:
+                    d['homeurl'] = pkginfo['home_page']
+                else:
+                    if data:
+                        d['homeurl'] = data['home_page']
+                    else:
+                        d['homeurl'] = "The package home page"
+                        d['home_comment'] = '#'
+
+                if 'summary' in pkginfo:
+                    d['summary'] = repr(pkginfo['summary'])
+                else:
+                    if data:
+                        d['summary'] = repr(data['summary'])
+                    else:
+                        d['summary'] = "Summary of the package"
+                        d['summary_comment'] = '#'
+
+                license_classifier = "License :: OSI Approved ::"
+                if 'classifiers' in pkginfo:
+                    licenses = [classifier.split(license_classifier, 1)[1] for
+                        classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
+                elif data and 'classifiers' in data:
+                    licenses = [classifier.split(license_classifier, 1)[1] for classifier in
+                            data['classifiers'] if classifier.startswith(license_classifier)]
+                else:
+                    licenses = []
+                if not licenses:
+                    if data['license']:
+                        if args.noprompt:
+                            license = data['license']
+                        elif '\n' not in data['license']:
+                            print('Using "%s" for the license' % data['license'])
+                            license = data['license']
+                        else:
+                            # Some projects put the whole license text in this field
+                            print("This is the license for %s" % package)
+                            print()
+                            print(data['license'])
+                            print()
+                            license = input("What license string should I use? ")
+                    else:
+                        if args.noprompt:
+                            license = "UNKNOWN"
+                        else:
+                            license = input(("No license could be found for %s on " +
+                                             "PyPI. What license should I use? ") %
+                                            package)
+                else:
+                    license = ' or '.join(licenses)
+                d['license'] = license
+
             finally:
                 rm_rf(tempdir)
 
