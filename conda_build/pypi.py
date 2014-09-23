@@ -126,7 +126,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,34 @@ def setup (**attrs):
+@@ -166,5 +167,37 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -151,7 +151,10 @@ diff core.py core.py
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
-+    data.update(kwargs)
++    data['summary'] = kwargs.get('summary', None)
++    data['homeurl'] = kwargs.get('home_page', None)
++    data['license'] = kwargs.get('license', None)
++    data['classifiers'] = kwargs.get('classifiers', None)
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
 +        fn.write(yaml.dump(data, encoding=None))
 +
@@ -487,7 +490,7 @@ def main(args, parser):
                     d['import_tests'] = indent.join([''] + sorted(deps))
                     d['import_comment'] = ''
 
-                if 'home_page' in pkginfo:
+                if pkginfo['homeurl']:
                     d['homeurl'] = pkginfo['home_page']
                 else:
                     if data:
@@ -496,7 +499,7 @@ def main(args, parser):
                         d['homeurl'] = "The package home page"
                         d['home_comment'] = '#'
 
-                if 'summary' in pkginfo:
+                if pkginfo['summary']:
                     d['summary'] = repr(pkginfo['summary'])
                 else:
                     if data:
@@ -506,7 +509,7 @@ def main(args, parser):
                         d['summary_comment'] = '#'
 
                 license_classifier = "License :: OSI Approved :: "
-                if 'classifiers' in pkginfo:
+                if pkginfo['classifiers']:
                     licenses = [classifier.split(license_classifier, 1)[1] for
                         classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
                 elif data and 'classifiers' in data:
@@ -515,17 +518,22 @@ def main(args, parser):
                 else:
                     licenses = []
                 if not licenses:
-                    if data['license']:
+                    if pkginfo['license']:
+                        license = pkginfo['license']
+                    elif data and 'license' in data:
+                        license = data['license']
+                    else:
+                        license = None
+                    if license:
                         if args.noprompt:
-                            license = data['license']
-                        elif '\n' not in data['license']:
-                            print('Using "%s" for the license' % data['license'])
-                            license = data['license']
+                            pass
+                        elif '\n' not in license:
+                            print('Using "%s" for the license' % license)
                         else:
                             # Some projects put the whole license text in this field
                             print("This is the license for %s" % package)
                             print()
-                            print(data['license'])
+                            print(license)
                             print()
                             license = input("What license string should I use? ")
                     else:
@@ -533,7 +541,7 @@ def main(args, parser):
                             license = "UNKNOWN"
                         else:
                             license = input(("No license could be found for %s on " +
-                                             "PyPI. What license should I use? ") %
+                                             "PyPI or in the source. What license should I use? ") %
                                             package)
                 else:
                     license = ' or '.join(licenses)
