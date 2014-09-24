@@ -536,10 +536,10 @@ def get_package_metadata(args, package, d, data):
             d['import_comment'] = ''
 
         if pkginfo['homeurl']:
-            d['homeurl'] = pkginfo['home_page']
+            d['homeurl'] = pkginfo['homeurl']
         else:
             if data:
-                d['homeurl'] = data['home_page']
+                d['homeurl'] = data['homeurl']
             else:
                 d['homeurl'] = "The package home page"
                 d['home_comment'] = '#'
