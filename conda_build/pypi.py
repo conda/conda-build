@@ -151,7 +151,7 @@ diff core.py core.py
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
-+    data['summary'] = kwargs.get('summary', None)
++    data['summary'] = kwargs.get('description', None)
 +    data['homeurl'] = kwargs.get('url', None)
 +    data['license'] = kwargs.get('license', None)
 +    data['name'] = kwargs.get('name', '??PACKAGE-NAME-UNKNOWN??')
