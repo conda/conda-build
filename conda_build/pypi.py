@@ -152,7 +152,7 @@ diff core.py core.py
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
 +    data['summary'] = kwargs.get('summary', None)
-+    data['homeurl'] = kwargs.get('home_page', None)
++    data['homeurl'] = kwargs.get('url', None)
 +    data['license'] = kwargs.get('license', None)
 +    data['name'] = kwargs.get('name', '??PACKAGE-NAME-UNKNOWN??')
 +    data['classifiers'] = kwargs.get('classifiers', None)
