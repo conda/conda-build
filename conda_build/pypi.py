@@ -126,7 +126,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,37 @@ def setup (**attrs):
+@@ -166,5 +167,39 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -154,7 +154,9 @@ diff core.py core.py
 +    data['summary'] = kwargs.get('summary', None)
 +    data['homeurl'] = kwargs.get('home_page', None)
 +    data['license'] = kwargs.get('license', None)
++    data['name'] = kwargs.get('name', '??PACKAGE-NAME-UNKNOWN??')
 +    data['classifiers'] = kwargs.get('classifiers', None)
++    data['version'] = kwargs.get('version', '??PACKAGE-VERSION-UNKNOWN??')
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
 +        fn.write(yaml.dump(data, encoding=None))
 +
@@ -256,9 +258,12 @@ def main(args, parser):
 
         package = args.packages.pop()
 
-        dir_path = join(output_dir, package.lower())
-        if exists(dir_path):
-            raise RuntimeError("directory already exists: %s" % dir_path)
+        is_url = ':' in package
+
+        if not is_url:
+            dir_path = join(output_dir, package.lower())
+            if exists(dir_path):
+                raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package,
             {
                 'packagename': package.lower(),
@@ -273,45 +278,44 @@ def main(args, parser):
                 'summary_comment': '',
                 'home_comment': '',
             })
-        d['import_tests'] = valid(package).lower()
-        if d['import_tests'] == '':
-            d['import_comment'] = '# '
-        else:
-            d['import_comment'] = ''
-            d['import_tests'] = INDENT + d['import_tests']
+        if is_url:
+            del d['packagename']
 
-        if args.version:
-            [version] = args.version
-            versions = client.package_releases(package, True)
-            if version not in versions:
-                sys.exit("Error: Version %s of %s is not available on PyPI."
-                         % (version, package))
-            d['version'] = version
+        if is_url:
+            d['version'] = 'UNKNOWN'
         else:
-            versions = client.package_releases(package)
-            if not versions:
-                # The xmlrpc interface is case sensitive, but the index itself
-                # is apparently not (the last time I checked,
-                # len(set(all_packages_lower)) == len(set(all_packages)))
-                if package.lower() in all_packages_lower:
-                    print("%s not found, trying %s" % (package, package.capitalize()))
-                    args.packages.append(all_packages[all_packages_lower.index(package.lower())])
-                    del package_dicts[package]
-                    continue
-                sys.exit("Error: Could not find any versions of package %s" %
-                         package)
-            if len(versions) > 1:
-                print("Warning, the following versions were found for %s" %
-                      package)
-                for ver in versions:
-                    print(ver)
-                print("Using %s" % versions[0])
-                print("Use --version to specify a different version.")
-            d['version'] = versions[0]
+            if args.version:
+                [version] = args.version
+                versions = client.package_releases(package, True)
+                if version not in versions:
+                    sys.exit("Error: Version %s of %s is not available on PyPI."
+                             % (version, package))
+                d['version'] = version
+            else:
+                versions = client.package_releases(package)
+                if not versions:
+                    # The xmlrpc interface is case sensitive, but the index itself
+                    # is apparently not (the last time I checked,
+                    # len(set(all_packages_lower)) == len(set(all_packages)))
+                    if package.lower() in all_packages_lower:
+                        print("%s not found, trying %s" % (package, package.capitalize()))
+                        args.packages.append(all_packages[all_packages_lower.index(package.lower())])
+                        del package_dicts[package]
+                        continue
+                    sys.exit("Error: Could not find any versions of package %s" %
+                             package)
+                if len(versions) > 1:
+                    print("Warning, the following versions were found for %s" %
+                          package)
+                    for ver in versions:
+                        print(ver)
+                    print("Using %s" % versions[0])
+                    print("Use --version to specify a different version.")
+                d['version'] = versions[0]
 
-        data = client.release_data(package, d['version'])
-        urls = client.release_urls(package, d['version'])
-        if not args.all_urls:
+        data = client.release_data(package, d['version']) if not is_url else None
+        urls = client.release_urls(package, d['version']) if not is_url else [package]
+        if not is_url and not args.all_urls:
             # Try to find source urls
             urls = [url for url in urls if url['python_version'] == 'source']
         if not urls:
@@ -332,24 +336,45 @@ def main(args, parser):
         else:
             n = 0
 
-        print("Using url %s (%s) for %s." % (urls[n]['url'],
-                                             human_bytes(urls[n]['size'] or 0),
-                                             package))
-        d['pypiurl'] = urls[n]['url']
-        d['md5'] = urls[n]['md5_digest']
-        d['filename'] = urls[n]['filename']
+        if not is_url:
+            print("Using url %s (%s) for %s." % (urls[n]['url'],
+                human_bytes(urls[n]['size'] or 0), package))
+            d['pypiurl'] = urls[n]['url']
+            d['md5'] = urls[n]['md5_digest']
+            d['filename'] = urls[n]['filename']
+        else:
+            from requests.packages.urllib3.util.url import parse_url
+            print("Using url %s" % package)
+            d['pypiurl'] = package
+            d['md5'] = ''
+            d['usemd5'] = '#'
+            U = parse_url(package)
+            # TODO: 'package' won't work with unpack()
+            d['filename'] = U.path.rsplit('/', 1)[-1] or 'package'
+
+        if is_url:
+            d['import_tests'] = 'PLACEHOLDER'
+        else:
+            d['import_tests'] = valid(package).lower()
 
         get_package_metadata(args, package, d, data)
 
+        if d['import_tests'] == '':
+            d['import_comment'] = '# '
+        else:
+            d['import_comment'] = ''
+            d['import_tests'] = INDENT + d['import_tests']
+
     for package in package_dicts:
         d = package_dicts[package]
-        makedirs(join(output_dir, package.lower()))
+        name = d['packagename']
+        makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, package.lower(), 'meta.yaml'), 'w') as f:
+        with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
             f.write(PYPI_META.format(**d))
-        with open(join(output_dir, package.lower(), 'build.sh'), 'w') as f:
+        with open(join(output_dir, name, 'build.sh'), 'w') as f:
             f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, package.lower(), 'bld.bat'), 'w') as f:
+        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
@@ -364,7 +389,7 @@ def get_package_metadata(args, package, d, data):
 
     import yaml
     print("Downloading %s (use --no-download to skip this step)" % package)
-    tempdir = mkdtemp('conda_skeleton_' + package)
+    tempdir = mkdtemp('conda_skeleton_' + d['filename'])
 
     [output_dir] = args.output_dir
 
@@ -493,13 +518,21 @@ def get_package_metadata(args, package, d, data):
                     if not exists(join(output_dir, dep)):
                         args.packages.append(dep)
 
+        if 'packagename' not in d:
+            d['packagename'] = pkginfo['name'].lower()
+        if d['version'] == 'UNKNOWN':
+            d['version'] = pkginfo['version']
+
         if pkginfo['packages']:
             deps = set(pkginfo['packages'])
             if d['import_tests']:
-                olddeps = [x for x in d['import_tests'].split()
+                if not d['import_tests'] or d['import_tests'] == 'PLACEHOLDER':
+                    olddeps = []
+                else:
+                    olddeps = [x for x in d['import_tests'].split()
                            if x != '-']
                 deps = set(olddeps) | deps
-            d['import_tests'] = INDENT.join([''] + sorted(deps))
+            d['import_tests'] = INDENT.join(sorted(deps))
             d['import_comment'] = ''
 
         if pkginfo['homeurl']:
