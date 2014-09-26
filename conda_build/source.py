@@ -111,7 +111,7 @@ def git_source(meta, recipe_dir):
     return WORK_DIR
 
 
-def git_info(fo=sys.stdout):
+def git_info(fo=None):
     ''' Print info about a Git repo. '''
     assert isdir(WORK_DIR)
 
@@ -132,8 +132,12 @@ def git_info(fo=sys.stdout):
             stderr = stderr.decode('utf-8')
         if check_error and stderr and stderr.strip():
             raise Exception("git error: %s" % stderr)
-        fo.write('==> %s <==\n' % cmd)
-        fo.write(stdout + '\n')
+        if fo:
+            fo.write('==> %s <==\n' % cmd)
+            fo.write(stdout + '\n')
+        else:
+            print('==> %s <==\n' % cmd)
+            print(stdout + '\n')
 
 
 def hg_source(meta):
