@@ -37,6 +37,8 @@ from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
 from conda_build.config import config
 
+from requests.packages.urllib3.util.url import parse_url
+
 PYPI_META = """\
 package:
   name: {packagename}
@@ -321,7 +323,8 @@ def main(args, parser):
         if not urls:
             if 'download_url' in data:
                 urls = [defaultdict(str, {'url': data['download_url']})]
-                urls[0]['filename'] = urls[0]['url'].split('/')[-1]
+                U = parse_url(urls[0]['url'])
+                urls[0]['filename'] = U.path.rsplit('/')[-1]
                 d['usemd5'] = '#'
             else:
                 sys.exit("Error: No source urls found for %s" % package)
@@ -343,7 +346,6 @@ def main(args, parser):
             d['md5'] = urls[n]['md5_digest']
             d['filename'] = urls[n]['filename']
         else:
-            from requests.packages.urllib3.util.url import parse_url
             print("Using url %s" % package)
             d['pypiurl'] = package
             d['md5'] = ''
