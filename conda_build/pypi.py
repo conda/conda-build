@@ -325,7 +325,11 @@ def main(args, parser):
                 urls = [defaultdict(str, {'url': data['download_url']})]
                 U = parse_url(urls[0]['url'])
                 urls[0]['filename'] = U.path.rsplit('/')[-1]
-                d['usemd5'] = '#'
+                if U.fragment.startswith('md5='):
+                    d['usemd5'] = ''
+                    d['md5'] = U.fragment[len('md5='):]
+                else:
+                    d['usemd5'] = '#'
             else:
                 sys.exit("Error: No source urls found for %s" % package)
         if len(urls) > 1 and not args.noprompt:
@@ -348,9 +352,13 @@ def main(args, parser):
         else:
             print("Using url %s" % package)
             d['pypiurl'] = package
-            d['md5'] = ''
-            d['usemd5'] = '#'
             U = parse_url(package)
+            if U.fragment.startswith('md5='):
+                d['usemd5'] = ''
+                d['md5'] = U.fragment[len('md5='):]
+            else:
+                d['usemd5'] = '#'
+                d['md5'] = ''
             # TODO: 'package' won't work with unpack()
             d['filename'] = U.path.rsplit('/', 1)[-1] or 'package'
 
