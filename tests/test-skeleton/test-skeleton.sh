@@ -1,7 +1,7 @@
 #!/bin/bash
 set -x
 set -e
-DIR=`mktemp -d -t sympy-0.7.5`
+DIR=`mktemp -d -t sympy-0.7.5-XXXX`
 conda skeleton pypi --output-dir $DIR --version=0.7.5 sympy
 python -c "
 import yaml
@@ -15,7 +15,7 @@ assert expected == actual
 rm -rf $DIR
 echo passed
 
-DIR=`mktemp -d -t sympy-0.7.5-url`
+DIR=`mktemp -d -t sympy-0.7.5-url-XXXX`
 conda skeleton pypi --output-dir $DIR https://pypi.python.org/packages/source/s/sympy/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9
 python -c "
 import yaml
