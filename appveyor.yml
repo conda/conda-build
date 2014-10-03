@@ -27,6 +27,6 @@ install:
   - C:\Miniconda\Scripts\conda list
 
 test_script:
-  - cd test-recipes\metadata
+  - cd tests\test-recipes\metadata
   # This will be effectively a no-op for recipes without bld.bat
   - for /D %%f in (*) do (C:\Miniconda\Scripts\conda-build --no-binstar-upload %%~nf)

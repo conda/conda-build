@@ -25,7 +25,8 @@ install:
 
 script:
   - py.test tests
-  - test-recipes/build_recipes.sh
+  - tests/test-recipes/build_recipes.sh
+  - tests/test-skeleton/test-skeleton.sh
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb
