@@ -334,6 +334,9 @@ class MetaData(object):
         if ret:
             check_bad_chrs(ret, 'build/string')
             return ret
+        return self.default_build_id()
+
+    def default_build_id(self, build_number=None):
         res = []
         version_re = re.compile(r'(?:==)?(\d)\.(\d)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
@@ -351,7 +354,9 @@ class MetaData(object):
                     break
         if res:
             res.append('_')
-        res.append('%d' % self.build_number())
+        if build_number is None:
+            build_number = self.build_number()
+        res.append('%d' % build_number)
         return ''.join(res)
 
     def dist(self):

@@ -28,7 +28,7 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
-def get_git_build_info(src_dir):
+def get_git_build_info(m, src_dir):
     env = os.environ.copy()
     env['GIT_DIR'] = join(src_dir, '.git')
 
@@ -54,9 +54,13 @@ def get_git_build_info(src_dir):
     output = output.decode('utf-8')
     d['GIT_FULL_HASH'] = output
     # set up the build string
+    if not m:
+        build_id = d[key_name("NUMBER")]
+    else:
+        build_id = m.default_build_id(int(d[key_name("NUMBER")]))
     if key_name('NUMBER') in d and key_name('HASH') in d:
-        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
-                                            d[key_name('HASH')])
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('HASH')],
+                                            build_id)
 
     return d
 
@@ -82,7 +86,7 @@ def get_dict(m=None, prefix=None):
         d['LANG'] = os.environ['LANG']
 
     if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-        d.update(**get_git_build_info(d['SRC_DIR']))
+        d.update(**get_git_build_info(m, d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
