@@ -197,6 +197,8 @@ def execute(args, parser):
                 execute(args, parser)
         else:
             config.CONDA_PY = int(args.python[0].replace('.', ''))
+        if not len(str(config.CONDA_PY)) == 2:
+            raise RuntimeError("CONDA_PY must be major.minor, like 3.4, not %s" % config.CONDA_PY)
     if args.perl:
         config.CONDA_PERL = args.perl
     if args.numpy:
@@ -211,6 +213,8 @@ def execute(args, parser):
                 execute(args, parser)
         else:
             config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
+        if not len(str(config.CONDA_NPY)) == 2:
+            raise RuntimeError("CONDA_NPY must be major.minor, like 1.8, not %s" % config.CONDA_NPY)
 
     with Locked(config.croot):
         recipes = deque(args.recipe)
