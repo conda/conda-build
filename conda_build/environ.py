@@ -18,6 +18,9 @@ def get_perl_ver():
 def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
 
+def get_npy_ver():
+    return '.'.join(str(config.CONDA_NPY))
+
 def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % get_py_ver())
@@ -73,6 +76,7 @@ def get_dict(m=None, prefix=None):
     d['SYS_PYTHON'] = sys.executable
     d['PERL_VER'] = get_perl_ver()
     d['PY_VER'] = get_py_ver()
+    d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
