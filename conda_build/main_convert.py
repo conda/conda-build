@@ -127,10 +127,14 @@ pyver_re = re.compile(r'python\s+(\d.\d)')
 
 
 def conda_convert(file, args):
-    if args.platforms is None:
+    if not args.show_imports and args.platforms is None:
         sys.exit('Error: --platform option required for conda package conversion')
 
     with tarfile.open(file) as t:
+        if args.show_imports:
+            has_cext(t, show=True)
+            return
+
         if not args.force and has_cext(t, show=args.show_imports):
             print("WARNING: Package %s has C extensions, skipping. Use -f to "
                   "force conversion." % file)
