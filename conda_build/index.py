@@ -15,7 +15,11 @@ from conda.compat import PY3
 
 def read_index_tar(tar_path):
     with tarfile.open(tar_path) as t:
-        return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+        try:
+            return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+        except EOFError:
+            raise RuntimeError("Could not extract %s. File probably corrupt."
+                % tar_path)
 
 def write_repodata(repodata, dir_path):
     data = json.dumps(repodata, indent=2, sort_keys=True)
