@@ -57,9 +57,9 @@ def main():
         "--dependencies", "-d",
         nargs='*',
         default=(),
-        help="""The dependencies of the package. To specify a version
+        help='''The dependencies of the package. To specify a version
         restriction for a dependency, wrap the dependency in quotes, like
-        'package >=2.0'""",
+        "package >=2.0"''',
     )
     p.add_argument(
         "--home",
