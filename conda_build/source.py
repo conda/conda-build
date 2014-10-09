@@ -60,6 +60,7 @@ def unpack(meta):
     src_path = download_to_cache(meta)
 
     os.makedirs(WORK_DIR)
+    print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
         tar_xf(src_path, WORK_DIR)
     elif src_path.lower().endswith('.zip'):
@@ -220,6 +221,7 @@ def provide(recipe_dir, meta, patch=True):
       - unpack
       - apply patches (if any)
     """
+    print("Removing old work directory")
     rm_rf(WORK_DIR)
     if 'fn' in meta:
         unpack(meta)
