@@ -231,6 +231,10 @@ def provide(recipe_dir, meta, patch=True):
         hg_source(meta)
     elif 'svn_url' in meta:
         svn_source(meta)
+    elif 'path' in meta:
+        os.chdir(recipe_dir)
+        print("Copying %s to %s" % (abspath(meta.get('path')), WORK_DIR))
+        copytree(abspath(meta.get('path')), WORK_DIR)
     else: # no source
         os.makedirs(WORK_DIR)
 

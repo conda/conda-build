@@ -109,7 +109,7 @@ def parse(data):
     # ensure those are strings
     for field in ('package/version', 'build/string', 'source/svn_rev',
                   'source/git_tag', 'source/git_branch', 'source/md5',
-                  'source/git_rev'):
+                  'source/git_rev', 'source/path'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -174,7 +174,7 @@ def _git_clean(source_meta):
 # conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
+    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
                'git_url', 'git_tag', 'git_branch', 'git_rev',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
