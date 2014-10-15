@@ -9,6 +9,7 @@ import subprocess
 from os.path import dirname, getmtime, getsize, isdir, join
 
 from conda.utils import md5_file
+from conda.compat import PY3
 
 from conda_build import external
 
@@ -52,7 +53,7 @@ def _check_call(args, **kwargs):
 
 
 def tar_xf(tarball, dir_path, mode='r:*'):
-    if tarball.endswith('.tar.xz'):
+    if not PY3 and tarball.endswith('.tar.xz'):
         unxz = external.find_executable('unxz')
         if not unxz:
             sys.exit("""\
