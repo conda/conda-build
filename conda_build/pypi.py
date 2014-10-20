@@ -275,8 +275,8 @@ def main(args, parser):
                 'build_comment': '# ',
                 'test_commands': '',
                 'usemd5': '',
-                'entry_comment': '#',
-                'egg_comment': '#',
+                'entry_comment': '# ',
+                'egg_comment': '# ',
                 'summary_comment': '',
                 'home_comment': '',
             })
