@@ -132,11 +132,11 @@ def git_info(fo=None):
         if check_error and stderr and stderr.strip():
             raise Exception("git error: %s" % stderr)
         if fo:
-            fo.write('==> %s <==\n' % cmd)
-            fo.write(stdout + '\n')
+            fo.write(u'==> %s <==\n' % cmd)
+            fo.write(stdout + u'\n')
         else:
-            print('==> %s <==\n' % cmd)
-            print(stdout + '\n')
+            print(u'==> %s <==\n' % cmd)
+            print(stdout + u'\n')
 
 
 def hg_source(meta):
