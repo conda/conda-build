@@ -4,6 +4,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 
 from __future__ import absolute_import, division, print_function
 
+import io
 import json
 import os
 import re
@@ -208,7 +209,7 @@ def create_info_files(m, files, include_recipe=True):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(config.info_dir, 'git'), 'w') as fo:
+        with io.open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
