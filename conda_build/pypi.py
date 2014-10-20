@@ -459,7 +459,7 @@ def get_package_metadata(args, package, d, data):
                 gs = entry_points.get('gui_scripts', [])
                 # We have *other* kinds of entry-points so we need
                 # setuptools at run-time
-                if not cs and not gs and len(entry_points) > 1:
+                if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
                     setuptools_build = True
                     setuptools_run = True
                 entry_list = (
@@ -498,6 +498,8 @@ def get_package_metadata(args, package, d, data):
                 requires.extend(specs)
         if requires or setuptools_build or setuptools_run:
             deps = []
+            if setuptools_run:
+                deps.append('setuptools')
             for deptext in requires:
                 # Every item may be a single requirement
                 #  or a multiline requirements string...
