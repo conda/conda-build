@@ -27,7 +27,7 @@
   * correctly detect when to preserve the egg directory and depend on
     setuptools in skeleton pypi
   * set LIBRARY_PATH and INCLUDE_PATH when building on Unix
-
+  * allow selectors to have text after them if they are in a comment
 
 2014-09-19   1.8.2:
 -------------------
