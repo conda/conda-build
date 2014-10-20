@@ -58,14 +58,14 @@ def ns_cfg():
     )
 
 
-sel_pat = re.compile(r'(.+?)\s*\[(.+)\]$')
+sel_pat = re.compile(r'(.+?)\s*(#.*)?\[(.+)\](?(2).*)$')
 def select_lines(data, namespace):
     lines = []
     for i, line in enumerate(data.splitlines()):
         line = line.rstrip()
         m = sel_pat.match(line)
         if m:
-            cond = m.group(2)
+            cond = m.group(3)
             try:
                 if eval(cond, namespace, {}):
                     lines.append(m.group(1))
