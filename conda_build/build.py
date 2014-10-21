@@ -172,15 +172,14 @@ def create_info_files(m, files, include_recipe=True):
             for pfix, mode, fn in files_with_prefix:
                 if (fn in text_has_prefix_files):
                     # register for text replacement, regardless of mode
-                    print("Detected hard-coded path in %s" % fn)
                     fo.write(fmt_str % (pfix, 'text', fn))
                     text_has_prefix_files.remove(fn)
                 elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
-                    print("Detected hard-coded path in %s" % fn)
+                    print("Detected hard-coded path in binary file %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                     binary_has_prefix_files.remove(fn)
                 elif (auto_detect or (mode == 'text')):
-                    print("Detected hard-coded path in %s" % fn)
+                    print("Detected hard-coded path in text file %s" % fn)
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
