@@ -14,8 +14,9 @@ import subprocess
 import sys
 import tarfile
 from os.path import exists, isdir, isfile, islink, join
-import yaml
+import fnmatch
 
+import yaml
 
 import conda.config as cc
 import conda.plan as plan
@@ -197,15 +198,11 @@ def create_info_files(m, files, include_recipe=True):
 
     no_link = m.get_value('build/no_link')
     if no_link:
-        def w2rx(p):
-            return p.replace('.', r'\.').replace('*', r'.*')
         if not isinstance(no_link, list):
             no_link = [no_link]
-        rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
-        pat = re.compile(rx)
         with open(join(config.info_dir, 'no_link'), 'w') as fo:
             for f in files:
-                if pat.match(f):
+                if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
