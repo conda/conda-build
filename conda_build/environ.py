@@ -4,6 +4,7 @@ import os
 import sys
 from os.path import join
 import subprocess
+import multiprocessing
 
 import conda.config as cc
 
@@ -80,6 +81,11 @@ def get_dict(m=None, prefix=None):
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
+
+    try:
+        d['CPU_COUNT'] = str(multiprocessing.cpu_count())
+    except NotImplementedError:
+        d['CPU_COUNT'] = "1"
 
     if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
         d.update(**get_git_build_info(d['SRC_DIR']))
