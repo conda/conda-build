@@ -1,4 +1,4 @@
-......
+2014-10-22   1.9.0:
 -------------------
   * adapt tests for Windows
   * don't use the long build prefix if the short build prefix is already long
@@ -29,6 +29,7 @@
   * set LIBRARY_PATH and INCLUDE_PATH when building on Unix
   * allow selectors to have text after them if they are in a comment
   * add CPU_COUNT environment variable to the build
+
 
 2014-09-19   1.8.2:
 -------------------
