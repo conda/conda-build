@@ -36,7 +36,7 @@ def ns_cfg():
     pl = config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
-    return dict(
+    d = dict(
         linux = plat.startswith('linux-'),
         linux32 = bool(plat == 'linux-32'),
         linux64 = bool(plat == 'linux-64'),
@@ -56,6 +56,8 @@ def ns_cfg():
         py34 = bool(py == 34),
         np = np,
     )
+    d.update(os.environ)
+    return d
 
 
 sel_pat = re.compile(r'(.+?)\s*(#.*)?\[(.+)\](?(2).*)$')
