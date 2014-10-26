@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
+from collections import defaultdict
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -36,7 +37,7 @@ def ns_cfg():
     pl = config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
-    d = dict(
+    d = deafultdict(lambda: False, 
         linux = plat.startswith('linux-'),
         linux32 = bool(plat == 'linux-32'),
         linux64 = bool(plat == 'linux-64'),
