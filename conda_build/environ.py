@@ -66,7 +66,7 @@ def get_dict(m=None, prefix=None):
         prefix = config.build_prefix
 
     python = config.build_python
-    d = {'CONDA_BUILD': '1'}
+    d = {'CONDA_BUILD': '1', 'PYTHONNOUSERSITE': '1'}
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
