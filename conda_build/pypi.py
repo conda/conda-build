@@ -325,9 +325,10 @@ def main(args, parser):
                 urls = [defaultdict(str, {'url': data['download_url']})]
                 U = parse_url(urls[0]['url'])
                 urls[0]['filename'] = U.path.rsplit('/')[-1]
-                if U.fragment.startswith('md5='):
+                fragment = U.fragment or ''
+                if fragment.startswith('md5='):
                     d['usemd5'] = ''
-                    d['md5'] = U.fragment[len('md5='):]
+                    d['md5'] = fragment[len('md5='):]
                 else:
                     d['usemd5'] = '#'
             else:
