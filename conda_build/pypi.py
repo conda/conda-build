@@ -74,7 +74,7 @@ requirements:
   run:
     - python{run_depends}
 
-test:
+{test_comment}test:
   # Python imports
   {import_comment}imports:{import_tests}
 
@@ -275,6 +275,7 @@ def main(args, parser):
                 'build_comment': '# ',
                 'test_commands': '',
                 'usemd5': '',
+                'test_comment': '',
                 'entry_comment': '# ',
                 'egg_comment': '# ',
                 'summary_comment': '',
@@ -375,6 +376,9 @@ def main(args, parser):
         else:
             d['import_comment'] = ''
             d['import_tests'] = INDENT + d['import_tests']
+
+        if d['entry_comment'] == d['import_comment'] == '# ':
+            d['test_comment'] = '# '
 
     for package in package_dicts:
         d = package_dicts[package]
