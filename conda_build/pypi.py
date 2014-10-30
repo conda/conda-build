@@ -462,6 +462,10 @@ def get_package_metadata(args, package, d, data):
             else:
                 cs = entry_points.get('console_scripts', [])
                 gs = entry_points.get('gui_scripts', [])
+                if isinstance(cs, string_types):
+                    cs = [cs]
+                if isinstance(gs, string_types):
+                    gs = [gs]
                 # We have *other* kinds of entry-points so we need
                 # setuptools at run-time
                 if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
