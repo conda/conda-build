@@ -56,6 +56,7 @@ def ns_cfg():
         py34 = bool(py == 34),
         np = np,
         os = os,
+        environ = os.environ,
     )
     d.update(os.environ)
     return d
