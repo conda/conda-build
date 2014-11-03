@@ -64,6 +64,7 @@ def create_py_files(dir_path, m):
 
         try:
             with open(join(m.path, 'run_test.py')) as fi:
+                fo.write("print('running run_test.py')\n")
                 fo.write("# --- run_test.py (begin) ---\n")
                 fo.write(fi.read())
                 fo.write("# --- run_test.py (end) ---\n")
