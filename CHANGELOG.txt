@@ -1,6 +1,7 @@
 2014-XX-XX   1.9.1:
 -------------------
   * set PYTHONNOUSERSITE=1 while running build scripts
+  * fix patch of distutils because of problem on Windows, see issue #119
 
 
 2014-10-22   1.9.0:
