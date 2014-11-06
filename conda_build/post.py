@@ -179,6 +179,13 @@ def mk_relative_osx(path):
         # made relocatable.
         assert_relative_osx(path)
 
+def mk_relative_linux(f, rpaths=('lib',)):
+    path = join(config.build_prefix, f)
+    rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
+    patchelf = external.find_executable('patchelf')
+    print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
+    call([patchelf, '--set-rpath', rpath, path])
+
 def assert_relative_osx(path):
     for name in macho.otool(path):
         assert not name.startswith(config.build_prefix), path
@@ -190,12 +197,7 @@ def mk_relative(m, f):
         return
 
     if sys.platform.startswith('linux'):
-        rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in
-                         m.get_value('build/rpaths', ['lib']))
-        patchelf = external.find_executable('patchelf')
-        print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-        call([patchelf, '--set-rpath', rpath, path])
-
+        mk_relative_linux(f, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
         mk_relative_osx(path)
 
