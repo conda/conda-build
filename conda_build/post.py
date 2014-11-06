@@ -16,6 +16,7 @@ from conda_build import environ
 from conda_build import utils
 from conda_build import source
 from conda.compat import lchmod
+from conda.misc import walk_prefix
 
 if sys.platform.startswith('linux'):
     from conda_build import elf
@@ -65,17 +66,19 @@ def write_pth(egg_path):
         fo.write('./%s\n' % fn)
 
 
-def remove_easy_install_pth(preserve_egg_dir=False):
+def remove_easy_install_pth(files, preserve_egg_dir=False):
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
+    absfiles = [join(config.build_prefix, f) for f in files]
     sp_dir = environ.get_sp_dir()
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir:
-                write_pth(egg_path)
-                continue
+                if not any(i in absfiles for i in walk_prefix(egg_path, False)):
+                    write_pth(egg_path)
+                    continue
 
             print('found egg dir:', egg_path)
             try:
@@ -98,6 +101,8 @@ def remove_easy_install_pth(preserve_egg_dir=False):
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
 
         elif isfile(egg_path):
+            if not egg_path in absfiles:
+                continue
             print('found egg:', egg_path)
             write_pth(egg_path)
 
@@ -132,8 +137,8 @@ def compile_missing_pyc():
                            '-q', '-x', 'port_v3', sp_dir])
 
 
-def post_process(preserve_egg_dir=False):
-    remove_easy_install_pth(preserve_egg_dir=preserve_egg_dir)
+def post_process(files, preserve_egg_dir=False):
+    remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
     if not config.PY3K:
         compile_missing_pyc()
