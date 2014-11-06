@@ -211,7 +211,7 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def create_env(pref, specs, clear_cache=True, verbose=True):
+def create_env(prefix, specs, clear_cache=True, verbose=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -226,12 +226,12 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
         index = get_index([url_path(config.croot)])
 
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        actions = plan.install_actions(pref, index, specs)
+        actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
-    if not isdir(pref):
-        os.makedirs(pref)
+    if not isdir(prefix):
+        os.makedirs(prefix)
 
 def rm_pkgs_cache(dist):
     '''
