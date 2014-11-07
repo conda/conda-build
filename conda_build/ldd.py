@@ -48,7 +48,7 @@ def get_package_linkages(pkg):
 
     res = {}
 
-    with open(join(config.test_prefix, 'conda-meta', '-'.join(specs[0]) +
+    with open(join(config.test_prefix, 'conda-meta', '-'.join(specs[0].split()) +
         '.json')) as f:
         data = json.load(f)
 
