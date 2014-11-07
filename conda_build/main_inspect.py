@@ -6,8 +6,11 @@
 
 from __future__ import absolute_import, division, print_function
 
+import sys
 import argparse
+from collections import defaultdict
 
+from conda.misc import which_package
 from conda.lock import Locked
 
 from conda_build.main_build import args_func
@@ -35,9 +38,32 @@ def main():
     args = p.parse_args()
     args_func(args, p)
 
+def print_linkages(depmap):
+    # Print system and not found last
+    k = sorted(depmap.keys() - {'system', 'not found'})
+    for dep in k + ['system', 'not found']:
+        print(dep)
+        for lib, path in depmap[dep]:
+            print("  %s => %s" % (lib, path))
+        print()
+
 def execute(args, parser):
     with Locked(config.croot):
         for pkg in args.packages:
             if args.linkages:
                 linkages = get_package_linkages(pkg)
-                print(linkages)
+                depmap = defaultdict(set)
+                for binary in linkages:
+                    for lib, path in linkages[binary]:
+                        if path.startswith(config.test_prefix):
+                            deps = list(which_package(path))
+                            if len(deps) > 1:
+                                print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
+                            for d in deps:
+                                depmap[d].add((lib, path))
+                        elif path == 'not found':
+                            depmap['not found'].add((lib, path))
+                        else:
+                            depmap['system'].add((lib, path))
+
+                print_linkages(depmap)
