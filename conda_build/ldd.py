@@ -40,7 +40,7 @@ def ldd(path):
 
 def get_package_linkages(pkg):
     rm_rf(config.test_prefix)
-    specs = ['%s %s %s' % (pkg.rsplit('.tar.bz2', 1)[0].rsplit('-', 2))]
+    specs = ['%s %s %s' % tuple(pkg.rsplit('.tar.bz2', 1)[0].rsplit('-', 2))]
 
     create_env(config.test_prefix, specs)
 
