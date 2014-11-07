@@ -62,7 +62,8 @@ def execute(args, parser):
                             if len(deps) > 1:
                                 print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
                             for d in deps:
-                                depmap[d].add((lib, path))
+                                depmap[d].add((lib,
+                                    path.split(config.test_prefix, 1)))
                         elif path == 'not found':
                             depmap['not found'].add((lib, path))
                         else:
