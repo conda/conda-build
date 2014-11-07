@@ -45,7 +45,7 @@ def print_linkages(depmap):
     for dep in k + ['system', 'not found']:
         print("%s:" % dep)
         for lib, path in sorted(depmap[dep]):
-            print("    %s => %s" % (lib, path))
+            print("    %s (%s)" % (lib, path))
         print()
 
 def execute(args, parser):
