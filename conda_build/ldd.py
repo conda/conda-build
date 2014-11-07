@@ -6,6 +6,7 @@ import json
 from os.path import join
 
 from conda.install import rm_rf
+from conda.utils import memoized
 
 from conda_build import post
 from conda_build.config import config
@@ -38,6 +39,7 @@ def ldd(path):
 
     return res
 
+@memoized
 def get_package_linkages(pkg):
     rm_rf(config.test_prefix)
     specs = ['%s %s %s' % tuple(pkg.rsplit('.tar.bz2', 1)[0].rsplit('-', 2))]
