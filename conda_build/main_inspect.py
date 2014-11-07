@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import argparse
+from os.path import abspath
 from collections import defaultdict
 
 from conda.misc import which_package
@@ -55,6 +56,7 @@ def execute(args, parser):
                 depmap = defaultdict(set)
                 for binary in linkages:
                     for lib, path in linkages[binary]:
+                        path = abspath(path)
                         if path.startswith(config.test_prefix):
                             deps = list(which_package(path))
                             if len(deps) > 1:
