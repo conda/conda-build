@@ -54,7 +54,8 @@ def get_package_linkages(pkg):
 
     files = data['files']
     for f in files:
-        if post.is_obj(f):
-            res[f] = ldd(f)
+        path = join(config.build_prefix, f)
+        if post.is_obj(path):
+            res[f] = ldd(path)
 
     return res
