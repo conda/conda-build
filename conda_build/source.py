@@ -101,6 +101,14 @@ def git_source(meta, recipe_dir):
 
     # now clone into the work directory
     checkout = meta.get('git_rev')
+    # if rev is not specified, and the git_url is local,
+    # assume the user wants the current HEAD
+    if not checkout and git_url.startswith('.'):
+        process = Popen(["git", "rev-parse", "HEAD"],
+                    stdout=PIPE, stderr=PIPE,
+                               cwd=git_url)
+        output = process.communicate()[0].strip()
+        checkout = output.decode('utf-8')
     if checkout:
         print('checkout: %r' % checkout)
 
