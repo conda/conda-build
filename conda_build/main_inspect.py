@@ -51,17 +51,12 @@ def print_linkages(depmap, show_files=False):
     k = sorted(depmap.keys() - {'system', 'not found'})
     for dep in k + ['system', 'not found']:
         print("%s:" % dep)
-        curbin = None
-        for lib, path, binary in sorted(depmap[dep]):
-            if show_files:
+        if show_files:
+            for lib, path, binary in sorted(depmap[dep]):
                 print("    %s (%s) from %s" % (lib, path, binary))
-            else:
-                if binary == curbin:
-                    # Show each library only once
-                    continue
-                else:
-                    print("    %s (%s)" % (lib, path))
-                    curbin = binary
+        else:
+            for lib, path in sorted(depmap[dep]):
+                print("    %s (%s)" % (lib, path))
         print()
 
 def execute(args, parser):
