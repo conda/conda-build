@@ -10,6 +10,7 @@ import sys
 import argparse
 from os.path import abspath
 from collections import defaultdict
+from operator import itemgetter
 
 from conda.misc import which_package
 from conda.lock import Locked
@@ -52,7 +53,7 @@ def print_linkages(depmap, show_files=False):
     for dep in k + ['system', 'not found']:
         print("%s:" % dep)
         if show_files:
-            for lib, path, binary in sorted(depmap[dep]):
+            for lib, path, binary in sorted(map(itemgetter(0, 1), depmap[dep])):
                 print("    %s (%s) from %s" % (lib, path, binary))
         else:
             for lib, path in sorted(depmap[dep]):
