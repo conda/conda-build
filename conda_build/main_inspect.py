@@ -23,7 +23,14 @@ def main():
         description='tool for inspecting conda packages'
     )
 
-    p.add_argument(
+    subcommand = p.add_subparsers(
+        dest='subcommand',
+        )
+    linkages = subcommand.add_parser(
+        "linkages",
+        help="Tools to investigate linkages of binary libraries in a package",
+        )
+    linkages.add_argument(
         'packages',
         action='store',
         nargs='+',
@@ -51,7 +58,7 @@ def print_linkages(depmap):
 def execute(args, parser):
     with Locked(config.croot):
         for pkg in args.packages:
-            if args.linkages:
+            if args.subcommand == 'linkages':
                 linkages = get_package_linkages(pkg)
                 depmap = defaultdict(set)
                 for binary in linkages:
