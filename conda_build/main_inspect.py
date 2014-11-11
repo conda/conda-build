@@ -56,7 +56,7 @@ def execute(args, parser):
                 depmap = defaultdict(set)
                 for binary in linkages:
                     for lib, path in linkages[binary]:
-                        path = abspath(path)
+                        path = abspath(path) if path else path
                         if path.startswith(config.test_prefix):
                             deps = list(which_package(path))
                             if len(deps) > 1:
