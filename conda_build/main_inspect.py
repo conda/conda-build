@@ -36,23 +36,32 @@ def main():
         nargs='+',
         help='conda packages to inspect',
     )
-    p.add_argument(
-        '--linkages',
+    linkages.add_argument(
+        '--show-files',
         action="store_true",
-        help="inspect the linkages of the binary files in the package",
+        help="Show the files in the package that link to each library",
     )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
     args_func(args, p)
 
-def print_linkages(depmap):
+def print_linkages(depmap, show_files=False):
     # Print system and not found last
     k = sorted(depmap.keys() - {'system', 'not found'})
     for dep in k + ['system', 'not found']:
         print("%s:" % dep)
-        for lib, path in sorted(depmap[dep]):
-            print("    %s (%s)" % (lib, path))
+        curbin = None
+        for lib, path, binary in sorted(depmap[dep]):
+            if show_files:
+                print("    %s (%s) from %s" % (lib, path, binary))
+            else:
+                if binary == curbin:
+                    # Show each library only once
+                    continue
+                else:
+                    print("    %s (%s)" % (lib, path))
+                    curbin = binary
         print()
 
 def execute(args, parser):
@@ -60,7 +69,7 @@ def execute(args, parser):
         for pkg in args.packages:
             if args.subcommand == 'linkages':
                 linkages = get_package_linkages(pkg)
-                depmap = defaultdict(set)
+                depmap = defaultdict(list)
                 for binary in linkages:
                     for lib, path in linkages[binary]:
                         path = abspath(path) if path not in {'', 'not found'} else path
@@ -69,11 +78,12 @@ def execute(args, parser):
                             if len(deps) > 1:
                                 print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
                             for d in deps:
-                                depmap[d].add((lib,
-                                    path.split(config.test_prefix + '/', 1)[-1]))
+                                depmap[d].append((lib,
+                                    path.split(config.test_prefix + '/',
+                                        1)[-1], binary))
                         elif path == 'not found':
-                            depmap['not found'].add((lib, path))
+                            depmap['not found'].append((lib, path, binary))
                         else:
-                            depmap['system'].add((lib, path))
+                            depmap['system'].append((lib, path, binary))
 
-                print_linkages(depmap)
+                print_linkages(depmap, show_files=args.show_files)
