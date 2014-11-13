@@ -90,22 +90,21 @@ def yamlize(data):
     try:
         return yaml.load(data)
     except yaml.parser.ParserError as e:
+        sys.stderr.write(('-' * 70) + "\n")
+        sys.stderr.write("Unable to parse meta.yaml file\n\n")
         if e.problem == "expected ',' or '}', but got '<scalar>'":
             try:
                 import jinja2
-                raise e
             except ImportError:
-                sys.stderr.write(('-' * 70) + "\n")
-                sys.stderr.write("Unable to parse meta.yaml file\n\n")
                 sys.stderr.write(textwrap.fill(textwrap.dedent("""\
                     It appears you are missing jinja2.  Please install that
                     package, then attempt to build.
                     """)) + "\n\n")
-                indent = lambda s: s.replace("\n", "\n    ")
-                sys.stderr.write(
-                    "Error Message:\n    {}\n\n".format(indent(str(e)))
-                )
-                sys.exit(-1)
+        indent = lambda s: s.replace("\n", "\n---> ")
+        sys.stderr.write(
+            "Error Message:\n---> {}\n\n".format(indent(str(e)))
+        )
+        sys.exit(1)
 
 
 def parse(data):
