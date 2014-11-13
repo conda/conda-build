@@ -37,26 +37,26 @@ def ns_cfg():
     for x in py, np:
         assert isinstance(x, int), x
     d = dict(
-        linux = plat.startswith('linux-'),
-        linux32 = bool(plat == 'linux-32'),
-        linux64 = bool(plat == 'linux-64'),
-        armv6 = bool(plat == 'linux-armv6l'),
-        osx = plat.startswith('osx-'),
-        unix = plat.startswith(('linux-', 'osx-')),
-        win = plat.startswith('win-'),
-        win32 = bool(plat == 'win-32'),
-        win64 = bool(plat == 'win-64'),
-        pl = pl,
-        py = py,
-        py3k = bool(30 <= py < 40),
-        py2k = bool(20 <= py < 30),
-        py26 = bool(py == 26),
-        py27 = bool(py == 27),
-        py33 = bool(py == 33),
-        py34 = bool(py == 34),
-        np = np,
-        os = os,
-        environ = os.environ,
+        linux=plat.startswith('linux-'),
+        linux32=bool(plat == 'linux-32'),
+        linux64=bool(plat == 'linux-64'),
+        armv6=bool(plat == 'linux-armv6l'),
+        osx=plat.startswith('osx-'),
+        unix=plat.startswith(('linux-', 'osx-')),
+        win=plat.startswith('win-'),
+        win32=bool(plat == 'win-32'),
+        win64=bool(plat == 'win-64'),
+        pl=pl,
+        py=py,
+        py3k=bool(30 <= py < 40),
+        py2k=bool(20 <= py < 30),
+        py26=bool(py == 26),
+        py27=bool(py == 27),
+        py33=bool(py == 33),
+        py34=bool(py == 34),
+        np=np,
+        os=os,
+        environ=os.environ,
     )
     d.update(os.environ)
     return d
@@ -227,7 +227,7 @@ def get_contents(meta_path):
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(ns_cfg())
-    env.globals.update(context_processor())
+    env.globals.update(context_processor(meta_path))
 
     template = env.get_or_select_template(filename)
 
@@ -382,14 +382,14 @@ class MetaData(object):
 
     def info_index(self):
         d = dict(
-            name = self.name(),
-            version = self.version(),
-            build = self.build_id(),
-            build_number = self.build_number(),
-            license = self.get_value('about/license'),
-            platform = cc.platform,
-            arch = cc.arch_name,
-            depends = sorted(ms.spec for ms in self.ms_depends())
+            name=self.name(),
+            version=self.version(),
+            build=self.build_id(),
+            build_number=self.build_number(),
+            license=self.get_value('about/license'),
+            platform=cc.platform,
+            arch=cc.arch_name,
+            depends=sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
