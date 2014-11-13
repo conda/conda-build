@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
+import textwrap
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -86,7 +87,25 @@ Error: Invalid selector in meta.yaml line %d:
 
 @memoized
 def yamlize(data):
-    return yaml.load(data)
+    try:
+        return yaml.load(data)
+    except yaml.parser.ParserError as e:
+        if e.problem == "expected ',' or '}', but got '<scalar>'":
+            try:
+                import jinja2
+                raise e
+            except ImportError:
+                sys.stderr.write(('-' * 70) + "\n")
+                sys.stderr.write("Unable to parse meta.yaml file\n\n")
+                sys.stderr.write(textwrap.fill(textwrap.dedent("""\
+                    It appears you are missing jinja2.  Please install that
+                    package, then attempt to build.
+                    """)) + "\n\n")
+                indent = lambda s: s.replace("\n", "\n    ")
+                sys.stderr.write(
+                    "Error Message:\n    {}\n\n".format(indent(str(e)))
+                )
+                sys.exit(-1)
 
 
 def parse(data):
