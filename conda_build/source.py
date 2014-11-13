@@ -83,7 +83,8 @@ def git_source(meta, recipe_dir):
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
         os.chdir(recipe_dir)
-        git_dn = abspath(expanduser(git_url)).replace('/', '_')
+        git_dn = abspath(expanduser(git_url))
+        git_dn = "_".join(git_dn.split(os.path.sep)[1:])
     else:
         git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
