@@ -61,6 +61,8 @@ def print_linkages(depmap, show_files=False):
         print()
 
 def execute(args, parser):
+    if not args.subcommand:
+        parser.print_help()
     with Locked(config.croot):
         if args.subcommand == 'linkages':
             if not sys.platform.startswith('linux'):
