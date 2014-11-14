@@ -62,8 +62,8 @@ def print_linkages(depmap, show_files=False):
 
 def execute(args, parser):
     with Locked(config.croot):
-        for pkg in args.packages:
-            if args.subcommand == 'linkages':
+        if args.subcommand == 'linkages':
+            for pkg in args.packages:
                 linkages = get_package_linkages(pkg)
                 depmap = defaultdict(list)
                 for binary in linkages:
