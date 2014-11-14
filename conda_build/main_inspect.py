@@ -56,7 +56,7 @@ def print_linkages(depmap, show_files=False):
             for lib, path, binary in sorted(depmap[dep]):
                 print("    %s (%s) from %s" % (lib, path, binary))
         else:
-            for lib, path in sorted(map(itemgetter(0, 1), depmap[dep])):
+            for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
                 print("    %s (%s)" % (lib, path))
         print()
 
