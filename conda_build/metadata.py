@@ -12,6 +12,8 @@ import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
 
+from . import exceptions
+
 try:
     import yaml
     from yaml import Loader, SafeLoader
@@ -90,26 +92,20 @@ def yamlize(data):
     try:
         return yaml.load(data)
     except yaml.parser.ParserError as e:
-        sys.stderr.write(('-' * 70) + "\n")
-        sys.stderr.write("Unable to parse meta.yaml file\n\n")
-        if e.problem == "expected ',' or '}', but got '<scalar>'":
-            try:
-                import jinja2
-            except ImportError:
-                sys.stderr.write(textwrap.fill(textwrap.dedent("""\
-                    It appears you are missing jinja2.  Please install that
-                    package, then attempt to build.
-                    """)) + "\n\n")
-        indent = lambda s: s.replace("\n", "\n---> ")
-        sys.stderr.write(
-            "Error Message:\n---> {}\n\n".format(indent(str(e)))
-        )
-        sys.exit(1)
+        try:
+            import jinja2
+        except ImportError:
+            raise exceptions.UnableToParseMissingJinja2(original=e)
+        raise exceptions.UnableToParse(original=e)
 
 
 def parse(data):
     data = select_lines(data, ns_cfg())
-    res = yamlize(data)
+    try:
+        res = yamlize(data)
+    except exceptions.YamlParsingError as e:
+        sys.stderr.write(e.error_msg())
+        sys.exit(1)
     # ensure the result is a dict
     if res is None:
         res = {}
