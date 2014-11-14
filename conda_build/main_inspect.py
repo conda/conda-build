@@ -63,6 +63,8 @@ def print_linkages(depmap, show_files=False):
 def execute(args, parser):
     with Locked(config.croot):
         if args.subcommand == 'linkages':
+            if not sys.platform.startswith('linux'):
+                sys.exit("conda inspect linkages is only implemented in Linux")
             for pkg in args.packages:
                 linkages = get_package_linkages(pkg)
                 depmap = defaultdict(list)
