@@ -3,7 +3,7 @@
   * set PYTHONNOUSERSITE=1 while running build scripts
   * conda index: add error if they try to mix their packages into Anaconda
     channel
-
+  * fix building recipes with local git urls in Windows
 
 2014-10-22   1.9.0:
 -------------------
