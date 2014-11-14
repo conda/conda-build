@@ -101,11 +101,7 @@ def yamlize(data):
 
 def parse(data):
     data = select_lines(data, ns_cfg())
-    try:
-        res = yamlize(data)
-    except exceptions.YamlParsingError as e:
-        sys.stderr.write(e.error_msg())
-        sys.exit(1)
+    res = yamlize(data)
     # ensure the result is a dict
     if res is None:
         res = {}
