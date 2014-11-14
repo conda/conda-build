@@ -68,7 +68,7 @@ def execute(args, parser):
             if not sys.platform.startswith('linux'):
                 sys.exit("Error: conda inspect linkages is only implemented in Linux")
             for pkg in args.packages:
-                if pkg.find('-') < 2:
+                if pkg.count('-') < 2:
                     parser.error("""Package must be a package file name, like pkg-1.0-0.tar.bz2, not %s""" % pkg)
                 if '/' in pkg and not abspath(expanduser(pkg)).startswith(config.bldpkgs_dir):
                         parser.error("Package must be in the build packages directory (%s)" % config.bldpkgs_dir)
