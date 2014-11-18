@@ -1,10 +1,11 @@
-2014-XX-XX   1.9.1:
+2014-11-18   1.9.1:
 -------------------
   * set PYTHONNOUSERSITE=1 while running build scripts
   * conda index: add error if they try to mix their packages into Anaconda
     channel
   * fix building recipes with local git urls in Windows
   * warn if conda-build is out of date
+
 
 2014-10-22   1.9.0:
 -------------------
