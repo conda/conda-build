@@ -247,6 +247,7 @@ def check_symlinks(files):
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
                     # such crazy things don't happen.
+                    print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
                     os.symlink(relpath(real_link_path, config.build_prefix), path)
             else:
