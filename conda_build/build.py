@@ -368,6 +368,9 @@ def build(m, get_src=True, verbose=True, post=None):
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
+        if m.get_value('build/noarch'):
+            import conda_build.noarch as noarch
+            noarch.transform(m, sorted(files2 - files1))
 
         files3 = prefix_files()
         fix_permissions(files3 - files1)
