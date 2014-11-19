@@ -226,8 +226,8 @@ def get_contents(meta_path):
                jinja2.FileSystemLoader(path)
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
-    env.globals.update(context_processor())
     env.globals.update(ns_cfg())
+    env.globals.update(context_processor())
 
     template = env.get_or_select_template(filename)
 

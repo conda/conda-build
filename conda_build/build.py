@@ -23,8 +23,9 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder
+from conda.install import prefix_placeholder, linked
 from conda.utils import url_path
+from conda.resolve import Resolve, MatchSpec
 
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
@@ -225,6 +226,8 @@ def create_env(prefix, specs, clear_cache=True, verbose=True):
             fetch_index.cache = {}
         index = get_index([url_path(config.croot)])
 
+        warn_on_old_conda_build(index)
+
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
@@ -232,6 +235,30 @@ def create_env(prefix, specs, clear_cache=True, verbose=True):
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
+
+def warn_on_old_conda_build(index):
+    root_linked = linked(cc.root_dir)
+    vers_inst = [dist.rsplit('-', 2)[1] for dist in root_linked
+        if dist.rsplit('-', 2)[0] == 'conda-build']
+    if not len(vers_inst) == 1:
+        print("WARNING: Could not detect installed version of conda-build", file=sys.stderr)
+        return
+    r = Resolve(index)
+    pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
+    if not pkgs:
+        print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)
+        return
+    if pkgs[-1].version != vers_inst[0]:
+        print("""
+WARNING: conda-build appears to be out of date. You have version %s but the
+latest version is %s. Run
+
+conda update -n root conda-build
+
+to get the latest version.
+""" % (vers_inst[0], pkgs[-1].version), file=sys.stderr)
+
+
 
 def rm_pkgs_cache(dist):
     '''

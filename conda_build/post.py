@@ -6,7 +6,8 @@ import os
 import sys
 import stat
 from glob import glob
-from os.path import basename, join, splitext, isdir, isfile, exists
+from os.path import (basename, join, splitext, isdir, isfile, exists, islink, realpath, relpath)
+from os import readlink
 import io
 from subprocess import call, Popen, PIPE
 
@@ -205,7 +206,7 @@ def mk_relative(m, f):
 def fix_permissions(files):
     for root, dirs, unused_files in os.walk(config.build_prefix):
         for dn in dirs:
-            os.chmod(join(root, dn), int('755', 8))
+            lchmod(join(root, dn), int('755', 8))
 
     for f in files:
         path = join(config.build_prefix, f)
@@ -224,11 +225,42 @@ def post_build(m, files):
     if not binary_relocation:
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
+
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, osx_is_app=osx_is_app)
         if binary_relocation:
             mk_relative(m, f)
+
+    check_symlinks(files)
+
+def check_symlinks(files):
+    msgs = []
+    for f in files:
+        path = join(config.build_prefix, f)
+        if islink(path):
+            link_path = readlink(path)
+            real_link_path = realpath(path)
+            if real_link_path.startswith(config.build_prefix):
+                # If the path is in the build prefix, this is fine, but
+                # the link needs to be relative
+                if not link_path.startswith('.'):
+                    # Don't change the link structure if it is already a
+                    # relative link. It's possible that ..'s later in the path
+                    # can result in a broken link still, but we'll assume that
+                    # such crazy things don't happen.
+                    os.unlink(path)
+                    os.symlink(relpath(real_link_path, config.build_prefix), path)
+            else:
+                # Symlinks to absolute paths on the system (like /usr) are fine.
+                if real_link_path.startswith(config.croot):
+                    msgs.append("%s is a symlink to a path that may not "
+                        "exist after the build is completed (%s)" % (f, link_path))
+
+    if msgs:
+        for msg in msgs:
+            print("Error: %s" % msg, file=sys.stderr)
+        sys.exit(1)
 
 def get_build_metadata(m):
     if exists(join(source.WORK_DIR, '__conda_version__.txt')):
