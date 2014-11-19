@@ -363,7 +363,9 @@ def build(m, get_src=True, verbose=True, post=None):
         files2 = prefix_files()
 
         post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        create_info_files(m, sorted(files2 - files1),
+                          include_recipe=bool(m.path))
+
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 

@@ -311,7 +311,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
+        name_ver_list = [('python', config.CONDA_PY),
+                         ('numpy', config.CONDA_NPY),
                          ('perl', config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
@@ -320,7 +321,7 @@ class MetaData(object):
                 raise RuntimeError("Invalid package specification: %r" % spec)
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if ms.strictness != 1:
+                    if ms.strictness != 1 or self.get_value('build/noarch'):
                         continue
                     str_ver = text_type(ver)
                     if '.' not in str_ver:
@@ -343,7 +344,11 @@ class MetaData(object):
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
-                    v = ms.spec.split()[1]
+                    try:
+                        v = ms.spec.split()[1]
+                    except IndexError:
+                        res.append(s)
+                        break
                     if ',' in v or '|' in v:
                         break
                     if name != 'perl':
