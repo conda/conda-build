@@ -151,8 +151,11 @@ def create_info_files(m, files, include_recipe=True):
         files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write(f + '\n')
+        if m.get_value('build/noarch') and 'py_' in m.dist():
+            fo.write('\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
 
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
