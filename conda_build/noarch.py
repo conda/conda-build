@@ -1,10 +1,14 @@
 import os
-import shutil
 from os.path import dirname, isdir, join
 
 from conda_build.config import config
 
 
+BASH_HEAD = '''\
+#!/bin/bash
+SP_DIR=$($PREFIX/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
+echo "SP_DIR='$SP_DIR'"
+'''
 
 def handle_file(f):
     path = join(config.build_prefix, f)
@@ -24,29 +28,28 @@ def handle_file(f):
         os.rename(path, dst)
         return g
 
-
 def transform(m, files):
-    global pre_link_sh
-
-    pre_link_sh = join(config.build_prefix, 'bin/.%s-pre-link.sh' % m.name())
-    print 75 * 'X'
-    with open(pre_link_sh, 'w') as fo:
-        fo.write('''\
-#!/bin/bash
-SP_DIR=$($PREFIX/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
-echo "SP_DIR='$SP_DIR'"
-''')
-        for f in files:
-            print f
-            g = handle_file(f)
-            if g is None:
-                continue
-            if g.startswith('site-packages/'):
-                g = g[14:]
-                fo.write('''
+    f1 = open(join(config.build_prefix, 'bin/.%s-pre-link.sh' % m.name()), 'w')
+    f1.write(BASH_HEAD)
+    f2 = open(join(config.build_prefix,
+                   'bin/.%s-pre-unlink.sh' % m.name()), 'w')
+    f2.write(BASH_HEAD)
+    for f in files:
+        print f
+        g = handle_file(f)
+        if g is None:
+            continue
+        if g.startswith('site-packages/'):
+            g = g[14:]
+            f1.write('''
 mkdir -p $SP_DIR/%s
 rm -f $SP_DIR/%s
 ln $SOURCE_DIR/site-packages/%s $SP_DIR/%s
 ''' % (dirname(g), g, g, g))
-
-    print pre_link_sh
+            f2.write('''
+rm -f $SP_DIR/%s
+rm -f $SP_DIR/%sc
+rmdir $SP_DIR/%s
+''' % (g, g, dirname(g)))
+    f1.close()
+    f2.close()
