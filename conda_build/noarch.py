@@ -7,7 +7,7 @@ from conda_build.config import config
 BASH_HEAD = '''\
 #!/bin/bash
 SP_DIR=$($PREFIX/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
-echo "SP_DIR='$SP_DIR'"
+#echo "SP_DIR='$SP_DIR'"
 '''
 
 def handle_file(f):
@@ -29,7 +29,11 @@ def handle_file(f):
         return g
 
 def transform(m, files):
-    f1 = open(join(config.build_prefix, 'bin/.%s-pre-link.sh' % m.name()), 'w')
+    f1 = open(join(config.build_prefix,
+                   'bin/.%s-pre-link.sh' % m.name()), 'w')
+    f1.write('''
+cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
+''' % m.name())
     f1.write(BASH_HEAD)
     f2 = open(join(config.build_prefix,
                    'bin/.%s-pre-unlink.sh' % m.name()), 'w')
@@ -46,10 +50,8 @@ mkdir -p $SP_DIR/%s
 rm -f $SP_DIR/%s
 ln $SOURCE_DIR/site-packages/%s $SP_DIR/%s
 ''' % (dirname(g), g, g, g))
-            f2.write('''
-rm -f $SP_DIR/%s
-rm -f $SP_DIR/%sc
-rmdir $SP_DIR/%s
-''' % (g, g, dirname(g)))
+            f2.write('''\
+rm -f $SP_DIR/%s*
+''' % g)
     f1.close()
     f2.close()
