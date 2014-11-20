@@ -38,20 +38,24 @@ cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
     f2 = open(join(config.build_prefix,
                    'bin/.%s-pre-unlink.sh' % m.name()), 'w')
     f2.write(BASH_HEAD)
+    dirs = set()
     for f in files:
-        print f
         g = handle_file(f)
         if g is None:
             continue
         if g.startswith('site-packages/'):
             g = g[14:]
+            dirs.add(dirname(g))
             f1.write('''
 mkdir -p $SP_DIR/%s
 rm -f $SP_DIR/%s
 ln $SOURCE_DIR/site-packages/%s $SP_DIR/%s
 ''' % (dirname(g), g, g, g))
-            f2.write('''\
-rm -f $SP_DIR/%s*
-''' % g)
+            f2.write('rm -f $SP_DIR/%s*\n' % g)
+
     f1.close()
+
+    for d in sorted(dirs, key=len, reverse=True):
+        f2.write('rmdir $SP_DIR/%s\n' % d)
+
     f2.close()
