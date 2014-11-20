@@ -70,8 +70,10 @@ def execute(args, parser):
             for pkg in args.packages:
                 if pkg.count('-') < 2:
                     parser.error("""Package must be a package file name, like pkg-1.0-0.tar.bz2, not %s""" % pkg)
-                if '/' in pkg and not abspath(expanduser(pkg)).startswith(config.bldpkgs_dir):
+                if '/' in pkg:
+                    if not abspath(expanduser(pkg)).startswith(config.bldpkgs_dir):
                         parser.error("Package must be in the build packages directory (%s)" % config.bldpkgs_dir)
+                    pkg = pkg.rsplit('/', 1)[1]
 
                 linkages = get_package_linkages(pkg)
                 depmap = defaultdict(list)
