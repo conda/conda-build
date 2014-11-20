@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import argparse
-from os.path import abspath, expanduser
+from os.path import realpath, expanduser, abspath
 from collections import defaultdict
 from operator import itemgetter
 
@@ -71,7 +71,7 @@ def execute(args, parser):
                 if pkg.count('-') < 2:
                     parser.error("""Package must be a package file name, like pkg-1.0-0.tar.bz2, not %s""" % pkg)
                 if '/' in pkg:
-                    if not abspath(expanduser(pkg)).startswith(config.bldpkgs_dir):
+                    if not realpath(expanduser(pkg)).startswith(config.bldpkgs_dir):
                         parser.error("Package must be in the build packages directory (%s)" % config.bldpkgs_dir)
                     pkg = pkg.rsplit('/', 1)[1]
 
