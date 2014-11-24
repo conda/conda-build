@@ -45,14 +45,16 @@ cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
                    'bin/.%s-pre-unlink.sh' % m.name()), 'w')
     f2.write(BASH_HEAD)
 
-    f3 = open(join(config.build_prefix,
-                   'Scripts', '.%s-pre-link.bat' % m.name()), 'w')
+    scripts_dir = join(config.build_prefix, 'Scripts')
+    if not isdir(scripts_dir):
+        os.mkdir(scripts_dir)
+
+    f3 = open(join(scripts_dir, '.%s-pre-link.bat' % m.name()), 'w')
     f3.write(BAT_HEAD)
     f3.write('''
 copy %%SOURCE_DIR%%/Scripts/.%s-pre-unlink.bat %%PREFIX%%/Scripts/
 ''' % m.name())
-    f4 = open(join(config.build_prefix,
-                   'Scripts', '.%s-pre-unlink.bat' % m.name()), 'w')
+    f4 = open(join(scripts_dir, '.%s-pre-unlink.bat' % m.name()), 'w')
     f4.write(BAT_HEAD)
 
     dirs = set()
