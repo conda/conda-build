@@ -13,7 +13,7 @@ SP_DIR=$($PREFIX/bin/python -c "from distutils.sysconfig import get_python_lib; 
 BAT_HEAD = '''\
 for /f %%i in ('%PREFIX%/python.exe -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"') do set SP_DIR=%%i
 if errorlevel 1 exit 1
-#echo "SP_DIR='$SP_DIR'"
+REM echo "SP_DIR='$SP_DIR'"
 '''
 
 def handle_file(f):
@@ -51,8 +51,8 @@ cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
 
     f3 = open(join(scripts_dir, '.%s-pre-link.bat' % m.name()), 'w')
     f3.write(BAT_HEAD)
-    f3.write('''
-copy %%SOURCE_DIR%%/Scripts/.%s-pre-unlink.bat %%PREFIX%%/Scripts/
+    f3.write(r'''
+copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
 ''' % m.name())
     f4 = open(join(scripts_dir, '.%s-pre-unlink.bat' % m.name()), 'w')
     f4.write(BAT_HEAD)
@@ -72,16 +72,17 @@ ln $SOURCE_DIR/site-packages/%s $SP_DIR/%s
 ''' % (dirname(g), g, g, g))
             f2.write('rm -f $SP_DIR/%s*\n' % g)
 
-            f3.write('''
-md %%SP_DIR%%/%s
-del %%SP_DIR%%/%s
-fsutil hardlink create %%SP_DIR%%/%s %%SOURCE_DIR%%/site-packages/%s
-''' % (dirname(g), g, g, g))
-            f4.write('del %%SP_DIR%%/%s*\n' % g)
+            gw = g.replace('/', '\\')
+            f3.write(r'''
+md %%SP_DIR%%\%s
+del %%SP_DIR%%\%s
+fsutil hardlink create %%SP_DIR%%\%s %%SOURCE_DIR%%\site-packages\%s
+''' % (dirname(g).replace('/', '\\'), gw, gw, gw))
+            f4.write('del %%SP_DIR%%\\%s*\n' % gw)
 
     for d in sorted(dirs, key=len, reverse=True):
         f2.write('rmdir $SP_DIR/%s\n' % d)
-        f4.write('rd /S /Q %%SP_DIR%%/%s\n' % d)
+        f4.write('rd /S /Q %%SP_DIR%%\\%s\n' % d.replace('/', '\\'))
 
     f1.close()
     f2.close()
