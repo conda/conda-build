@@ -11,6 +11,7 @@ SP_DIR=$($PREFIX/bin/python -c "from distutils.sysconfig import get_python_lib; 
 '''
 
 BAT_HEAD = '''\
+@echo off
 for /f %%i in ('%PREFIX%/python.exe -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"') do set SP_DIR=%%i
 if errorlevel 1 exit 1
 REM echo "SP_DIR='$SP_DIR'"
