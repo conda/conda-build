@@ -97,6 +97,17 @@ def have_prefix_files(files):
         with open(path, 'rb') as fi:
             data = fi.read()
         mode = 'binary' if b'\x00' in data else 'text'
+        if mode == 'text':
+            # Use the placeholder for maximal backwards
+            # compatibility.
+            data = data.replace(prefix_bytes, prefix_placeholder_bytes)
+
+            st = os.stat(path)
+            # Save as
+            with open(path, 'wb') as fo:
+                fo.write(data)
+            os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+
         if prefix_bytes in data:
             yield (prefix, mode, f)
         if (sys.platform == 'win32') and (alt_prefix_bytes in data):
