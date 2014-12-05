@@ -199,12 +199,13 @@ def get_pure_py_file_map(t, platform):
         raise RuntimeError("Found more than one Python dependency in package %s"
             % t.name)
     if len(pythons) == 0:
-        raise RuntimeError("Package %s does not appear to be a Python package"
-            % t.name)
-    pyver = pythons[0].group(1)
+        # not a Python package
+        mapping = []
+    else:
+        pyver = pythons[0].group(1)
 
-    mapping = [(re.compile(i[0].format(pyver=pyver)),
-        i[1].format(pyver=pyver)) for i in mapping]
+        mapping = [(re.compile(i[0].format(pyver=pyver)),
+            i[1].format(pyver=pyver)) for i in mapping]
 
     members = t.getmembers()
     file_map = {}
