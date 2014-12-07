@@ -31,9 +31,17 @@ def get_sp_dir():
 
 def get_git_build_info(src_dir):
     env = os.environ.copy()
-    env['GIT_DIR'] = join(src_dir, '.git')
-
     d = {}
+    git_dir = join(src_dir, '.git')
+    if os.path.isdir(git_dir):
+        env['GIT_DIR'] = git_dir
+    else:
+        d['GIT_DIR'] = ''
+        d['GIT_DESCRIBE_TAG'] = ''
+        d['GIT_DESCRIBE_NUMBER'] = ''
+        d['GIT_DESCRIBE_HASH'] = ''
+        return d
+
     # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
@@ -87,8 +95,7 @@ def get_dict(m=None, prefix=None):
     except NotImplementedError:
         d['CPU_COUNT'] = "1"
 
-    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-        d.update(**get_git_build_info(d['SRC_DIR']))
+    d.update(**get_git_build_info(d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
