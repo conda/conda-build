@@ -137,6 +137,8 @@ def execute(args, parser):
     from conda.lock import Locked
     from conda_build.config import config
 
+    if not args.repo:
+        parser.print_help()
     with Locked(config.croot):
         if args.repo == "pypi":
             pypi.main(args, parser)

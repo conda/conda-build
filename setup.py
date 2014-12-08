@@ -47,6 +47,7 @@ setup(
         'bin/conda-pipbuild',
         'bin/conda-metapackage',
         'bin/conda-develop',
+        'bin/conda-inspect',
         ],
     install_requires = ['conda'],
 
