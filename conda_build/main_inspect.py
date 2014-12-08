@@ -52,7 +52,7 @@ def main():
 
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
-    k = sorted(depmap.keys() - {'system', 'not found'})
+    k = sorted(set(depmap.keys()) - {'system', 'not found'})
     for dep in k + ['system', 'not found']:
         print("%s:" % dep)
         if show_files:
