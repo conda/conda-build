@@ -84,13 +84,13 @@ def execute(args, parser):
                 for binary in linkages:
                     for lib, path in linkages[binary]:
                         path = abspath(path) if path not in {'', 'not found'} else path
-                        if path.startswith(config.test_prefix):
+                        if path.startswith(prefix):
                             deps = list(which_package(path))
                             if len(deps) > 1:
                                 print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
                             for d in deps:
                                 depmap[d].append((lib,
-                                    path.split(config.test_prefix + '/',
+                                    path.split(prefix + '/',
                                         1)[-1], binary))
                         elif path == 'not found':
                             depmap['not found'].append((lib, path, binary))
