@@ -40,21 +40,15 @@ def ldd(path):
     return res
 
 @memoized
-def get_package_linkages(pkg):
-    rm_rf(config.test_prefix)
-    specs = ['%s %s %s' % tuple(pkg.rsplit('.tar.bz2', 1)[0].rsplit('-', 2))]
-
-    create_env(config.test_prefix, specs)
-
-    res = {}
-
-    with open(join(config.test_prefix, 'conda-meta', '-'.join(specs[0].split()) +
+def get_package_linkages(dist, prefix):
+    with open(join(prefix, 'conda-meta', dist +
         '.json')) as f:
         data = json.load(f)
 
+    res = {}
     files = data['files']
     for f in files:
-        path = join(config.test_prefix, f)
+        path = join(prefix, f)
         if post.is_obj(path):
             res[f] = ldd(path)
 

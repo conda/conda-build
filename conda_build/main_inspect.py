@@ -14,6 +14,8 @@ from operator import itemgetter
 
 from conda.misc import which_package
 from conda.lock import Locked
+from conda.cli.common import add_parser_prefix, get_prefix
+import conda.install as ci
 
 from conda_build.main_build import args_func
 from conda_build.config import config
@@ -42,6 +44,7 @@ def main():
         action="store_true",
         help="Show the files in the package that link to each library",
     )
+    add_parser_prefix(linkages)
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -67,15 +70,16 @@ def execute(args, parser):
         if args.subcommand == 'linkages':
             if not sys.platform.startswith('linux'):
                 sys.exit("Error: conda inspect linkages is only implemented in Linux")
-            for pkg in args.packages:
-                if pkg.count('-') < 2:
-                    parser.error("""Package must be a package file name, like pkg-1.0-0.tar.bz2, not %s""" % pkg)
-                if '/' in pkg:
-                    if not realpath(expanduser(pkg)).startswith(config.bldpkgs_dir):
-                        parser.error("Package must be in the build packages directory (%s)" % config.bldpkgs_dir)
-                    pkg = pkg.rsplit('/', 1)[1]
 
-                linkages = get_package_linkages(pkg)
+            prefix = get_prefix(args)
+            installed = ci.linked(prefix)
+            for pkg in args.packages:
+                for dist in installed:
+                    if pkg == dist.rsplit('-', 2)[0]:
+                        break
+                else:
+                    sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+                linkages = get_package_linkages(dist, prefix)
                 depmap = defaultdict(list)
                 for binary in linkages:
                     for lib, path in linkages[binary]:
