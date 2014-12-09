@@ -3,7 +3,12 @@
   * automatically convert absolute symlinks to paths in the build prefix to
     relative ones.
   * error if there are symlinks to the source directory.
-
+  * use the placeholder prefix in text files rather than the build prefix
+  * allow non-Python packages to be converted to other platforms with conda
+    convert
+  * new command conda inspect for inspecting packages. The only subcommand so
+    far is conda inspect linkages, which shows the dynamic linkages of the
+    shared object files on Linux.
 
 2014-11-18   1.9.1:
 -------------------
@@ -34,7 +39,7 @@
   * fix conda convert --show-imports
   * give better error message when encountering a corrupt tarfile in conda
     index
-  * print some more helpful information about what is going on at the
+  * print{ some more helpful information about what is going on at the
     beginning of a build
   * allow source/path in the meta.yaml to specify a path to the source (which
     can be relative to the recipe directory)
