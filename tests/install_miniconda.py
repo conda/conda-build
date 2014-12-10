@@ -3,7 +3,7 @@ import os
 import hashlib
 import subprocess
 
-tempdir = os.environ.get('TEMP', '/tmp')
+tempdir = os.path.expanduser("~")
 
 def download_file(url, md5):
     urlparts = requests.packages.urllib3.util.url.parse_url(url)
@@ -48,7 +48,7 @@ def hashsum_file(path, mode='md5'):
 def install_miniconda(path):
     from conda.install import rm_rf
 
-    prefix = os.path.join(tempdir, 'miniconda')
+    prefix = os.path.join(tempdir, 'conda-build-miniconda')
     print("Installing Miniconda %s to %s" % (path, prefix))
 
     rm_rf(prefix)
