@@ -98,12 +98,10 @@ def have_prefix_files(files):
             data = fi.read()
         mode = 'binary' if b'\x00' in data else 'text'
         if mode == 'text':
-            if sys.platform == 'win32' and alt_prefix_bytes in data:
-                yield (alt_prefix, mode, f)
-            else:
-                # Otherwise, use the placeholder for maximal backwards
-                # compatibility, and to minimize the occurrences of usernames
-                # appearing in built packages.
+            if not (sys.platform == 'win32' and alt_prefix_bytes in data):
+                # Use the placeholder for maximal backwards compatibility, and
+                # to minimize the occurrences of usernames appearing in built
+                # packages.
                 data = rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
 
         if prefix_bytes in data:
