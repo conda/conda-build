@@ -39,7 +39,10 @@ def hashsum_file(path, mode='md5'):
     return h.hexdigest()
 
 def install_miniconda(path):
+    from conda.utils import rm_rf
+
     prefix = os.path.join(tempdir, 'miniconda')
+    rm_rf(prefix)
     subprocess.call([path, '/S', '/D=%s' % prefix])
     subprocess.call([os.path.join(prefix, 'conda'), 'config', '--set', 'always_yes', 'yes'])
     subprocess.call([os.path.join(prefix, 'conda'), 'install', 'pytest', 'requests',
