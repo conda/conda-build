@@ -52,10 +52,14 @@ def install_miniconda(path):
     print("Installing Miniconda %s to %s" % (path, prefix))
 
     rm_rf(prefix)
-    subprocess.call([path, '/S', '/D=%s' % prefix])
-    subprocess.call([os.path.join(prefix, 'conda'), 'config', '--set', 'always_yes', 'yes'])
-    subprocess.call([os.path.join(prefix, 'conda'), 'install', 'pytest', 'requests',
-        'conda-build', '--quiet'])
+    for cmd in [
+    [path, '/S', '/D=%s' % prefix],
+    [os.path.join(prefix, 'conda'), 'config', '--set', 'always_yes', 'yes'],
+    [os.path.join(prefix, 'conda'), 'install', 'pytest', 'requests',
+    'conda-build', '--quiet'],
+        ]:
+        print(' '.join(cmd))
+        subprocess.call(cmd)
 
 def main():
     for url, md5 in [
