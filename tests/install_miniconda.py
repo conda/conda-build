@@ -28,8 +28,9 @@ def download_file(url, md5):
     if os.path.exists(file_path):
         return file_path
     with open(file_path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
+        for i, chunk in enumerate(r.iter_content(chunk_size=1024)):
             if chunk: # filter out keep-alive new chunks
+                print("writing %s/%s" % (i, r.raw.tell()//1024))
                 f.write(chunk)
                 f.flush()
     return file_path
