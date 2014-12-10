@@ -28,7 +28,7 @@ def download_file(url, md5):
     if os.path.exists(file_path):
         return file_path
 
-    size = r.headers.get('Content-Length')
+    size = int(r.headers.get('Content-Length'))
     with open(file_path, 'wb') as f:
         for i, chunk in enumerate(r.iter_content(chunk_size=2**20)):
             if chunk: # filter out keep-alive new chunks
