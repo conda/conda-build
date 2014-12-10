@@ -7,8 +7,7 @@ tempdir = os.environ.get('TEMP', '/tmp')
 
 def download_file(url, md5):
     urlparts = requests.packages.urllib3.util.url.parse_url(url)
-    # local_filename = urlparts.path.split('/')[-1]
-    local_filename = "Miniconda.exe"
+    local_filename = urlparts.path.split('/')[-1]
 
     r = requests.get(url, stream=True)
     r.raise_for_status()
