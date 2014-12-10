@@ -52,6 +52,7 @@ def install_miniconda(path):
     print("Installing Miniconda %s to %s" % (path, prefix))
 
     rm_rf(prefix)
+    os.makedirs(prefix)
     for cmd in [
     [path, '/S', '/D=%s' % prefix],
     [os.path.join(prefix, 'Scripts', 'conda.exe'), 'config', '--set', 'always_yes', 'yes'],
