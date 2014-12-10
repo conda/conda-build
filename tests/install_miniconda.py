@@ -47,7 +47,7 @@ def hashsum_file(path, mode='md5'):
     return h.hexdigest()
 
 def install_miniconda(path):
-    from conda.utils import rm_rf
+    from conda.install import rm_rf
 
     prefix = os.path.join(tempdir, 'miniconda')
     print("Installing Miniconda %s to %s" % (path, prefix))
