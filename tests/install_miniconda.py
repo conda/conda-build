@@ -14,6 +14,11 @@ def download_file(url, md5):
 
     dir_path = os.path.join(tempdir, 'download_cache')
     file_path = os.path.join(dir_path, local_filename)
+
+    print("Downloading %s to %s" % (local_filename, file_path))
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+
     if os.path.exists(file_path):
         if hashsum_file(file_path) == md5:
             print("File %s already exists at %s" % (local_filename,
@@ -21,12 +26,6 @@ def download_file(url, md5):
             return file_path
         else:
             print("MD5 mismatch. Downloading again.")
-
-    print("Downloading %s to %s" % (local_filename, file_path))
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    if os.path.exists(file_path):
-        return file_path
 
     size = int(r.headers.get('Content-Length'))
     with open(file_path, 'wb') as f:
