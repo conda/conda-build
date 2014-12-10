@@ -10,12 +10,13 @@ def download_file(url):
     # local_filename = urlparts.path.split('/')[-1]
     local_filename = "Miniconda.exe"
 
-    print("Downloading %s" % local_filename)
     r = requests.get(url, stream=True)
     r.raise_for_status()
 
     dir_path = os.path.join(tempdir, 'download_cache')
     file_path = os.path.join(dir_path, local_filename)
+    print("Downloading %s to %s" % (local_filename, file_path))
+
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     if os.path.exists(file_path):
