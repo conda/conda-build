@@ -59,7 +59,8 @@ def install_miniconda(path):
     'conda-build', '--quiet'],
         ]:
         print(' '.join(cmd))
-        subprocess.call(cmd)
+        subprocess.check_call(cmd)
+
 
 def main():
     for url, md5 in [
