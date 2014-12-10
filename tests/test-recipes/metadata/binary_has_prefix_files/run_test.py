@@ -3,7 +3,7 @@ import os
 prefix = os.environ['PREFIX']
 fn = os.path.join(prefix, 'binary-has-prefix')
 
-with open(fn, 'b') as f:
+with open(fn, 'rb') as f:
     data = f.read()
 
 print(data)
