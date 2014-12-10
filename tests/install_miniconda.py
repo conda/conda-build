@@ -27,10 +27,12 @@ def download_file(url, md5):
         os.makedirs(dir_path)
     if os.path.exists(file_path):
         return file_path
+
+    size = r.headers.get('Content-Length')
     with open(file_path, 'wb') as f:
-        for i, chunk in enumerate(r.iter_content(chunk_size=1024)):
+        for i, chunk in enumerate(r.iter_content(chunk_size=2**20)):
             if chunk: # filter out keep-alive new chunks
-                print("writing %s/%s" % (i, r.raw.tell()//1024))
+                print("writing %s/%s" % (r.raw.tell(), size//2**20))
                 f.write(chunk)
                 f.flush()
     return file_path
