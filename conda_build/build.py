@@ -99,8 +99,7 @@ def have_prefix_files(files):
         mode = 'binary' if b'\x00' in data else 'text'
         if mode == 'text':
             if sys.platform == 'win32' and alt_prefix_bytes in data:
-                # Make sure the prefix is uniform
-                data = rewrite_file_with_new_prefix(path, data, prefix_bytes, alt_prefix_bytes)
+                yield (alt_prefix, mode, f)
             else:
                 # Otherwise, use the placeholder for maximal backwards
                 # compatibility, and to minimize the occurrences of usernames
