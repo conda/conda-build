@@ -53,7 +53,7 @@ def install_miniconda(path):
 
     rm_rf(prefix)
     for cmd in [
-    [path, '/S', '/D=%s' % prefix],
+    [path, '/D=%s' % prefix],
     [os.path.join(prefix, 'Scripts', 'conda.exe'), 'config', '--set', 'always_yes', 'yes'],
     [os.path.join(prefix, 'Scripts', 'conda.exe'), 'install', 'pytest', 'requests',
     'conda-build', '--quiet'],
