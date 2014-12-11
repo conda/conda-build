@@ -116,6 +116,7 @@ def install_miniconda(path):
         [conda, 'config', '--set', 'always_yes', 'yes'],
         [conda, 'install', 'pytest', 'requests',
             'conda-build', '--quiet'],
+        [conda, 'list'],
     ]:
         print(' '.join(cmd))
         subprocess.check_call(cmd)
