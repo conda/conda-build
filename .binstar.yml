@@ -17,11 +17,11 @@ package: conda-build
 ## platform defaults to linux-64
 platform:
   - win-64
-#  - linux-32
+  - win-32
 ## The engine are the inital conda packages you want to run with
 engine:
   - python=2
-#  - python=3
+  - python=3
 ## The env param is an environment variable list
 # env:
 #  - MY_ENV=A CC=gcc
