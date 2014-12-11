@@ -108,11 +108,13 @@ def install_miniconda(path):
     rm_rf(prefix)
     os.makedirs(prefix)
     conda = os.path.join(prefix, 'Scripts', 'conda.exe')
+
+    import pprint
+    pprint.pprint(os.environ)
     for cmd in [
         [path, '/S', '/D=%s' % prefix],
         [conda, 'info', '-a'],
         [conda, 'config', '--get'],
-        ['env'],
         [conda, 'config', '--set', 'always_yes', 'yes'],
         [conda, 'install', 'pytest', 'requests',
             'conda-build', '--quiet'],
