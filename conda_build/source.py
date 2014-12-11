@@ -113,7 +113,7 @@ def git_source(meta, recipe_dir):
     if checkout:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', cache_repo_arg, WORK_DIR])
+    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR])
     if checkout:
         check_call([git, 'checkout', checkout], cwd=WORK_DIR)
 
