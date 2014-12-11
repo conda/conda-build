@@ -135,8 +135,8 @@ def main():
         ('http://repo.continuum.io/miniconda/Miniconda3-3.5.5-Windows-x86.exe',
             '2aae7daffbbd4a3f2b775c85a1500a47', 'win-32-3'),
         ]:
-        f = download_file(url, md5)
         if plat == '%s-%s' % (arch, pyver):
+            f = download_file(url, md5)
             install_miniconda(f)
 
 if __name__ == '__main__':
