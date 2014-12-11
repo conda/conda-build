@@ -39,6 +39,7 @@ engine:
 ## Put your main computations here!
 
 install:
+  - set CONDA_DEFAULT_ENV=
   - conda install requests
   - python tests\install_miniconda.py
 
