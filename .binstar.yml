@@ -40,8 +40,8 @@ engine:
 
 install:
   - set "CONDA_DEFAULT_ENV="
-  - '"%HOME%\conda-build-miniconda\Scripts\conda.exe" install requests'
-  - '"%HOME%"\conda-build-miniconda\python.exe" tests\install_miniconda.py'
+  - '"%HOMEDRIVE%%HOMEPATH%\conda-build-miniconda\Scripts\conda.exe" install requests'
+  - '"%HOMEDRIVE%%HOMEPATH%\conda-build-miniconda\python.exe" tests\install_miniconda.py'
 
 test:
   - echo "testing"
