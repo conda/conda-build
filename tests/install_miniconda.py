@@ -31,7 +31,7 @@ def download_file(url, md5):
     with open(file_path, 'wb') as f:
         for i, chunk in enumerate(r.iter_content(chunk_size=2**20)):
             if chunk: # filter out keep-alive new chunks
-                print("writing %s/%s" % (r.raw.tell(), size//2**20))
+                print("writing %s/%s MB" % (r.raw.tell()/2**20, size/2**20))
                 f.write(chunk)
                 f.flush()
     return file_path
