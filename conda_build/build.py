@@ -98,14 +98,11 @@ def have_prefix_files(files):
             data = fi.read()
         mode = 'binary' if b'\x00' in data else 'text'
         if mode == 'text':
-            if sys.platform == 'win32' and alt_prefix_bytes in data:
-                # Make sure the prefix is uniform
-                rewrite_file_with_new_prefix(path, data, prefix_bytes, alt_prefix_bytes)
-            else:
-                # Otherwise, use the placeholder for maximal backwards
-                # compatibility, and to minimize the occurrences of usernames
-                # appearing in built packages.
-                rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
+            if not (sys.platform == 'win32' and alt_prefix_bytes in data):
+                # Use the placeholder for maximal backwards compatibility, and
+                # to minimize the occurrences of usernames appearing in built
+                # packages.
+                data = rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
 
         if prefix_bytes in data:
             yield (prefix, mode, f)
@@ -125,7 +122,7 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     with open(path, 'wb') as fo:
         fo.write(data)
     os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
-
+    return data
 
 def create_info_files(m, files, include_recipe=True):
     '''
