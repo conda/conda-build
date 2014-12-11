@@ -1,4 +1,3 @@
-
 ## The package attribure specifies a binstar package namespace to build the package to.
 ## This can be specified here or on the command line
 package: conda-build
@@ -16,12 +15,12 @@ package: conda-build
 
 ## The platforms to build on.
 ## platform defaults to linux-64
-# platform:
-#  - linux-64
+platform:
+  - win-64
 #  - linux-32
 ## The engine are the inital conda packages you want to run with
 # engine:
-#  - python=2
+  - python=2
 #  - python=3
 ## The env param is an environment variable list
 # env:
@@ -29,8 +28,8 @@ package: conda-build
 #  - MY_ENV=B
 
 #===============================================================================
-# Scrip options
-# Thes options may be broken out into the before_script, script and after_script
+# Script options
+# These options may be broken out into the before_script, script and after_script
 # or not, that is up to you
 #===============================================================================
 
@@ -38,8 +37,17 @@ package: conda-build
 # before_script:
 #   - echo "before_script!"
 ## Put your main computations here!
-script:
-  - echo "This is my binstar build!"
+
+install:
+  - conda install requests
+  - python tests\install_miniconda.py
+
+test:
+  - echo "testing"
+
+# script:
+#   - echo "This is my binstar build!"
+
 ## This will run after the script regardless of the result of script
 ## BINSTAR_BUILD_RESULT=[succcess|failure]
 # after_script:
