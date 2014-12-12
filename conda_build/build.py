@@ -124,7 +124,7 @@ def have_prefix_files(files):
             yield (prefix, mode, f)
         if prefix_placeholder_bytes in data:
             # backwards compatibility for recipes manually adding files with
-            # /opt/anaconda1/anaconda2/anaconda3 prefix
+            # /opt/anaconda1anaconda2anaconda3 prefix
             yield (prefix_placeholder, mode, f)
         if new_prefix_placeholder_bytes in data:
             yield (new_prefix_placeholder, mode, f)
