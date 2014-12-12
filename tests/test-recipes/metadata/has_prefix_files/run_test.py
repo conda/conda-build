@@ -40,7 +40,8 @@ def main():
 
         print('forward-slash-prefix')
         print(data)
-        assert data.count(forward_slash_prefix) == 2
+        assert forward_slash_prefix in data
+        assert prefix in data
         assert 'C:\\installation_prefix_placeholder' not in data
         assert 'C:/installation_prefix_placeholder' not in data
 
