@@ -85,6 +85,7 @@ def have_prefix_files(files):
     alt_prefix = prefix.replace('\\', '/')
     alt_prefix_bytes = alt_prefix.encode('utf-8')
 
+    prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     alt_prefix_placeholder = '/installation_prefix_placeholder'
     alt_prefix_placeholder_bytes = alt_prefix_placeholder.encode('utf-8')
     if sys.platform == 'win32':
