@@ -85,7 +85,14 @@ def have_prefix_files(files):
     alt_prefix = prefix.replace('\\', '/')
     alt_prefix_bytes = alt_prefix.encode('utf-8')
 
+    # backward compatibility:
+    # support the old prefix_placeholder (/opt/anaconda1anaconda2anaconda3),
+    # replaced with install prefix containing native path separators
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
+    # more explicitly: replace build prefixes with a placeholder using
+    # path separators consistent with what was found in the build prefix.
+    # this allows conda to replace the placeholder with an install prefix
+    # containing the same path separator appearing in the original build prefix
     alt_prefix_placeholder = '/installation_prefix_placeholder'
     alt_prefix_placeholder_bytes = alt_prefix_placeholder.encode('utf-8')
     if sys.platform == 'win32':
@@ -113,9 +120,8 @@ def have_prefix_files(files):
                     path, data, prefix_bytes, prefix_placeholder_bytes
                     )
             if sys.platform == 'win32' and alt_prefix_bytes in data:
-                # use placeholder with unix-style path separators
-                # this tells conda to replace it with an installation prefix
-                # that uses unix-style path separators
+                # build prefix contains unix-style path separators
+                # use placeholder with unix-style path separators as well
                 data = rewrite_file_with_new_prefix(
                     path, data, alt_prefix_bytes, alt_prefix_placeholder_bytes
                     )
