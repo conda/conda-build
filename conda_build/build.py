@@ -23,7 +23,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked
+from conda.install import linked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec
 
@@ -81,9 +81,18 @@ def have_prefix_files(files):
     '''
     prefix = config.build_prefix
     prefix_bytes = prefix.encode('utf-8')
+    # some windows packages contain prefixes with unix-style path separators
     alt_prefix = prefix.replace('\\', '/')
     alt_prefix_bytes = alt_prefix.encode('utf-8')
+
+    alt_prefix_placeholder = '/installation_prefix_placeholder'
+    alt_prefix_placeholder_bytes = alt_prefix_placeholder.encode('utf-8')
+    if sys.platform == 'win32':
+        prefix_placeholder = 'C:\\installation_prefix_placeholder'
+    else:
+        prefix_placeholder = alt_prefix_placeholder
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
+
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
             continue
@@ -98,19 +107,24 @@ def have_prefix_files(files):
             data = fi.read()
         mode = 'binary' if b'\x00' in data else 'text'
         if mode == 'text':
-            if not (sys.platform == 'win32' and alt_prefix_bytes in data):
-                # Use the placeholder for maximal backwards compatibility, and
-                # to minimize the occurrences of usernames appearing in built
-                # packages.
-                data = rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
+            if prefix_bytes in data:
+                data = rewrite_file_with_new_prefix(
+                    path, data, prefix_bytes, prefix_placeholder_bytes
+                    )
+            if sys.platform == 'win32' and alt_prefix_bytes in data:
+                # use placeholder with unix-style path separators
+                # this tells conda to replace it with an installation prefix
+                # that uses unix-style path separators
+                data = rewrite_file_with_new_prefix(
+                    path, data, alt_prefix_bytes, alt_prefix_placeholder_bytes
+                    )
 
         if prefix_bytes in data:
             yield (prefix, mode, f)
-        if (sys.platform == 'win32') and (alt_prefix_bytes in data):
-            # some windows libraries use unix-style path separators
-            yield (alt_prefix, mode, f)
         if prefix_placeholder_bytes in data:
             yield (prefix_placeholder, mode, f)
+        if (sys.platform == 'win32') and (alt_prefix_placeholder_bytes in data):
+            yield (alt_prefix_placeholder, mode, f)
 
 
 def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
