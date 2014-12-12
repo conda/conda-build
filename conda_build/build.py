@@ -23,7 +23,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import linked
+from conda.install import prefix_placeholder, linked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec
 
@@ -88,10 +88,10 @@ def have_prefix_files(files):
     alt_prefix_placeholder = '/installation_prefix_placeholder'
     alt_prefix_placeholder_bytes = alt_prefix_placeholder.encode('utf-8')
     if sys.platform == 'win32':
-        prefix_placeholder = 'C:\\installation_prefix_placeholder'
+        new_prefix_placeholder = 'C:\\installation_prefix_placeholder'
     else:
-        prefix_placeholder = alt_prefix_placeholder
-    prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
+        new_prefix_placeholder = alt_prefix_placeholder
+    new_prefix_placeholder_bytes = new_prefix_placeholder.encode('utf-8')
 
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
@@ -122,7 +122,11 @@ def have_prefix_files(files):
         if prefix_bytes in data:
             yield (prefix, mode, f)
         if prefix_placeholder_bytes in data:
+            # backwards compatibility for recipes manually adding files with
+            # /opt/anaconda1/anaconda2/anaconda3 prefix
             yield (prefix_placeholder, mode, f)
+        if new_prefix_placeholder_bytes in data:
+            yield (new_prefix_placeholder, mode, f)
         if (sys.platform == 'win32') and (alt_prefix_placeholder_bytes in data):
             yield (alt_prefix_placeholder, mode, f)
 

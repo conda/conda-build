@@ -1,7 +1,8 @@
 import os
 
 prefix = os.environ['PREFIX']
-fn = '%s/forward-slash-prefix' % prefix
+fn = os.path.join('%s' % prefix, 'forward-slash-prefix')
 
 with open(fn, 'w') as f:
+    f.write(prefix)
     f.write(prefix.replace('\\', '/'))
