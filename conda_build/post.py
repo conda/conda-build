@@ -75,10 +75,9 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
     sp_dir = environ.get_sp_dir()
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
-            if preserve_egg_dir:
-                if not any(i in absfiles for i in walk_prefix(egg_path, False)):
-                    write_pth(egg_path)
-                    continue
+            if not any(i in absfiles for i in walk_prefix(egg_path, False)):
+                write_pth(egg_path)
+                continue
 
             print('found egg dir:', egg_path)
             try:
