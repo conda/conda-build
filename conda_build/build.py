@@ -375,11 +375,13 @@ def build(m, get_src=True, verbose=True, post=None):
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
-        post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
         assert not exists(config.info_dir)
         files2 = prefix_files()
 
+        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+
+        # The post processing may have deleted some files (like easy-install.pth)
+        files2 = prefix_files()
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
         files3 = prefix_files()
