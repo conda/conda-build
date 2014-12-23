@@ -31,7 +31,7 @@ def handle_file(f):
         dst = join(config.build_prefix, g)
         dst_dir = dirname(dst)
         if not isdir(dst_dir):
-            os.mkdir(dst_dir)
+            os.makedirs(dst_dir)
         os.rename(path, dst)
         return g
 
