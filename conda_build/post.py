@@ -6,7 +6,8 @@ import os
 import sys
 import stat
 from glob import glob
-from os.path import basename, join, splitext, isdir, isfile, exists
+from os.path import (basename, join, splitext, isdir, isfile, exists, islink, realpath, relpath)
+from os import readlink
 import io
 from subprocess import call, Popen, PIPE
 
@@ -16,6 +17,7 @@ from conda_build import environ
 from conda_build import utils
 from conda_build import source
 from conda.compat import lchmod
+from conda.misc import walk_prefix
 
 if sys.platform.startswith('linux'):
     from conda_build import elf
@@ -65,15 +67,16 @@ def write_pth(egg_path):
         fo.write('./%s\n' % fn)
 
 
-def remove_easy_install_pth(preserve_egg_dir=False):
+def remove_easy_install_pth(files, preserve_egg_dir=False):
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
+    absfiles = [join(config.build_prefix, f) for f in files]
     sp_dir = environ.get_sp_dir()
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
-            if preserve_egg_dir:
+            if preserve_egg_dir or not any(i in absfiles for i in walk_prefix(egg_path, False)):
                 write_pth(egg_path)
                 continue
 
@@ -98,6 +101,8 @@ def remove_easy_install_pth(preserve_egg_dir=False):
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
 
         elif isfile(egg_path):
+            if not egg_path in absfiles:
+                continue
             print('found egg:', egg_path)
             write_pth(egg_path)
 
@@ -132,8 +137,8 @@ def compile_missing_pyc():
                            '-q', '-x', 'port_v3', sp_dir])
 
 
-def post_process(preserve_egg_dir=False):
-    remove_easy_install_pth(preserve_egg_dir=preserve_egg_dir)
+def post_process(files, preserve_egg_dir=False):
+    remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
     if not config.PY3K:
         compile_missing_pyc()
@@ -179,6 +184,13 @@ def mk_relative_osx(path):
         # made relocatable.
         assert_relative_osx(path)
 
+def mk_relative_linux(f, rpaths=('lib',)):
+    path = join(config.build_prefix, f)
+    rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
+    patchelf = external.find_executable('patchelf')
+    print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
+    call([patchelf, '--set-rpath', rpath, path])
+
 def assert_relative_osx(path):
     for name in macho.otool(path):
         assert not name.startswith(config.build_prefix), path
@@ -190,12 +202,7 @@ def mk_relative(m, f):
         return
 
     if sys.platform.startswith('linux'):
-        rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in
-                         m.get_value('build/rpaths', ['lib']))
-        patchelf = external.find_executable('patchelf')
-        print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-        call([patchelf, '--set-rpath', rpath, path])
-
+        mk_relative_linux(f, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
         mk_relative_osx(path)
 
@@ -203,7 +210,7 @@ def mk_relative(m, f):
 def fix_permissions(files):
     for root, dirs, unused_files in os.walk(config.build_prefix):
         for dn in dirs:
-            os.chmod(join(root, dn), int('755', 8))
+            lchmod(join(root, dn), int('755', 8))
 
     for f in files:
         path = join(config.build_prefix, f)
@@ -222,11 +229,43 @@ def post_build(m, files):
     if not binary_relocation:
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
+
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, osx_is_app=osx_is_app)
         if binary_relocation:
             mk_relative(m, f)
+
+    check_symlinks(files)
+
+def check_symlinks(files):
+    msgs = []
+    for f in files:
+        path = join(config.build_prefix, f)
+        if islink(path):
+            link_path = readlink(path)
+            real_link_path = realpath(path)
+            if real_link_path.startswith(config.build_prefix):
+                # If the path is in the build prefix, this is fine, but
+                # the link needs to be relative
+                if not link_path.startswith('.'):
+                    # Don't change the link structure if it is already a
+                    # relative link. It's possible that ..'s later in the path
+                    # can result in a broken link still, but we'll assume that
+                    # such crazy things don't happen.
+                    print("Making absolute symlink %s -> %s relative" % (f, link_path))
+                    os.unlink(path)
+                    os.symlink(relpath(real_link_path, path), path)
+            else:
+                # Symlinks to absolute paths on the system (like /usr) are fine.
+                if real_link_path.startswith(config.croot):
+                    msgs.append("%s is a symlink to a path that may not "
+                        "exist after the build is completed (%s)" % (f, link_path))
+
+    if msgs:
+        for msg in msgs:
+            print("Error: %s" % msg, file=sys.stderr)
+        sys.exit(1)
 
 def get_build_metadata(m):
     if exists(join(source.WORK_DIR, '__conda_version__.txt')):

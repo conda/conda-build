@@ -85,7 +85,7 @@ def have_prefix_files(files):
     alt_prefix_bytes = alt_prefix.encode('utf-8')
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     for f in files:
-        if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
+        if f.endswith(('.pyc', '.pyo', '.a')):
             continue
         path = join(prefix, f)
         if isdir(path):
@@ -97,6 +97,13 @@ def have_prefix_files(files):
         with open(path, 'rb') as fi:
             data = fi.read()
         mode = 'binary' if b'\x00' in data else 'text'
+        if mode == 'text':
+            if not (sys.platform == 'win32' and alt_prefix_bytes in data):
+                # Use the placeholder for maximal backwards compatibility, and
+                # to minimize the occurrences of usernames appearing in built
+                # packages.
+                data = rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
+
         if prefix_bytes in data:
             yield (prefix, mode, f)
         if (sys.platform == 'win32') and (alt_prefix_bytes in data):
@@ -105,6 +112,17 @@ def have_prefix_files(files):
         if prefix_placeholder_bytes in data:
             yield (prefix_placeholder, mode, f)
 
+
+def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
+    # Old and new prefix should be bytes
+    data = data.replace(old_prefix, new_prefix)
+
+    st = os.stat(path)
+    # Save as
+    with open(path, 'wb') as fo:
+        fo.write(data)
+    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+    return data
 
 def create_info_files(m, files, include_recipe=True):
     '''
@@ -215,7 +233,7 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def create_env(pref, specs, clear_cache=True, verbose=True):
+def create_env(prefix, specs, clear_cache=True, verbose=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -232,12 +250,12 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
         warn_on_old_conda_build(index)
 
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        actions = plan.install_actions(pref, index, specs)
+        actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
-    if not isdir(pref):
-        os.makedirs(pref)
+    if not isdir(prefix):
+        os.makedirs(prefix)
 
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
@@ -360,11 +378,13 @@ def build(m, get_src=True, verbose=True, post=None):
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
-        post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
         assert not exists(config.info_dir)
         files2 = prefix_files()
 
+        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+
+        # The post processing may have deleted some files (like easy-install.pth)
+        files2 = prefix_files()
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
