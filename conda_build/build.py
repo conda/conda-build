@@ -85,7 +85,7 @@ def have_prefix_files(files):
     alt_prefix_bytes = alt_prefix.encode('utf-8')
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     for f in files:
-        if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
+        if f.endswith(('.pyc', '.pyo', '.a')):
             continue
         path = join(prefix, f)
         if isdir(path):
