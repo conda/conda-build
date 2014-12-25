@@ -7,7 +7,8 @@ import sys
 import stat
 from glob import glob
 from os.path import (basename, join, splitext, isdir, isfile, exists, islink, realpath, relpath)
-from os import readlink
+if sys.platform != 'win32':
+    from os import readlink
 import io
 from subprocess import call, Popen, PIPE
 
