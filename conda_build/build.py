@@ -347,17 +347,17 @@ def build(m, get_src=True, verbose=True, post=None):
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
+        script = m.get_value('build/script', None)
+        if isinstance(script, list):
+            script = '\n'.join(script)
         if sys.platform == 'win32':
             import conda_build.windows as windows
-            windows.build(m)
+            windows.build(m, script=script)
         else:
             env = environ.get_dict(m)
             build_file = join(m.path, 'build.sh')
 
-            script = m.get_value('build/script', None)
             if script:
-                if isinstance(script, list):
-                    script = '\n'.join(script)
                 with open(build_file, 'w') as bf:
                     bf.write(script)
                 os.chmod(build_file, 0o766)
