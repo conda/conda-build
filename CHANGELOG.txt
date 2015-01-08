@@ -9,6 +9,10 @@
   * new command conda inspect for inspecting packages. The only subcommand so
     far is conda inspect linkages, which shows the dynamic linkages of the
     shared object files on Linux.
+  * correctly handle Unix style has_prefixes on Windows
+  * run the tests in Binstar build
+  * only modify egg directories that are part of the package being built
+  * don't exclude .dylib files from prefix replacement
 
 2014-11-18   1.9.1:
 -------------------
