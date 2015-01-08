@@ -169,8 +169,11 @@ def create_info_files(m, files, include_recipe=True):
         files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write(f + '\n')
+        if m.get_value('build/noarch') and 'py_' in m.dist():
+            fo.write('\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
 
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
@@ -383,7 +386,12 @@ def build(m, get_src=True, verbose=True, post=None):
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files()
         post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        create_info_files(m, sorted(files2 - files1),
+                          include_recipe=bool(m.path))
+        if m.get_value('build/noarch'):
+            import conda_build.noarch as noarch
+            noarch.transform(m, sorted(files2 - files1))
+
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 
