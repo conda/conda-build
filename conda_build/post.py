@@ -6,7 +6,8 @@ import os
 import sys
 import stat
 from glob import glob
-from os.path import (basename, join, splitext, isdir, isfile, exists, islink, realpath, relpath)
+from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
+                     islink, realpath, relpath)
 from os import readlink
 import io
 from subprocess import call, Popen, PIPE
@@ -255,7 +256,7 @@ def check_symlinks(files):
                     # such crazy things don't happen.
                     print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
-                    os.symlink(relpath(real_link_path, path), path)
+                    os.symlink(relpath(real_link_path, dirname(path)), path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(config.croot):
