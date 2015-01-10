@@ -187,7 +187,8 @@ FIELDS = {
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch',
               'has_prefix_files', 'binary_has_prefix_files',
-              'detect_binary_files_with_prefix', 'rpaths'],
+              'detect_binary_files_with_prefix', 'rpaths',
+              'always_include_files', ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
@@ -414,6 +415,9 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
+
+    def always_include_files(self):
+        return self.get_value('build/always_include_files', [])
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])
