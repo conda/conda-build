@@ -8,7 +8,10 @@ import stat
 from glob import glob
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath)
-from os import readlink
+try:
+    from os import readlink
+except ImportError:
+    readlink = False
 import io
 from subprocess import call, Popen, PIPE
 
@@ -239,7 +242,10 @@ def post_build(m, files):
 
     check_symlinks(files)
 
+
 def check_symlinks(files):
+    if readlink is False:
+        return  # Not on Unix system
     msgs = []
     for f in files:
         path = join(config.build_prefix, f)
