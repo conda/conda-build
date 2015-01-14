@@ -201,7 +201,7 @@ def create_info_files(m, files, include_recipe=True):
                     fo.write(fmt_str % (pfix, mode, fn))
                     binary_has_prefix_files.remove(fn)
                 elif (auto_detect or (mode == 'text')):
-                    print("Detected hard-coded path in text file %s" % fn)
+                    print("Detected hard-coded path in %s file %s" % (mode, fn))
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
