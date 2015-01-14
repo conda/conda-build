@@ -100,6 +100,7 @@ def parse(data):
             raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
+                  'source/path_ignore',
                   'build/entry_points',
                   'build/features', 'build/track_features',
                   'requirements/build', 'requirements/run',
@@ -178,7 +179,8 @@ def _git_clean(source_meta):
 # conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
+    'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
+               'path', 'path_ignore',
                'git_url', 'git_tag', 'git_branch', 'git_rev',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
