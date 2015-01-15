@@ -1,5 +1,5 @@
-...
--------------------
+2015-01-15   1.10.0:
+--------------------
   * automatically convert absolute symlinks to paths in the build prefix to
     relative ones.
   * error if there are symlinks to the source directory.
@@ -17,6 +17,7 @@
   * allow specifying files to always include
   * fix for building dependencies in some cases
   * print the correct thing for binary files detected with a prefix
+
 
 2014-11-18   1.9.1:
 -------------------
