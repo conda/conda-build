@@ -13,6 +13,10 @@
   * run the tests in Binstar build
   * only modify egg directories that are part of the package being built
   * don't exclude .dylib files from prefix replacement
+  * ability to build noarch packages
+  * allow specifying files to always include
+  * fix for building dependencies in some cases
+  * print the correct thing for binary files detected with a prefix
 
 2014-11-18   1.9.1:
 -------------------
