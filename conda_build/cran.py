@@ -304,7 +304,7 @@ def main(args, parser):
         d['filename'] = "{cran_packagename}_{cran_version}.tar.bz2".format(**d)
         d['cranurl'] = args.cran_url + d['filename']
 
-        d['cran_metadata'] = '\n'.join(cran_package['orig_lines'])
+        d['cran_metadata'] = '\n'.join(['# %s' % l for l in cran_package['orig_lines']])
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
