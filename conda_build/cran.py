@@ -265,7 +265,7 @@ def main(args, parser):
 
     r = requests.get(args.cran_url + "PACKAGES")
     PACKAGES = r.text
-    package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\\n\\n')]
+    package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
 
     cran_metadata = {d['Package'].lower(): d for d in map(dict_from_cran_lines,
         package_list)}
