@@ -55,10 +55,10 @@ source:
 {suggests}
 requirements:
   build:
-    {depends}
+{depends}
 
   run:
-   {depends}
+{depends}
 
 test:
   commands:
