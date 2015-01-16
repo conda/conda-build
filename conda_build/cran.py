@@ -16,6 +16,7 @@ from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile
 from tempfile import mkdtemp
 from shutil import copy2
+from itertools import chain
 
 from conda.fetch import (download, handle_proxy_407)
 from conda.connection import CondaSession
@@ -34,58 +35,50 @@ from requests.packages.urllib3.util.url import parse_url
 CRAN_META = """\
 package:
   name: {packagename}
-  version: !!str {version}
+  version: !!str {conda_version}
 
 source:
   fn: {filename}
   url: {cranurl}
-  {usemd5}md5: {md5}
-#  patches:
+  # You can add a hash for the file here, like md5 or sha1
+  # md5: 49448ba4863157652311cc5ea4fea3ea
+  # sha1: 3bcfbee008276084cbb37a2b453963c61176a322
+  # patches:
    # List any patch files here
    # - fix.patch
 
-{build_comment}build:
-  {egg_comment}preserve_egg_dir: True
-  {entry_comment}entry_points:
-    # Put any entry points (scripts to be generated automatically) here. The
-    # syntax is module:function.  For example
-    #
-    # - {packagename} = {packagename}:main
-    #
-    # Would create an entry point called {packagename} that calls {packagename}.main()
-{entry_points}
-
+# build:
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
   # number: 1
 
+{suggests}
 requirements:
   build:
-    - python{build_depends}
+    {depends}
 
   run:
-    - python{run_depends}
+   {depends}
 
-{test_comment}test:
-  # Python imports
-  {import_comment}imports:{import_tests}
+test:
+  commands:
+    # You can put additional test commands to be run here.
+    - R -e "library('{cran_packagename}')"
 
-  {entry_comment}commands:
-    # You can put test commands to be run here.  Use this to test that the
-    # entry points work.
-{test_commands}
-
-  # You can also put a file called run_test.py in the recipe that will be run
-  # at test time.
+  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
+  # in the recipe that will be run at test time.
 
   # requires:
-    # Put any additional test requirements here.  For example
-    # - nose
+    # Put any additional test requirements here.
 
 about:
   {home_comment}home: {homeurl}
   license: {license}
   {summary_comment}summary: {summary}
+
+# The original CRAN metadata for this package was:
+
+{cran_metadata}
 
 # See
 # http://docs.continuum.io/conda/build.html for
@@ -125,134 +118,6 @@ if errorlevel 1 exit 1
 
 INDENT = '\n    - '
 
-def main(args, parser):
-    package_dicts = {}
-
-    while args.packages:
-        [output_dir] = args.output_dir
-
-        package = args.packages.pop()
-
-        d = package_dicts.setdefault(package,
-            {
-                'packagename': package.lower(),
-                'run_depends': '',
-                'build_depends': '',
-                'entry_points': '',
-                'build_comment': '# ',
-                'test_commands': '',
-                'usemd5': '',
-                'test_comment': '',
-                'entry_comment': '# ',
-                'egg_comment': '# ',
-                'summary_comment': '',
-                'home_comment': '',
-            })
-
-        if args.version:
-            raise NotImplementedError("Package versions from CRAN are not yet implemented")
-            [version] = args.version
-            d['version'] = version
-        else:
-            versions = client.package_releases(package)
-            if not versions:
-                # The xmlrpc interface is case sensitive, but the index itself
-                # is apparently not (the last time I checked,
-                # len(set(all_packages_lower)) == len(set(all_packages)))
-                if package.lower() in all_packages_lower:
-                    print("%s not found, trying %s" % (package, package.capitalize()))
-                    args.packages.append(all_packages[all_packages_lower.index(package.lower())])
-                    del package_dicts[package]
-                    continue
-                sys.exit("Error: Could not find any versions of package %s" %
-                         package)
-            if len(versions) > 1:
-                print("Warning, the following versions were found for %s" %
-                      package)
-                for ver in versions:
-                    print(ver)
-                print("Using %s" % versions[0])
-                print("Use --version to specify a different version.")
-            d['version'] = versions[0]
-
-        data = client.release_data(package, d['version']) if not is_url else None
-        urls = client.release_urls(package, d['version']) if not is_url else [package]
-        if not is_url and not args.all_urls:
-            # Try to find source urls
-            urls = [url for url in urls if url['python_version'] == 'source']
-        if not urls:
-            if 'download_url' in data:
-                urls = [defaultdict(str, {'url': data['download_url']})]
-                U = parse_url(urls[0]['url'])
-                urls[0]['filename'] = U.path.rsplit('/')[-1]
-                fragment = U.fragment or ''
-                if fragment.startswith('md5='):
-                    d['usemd5'] = ''
-                    d['md5'] = fragment[len('md5='):]
-                else:
-                    d['usemd5'] = '#'
-            else:
-                sys.exit("Error: No source urls found for %s" % package)
-        if len(urls) > 1 and not args.noprompt:
-            print("More than one source version is available for %s:" %
-                  package)
-            for i, url in enumerate(urls):
-                print("%d: %s (%s) %s" % (i, url['url'],
-                                          human_bytes(url['size']),
-                                          url['comment_text']))
-            n = int(input("Which version should I use? "))
-        else:
-            n = 0
-
-        if not is_url:
-            print("Using url %s (%s) for %s." % (urls[n]['url'],
-                human_bytes(urls[n]['size'] or 0), package))
-            d['cranurl'] = urls[n]['url']
-            d['md5'] = urls[n]['md5_digest']
-            d['filename'] = urls[n]['filename']
-        else:
-            print("Using url %s" % package)
-            d['cranurl'] = package
-            U = parse_url(package)
-            if U.fragment.startswith('md5='):
-                d['usemd5'] = ''
-                d['md5'] = U.fragment[len('md5='):]
-            else:
-                d['usemd5'] = '#'
-                d['md5'] = ''
-            # TODO: 'package' won't work with unpack()
-            d['filename'] = U.path.rsplit('/', 1)[-1] or 'package'
-
-        if is_url:
-            d['import_tests'] = 'PLACEHOLDER'
-        else:
-            d['import_tests'] = valid(package).lower()
-
-        get_package_metadata(args, package, d, data)
-
-        if d['import_tests'] == '':
-            d['import_comment'] = '# '
-        else:
-            d['import_comment'] = ''
-            d['import_tests'] = INDENT + d['import_tests']
-
-        if d['entry_comment'] == d['import_comment'] == '# ':
-            d['test_comment'] = '# '
-
-    for package in package_dicts:
-        d = package_dicts[package]
-        name = d['packagename']
-        makedirs(join(output_dir, name))
-        print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(CRAN_META.format(**d))
-        with open(join(output_dir, name, 'build.sh'), 'w') as f:
-            f.write(CRAN_BUILD_SH.format(**d))
-        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
-            f.write(CRAN_BLD_BAT.format(**d))
-
-    print("Done")
-
 CRAN_KEYS = [
     'Site',
     'Archs',
@@ -276,6 +141,53 @@ CRAN_KEYS = [
     'Author',
     'Maintainer',
 ]
+
+
+# The following base/recommended package names are derived from R's source
+# tree (R-3.0.2/share/make/vars.mk).  Hopefully they don't change too much
+# between versions.
+R_BASE_PACKAGE_NAMES = (
+    'base',
+    'tools',
+    'utils',
+    'grDevices',
+    'graphics',
+    'stats',
+    'datasets',
+    'methods',
+    'grid',
+    'splines',
+    'stats4',
+    'tcltk',
+    'compiler',
+    'parallel',
+)
+
+R_RECOMMENDED_PACKAGE_NAMES = (
+    'MASS',
+    'lattice',
+    'Matrix',
+    'nlme',
+    'survival',
+    'boot',
+    'cluster',
+    'codetools',
+    'foreign',
+    'KernSmooth',
+    'rpart',
+    'class',
+    'nnet',
+    'spatial',
+    'mgcv',
+)
+
+# Stolen then tweaked from debian.deb822.PkgRelation.__dep_RE.
+VERSION_DEPENDENCY_REGEX = re.compile(
+    r'^\s*(?P<name>[a-zA-Z0-9.+\-]{1,})'
+    r'(\s*\(\s*(?P<relop>[>=<]+)\s*'
+    r'(?P<version>[0-9a-zA-Z:\-+~.]+)\s*\))'
+    r'?(\s*\[(?P<archs>[\s!\w\-]+)\])?\s*$'
+)
 
 def dict_from_cran_lines(lines):
     d = {}
@@ -348,36 +260,108 @@ def get_package_metadata(args, package, d, data):
     [output_dir] = args.output_dir
 
 
-def valid(name):
-    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name)
-            and not keyword.iskeyword(name)):
-        return name
-    else:
-        return ''
+def main(args, parser):
+    package_dicts = {}
 
+    r = requests.get(args.cran_url + "PACKAGES")
+    PACKAGES = r.text
+    package_list = [remove_package_line_continuations(i.splitlines()) for i in text.split('\\n\\n')]
 
-def unpack(src_path, tempdir):
-    if src_path.endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
-        tar_xf(src_path, tempdir)
-    elif src_path.endswith('.zip'):
-        unzip(src_path, tempdir)
-    else:
-        raise Exception("not a valid source")
+    cran_metadata = {d['Package'].lower(): d for d in map(dict_from_cran_lines,
+        package_list)}
 
+    while args.packages:
+        [output_dir] = args.output_dir
 
-def get_dir(tempdir):
-    lst = [fn for fn in listdir(tempdir) if not fn.startswith('.') and
-           isdir(join(tempdir, fn))]
-    if len(lst) == 1:
-        dir_path = join(tempdir, lst[0])
-        if isdir(dir_path):
-            return dir_path
-    raise Exception("could not find unpacked source dir")
+        package = args.packages.pop()
 
+        if package.lower() not in cran_metadata:
+            sys.exit("Package %s not found" % package)
 
-def make_entry_tests(entry_list):
-    tests = []
-    for entry_point in entry_list:
-        entry = entry_point.partition('=')[0].strip()
-        tests.append(entry + " --help")
-    return tests
+        cran_package = cran_metadata[package.lower()]
+
+        d = package_dicts.setdefault(package,
+            {
+                'cran_packagename': package,
+                'packagename': 'r-' + package.lower(),
+                'depends': '',
+                # CRAN doesn't seem to have this metadata :(
+                'home_comment': '#',
+                'homeurl': '',
+                'summary_comment': '#',
+                'summary': '',
+            })
+
+        if args.version:
+            raise NotImplementedError("Package versions from CRAN are not yet implemented")
+            [version] = args.version
+            d['version'] = version
+
+        d['cran_version'] = cran_package['Version']
+        # Conda versions cannot have -. Conda (verlib) will treat _ as a .
+        d['conda_version'] = d['cran_version'].replace('-', '_')
+        d['filename'] = "{cran_packagename}_{cran_version}.tar.bz2".format(**d)
+        d['cranurl'] = args.url + d['filename']
+
+        d['cran_metadata'] = '\n'.join('# %s: %s' % (i, j) for i, j in cran_package.items())
+
+        # XXX: We should maybe normalize these
+        d['license'] = cran_package.get("License", "None")
+        if 'License_is_FOSS' in cran_package:
+            d['license'] += ' (FOSS)'
+        if cran_package.get('License_restricts_use', None) == 'yes':
+            d['license'] += ' (Restricts use)'
+
+        if "Suggests" in cran_package:
+            d['suggests'] = "# Suggests: %s" % cran_package['Suggests']
+        else:
+            d['suggests'] = ''
+
+        # Every package depends on at least R.
+        # I'm not sure what the difference between depends and imports is.
+        depends = [s.strip() for s in cran_package.get('Depends', '').split(',')]
+        imports = [s.strip() for s in cran_package.get('Imports', '').split(',')]
+        links = [s.strip() for s in cran_package.get("LinkingTo", '').split(',')]
+
+        deps = []
+        dep_dict = {}
+
+        for s in set(chain(depends, imports, links)):
+            match = VERSION_DEPENDENCY_REGEX.match(s)
+            if not match:
+                sys.exit("Could not parse version from dependency of %s: %s" %
+                    (package, s))
+            name = match.group('name')
+            archs = match.group('archs')
+            relop = match.group('relop')
+            version = match.group('version')
+
+            if archs:
+                sys.exit("Don't know how to handle archs from dependency of "
+                "package %s: %s" % (package, s))
+
+            dep_dict[name] = '{relop}{version}'.format(relop=relop, version=version)
+
+        for name in sorted(dep_dict):
+            if name == 'R':
+                # Put R first
+                deps.insert(0, '    - R {version}'.format(version=dep_dict[name]))
+            else:
+                deps.append('    - {name} {version}'.format(name=name,
+                    version=dep_dict[name]))
+
+        d['depends'] = '\n'.join(deps)
+
+    for package in package_dicts:
+        d = package_dicts[package]
+        name = d['packagename']
+        makedirs(join(output_dir, name))
+        print("Writing recipe for %s" % package.lower())
+        with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
+            f.write(CRAN_META.format(**d))
+        with open(join(output_dir, name, 'build.sh'), 'w') as f:
+            f.write(CRAN_BUILD_SH.format(**d))
+        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
+            f.write(CRAN_BLD_BAT.format(**d))
+
+    print("Done")
