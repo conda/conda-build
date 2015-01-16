@@ -264,6 +264,7 @@ def get_package_metadata(args, package, d, data):
 def main(args, parser):
     package_dicts = {}
 
+    print("Fetching metadata from %s" % args.cran_url)
     r = requests.get(args.cran_url + "PACKAGES")
     PACKAGES = r.text
     package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
