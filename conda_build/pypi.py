@@ -42,7 +42,7 @@ from requests.packages.urllib3.util.url import parse_url
 PYPI_META = """\
 package:
   name: {packagename}
-  version: !!str {version}
+  version: "{version}"
 
 source:
   fn: {filename}

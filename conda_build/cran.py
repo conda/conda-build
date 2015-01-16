@@ -35,7 +35,7 @@ from requests.packages.urllib3.util.url import parse_url
 CRAN_META = """\
 package:
   name: {packagename}
-  version: !!str {conda_version}
+  version: "{conda_version}"
 
 source:
   fn: {filename}

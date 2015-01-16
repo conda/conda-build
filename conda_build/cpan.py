@@ -24,7 +24,7 @@ from conda_build.config import config
 CPAN_META = """\
 package:
   name: {packagename}
-  version: !!str {version}
+  version: "{version}"
 
 source:
   {useurl}fn: {filename}
