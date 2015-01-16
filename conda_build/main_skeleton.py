@@ -125,6 +125,57 @@ def main():
         action='store_true',
         help='Create recipes for dependencies if they do not already exist.')
 
+
+    cran = repos.add_parser(
+        "cran",
+        help="Create recipes from packages on CRAN",
+    )
+    cran.add_argument(
+        "packages",
+        action="store",
+        nargs='+',
+        help="""CRAN packages to create recipe skeletons for.
+                You can also specify package[extra,...] features.""",
+    )
+    cran.add_argument(
+        "--output-dir",
+        action="store",
+        nargs=1,
+        help="Directory to write recipes to",
+        default=".",
+    )
+    cran.add_argument(
+        "--version",
+        action="store",
+        nargs=1,
+        help="Version to use. Applies to all packages",
+    )
+    cran.add_argument(
+        "--all-urls",
+        action="store_true",
+        help="""Look at all URLs, not just source URLs. Use this if it can't
+                find the right URL.""",
+    )
+    cran.add_argument(
+        "--cran-url",
+        action="store",
+        nargs=1,
+        default='http://cran.r-project.org/src/contrib/',
+        help="URL to use for CRAN",
+    )
+    cran.add_argument(
+        "--recursive",
+        action='store_true',
+        dest='recursive',
+        help='Create recipes for dependencies if they do not already exist.',
+    )
+    cran.add_argument(
+        "--no-recursive",
+        action='store_false',
+        dest='recursive',
+        help="Don't create recipes for dependencies if they do not already exist.",
+    )
+
     p.set_defaults(func=execute)
 
     args = p.parse_args()
