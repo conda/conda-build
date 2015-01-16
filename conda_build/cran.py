@@ -319,9 +319,12 @@ def main(args, parser):
 
         # Every package depends on at least R.
         # I'm not sure what the difference between depends and imports is.
-        depends = [s.strip() for s in cran_package.get('Depends', '').split(',')]
-        imports = [s.strip() for s in cran_package.get('Imports', '').split(',')]
-        links = [s.strip() for s in cran_package.get("LinkingTo", '').split(',')]
+        depends = [s.strip() for s in cran_package.get('Depends',
+            '').split(',') if s.strip()]
+        imports = [s.strip() for s in cran_package.get('Imports',
+            '').split(',') if s.strip()]
+        links = [s.strip() for s in cran_package.get("LinkingTo",
+            '').split(',') if s.strip()]
 
         deps = []
         dep_dict = {}
