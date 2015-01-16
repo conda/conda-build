@@ -72,9 +72,9 @@ test:
     # Put any additional test requirements here.
 
 about:
-  {home_comment}home: {homeurl}
+  {home_comment}home:{homeurl}
   license: {license}
-  {summary_comment}summary: {summary}
+  {summary_comment}summary:{summary}
 
 # The original CRAN metadata for this package was:
 
