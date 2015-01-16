@@ -185,6 +185,7 @@ def main():
 def execute(args, parser):
     import conda_build.pypi as pypi
     import conda_build.cpan as cpan
+    import conda_build.cran as cran
     from conda.lock import Locked
     from conda_build.config import config
 
@@ -195,7 +196,8 @@ def execute(args, parser):
             pypi.main(args, parser)
         elif args.repo == "cpan":
             cpan.main(args, parser)
-
+        elif args.repo == 'cran':
+            cran.main(args, parser)
 
 if __name__ == '__main__':
     main()
