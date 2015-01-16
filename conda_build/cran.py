@@ -198,6 +198,7 @@ def dict_from_cran_lines(lines):
         d[k] = v
         if k not in CRAN_KEYS:
             print("Warning: Unknown key %s" % k)
+    d['orig_lines'] = lines
     return d
 
 def remove_package_line_continuations(chunk):
@@ -303,7 +304,7 @@ def main(args, parser):
         d['filename'] = "{cran_packagename}_{cran_version}.tar.bz2".format(**d)
         d['cranurl'] = args.cran_url + d['filename']
 
-        d['cran_metadata'] = '\n'.join('# %s: %s' % (i, j) for i, j in cran_package.items())
+        d['cran_metadata'] = '\n'.join(cran_package['orig_lines'])
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
