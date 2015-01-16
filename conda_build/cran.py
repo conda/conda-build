@@ -336,8 +336,10 @@ def main(args, parser):
                     (package, s))
             name = match.group('name')
             archs = match.group('archs')
-            relop = match.group('relop')
-            version = match.group('version')
+            relop = match.group('relop') or ''
+            version = match.group('version') or ''
+            # If there is a relop there should be a version
+            assert not relop or version
 
             if archs:
                 sys.exit("Don't know how to handle archs from dependency of "
