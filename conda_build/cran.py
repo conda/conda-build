@@ -343,6 +343,8 @@ def main(args, parser):
             dep_dict[name] = '{relop}{version}'.format(relop=relop, version=version)
 
         for name in sorted(dep_dict):
+            if name in R_BASE_PACKAGE_NAMES:
+                continue
             if name == 'R':
                 # Put R first
                 deps.insert(0, '    - R {version}'.format(version=dep_dict[name]))
