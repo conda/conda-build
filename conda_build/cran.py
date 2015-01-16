@@ -347,9 +347,10 @@ def main(args, parser):
                 continue
             if name == 'R':
                 # Put R first
-                deps.insert(0, '    - R {version}'.format(version=dep_dict[name]))
+                deps.insert(0, '    - r {version}'.format(version=dep_dict[name]))
             else:
-                deps.append('    - {name} {version}'.format(name=name,
+                conda_name = 'r-' + name.lower()
+                deps.append('    - {name} {version}'.format(name=conda_name,
                     version=dep_dict[name]))
 
         d['depends'] = '\n'.join(deps)
