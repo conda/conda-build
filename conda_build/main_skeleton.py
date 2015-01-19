@@ -175,6 +175,12 @@ def main():
         dest='recursive',
         help="Don't create recipes for dependencies if they do not already exist.",
     )
+    cran.add_argument(
+        '--no-archive',
+        action='store_false',
+        dest='archive',
+        help="Don't include an Archive download url (default %(default)s)",
+    )
 
     p.set_defaults(func=execute)
 

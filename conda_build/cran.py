@@ -20,7 +20,7 @@ package:
 
 source:
   fn: {filename}
-  url: {cranurl}
+  url:{cranurl}
   # You can add a hash for the file here, like md5 or sha1
   # md5: 49448ba4863157652311cc5ea4fea3ea
   # sha1: 3bcfbee008276084cbb37a2b453963c61176a322
@@ -295,7 +295,11 @@ def main(args, parser):
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .
         d['conda_version'] = d['cran_version'].replace('-', '_')
         d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
-        d['cranurl'] = args.cran_url + d['filename']
+        if args.archive:
+            d['cranurl'] = (INDENT + args.cran_url + d['filename'] + INDENT +
+                args.cran_url + 'Archive/' + d['cran_packagename'] + '/' + d['filename'])
+        else:
+            d['cranurl'] = ' ' + args.cran_url + d['filename']
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
