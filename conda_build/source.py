@@ -8,6 +8,7 @@ from subprocess import check_call, Popen, PIPE
 
 from conda.fetch import download
 from conda.utils import hashsum_file
+from conda.cli.common import error_and_exit
 
 from conda_build import external
 from conda_build.config import config
@@ -45,7 +46,20 @@ def download_to_cache(meta):
         print('Found source in cache: %s' % fn)
     else:
         print('Downloading source to cache: %s' % fn)
-        download(meta['url'], path)
+        if not isinstance(meta['url'], list):
+            meta['url'] = [meta['url']]
+
+        for url in meta['url']:
+            try:
+                print("Downloading %s" % url)
+                download(url, path)
+            except RuntimeError as e:
+                print("Error: %s" % str(e).strip(), file=sys.stderr)
+            else:
+                print("Success")
+                break
+        else: # no break
+            sys.exit("Could now download %s" % fn)
 
     for tp in 'md5', 'sha1', 'sha256':
         if meta.get(tp) and hashsum_file(path, tp) != meta[tp]:
