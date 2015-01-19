@@ -261,6 +261,8 @@ def main(args, parser):
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
 
+        package = cran_metadata[package.lower()]['Package']
+
         cran_package = cran_metadata[package.lower()]
 
         d = package_dicts.setdefault(package,
