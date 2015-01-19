@@ -238,10 +238,6 @@ def remove_package_line_continuations(chunk):
 
     return chunk
 
-def get_package_metadata(args, package, d, data):
-    [output_dir] = args.output_dir
-
-
 def main(args, parser):
     package_dicts = {}
 
