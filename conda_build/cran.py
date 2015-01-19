@@ -50,7 +50,7 @@ test:
   commands:
     # You can put additional test commands to be run here.
     - $R -e "library('{cran_packagename}')" # [not win]
-    - "%R% -e \\"library('{cran_packagename}')\\"" # [win]
+    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\"" # [win]
 
   # You can also put a file called run_test.py, run_test.sh, or run_test.bat
   # in the recipe that will be run at test time.
@@ -97,7 +97,7 @@ $R CMD INSTALL --build .
 """
 
 CRAN_BLD_BAT = """\
-%R% CMD INSTALL --build .
+"%R%" CMD INSTALL --build .
 if errorlevel 1 exit 1
 
 @rem Add more build steps here, if they are necessary.
