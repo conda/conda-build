@@ -1,3 +1,7 @@
+...................
+-------------------
+  * allow url to be a list or urls, which are tried until one works
+
 2015-01-15   1.10.0:
 --------------------
   * automatically convert absolute symlinks to paths in the build prefix to
