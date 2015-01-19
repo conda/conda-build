@@ -248,10 +248,11 @@ def main(args, parser):
     session = requests.Session()
     try:
         import cachecontrol
+        import cachecontrol.caches
     except ImportError:
         print("Tip: install CacheControl to cache the CRAN metadata")
     else:
-        session = cachecontrol.CacheControl(session)
+        session = cachecontrol.CacheControl(session, cache=cachecontrol.caches.FileCache('.web_cache'))
 
     print("Fetching metadata from %s" % args.cran_url)
     r = session.get(args.cran_url + "PACKAGES")
