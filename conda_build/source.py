@@ -59,7 +59,7 @@ def download_to_cache(meta):
                 print("Success")
                 break
         else: # no break
-            sys.exit("Could now download %s" % fn)
+            raise RuntimeError("Could not download %s" % fn)
 
     for tp in 'md5', 'sha1', 'sha256':
         if meta.get(tp) and hashsum_file(path, tp) != meta[tp]:
