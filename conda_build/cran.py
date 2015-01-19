@@ -245,6 +245,8 @@ def get_package_metadata(args, package, d, data):
 def main(args, parser):
     package_dicts = {}
 
+    [output_dir] = args.output_dir
+
     session = requests.Session()
     try:
         import cachecontrol
@@ -252,7 +254,9 @@ def main(args, parser):
     except ImportError:
         print("Tip: install CacheControl to cache the CRAN metadata")
     else:
-        session = cachecontrol.CacheControl(session, cache=cachecontrol.caches.FileCache('.web_cache'))
+        session = cachecontrol.CacheControl(session,
+            cache=cachecontrol.caches.FileCache(join(output_dir,
+                '.web_cache')))
 
     print("Fetching metadata from %s" % args.cran_url)
     r = session.get(args.cran_url + "PACKAGES")
@@ -263,8 +267,6 @@ def main(args, parser):
         package_list)}
 
     while args.packages:
-        [output_dir] = args.output_dir
-
         package = args.packages.pop()
 
         if package.lower() not in cran_metadata:
