@@ -348,6 +348,7 @@ def main(args, parser):
             archs = match.group('archs')
             relop = match.group('relop') or ''
             version = match.group('version') or ''
+            version = version.replace('-', '_')
             # If there is a relop there should be a version
             assert not relop or version
 
