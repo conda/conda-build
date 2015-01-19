@@ -358,6 +358,9 @@ def main(args, parser):
 
             dep_dict[name] = '{relop}{version}'.format(relop=relop, version=version)
 
+        if 'R' not in dep_dict:
+            dep_dict['R'] = ''
+
         for name in sorted(dep_dict):
             if name in R_BASE_PACKAGE_NAMES:
                 continue
