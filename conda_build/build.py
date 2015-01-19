@@ -85,7 +85,7 @@ def have_prefix_files(files):
     alt_prefix_bytes = alt_prefix.encode('utf-8')
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     for f in files:
-        if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
+        if f.endswith(('.pyc', '.pyo', '.a')):
             continue
         path = join(prefix, f)
         if isdir(path):
@@ -169,8 +169,11 @@ def create_info_files(m, files, include_recipe=True):
         files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write(f + '\n')
+        if m.get_value('build/noarch') and 'py_' in m.dist():
+            fo.write('\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
 
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
@@ -198,7 +201,7 @@ def create_info_files(m, files, include_recipe=True):
                     fo.write(fmt_str % (pfix, mode, fn))
                     binary_has_prefix_files.remove(fn)
                 elif (auto_detect or (mode == 'text')):
-                    print("Detected hard-coded path in text file %s" % fn)
+                    print("Detected hard-coded path in %s file %s" % (mode, fn))
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
@@ -341,7 +344,7 @@ def build(m, get_src=True, verbose=True, post=None):
             print("no source")
 
         rm_rf(config.info_dir)
-        files1 = prefix_files()
+        files1 = prefix_files().difference(set(m.always_include_files()))
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
@@ -375,13 +378,20 @@ def build(m, get_src=True, verbose=True, post=None):
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
-        post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
         assert not exists(config.info_dir)
         files2 = prefix_files()
 
+        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+
+        # The post processing may have deleted some files (like easy-install.pth)
+        files2 = prefix_files()
         post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        create_info_files(m, sorted(files2 - files1),
+                          include_recipe=bool(m.path))
+        if m.get_value('build/noarch'):
+            import conda_build.noarch as noarch
+            noarch.transform(m, sorted(files2 - files1))
+
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 

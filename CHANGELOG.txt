@@ -1,5 +1,5 @@
-...
--------------------
+2015-01-15   1.10.0:
+--------------------
   * automatically convert absolute symlinks to paths in the build prefix to
     relative ones.
   * error if there are symlinks to the source directory.
@@ -9,6 +9,15 @@
   * new command conda inspect for inspecting packages. The only subcommand so
     far is conda inspect linkages, which shows the dynamic linkages of the
     shared object files on Linux.
+  * correctly handle Unix style has_prefixes on Windows
+  * run the tests in Binstar build
+  * only modify egg directories that are part of the package being built
+  * don't exclude .dylib files from prefix replacement
+  * ability to build noarch packages
+  * allow specifying files to always include
+  * fix for building dependencies in some cases
+  * print the correct thing for binary files detected with a prefix
+
 
 2014-11-18   1.9.1:
 -------------------
