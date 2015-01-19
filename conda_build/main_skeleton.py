@@ -161,7 +161,7 @@ def main():
         action="store",
         nargs=1,
         default='http://cran.r-project.org/src/contrib/',
-        help="URL to use for CRAN",
+        help="URL to use for CRAN (default: %(default)s)",
     )
     cran.add_argument(
         "--recursive",
