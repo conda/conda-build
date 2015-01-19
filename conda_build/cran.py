@@ -16,6 +16,8 @@ from itertools import chain
 CRAN_META = """\
 package:
   name: {packagename}
+  # Note that conda versions cannot contain -, so any -'s in the version have
+  # been replaced with _'s.
   version: "{conda_version}"
 
 source:
