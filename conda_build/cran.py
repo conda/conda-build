@@ -296,7 +296,7 @@ def main(args, parser):
         d['cran_version'] = cran_package['Version']
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .
         d['conda_version'] = d['cran_version'].replace('-', '_')
-        d['filename'] = "{cran_packagename}_{cran_version}.tar.bz2".format(**d)
+        d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
         d['cranurl'] = args.cran_url + d['filename']
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
