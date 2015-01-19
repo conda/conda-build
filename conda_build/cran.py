@@ -6,31 +6,12 @@ from __future__ import absolute_import, division, print_function
 
 import requests
 
-import keyword
-import os
 import re
-import subprocess
 import sys
-from collections import defaultdict
-from os import makedirs, listdir, getcwd, chdir
-from os.path import join, isdir, exists, isfile
-from tempfile import mkdtemp
-from shutil import copy2
+from os import makedirs
+from os.path import join
 from itertools import chain
 
-from conda.fetch import (download, handle_proxy_407)
-from conda.connection import CondaSession
-from conda.utils import human_bytes, hashsum_file
-from conda.install import rm_rf
-from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import get_proxy_servers
-from conda.cli.common import spec_from_line
-from conda_build.utils import tar_xf, unzip
-from conda_build.source import SRC_CACHE, apply_patch
-from conda_build.build import create_env
-from conda_build.config import config
-
-from requests.packages.urllib3.util.url import parse_url
 
 CRAN_META = """\
 package:
