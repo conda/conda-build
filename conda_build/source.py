@@ -254,8 +254,6 @@ def provide(recipe_dir, meta, patch=True):
                         result.append(fn)
             return result
 
-        print("ignorePatterns: {0}".format(ignorePatterns)) # TESTING
-
         print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
         copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR, ignore=ignore)
     else: # no source
