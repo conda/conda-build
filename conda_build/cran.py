@@ -35,11 +35,9 @@ source:
 
 {suggests}
 requirements:
-  build:
-{depends}
+  build:{depends}
 
-  run:
-{depends}
+  run:{depends}
 
 test:
   commands:
@@ -350,9 +348,10 @@ def main(args, parser):
             if name == 'R':
                 # Put R first
                 if dep_dict[name]:
-                    deps.insert(0, '    - r {version}'.format(version=dep_dict[name]))
+                    deps.insert(0, '{indent}r {version}'.format(version=dep_dict[name],
+                        indent=INDENT))
                 else:
-                    deps.insert(0, '    - r')
+                    deps.insert(0, '{indent}r'.format(indent=INDENT))
             else:
                 conda_name = 'r-' + name.lower()
 
@@ -362,15 +361,16 @@ def main(args, parser):
                 else:
                     end = ''
                 if dep_dict[name]:
-                    deps.append('    - {name} {version}{end}'.format(name=conda_name,
-                        version=dep_dict[name], end=end))
+                    deps.append('{indent}{name} {version}{end}'.format(name=conda_name,
+                        version=dep_dict[name], end=end, indent=INDENT))
                 else:
-                    deps.append('    - {name}{end}'.format(name=conda_name, end=end))
+                    deps.append('{indent}{name}{end}'.format(name=conda_name,
+                        indent=INDENT, end=end))
                 if args.recursive:
                     if not exists(join(output_dir, conda_name)):
                         args.packages.append(name)
 
-        d['depends'] = '\n'.join(deps)
+        d['depends'] = ''.join(deps)
 
     for package in package_dicts:
         d = package_dicts[package]
