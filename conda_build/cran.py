@@ -9,7 +9,7 @@ import requests
 import re
 import sys
 from os import makedirs
-from os.path import join
+from os.path import join, exists
 from itertools import chain
 
 
@@ -347,6 +347,9 @@ def main(args, parser):
                         version=dep_dict[name]))
                 else:
                     deps.append('    - {name}'.format(name=conda_name))
+                if args.recursive:
+                    if not exists(join(output_dir, conda_name)):
+                        args.packages.append(name)
 
         d['depends'] = '\n'.join(deps)
 
