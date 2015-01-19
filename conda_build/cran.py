@@ -355,11 +355,17 @@ def main(args, parser):
                     deps.insert(0, '    - r')
             else:
                 conda_name = 'r-' + name.lower()
-                if dep_dict[name]:
-                    deps.append('    - {name} {version}'.format(name=conda_name,
-                        version=dep_dict[name]))
+
+                # The r package on Windows includes the recommended packages
+                if name in R_RECOMMENDED_PACKAGE_NAMES:
+                    end = ' # [not win]'
                 else:
-                    deps.append('    - {name}'.format(name=conda_name))
+                    end = ''
+                if dep_dict[name]:
+                    deps.append('    - {name} {version}{end}'.format(name=conda_name,
+                        version=dep_dict[name], end=end))
+                else:
+                    deps.append('    - {name}{end}'.format(name=conda_name, end=end))
                 if args.recursive:
                     if not exists(join(output_dir, conda_name)):
                         args.packages.append(name)
