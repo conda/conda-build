@@ -1,8 +1,26 @@
-...
+...................
 -------------------
+  * allow url to be a list or urls, which are tried until one works
+
+2015-01-15   1.10.0:
+--------------------
   * automatically convert absolute symlinks to paths in the build prefix to
     relative ones.
   * error if there are symlinks to the source directory.
+  * use the placeholder prefix in text files rather than the build prefix
+  * allow non-Python packages to be converted to other platforms with conda
+    convert
+  * new command conda inspect for inspecting packages. The only subcommand so
+    far is conda inspect linkages, which shows the dynamic linkages of the
+    shared object files on Linux.
+  * correctly handle Unix style has_prefixes on Windows
+  * run the tests in Binstar build
+  * only modify egg directories that are part of the package being built
+  * don't exclude .dylib files from prefix replacement
+  * ability to build noarch packages
+  * allow specifying files to always include
+  * fix for building dependencies in some cases
+  * print the correct thing for binary files detected with a prefix
 
 
 2014-11-18   1.9.1:
@@ -34,7 +52,7 @@
   * fix conda convert --show-imports
   * give better error message when encountering a corrupt tarfile in conda
     index
-  * print some more helpful information about what is going on at the
+  * print{ some more helpful information about what is going on at the
     beginning of a build
   * allow source/path in the meta.yaml to specify a path to the source (which
     can be relative to the recipe directory)

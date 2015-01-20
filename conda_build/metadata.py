@@ -187,7 +187,8 @@ FIELDS = {
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch',
               'has_prefix_files', 'binary_has_prefix_files',
-              'detect_binary_files_with_prefix', 'rpaths'],
+              'detect_binary_files_with_prefix', 'rpaths',
+              'always_include_files', ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
@@ -311,7 +312,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
+        name_ver_list = [('python', config.CONDA_PY),
+                         ('numpy', config.CONDA_NPY),
                          ('perl', config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
@@ -320,7 +322,7 @@ class MetaData(object):
                 raise RuntimeError("Invalid package specification: %r" % spec)
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if ms.strictness != 1:
+                    if ms.strictness != 1 or self.get_value('build/noarch'):
                         continue
                     str_ver = text_type(ver)
                     if '.' not in str_ver:
@@ -343,7 +345,11 @@ class MetaData(object):
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
-                    v = ms.spec.split()[1]
+                    try:
+                        v = ms.spec.split()[1]
+                    except IndexError:
+                        res.append(s)
+                        break
                     if ',' in v or '|' in v:
                         break
                     if name != 'perl':
@@ -409,6 +415,9 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
+
+    def always_include_files(self):
+        return self.get_value('build/always_include_files', [])
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])

@@ -6,8 +6,12 @@ import os
 import sys
 import stat
 from glob import glob
-from os.path import (basename, join, splitext, isdir, isfile, exists, islink, realpath, relpath)
-from os import readlink
+from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
+                     islink, realpath, relpath)
+try:
+    from os import readlink
+except ImportError:
+    readlink = False
 import io
 from subprocess import call, Popen, PIPE
 
@@ -17,6 +21,7 @@ from conda_build import environ
 from conda_build import utils
 from conda_build import source
 from conda.compat import lchmod
+from conda.misc import walk_prefix
 
 if sys.platform.startswith('linux'):
     from conda_build import elf
@@ -66,15 +71,16 @@ def write_pth(egg_path):
         fo.write('./%s\n' % fn)
 
 
-def remove_easy_install_pth(preserve_egg_dir=False):
+def remove_easy_install_pth(files, preserve_egg_dir=False):
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
+    absfiles = [join(config.build_prefix, f) for f in files]
     sp_dir = environ.get_sp_dir()
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
-            if preserve_egg_dir:
+            if preserve_egg_dir or not any(i in absfiles for i in walk_prefix(egg_path, False)):
                 write_pth(egg_path)
                 continue
 
@@ -99,6 +105,8 @@ def remove_easy_install_pth(preserve_egg_dir=False):
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
 
         elif isfile(egg_path):
+            if not egg_path in absfiles:
+                continue
             print('found egg:', egg_path)
             write_pth(egg_path)
 
@@ -133,8 +141,8 @@ def compile_missing_pyc():
                            '-q', '-x', 'port_v3', sp_dir])
 
 
-def post_process(preserve_egg_dir=False):
-    remove_easy_install_pth(preserve_egg_dir=preserve_egg_dir)
+def post_process(files, preserve_egg_dir=False):
+    remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
     if not config.PY3K:
         compile_missing_pyc()
@@ -180,6 +188,13 @@ def mk_relative_osx(path):
         # made relocatable.
         assert_relative_osx(path)
 
+def mk_relative_linux(f, rpaths=('lib',)):
+    path = join(config.build_prefix, f)
+    rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
+    patchelf = external.find_executable('patchelf')
+    print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
+    call([patchelf, '--set-rpath', rpath, path])
+
 def assert_relative_osx(path):
     for name in macho.otool(path):
         assert not name.startswith(config.build_prefix), path
@@ -191,12 +206,7 @@ def mk_relative(m, f):
         return
 
     if sys.platform.startswith('linux'):
-        rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in
-                         m.get_value('build/rpaths', ['lib']))
-        patchelf = external.find_executable('patchelf')
-        print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-        call([patchelf, '--set-rpath', rpath, path])
-
+        mk_relative_linux(f, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
         mk_relative_osx(path)
 
@@ -232,7 +242,10 @@ def post_build(m, files):
 
     check_symlinks(files)
 
+
 def check_symlinks(files):
+    if readlink is False:
+        return  # Not on Unix system
     msgs = []
     for f in files:
         path = join(config.build_prefix, f)
@@ -249,7 +262,7 @@ def check_symlinks(files):
                     # such crazy things don't happen.
                     print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
-                    os.symlink(relpath(real_link_path, path), path)
+                    os.symlink(relpath(real_link_path, dirname(path)), path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(config.croot):

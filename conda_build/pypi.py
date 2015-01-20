@@ -559,7 +559,7 @@ def get_package_metadata(args, package, d, data):
         if pkginfo['homeurl'] is not None:
             d['homeurl'] = pkginfo['homeurl']
         else:
-            if data:
+            if data and 'homeurl' in data:
                 d['homeurl'] = data['homeurl']
             else:
                 d['homeurl'] = "The package home page"
