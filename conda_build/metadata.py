@@ -258,7 +258,7 @@ class MetaData(object):
             return
         self.meta = parse(get_contents(self.meta_path))
 
-        if isfile(self.requirements_path):
+        if isfile(self.requirements_path) and not self.meta['requirements']['run']:
             self.meta.setdefault('requirements', {})
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
