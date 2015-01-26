@@ -107,12 +107,15 @@ def get_dict(m=None, prefix=None):
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
 
+        d['R'] = join(prefix, 'Scripts', 'R.bat')
     else:                               # -------- Unix
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
         d['INCLUDE_PATH'] = join(prefix, 'include')
         d['LIBRARY_PATH'] = join(prefix, 'lib')
+
+        d['R'] = join(prefix, 'bin', 'R')
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
