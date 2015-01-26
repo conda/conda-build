@@ -22,12 +22,14 @@ def get_py_ver():
 def get_npy_ver():
     return '.'.join(str(config.CONDA_NPY))
 
-def get_stdlib_dir():
-    return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
+def get_stdlib_dir(prefix=None):
+    if prefix is None:
+        prefix = config.build_prefix
+    return join(prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % get_py_ver())
 
-def get_sp_dir():
-    return join(get_stdlib_dir(), 'site-packages')
+def get_sp_dir(prefix=None):
+    return join(get_stdlib_dir(prefix), 'site-packages')
 
 def get_git_build_info(src_dir):
     env = os.environ.copy()
@@ -87,6 +89,7 @@ def get_dict(m=None, prefix=None):
     d['PY_VER'] = get_py_ver()
     d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
+    d['DESTDIR'] = config.destdir
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
 
