@@ -189,6 +189,28 @@ def mk_relative_osx(path):
                     raise RuntimeError("install_name_tool failed with exit status %d"
                 % p.returncode)
 
+            # Add an rpath to every executable to increase the chances of it
+            # being found.
+            args = [
+                'install_name_tool',
+                '-add_rpath',
+                join('@loader_path', relpath(join(config.build_prefix, 'lib'),
+                    dirname(path)), ''),
+                path,
+                ]
+            print(' '.join(args))
+            p = Popen(args, stderr=PIPE)
+            stdout, stderr = p.communicate()
+            stderr = stderr.decode('utf-8')
+            if "Mach-O dynamic shared library stub file" in stderr:
+                print("Skipping Mach-O dynamic shared library stub file %s" % path)
+                return
+            else:
+                print(stderr, file=sys.stderr)
+                if p.returncode:
+                    raise RuntimeError("install_name_tool failed with exit status %d"
+                % p.returncode)
+
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
