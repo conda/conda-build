@@ -169,7 +169,13 @@ def mk_relative_osx(path):
     if macho.is_dylib(path):
         names = macho.otool(path)
         if names:
-            args = ['install_name_tool', '-id', basename(names[0]), path]
+            args = [
+                'install_name_tool',
+                '-id',
+                join('@rpath', relpath(dirname(path),
+                    join(config.build_prefix, 'lib')), basename(names[0])),
+                path,
+            ]
             print(' '.join(args))
             p = Popen(args, stderr=PIPE)
             stdout, stderr = p.communicate()
