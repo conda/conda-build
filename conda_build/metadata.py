@@ -395,6 +395,7 @@ class MetaData(object):
             license = self.get_value('about/license'),
             platform = cc.platform,
             arch = cc.arch_name,
+            subdir = cc.subdir,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):
@@ -403,6 +404,7 @@ class MetaData(object):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
         if self.get_value('build/noarch'):
             d['platform'] = d['arch'] = None
+            d['subdir'] = 'noarch'
         if self.is_app():
             d.update(self.app_meta())
         return d
