@@ -1,0 +1,31 @@
+package:
+  name: grin
+  version: 1.2.1
+
+source:
+  fn: grin-1.2.1.tar.gz
+  url: https://pypi.python.org/packages/source/g/grin/grin-1.2.1.tar.gz
+  md5: d894426dfbf70bc105388c2a51348199
+  patches:
+    - no_setuptools.patch
+
+build:
+  noarch: True
+
+requirements:
+  build:
+    - python
+  run:
+    - python
+    - argparse     [py == 26]
+
+test:
+  commands:
+    - grin -h
+    - grind -h
+  imports:
+    - grin
+
+about:
+  home: http://pypi.python.org/pypi/grin
+  license: BSD
