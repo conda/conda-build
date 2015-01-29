@@ -175,7 +175,7 @@ def mk_relative_osx(path):
             stdout, stderr = p.communicate()
             stderr = stderr.decode('utf-8')
             if "Mach-O dynamic shared library stub file" in stderr:
-                print("Skipping Mach-O dynamic shared library stub file %s" % path)
+                print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
                 return
             else:
                 print(stderr, file=sys.stderr)
