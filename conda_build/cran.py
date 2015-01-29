@@ -265,7 +265,7 @@ def main(args, parser):
                 '.web_cache')))
 
     print("Fetching metadata from %s" % args.cran_url)
-    r = session.get(args.cran_url + "PACKAGES")
+    r = session.get(args.cran_url + "src/contrib/PACKAGES")
     PACKAGES = r.text
     package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
 
@@ -308,10 +308,11 @@ def main(args, parser):
         d['conda_version'] = d['cran_version'].replace('-', '_')
         d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
         if args.archive:
-            d['cranurl'] = (INDENT + args.cran_url + d['filename'] + INDENT +
-                args.cran_url + 'Archive/' + d['cran_packagename'] + '/' + d['filename'])
+            d['cranurl'] = (INDENT + args.cran_url + 'src/contrib/' +
+                d['filename'] + INDENT + args.cran_url + 'src/contrib/' +
+                'Archive/' + d['cran_packagename'] + '/' + d['filename'])
         else:
-            d['cranurl'] = ' ' + args.cran_url + d['filename']
+            d['cranurl'] = ' ' + args.cran_url + 'src/contrib/' + d['filename']
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
