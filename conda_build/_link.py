@@ -121,7 +121,14 @@ def link():
 
 def unlink():
     d = read_data()
+
     create_entry_points(d['entry_points'], remove=True)
+
+    unlink_files(join(prefix, get_python_lib()),
+                 d['site-packages'])
+
+    unlink_files(join(prefix, 'Examples'),
+                 d['Examples'])
 
 
 def main():
