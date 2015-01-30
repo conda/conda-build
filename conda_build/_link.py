@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import shutil
-from os.path import dirname, exists, isdir, join
+from os.path import basename, dirname, exists, isdir, join
 from distutils.sysconfig import get_python_lib
 
 
@@ -67,29 +67,30 @@ def unlink_files(root, files):
             pass
 
 
-def create_entry_point(path, module, func):
-    pyscript = PY_TMPL % (module, func, func)
+def create_script(path):
     if sys.platform == 'win32':
-        with open(path + '-script.py', 'w') as fo:
-            fo.write(pyscript)
+        shutil.copyfile(join(THIS_DIR, 'bin', basename(path)),
+                        path + '-script.py', 'w')
         shutil.copyfile(join(THIS_DIR,
                              'cli-%d.exe' % (8 * tuple.__itemsize__)),
                         path + '.exe')
     else:
+        with open(join(THIS_DIR, 'bin', basename(path))) as fi:
+            data = fi.read()
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % python)
-            fo.write(pyscript)
+            fo.write(data)
         os.chmod(path, int('755', 8))
 
 
-def create_entry_points(items, remove=False):
-    if not items:
+def create_scripts(files, remove=False):
+    if not files:
         return
     bin_dir = join(prefix, 'Scripts' if sys.platform == 'win32' else 'bin')
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
-    for cmd, module, func in items:
-        path = join(bin_dir, cmd)
+    for fn in files:
+        path = join(bin_dir, fn)
         if remove:
             if sys.platform == 'win32':
                 _unlink(path + '-script.py')
@@ -97,7 +98,7 @@ def create_entry_points(items, remove=False):
             else:
                 _unlink(path)
         else:
-            create_entry_point(path, module, func)
+            create_script(path)
 
 
 def read_data():
@@ -108,7 +109,7 @@ def read_data():
 def link():
     d = read_data()
 
-    create_entry_points(d['entry_points'])
+    create_scripts(d['bin'])
 
     link_files(join(THIS_DIR, 'site-packages'),
                join(prefix, get_python_lib()),
@@ -122,7 +123,7 @@ def link():
 def unlink():
     d = read_data()
 
-    create_entry_points(d['entry_points'], remove=True)
+    create_scripts(d['bin'], remove=True)
 
     unlink_files(join(prefix, get_python_lib()),
                  d['site-packages'])

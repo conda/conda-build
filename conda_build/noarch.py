@@ -3,7 +3,6 @@ import json
 import shutil
 from os.path import dirname, isdir, join
 
-from conda_build.scripts import iter_entry_points
 from conda_build.config import config
 
 
@@ -25,6 +24,16 @@ def handle_file(f):
             os.makedirs(dst_dir)
         os.rename(path, dst)
         return g
+
+    if f.startswith('bin/'):
+        with open(path, 'rb') as fi:
+            data = fi.read()
+        if not data[:2] == b'#!':
+            raise Exception("No shebang in: %s" % f)
+        new_data = data[data.find('\n') + 1:]
+        with open(path, 'wb') as fo:
+            fo.write(new_data)
+        return f
 
     if f.startswith('Examples/'):
         return f
@@ -66,14 +75,15 @@ copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
 
     d = {'Examples': [],
          'site-packages': [],
-         'entry_points': list(iter_entry_points(
-                m.get_value('build/entry_points')))}
+         'bin': []}
     for f in files:
         g = handle_file(f)
         if g is None:
             continue
         if g.startswith('site-packages/'):
             d['site-packages'].append(g[14:])
+        elif g.startswith('bin/'):
+            d['bin'].append(g[4:])
         elif g.startswith('Examples/'):
             d['Examples'].append(g[9:])
         else:
@@ -83,7 +93,7 @@ copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
         json.dump(d, fo, indent=2, sort_keys=True)
 
     this_dir = dirname(__file__)
-    if d['entry_points']:
+    if d['bin']:
         for fn in 'cli-32.exe', 'cli-64.exe':
             shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
