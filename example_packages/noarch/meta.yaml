@@ -1,5 +1,5 @@
 package:
-  name: grin
+  name: noarch
   version: 1.2.1
 
 source:
@@ -10,6 +10,9 @@ source:
     - no_setuptools.patch
 
 build:
+  entry_points:
+    - grin = grin:grin_main
+    - grind = grin:grind_main
   noarch: True
 
 requirements:

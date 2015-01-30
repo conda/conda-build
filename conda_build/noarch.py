@@ -1,21 +1,12 @@
 import os
+import json
+import shutil
 from os.path import dirname, isdir, join
 
+from conda_build.scripts import iter_entry_points
 from conda_build.config import config
 
 
-BASH_HEAD = '''\
-#!/bin/bash
-SP_DIR=$($PREFIX/bin/python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
-#echo "SP_DIR='$SP_DIR'"
-'''
-
-BAT_HEAD = '''\
-@echo off
-for /f %%i in ('%PREFIX%/python.exe -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"') do set SP_DIR=%%i
-if errorlevel 1 exit 1
-REM echo "SP_DIR='$SP_DIR'"
-'''
 
 def handle_file(f):
     path = join(config.build_prefix, f)
@@ -35,57 +26,56 @@ def handle_file(f):
         os.rename(path, dst)
         return g
 
-def transform(m, files):
-    f1 = open(join(config.build_prefix,
-                   'bin/.%s-pre-link.sh' % m.name()), 'w')
-    f1.write(BASH_HEAD)
-    f1.write('''
-cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
-''' % m.name())
-    f2 = open(join(config.build_prefix,
-                   'bin/.%s-pre-unlink.sh' % m.name()), 'w')
-    f2.write(BASH_HEAD)
+    return None
 
-    scripts_dir = join(config.build_prefix, 'Scripts')
+
+def transform(m, files):
+    prefix = config.build_prefix
+    with open(join(prefix, 'bin/.%s-pre-link.sh' % m.name()), 'w') as fo:
+        fo.write('''\
+#!/bin/bash
+cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
+$PREFIX/bin/python $SOURCE_DIR/link.py
+''' % m.name())
+
+    with open(join(prefix, 'bin/.%s-pre-unlink.sh' % m.name()), 'w') as fo:
+        fo.write('''\
+#!/bin/bash
+$PREFIX/bin/python $SOURCE_DIR/link.py --unlink
+''')
+
+    scripts_dir = join(prefix, 'Scripts')
     if not isdir(scripts_dir):
         os.mkdir(scripts_dir)
 
-    f3 = open(join(scripts_dir, '.%s-pre-link.bat' % m.name()), 'w')
-    f3.write(BAT_HEAD)
-    f3.write(r'''
+    with open(join(scripts_dir, '.%s-pre-link.bat' % m.name()), 'w') as fo:
+        fo.write('''\
+@echo off
 copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
+%%PREFIX%%/bin/python $SOURCE_DIR/link.py
 ''' % m.name())
-    f4 = open(join(scripts_dir, '.%s-pre-unlink.bat' % m.name()), 'w')
-    f4.write(BAT_HEAD)
 
-    dirs = set()
+    with open(join(scripts_dir, '.%s-pre-unlink.bat' % m.name()), 'w') as fo:
+        fo.write('''\
+@echo off
+%%PREFIX%%/bin/python $SOURCE_DIR/link.py --unlink
+''')
+
+    d = {'site-packages': [],
+         'entry_points': list(iter_entry_points(
+                m.get_value('build/entry_points')))}
     for f in files:
         g = handle_file(f)
         if g is None:
             continue
         if g.startswith('site-packages/'):
-            g = g[14:]
-            dirs.add(dirname(g))
-            f1.write('''
-mkdir -p $SP_DIR/%s
-rm -f $SP_DIR/%s
-ln $SOURCE_DIR/site-packages/%s $SP_DIR/%s
-''' % (dirname(g), g, g, g))
-            f2.write('rm -f $SP_DIR/%s*\n' % g)
+            d['site-packages'].append(g[14:])
+    with open(join(prefix, 'data.json'), 'w') as fo:
+        json.dump(d, fo, indent=2, sort_keys=True)
 
-            gw = g.replace('/', '\\')
-            f3.write(r'''
-md %%SP_DIR%%\%s
-del %%SP_DIR%%\%s
-fsutil hardlink create %%SP_DIR%%\%s %%SOURCE_DIR%%\site-packages\%s
-''' % (dirname(g).replace('/', '\\'), gw, gw, gw))
-            f4.write('del %%SP_DIR%%\\%s*\n' % gw)
+    this_dir = dirname(__file__)
+    if d['entry_points']:
+        for fn in 'cli-32.exe', 'cli-64.exe':
+            shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
-    for d in sorted(dirs, key=len, reverse=True):
-        f2.write('rmdir $SP_DIR/%s\n' % d)
-        f4.write('rd /S /Q %%SP_DIR%%\\%s\n' % d.replace('/', '\\'))
-
-    f1.close()
-    f2.close()
-    f3.close()
-    f4.close()
+    shutil.copyfile(join(this_dir, '_link.py'), join(prefix, 'link.py'))
