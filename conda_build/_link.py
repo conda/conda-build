@@ -20,6 +20,13 @@ prefix = sys.prefix
 python = sys.executable
 
 
+def _unlink(path):
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
 def create_entry_point(path, module, func):
     pyscript = PY_TMPL % (module, func, func)
     if sys.platform == 'win32':
@@ -35,14 +42,22 @@ def create_entry_point(path, module, func):
         os.chmod(path, int('755', 8))
 
 
-def create_entry_points(items):
+def create_entry_points(items, remove=False):
     if not items:
         return
     bin_dir = join(prefix, 'Scripts' if sys.platform == 'win32' else 'bin')
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
     for cmd, module, func in items:
-        create_entry_point(join(bin_dir, cmd), module, func)
+        path = join(bin_dir, cmd)
+        if remove:
+            if sys.platform == 'win32':
+                _unlink(path + '-script.py')
+                _unlink(path + '.exe')
+            else:
+                _unlink(path)
+        else:
+            create_entry_point(path, module, func)
 
 
 def read_data():
@@ -53,6 +68,11 @@ def read_data():
 def link():
     d = read_data()
     create_entry_points(d['entry_points'])
+
+
+def unlink():
+    d = read_data()
+    create_entry_points(d['entry_points'], remove=True)
 
 
 def main():
