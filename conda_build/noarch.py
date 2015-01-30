@@ -4,6 +4,7 @@ import shutil
 from os.path import dirname, isdir, join
 
 from conda_build.config import config
+from conda_build.post import SHEBANG_PAT
 
 
 
@@ -28,8 +29,9 @@ def handle_file(f):
     if f.startswith('bin/'):
         with open(path, 'rb') as fi:
             data = fi.read()
-        if not data[:2] == b'#!':
-            raise Exception("No shebang in: %s" % f)
+        m = SHEBANG_PAT.match(data)
+        if not (m and 'python' in m.group()):
+            raise Exception("No python shebang in: %s" % f)
         new_data = data[data.find('\n') + 1:]
         with open(path, 'wb') as fo:
             fo.write(new_data)
