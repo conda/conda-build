@@ -9,7 +9,8 @@ source:
 
 build:
   entry_points:
-    - bokeh-server = bokeh.server.start:run
+    - bokeh-server = bokeh.server:run
+    - websocket_worker.py = bokeh.server.websocket:make_app
   noarch: True
 
 requirements:
@@ -34,6 +35,8 @@ requirements:
     - tornado
 
 test:
+  requires:
+    - nose
   commands:
     - bokeh-server -h
   imports:

@@ -107,10 +107,16 @@ def read_data():
 
 def link():
     d = read_data()
+
     create_entry_points(d['entry_points'])
+
     link_files(join(THIS_DIR, 'site-packages'),
                join(prefix, get_python_lib()),
                d['site-packages'])
+
+    link_files(join(THIS_DIR, 'Examples'),
+               join(prefix, 'Examples'),
+               d['Examples'])
 
 
 def unlink():

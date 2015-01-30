@@ -26,6 +26,9 @@ def handle_file(f):
         os.rename(path, dst)
         return g
 
+    if f.startswith('Examples/'):
+        return f
+
     return None
 
 
@@ -61,7 +64,8 @@ copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
 %%PREFIX%%/bin/python $SOURCE_DIR/link.py --unlink
 ''')
 
-    d = {'site-packages': [],
+    d = {'Examples': [],
+         'site-packages': [],
          'entry_points': list(iter_entry_points(
                 m.get_value('build/entry_points')))}
     for f in files:
@@ -70,6 +74,11 @@ copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
             continue
         if g.startswith('site-packages/'):
             d['site-packages'].append(g[14:])
+        elif g.startswith('Examples/'):
+            d['Examples'].append(g[9:])
+        else:
+            raise Exception("Did not expect: %r" % g)
+
     with open(join(prefix, 'data.json'), 'w') as fo:
         json.dump(d, fo, indent=2, sort_keys=True)
 
