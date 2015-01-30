@@ -5,6 +5,7 @@ Tools for converting Cran packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 import requests
+import yaml
 
 import re
 import sys
@@ -185,10 +186,10 @@ def dict_from_cran_lines(lines):
     for line in lines:
         if not line:
             continue
-        (k, v) = line.split(': ')
+        (k, v) = line.split(': ', 1)
         d[k] = v
-        if k not in CRAN_KEYS:
-            print("Warning: Unknown key %s" % k)
+        # if k not in CRAN_KEYS:
+        #     print("Warning: Unknown key %s" % k)
     d['orig_lines'] = lines
     return d
 
@@ -213,7 +214,7 @@ def remove_package_line_continuations(chunk):
      'License: GPL (>= 2)',
      'NeedsCompilation: no']
     """
-    continuation = ' ' * 8
+    continuation = ' '
     continued_ix = None
     continued_line = None
     had_continuation = False
@@ -248,6 +249,13 @@ def remove_package_line_continuations(chunk):
 
     return chunk
 
+def get_package_metadata(cran_url, package, session):
+    r = session.get(cran_url + 'web/packages/' + package + '/DESCRIPTION')
+    DESCRIPTION = r.text
+    d = dict_from_cran_lines(remove_package_line_continuations(DESCRIPTION.splitlines()))
+    d['orig_description'] = DESCRIPTION
+    return d
+
 def main(args, parser):
     package_dicts = {}
 
@@ -265,7 +273,7 @@ def main(args, parser):
                 '.web_cache')))
 
     print("Fetching metadata from %s" % args.cran_url)
-    r = session.get(args.cran_url + "PACKAGES")
+    r = session.get(args.cran_url + "src/contrib/PACKAGES")
     PACKAGES = r.text
     package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
 
@@ -277,6 +285,9 @@ def main(args, parser):
 
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
+
+        cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
+            package, session))
 
         dir_path = join(output_dir, 'r-' + package.lower())
         if exists(dir_path):
@@ -308,10 +319,11 @@ def main(args, parser):
         d['conda_version'] = d['cran_version'].replace('-', '_')
         d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
         if args.archive:
-            d['cranurl'] = (INDENT + args.cran_url + d['filename'] + INDENT +
-                args.cran_url + 'Archive/' + d['cran_packagename'] + '/' + d['filename'])
+            d['cranurl'] = (INDENT + args.cran_url + 'src/contrib/' +
+                d['filename'] + INDENT + args.cran_url + 'src/contrib/' +
+                'Archive/' + d['cran_packagename'] + '/' + d['filename'])
         else:
-            d['cranurl'] = ' ' + args.cran_url + d['filename']
+            d['cranurl'] = ' ' + args.cran_url + 'src/contrib/' + d['filename']
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
@@ -322,6 +334,14 @@ def main(args, parser):
             d['license'] += ' (FOSS)'
         if cran_package.get('License_restricts_use', None) == 'yes':
             d['license'] += ' (Restricts use)'
+
+        if "URL" in cran_package:
+            d['home_comment'] = ''
+            d['homeurl'] = ' ' + yaml.dump(cran_package['URL'])
+
+        if 'Description' in cran_package:
+            d['summary_comment'] = ''
+            d['summary'] = ' ' + yaml.dump(cran_package['Description'])
 
         if "Suggests" in cran_package:
             d['suggests'] = "# Suggests: %s" % cran_package['Suggests']
