@@ -1,18 +1,15 @@
 package:
   name: noarch
-  version: 1.2.1
+  version: 0.7.1
 
 source:
-  fn: grin-1.2.1.tar.gz
-  url: https://pypi.python.org/packages/source/g/grin/grin-1.2.1.tar.gz
-  md5: d894426dfbf70bc105388c2a51348199
-  patches:
-    - no_setuptools.patch
+  fn: bokeh-0.7.1.tar.gz
+  url: https://pypi.python.org/packages/source/b/bokeh/bokeh-0.7.1.tar.gz
+  md5: 426f2b0850018fab1407f2e7ed129544
 
 build:
   entry_points:
-    - grin = grin:grin_main
-    - grind = grin:grind_main
+    - bokeh-server = bokeh.server.start:run
   noarch: True
 
 requirements:
@@ -20,15 +17,28 @@ requirements:
     - python
   run:
     - python
-    - argparse     [py == 26]
+    - numpy
+    - pandas
+    - flask
+    - jinja2
+    - markupsafe
+    - werkzeug
+    - greenlet
+    - dateutil
+    - pytz
+    - requests
+    - six
+    - pygments
+    - pyyaml
+    - pyzmq
+    - tornado
 
 test:
   commands:
-    - grin -h
-    - grind -h
+    - bokeh-server -h
   imports:
-    - grin
+    - bokeh
 
 about:
-  home: http://pypi.python.org/pypi/grin
-  license: BSD
+  home: https://github.com/ContinuumIO/Bokeh
+  license: New BSD
