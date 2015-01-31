@@ -71,7 +71,7 @@ def create_script(path):
     fn = basename(path)
     src = join(THIS_DIR, 'python-scripts', fn)
     if sys.platform == 'win32':
-        shutil.copyfile(src, path + '-script.py', 'w')
+        shutil.copyfile(src, path + '-script.py')
         shutil.copyfile(join(THIS_DIR,
                              'cli-%d.exe' % (8 * tuple.__itemsize__)),
                         path + '.exe')
