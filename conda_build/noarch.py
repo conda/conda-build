@@ -1,6 +1,8 @@
 import os
+import io
 import json
 import shutil
+import locale
 from os.path import basename, dirname, isdir, join
 
 from conda_build.config import config
@@ -26,8 +28,11 @@ def handle_file(f, d):
         d['site-packages'].append(g[14:])
 
     elif f.startswith('bin/'):
-        with open(path, 'rb') as fi:
-            data = fi.read()
+        with io.open(path, encoding=locale.getpreferredencoding()) as fi:
+            try:
+                data = fi.read()
+            except UnicodeDecodeError: # file is binary
+                raise Exception("No binary scripts: %s" % f)
         os.unlink(path)
 
         m = SHEBANG_PAT.match(data)
@@ -39,7 +44,7 @@ def handle_file(f, d):
         if not isdir(dst_dir):
             os.makedirs(dst_dir)
         dst = join(dst_dir, basename(path))
-        with open(dst, 'wb') as fo:
+        with open(dst, 'w') as fo:
             fo.write(new_data)
         d['python-scripts'].append(basename(path))
 
