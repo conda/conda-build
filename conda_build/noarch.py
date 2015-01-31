@@ -59,7 +59,7 @@ def transform(m, files):
         fo.write('''\
 #!/bin/bash
 cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
-cp $SOURCE_DIR/data.json $PREFIX/bin/.%s-data.json
+#cp $SOURCE_DIR/data.json $PREFIX/bin/.%s-data.json
 $PREFIX/bin/python $SOURCE_DIR/link.py
 ''' % (name, name))
 
@@ -92,12 +92,15 @@ copy %%SOURCE_DIR%%\\Scripts\\.%s-pre-unlink.bat %%PREFIX%%\\Scripts
     for f in files:
         handle_file(f, d)
 
-    with open(join(prefix, 'data.json'), 'w') as fo:
-        json.dump(d, fo, indent=2, sort_keys=True)
-
     this_dir = dirname(__file__)
     if d['python-scripts']:
         for fn in 'cli-32.exe', 'cli-64.exe':
             shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
-    shutil.copyfile(join(this_dir, '_link.py'), join(prefix, 'link.py'))
+    with open(join(this_dir, '_link.py')) as fi:
+        link_code = fi.read()
+    with open(join(prefix, 'link.py'), 'w') as fo:
+        fo.write('DATA = ')
+        json.dump(d, fo, indent=2, sort_keys=True)
+        fo.write('\n## END DATA\n\n')
+        fo.write(link_code)

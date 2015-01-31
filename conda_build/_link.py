@@ -1,6 +1,5 @@
 import os
 import sys
-import json
 import shutil
 from os.path import basename, dirname, exists, isdir, join
 from distutils.sysconfig import get_python_lib
@@ -102,35 +101,26 @@ def create_scripts(files, remove=False):
             create_script(path)
 
 
-def read_data():
-    with open(join(THIS_DIR, 'data.json')) as fi:
-        return json.load(fi)
-
-
 def link():
-    d = read_data()
-
-    create_scripts(d['python-scripts'])
+    create_scripts(DATA['python-scripts'])
 
     link_files(join(THIS_DIR, 'site-packages'),
                join(prefix, get_python_lib()),
-               d['site-packages'])
+               DATA['site-packages'])
 
     link_files(join(THIS_DIR, 'Examples'),
                join(prefix, 'Examples'),
-               d['Examples'])
+               DATA['Examples'])
 
 
 def unlink():
-    d = read_data()
-
-    create_scripts(d['python-scripts'], remove=True)
+    create_scripts(DATA['python-scripts'], remove=True)
 
     unlink_files(join(prefix, get_python_lib()),
-                 d['site-packages'])
+                 DATA['site-packages'])
 
     unlink_files(join(prefix, 'Examples'),
-                 d['Examples'])
+                 DATA['Examples'])
 
 
 def main():
