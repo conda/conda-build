@@ -1,14 +1,12 @@
 import os
 import sys
 import shutil
-from os.path import basename, dirname, exists, isdir, join
+from os.path import basename, dirname, exists, isdir, join, normpath
 from distutils.sysconfig import get_python_lib
 
 
 THIS_DIR = dirname(__file__)
-
-prefix = sys.prefix
-python = sys.executable
+PREFIX = normpath(sys.prefix)
 
 
 def _link(src, dst):
@@ -47,7 +45,7 @@ def unlink_files(root, files):
 
     dst_dirs2 = set()
     for path in dst_dirs1:
-        while len(path) > len(prefix):
+        while len(path) > len(PREFIX):
             dst_dirs2.add(path)
             path = dirname(path)
 
@@ -70,7 +68,7 @@ def create_script(path):
         with open(src) as fi:
             data = fi.read()
         with open(path, 'w') as fo:
-            fo.write('#!%s\n' % python)
+            fo.write('#!%s\n' % normpath(sys.executable))
             fo.write(data)
         os.chmod(path, int('755', 8))
 
@@ -78,7 +76,7 @@ def create_script(path):
 def create_scripts(files, remove=False):
     if not files:
         return
-    bin_dir = join(prefix, 'Scripts' if sys.platform == 'win32' else 'bin')
+    bin_dir = join(PREFIX, 'Scripts' if sys.platform == 'win32' else 'bin')
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
     for fn in files:
@@ -97,21 +95,21 @@ def link():
     create_scripts(DATA['python-scripts'])
 
     link_files(join(THIS_DIR, 'site-packages'),
-               join(prefix, get_python_lib()),
+               get_python_lib(prefix=PREFIX),
                DATA['site-packages'])
 
     link_files(join(THIS_DIR, 'Examples'),
-               join(prefix, 'Examples'),
+               join(PREFIX, 'Examples'),
                DATA['Examples'])
 
 
 def unlink():
     create_scripts(DATA['python-scripts'], remove=True)
 
-    unlink_files(join(prefix, get_python_lib()),
+    unlink_files(get_python_lib(prefix=PREFIX),
                  DATA['site-packages'])
 
-    unlink_files(join(prefix, 'Examples'),
+    unlink_files(join(PREFIX, 'Examples'),
                  DATA['Examples'])
 
 
