@@ -68,14 +68,15 @@ def unlink_files(root, files):
 
 
 def create_script(path):
+    fn = basename(path)
+    src = join(THIS_DIR, 'python-scripts', fn)
     if sys.platform == 'win32':
-        shutil.copyfile(join(THIS_DIR, 'bin', basename(path)),
-                        path + '-script.py', 'w')
+        shutil.copyfile(src, path + '-script.py', 'w')
         shutil.copyfile(join(THIS_DIR,
                              'cli-%d.exe' % (8 * tuple.__itemsize__)),
                         path + '.exe')
     else:
-        with open(join(THIS_DIR, 'bin', basename(path))) as fi:
+        with open(src) as fi:
             data = fi.read()
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % python)
@@ -109,7 +110,7 @@ def read_data():
 def link():
     d = read_data()
 
-    create_scripts(d['bin'])
+    create_scripts(d['python-scripts'])
 
     link_files(join(THIS_DIR, 'site-packages'),
                join(prefix, get_python_lib()),
@@ -123,7 +124,7 @@ def link():
 def unlink():
     d = read_data()
 
-    create_scripts(d['bin'], remove=True)
+    create_scripts(d['python-scripts'], remove=True)
 
     unlink_files(join(prefix, get_python_lib()),
                  d['site-packages'])

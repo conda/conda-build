@@ -1,20 +1,19 @@
 import os
 import json
 import shutil
-from os.path import dirname, isdir, join
+from os.path import basename, dirname, isdir, join
 
 from conda_build.config import config
 from conda_build.post import SHEBANG_PAT
 
 
 
-def handle_file(f):
+def handle_file(f, d):
     path = join(config.build_prefix, f)
     if f.endswith(('.egg-info', '.pyc')):
         os.unlink(path)
-        return None
 
-    if 'site-packages' in f:
+    elif 'site-packages' in f:
         nsp = join(config.build_prefix, 'site-packages')
         if not isdir(nsp):
             os.mkdir(nsp)
@@ -24,23 +23,28 @@ def handle_file(f):
         if not isdir(dst_dir):
             os.makedirs(dst_dir)
         os.rename(path, dst)
-        return g
+        d['site-packages'].append(g[14:])
 
-    if f.startswith('bin/'):
+    elif f.startswith('bin/'):
         with open(path, 'rb') as fi:
             data = fi.read()
+        os.unlink(path)
+
         m = SHEBANG_PAT.match(data)
         if not (m and 'python' in m.group()):
             raise Exception("No python shebang in: %s" % f)
         new_data = data[data.find('\n') + 1:]
-        with open(path, 'wb') as fo:
+
+        dst_dir = join(config.build_prefix, 'python-scripts')
+        if not isdir(dst_dir):
+            os.makedirs(dst_dir)
+        dst = join(dst_dir, basename(path))
+        with open(dst, 'wb') as fo:
             fo.write(new_data)
-        return f
+        d['python-scripts'].append(basename(path))
 
-    if f.startswith('Examples/'):
-        return f
-
-    return None
+    elif f.startswith('Examples/'):
+        d['Examples'].append(f[9:])
 
 
 def transform(m, files):
@@ -75,27 +79,17 @@ copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
 %%PREFIX%%/bin/python $SOURCE_DIR/link.py --unlink
 ''')
 
-    d = {'Examples': [],
-         'site-packages': [],
-         'bin': []}
+    d = {'site-packages': [],
+         'python-scripts': [],
+         'Examples': []}
     for f in files:
-        g = handle_file(f)
-        if g is None:
-            continue
-        if g.startswith('site-packages/'):
-            d['site-packages'].append(g[14:])
-        elif g.startswith('bin/'):
-            d['bin'].append(g[4:])
-        elif g.startswith('Examples/'):
-            d['Examples'].append(g[9:])
-        else:
-            raise Exception("Did not expect: %r" % g)
+        handle_file(f, d)
 
     with open(join(prefix, 'data.json'), 'w') as fo:
         json.dump(d, fo, indent=2, sort_keys=True)
 
     this_dir = dirname(__file__)
-    if d['bin']:
+    if d['python-scripts']:
         for fn in 'cli-32.exe', 'cli-64.exe':
             shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
