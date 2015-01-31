@@ -54,31 +54,33 @@ def handle_file(f, d):
 
 def transform(m, files):
     prefix = config.build_prefix
-    with open(join(prefix, 'bin/.%s-pre-link.sh' % m.name()), 'w') as fo:
+    name = m.name()
+    with open(join(prefix, 'bin/.%s-pre-link.sh' % name), 'w') as fo:
         fo.write('''\
 #!/bin/bash
 cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
+cp $SOURCE_DIR/data.json $PREFIX/bin/.%s-data.json
 $PREFIX/bin/python $SOURCE_DIR/link.py
-''' % m.name())
+''' % (name, name))
 
-    with open(join(prefix, 'bin/.%s-pre-unlink.sh' % m.name()), 'w') as fo:
+    with open(join(prefix, 'bin/.%s-pre-unlink.sh' % name), 'w') as fo:
         fo.write('''\
 #!/bin/bash
-$PREFIX/bin/python $SOURCE_DIR/link.py --unlink
-''')
+$PREFIX/bin/python $PREFIX/bin/.%s-link.py --unlink
+''' % name)
 
     scripts_dir = join(prefix, 'Scripts')
     if not isdir(scripts_dir):
         os.mkdir(scripts_dir)
 
-    with open(join(scripts_dir, '.%s-pre-link.bat' % m.name()), 'w') as fo:
+    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'w') as fo:
         fo.write('''\
 @echo off
 copy %%SOURCE_DIR%%\\Scripts\\.%s-pre-unlink.bat %%PREFIX%%\\Scripts
 %%PREFIX%%\\python.exe %%SOURCE_DIR%%\\link.py
-''' % m.name())
+''' % name)
 
-    with open(join(scripts_dir, '.%s-pre-unlink.bat' % m.name()), 'w') as fo:
+    with open(join(scripts_dir, '.%s-pre-unlink.bat' % name), 'w') as fo:
         fo.write('''\
 @echo off
 %PREFIX%\\python.exe %SOURCE_DIR%\\link.py --unlink
