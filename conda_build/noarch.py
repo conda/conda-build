@@ -59,7 +59,7 @@ def transform(m, files):
         fo.write('''\
 #!/bin/bash
 cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
-#cp $SOURCE_DIR/data.json $PREFIX/bin/.%s-data.json
+cp $SOURCE_DIR/link.py $PREFIX/bin/.%s-link.py
 $PREFIX/bin/python $SOURCE_DIR/link.py
 ''' % (name, name))
 
@@ -67,7 +67,9 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
         fo.write('''\
 #!/bin/bash
 $PREFIX/bin/python $PREFIX/bin/.%s-link.py --unlink
-''' % name)
+rm -f $PREFIX/bin/.%s-pre-unlink.sh
+rm -f $PREFIX/bin/.%s-link.py
+''' % (name, name, name))
 
     scripts_dir = join(prefix, 'Scripts')
     if not isdir(scripts_dir):
@@ -77,14 +79,17 @@ $PREFIX/bin/python $PREFIX/bin/.%s-link.py --unlink
         fo.write('''\
 @echo off
 copy %%SOURCE_DIR%%\\Scripts\\.%s-pre-unlink.bat %%PREFIX%%\\Scripts
+copy %%SOURCE_DIR%%\\link.py %%PREFIX%%\\Scripts\\.%s-link.py
 %%PREFIX%%\\python.exe %%SOURCE_DIR%%\\link.py
-''' % name)
+''' % (name, name))
 
     with open(join(scripts_dir, '.%s-pre-unlink.bat' % name), 'w') as fo:
         fo.write('''\
 @echo off
-%PREFIX%\\python.exe %SOURCE_DIR%\\link.py --unlink
-''')
+%%PREFIX%%\\python.exe %%PREFIX%%\\Scripts\\.%s-link.py --unlink
+del %%PREFIX%%\\Scripts\\.%s-pre-unlink.sh
+del %%PREFIX%%\\Scripts\\.%s-link.py
+''' % (name, name, name))
 
     d = {'site-packages': [],
          'python-scripts': [],
