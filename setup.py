@@ -10,7 +10,7 @@ import versioneer
 
 
 if sys.version_info[:2] < (2, 7):
-    sys.exit("conda is only meant for Python >2.7"
+    sys.exit("conda is only meant for Python >=2.7"
              "Current Python version: %d.%d" % sys.version_info[:2])
 
 versioneer.versionfile_source = 'conda_build/_version.py'
