@@ -78,17 +78,17 @@ rm -f $PREFIX/bin/.%s-link.py
     with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'w') as fo:
         fo.write('''\
 @echo off
-copy %%SOURCE_DIR%%\\Scripts\\.%s-pre-unlink.bat %%PREFIX%%\\Scripts
-copy %%SOURCE_DIR%%\\link.py %%PREFIX%%\\Scripts\\.%s-link.py
-%%PREFIX%%\\python.exe %%SOURCE_DIR%%\\link.py
+copy "%%SOURCE_DIR%%\\Scripts\\.%s-pre-unlink.bat" "%%PREFIX%%\\Scripts"
+copy "%%SOURCE_DIR%%\\link.py" "%%PREFIX%%\\Scripts\\.%s-link.py"
+"%%PREFIX%%\\python.exe" "%%SOURCE_DIR%%\\link.py"
 ''' % (name, name))
 
     with open(join(scripts_dir, '.%s-pre-unlink.bat' % name), 'w') as fo:
         fo.write('''\
 @echo off
-%%PREFIX%%\\python.exe %%PREFIX%%\\Scripts\\.%s-link.py --unlink
-del %%PREFIX%%\\Scripts\\.%s-pre-unlink.sh
-del %%PREFIX%%\\Scripts\\.%s-link.py
+"%%PREFIX%%\\python.exe" "%%PREFIX%%\\Scripts\\.%s-link.py" --unlink
+del "%%PREFIX%%\\Scripts\\.%s-pre-unlink.sh"
+del "%%PREFIX%%\\Scripts\\.%s-link.py"
 ''' % (name, name, name))
 
     d = {'site-packages': [],
