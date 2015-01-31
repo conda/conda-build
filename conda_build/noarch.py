@@ -74,14 +74,14 @@ $PREFIX/bin/python $SOURCE_DIR/link.py --unlink
     with open(join(scripts_dir, '.%s-pre-link.bat' % m.name()), 'w') as fo:
         fo.write('''\
 @echo off
-copy %%SOURCE_DIR%%\Scripts\.%s-pre-unlink.bat %%PREFIX%%\Scripts
-%%PREFIX%%\python.exe %%SOURCE_DIR%%\link.py
+copy %%SOURCE_DIR%%\\Scripts\\.%s-pre-unlink.bat %%PREFIX%%\\Scripts
+%%PREFIX%%\\python.exe %%SOURCE_DIR%%\\link.py
 ''' % m.name())
 
     with open(join(scripts_dir, '.%s-pre-unlink.bat' % m.name()), 'w') as fo:
         fo.write('''\
 @echo off
-%PREFIX%\python.exe %SOURCE_DIR%\link.py --unlink
+%PREFIX%\\python.exe %SOURCE_DIR%\\link.py --unlink
 ''')
 
     d = {'site-packages': [],
