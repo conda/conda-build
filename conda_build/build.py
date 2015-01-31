@@ -178,7 +178,7 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    if files_with_prefix:
+    if files_with_prefix and not m.get_value('build/noarch'):
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
