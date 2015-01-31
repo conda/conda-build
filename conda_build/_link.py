@@ -7,14 +7,6 @@ from distutils.sysconfig import get_python_lib
 
 THIS_DIR = dirname(__file__)
 
-PY_TMPL = """\
-if __name__ == '__main__':
-    import sys
-    from %s import %s
-
-    sys.exit(%s())
-"""
-
 prefix = sys.prefix
 python = sys.executable
 
@@ -127,7 +119,6 @@ def main():
     from optparse import OptionParser
     p = OptionParser()
     p.add_option("--unlink", action="store_true")
-    p.add_option("--verbose", action="store_true")
     opts, args = p.parse_args()
 
     if opts.unlink:
