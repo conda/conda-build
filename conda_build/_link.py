@@ -54,7 +54,7 @@ def create_script(fn):
         shutil.copyfile(join(THIS_DIR,
                              'cli-%d.exe' % (8 * tuple.__itemsize__)),
                         path + '.exe')
-        FILES.append('Scripts/%s-script.py' % fn)
+        FILES.append('Scripts/%s.exe' % fn)
     else:
         with open(src) as fi:
             data = fi.read()
