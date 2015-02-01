@@ -16,6 +16,9 @@ def handle_file(f, d):
     if f.endswith(('.egg-info', '.pyc')):
         os.unlink(path)
 
+    elif f.endswith('.so'):
+        sys.exit("[noarch] Error: Shared object file found: %s" % f)
+
     elif 'site-packages' in f:
         nsp = join(config.build_prefix, 'site-packages')
         if not isdir(nsp):
