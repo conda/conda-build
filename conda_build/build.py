@@ -377,8 +377,7 @@ def build(m, get_src=True, verbose=True, post=None):
 
         get_build_metadata(m)
         create_post_scripts(m)
-        if not m.get_value('build/noarch'):
-            create_entry_points(m.get_value('build/entry_points'))
+        create_entry_points(m.get_value('build/entry_points'))
 
         assert not exists(config.info_dir)
         files2 = prefix_files()
