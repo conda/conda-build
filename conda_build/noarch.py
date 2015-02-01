@@ -27,8 +27,7 @@ def rewrite_script(fn):
     dst_dir = join(config.build_prefix, 'python-scripts')
     if not isdir(dst_dir):
         os.makedirs(dst_dir)
-    dst = join(dst_dir, fn)
-    with open(dst, 'w') as fo:
+    with open(join(dst_dir, fn), 'w') as fo:
         fo.write(new_data)
 
 
