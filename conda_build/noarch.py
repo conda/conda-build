@@ -10,6 +10,27 @@ from conda_build.config import config
 from conda_build.post import SHEBANG_PAT
 
 
+def rewrite_script(fn):
+    src = join(config.build_prefix, 'bin', fn)
+    with io.open(src, encoding=locale.getpreferredencoding()) as fi:
+        try:
+            data = fi.read()
+        except UnicodeDecodeError: # file is binary
+            raise Exception("Binary: %s" % fn)
+    os.unlink(src)
+
+    m = SHEBANG_PAT.match(data)
+    if not (m and 'python' in m.group()):
+        raise Exception("No python shebang in: %s" % fn)
+    new_data = data[data.find('\n') + 1:]
+
+    dst_dir = join(config.build_prefix, 'python-scripts')
+    if not isdir(dst_dir):
+        os.makedirs(dst_dir)
+    dst = join(dst_dir, fn)
+    with open(dst, 'w') as fo:
+        fo.write(new_data)
+
 
 def handle_file(f, d):
     path = join(config.build_prefix, f)
@@ -32,25 +53,9 @@ def handle_file(f, d):
         d['site-packages'].append(g[14:])
 
     elif f.startswith('bin/'):
-        with io.open(path, encoding=locale.getpreferredencoding()) as fi:
-            try:
-                data = fi.read()
-            except UnicodeDecodeError: # file is binary
-                raise Exception("No binary scripts: %s" % f)
-        os.unlink(path)
-
-        m = SHEBANG_PAT.match(data)
-        if not (m and 'python' in m.group()):
-            raise Exception("No python shebang in: %s" % f)
-        new_data = data[data.find('\n') + 1:]
-
-        dst_dir = join(config.build_prefix, 'python-scripts')
-        if not isdir(dst_dir):
-            os.makedirs(dst_dir)
-        dst = join(dst_dir, basename(path))
-        with open(dst, 'w') as fo:
-            fo.write(new_data)
-        d['python-scripts'].append(basename(path))
+        fn = basename(path)
+        rewrite_script(fn)
+        d['python-scripts'].append(fn)
 
     elif f.startswith('Examples/'):
         d['Examples'].append(f[9:])
