@@ -1,5 +1,6 @@
 import os
 import io
+import sys
 import json
 import shutil
 import locale
@@ -50,6 +51,9 @@ def handle_file(f, d):
 
     elif f.startswith('Examples/'):
         d['Examples'].append(f[9:])
+
+    else:
+        sys.exit("[noarch] Error: Don't know how to handle file: %s" % f)
 
 
 def transform(m, files):
