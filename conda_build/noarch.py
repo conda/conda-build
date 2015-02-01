@@ -64,6 +64,10 @@ def handle_file(f, d):
 
 
 def transform(m, files):
+    if sys.platform == 'win32':
+        sys.exit("[noarch] Error: Python noarch packages can currently "
+                 "not be created on Windows systems.")
+
     prefix = config.build_prefix
     name = m.name()
     with open(join(prefix, 'bin/.%s-pre-link.sh' % name), 'w') as fo:
