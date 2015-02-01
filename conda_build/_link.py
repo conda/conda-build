@@ -61,7 +61,7 @@ def create_script(fn):
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % normpath(sys.executable))
             fo.write(data)
-        os.chmod(path, int('755', 8))
+        os.chmod(path, 0o755)
         FILES.append('bin/%s' % fn)
 
 
@@ -74,14 +74,11 @@ def create_scripts(files):
         create_script(fn)
 
 
-def link():
+def main():
     create_scripts(DATA['python-scripts'])
     link_files('site-packages', SITE_PACKAGES, DATA['site-packages'])
     link_files('Examples', 'Examples', DATA['Examples'])
 
-
-def main():
-    link()
     with open(join(PREFIX, 'conda-meta',
                    '%s.files' % DATA['dist']), 'w') as fo:
         for f in FILES:
