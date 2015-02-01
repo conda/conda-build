@@ -1,12 +1,20 @@
 import os
 import sys
 import shutil
-from os.path import basename, dirname, exists, isdir, join, normpath
-from distutils.sysconfig import get_python_lib
+from os.path import dirname, exists, isdir, join, normpath
 
 
 THIS_DIR = dirname(__file__)
 PREFIX = normpath(sys.prefix)
+if sys.platform == 'win32':
+    BIN_DIR = join(PREFIX, 'Scripts')
+    SITE_PACKAGES = 'Lib/site-packages'
+else:
+    BIN_DIR = join(PREFIX, 'bin')
+    SITE_PACKAGES = 'lib/python%s/site-packages' % sys.version[:3]
+
+# the list of these files is going to be store in info/_files
+FILES = []
 
 
 def _link(src, dst):
@@ -26,44 +34,27 @@ def _unlink(path):
 
 def link_files(src_root, dst_root, files):
     for f in files:
-        src = join(src_root, f)
-        dst = join(dst_root, f)
+        src = join(THIS_DIR, src_root, f)
+        dst = join(PREFIX, dst_root, f)
         dst_dir = dirname(dst)
         if not isdir(dst_dir):
             os.makedirs(dst_dir)
         if exists(dst):
             _unlink(dst)
         _link(src, dst)
+        FILES.append('%s/%s' % (dst_root, f))
 
 
-def unlink_files(root, files):
-    dst_dirs1 = set()
-    for f in files:
-        path = join(root, f)
-        _unlink(path)
-        dst_dirs1.add(dirname(path))
-
-    dst_dirs2 = set()
-    for path in dst_dirs1:
-        while len(path) > len(PREFIX):
-            dst_dirs2.add(path)
-            path = dirname(path)
-
-    for path in sorted(dst_dirs2, key=len, reverse=True):
-        try:
-            os.rmdir(path)
-        except OSError: # directory might not exist or not be empty
-            pass
-
-
-def create_script(path):
-    fn = basename(path)
+def create_script(fn):
+    path = join(BIN_DIR, fn)
     src = join(THIS_DIR, 'python-scripts', fn)
     if sys.platform == 'win32':
         shutil.copyfile(src, path + '-script.py')
+        FILES.append('Scripts/%s-script.py' % fn)
         shutil.copyfile(join(THIS_DIR,
                              'cli-%d.exe' % (8 * tuple.__itemsize__)),
                         path + '.exe')
+        FILES.append('Scripts/%s-script.py' % fn)
     else:
         with open(src) as fi:
             data = fi.read()
@@ -71,58 +62,30 @@ def create_script(path):
             fo.write('#!%s\n' % normpath(sys.executable))
             fo.write(data)
         os.chmod(path, int('755', 8))
+        FILES.append('bin/%s' % fn)
 
 
-def create_scripts(files, remove=False):
+def create_scripts(files):
     if not files:
         return
-    bin_dir = join(PREFIX, 'Scripts' if sys.platform == 'win32' else 'bin')
-    if not isdir(bin_dir):
-        os.mkdir(bin_dir)
+    if not isdir(BIN_DIR):
+        os.mkdir(BIN_DIR)
     for fn in files:
-        path = join(bin_dir, fn)
-        if remove:
-            if sys.platform == 'win32':
-                _unlink(path + '-script.py')
-                _unlink(path + '.exe')
-            else:
-                _unlink(path)
-        else:
-            create_script(path)
+        create_script(fn)
 
 
 def link():
     create_scripts(DATA['python-scripts'])
-
-    link_files(join(THIS_DIR, 'site-packages'),
-               get_python_lib(prefix=PREFIX),
-               DATA['site-packages'])
-
-    link_files(join(THIS_DIR, 'Examples'),
-               join(PREFIX, 'Examples'),
-               DATA['Examples'])
-
-
-def unlink():
-    create_scripts(DATA['python-scripts'], remove=True)
-
-    unlink_files(get_python_lib(prefix=PREFIX),
-                 DATA['site-packages'])
-
-    unlink_files(join(PREFIX, 'Examples'),
-                 DATA['Examples'])
+    link_files('site-packages', SITE_PACKAGES, DATA['site-packages'])
+    link_files('Examples', 'Examples', DATA['Examples'])
 
 
 def main():
-    from optparse import OptionParser
-    p = OptionParser()
-    p.add_option("--unlink", action="store_true")
-    opts, args = p.parse_args()
-
-    if opts.unlink:
-        unlink()
-    else:
-        link()
+    link()
+    with open(join(PREFIX, 'conda-meta',
+                   '%s.files' % DATA['dist']), 'w') as fo:
+        for f in FILES:
+            fo.write('%s\n' % f)
 
 
 if __name__ == '__main__':
