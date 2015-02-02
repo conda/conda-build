@@ -37,7 +37,7 @@ def handle_file(f, d):
         os.unlink(path)
 
     elif f.endswith('.so'):
-        sys.exit("[noarch] Error: Shared object file found: %s" % f)
+        sys.exit("[noarch_python] Error: Shared object file found: %s" % f)
 
     elif 'site-packages' in f:
         nsp = join(config.build_prefix, 'site-packages')
@@ -60,12 +60,13 @@ def handle_file(f, d):
         d['Examples'].append(f[9:])
 
     else:
-        sys.exit("[noarch] Error: Don't know how to handle file: %s" % f)
+        sys.exit("[noarch_python] Error: Don't know how to handle file: %s" % f)
 
 
 def transform(m, files):
+    assert 'py_' in m.dist()
     if sys.platform == 'win32':
-        sys.exit("[noarch] Error: Python noarch packages can currently "
+        sys.exit("[noarch_python] Error: Python noarch packages can currently "
                  "not be created on Windows systems.")
 
     prefix = config.build_prefix

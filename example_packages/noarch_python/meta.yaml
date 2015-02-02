@@ -8,7 +8,7 @@ source:
   md5: 426f2b0850018fab1407f2e7ed129544
 
 build:
-  noarch: True
+  noarch_python: True
   number: 1
 
 requirements:
