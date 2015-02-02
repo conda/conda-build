@@ -156,6 +156,17 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
         yaml.safe_dump(m.meta, fo)
 
+    readme = m.get_value('about/readme')
+    if readme:
+        src = join(source.get_dir(), readme)
+        if not os.path.exists(src):
+            sys.exit("Error: Could not find the readme: %s" % readme)
+        dst = join(config.info_dir, readme)
+        shutil.copy(src, dst)
+        if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
+            print("WARNING: Binstar only recognizes about/readme as README.md and README.rst",
+                file=sys.stderr)
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
