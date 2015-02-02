@@ -36,17 +36,17 @@ def handle_file(f):
         return g
 
 def transform(m, files):
-    f1 = open(join(config.build_prefix,
+    f1 = open(join(config.install_prefix,
                    'bin/.%s-pre-link.sh' % m.name()), 'w')
     f1.write(BASH_HEAD)
     f1.write('''
 cp $SOURCE_DIR/bin/.%s-pre-unlink.sh $PREFIX/bin
 ''' % m.name())
-    f2 = open(join(config.build_prefix,
+    f2 = open(join(config.install_prefix,
                    'bin/.%s-pre-unlink.sh' % m.name()), 'w')
     f2.write(BASH_HEAD)
 
-    scripts_dir = join(config.build_prefix, 'Scripts')
+    scripts_dir = join(config.install_prefix, 'Scripts')
     if not isdir(scripts_dir):
         os.mkdir(scripts_dir)
 

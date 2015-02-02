@@ -38,7 +38,7 @@ def is_obj(path):
 
 
 def fix_shebang(f, osx_is_app=False):
-    path = join(config.build_prefix, f)
+    path = join(config.install_prefix, f)
     if is_obj(path):
         return
     elif os.path.islink(path):
@@ -76,8 +76,8 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
-    absfiles = [join(config.build_prefix, f) for f in files]
-    sp_dir = environ.get_sp_dir()
+    absfiles = [join(config.install_prefix, f) for f in files]
+    sp_dir = environ.get_sp_dir(config.install_prefix)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(i in absfiles for i in walk_prefix(egg_path, False)):
@@ -115,7 +115,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
 
 def rm_py_along_so():
     "remove .py (.pyc) files alongside .so or .pyd files"
-    for root, dirs, files in os.walk(config.build_prefix):
+    for root, dirs, files in os.walk(config.install_prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
                 name, unused_ext = splitext(fn)
@@ -125,8 +125,8 @@ def rm_py_along_so():
 
 
 def compile_missing_pyc():
-    sp_dir = environ.get_sp_dir()
-    stdlib_dir = environ.get_stdlib_dir()
+    sp_dir = environ.get_sp_dir(config.install_prefix)
+    stdlib_dir = environ.get_stdlib_dir(config.install_prefix)
 
     need_compile = False
     for root, dirs, files in os.walk(sp_dir):
@@ -189,7 +189,10 @@ def mk_relative_osx(path):
         assert_relative_osx(path)
 
 def mk_relative_linux(f, rpaths=('lib',)):
-    path = join(config.build_prefix, f)
+    path = join(config.install_prefix, f)
+    build_prefix = config.build_prefix.strip('/')
+    if f.startswith(build_prefix):  # build/use_destdir=true case
+        f = f[len(build_prefix) + 1:]
     rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
     patchelf = external.find_executable('patchelf')
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
@@ -201,7 +204,7 @@ def assert_relative_osx(path):
 
 def mk_relative(m, f):
     assert sys.platform != 'win32'
-    path = join(config.build_prefix, f)
+    path = join(config.install_prefix, f)
     if not is_obj(path):
         return
 
@@ -212,12 +215,12 @@ def mk_relative(m, f):
 
 
 def fix_permissions(files):
-    for root, dirs, unused_files in os.walk(config.build_prefix):
+    for root, dirs, unused_files in os.walk(config.install_prefix):
         for dn in dirs:
             lchmod(join(root, dn), int('755', 8))
 
     for f in files:
-        path = join(config.build_prefix, f)
+        path = join(config.install_prefix, f)
         st = os.lstat(path)
         lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
 
@@ -248,11 +251,11 @@ def check_symlinks(files):
         return  # Not on Unix system
     msgs = []
     for f in files:
-        path = join(config.build_prefix, f)
+        path = join(config.install_prefix, f)
         if islink(path):
             link_path = readlink(path)
             real_link_path = realpath(path)
-            if real_link_path.startswith(config.build_prefix):
+            if real_link_path.startswith(config.install_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
                 if not link_path.startswith('.'):

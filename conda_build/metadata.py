@@ -188,7 +188,7 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch',
               'has_prefix_files', 'binary_has_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths',
-              'always_include_files', ],
+              'always_include_files', 'use_destdir'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],

@@ -62,11 +62,48 @@ class Config(object):
 
     @property
     def build_prefix(self):
+        """The prefix of the build environment.
+
+        This is a conda environment with all the build-dependencies
+        installed into.  Normally the newly built package will install
+        files here, unless build/use_destdir is set to True in which
+        case install_prefix is used.
+
+        """
         if self.use_long_build_prefix is None:
             raise Exception("I don't know which build prefix to use yet")
         if self.use_long_build_prefix:
             return self.long_build_prefix
         return self.short_build_prefix
+
+    @property
+    def destdir(self):
+        """The location of $DESTDIR.
+
+        This is will always point to destdir whether build/use_destdir
+        is used or not.
+
+        """
+        return join(self.croot, 'work', 'destdir')
+
+    @property
+    def install_prefix(self):
+        """The prefix where files got installed into.
+
+        This is normally the same as build_prefix unless
+        build/use_destdir is used.  It is used by the post-processing
+        steps instead of build_prefix so that they work correctly when
+        build/use_destdir is used.
+
+        """
+        try:
+            return self._install_prefix
+        except Exception:
+            return self.build_prefix
+
+    @install_prefix.setter
+    def install_prefix(self, val):
+        self._install_prefix = val
 
     @property
     def build_python(self):
@@ -86,7 +123,7 @@ class Config(object):
 
     @property
     def info_dir(self):
-        return join(self.build_prefix, 'info')
+        return join(self.install_prefix, 'info')
 
     @property
     def broken_dir(self):

@@ -37,19 +37,40 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 
-def prefix_files():
+def prefix_files(prefix=None):
     '''
     Returns a set of all files in prefix.
     '''
+    if prefix is None:
+        prefix = config.build_prefix
     res = set()
-    for root, dirs, files in os.walk(config.build_prefix):
+    for root, dirs, files in os.walk(prefix):
         for fn in files:
-            res.add(join(root, fn)[len(config.build_prefix) + 1:])
+            res.add(join(root, fn)[len(prefix) + 1:])
         for dn in dirs:
             path = join(root, dn)
             if islink(path):
-                res.add(path[len(config.build_prefix) + 1:])
+                res.add(path[len(prefix) + 1:])
     return res
+
+
+def installed_files(prev_files, m):
+    """Return a set of all the files installed by the build script.
+
+    If build/use_destdir is false this will look at the current prefix
+    files and ignore those which where already present.  Otherwise all
+    files in config.destdir are used.
+
+    :param prev_files: The set of files which where present before
+       the build was executed but after the build environment was set
+       up.
+    :param m: The recipe metadata.
+
+    """
+    files = prefix_files(config.install_prefix)
+    if not m.get_value('build/use_destdir'):
+        files = files - prev_files
+    return files
 
 
 def create_post_scripts(m):
@@ -62,7 +83,7 @@ def create_post_scripts(m):
         src = join(recipe_dir, tp + ext)
         if not isfile(src):
             continue
-        dst_dir = join(config.build_prefix,
+        dst_dir = join(config.install_prefix,
                        'Scripts' if sys.platform == 'win32' else 'bin')
         if not isdir(dst_dir):
             os.makedirs(dst_dir, int('755', 8))
@@ -87,7 +108,7 @@ def have_prefix_files(files):
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
             continue
-        path = join(prefix, f)
+        path = join(config.install_prefix, f)
         if isdir(path):
             continue
         if sys.platform != 'darwin' and islink(path):
@@ -168,11 +189,15 @@ def create_info_files(m, files, include_recipe=True):
         # make sure we use '/' path separators in metadata
         files = [f.replace('\\', '/') for f in files]
 
+    build_prefix = config.build_prefix.strip('/')
+    prefix_len = len(build_prefix) + 1
     with open(join(config.info_dir, 'files'), 'w') as fo:
         if m.get_value('build/noarch') and 'py_' in m.dist():
             fo.write('\n')
         else:
             for f in files:
+                if m.get_value('build/use_destdir'):
+                    f = f[prefix_len:]
                 fo.write(f + '\n')
 
     files_with_prefix = sorted(have_prefix_files(files))
@@ -192,19 +217,23 @@ def create_info_files(m, files, include_recipe=True):
             fmt_str = '%s %s %s\n'
         with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
+                if m.get_value('build/use_destdir'):
+                    ifn = fn[prefix_len:]
+                else:
+                    ifn = fn
                 if (fn in text_has_prefix_files):
                     # register for text replacement, regardless of mode
-                    fo.write(fmt_str % (pfix, 'text', fn))
+                    fo.write(fmt_str % (pfix, 'text', ifn))
                     text_has_prefix_files.remove(fn)
                 elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
-                    print("Detected hard-coded path in binary file %s" % fn)
-                    fo.write(fmt_str % (pfix, mode, fn))
+                    print("Detected hard-coded path in binary file %s" % ifn)
+                    fo.write(fmt_str % (pfix, mode, ifn))
                     binary_has_prefix_files.remove(fn)
                 elif (auto_detect or (mode == 'text')):
-                    print("Detected hard-coded path in %s file %s" % (mode, fn))
-                    fo.write(fmt_str % (pfix, mode, fn))
+                    print("Detected hard-coded path in %s file %s" % (mode, ifn))
+                    fo.write(fmt_str % (pfix, mode, ifn))
                 else:
-                    print("Ignored hard-coded path in %s" % fn)
+                    print("Ignored hard-coded path in %s file %s" % (mode, ifn))
 
     # make sure we found all of the files expected
     errstr = ""
@@ -307,18 +336,22 @@ def build(m, get_src=True, verbose=True, post=None):
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     '''
+    if (m.get_value('build/detect_binary_files_with_prefix')
+        or m.binary_has_prefix_files()):
+        # We must use a long prefix here as the package will only be
+        # installable into prefixes shorter than this one.
+        config.use_long_build_prefix = True
+    else:
+        # In case there are multiple builds in the same process
+        config.use_long_build_prefix = False
+    if m.get_value('build/use_destdir'):
+        config.install_prefix = config.destdir
+    else:
+        config.install_prefix = config.build_prefix
+
     if post in [False, None]:
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
-
-        if (m.get_value('build/detect_binary_files_with_prefix')
-            or m.binary_has_prefix_files()):
-            # We must use a long prefix here as the package will only be
-            # installable into prefixes shorter than this one.
-            config.use_long_build_prefix = True
-        else:
-            # In case there are multiple builds in the same process
-            config.use_long_build_prefix = False
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
@@ -344,6 +377,7 @@ def build(m, get_src=True, verbose=True, post=None):
             print("no source")
 
         rm_rf(config.info_dir)
+        rm_rf(config.destdir)
         files1 = prefix_files().difference(set(m.always_include_files()))
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
@@ -379,26 +413,31 @@ def build(m, get_src=True, verbose=True, post=None):
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
         assert not exists(config.info_dir)
-        files2 = prefix_files()
+        files2 = installed_files(files1, m)
 
-        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+        post_process(sorted(files2), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         # The post processing may have deleted some files (like easy-install.pth)
-        files2 = prefix_files()
-        post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1),
+        files2 = installed_files(files1, m)
+        post_build(m, sorted(files2))
+        create_info_files(m, sorted(files2),
                           include_recipe=bool(m.path))
         if m.get_value('build/noarch'):
             import conda_build.noarch as noarch
-            noarch.transform(m, sorted(files2 - files1))
+            noarch.transform(m, sorted(files2))
 
-        files3 = prefix_files()
-        fix_permissions(files3 - files1)
+        files3 = installed_files(files1, m)
+        fix_permissions(files3)
 
         path = bldpkg_path(m)
+        prefix = config.build_prefix.strip('/')
+        prefix_len = len(prefix) + 1
         t = tarfile.open(path, 'w:bz2')
-        for f in sorted(files3 - files1):
-            t.add(join(config.build_prefix, f), f)
+        for f in sorted(files3):
+            if m.get_value('build/use_destdir') and f.startswith(prefix):
+                t.add(join(config.install_prefix, f), f[prefix_len:])
+            else:
+                t.add(join(config.install_prefix, f), f)
         t.close()
 
         print("BUILD END:", m.dist())
