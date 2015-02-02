@@ -156,6 +156,17 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
         yaml.safe_dump(m.meta, fo)
 
+    readme = m.get_value('about/readme')
+    if readme:
+        src = join(source.get_dir(), readme)
+        if not os.path.exists(src):
+            sys.exit("Error: Could not find the readme: %s" % readme)
+        dst = join(config.info_dir, readme)
+        shutil.copy(src, dst)
+        if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
+            print("WARNING: Binstar only recognizes about/readme as README.md and README.rst",
+                file=sys.stderr)
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
@@ -169,7 +180,7 @@ def create_info_files(m, files, include_recipe=True):
         files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
-        if m.get_value('build/noarch') and 'py_' in m.dist():
+        if m.get_value('build/noarch_python'):
             fo.write('\n')
         else:
             for f in files:
@@ -178,7 +189,7 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    if files_with_prefix:
+    if files_with_prefix and not m.get_value('build/noarch_python'):
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
@@ -388,9 +399,9 @@ def build(m, get_src=True, verbose=True, post=None):
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
-        if m.get_value('build/noarch'):
-            import conda_build.noarch as noarch
-            noarch.transform(m, sorted(files2 - files1))
+        if m.get_value('build/noarch_python'):
+            import conda_build.noarch_python as noarch_python
+            noarch_python.transform(m, sorted(files2 - files1))
 
         files3 = prefix_files()
         fix_permissions(files3 - files1)

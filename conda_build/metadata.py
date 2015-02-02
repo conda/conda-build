@@ -185,7 +185,7 @@ FIELDS = {
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'noarch',
+              'no_link', 'binary_relocation', 'script', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', ],
@@ -193,7 +193,7 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary'],
+    'about': ['home', 'license', 'summary', 'readme'],
 }
 
 
@@ -322,7 +322,8 @@ class MetaData(object):
                 raise RuntimeError("Invalid package specification: %r" % spec)
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if ms.strictness != 1 or self.get_value('build/noarch'):
+                    if (ms.strictness != 1 or
+                             self.get_value('build/noarch_python')):
                         continue
                     str_ver = text_type(ver)
                     if '.' not in str_ver:
@@ -395,14 +396,16 @@ class MetaData(object):
             license = self.get_value('about/license'),
             platform = cc.platform,
             arch = cc.arch_name,
+            subdir = cc.subdir,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch'):
+        if self.get_value('build/noarch_python'):
             d['platform'] = d['arch'] = None
+            d['subdir'] = 'noarch'
         if self.is_app():
             d.update(self.app_meta())
         return d
