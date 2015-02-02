@@ -180,7 +180,7 @@ def create_info_files(m, files, include_recipe=True):
         files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
-        if m.get_value('build/noarch') and 'py_' in m.dist():
+        if m.get_value('build/noarch_python'):
             fo.write('\n')
         else:
             for f in files:
@@ -189,7 +189,7 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    if files_with_prefix:
+    if files_with_prefix and not m.get_value('build/noarch_python'):
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
@@ -399,9 +399,9 @@ def build(m, get_src=True, verbose=True, post=None):
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
-        if m.get_value('build/noarch'):
-            import conda_build.noarch as noarch
-            noarch.transform(m, sorted(files2 - files1))
+        if m.get_value('build/noarch_python'):
+            import conda_build.noarch_python as noarch_python
+            noarch_python.transform(m, sorted(files2 - files1))
 
         files3 = prefix_files()
         fix_permissions(files3 - files1)
