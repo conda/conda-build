@@ -137,7 +137,7 @@ def conda_convert(file, args):
 
         if not args.force and has_cext(t, show=args.show_imports):
             print("WARNING: Package %s has C extensions, skipping. Use -f to "
-                  "force conversion." % file)
+                  "force conversion." % file, file=sys.stderr)
             return
 
         file_dir, fn = split(file)
@@ -173,13 +173,13 @@ def conda_convert(file, args):
             if nonpy_unix and not args.force:
                 print(("WARNING: Package %s has non-Python entry points, "
                        "skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform))
+                      (file, info['platform'], platform), file=sys.stderr)
                 continue
 
             if nonpy_win and not args.force:
                 print(("WARNING: Package %s has entry points, which are not "
                        "supported yet. Skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform))
+                      (file, info['platform'], platform), file=sys.stderr)
                 continue
 
             file_map = get_pure_py_file_map(t, platform)
