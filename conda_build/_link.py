@@ -43,25 +43,27 @@ def link_files(src_root, dst_root, files):
             _unlink(dst)
         _link(src, dst)
         FILES.append('%s/%s' % (dst_root, f))
+        if f.endswith('.py'):
+            FILES.append('%s/%sc' % (dst_root, f))
 
 
 def create_script(fn):
-    path = join(BIN_DIR, fn)
     src = join(THIS_DIR, 'python-scripts', fn)
+    dst = join(BIN_DIR, fn)
     if sys.platform == 'win32':
-        shutil.copyfile(src, path + '-script.py')
+        shutil.copyfile(src, dst + '-script.py')
         FILES.append('Scripts/%s-script.py' % fn)
         shutil.copyfile(join(THIS_DIR,
                              'cli-%d.exe' % (8 * tuple.__itemsize__)),
-                        path + '.exe')
+                        dst + '.exe')
         FILES.append('Scripts/%s.exe' % fn)
     else:
         with open(src) as fi:
             data = fi.read()
-        with open(path, 'w') as fo:
+        with open(dst, 'w') as fo:
             fo.write('#!%s\n' % normpath(sys.executable))
             fo.write(data)
-        os.chmod(path, 0o755)
+        os.chmod(dst, 0o755)
         FILES.append('bin/%s' % fn)
 
 
