@@ -112,6 +112,11 @@ def main():
         action="store_true",
         help="only display what would have been done",
     )
+    p.add_argument(
+        "-q", "--quiet",
+        action="store_true",
+        help="Don't print as much output"
+    )
 
     p.set_defaults(func=execute)
 
@@ -154,7 +159,8 @@ def conda_convert(file, args):
         for platform in args.platforms:
             output_dir = join(args.output_dir, platform)
             if abspath(expanduser(join(output_dir, fn))) == file:
-                print("Skipping %s/%s. Same as input file" % (platform, fn))
+                if not args.quiet:
+                    print("Skipping %s/%s. Same as input file" % (platform, fn))
                 continue
             if not PY3:
                 platform = platform.decode('utf-8')
@@ -163,12 +169,14 @@ def conda_convert(file, args):
 
             if source_type == 'unix' and dest_type == 'win':
                 nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
-                                                                  unix_to_win=True,
-                                                                  show=args.verbose)
+                    unix_to_win=True,
+                    show=args.verbose,
+                    quiet=args.quiet)
             if source_type == 'win' and dest_type == 'unix':
                 nonpy_win = nonpy_win or has_nonpy_entry_points(t,
-                                                                unix_to_win=False,
-                                                                show=args.verbose)
+                    unix_to_win=False,
+                    show=args.verbose,
+                    quiet=args.quiet)
 
             if nonpy_unix and not args.force:
                 print(("WARNING: Package %s has non-Python entry points, "
@@ -185,18 +193,21 @@ def conda_convert(file, args):
             file_map = get_pure_py_file_map(t, platform)
 
             if args.dry_run:
-                print("Would convert %s from %s to %s" %
-                      (file, info['platform'], dest_plat))
+                if not args.quiet:
+                    print("Would convert %s from %s to %s" %
+                        (file, info['platform'], dest_plat))
                 if args.verbose:
                     pprint.pprint(file_map)
                 continue
             else:
-                print("Converting %s from %s to %s" %
-                      (file, info['platform'], platform))
+                if not args.quiet:
+                    print("Converting %s from %s to %s" %
+                        (file, info['platform'], platform))
 
             if not isdir(output_dir):
                 os.makedirs(output_dir)
-            tar_update(t, join(output_dir, fn), file_map, verbose=args.verbose)
+            tar_update(t, join(output_dir, fn), file_map,
+                verbose=args.verbose, quiet=args.quiet)
 
 
 def execute(args, parser):
