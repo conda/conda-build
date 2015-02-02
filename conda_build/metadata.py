@@ -193,7 +193,7 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary'],
+    'about': ['home', 'license', 'summary', 'readme'],
 }
 
 
