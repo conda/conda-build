@@ -150,14 +150,19 @@ def post_process(files, preserve_egg_dir=False):
 
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
-    reldir = utils.relative(path[len(config.build_prefix) + 1:])
+    if macho.is_dylib(path):
+        reldir = relpath(dirname(path), join(config.build_prefix, 'lib'))
+        atvariable = "@rpath"
+    else:
+        reldir = utils.relative(path[len(config.build_prefix) + 1:])
+        atvariable = "@loader_path"
 
     prefix_lib = config.build_prefix + '/lib'
     if link.startswith(prefix_lib):
-        return '@loader_path/%s/%s' % (reldir, link[len(prefix_lib) + 1:])
+        return '%s/%s/%s' % (atvariable, reldir, link[len(prefix_lib) + 1:])
 
     if link.startswith(('lib', '@executable_path/')):
-        return '@loader_path/%s/%s' % (reldir, basename(link))
+        return '%s/%s/%s' % (atvariable, reldir, basename(link))
 
     if link == '/usr/local/lib/libgcc_s.1.dylib':
         return '/usr/lib/libgcc_s.1.dylib'
