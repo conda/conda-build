@@ -7,7 +7,6 @@ from __future__ import absolute_import, division, print_function
 import io
 import json
 import os
-import re
 import shutil
 import stat
 import subprocess
@@ -30,7 +29,7 @@ from conda.resolve import Resolve, MatchSpec
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
 from conda_build.scripts import create_entry_points, bin_dirname
-from conda_build.post import (post_process, post_build, is_obj,
+from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
