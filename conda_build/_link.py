@@ -32,12 +32,12 @@ def _unlink(path):
         pass
 
 
-def pyc_f(f):
-    if sys.version_info[0] == 2:
+def pyc_f(f, version_info=sys.version_info):
+    if version_info[0] == 2:
         return f + 'c'
     dn, fn = f.rsplit('/', 1)
     return '%s/__pycache__/%s.cpython-%d%d.pyc' % (
-              dn, fn[:-3], sys.version_info[0], sys.version_info[1])
+              dn, fn[:-3], version_info[0], version_info[1])
 
 
 def link_files(src_root, dst_root, files):
