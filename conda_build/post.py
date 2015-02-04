@@ -171,53 +171,53 @@ def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
     s = macho.install_name_change(path, osx_ch_link)
 
-    if macho.is_dylib(path):
-        names = macho.otool(path)
-        if names:
-            args = [
-                'install_name_tool',
-                '-id',
-                join('@rpath', relpath(dirname(path),
-                    join(config.build_prefix, 'lib')), basename(names[0])),
-                path,
-            ]
-            print(' '.join(args))
-            p = Popen(args, stderr=PIPE)
-            stdout, stderr = p.communicate()
-            stderr = stderr.decode('utf-8')
-            if "Mach-O dynamic shared library stub file" in stderr:
-                print("Skipping Mach-O dynamic shared library stub file %s" % path)
-                return
-            else:
-                print(stderr, file=sys.stderr)
-                if p.returncode:
-                    raise RuntimeError("install_name_tool failed with exit status %d"
-                % p.returncode)
+    # if macho.is_dylib(path):
+    names = macho.otool(path)
+    if names:
+        args = [
+            'install_name_tool',
+            '-id',
+            join('@rpath', relpath(dirname(path),
+                join(config.build_prefix, 'lib')), basename(names[0])),
+            path,
+        ]
+        print(' '.join(args))
+        p = Popen(args, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
+        if "Mach-O dynamic shared library stub file" in stderr:
+            print("Skipping Mach-O dynamic shared library stub file %s" % path)
+            return
+        else:
+            print(stderr, file=sys.stderr)
+            if p.returncode:
+                raise RuntimeError("install_name_tool failed with exit status %d"
+            % p.returncode)
 
-            # Add an rpath to every executable to increase the chances of it
-            # being found.
-            args = [
-                'install_name_tool',
-                '-add_rpath',
-                join('@loader_path', relpath(join(config.build_prefix, 'lib'),
-                    dirname(path)), ''),
-                path,
-                ]
-            print(' '.join(args))
-            p = Popen(args, stderr=PIPE)
-            stdout, stderr = p.communicate()
-            stderr = stderr.decode('utf-8')
-            if "Mach-O dynamic shared library stub file" in stderr:
-                print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
-                return
-            elif "would duplicate path, file already has LC_RPATH for:" in stderr:
-                print("Skipping -add_rpath, file already has LC_RPATH set")
-                return
-            else:
-                print(stderr, file=sys.stderr)
-                if p.returncode:
-                    raise RuntimeError("install_name_tool failed with exit status %d"
-                % p.returncode)
+        # Add an rpath to every executable to increase the chances of it
+        # being found.
+        args = [
+            'install_name_tool',
+            '-add_rpath',
+            join('@loader_path', relpath(join(config.build_prefix, 'lib'),
+                dirname(path)), ''),
+            path,
+            ]
+        print(' '.join(args))
+        p = Popen(args, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
+        if "Mach-O dynamic shared library stub file" in stderr:
+            print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+            return
+        elif "would duplicate path, file already has LC_RPATH for:" in stderr:
+            print("Skipping -add_rpath, file already has LC_RPATH set")
+            return
+        else:
+            print(stderr, file=sys.stderr)
+            if p.returncode:
+                raise RuntimeError("install_name_tool failed with exit status %d"
+            % p.returncode)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
