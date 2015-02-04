@@ -5,6 +5,7 @@ import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, ignore_patterns, copy2
 from subprocess import check_call, Popen, PIPE
+import fnmatch
 
 from conda.fetch import download
 from conda.utils import hashsum_file
@@ -253,8 +254,22 @@ def provide(recipe_dir, meta, patch=True):
     elif 'svn_url' in meta:
         svn_source(meta)
     elif 'path' in meta:
+        ignorePatterns = meta.get('path_ignore', None)
+        if not isinstance(ignorePatterns, list):
+            ignorePatterns = [ignorePatterns]
+        ignorePatterns = [abspath(join(recipe_dir, pat)) for pat in ignorePatterns]
+
+        def ignore(dirPath, fileList):
+            result = []
+            for pattern in ignorePatterns:
+                for fn in fileList:
+                    path = join(dirPath, fn)
+                    if fnmatch.fnmatch(path, pattern):
+                        result.append(fn)
+            return result
+
         print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
-        copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
+        copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR, ignore=ignore)
     else: # no source
         os.makedirs(WORK_DIR)
 
