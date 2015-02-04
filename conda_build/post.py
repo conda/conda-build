@@ -210,6 +210,9 @@ def mk_relative_osx(path):
             if "Mach-O dynamic shared library stub file" in stderr:
                 print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
                 return
+            elif "would duplicate path, file already has LC_RPATH for:" in stderr:
+                print("Skipping -add_rpath, file already has LC_RPATH set")
+                return
             else:
                 print(stderr, file=sys.stderr)
                 if p.returncode:
