@@ -1,4 +1,4 @@
-2015-02-XX   1.10.1:
+2015-02-06   1.10.1:
 --------------------
   * greatly improved ability to create noarch_python packages
   * added 'subdir' key to info/index.json
