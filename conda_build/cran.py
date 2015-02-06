@@ -186,7 +186,10 @@ def dict_from_cran_lines(lines):
     for line in lines:
         if not line:
             continue
-        (k, v) = line.split(': ', 1)
+        try:
+            (k, v) = line.split(': ', 1)
+        except ValueError:
+            sys.exit("Could not parse metadata")
         d[k] = v
         # if k not in CRAN_KEYS:
         #     print("Warning: Unknown key %s" % k)
