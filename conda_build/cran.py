@@ -297,14 +297,15 @@ def main(args, parser):
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
 
+        # Make sure package is always uses the CRAN capitalization
+        package = cran_metadata[package.lower()]['Package']
+
         cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
             package, session))
 
         dir_path = join(output_dir, 'r-' + package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
-
-        package = cran_metadata[package.lower()]['Package']
 
         cran_package = cran_metadata[package.lower()]
 
