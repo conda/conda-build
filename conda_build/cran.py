@@ -250,7 +250,14 @@ def remove_package_line_continuations(chunk):
     return chunk
 
 def get_package_metadata(cran_url, package, session):
-    r = session.get(cran_url + 'web/packages/' + package + '/DESCRIPTION')
+    url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
+    r = session.get(url)
+    try:
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            sys.exit("ERROR: %s (404 Not Found)" % url)
+        raise
     DESCRIPTION = r.text
     d = dict_from_cran_lines(remove_package_line_continuations(DESCRIPTION.splitlines()))
     d['orig_description'] = DESCRIPTION
@@ -274,6 +281,7 @@ def main(args, parser):
 
     print("Fetching metadata from %s" % args.cran_url)
     r = session.get(args.cran_url + "src/contrib/PACKAGES")
+    r.raise_for_status()
     PACKAGES = r.text
     package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
 
