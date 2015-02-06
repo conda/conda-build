@@ -217,7 +217,7 @@ def remove_package_line_continuations(chunk):
      'License: GPL (>= 2)',
      'NeedsCompilation: no']
     """
-    continuation = ' '
+    continuation = (' ', '\t')
     continued_ix = None
     continued_line = None
     had_continuation = False
