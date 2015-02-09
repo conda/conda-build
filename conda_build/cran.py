@@ -178,7 +178,10 @@ def dict_from_cran_lines(lines):
     for line in lines:
         if not line:
             continue
-        (k, v) = line.split(': ', 1)
+        try:
+            (k, v) = line.split(': ', 1)
+        except ValueError:
+            sys.exit("Could not parse metadata")
         d[k] = v
         # if k not in CRAN_KEYS:
         #     print("Warning: Unknown key %s" % k)
@@ -206,7 +209,7 @@ def remove_package_line_continuations(chunk):
      'License: GPL (>= 2)',
      'NeedsCompilation: no']
     """
-    continuation = ' '
+    continuation = (' ', '\t')
     continued_ix = None
     continued_line = None
     had_continuation = False
@@ -241,8 +244,33 @@ def remove_package_line_continuations(chunk):
 
     return chunk
 
+def yaml_quote_string(string):
+    """
+    Quote a string for use in YAML.
+
+    We can't just use yaml.dump because it adds ellipses to the end of the
+    string, and it in general doesn't handle being placed inside an existing
+    document very well.
+
+    Note that this function is NOT general.
+    """
+    return yaml.dump(string).replace('\n...\n', '').replace('\n', '\n  ')
+
+def clear_trailing_whitespace(string):
+    lines = []
+    for line in string.splitlines():
+        lines.append(line.rstrip())
+    return '\n'.join(lines)
+
 def get_package_metadata(cran_url, package, session):
-    r = session.get(cran_url + 'web/packages/' + package + '/DESCRIPTION')
+    url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
+    r = session.get(url)
+    try:
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            sys.exit("ERROR: %s (404 Not Found)" % url)
+        raise
     DESCRIPTION = r.text
     d = dict_from_cran_lines(remove_package_line_continuations(DESCRIPTION.splitlines()))
     d['orig_description'] = DESCRIPTION
@@ -266,6 +294,7 @@ def main(args, parser):
 
     print("Fetching metadata from %s" % args.cran_url)
     r = session.get(args.cran_url + "src/contrib/PACKAGES")
+    r.raise_for_status()
     PACKAGES = r.text
     package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
 
@@ -278,14 +307,15 @@ def main(args, parser):
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
 
+        # Make sure package is always uses the CRAN capitalization
+        package = cran_metadata[package.lower()]['Package']
+
         cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
             package, session))
 
         dir_path = join(output_dir, 'r-' + package.lower())
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
-
-        package = cran_metadata[package.lower()]['Package']
 
         cran_package = cran_metadata[package.lower()]
 
@@ -329,11 +359,11 @@ def main(args, parser):
 
         if "URL" in cran_package:
             d['home_comment'] = ''
-            d['homeurl'] = ' ' + yaml.dump(cran_package['URL'])
+            d['homeurl'] = ' ' + yaml_quote_string(cran_package['URL'])
 
         if 'Description' in cran_package:
             d['summary_comment'] = ''
-            d['summary'] = ' ' + yaml.dump(cran_package['Description'])
+            d['summary'] = ' ' + yaml_quote_string(cran_package['Description'])
 
         if "Suggests" in cran_package:
             d['suggests'] = "# Suggests: %s" % cran_package['Suggests']
@@ -410,7 +440,7 @@ def main(args, parser):
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(CRAN_META.format(**d))
+            f.write(clear_trailing_whitespace(CRAN_META.format(**d)))
         with open(join(output_dir, name, 'build.sh'), 'w') as f:
             f.write(CRAN_BUILD_SH.format(**d))
         with open(join(output_dir, name, 'bld.bat'), 'w') as f:

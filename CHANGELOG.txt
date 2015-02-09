@@ -1,8 +1,13 @@
-...................
--------------------
+2015-02-XX   1.10.1:
+--------------------
+  * greatly improved ability to create noarch_python packages
+  * added 'subdir' key to info/index.json
   * allow url to be a list or urls, which are tried until one works
   * use quotes instead of !!str for versions from the conda skeleton commands
   * add conda skeleton cran to generate recipes for packages from CRAN
+  * add support for adding a readme to a recipe
+  * add a --quiet option to conda convert
+
 
 2015-01-15   1.10.0:
 --------------------

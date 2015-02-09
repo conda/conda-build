@@ -22,7 +22,7 @@ class TarCheck(object):
         self.name, self.version, self.build = self.dist.rsplit('-', 2)
 
     def info_files(self):
-        if self.build.startswith('py_'):
+        if 'py_' in self.build:
             return
         lista = [p.strip().decode('utf-8') for p in
                  self.t.extractfile('info/files').readlines()]

@@ -355,7 +355,7 @@ def main(args, parser):
             print("Using url %s" % package)
             d['pypiurl'] = package
             U = parse_url(package)
-            if U.fragment.startswith('md5='):
+            if U.fragment and U.fragment.startswith('md5='):
                 d['usemd5'] = ''
                 d['md5'] = U.fragment[len('md5='):]
             else:
