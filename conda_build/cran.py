@@ -257,9 +257,10 @@ def yaml_quote_string(string):
     Quote a string for use in YAML.
 
     We can't just use yaml.dump because it adds ellipses to the end of the
-    string.
+    string, and it in general doesn't handle being placed inside an existing
+    document very well.
     """
-    return yaml.dump(string).replace('\n...\n', '')
+    return yaml.dump(string).replace('\n...\n', '').replace('\n', '\n  ')
 
 def get_package_metadata(cran_url, package, session):
     url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
