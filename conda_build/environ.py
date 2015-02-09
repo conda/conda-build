@@ -36,10 +36,6 @@ def get_git_build_info(src_dir):
     if os.path.isdir(git_dir):
         env['GIT_DIR'] = git_dir
     else:
-        d['GIT_DIR'] = ''
-        d['GIT_DESCRIBE_TAG'] = ''
-        d['GIT_DESCRIBE_NUMBER'] = ''
-        d['GIT_DESCRIBE_HASH'] = ''
         return d
 
     # grab information from describe
