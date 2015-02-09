@@ -67,6 +67,9 @@ def select_lines(data, namespace):
     lines = []
     for i, line in enumerate(data.splitlines()):
         line = line.rstrip()
+        if line.lstrip().startswith('#'):
+            # Don't bother with comment only lines
+            continue
         m = sel_pat.match(line)
         if m:
             cond = m.group(3)
