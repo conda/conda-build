@@ -259,8 +259,16 @@ def yaml_quote_string(string):
     We can't just use yaml.dump because it adds ellipses to the end of the
     string, and it in general doesn't handle being placed inside an existing
     document very well.
+
+    Note that this function is NOT general.
     """
     return yaml.dump(string).replace('\n...\n', '').replace('\n', '\n  ')
+
+def clear_trailing_whitespace(string):
+    lines = []
+    for line in string.splitlines():
+        lines.append(line.rstrip())
+    return '\n'.join(lines)
 
 def get_package_metadata(cran_url, package, session):
     url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
@@ -440,7 +448,7 @@ def main(args, parser):
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(CRAN_META.format(**d))
+            f.write(clear_trailing_whitespace(CRAN_META.format(**d)))
         with open(join(output_dir, name, 'build.sh'), 'w') as f:
             f.write(CRAN_BUILD_SH.format(**d))
         with open(join(output_dir, name, 'bld.bat'), 'w') as f:
