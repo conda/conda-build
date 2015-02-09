@@ -252,6 +252,15 @@ def remove_package_line_continuations(chunk):
 
     return chunk
 
+def yaml_quote_string(string):
+    """
+    Quote a string for use in YAML.
+
+    We can't just use yaml.dump because it adds ellipses to the end of the
+    string.
+    """
+    return yaml.dump(string).replace('\n...\n', '')
+
 def get_package_metadata(cran_url, package, session):
     url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
     r = session.get(url)
@@ -349,11 +358,11 @@ def main(args, parser):
 
         if "URL" in cran_package:
             d['home_comment'] = ''
-            d['homeurl'] = ' ' + yaml.dump(cran_package['URL'])
+            d['homeurl'] = ' ' + yaml_quote_string(cran_package['URL'])
 
         if 'Description' in cran_package:
             d['summary_comment'] = ''
-            d['summary'] = ' ' + yaml.dump(cran_package['Description'])
+            d['summary'] = ' ' + yaml_quote_string(cran_package['Description'])
 
         if "Suggests" in cran_package:
             d['suggests'] = "# Suggests: %s" % cran_package['Suggests']
