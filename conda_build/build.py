@@ -318,8 +318,11 @@ def build(m, get_src=True, verbose=True, post=None):
     post only. False means stop just before the post.
     '''
     if post in [False, None]:
+        print("Removing old build directory")
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
+        print("Removing old work directory")
+        rm_rf(config.WORK_DIR)
 
         if (m.get_value('build/detect_binary_files_with_prefix')
             or m.binary_has_prefix_files()):
