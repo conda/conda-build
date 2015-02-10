@@ -1,7 +1,10 @@
+2015-02-10   1.10.2:
+--------------------
   * don't set the GIT_* environment variables when the source is not a git repo
   * skeleton cran: add extra metadata from CRAN to the recipe
   * skeleton pypi: fix there not being a fragment in a url
   * don't match comment only lines as selectors
+
 
 2015-02-06   1.10.1:
 --------------------
