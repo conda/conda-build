@@ -322,7 +322,7 @@ def build(m, get_src=True, verbose=True, post=None):
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
         print("Removing old work directory")
-        rm_rf(config.WORK_DIR)
+        rm_rf(source.WORK_DIR)
 
         if (m.get_value('build/detect_binary_files_with_prefix')
             or m.binary_has_prefix_files()):
