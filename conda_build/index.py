@@ -21,6 +21,8 @@ def read_index_tar(tar_path):
         except EOFError:
             raise RuntimeError("Could not extract %s. File probably corrupt."
                 % tar_path)
+        except OSError as e:
+            raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
 
 def write_repodata(repodata, dir_path):
     data = json.dumps(repodata, indent=2, sort_keys=True)
