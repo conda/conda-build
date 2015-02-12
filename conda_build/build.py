@@ -7,7 +7,6 @@ from __future__ import absolute_import, division, print_function
 import io
 import json
 import os
-import re
 import shutil
 import stat
 import subprocess
@@ -30,7 +29,7 @@ from conda.resolve import Resolve, MatchSpec
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
 from conda_build.scripts import create_entry_points, bin_dirname
-from conda_build.post import (post_process, post_build, is_obj,
+from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
@@ -156,6 +155,17 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
         yaml.safe_dump(m.meta, fo)
 
+    readme = m.get_value('about/readme')
+    if readme:
+        src = join(source.get_dir(), readme)
+        if not os.path.exists(src):
+            sys.exit("Error: Could not find the readme: %s" % readme)
+        dst = join(config.info_dir, readme)
+        shutil.copy(src, dst)
+        if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
+            print("WARNING: Binstar only recognizes about/readme as README.md and README.rst",
+                file=sys.stderr)
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
@@ -169,13 +179,16 @@ def create_info_files(m, files, include_recipe=True):
         files = [f.replace('\\', '/') for f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write(f + '\n')
+        if m.get_value('build/noarch_python'):
+            fo.write('\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
 
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    if files_with_prefix:
+    if files_with_prefix and not m.get_value('build/noarch_python'):
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
@@ -198,7 +211,7 @@ def create_info_files(m, files, include_recipe=True):
                     fo.write(fmt_str % (pfix, mode, fn))
                     binary_has_prefix_files.remove(fn)
                 elif (auto_detect or (mode == 'text')):
-                    print("Detected hard-coded path in text file %s" % fn)
+                    print("Detected hard-coded path in %s file %s" % (mode, fn))
                     fo.write(fmt_str % (pfix, mode, fn))
                 else:
                     print("Ignored hard-coded path in %s" % fn)
@@ -341,7 +354,7 @@ def build(m, get_src=True, verbose=True, post=None):
             print("no source")
 
         rm_rf(config.info_dir)
-        files1 = prefix_files()
+        files1 = prefix_files().difference(set(m.always_include_files()))
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
@@ -383,7 +396,12 @@ def build(m, get_src=True, verbose=True, post=None):
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files()
         post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        create_info_files(m, sorted(files2 - files1),
+                          include_recipe=bool(m.path))
+        if m.get_value('build/noarch_python'):
+            import conda_build.noarch_python as noarch_python
+            noarch_python.transform(m, sorted(files2 - files1))
+
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 

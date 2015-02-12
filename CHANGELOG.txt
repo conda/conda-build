@@ -1,5 +1,24 @@
-...
--------------------
+2015-02-10   1.10.2:
+--------------------
+  * don't set the GIT_* environment variables when the source is not a git repo
+  * skeleton cran: add extra metadata from CRAN to the recipe
+  * skeleton pypi: fix there not being a fragment in a url
+  * don't match comment only lines as selectors
+
+
+2015-02-06   1.10.1:
+--------------------
+  * greatly improved ability to create noarch_python packages
+  * added 'subdir' key to info/index.json
+  * allow url to be a list or urls, which are tried until one works
+  * use quotes instead of !!str for versions from the conda skeleton commands
+  * add conda skeleton cran to generate recipes for packages from CRAN
+  * add support for adding a readme to a recipe
+  * add a --quiet option to conda convert
+
+
+2015-01-15   1.10.0:
+--------------------
   * automatically convert absolute symlinks to paths in the build prefix to
     relative ones.
   * error if there are symlinks to the source directory.
@@ -9,6 +28,15 @@
   * new command conda inspect for inspecting packages. The only subcommand so
     far is conda inspect linkages, which shows the dynamic linkages of the
     shared object files on Linux.
+  * correctly handle Unix style has_prefixes on Windows
+  * run the tests in Binstar build
+  * only modify egg directories that are part of the package being built
+  * don't exclude .dylib files from prefix replacement
+  * ability to build noarch packages
+  * allow specifying files to always include
+  * fix for building dependencies in some cases
+  * print the correct thing for binary files detected with a prefix
+
 
 2014-11-18   1.9.1:
 -------------------

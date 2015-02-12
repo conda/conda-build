@@ -31,9 +31,13 @@ def get_sp_dir():
 
 def get_git_build_info(src_dir):
     env = os.environ.copy()
-    env['GIT_DIR'] = join(src_dir, '.git')
-
     d = {}
+    git_dir = join(src_dir, '.git')
+    if os.path.isdir(git_dir):
+        env['GIT_DIR'] = git_dir
+    else:
+        return d
+
     # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
@@ -87,8 +91,7 @@ def get_dict(m=None, prefix=None):
     except NotImplementedError:
         d['CPU_COUNT'] = "1"
 
-    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-        d.update(**get_git_build_info(d['SRC_DIR']))
+    d.update(**get_git_build_info(d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
@@ -100,12 +103,15 @@ def get_dict(m=None, prefix=None):
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
 
+        d['R'] = join(prefix, 'Scripts', 'R.bat')
     else:                               # -------- Unix
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
         d['INCLUDE_PATH'] = join(prefix, 'include')
         d['LIBRARY_PATH'] = join(prefix, 'lib')
+
+        d['R'] = join(prefix, 'bin', 'R')
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'

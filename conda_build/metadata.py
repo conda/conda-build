@@ -67,6 +67,9 @@ def select_lines(data, namespace):
     lines = []
     for i, line in enumerate(data.splitlines()):
         line = line.rstrip()
+        if line.lstrip().startswith('#'):
+            # Don't bother with comment only lines
+            continue
         m = sel_pat.match(line)
         if m:
             cond = m.group(3)
@@ -185,14 +188,15 @@ FIELDS = {
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'noarch',
+              'no_link', 'binary_relocation', 'script', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files',
-              'detect_binary_files_with_prefix', 'rpaths'],
+              'detect_binary_files_with_prefix', 'rpaths',
+              'always_include_files', ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary'],
+    'about': ['home', 'license', 'summary', 'readme'],
 }
 
 
@@ -257,7 +261,7 @@ class MetaData(object):
             return
         self.meta = parse(get_contents(self.meta_path))
 
-        if isfile(self.requirements_path):
+        if isfile(self.requirements_path) and not self.meta['requirements']['run']:
             self.meta.setdefault('requirements', {})
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
@@ -311,7 +315,8 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
+        name_ver_list = [('python', config.CONDA_PY),
+                         ('numpy', config.CONDA_NPY),
                          ('perl', config.CONDA_PERL)]
         for spec in self.get_value('requirements/' + typ, []):
             try:
@@ -320,7 +325,8 @@ class MetaData(object):
                 raise RuntimeError("Invalid package specification: %r" % spec)
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if ms.strictness != 1:
+                    if (ms.strictness != 1 or
+                             self.get_value('build/noarch_python')):
                         continue
                     str_ver = text_type(ver)
                     if '.' not in str_ver:
@@ -343,7 +349,11 @@ class MetaData(object):
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
             for ms in self.ms_depends():
                 if ms.name == name:
-                    v = ms.spec.split()[1]
+                    try:
+                        v = ms.spec.split()[1]
+                    except IndexError:
+                        res.append(s)
+                        break
                     if ',' in v or '|' in v:
                         break
                     if name != 'perl':
@@ -389,14 +399,16 @@ class MetaData(object):
             license = self.get_value('about/license'),
             platform = cc.platform,
             arch = cc.arch_name,
+            subdir = cc.subdir,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch'):
+        if self.get_value('build/noarch_python'):
             d['platform'] = d['arch'] = None
+            d['subdir'] = 'noarch'
         if self.is_app():
             d.update(self.app_meta())
         return d
@@ -409,6 +421,9 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
+
+    def always_include_files(self):
+        return self.get_value('build/always_include_files', [])
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])

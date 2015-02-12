@@ -6,8 +6,12 @@ import os
 import sys
 import stat
 from glob import glob
-from os.path import (basename, join, splitext, isdir, isfile, exists, islink, realpath, relpath)
-from os import readlink
+from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
+                     islink, realpath, relpath)
+try:
+    from os import readlink
+except ImportError:
+    readlink = False
 import io
 from subprocess import call, Popen, PIPE
 
@@ -171,7 +175,7 @@ def mk_relative_osx(path):
             stdout, stderr = p.communicate()
             stderr = stderr.decode('utf-8')
             if "Mach-O dynamic shared library stub file" in stderr:
-                print("Skipping Mach-O dynamic shared library stub file %s" % path)
+                print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
                 return
             else:
                 print(stderr, file=sys.stderr)
@@ -238,7 +242,10 @@ def post_build(m, files):
 
     check_symlinks(files)
 
+
 def check_symlinks(files):
+    if readlink is False:
+        return  # Not on Unix system
     msgs = []
     for f in files:
         path = join(config.build_prefix, f)
@@ -255,7 +262,7 @@ def check_symlinks(files):
                     # such crazy things don't happen.
                     print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
-                    os.symlink(relpath(real_link_path, path), path)
+                    os.symlink(relpath(real_link_path, dirname(path)), path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(config.croot):
