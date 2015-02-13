@@ -7,11 +7,12 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import os
 import sys
 from collections import deque
 from glob import glob
 from locale import getpreferredencoding
-from os.path import exists
+from os.path import exists, join
 
 import conda.config as config
 from conda.compat import PY3
@@ -56,7 +57,7 @@ def main():
         'recipe',
         action="store",
         metavar='RECIPE_PATH',
-        nargs='+',
+        nargs='*',
         help="path to recipe directory"
     )
     p.add_argument(
@@ -184,6 +185,14 @@ def execute(args, parser):
     from conda_build.metadata import MetaData
 
     check_external()
+
+    if not getattr(args, 'recipe'):
+        possible = join(os.getcwd(), 'conda.recipe')
+        if not exists(possible):
+            raise RuntimeError(
+                "conda.recipe directory not found, please specify"
+            )
+        args.recipe = [possible, ]
 
     if args.python:
         if args.python == ['all']:
