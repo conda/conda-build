@@ -56,7 +56,8 @@ def main():
         'recipe',
         action="store",
         metavar='RECIPE_PATH',
-        nargs='+',
+        nargs='?',
+        default='.',
         help="path to recipe directory"
     )
     p.add_argument(
@@ -79,7 +80,7 @@ def main():
     p.add_argument(
         '-V', '--version',
         action='version',
-        version = 'conda-build %s' % __version__,
+        version='conda-build %s' % __version__,
     )
     p.add_argument(
         '-q', "--quiet",
