@@ -40,7 +40,7 @@ engine:
 
 install:
   # Use the provided conda and Python to run the install script. The order of these commands matters.
-  - conda install requests
+  - conda install requests --yes
   - set "CONDA_DEFAULT_ENV="
   - python tests\install_miniconda.py
 
