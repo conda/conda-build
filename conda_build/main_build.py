@@ -186,13 +186,21 @@ def execute(args, parser):
 
     check_external()
 
-    if not getattr(args, 'recipe'):
-        possible = join(os.getcwd(), 'conda.recipe')
-        if not exists(possible):
+    if not getattr(args, 'recipe', False):
+        POSSIBLE_PATHS = [
+            join(os.getcwd(), 'conda.recipe'),
+            join(os.getcwd()),
+        ]
+        POSSIBLE_FILES = ['meta.yaml', 'conda.yaml']
+        for possible_path in POSSIBLE_PATHS:
+            for possible_file in POSSIBLE_FILES:
+                if exists(join(possible_path, possible_file)):
+                    args.recipe = [possible_path, ]
+                    break
+        if not getattr(args, 'recipe', False):
             raise RuntimeError(
-                "conda.recipe directory not found, please specify"
+                "recipe directory not found, please specify"
             )
-        args.recipe = [possible, ]
 
     if args.python:
         if args.python == ['all']:
