@@ -96,7 +96,7 @@ def get_dict(m=None, prefix=None):
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
                      join(prefix) + ';' +
-                     join(prefix, 'Scripts') + ';' + os.getenv('PATH'))
+                     join(prefix, 'Scripts') + ';%PATH%')
         d['SCRIPTS'] = join(prefix, 'Scripts')
         d['LIBRARY_PREFIX'] = join(prefix, 'Library')
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
