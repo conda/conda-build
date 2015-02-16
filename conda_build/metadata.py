@@ -336,6 +336,15 @@ class MetaData(object):
                 if c in ms.name:
                     sys.exit("Error: bad character '%s' in package name "
                              "dependency '%s'" % (c, ms.name))
+                parts = spec.split()
+                if len(parts) >= 2:
+                    if parts[1] in {'>', '>=', '=', '==', '!=', '<', '<='}:
+                        msg = ("Error: bad character '%s' in package version "
+                            "dependency '%s'" % (parts[1], ms.name))
+                        if len(parts) >= 3:
+                            msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
+                                parts[1], parts[2])
+                        sys.exit(msg)
             res.append(ms)
         return res
 
