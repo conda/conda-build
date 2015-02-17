@@ -500,7 +500,7 @@ def test(m, verbose=True):
     if shell_files:
         if sys.platform == 'win32':
             test_file = join(tmp_dir, 'run_test.bat')
-            cmd = [os.environ['COMSPEC'], '/c', test_file]
+            cmd = [os.environ['COMSPEC'], '/c', 'call', test_file]
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
