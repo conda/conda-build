@@ -1,3 +1,11 @@
+2015-02-XX   1.10.3:
+--------------------
+  * add 'script_env' key in build section of meta.yaml file, which is a list
+    of environment variable names which are made available in the build
+    script.  If a variable is listed here, but is not in the environment,
+    the value '<UNDEFINED>' is assigned.
+
+
 2015-02-10   1.10.2:
 --------------------
   * don't set the GIT_* environment variables when the source is not a git repo

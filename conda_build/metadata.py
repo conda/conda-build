@@ -103,7 +103,7 @@ def parse(data):
             raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
-                  'build/entry_points',
+                  'build/entry_points', 'build/script_env',
                   'build/features', 'build/track_features',
                   'requirements/build', 'requirements/run',
                   'requirements/conflicts', 'test/requires',
@@ -189,7 +189,7 @@ FIELDS = {
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch_python',
-              'has_prefix_files', 'binary_has_prefix_files',
+              'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', ],
     'requirements': ['build', 'run', 'conflicts'],

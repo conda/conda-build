@@ -83,8 +83,13 @@ def get_dict(m=None, prefix=None):
     d['PY_VER'] = get_py_ver()
     d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
-    if "LANG" in os.environ:
-        d['LANG'] = os.environ['LANG']
+
+    if m:
+        for var_name in m.get_value('build/script_env'):
+            value = os.getenv(var_name)
+            if value is None:
+                value = '<UNDEFINED>'
+            d[var_name] = value
 
     try:
         d['CPU_COUNT'] = str(multiprocessing.cpu_count())
