@@ -107,6 +107,8 @@ def get_dict(m=None, prefix=None):
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
+        # This probably should be done more generally
+        d['CYGWIN_PREFIX'] = prefix.replace('\\', '/').replace('C:', '/cygdrive/c')
 
         d['R'] = join(prefix, 'Scripts', 'R.bat')
     else:                               # -------- Unix
