@@ -510,9 +510,11 @@ def get_package_metadata(args, package, d, data):
             if setuptools_run:
                 deps.append('setuptools')
             for deptext in requires:
+                if isinstance(deptext, string_types):
+                    deptext = deptext.split('\n')
                 # Every item may be a single requirement
                 #  or a multiline requirements string...
-                for dep in deptext.split('\n'):
+                for dep in deptext:
                     #... and may also contain comments...
                     dep = dep.split('#')[0].strip()
                     if dep: #... and empty (or comment only) lines
