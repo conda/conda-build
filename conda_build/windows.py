@@ -113,7 +113,7 @@ def build(m):
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+        cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
         kill_processes()
         fix_staged_scripts()
