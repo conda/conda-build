@@ -324,6 +324,10 @@ def main(args, parser):
         if not urls:
             if 'download_url' in data:
                 urls = [defaultdict(str, {'url': data['download_url']})]
+                if not urls[0]['url']:
+                    # The package doesn't have a url, or maybe it only has a wheel.
+                    sys.exit("Error: Could not build recipe for %s. "
+                        "Could not find any valid urls." % package)
                 U = parse_url(urls[0]['url'])
                 urls[0]['filename'] = U.path.rsplit('/')[-1]
                 fragment = U.fragment or ''
