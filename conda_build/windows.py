@@ -90,7 +90,7 @@ def kill_processes():
             continue
 
 
-def build(m):
+def build(m, script=None):
     env = dict(os.environ)
     env.update(environ.get_dict(m))
 
@@ -101,6 +101,9 @@ def build(m):
 
     src_dir = source.get_dir()
     bld_bat = join(m.path, 'bld.bat')
+    if script:
+        with open(bld_bat, 'w') as bf:
+            bf.write(script)
     if exists(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
