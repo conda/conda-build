@@ -473,7 +473,7 @@ def test(m, verbose=True):
 
     # prepend bin (or Scripts) directory
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
-                   env['PATH'])
+                   os.getenv('PATH'))
 
     for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
         env[varname] = str(getattr(config, varname))
