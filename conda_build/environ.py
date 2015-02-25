@@ -110,7 +110,7 @@ def get_dict(m=None, prefix=None):
         # This probably should be done more generally
         d['CYGWIN_PREFIX'] = prefix.replace('\\', '/').replace('C:', '/cygdrive/c')
 
-        d['R'] = join(prefix, 'Scripts', 'R.bat')
+        d['R'] = join(prefix, 'Scripts', 'R.exe')
     else:                               # -------- Unix
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
