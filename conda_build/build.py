@@ -374,6 +374,7 @@ def build(m, get_src=True, verbose=True, post=None):
             if script:
                 if isinstance(script, list):
                     script = '\n'.join(script)
+                build_file = join(source.get_dir(), 'conda_build.sh')
                 with open(build_file, 'w') as bf:
                     bf.write(script)
                 os.chmod(build_file, 0o766)
