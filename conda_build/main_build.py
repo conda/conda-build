@@ -270,9 +270,10 @@ def execute(args, parser):
                     args.binstar_upload = False
                 else:
                     post = None
+                channel_urls = args.channel or ()
                 try:
                     build.build(m, verbose=not args.quiet, post=post,
-                        channel_urls=args.channel, override_channels=args.override_channels)
+                        channel_urls=channel_urls, override_channels=args.override_channels)
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
