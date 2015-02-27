@@ -302,7 +302,7 @@ def execute(args, parser):
 
                 if not args.notest:
                     build.test(m, verbose=not args.quiet,
-                        channel_urls=args.channel, override_channels=args.override_channels)
+                        channel_urls=channel_urls, override_channels=args.override_channels)
                 binstar_upload = True
 
             if need_cleanup:
