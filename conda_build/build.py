@@ -243,7 +243,8 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def create_env(prefix, specs, clear_cache=True, verbose=True):
+def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
+    override_channels=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -255,7 +256,8 @@ def create_env(prefix, specs, clear_cache=True, verbose=True):
             # remove the cache such that a refetch is made,
             # this is necessary because we add the local build repo URL
             fetch_index.cache = {}
-        index = get_index([url_path(config.croot)])
+        index = get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+            prepend=not override_channels)
 
         warn_on_old_conda_build(index)
 
@@ -306,7 +308,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, verbose=True, post=None):
+def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_channels=False):
     '''
     Build the package with the specified metadata.
 
@@ -337,8 +339,9 @@ def build(m, get_src=True, verbose=True, post=None):
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
         create_env(config.build_prefix,
-                   [ms.spec for ms in m.ms_depends('build')],
-                   verbose=verbose)
+            [ms.spec for ms in m.ms_depends('build')],
+            verbose=verbose, channel_urls=channel_urls,
+            override_channels=override_channels)
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
@@ -424,7 +427,7 @@ def build(m, get_src=True, verbose=True, post=None):
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
-def test(m, verbose=True):
+def test(m, verbose=True, channel_urls=(), override_channels=False):
     '''
     Execute any test scripts for the given package.
 
@@ -465,7 +468,8 @@ def test(m, verbose=True):
     for spec in m.get_value('test/requires', []):
         specs.append(spec)
 
-    create_env(config.test_prefix, specs, verbose=verbose)
+    create_env(config.test_prefix, specs, verbose=verbose,
+        channel_urls=channel_urls, override_channels=override_channels)
 
     env = dict(os.environ)
     # TODO: Include all the same environment variables that are used in
