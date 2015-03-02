@@ -16,7 +16,7 @@ from os.path import exists
 import conda.config as config
 from conda.compat import PY3
 
-from conda_build import __version__
+from conda_build import __version__, exceptions
 
 
 def main():
@@ -241,7 +241,11 @@ def execute(args, parser):
             if not isdir(recipe_dir):
                 sys.exit("Error: no such directory: %s" % recipe_dir)
 
-            m = MetaData(recipe_dir)
+            try:
+                m = MetaData(recipe_dir)
+            except exceptions.YamlParsingError as e:
+                sys.stderr.write(e.error_msg())
+                sys.exit(1)
             binstar_upload = False
             if args.check and len(args.recipe) > 1:
                 print(m.path)

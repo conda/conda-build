@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
+import textwrap
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -10,6 +11,8 @@ from conda.utils import memoized, md5_file
 import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
+
+from . import exceptions
 
 try:
     import yaml
@@ -89,7 +92,14 @@ Error: Invalid selector in meta.yaml line %d:
 
 @memoized
 def yamlize(data):
-    return yaml.load(data)
+    try:
+        return yaml.load(data)
+    except yaml.parser.ParserError as e:
+        try:
+            import jinja2
+        except ImportError:
+            raise exceptions.UnableToParseMissingJinja2(original=e)
+        raise exceptions.UnableToParse(original=e)
 
 
 def parse(data):

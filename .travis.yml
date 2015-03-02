@@ -34,3 +34,5 @@ notifications:
 
 git:
   depth: 10000
+
+sudo: false
