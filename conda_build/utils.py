@@ -19,7 +19,10 @@ from conda.install import rm_rf
 def copy_into(src, dst):
     "Copy all the files and directories in src to the directory dst"
 
-    tocopy = os.listdir(src)
+    if not isdir(src):
+        tocopy = [src]
+    else:
+        tocopy = os.listdir(src)
     for afile in tocopy:
         srcname = os.path.join(src, afile)
         dstname = os.path.join(dst, afile)
