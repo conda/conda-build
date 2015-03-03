@@ -9,10 +9,12 @@ import bz2
 import sys
 import json
 import tarfile
-from os.path import join, getmtime
+from os.path import join
 
 from conda_build.utils import file_info
 from conda.compat import PY3
+from conda.utils import md5_file
+
 
 def read_index_tar(tar_path):
     with tarfile.open(tar_path) as t:
@@ -60,7 +62,7 @@ Error:
 """)
     for fn in files:
         path = join(dir_path, fn)
-        if fn in index and index[fn]['mtime'] == getmtime(path):
+        if fn in index and index[fn]['md5'] == md5_file(path):
             continue
         if verbose:
             print('updating:', fn)
