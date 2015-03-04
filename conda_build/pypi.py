@@ -42,7 +42,7 @@ from requests.packages.urllib3.util.url import parse_url
 PYPI_META = """\
 package:
   name: {packagename}
-  version: !!str {version}
+  version: "{version}"
 
 source:
   fn: {filename}
@@ -74,7 +74,7 @@ requirements:
   run:
     - python{run_depends}
 
-test:
+{test_comment}test:
   # Python imports
   {import_comment}imports:{import_tests}
 
@@ -275,8 +275,9 @@ def main(args, parser):
                 'build_comment': '# ',
                 'test_commands': '',
                 'usemd5': '',
-                'entry_comment': '#',
-                'egg_comment': '#',
+                'test_comment': '',
+                'entry_comment': '# ',
+                'egg_comment': '# ',
                 'summary_comment': '',
                 'home_comment': '',
             })
@@ -323,11 +324,16 @@ def main(args, parser):
         if not urls:
             if 'download_url' in data:
                 urls = [defaultdict(str, {'url': data['download_url']})]
+                if not urls[0]['url']:
+                    # The package doesn't have a url, or maybe it only has a wheel.
+                    sys.exit("Error: Could not build recipe for %s. "
+                        "Could not find any valid urls." % package)
                 U = parse_url(urls[0]['url'])
                 urls[0]['filename'] = U.path.rsplit('/')[-1]
-                if U.fragment.startswith('md5='):
+                fragment = U.fragment or ''
+                if fragment.startswith('md5='):
                     d['usemd5'] = ''
-                    d['md5'] = U.fragment[len('md5='):]
+                    d['md5'] = fragment[len('md5='):]
                 else:
                     d['usemd5'] = '#'
             else:
@@ -353,7 +359,7 @@ def main(args, parser):
             print("Using url %s" % package)
             d['pypiurl'] = package
             U = parse_url(package)
-            if U.fragment.startswith('md5='):
+            if U.fragment and U.fragment.startswith('md5='):
                 d['usemd5'] = ''
                 d['md5'] = U.fragment[len('md5='):]
             else:
@@ -374,6 +380,9 @@ def main(args, parser):
         else:
             d['import_comment'] = ''
             d['import_tests'] = INDENT + d['import_tests']
+
+        if d['entry_comment'] == d['import_comment'] == '# ':
+            d['test_comment'] = '# '
 
     for package in package_dicts:
         d = package_dicts[package]
@@ -457,9 +466,13 @@ def get_package_metadata(args, package, d, data):
             else:
                 cs = entry_points.get('console_scripts', [])
                 gs = entry_points.get('gui_scripts', [])
+                if isinstance(cs, string_types):
+                    cs = [cs]
+                if isinstance(gs, string_types):
+                    gs = [gs]
                 # We have *other* kinds of entry-points so we need
                 # setuptools at run-time
-                if not cs and not gs and len(entry_points) > 1:
+                if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
                     setuptools_build = True
                     setuptools_run = True
                 entry_list = (
@@ -498,10 +511,14 @@ def get_package_metadata(args, package, d, data):
                 requires.extend(specs)
         if requires or setuptools_build or setuptools_run:
             deps = []
+            if setuptools_run:
+                deps.append('setuptools')
             for deptext in requires:
+                if isinstance(deptext, string_types):
+                    deptext = deptext.split('\n')
                 # Every item may be a single requirement
                 #  or a multiline requirements string...
-                for dep in deptext.split('\n'):
+                for dep in deptext:
                     #... and may also contain comments...
                     dep = dep.split('#')[0].strip()
                     if dep: #... and empty (or comment only) lines
@@ -545,10 +562,10 @@ def get_package_metadata(args, package, d, data):
             d['import_tests'] = INDENT.join(sorted(deps))
             d['import_comment'] = ''
 
-        if pkginfo['homeurl']:
+        if pkginfo['homeurl'] is not None:
             d['homeurl'] = pkginfo['homeurl']
         else:
-            if data:
+            if data and 'homeurl' in data:
                 d['homeurl'] = data['homeurl']
             else:
                 d['homeurl'] = "The package home page"

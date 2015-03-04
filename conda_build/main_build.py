@@ -16,7 +16,7 @@ from os.path import exists
 import conda.config as config
 from conda.compat import PY3
 
-from conda_build import __version__
+from conda_build import __version__, exceptions
 
 
 def main():
@@ -241,7 +241,11 @@ def execute(args, parser):
             if not isdir(recipe_dir):
                 sys.exit("Error: no such directory: %s" % recipe_dir)
 
-            m = MetaData(recipe_dir)
+            try:
+                m = MetaData(recipe_dir)
+            except exceptions.YamlParsingError as e:
+                sys.stderr.write(e.error_msg())
+                sys.exit(1)
             binstar_upload = False
             if args.check and len(args.recipe) > 1:
                 print(m.path)
@@ -272,7 +276,7 @@ def execute(args, parser):
                     build.build(m, verbose=not args.quiet, post=post)
                 except RuntimeError as e:
                     error_str = str(e)
-                    if error_str.startswith('No packages found'):
+                    if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
                         # Build dependency if recipe exists
                         dep_pkg = error_str.split(': ')[1]
                         # Handle package names that contain version deps.

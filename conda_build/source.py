@@ -8,6 +8,7 @@ from subprocess import check_call, Popen, PIPE
 
 from conda.fetch import download
 from conda.utils import hashsum_file
+from conda.cli.common import error_and_exit
 
 from conda_build import external
 from conda_build.config import config
@@ -45,7 +46,20 @@ def download_to_cache(meta):
         print('Found source in cache: %s' % fn)
     else:
         print('Downloading source to cache: %s' % fn)
-        download(meta['url'], path)
+        if not isinstance(meta['url'], list):
+            meta['url'] = [meta['url']]
+
+        for url in meta['url']:
+            try:
+                print("Downloading %s" % url)
+                download(url, path)
+            except RuntimeError as e:
+                print("Error: %s" % str(e).strip(), file=sys.stderr)
+            else:
+                print("Success")
+                break
+        else: # no break
+            raise RuntimeError("Could not download %s" % fn)
 
     for tp in 'md5', 'sha1', 'sha256':
         if meta.get(tp) and hashsum_file(path, tp) != meta[tp]:
@@ -60,6 +74,7 @@ def unpack(meta):
     src_path = download_to_cache(meta)
 
     os.makedirs(WORK_DIR)
+    print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
         tar_xf(src_path, WORK_DIR)
     elif src_path.lower().endswith('.zip'):
@@ -82,7 +97,8 @@ def git_source(meta, recipe_dir):
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
         os.chdir(recipe_dir)
-        git_dn = abspath(expanduser(git_url)).replace('/', '_')
+        git_dn = abspath(expanduser(git_url))
+        git_dn = "_".join(git_dn.split(os.path.sep)[1:])
     else:
         git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
@@ -100,10 +116,18 @@ def git_source(meta, recipe_dir):
 
     # now clone into the work directory
     checkout = meta.get('git_rev')
+    # if rev is not specified, and the git_url is local,
+    # assume the user wants the current HEAD
+    if not checkout and git_url.startswith('.'):
+        process = Popen(["git", "rev-parse", "HEAD"],
+                    stdout=PIPE, stderr=PIPE,
+                               cwd=git_url)
+        output = process.communicate()[0].strip()
+        checkout = output.decode('utf-8')
     if checkout:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', cache_repo_arg, WORK_DIR])
+    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR])
     if checkout:
         check_call([git, 'checkout', checkout], cwd=WORK_DIR)
 
@@ -126,18 +150,16 @@ def git_info(fo=None):
                 ('git status', True)]:
         p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
         stdout, stderr = p.communicate()
-        if isinstance(stdout, bytes):
-            stdout = stdout.decode('utf-8')
-        if isinstance(stderr, bytes):
-            stderr = stderr.decode('utf-8')
+        stdout = stdout.decode('utf-8')
+        stderr = stderr.decode('utf-8')
         if check_error and stderr and stderr.strip():
             raise Exception("git error: %s" % stderr)
         if fo:
-            fo.write('==> %s <==\n' % cmd)
-            fo.write(stdout + '\n')
+            fo.write(u'==> %s <==\n' % cmd)
+            fo.write(stdout + u'\n')
         else:
-            print('==> %s <==\n' % cmd)
-            print(stdout + '\n')
+            print(u'==> %s <==\n' % cmd)
+            print(stdout + u'\n')
 
 
 def hg_source(meta):
@@ -220,6 +242,7 @@ def provide(recipe_dir, meta, patch=True):
       - unpack
       - apply patches (if any)
     """
+    print("Removing old work directory")
     rm_rf(WORK_DIR)
     if 'fn' in meta:
         unpack(meta)
@@ -229,6 +252,9 @@ def provide(recipe_dir, meta, patch=True):
         hg_source(meta)
     elif 'svn_url' in meta:
         svn_source(meta)
+    elif 'path' in meta:
+        print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
+        copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
     else: # no source
         os.makedirs(WORK_DIR)
 

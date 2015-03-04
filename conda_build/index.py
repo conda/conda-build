@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import bz2
+import sys
 import json
 import tarfile
 from os.path import join, getmtime
@@ -15,7 +16,13 @@ from conda.compat import PY3
 
 def read_index_tar(tar_path):
     with tarfile.open(tar_path) as t:
-        return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+        try:
+            return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+        except EOFError:
+            raise RuntimeError("Could not extract %s. File probably corrupt."
+                % tar_path)
+        except OSError as e:
+            raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
 
 def write_repodata(repodata, dir_path):
     data = json.dumps(repodata, indent=2, sort_keys=True)
@@ -44,6 +51,13 @@ def update_index(dir_path, verbose=False, force=False):
             index = {}
 
     files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
+    if any(fn.startswith('_license-') for fn in files):
+        sys.exit("""\
+Error:
+    Indexing a copy of the Anaconda conda package channel is neither
+    necessary nor supported.  If you which to add your own packages,
+    you can do so by adding them to a separate channel.
+""")
     for fn in files:
         path = join(dir_path, fn)
         if fn in index and index[fn]['mtime'] == getmtime(path):

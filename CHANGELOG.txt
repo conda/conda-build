@@ -1,3 +1,93 @@
+2015-02-XX   1.10.3:
+--------------------
+  * add 'script_env' key in build section of meta.yaml file, which is a list
+    of environment variable names which are made available in the build
+    script.  If a variable is listed here, but is not in the environment,
+    the value '<UNDEFINED>' is assigned.
+
+
+2015-02-10   1.10.2:
+--------------------
+  * don't set the GIT_* environment variables when the source is not a git repo
+  * skeleton cran: add extra metadata from CRAN to the recipe
+  * skeleton pypi: fix there not being a fragment in a url
+  * don't match comment only lines as selectors
+
+
+2015-02-06   1.10.1:
+--------------------
+  * greatly improved ability to create noarch_python packages
+  * added 'subdir' key to info/index.json
+  * allow url to be a list or urls, which are tried until one works
+  * use quotes instead of !!str for versions from the conda skeleton commands
+  * add conda skeleton cran to generate recipes for packages from CRAN
+  * add support for adding a readme to a recipe
+  * add a --quiet option to conda convert
+
+
+2015-01-15   1.10.0:
+--------------------
+  * automatically convert absolute symlinks to paths in the build prefix to
+    relative ones.
+  * error if there are symlinks to the source directory.
+  * use the placeholder prefix in text files rather than the build prefix
+  * allow non-Python packages to be converted to other platforms with conda
+    convert
+  * new command conda inspect for inspecting packages. The only subcommand so
+    far is conda inspect linkages, which shows the dynamic linkages of the
+    shared object files on Linux.
+  * correctly handle Unix style has_prefixes on Windows
+  * run the tests in Binstar build
+  * only modify egg directories that are part of the package being built
+  * don't exclude .dylib files from prefix replacement
+  * ability to build noarch packages
+  * allow specifying files to always include
+  * fix for building dependencies in some cases
+  * print the correct thing for binary files detected with a prefix
+
+
+2014-11-18   1.9.1:
+-------------------
+  * set PYTHONNOUSERSITE=1 while running build scripts
+  * conda index: add error if they try to mix their packages into Anaconda
+    channel
+  * fix building recipes with local git urls in Windows
+  * warn if conda-build is out of date
+
+
+2014-10-22   1.9.0:
+-------------------
+  * adapt tests for Windows
+  * don't use the long build prefix if the short build prefix is already long
+  * support rewriting library load path for libraries that are in
+    subdirectories of lib/ on OS X
+  * allow 'git_rev' as a valid key in 'source', which is identical in behavior
+    to git_branch and git_tag (all checkout the given revision)
+  * also grab the full HEAD sha1 and shove it into the environmental
+    variable GIT_FULL_HASH
+  * automatically detect text prefix files
+  * add detect_binary_files_with_prefix flag to meta.yaml to automatically
+    detect binary files with the prefix and add them to
+    binary_has_prefix_files
+  * fix git_info when the author or commit message contains Unicode characters
+  * allow to pass a url to skeleton pypi
+  * add NPY_VER environment variable
+  * fix conda convert --show-imports
+  * give better error message when encountering a corrupt tarfile in conda
+    index
+  * print{ some more helpful information about what is going on at the
+    beginning of a build
+  * allow source/path in the meta.yaml to specify a path to the source (which
+    can be relative to the recipe directory)
+  * support xz files in Python 3 without requiring unxz
+  * put spaces after skeleton pypi comments
+  * correctly detect when to preserve the egg directory and depend on
+    setuptools in skeleton pypi
+  * set LIBRARY_PATH and INCLUDE_PATH when building on Unix
+  * allow selectors to have text after them if they are in a comment
+  * add CPU_COUNT environment variable to the build
+
+
 2014-09-19   1.8.2:
 -------------------
   * add substantially more tests

@@ -1,0 +1,6 @@
+package:
+  name: conda-build-test-source-path
+  version: 1.0
+
+source:
+  path: ../../../../

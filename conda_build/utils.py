@@ -9,6 +9,7 @@ import subprocess
 from os.path import dirname, getmtime, getsize, isdir, join
 
 from conda.utils import md5_file
+from conda.compat import PY3
 
 from conda_build import external
 
@@ -18,7 +19,10 @@ from conda.install import rm_rf
 def copy_into(src, dst):
     "Copy all the files and directories in src to the directory dst"
 
-    tocopy = os.listdir(src)
+    if not isdir(src):
+        tocopy = [src]
+    else:
+        tocopy = os.listdir(src)
     for afile in tocopy:
         srcname = os.path.join(src, afile)
         dstname = os.path.join(dst, afile)
@@ -52,7 +56,7 @@ def _check_call(args, **kwargs):
 
 
 def tar_xf(tarball, dir_path, mode='r:*'):
-    if tarball.endswith('.tar.xz'):
+    if not PY3 and tarball.endswith('.tar.xz'):
         unxz = external.find_executable('unxz')
         if not unxz:
             sys.exit("""\
