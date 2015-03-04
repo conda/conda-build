@@ -100,7 +100,7 @@ def get_dict(m=None, prefix=None):
     except NotImplementedError:
         d['CPU_COUNT'] = "1"
 
-    d.update(**get_git_build_info(d['SRC_DIR']))
+    d.update(**get_git_build_info(m, d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
