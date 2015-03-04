@@ -88,9 +88,6 @@ def get_dict(m=None, prefix=None):
     d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
 
-    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-        d.update(**get_git_build_info(m, d['SRC_DIR']))
-
     if m:
         for var_name in m.get_value('build/script_env'):
             value = os.getenv(var_name)
