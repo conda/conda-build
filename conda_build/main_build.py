@@ -15,6 +15,7 @@ from os.path import exists
 
 import conda.config as config
 from conda.compat import PY3
+from conda.cli.common import add_parser_channels
 
 from conda_build import __version__, exceptions
 
@@ -25,7 +26,7 @@ def main():
     )
 
     p.add_argument(
-        '-c', "--check",
+        "--check",
         action="store_true",
         help="only check (validate) the recipe",
     )
@@ -104,6 +105,7 @@ def main():
         help="Set the NumPy version used by conda build",
         metavar="NUMPY_VER",
     )
+    add_parser_channels(p)
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -272,8 +274,10 @@ def execute(args, parser):
                     args.binstar_upload = False
                 else:
                     post = None
+                channel_urls = args.channel or ()
                 try:
-                    build.build(m, verbose=not args.quiet, post=post)
+                    build.build(m, verbose=not args.quiet, post=post,
+                        channel_urls=channel_urls, override_channels=args.override_channels)
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
@@ -301,7 +305,8 @@ def execute(args, parser):
                     continue
 
                 if not args.notest:
-                    build.test(m, verbose=not args.quiet)
+                    build.test(m, verbose=not args.quiet,
+                        channel_urls=channel_urls, override_channels=args.override_channels)
                 binstar_upload = True
 
             if need_cleanup:
