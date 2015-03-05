@@ -19,7 +19,7 @@ def main():
                    nargs='*',
                    default=[os.getcwd()])
 
-    p.add_argument('-c', "--check_md5",
+    p.add_argument('-c', "--check-md5",
                    action="store_true",
                    help="Use MD5 values instead of file modification times for\
                          determining if a package's metadata needs to be \
