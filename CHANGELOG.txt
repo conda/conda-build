@@ -22,6 +22,7 @@
   * Add --channel and --override-channels to conda build. -c is changed to
     mean --channel instead of --check.
   * Add --check-md5 flag to conda index
+  * Look for vcvarsall.bat from the Microsoft Visual C++ Compiler for Python 2.7
 
 2015-02-10   1.10.2:
 --------------------
