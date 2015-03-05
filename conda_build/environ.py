@@ -59,11 +59,12 @@ def get_git_build_info(m, src_dir):
     output = output.decode('utf-8')
     d['GIT_FULL_HASH'] = output
     # set up the build string
-    if not m:
-        build_id = d[key_name("NUMBER")]
-    else:
-        build_id = m.default_build_id(int(d[key_name("NUMBER")]))
     if key_name('NUMBER') in d and key_name('HASH') in d:
+        if not m:
+            build_id = d[key_name("NUMBER")]
+        else:
+            build_id = m.default_build_id(int(d[key_name("NUMBER")]))
+
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('HASH')],
                                             build_id)
 
