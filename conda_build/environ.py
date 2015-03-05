@@ -85,7 +85,7 @@ def get_dict(m=None, prefix=None):
     d['SRC_DIR'] = source.get_dir()
 
     if m:
-        for var_name in m.get_value('build/script_env'):
+        for var_name in m.get_value('build/script_env', []):
             value = os.getenv(var_name)
             if value is None:
                 value = '<UNDEFINED>'
