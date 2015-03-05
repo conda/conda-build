@@ -1,3 +1,24 @@
+...
+-------------------
+  * Handle OSError in conda index
+  * Fix how the PATH environment variable is set on Windows
+  * Remove the work directory earlier in the build
+  * Give a helpful error message for dependencies like "python >= 2.7"
+  * Add CYGWIN_PREFIX environment variable on Windows
+  * Handle list requires in skeleton pypi
+  * Correctly fail if the Windows bld.bat exits 1
+  * Give a better error message if no urls can be found for a package
+  * Add __main__ to allow python -m conda_build
+  * %R% is now set to R.exe instead of R.bat on Windows
+  * Write the build script to the source directory for build/script instead of
+    the recipe directory.
+  * Handle non-directories in copy_into (avoids an OSError, #332)
+  * Halt the build on YAML error without jinja2
+  * Clone git sources with the --recursive option
+  * Add --channel and --override-channels to conda build. -c is changed to
+    mean --channel instead of --check.
+
+
 2015-02-XX   1.10.3:
 --------------------
   * add 'script_env' key in build section of meta.yaml file, which is a list
