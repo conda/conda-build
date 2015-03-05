@@ -17,7 +17,7 @@
   * Clone git sources with the --recursive option
   * Add --channel and --override-channels to conda build. -c is changed to
     mean --channel instead of --check.
-
+  * Add --check-md5 flag to conda index
 
 2015-02-XX   1.10.3:
 --------------------
