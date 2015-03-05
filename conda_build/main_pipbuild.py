@@ -335,6 +335,13 @@ def execute(args, parser):
         all_versions = True
         version = args.release[0]
 
+    search = client.search({'name':package})
+    if search:
+        r_name = filter(lambda x: x.has_key('name') and package.lower()==x['name'].lower(),search)
+        if r_name: 
+            print('Package search: %s' % r_name[0])
+            package=r_name[0]['name']
+      
     releases = client.package_releases(package, all_versions)
     if not releases:
         sys.exit("Error:  PyPI does not have a package named %s" % package)
