@@ -1,4 +1,4 @@
-2015-02-XX   1.10.3:
+2015-03-05   1.11.0:
 --------------------
   * add 'script_env' key in build section of meta.yaml file, which is a list
     of environment variable names which are made available in the build
