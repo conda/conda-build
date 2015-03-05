@@ -70,8 +70,8 @@ def msvc_env_cmd():
                                  r'Microsoft Visual Studio 9.0'
                                  r'\VC\vcvarsall.bat')
 
+    # Try the Microsoft Visual C++ Compiler for Python 2.7
     if not isfile(vcvarsall) and localappdata and not config.PY3K:
-            # Try the Microsoft Visual C++ Compiler for Python 2.7
         vcvarsall = os.path.join(localappdata, "Programs", "Common",
             "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
     if not isfile(vcvarsall) and program_files and not config.PY3K:
