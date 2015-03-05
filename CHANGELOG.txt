@@ -1,5 +1,9 @@
-...
--------------------
+2015-02-XX   1.10.3:
+--------------------
+  * add 'script_env' key in build section of meta.yaml file, which is a list
+    of environment variable names which are made available in the build
+    script.  If a variable is listed here, but is not in the environment,
+    the value '<UNDEFINED>' is assigned.
   * Handle OSError in conda index
   * Fix how the PATH environment variable is set on Windows
   * Remove the work directory earlier in the build
@@ -18,14 +22,6 @@
   * Add --channel and --override-channels to conda build. -c is changed to
     mean --channel instead of --check.
   * Add --check-md5 flag to conda index
-
-2015-02-XX   1.10.3:
---------------------
-  * add 'script_env' key in build section of meta.yaml file, which is a list
-    of environment variable names which are made available in the build
-    script.  If a variable is listed here, but is not in the environment,
-    the value '<UNDEFINED>' is assigned.
-
 
 2015-02-10   1.10.2:
 --------------------
