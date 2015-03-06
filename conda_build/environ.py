@@ -125,7 +125,7 @@ def get_dict(m=None, prefix=None):
         d['CFLAGS'] = '-arch %(OSX_ARCH)s' % d
         d['CXXFLAGS'] = d['CFLAGS']
         d['LDFLAGS'] = d['CFLAGS']
-        d['MACOSX_DEPLOYMENT_TARGET'] = '10.5'
+        d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'
