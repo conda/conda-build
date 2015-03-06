@@ -39,8 +39,7 @@ def get_git_build_info(m, src_dir):
         return d
 
     # grab information from describe
-    key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
-    keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
+    keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
     env = {str(key): str(value) for key, value in env.items()}
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -59,13 +58,13 @@ def get_git_build_info(m, src_dir):
     output = output.decode('utf-8')
     d['GIT_FULL_HASH'] = output
     # set up the build string
-    if key_name('NUMBER') in d and key_name('HASH') in d:
+    if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
         if not m:
-            build_id = d[key_name("NUMBER")]
+            build_id = d["GIT_DESCRIBE_NUMBER"]
         else:
-            build_id = m.default_build_id(int(d[key_name("NUMBER")]))
+            build_id = m.default_build_id(int(d["GIT_DESCRIBE_NUMBER"]))
 
-        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('HASH')],
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_HASH"],
                                             build_id)
 
     return d
