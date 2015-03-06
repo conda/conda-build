@@ -29,7 +29,7 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
-def get_git_build_info(src_dir):
+def get_git_build_info(m, src_dir):
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
@@ -39,8 +39,7 @@ def get_git_build_info(src_dir):
         return d
 
     # grab information from describe
-    key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
-    keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
+    keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
     env = {str(key): str(value) for key, value in env.items()}
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -59,9 +58,14 @@ def get_git_build_info(src_dir):
     output = output.decode('utf-8')
     d['GIT_FULL_HASH'] = output
     # set up the build string
-    if key_name('NUMBER') in d and key_name('HASH') in d:
-        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
-                                            d[key_name('HASH')])
+    if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
+        if not m:
+            build_id = d["GIT_DESCRIBE_NUMBER"]
+        else:
+            build_id = m.default_build_id(int(d["GIT_DESCRIBE_NUMBER"]))
+
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_HASH"],
+                                            build_id)
 
     return d
 
@@ -96,7 +100,7 @@ def get_dict(m=None, prefix=None):
     except NotImplementedError:
         d['CPU_COUNT'] = "1"
 
-    d.update(**get_git_build_info(d['SRC_DIR']))
+    d.update(**get_git_build_info(m, d['SRC_DIR']))
 
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
