@@ -1,3 +1,5 @@
+ * correctly fix egg directories that are part of the package
+
 2015-03-05   1.11.0:
 --------------------
   * add 'script_env' key in build section of meta.yaml file, which is a list
