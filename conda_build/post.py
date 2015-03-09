@@ -14,12 +14,14 @@ except ImportError:
     readlink = False
 import io
 from subprocess import call, Popen, PIPE
+from collections import defaultdict
 
 from conda_build.config import config
 from conda_build import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
+from conda_build import build
 from conda.compat import lchmod
 from conda.misc import walk_prefix
 
@@ -147,6 +149,25 @@ def post_process(files, preserve_egg_dir=False):
     if not config.PY3K:
         compile_missing_pyc()
 
+
+def find_lib(link):
+    files = build.prefix_files()
+    if link.startswith(config.build_prefix):
+        link = link[len(config.build_python) + 1]
+        if link not in files:
+            sys.exit("Error: Could not find %s" % link)
+        return link
+    if link.startswith(('lib', '@executable_path/')):
+        link = basename(link)
+        file_names = defaultdict(list)
+        for f in files:
+            file_names[basename(f)].append(f)
+        if link not in file_names:
+            sys.exit("Error: Could not find %s" % link)
+        if len(file_names[link]) > 1:
+            sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+        return file_names[link][0]
+    print("Don't know how to find %s, skipping" % link)
 
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
