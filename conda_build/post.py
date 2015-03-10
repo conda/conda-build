@@ -21,7 +21,6 @@ from conda_build import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
-from conda_build import build
 from conda.compat import lchmod
 from conda.misc import walk_prefix
 
@@ -151,7 +150,8 @@ def post_process(files, preserve_egg_dir=False):
 
 
 def find_lib(link):
-    files = build.prefix_files()
+    from conda_build.build import prefix_files
+    files = prefix_files()
     if link.startswith(config.build_prefix):
         link = link[len(config.build_python) + 1]
         if link not in files:
