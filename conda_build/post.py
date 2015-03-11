@@ -193,7 +193,7 @@ def mk_relative_linux(f, rpaths=('lib',)):
     rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
     patchelf = external.find_executable('patchelf')
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-    call([patchelf, '--set-rpath', rpath, path])
+    call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 
 def assert_relative_osx(path):
     for name in macho.otool(path):
