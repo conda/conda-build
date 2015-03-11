@@ -1,4 +1,5 @@
  * correctly fix egg directories that are part of the package
+ * use the --force-rpath flag to patchelf
 
 2015-03-05   1.11.0:
 --------------------
