@@ -159,6 +159,10 @@ def find_lib(link):
         return link
     if link.startswith('/'): # But doesn't start with the build prefix
         return
+    if link.startswith('@rpath/'):
+        # Assume the rpath already points to lib, so there is no need to
+        # change it.
+        return
     if link.startswith(('lib', '@executable_path/')):
         link = basename(link)
         file_names = defaultdict(list)
