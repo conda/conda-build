@@ -200,11 +200,13 @@ def osx_ch_link(path, link):
     # @loader_path/reldir_to_lib/reldir_from_lib/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
-    # TODO: We could tighten this up, e.g., there's no need to use /./
     if macho.is_dylib(path):
-        return '@rpath/%s/%s' % (reldir_from_lib, basename(link))
+        ret =  '@rpath/%s/%s' % (reldir_from_lib, basename(link))
     else:
-        return '@loader_path/%s/%s/%s' % (reldir_to_lib, reldir_from_lib, basename(link))
+        ret = '@loader_path/%s/%s/%s' % (reldir_to_lib, reldir_from_lib, basename(link))
+
+    ret = ret.replace('/./', '/')
+    return ret
 
 def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
