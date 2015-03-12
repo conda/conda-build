@@ -181,29 +181,29 @@ def osx_ch_link(path, link):
     if not link_loc:
         return
 
-    reldir_from_lib = relpath(dirname(link_loc), 'lib')
-    reldir_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
+    lib_to_link = relpath(dirname(link_loc), 'lib')
+    path_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
     # e.g., if
     # path = '/build_prefix/lib/some/stuff/libstuff.dylib'
     # link_loc = 'lib/things/libthings.dylib'
 
     # then
 
-    # reldir_from_lib = 'things'
-    # reldir_to_lib = '../..'
+    # lib_to_link = 'things'
+    # path_to_lib = '../..'
 
     # @rpath always means 'lib', link will be at
-    # @rpath/reldir_from_lib/basename(link), like @rpath/things/libthings.dylib.
+    # @rpath/lib_to_link/basename(link), like @rpath/things/libthings.dylib.
 
     # For when we can't use @rpath, @loader_path means the path to the library
     # ('path'), so from path to link is
-    # @loader_path/reldir_to_lib/reldir_from_lib/basename(link), like
+    # @loader_path/path_to_lib/lib_to_link/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
     if macho.is_dylib(path):
-        ret =  '@rpath/%s/%s' % (reldir_from_lib, basename(link))
+        ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
     else:
-        ret = '@loader_path/%s/%s/%s' % (reldir_to_lib, reldir_from_lib, basename(link))
+        ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
 
     ret = ret.replace('/./', '/')
     return ret
