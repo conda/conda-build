@@ -462,7 +462,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     specs_include_python = False
     for spec in m.get_value('test/requires', []):
         specs.append(spec)
-        if spec.startswith('python '):
+        if spec.startswith('python ') or spec == 'python':
             specs_include_python = True
 
     if py_files and not specs_include_python:
