@@ -157,7 +157,7 @@ def find_lib(link):
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
-    if link.startswith('/'): # But doesn't start with the build prefix
+    if link.startswith('/'): # but doesn't start with the build prefix
         return
     if link.startswith('@rpath/'):
         # Assume the rpath already points to lib, so there is no need to
@@ -177,22 +177,34 @@ def find_lib(link):
 
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
+    link_loc = find_lib(link)
+    if not link_loc:
+        return
+
+    reldir_from_lib = relpath(dirname(link_loc), 'lib')
+    reldir_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
+    # e.g., if
+    # path = '/build_prefix/lib/some/stuff/libstuff.dylib'
+    # link_loc = 'lib/things/libthings.dylib'
+
+    # then
+
+    # reldir_from_lib = 'things'
+    # reldir_to_lib = '../..'
+
+    # @rpath always means 'lib', link will be at
+    # @rpath/reldir_from_lib/basename(link), like @rpath/things/libthings.dylib.
+
+    # For when we can't use @rpath, @loader_path means the path to the library
+    # ('path'), so from path to link is
+    # @loader_path/reldir_to_lib/reldir_from_lib/basename(link), like
+    # @loader_path/../../things/libthings.dylib.
+
+    # TODO: We could tighten this up, e.g., there's no need to use /./
     if macho.is_dylib(path):
-        reldir = relpath(dirname(path), join(config.build_prefix, 'lib'))
-        atvariable = "@rpath"
+        return '@rpath/%s/%s' % (reldir_from_lib, basename(link))
     else:
-        reldir = utils.relative(path[len(config.build_prefix) + 1:])
-        atvariable = "@loader_path"
-
-    prefix_lib = config.build_prefix + '/lib'
-    if link.startswith(prefix_lib):
-        return '%s/%s/%s' % (atvariable, reldir, link[len(prefix_lib) + 1:])
-
-    if link.startswith(('lib', '@executable_path/')):
-        return '%s/%s/%s' % (atvariable, reldir, basename(link))
-
-    if link == '/usr/local/lib/libgcc_s.1.dylib':
-        return '/usr/lib/libgcc_s.1.dylib'
+        return '@loader_path/%s/%s/%s' % (reldir_to_lib, reldir_from_lib, basename(link))
 
 def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
