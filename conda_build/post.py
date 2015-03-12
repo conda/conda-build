@@ -203,6 +203,8 @@ def osx_ch_link(path, link):
     if macho.is_dylib(path):
         ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
     else:
+        # TODO: This might contain redundant ..'s if link and path are both in
+        # some subdirectory of lib.
         ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
 
     ret = ret.replace('/./', '/')
@@ -212,9 +214,13 @@ def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
     s = macho.install_name_change(path, osx_ch_link)
 
-    # if macho.is_dylib(path):
     names = macho.otool(path)
     if names:
+        # Strictly speaking, not all object files have install names (e.g.,
+        # bundles and executables do not). In that case, the first name here
+        # will not be the install name (i.e., the id), but it isn't a problem,
+        # because in that case it will be a no-op (with the exception of stub
+        # files, which give an error, which is handled below).
         args = [
             'install_name_tool',
             '-id',
