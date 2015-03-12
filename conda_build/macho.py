@@ -71,6 +71,9 @@ def install_name_change(path, cb_func):
     """
     changes = []
     for link in otool(path):
+        # The first link may be the install name of the library itself, but
+        # this isn't a big deal because install_name_tool -change is a no-op
+        # if given a dependent install name that doesn't exist.
         new_link = cb_func(path, link)
         if new_link:
             changes.append((link, new_link))
