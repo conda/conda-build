@@ -163,7 +163,7 @@ def find_lib(link):
         # Assume the rpath already points to lib, so there is no need to
         # change it.
         return
-    if link.startswith(('lib', '@executable_path/')):
+    if '/' not in link or link.startswith('@executable_path/'):
         link = basename(link)
         file_names = defaultdict(list)
         for f in files:
