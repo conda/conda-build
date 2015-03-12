@@ -157,6 +157,8 @@ def find_lib(link):
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
+    if link.startswith('/'): # But doesn't start with the build prefix
+        return
     if link.startswith(('lib', '@executable_path/')):
         link = basename(link)
         file_names = defaultdict(list)
