@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import argparse
-from os.path import realpath, expanduser, abspath
+from os.path import abspath, join, dirname
 from collections import defaultdict
 from operator import itemgetter
 
@@ -20,6 +20,7 @@ import conda.install as ci
 from conda_build.main_build import args_func
 from conda_build.config import config
 from conda_build.ldd import get_package_linkages
+from conda_build.macho import get_rpath
 
 def main():
     p = argparse.ArgumentParser(
@@ -63,13 +64,26 @@ def print_linkages(depmap, show_files=False):
                 print("    %s (%s)" % (lib, path))
         print()
 
+def replace_path(binary, path, prefix):
+    if sys.platform.startswith('linux'):
+        return abspath(path)
+    elif sys.platform.startswith('darwin'):
+        if '@rpath' in path:
+            rpath = get_rpath(path)
+            if not rpath:
+                return "NO LC_RPATH FOUND"
+            else:
+                path = path.replace("@rpath", rpath)
+        path = path.replace('@loader_path', join(prefix, dirname(binary)))
+        return abspath(path)
+
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
     with Locked(config.croot):
         if args.subcommand == 'linkages':
-            if not sys.platform.startswith('linux'):
-                sys.exit("Error: conda inspect linkages is only implemented in Linux")
+            if not sys.platform.startswith(('linux', 'darwin')):
+                sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
 
             prefix = get_prefix(args)
             installed = ci.linked(prefix)
@@ -83,7 +97,7 @@ def execute(args, parser):
                 depmap = defaultdict(list)
                 for binary in linkages:
                     for lib, path in linkages[binary]:
-                        path = abspath(path) if path not in {'', 'not found'} else path
+                        path = replace_path(binary, path, prefix) if path not in {'', 'not found'} else path
                         if path.startswith(prefix):
                             deps = list(which_package(path))
                             if len(deps) > 1:
