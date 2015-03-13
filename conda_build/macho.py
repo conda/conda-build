@@ -60,6 +60,16 @@ def otool(path):
         res.append(line.split()[0])
     return res
 
+def get_rpath(path):
+    lines = subprocess.check_call(['otool', '-l',
+        path]).decode('utf-8').splitlines()
+    check_for_rpath = False
+    for line in lines:
+        if 'cmd LC_RPATH' in line:
+            check_for_rpath = True
+        if check_for_rpath and 'path' in line:
+            _, rpath, _ = line.split(None, 2)
+            return rpath
 
 def install_name_change(path, cb_func):
     """
