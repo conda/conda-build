@@ -61,7 +61,7 @@ def otool(path):
     return res
 
 def get_rpath(path):
-    lines = subprocess.check_call(['otool', '-l',
+    lines = subprocess.check_output(['otool', '-l',
         path]).decode('utf-8').splitlines()
     check_for_rpath = False
     for line in lines:
