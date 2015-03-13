@@ -153,7 +153,7 @@ def find_lib(link):
     from conda_build.build import prefix_files
     files = prefix_files()
     if link.startswith(config.build_prefix):
-        link = link[len(config.build_prefix) + 1]
+        link = link[len(config.build_prefix) + 1:]
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
