@@ -41,6 +41,9 @@ def is_macho(path):
 
 
 def is_dylib(path):
+    return human_filetype(path) == 'DYLIB'
+
+def human_filetype(path):
     lines = subprocess.check_output(['otool', '-h', path]).decode('utf-8').splitlines()
     assert lines[0].startswith(path), path
 
@@ -48,7 +51,7 @@ def is_dylib(path):
         if line.strip().startswith('0x'):
             header = line.split()
             filetype = int(header[4])
-            return FILETYPE[filetype] == 'MH_DYLIB'
+            return FILETYPE[filetype][3:]
 
 def otool(path):
     "thin wrapper around otool -L"

@@ -19,20 +19,21 @@ import conda.install as ci
 
 from conda_build.main_build import args_func
 from conda_build.config import config
-from conda_build.ldd import get_package_linkages
-from conda_build.macho import get_rpath
+from conda_build.ldd import get_package_linkages, get_package_obj_files
+from conda_build.macho import get_rpath, human_filetype
 
 def main():
     p = argparse.ArgumentParser(
-        description='tool for inspecting conda packages'
+        description='Tools for inspecting conda packages'
     )
-
     subcommand = p.add_subparsers(
         dest='subcommand',
         )
+
     linkages = subcommand.add_parser(
         "linkages",
-        help="Tools to investigate linkages of binary libraries in a package",
+        help="""Investigate linkages of binary libraries in a package
+        (only works in Linux and OS X)""",
         )
     linkages.add_argument(
         'packages',
@@ -46,8 +47,21 @@ def main():
         help="Show the files in the package that link to each library",
     )
     add_parser_prefix(linkages)
-    p.set_defaults(func=execute)
 
+    objects = subcommand.add_parser(
+        "objects",
+        help="""Investigate binary object files in a package (only works in OS
+        X)""",
+        )
+    objects.add_argument(
+        'packages',
+        action='store',
+        nargs='+',
+        help='conda packages to inspect',
+    )
+    add_parser_prefix(objects)
+
+    p.set_defaults(func=execute)
     args = p.parse_args()
     args_func(args, p)
 
@@ -76,6 +90,14 @@ def replace_path(binary, path, prefix):
                 path = path.replace("@rpath", rpath)
         path = path.replace('@loader_path', join(prefix, dirname(binary)))
         return abspath(path)
+
+def print_object_info(info):
+    for f in sorted(info):
+        print(f)
+        for data in sorted(info[f]):
+            if info[f][data] is None:
+                continue
+            print('  %s: %s' % (data, info[f][data]))
 
 def execute(args, parser):
     if not args.subcommand:
@@ -112,3 +134,25 @@ def execute(args, parser):
                             depmap['system'].append((lib, path, binary))
 
                 print_linkages(depmap, show_files=args.show_files)
+
+        if args.subcommand == 'objects':
+            if not sys.platform.startswith('darwin'):
+                sys.exit("Error: conda inspect objects is only implemented in OS X")
+
+            prefix = get_prefix(args)
+            installed = ci.linked(prefix)
+            for pkg in args.packages:
+                for dist in installed:
+                    if pkg == dist.rsplit('-', 2)[0]:
+                        break
+                else:
+                    sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+                objects = get_package_obj_files(dist, prefix)
+                info = defaultdict(dict)
+
+                for f in objects:
+                    path = join(prefix, f)
+                    info[f]['filetype'] = human_filetype(path)
+                    info[f]['rpath'] = get_rpath(path)
+
+                print_object_info(info)

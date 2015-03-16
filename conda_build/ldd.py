@@ -39,19 +39,30 @@ def ldd(path):
 
 @memoized
 def get_package_linkages(dist, prefix):
+    obj_files = get_package_obj_files(dist, prefix)
+    res = {}
+
+    for f in obj_files:
+        path = join(prefix, f)
+        if sys.platform.startswith('linux'):
+            res[f] = ldd(path)
+        elif sys.platform.startswith('darwin'):
+            links = otool(path)
+            res[f] = [(basename(l), l) for l in links]
+
+    return res
+
+@memoized
+def get_package_obj_files(dist, prefix):
     with open(join(prefix, 'conda-meta', dist +
         '.json')) as f:
         data = json.load(f)
 
-    res = {}
+    res = []
     files = data['files']
     for f in files:
         path = join(prefix, f)
         if post.is_obj(path):
-            if sys.platform.startswith('linux'):
-                res[f] = ldd(path)
-            elif sys.platform.startswith('darwin'):
-                links = otool(path)
-                res[f] = [(basename(l), l) for l in links]
+            res.append(f)
 
     return res
