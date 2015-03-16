@@ -106,16 +106,17 @@ def execute(args, parser):
     prefix = get_prefix(args)
     installed = ci.linked(prefix)
 
-    if args.subcommand == 'linkages':
-        if not sys.platform.startswith(('linux', 'darwin')):
-            sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
+    for pkg in args.packages:
+        for dist in installed:
+            if pkg == dist.rsplit('-', 2)[0]:
+                break
+        else:
+            sys.exit("Package %s is not installed in %s" % (pkg, prefix))
 
-        for pkg in args.packages:
-            for dist in installed:
-                if pkg == dist.rsplit('-', 2)[0]:
-                    break
-            else:
-                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+        if args.subcommand == 'linkages':
+            if not sys.platform.startswith(('linux', 'darwin')):
+                sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
+
             linkages = get_package_linkages(dist, prefix)
             depmap = defaultdict(list)
             for binary in linkages:
@@ -136,16 +137,10 @@ def execute(args, parser):
 
             print_linkages(depmap, show_files=args.show_files)
 
-    if args.subcommand == 'objects':
-        if not sys.platform.startswith('darwin'):
-            sys.exit("Error: conda inspect objects is only implemented in OS X")
+        if args.subcommand == 'objects':
+            if not sys.platform.startswith('darwin'):
+                sys.exit("Error: conda inspect objects is only implemented in OS X")
 
-        for pkg in args.packages:
-            for dist in installed:
-                if pkg == dist.rsplit('-', 2)[0]:
-                    break
-            else:
-                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
             objects = get_package_obj_files(dist, prefix)
             info = defaultdict(dict)
 
