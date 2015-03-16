@@ -1,5 +1,8 @@
- * correctly fix egg directories that are part of the package
- * use the --force-rpath flag to patchelf
+  * correctly fix egg directories that are part of the package
+  * use the --force-rpath flag to patchelf
+  * update MACOSX_DEPLOYMENT_TARGET to 10.6
+  * fix running tests for Python packages whose version differs from the
+    version in conda
 
 2015-03-05   1.11.0:
 --------------------
