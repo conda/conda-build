@@ -311,10 +311,17 @@ def args_func(args, p):
     try:
         args.func(args, p)
     except RuntimeError as e:
+        if 'maximum recursion depth exceeded' in str(e):
+            print_issue_message(e)
+            raise
         sys.exit("Error: %s" % e)
     except Exception as e:
-        if e.__class__.__name__ not in ('ScannerError', 'ParserError'):
-            message = """\
+        print_issue_message(e)
+        raise  # as if we did not catch it
+
+def print_issue_message(e):
+    if e.__class__.__name__ not in ('ScannerError', 'ParserError'):
+        message = """\
 An unexpected error has occurred, please consider sending the
 following traceback to the conda GitHub issue tracker at:
 
@@ -323,8 +330,7 @@ following traceback to the conda GitHub issue tracker at:
 Include the output of the command 'conda info' in your report.
 
 """
-            print(message, file=sys.stderr)
-        raise  # as if we did not catch it
+        print(message, file=sys.stderr)
 
 if __name__ == '__main__':
     main()
