@@ -59,6 +59,13 @@ def main():
         nargs='+',
         help='conda packages to inspect',
     )
+    objects.add_argument(
+        '--groupby',
+        action='store',
+        default='filename',
+        choices={'filename', 'filetype', 'rpath'},
+        help='Attribute to group by (default: %(default)s)',
+    )
     add_parser_prefix(objects)
 
     p.set_defaults(func=execute)
@@ -91,13 +98,19 @@ def replace_path(binary, path, prefix):
         path = path.replace('@loader_path', join(prefix, dirname(binary)))
         return abspath(path)
 
-def print_object_info(info):
-    for f in sorted(info):
-        print(f)
+def print_object_info(info, key):
+    printed = set()
+    for f in sorted(info, key=lambda x: str(info[x][key])):
+        if info[f][key] not in printed:
+            print(info[f][key])
+            printed.add(info[f][key])
         for data in sorted(info[f]):
+            if data == key:
+                continue
             if info[f][data] is None:
                 continue
             print('  %s: %s' % (data, info[f][data]))
+        print()
 
 def execute(args, parser):
     if not args.subcommand:
@@ -148,5 +161,6 @@ def execute(args, parser):
                 path = join(prefix, f)
                 info[f]['filetype'] = human_filetype(path)
                 info[f]['rpath'] = get_rpath(path)
+                info[f]['filename'] = f
 
-            print_object_info(info)
+            print_object_info(info, args.groupby)
