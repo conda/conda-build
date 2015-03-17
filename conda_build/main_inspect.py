@@ -113,7 +113,7 @@ def replace_path(binary, path, prefix):
 
 def print_object_info(info, key):
     gb = groupby(key, info)
-    for header in sorted(gb):
+    for header in sorted(gb, key=str):
         print(header)
         for f_info in sorted(gb[header], key=getter('filename')):
             for data in sorted(f_info):
