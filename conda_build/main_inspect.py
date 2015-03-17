@@ -122,7 +122,7 @@ def print_object_info(info, key):
                 if f_info[data] is None:
                     continue
                 print('  %s: %s' % (data, f_info[data]))
-            if len([i for i in f_info if f_info[i] is not None]) > 2:
+            if len([i for i in f_info if f_info[i] is not None and i != key]) > 1:
                 print()
         print()
 
