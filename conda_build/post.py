@@ -247,7 +247,7 @@ def mk_relative_osx(path):
             'install_name_tool',
             '-add_rpath',
             join('@loader_path', relpath(join(config.build_prefix, 'lib'),
-                dirname(path)), ''),
+                dirname(path)), '').replace('/./', '/'),
             path,
             ]
         print(' '.join(args))
