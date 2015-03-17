@@ -112,7 +112,7 @@ def replace_path(binary, path, prefix):
 
 def print_object_info(info, key):
     printed = set()
-    for f in sorted(info, key=lambda x: str(info[x][key])):
+    for f in sorted(info):
         if info[f][key] not in printed:
             print(info[f][key])
             printed.add(info[f][key])
