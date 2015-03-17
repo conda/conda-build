@@ -167,8 +167,8 @@ def execute(args, parser):
                         if len(deps) > 1:
                             print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
                         if not deps:
-                            depmap['untracked'].append(lib, path.split(prefix
-                                + '/', 1)[-1], binary)
+                            depmap['untracked'].append((lib, path.split(prefix
+                                + '/', 1)[-1], binary))
                         for d in deps:
                             depmap[d].append((lib, path.split(prefix + '/',
                                 1)[-1], binary))
