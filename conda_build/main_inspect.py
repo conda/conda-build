@@ -13,13 +13,11 @@ from collections import defaultdict
 from operator import itemgetter
 
 from conda.misc import which_package
-from conda.lock import Locked
 from conda.cli.common import add_parser_prefix, get_prefix
 import conda.install as ci
 
 from conda_build.main_build import args_func
-from conda_build.config import config
-from conda_build.ldd import get_package_linkages, get_package_obj_files
+from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpath, human_filetype
 
 def main():
@@ -38,8 +36,14 @@ def main():
     linkages.add_argument(
         'packages',
         action='store',
-        nargs='+',
+        nargs='*',
         help='conda packages to inspect',
+    )
+    linkages.add_argument(
+        '--untracked',
+        action='store_true',
+        help="""Inspect the untracked files in the environment. Useful when used
+        in conjunction with conda build --build-only.""",
     )
     linkages.add_argument(
         '--show-files',
@@ -56,8 +60,14 @@ def main():
     objects.add_argument(
         'packages',
         action='store',
-        nargs='+',
+        nargs='*',
         help='conda packages to inspect',
+    )
+    objects.add_argument(
+        '--untracked',
+        action='store_true',
+        help="""Inspect the untracked files in the environment. Useful when used
+        in conjunction with conda build --build-only.""",
     )
     objects.add_argument(
         '--groupby',
@@ -119,18 +129,33 @@ def execute(args, parser):
     prefix = get_prefix(args)
     installed = ci.linked(prefix)
 
+    untracked_package = object()
+
+    if not args.packages and not args.untracked:
+        parser.error("At least one package or --untracked must be provided")
+
+    if args.untracked:
+        args.packages.append(untracked_package)
+
     for pkg in args.packages:
-        for dist in installed:
-            if pkg == dist.rsplit('-', 2)[0]:
-                break
+        if pkg == untracked_package:
+            dist = untracked_package
         else:
-            sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+            for dist in installed:
+                if pkg == dist.rsplit('-', 2)[0]:
+                    break
+            else:
+                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
 
         if args.subcommand == 'linkages':
             if not sys.platform.startswith(('linux', 'darwin')):
                 sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
 
-            linkages = get_package_linkages(dist, prefix)
+            if dist == untracked_package:
+                obj_files = get_untracked_obj_files(prefix)
+            else:
+                obj_files = get_package_obj_files(dist, prefix)
+            linkages = get_linkages(obj_files, prefix)
             depmap = defaultdict(list)
             for binary in linkages:
                 for lib, path in linkages[binary]:
@@ -154,10 +179,13 @@ def execute(args, parser):
             if not sys.platform.startswith('darwin'):
                 sys.exit("Error: conda inspect objects is only implemented in OS X")
 
-            objects = get_package_obj_files(dist, prefix)
+            if dist == untracked_package:
+                obj_files = get_untracked_obj_files(prefix)
+            else:
+                obj_files = get_package_obj_files(dist, prefix)
             info = defaultdict(dict)
 
-            for f in objects:
+            for f in obj_files:
                 path = join(prefix, f)
                 info[f]['filetype'] = human_filetype(path)
                 info[f]['rpath'] = get_rpath(path)

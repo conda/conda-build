@@ -7,6 +7,7 @@ import json
 from os.path import join, basename
 
 from conda.utils import memoized
+from conda.misc import untracked
 
 from conda_build import post
 from conda_build.macho import otool
@@ -38,8 +39,7 @@ def ldd(path):
     return res
 
 @memoized
-def get_package_linkages(dist, prefix):
-    obj_files = get_package_obj_files(dist, prefix)
+def get_linkages(obj_files, prefix):
     res = {}
 
     for f in obj_files:
@@ -60,6 +60,17 @@ def get_package_obj_files(dist, prefix):
 
     res = []
     files = data['files']
+    for f in files:
+        path = join(prefix, f)
+        if post.is_obj(path):
+            res.append(f)
+
+    return res
+
+@memoized
+def get_untracked_obj_files(prefix):
+    res = []
+    files = untracked(prefix)
     for f in files:
         path = join(prefix, f)
         if post.is_obj(path):
