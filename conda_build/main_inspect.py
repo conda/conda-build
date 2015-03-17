@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 import argparse
-from os.path import abspath, join, dirname
+from os.path import abspath, join, dirname, exists
 from collections import defaultdict
 from operator import itemgetter
 
@@ -167,8 +167,12 @@ def execute(args, parser):
                         if len(deps) > 1:
                             print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
                         if not deps:
-                            depmap['untracked'].append((lib, path.split(prefix
-                                + '/', 1)[-1], binary))
+                            if exists(path):
+                                depmap['untracked'].append((lib, path.split(prefix
+                                    + '/', 1)[-1], binary))
+                            else:
+                                depmap['not found'].append((lib, path.split(prefix
+                                    + '/', 1)[-1], binary))
                         for d in deps:
                             depmap[d].append((lib, path.split(prefix + '/',
                                 1)[-1], binary))
