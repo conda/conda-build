@@ -19,6 +19,7 @@ import conda.install as ci
 from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpath, human_filetype
+from conda_build.utils import groupby, getter
 
 def main():
     p = argparse.ArgumentParser(
@@ -111,17 +112,18 @@ def replace_path(binary, path, prefix):
         return 'not found'
 
 def print_object_info(info, key):
-    printed = set()
-    for f in sorted(info):
-        if info[f][key] not in printed:
-            print(info[f][key])
-            printed.add(info[f][key])
-        for data in sorted(info[f]):
-            if data == key:
-                continue
-            if info[f][data] is None:
-                continue
-            print('  %s: %s' % (data, info[f][data]))
+    gb = groupby(key, info)
+    for header in sorted(gb):
+        print(header)
+        for f_info in sorted(gb[header], key=getter('filename')):
+            for data in f_info:
+                if data == key:
+                    continue
+                if f_info[data] is None:
+                    continue
+                print('  %s: %s' % (data, f_info[data]))
+            if len([i for i in f_info if f_info[i] is not None]) > 2:
+                print()
         print()
 
 def execute(args, parser):
@@ -191,12 +193,14 @@ def execute(args, parser):
                 obj_files = get_untracked_obj_files(prefix)
             else:
                 obj_files = get_package_obj_files(dist, prefix)
-            info = defaultdict(dict)
 
+            info = []
             for f in obj_files:
+                f_info = {}
                 path = join(prefix, f)
-                info[f]['filetype'] = human_filetype(path)
-                info[f]['rpath'] = get_rpath(path)
-                info[f]['filename'] = f
+                f_info['filetype'] = human_filetype(path)
+                f_info['rpath'] = get_rpath(path)
+                f_info['filename'] = f
+                info.append(f_info)
 
             print_object_info(info, args.groupby)
