@@ -101,7 +101,7 @@ def replace_path(binary, path, prefix):
         return abspath(path)
     elif sys.platform.startswith('darwin'):
         if '@rpath' in path:
-            rpath = get_rpath(path)
+            rpath = get_rpath(join(prefix, binary))
             if not rpath:
                 return "NO LC_RPATH FOUND"
             else:
