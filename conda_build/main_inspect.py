@@ -166,6 +166,8 @@ def execute(args, parser):
                         deps = list(which_package(path))
                         if len(deps) > 1:
                             print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
+                        if not deps:
+                            print("Warning: %s doesn't come from any package" % path)
                         for d in deps:
                             depmap[d].append((lib,
                                 path.split(prefix + '/',
