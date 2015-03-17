@@ -116,7 +116,7 @@ def print_object_info(info, key):
     for header in sorted(gb):
         print(header)
         for f_info in sorted(gb[header], key=getter('filename')):
-            for data in f_info:
+            for data in sorted(f_info):
                 if data == key:
                     continue
                 if f_info[data] is None:
