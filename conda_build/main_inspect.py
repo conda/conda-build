@@ -106,7 +106,9 @@ def replace_path(binary, path, prefix):
             else:
                 path = path.replace("@rpath", rpath)
         path = path.replace('@loader_path', join(prefix, dirname(binary)))
-        return abspath(path)
+        if path.startswith('/'):
+            return abspath(path)
+        return 'not found'
 
 def print_object_info(info, key):
     printed = set()
