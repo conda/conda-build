@@ -200,12 +200,12 @@ def osx_ch_link(path, link):
     # @loader_path/path_to_lib/lib_to_link/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
-    if True or macho.is_dylib(path):
-        ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
-    else:
-        # TODO: This might contain redundant ..'s if link and path are both in
-        # some subdirectory of lib.
-        ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
+    ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
+
+    # XXX: IF the above fails for whatever reason, the below can be used
+    # TODO: This might contain redundant ..'s if link and path are both in
+    # some subdirectory of lib.
+    # ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
 
     ret = ret.replace('/./', '/')
     return ret
