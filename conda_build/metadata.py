@@ -333,6 +333,8 @@ class MetaData(object):
                 ms = MatchSpec(spec)
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
+            if ms.name == self.name():
+                raise RuntimeError("Error: %s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if (ms.strictness != 1 or
