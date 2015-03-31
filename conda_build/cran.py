@@ -312,6 +312,8 @@ def main(args, parser):
     while args.packages:
         package = args.packages.pop()
 
+        if package.startswith('r-'):
+            package = package[2:]
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
 
