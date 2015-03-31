@@ -81,7 +81,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
     sp_dir = environ.get_sp_dir()
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
-            if preserve_egg_dir or not any(i in absfiles for i in walk_prefix(egg_path, False)):
+            if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i in walk_prefix(egg_path, False)):
                 write_pth(egg_path)
                 continue
 
@@ -276,7 +276,7 @@ def mk_relative_linux(f, rpaths=('lib',)):
     rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
     patchelf = external.find_executable('patchelf')
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-    call([patchelf, '--set-rpath', rpath, path])
+    call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 
 def assert_relative_osx(path):
     for name in macho.otool(path):

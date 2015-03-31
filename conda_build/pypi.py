@@ -324,6 +324,10 @@ def main(args, parser):
         if not urls:
             if 'download_url' in data:
                 urls = [defaultdict(str, {'url': data['download_url']})]
+                if not urls[0]['url']:
+                    # The package doesn't have a url, or maybe it only has a wheel.
+                    sys.exit("Error: Could not build recipe for %s. "
+                        "Could not find any valid urls." % package)
                 U = parse_url(urls[0]['url'])
                 urls[0]['filename'] = U.path.rsplit('/')[-1]
                 fragment = U.fragment or ''
@@ -510,9 +514,11 @@ def get_package_metadata(args, package, d, data):
             if setuptools_run:
                 deps.append('setuptools')
             for deptext in requires:
+                if isinstance(deptext, string_types):
+                    deptext = deptext.split('\n')
                 # Every item may be a single requirement
                 #  or a multiline requirements string...
-                for dep in deptext.split('\n'):
+                for dep in deptext:
                     #... and may also contain comments...
                     dep = dep.split('#')[0].strip()
                     if dep: #... and empty (or comment only) lines

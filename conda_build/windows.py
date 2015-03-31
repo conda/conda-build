@@ -59,6 +59,8 @@ def msvc_env_cmd():
     else:
         program_files = os.environ['ProgramFiles']
 
+    localappdata = os.environ.get("localappdata")
+
     if config.PY3K:
         vcvarsall = os.path.join(program_files,
                                  r'Microsoft Visual Studio 10.0'
@@ -68,6 +70,13 @@ def msvc_env_cmd():
                                  r'Microsoft Visual Studio 9.0'
                                  r'\VC\vcvarsall.bat')
 
+    # Try the Microsoft Visual C++ Compiler for Python 2.7
+    if not isfile(vcvarsall) and localappdata and not config.PY3K:
+        vcvarsall = os.path.join(localappdata, "Programs", "Common",
+            "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
+    if not isfile(vcvarsall) and program_files and not config.PY3K:
+        vcvarsall = os.path.join(program_files, 'Common Files',
+            'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
     if not isfile(vcvarsall):
         print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)
         return ''
@@ -113,7 +122,7 @@ def build(m):
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+        cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
         kill_processes()
         fix_staged_scripts()

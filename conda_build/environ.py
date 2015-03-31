@@ -83,8 +83,13 @@ def get_dict(m=None, prefix=None):
     d['PY_VER'] = get_py_ver()
     d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
-    if "LANG" in os.environ:
-        d['LANG'] = os.environ['LANG']
+
+    if m:
+        for var_name in m.get_value('build/script_env', []):
+            value = os.getenv(var_name)
+            if value is None:
+                value = '<UNDEFINED>'
+            d[var_name] = value
 
     try:
         d['CPU_COUNT'] = str(multiprocessing.cpu_count())
@@ -96,14 +101,16 @@ def get_dict(m=None, prefix=None):
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
                      join(prefix) + ';' +
-                     join(prefix, 'Scripts') + ';' + os.getenv('PATH'))
+                     join(prefix, 'Scripts') + ';%PATH%')
         d['SCRIPTS'] = join(prefix, 'Scripts')
         d['LIBRARY_PREFIX'] = join(prefix, 'Library')
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
+        # This probably should be done more generally
+        d['CYGWIN_PREFIX'] = prefix.replace('\\', '/').replace('C:', '/cygdrive/c')
 
-        d['R'] = join(prefix, 'Scripts', 'R.bat')
+        d['R'] = join(prefix, 'Scripts', 'R.exe')
     else:                               # -------- Unix
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
@@ -118,7 +125,7 @@ def get_dict(m=None, prefix=None):
         d['CFLAGS'] = '-arch %(OSX_ARCH)s' % d
         d['CXXFLAGS'] = d['CFLAGS']
         d['LDFLAGS'] = d['CFLAGS']
-        d['MACOSX_DEPLOYMENT_TARGET'] = '10.5'
+        d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'

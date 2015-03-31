@@ -243,7 +243,8 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def create_env(prefix, specs, clear_cache=True, verbose=True):
+def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
+    override_channels=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -255,7 +256,8 @@ def create_env(prefix, specs, clear_cache=True, verbose=True):
             # remove the cache such that a refetch is made,
             # this is necessary because we add the local build repo URL
             fetch_index.cache = {}
-        index = get_index([url_path(config.croot)])
+        index = get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+            prepend=not override_channels)
 
         warn_on_old_conda_build(index)
 
@@ -306,7 +308,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, verbose=True, post=None):
+def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_channels=False):
     '''
     Build the package with the specified metadata.
 
@@ -327,15 +329,19 @@ def build(m, get_src=True, verbose=True, post=None):
         config.use_long_build_prefix = False
 
     if post in [False, None]:
+        print("Removing old build directory")
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
+        print("Removing old work directory")
+        rm_rf(source.WORK_DIR)
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
         create_env(config.build_prefix,
-                   [ms.spec for ms in m.ms_depends('build')],
-                   verbose=verbose)
+            [ms.spec for ms in m.ms_depends('build')],
+            verbose=verbose, channel_urls=channel_urls,
+            override_channels=override_channels)
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
@@ -371,6 +377,7 @@ def build(m, get_src=True, verbose=True, post=None):
             if script:
                 if isinstance(script, list):
                     script = '\n'.join(script)
+                build_file = join(source.get_dir(), 'conda_build.sh')
                 with open(build_file, 'w') as bf:
                     bf.write(script)
                 os.chmod(build_file, 0o766)
@@ -420,7 +427,7 @@ def build(m, get_src=True, verbose=True, post=None):
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
-def test(m, verbose=True):
+def test(m, verbose=True, channel_urls=(), override_channels=False):
     '''
     Execute any test scripts for the given package.
 
@@ -451,17 +458,22 @@ def test(m, verbose=True):
     rm_rf(config.test_prefix)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
-    if py_files:
+    # add packages listed in test/requires
+    specs_include_python = False
+    for spec in m.get_value('test/requires', []):
+        specs.append(spec)
+        if spec.startswith('python ') or spec == 'python':
+            specs_include_python = True
+
+    if py_files and not specs_include_python:
         # as the tests are run by python, we need to specify it
         specs += ['python %s*' % environ.get_py_ver()]
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
-    # add packages listed in test/requires
-    for spec in m.get_value('test/requires', []):
-        specs.append(spec)
 
-    create_env(config.test_prefix, specs, verbose=verbose)
+    create_env(config.test_prefix, specs, verbose=verbose,
+        channel_urls=channel_urls, override_channels=override_channels)
 
     env = dict(os.environ)
     # TODO: Include all the same environment variables that are used in
@@ -470,7 +482,7 @@ def test(m, verbose=True):
 
     # prepend bin (or Scripts) directory
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
-                   env['PATH'])
+                   os.getenv('PATH'))
 
     for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
         env[varname] = str(getattr(config, varname))
@@ -497,7 +509,7 @@ def test(m, verbose=True):
     if shell_files:
         if sys.platform == 'win32':
             test_file = join(tmp_dir, 'run_test.bat')
-            cmd = [os.environ['COMSPEC'], '/c', test_file]
+            cmd = [os.environ['COMSPEC'], '/c', 'call', test_file]
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:

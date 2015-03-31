@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
+import textwrap
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -10,6 +11,8 @@ from conda.utils import memoized, md5_file
 import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
+
+from . import exceptions
 
 try:
     import yaml
@@ -89,7 +92,14 @@ Error: Invalid selector in meta.yaml line %d:
 
 @memoized
 def yamlize(data):
-    return yaml.load(data)
+    try:
+        return yaml.load(data)
+    except yaml.parser.ParserError as e:
+        try:
+            import jinja2
+        except ImportError:
+            raise exceptions.UnableToParseMissingJinja2(original=e)
+        raise exceptions.UnableToParse(original=e)
 
 
 def parse(data):
@@ -103,7 +113,7 @@ def parse(data):
             raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
-                  'build/entry_points',
+                  'build/entry_points', 'build/script_env',
                   'build/features', 'build/track_features',
                   'requirements/build', 'requirements/run',
                   'requirements/conflicts', 'test/requires',
@@ -189,7 +199,7 @@ FIELDS = {
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch_python',
-              'has_prefix_files', 'binary_has_prefix_files',
+              'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', ],
     'requirements': ['build', 'run', 'conflicts'],
@@ -336,6 +346,15 @@ class MetaData(object):
                 if c in ms.name:
                     sys.exit("Error: bad character '%s' in package name "
                              "dependency '%s'" % (c, ms.name))
+                parts = spec.split()
+                if len(parts) >= 2:
+                    if parts[1] in {'>', '>=', '=', '==', '!=', '<', '<='}:
+                        msg = ("Error: bad character '%s' in package version "
+                            "dependency '%s'" % (parts[1], ms.name))
+                        if len(parts) >= 3:
+                            msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
+                                parts[1], parts[2])
+                        sys.exit(msg)
             res.append(ms)
         return res
 

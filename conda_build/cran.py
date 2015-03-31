@@ -43,9 +43,9 @@ build:
 
 {suggests}
 requirements:
-  build:{depends}
+  build:{build_depends}
 
-  run:{depends}
+  run:{run_depends}
 
 test:
   commands:
@@ -305,6 +305,8 @@ def main(args, parser):
     while args.packages:
         package = args.packages.pop()
 
+        if package.startswith('r-'):
+            package = package[2:]
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
 
@@ -324,7 +326,8 @@ def main(args, parser):
             {
                 'cran_packagename': package,
                 'packagename': 'r-' + package.lower(),
-                'depends': '',
+                'build_depends': '',
+                'run_depends': '',
                 # CRAN doesn't seem to have this metadata :(
                 'home_comment': '#',
                 'homeurl': '',
@@ -380,7 +383,6 @@ def main(args, parser):
         links = [s.strip() for s in cran_package.get("LinkingTo",
             '').split(',') if s.strip()]
 
-        deps = []
         dep_dict = {}
 
         for s in set(chain(depends, imports, links)):
@@ -405,35 +407,46 @@ def main(args, parser):
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
 
-        for name in sorted(dep_dict):
-            if name in R_BASE_PACKAGE_NAMES:
-                continue
-            if name == 'R':
-                # Put R first
-                if dep_dict[name]:
-                    deps.insert(0, '{indent}r {version}'.format(version=dep_dict[name],
-                        indent=INDENT))
+        for dep_type in ['build', 'run']:
+            deps = []
+            for name in sorted(dep_dict):
+                if name in R_BASE_PACKAGE_NAMES:
+                    continue
+                if name == 'R':
+                    # Put R first
+                    if d['cran_packagename'] in R_RECOMMENDED_PACKAGE_NAMES and dep_type == 'build':
+                        # On Linux and OS X, r is a metapackage depending on
+                        # r-base and r-recommended. Recommended packages cannot
+                        # build depend on r as they would then build depend on
+                        # themselves and the built package would end up being
+                        # empty (because conda would find no new files)
+                        r_name = 'r-base'
+                    else:
+                        r_name = 'r'
+                    if dep_dict[name]:
+                        deps.insert(0, '{indent}{r_name} {version}'.format(version=dep_dict[name],
+                            indent=INDENT, r_name=r_name))
+                    else:
+                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
                 else:
-                    deps.insert(0, '{indent}r'.format(indent=INDENT))
-            else:
-                conda_name = 'r-' + name.lower()
+                    conda_name = 'r-' + name.lower()
 
-                # The r package on Windows includes the recommended packages
-                if name in R_RECOMMENDED_PACKAGE_NAMES:
-                    end = ' # [not win]'
-                else:
-                    end = ''
-                if dep_dict[name]:
-                    deps.append('{indent}{name} {version}{end}'.format(name=conda_name,
-                        version=dep_dict[name], end=end, indent=INDENT))
-                else:
-                    deps.append('{indent}{name}{end}'.format(name=conda_name,
-                        indent=INDENT, end=end))
-                if args.recursive:
-                    if not exists(join(output_dir, conda_name)):
-                        args.packages.append(name)
+                    # The r package on Windows includes the recommended packages
+                    if name in R_RECOMMENDED_PACKAGE_NAMES:
+                        end = ' # [not win]'
+                    else:
+                        end = ''
+                    if dep_dict[name]:
+                        deps.append('{indent}{name} {version}{end}'.format(name=conda_name,
+                            version=dep_dict[name], end=end, indent=INDENT))
+                    else:
+                        deps.append('{indent}{name}{end}'.format(name=conda_name,
+                            indent=INDENT, end=end))
+                    if args.recursive:
+                        if not exists(join(output_dir, conda_name)):
+                            args.packages.append(name)
 
-        d['depends'] = ''.join(deps)
+            d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
         d = package_dicts[package]

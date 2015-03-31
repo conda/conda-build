@@ -1,4 +1,47 @@
-2015-02-XX   1.10.1:
+  * correctly fix egg directories that are part of the package
+  * use the --force-rpath flag to patchelf
+  * update MACOSX_DEPLOYMENT_TARGET to 10.6
+  * fix running tests for Python packages whose version differs from the
+    version in conda
+
+2015-03-05   1.11.0:
+--------------------
+  * add 'script_env' key in build section of meta.yaml file, which is a list
+    of environment variable names which are made available in the build
+    script.  If a variable is listed here, but is not in the environment,
+    the value '<UNDEFINED>' is assigned.
+  * Handle OSError in conda index
+  * Fix how the PATH environment variable is set on Windows
+  * Remove the work directory earlier in the build
+  * Give a helpful error message for dependencies like "python >= 2.7"
+  * Add CYGWIN_PREFIX environment variable on Windows
+  * Handle list requires in skeleton pypi
+  * Correctly fail if the Windows bld.bat exits 1
+  * Give a better error message if no urls can be found for a package
+  * Add __main__ to allow python -m conda_build
+  * %R% is now set to R.exe instead of R.bat on Windows
+  * Write the build script to the source directory for build/script instead of
+    the recipe directory.
+  * Handle non-directories in copy_into (avoids an OSError, #332)
+  * Halt the build on YAML error without jinja2
+  * Clone git sources with the --recursive option
+  * Add --channel and --override-channels to conda build. -c is changed to
+    mean --channel instead of --check.
+  * Add --check-md5 flag to conda index
+  * Look for vcvarsall.bat from the Microsoft Visual C++ Compiler for Python 2.7
+  * Use PyPi XMLRCP client search in order to ignore case for PyPi package
+    names in pipbuild
+
+
+2015-02-10   1.10.2:
+--------------------
+  * don't set the GIT_* environment variables when the source is not a git repo
+  * skeleton cran: add extra metadata from CRAN to the recipe
+  * skeleton pypi: fix there not being a fragment in a url
+  * don't match comment only lines as selectors
+
+
+2015-02-06   1.10.1:
 --------------------
   * greatly improved ability to create noarch_python packages
   * added 'subdir' key to info/index.json
