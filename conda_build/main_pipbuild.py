@@ -221,8 +221,8 @@ def get_all_dependencies(package, version):
     cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
     fid = open('__tmpfile__.py', 'w')
     fid.write("import pkg_resources;\n")
-    fid.write(
-        "reqs = pkg_resources.get_distribution('%s').requires();\n" % package)
+    fid.write("reqs = pkg_resources.get_distribution('%s').requires();\n" %
+              package)
     fid.write("print [(req.key, req.specs) for req in reqs]\n")
     fid.close()
     print("Getting dependencies...")
