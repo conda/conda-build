@@ -33,17 +33,17 @@ def main():
 
     p.add_argument(
         "--no-binstar-upload",
-        action = "store_false",
-        help = "do not ask to upload the package to binstar",
-        dest = 'binstar_upload',
-        default = cc.binstar_upload,
+        action="store_false",
+        help="do not ask to upload the package to binstar",
+        dest='binstar_upload',
+        default=cc.binstar_upload,
     )
     p.add_argument(
         "--binstar-upload",
         action="store_true",
-        help = "upload the package to binstar",
-        dest = 'binstar_upload',
-        default = cc.binstar_upload,
+        help="upload the package to binstar",
+        dest='binstar_upload',
+        default=cc.binstar_upload,
     )
     p.add_argument(
         'pypi_name',
@@ -55,21 +55,21 @@ def main():
     p.add_argument(
         "--release",
         action='store',
-        nargs = 1,
-        help = "specify version of package to build",
+        nargs=1,
+        help="specify version of package to build",
         default="latest"
     )
     p.add_argument(
         "--pypi-url",
-        action = "store",
+        action="store",
         nargs=1,
         default='http://pypi.python.org/pypi',
-        help = "Url to use for PyPI",
+        help="Url to use for PyPI",
     )
     p.add_argument(
         '-V', '--version',
-        action = 'version',
-        version = 'conda-pipbuild %s' % __version__,
+        action='version',
+        version='conda-pipbuild %s' % __version__,
     )
     p.set_defaults(func=execute)
 
@@ -96,12 +96,13 @@ Error: cannot locate binstar (required for upload)
 # Modify the recipe directory to make a new recipe with just the dependencies
 #   and a build script that says pip install for both build.sh and build.bat
 
+
 def conda_package_exists(pkgname, version=None):
     from conda.api import get_index
     from conda.resolve import MatchSpec, Resolve
 
-    pyver = 'py%s' % sys.version[:3].replace('.','')
-    index = get_index(use_cache = True)
+    pyver = 'py%s' % sys.version[:3].replace('.', '')
+    index = get_index(use_cache=True)
     r = Resolve(index)
     try:
         pkgs = r.get_pkgs(MatchSpec(pkgname))
@@ -140,6 +141,7 @@ about:
   summary: {summary}
 """
 
+
 def build_recipe(package, version=None):
     if version:
         dirname = package.lower() + "-" + version
@@ -165,16 +167,17 @@ def build_recipe(package, version=None):
         raise RuntimeError("Incorrect output from build_recipe: %s" % output)
     return os.path.abspath(direc)
 
+
 def convert_recipe(direc, package):
     print("Converting recipe in {0}".format(direc))
     buildstr = 'pip install %s\n' % package
     # convert build.sh file and bld.bat file
     filenames = ['build.sh', 'bld.bat']
     for name in filenames:
-        with open(os.path.join(direc, name),'w') as fid:
+        with open(os.path.join(direc, name), 'w') as fid:
             fid.write(buildstr)
     # convert meta.yaml file
-    with open(os.path.join(direc,'meta.yaml')) as fid:
+    with open(os.path.join(direc, 'meta.yaml')) as fid:
         fid.seek(0)
         meta = yaml.load(fid)
 
@@ -198,7 +201,7 @@ def convert_recipe(direc, package):
     d['license'] = meta['about']['license']
     d['summary'] = meta['about']['summary']
 
-    with open(os.path.join(direc,'meta.yaml'),'w') as fid:
+    with open(os.path.join(direc, 'meta.yaml'), 'w') as fid:
         fid.write(meta_template.format(**d))
 
     return depends
@@ -216,9 +219,10 @@ def get_all_dependencies(package, version):
     if ret != 0:
         raise RuntimeError("Could not pip install %s==%s" % (package, version))
     cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
-    fid = open('__tmpfile__.py','w')
+    fid = open('__tmpfile__.py', 'w')
     fid.write("import pkg_resources;\n")
-    fid.write("reqs = pkg_resources.get_distribution('%s').requires();\n" % package)
+    fid.write("reqs = pkg_resources.get_distribution('%s').requires();\n" %
+              package)
     fid.write("print [(req.key, req.specs) for req in reqs]\n")
     fid.close()
     print("Getting dependencies...")
@@ -234,6 +238,7 @@ def get_all_dependencies(package, version):
     cmd4 = "conda remove -n _pipbuild_ --yes --all"
     subprocess.Popen(cmd4.split()).wait()
     return depends
+
 
 def make_recipe(package, version):
     if version is None:
@@ -252,7 +257,7 @@ def make_recipe(package, version):
     # write build.sh file and bld.bat file
     filenames = ['build.sh', 'bld.bat']
     for name in filenames:
-        with open(os.path.join(direc, name),'w') as fid:
+        with open(os.path.join(direc, name), 'w') as fid:
             fid.write(build)
 
     indent = '\n    - '
@@ -269,14 +274,14 @@ def make_recipe(package, version):
         raise RuntimeError("Cannot get data for %s-%s" % (package, version))
 
     license_classifier = "License :: OSI Approved ::"
-    if data.has_key('classifiers'):
+    if 'classifiers' in data:
         licenses = [classifier.lstrip(license_classifier) for classifier in
                     data['classifiers'] if classifier.startswith(license_classifier)]
     else:
         licenses = []
 
     if not licenses:
-        license = data.get('license','UNKNOWN') or 'UNKNOWN'
+        license = data.get('license', 'UNKNOWN') or 'UNKNOWN'
     else:
         license = ' or '.join(licenses)
 
@@ -284,11 +289,10 @@ def make_recipe(package, version):
     d['license'] = license
     d['summary'] = repr(data['summary'])
 
-    with open(os.path.join(direc,'meta.yaml'),'w') as fid:
+    with open(os.path.join(direc, 'meta.yaml'), 'w') as fid:
         fid.write(meta_template.format(**d))
 
     return direc, depends
-
 
 
 def build_package(package, version=None):
@@ -321,6 +325,7 @@ def build_package(package, version=None):
         rm_rf(directory)
     return result
 
+
 def execute(args, parser):
     global binstar_upload
     global client
@@ -335,20 +340,21 @@ def execute(args, parser):
         all_versions = True
         version = args.release[0]
 
-    search = client.search({'name':package})
+    search = client.search({'name': package})
     if search:
-        r_name = filter(lambda x: x.has_key('name') and package.lower()==x['name'].lower(),search)
-        if r_name: 
+        r_name = list(filter(lambda x: ('name' in x and package.lower() == x['name'].lower()), search))
+        if r_name:
             print('Package search: %s' % r_name[0])
-            package=r_name[0]['name']
-      
+            package = r_name[0]['name']
+
     releases = client.package_releases(package, all_versions)
     if not releases:
         sys.exit("Error:  PyPI does not have a package named %s" % package)
 
     if all_versions and version not in releases:
         print(releases)
-        print("Warning:  PyPI does not have version %s of package %s" % (version, package))
+        print("Warning:  PyPI does not have version %s of package %s" %
+              (version, package))
 
     if all_versions:
         build_package(package, version)
