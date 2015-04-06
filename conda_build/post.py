@@ -212,6 +212,7 @@ def mk_relative(m, f):
 
 
 def fix_permissions(files):
+    print("Fixing permissions")
     for root, dirs, unused_files in os.walk(config.build_prefix):
         for dn in dirs:
             lchmod(join(root, dn), int('755', 8))
