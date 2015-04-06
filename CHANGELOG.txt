@@ -1,8 +1,21 @@
+2015-04-??   1.12.0n
+-------------------
   * correctly fix egg directories that are part of the package
   * use the --force-rpath flag to patchelf
   * update MACOSX_DEPLOYMENT_TARGET to 10.6
   * fix running tests for Python packages whose version differs from the
     version in conda
+  * new post-build logic on OS X. All libraries on OS X now include LC_RPATH,
+    which points to the environment lib directory, and use and install name
+    using @rpath
+  * don't set DYLD_FALLBACK_LIBRARY_PATH in cran recipes (the new LC_RPATH
+    logic on OS X makes this unnecessary)
+  * fix conda build --build-only when the long build prefix is used
+  * make conda inspect linkages work on OS X
+  * don't hide the traceback for maximum recursion depth exceeded errors
+  * add conda inspect objects, for inspecting object files in packages (OS X only)
+  * add --untracked flag to conda inspect linkages
+
 
 2015-03-05   1.11.0:
 --------------------
