@@ -14,6 +14,7 @@ except ImportError:
     readlink = False
 import io
 from subprocess import call, Popen, PIPE
+from collections import defaultdict
 
 from conda_build.config import config
 from conda_build import external
@@ -148,40 +149,122 @@ def post_process(files, preserve_egg_dir=False):
         compile_missing_pyc()
 
 
+def find_lib(link):
+    from conda_build.build import prefix_files
+    files = prefix_files()
+    if link.startswith(config.build_prefix):
+        link = link[len(config.build_prefix) + 1:]
+        if link not in files:
+            sys.exit("Error: Could not find %s" % link)
+        return link
+    if link.startswith('/'): # but doesn't start with the build prefix
+        return
+    if link.startswith('@rpath/'):
+        # Assume the rpath already points to lib, so there is no need to
+        # change it.
+        return
+    if '/' not in link or link.startswith('@executable_path/'):
+        link = basename(link)
+        file_names = defaultdict(list)
+        for f in files:
+            file_names[basename(f)].append(f)
+        if link not in file_names:
+            sys.exit("Error: Could not find %s" % link)
+        if len(file_names[link]) > 1:
+            sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+        return file_names[link][0]
+    print("Don't know how to find %s, skipping" % link)
+
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
-    reldir = utils.relative(path[len(config.build_prefix) + 1:])
+    link_loc = find_lib(link)
+    if not link_loc:
+        return
 
-    prefix_lib = config.build_prefix + '/lib'
-    if link.startswith(prefix_lib):
-        return '@loader_path/%s/%s' % (reldir, link[len(prefix_lib) + 1:])
+    lib_to_link = relpath(dirname(link_loc), 'lib')
+    path_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
+    # e.g., if
+    # path = '/build_prefix/lib/some/stuff/libstuff.dylib'
+    # link_loc = 'lib/things/libthings.dylib'
 
-    if link.startswith(('lib', '@executable_path/')):
-        return '@loader_path/%s/%s' % (reldir, basename(link))
+    # then
 
-    if link == '/usr/local/lib/libgcc_s.1.dylib':
-        return '/usr/lib/libgcc_s.1.dylib'
+    # lib_to_link = 'things'
+    # path_to_lib = '../..'
+
+    # @rpath always means 'lib', link will be at
+    # @rpath/lib_to_link/basename(link), like @rpath/things/libthings.dylib.
+
+    # For when we can't use @rpath, @loader_path means the path to the library
+    # ('path'), so from path to link is
+    # @loader_path/path_to_lib/lib_to_link/basename(link), like
+    # @loader_path/../../things/libthings.dylib.
+
+    ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
+
+    # XXX: IF the above fails for whatever reason, the below can be used
+    # TODO: This might contain redundant ..'s if link and path are both in
+    # some subdirectory of lib.
+    # ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
+
+    ret = ret.replace('/./', '/')
+    return ret
 
 def mk_relative_osx(path):
     assert sys.platform == 'darwin' and is_obj(path)
     s = macho.install_name_change(path, osx_ch_link)
 
-    if macho.is_dylib(path):
-        names = macho.otool(path)
-        if names:
-            args = ['install_name_tool', '-id', basename(names[0]), path]
-            print(' '.join(args))
-            p = Popen(args, stderr=PIPE)
-            stdout, stderr = p.communicate()
-            stderr = stderr.decode('utf-8')
-            if "Mach-O dynamic shared library stub file" in stderr:
-                print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
-                return
-            else:
-                print(stderr, file=sys.stderr)
-                if p.returncode:
-                    raise RuntimeError("install_name_tool failed with exit status %d"
-                % p.returncode)
+    names = macho.otool(path)
+    if names:
+        # Strictly speaking, not all object files have install names (e.g.,
+        # bundles and executables do not). In that case, the first name here
+        # will not be the install name (i.e., the id), but it isn't a problem,
+        # because in that case it will be a no-op (with the exception of stub
+        # files, which give an error, which is handled below).
+        args = [
+            'install_name_tool',
+            '-id',
+            join('@rpath', relpath(dirname(path),
+                join(config.build_prefix, 'lib')), basename(names[0])),
+            path,
+        ]
+        print(' '.join(args))
+        p = Popen(args, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
+        if "Mach-O dynamic shared library stub file" in stderr:
+            print("Skipping Mach-O dynamic shared library stub file %s" % path)
+            return
+        else:
+            print(stderr, file=sys.stderr)
+            if p.returncode:
+                raise RuntimeError("install_name_tool failed with exit status %d"
+            % p.returncode)
+
+        # Add an rpath to every executable to increase the chances of it
+        # being found.
+        args = [
+            'install_name_tool',
+            '-add_rpath',
+            join('@loader_path', relpath(join(config.build_prefix, 'lib'),
+                dirname(path)), '').replace('/./', '/'),
+            path,
+            ]
+        print(' '.join(args))
+        p = Popen(args, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
+        if "Mach-O dynamic shared library stub file" in stderr:
+            print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+            return
+        elif "would duplicate path, file already has LC_RPATH for:" in stderr:
+            print("Skipping -add_rpath, file already has LC_RPATH set")
+            return
+        else:
+            print(stderr, file=sys.stderr)
+            if p.returncode:
+                raise RuntimeError("install_name_tool failed with exit status %d"
+            % p.returncode)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be

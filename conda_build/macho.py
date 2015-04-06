@@ -41,6 +41,9 @@ def is_macho(path):
 
 
 def is_dylib(path):
+    return human_filetype(path) == 'DYLIB'
+
+def human_filetype(path):
     lines = subprocess.check_output(['otool', '-h', path]).decode('utf-8').splitlines()
     assert lines[0].startswith(path), path
 
@@ -48,7 +51,7 @@ def is_dylib(path):
         if line.strip().startswith('0x'):
             header = line.split()
             filetype = int(header[4])
-            return FILETYPE[filetype] == 'MH_DYLIB'
+            return FILETYPE[filetype][3:]
 
 def otool(path):
     "thin wrapper around otool -L"
@@ -60,6 +63,16 @@ def otool(path):
         res.append(line.split()[0])
     return res
 
+def get_rpath(path):
+    lines = subprocess.check_output(['otool', '-l',
+        path]).decode('utf-8').splitlines()
+    check_for_rpath = False
+    for line in lines:
+        if 'cmd LC_RPATH' in line:
+            check_for_rpath = True
+        if check_for_rpath and 'path' in line:
+            _, rpath, _ = line.split(None, 2)
+            return rpath
 
 def install_name_change(path, cb_func):
     """
@@ -71,6 +84,9 @@ def install_name_change(path, cb_func):
     """
     changes = []
     for link in otool(path):
+        # The first link may be the install name of the library itself, but
+        # this isn't a big deal because install_name_tool -change is a no-op
+        # if given a dependent install name that doesn't exist.
         new_link = cb_func(path, link)
         if new_link:
             changes.append((link, new_link))
