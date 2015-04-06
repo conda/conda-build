@@ -5,6 +5,10 @@
   * update MACOSX_DEPLOYMENT_TARGET to 10.6
   * fix running tests for Python packages whose version differs from the
     version in conda
+  * fix some Python 3 issues with pipbuild
+  * don't allow packages to depend on themselves
+  * allow to use the r- prefix in conda skeleton cran
+  * make recommended r packages depend on r-base in skeleton cran
   * new post-build logic on OS X. All libraries on OS X now include LC_RPATH,
     which points to the environment lib directory, and use and install name
     using @rpath
