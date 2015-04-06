@@ -325,9 +325,12 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', config.CONDA_PY),
-                         ('numpy', config.CONDA_NPY),
-                         ('perl', config.CONDA_PERL)]
+        name_ver_list = [
+            ('python', config.CONDA_PY),
+            ('numpy', config.CONDA_NPY),
+            ('perl', config.CONDA_PERL),
+            ('r', config.CONDA_R),
+        ]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -367,7 +370,7 @@ class MetaData(object):
             return ret
         res = []
         version_re = re.compile(r'(?:==)?(\d)\.(\d)')
-        for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
+        for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl'), ('r', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     try:
@@ -377,7 +380,7 @@ class MetaData(object):
                         break
                     if ',' in v or '|' in v:
                         break
-                    if name != 'perl':
+                    if name not in ['perl', 'r']:
                         match = version_re.match(v)
                         if match:
                             res.append(s + match.group(1) + match.group(2))

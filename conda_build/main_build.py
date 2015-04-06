@@ -105,6 +105,12 @@ def main():
         help="Set the NumPy version used by conda build",
         metavar="NUMPY_VER",
     )
+    p.add_argument(
+        '--R',
+        action="append",
+        help="Set the R version used by conda build",
+        metavar="R_VER",
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -203,6 +209,8 @@ def execute(args, parser):
             raise RuntimeError("CONDA_PY must be major.minor, like 3.4, not %s" % config.CONDA_PY)
     if args.perl:
         config.CONDA_PERL = args.perl
+    if args.R:
+        config.CONDA_R = args.R
     if args.numpy:
         if args.numpy == ['all']:
             for npy in [16, 17, 18, 19]:

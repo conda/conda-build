@@ -423,11 +423,9 @@ def main(args, parser):
                         r_name = 'r-base'
                     else:
                         r_name = 'r'
-                    if dep_dict[name]:
-                        deps.insert(0, '{indent}{r_name} {version}'.format(version=dep_dict[name],
-                            indent=INDENT, r_name=r_name))
-                    else:
-                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
+                    # We don't include any R version restrictions because we
+                    # always build R packages against an exact R version
+                    deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
                 else:
                     conda_name = 'r-' + name.lower()
 
