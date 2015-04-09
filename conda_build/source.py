@@ -75,7 +75,8 @@ def unpack(meta):
 
     os.makedirs(WORK_DIR)
     print("Extracting download")
-    if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
+    if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
+        '.tar', 'tar.z')):
         tar_xf(src_path, WORK_DIR)
     elif src_path.lower().endswith('.zip'):
         unzip(src_path, WORK_DIR)
