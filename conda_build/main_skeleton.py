@@ -179,7 +179,7 @@ def main():
         '--no-archive',
         action='store_false',
         dest='archive',
-        help="Don't include an Archive download url (default %(default)s)",
+        help="Don't include an Archive download url",
     )
 
     p.set_defaults(func=execute)
