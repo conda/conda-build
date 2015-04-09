@@ -10,9 +10,13 @@ import yaml
 import re
 import sys
 from os import makedirs
-from os.path import join, exists
+from os.path import join, exists, isfile
 from itertools import chain
+import subprocess
 
+from conda.install import rm_rf
+
+from conda_build import source
 
 CRAN_META = """\
 package:
@@ -22,8 +26,10 @@ package:
   version: "{conda_version}"
 
 source:
-  fn: {filename}
-  url:{cranurl}
+  {fn_key} {filename}
+  {url_key} {cranurl}
+  {git_url_key} {git_url}
+  {git_tag_key} {git_tag}
   # You can add a hash for the file here, like md5 or sha1
   # md5: 49448ba4863157652311cc5ea4fea3ea
   # sha1: 3bcfbee008276084cbb37a2b453963c61176a322
@@ -279,6 +285,20 @@ def get_package_metadata(cran_url, package, session):
     d['orig_description'] = DESCRIPTION
     return d
 
+def get_latest_git_tag():
+    p = subprocess.Popen(['git', 'tag'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+    stdout, stderr = p.communicate()
+    stdout = stdout.decode('utf-8')
+    stderr = stderr.decode('utf-8')
+    if stderr or p.returncode:
+        sys.exit("Error: git tag failed (%s)" % stderr)
+    tags = stdout.strip().splitlines()
+    if not tags:
+        sys.exit("Error: no tags found")
+
+    print("Using tag %s" % tags[-1])
+    return tags[-1]
+
 def main(args, parser):
     package_dicts = {}
 
@@ -307,6 +327,24 @@ def main(args, parser):
     while args.packages:
         package = args.packages.pop()
 
+        is_github_url = 'github.com' in package
+        url = package
+
+        if is_github_url:
+            rm_rf(source.WORK_DIR)
+            source.git_source({'git_url': package}, '.')
+            DESCRIPTION = join(source.WORK_DIR, "DESCRIPTION")
+            if not isfile(DESCRIPTION):
+                sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file)" % package)
+
+            with open(DESCRIPTION) as f:
+                description_text = f.read()
+
+            d = dict_from_cran_lines(remove_package_line_continuations(description_text.splitlines()))
+            d['orig_description'] = description_text
+            package = d['Package'].lower()
+            cran_metadata[package] = d
+
         if package.startswith('r-'):
             package = package[2:]
         if package.lower() not in cran_metadata:
@@ -315,7 +353,8 @@ def main(args, parser):
         # Make sure package is always uses the CRAN capitalization
         package = cran_metadata[package.lower()]['Package']
 
-        cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
+        if not is_github_url:
+            cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
             package, session))
 
         dir_path = join(output_dir, 'r-' + package.lower())
@@ -337,6 +376,23 @@ def main(args, parser):
                 'summary': '',
             })
 
+        if is_github_url:
+            d['url_key'] = ''
+            d['fn_key'] = ''
+            d['git_url_key'] = 'git_url:'
+            d['git_tag_key'] = 'git_tag:'
+            d['filename'] = ''
+            d['cranurl'] = ''
+            d['git_url'] = url
+            d['git_tag'] = get_latest_git_tag()
+        else:
+            d['url_key'] = 'url:'
+            d['fn_key'] = 'fn:'
+            d['git_url_key'] = ''
+            d['git_tag_key'] = ''
+            d['git_url'] = ''
+            d['git_tag'] = ''
+
         if args.version:
             raise NotImplementedError("Package versions from CRAN are not yet implemented")
             [version] = args.version
@@ -345,13 +401,14 @@ def main(args, parser):
         d['cran_version'] = cran_package['Version']
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .
         d['conda_version'] = d['cran_version'].replace('-', '_')
-        d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
-        if args.archive:
-            d['cranurl'] = (INDENT + args.cran_url + 'src/contrib/' +
-                d['filename'] + INDENT + args.cran_url + 'src/contrib/' +
-                'Archive/' + d['cran_packagename'] + '/' + d['filename'])
-        else:
-            d['cranurl'] = ' ' + args.cran_url + 'src/contrib/' + d['filename']
+        if not is_github_url:
+            d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
+            if args.archive:
+                d['cranurl'] = (INDENT + args.cran_url + 'src/contrib/' +
+                    d['filename'] + INDENT + args.cran_url + 'src/contrib/' +
+                    'Archive/' + d['cran_packagename'] + '/' + d['filename'])
+            else:
+                d['cranurl'] = ' ' + args.cran_url + 'src/contrib/' + d['filename']
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
