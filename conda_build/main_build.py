@@ -233,7 +233,7 @@ def execute(args, parser):
             try_again = False
             # Don't use byte literals for paths in Python 2
             if not PY3:
-                arg = arg.decode(getpreferredencoding())
+                arg = arg.decode(getpreferredencoding() or 'utf-8')
             if isfile(arg):
                 if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
                     recipe_dir = tempfile.mkdtemp()
