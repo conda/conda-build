@@ -20,6 +20,7 @@
   * add conda inspect objects, for inspecting object files in packages (OS X only)
   * add --untracked flag to conda inspect linkages
   * build R packages against a specific version of R
+  * decompress .tar.z files
 
 2015-03-05   1.11.0:
 --------------------
