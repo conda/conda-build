@@ -216,6 +216,8 @@ def remove_package_line_continuations(chunk):
     had_continuation = False
     accumulating_continuations = False
 
+    chunk.append('')
+
     for (i, line) in enumerate(chunk):
         if line.startswith(continuation):
             line = ' ' + line.lstrip()
