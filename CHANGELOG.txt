@@ -21,6 +21,7 @@
   * add --untracked flag to conda inspect linkages
   * build R packages against a specific version of R
   * decompress .tar.z files
+  * add support for GitHub urls in conda skeleton cran
 
 
 2015-03-05   1.11.0:
