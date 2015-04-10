@@ -1,4 +1,4 @@
-2015-04-??   1.12.0:
+2015-04-10   1.12.0:
 --------------------
   * correctly fix egg directories that are part of the package
   * use the --force-rpath flag to patchelf
@@ -17,7 +17,8 @@
   * fix conda build --build-only when the long build prefix is used
   * make conda inspect linkages work on OS X
   * don't hide the traceback for maximum recursion depth exceeded errors
-  * add conda inspect objects, for inspecting object files in packages (OS X only)
+  * add conda inspect objects, for inspecting object files in packages
+    (OS X only)
   * add --untracked flag to conda inspect linkages
   * build R packages against a specific version of R
   * decompress .tar.z files
