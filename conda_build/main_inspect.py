@@ -29,10 +29,17 @@ def main():
         dest='subcommand',
         )
 
+    linkages_help = """
+    Investigate linkages of binary libraries in a package (only works in Linux
+    and OS X). Aggregates the output of ldd (on Linux) and otool -L (on OS
+    X). Useful for finding broken links, or links against system libraries
+    that ought to be dependent conda packages."""
     linkages = subcommand.add_parser(
         "linkages",
-        help="""Investigate linkages of binary libraries in a package
-        (only works in Linux and OS X)""",
+        # help controls conda inspect -h and description controls conda
+        # inspect linkages -h
+        help=linkages_help,
+        description=linkages_help,
         )
     linkages.add_argument(
         'packages',
@@ -53,10 +60,13 @@ def main():
     )
     add_parser_prefix(linkages)
 
+    objects_help = """Investigate binary object files in a package (only works
+    in OS X). Aggregates the output of otool on all the binary object files in
+    a package."""
     objects = subcommand.add_parser(
         "objects",
-        help="""Investigate binary object files in a package (only works in OS
-        X)""",
+        help=objects_help,
+        description=objects_help,
         )
     objects.add_argument(
         'packages',
