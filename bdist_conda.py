@@ -185,7 +185,7 @@ class bdist_conda(install):
             # someone writes their setup.py wrong and this doesn't work, it's
             # their fault.
             d['about']['license'] = metadata.license
-            d['about']['summary'] = self.distribution.description
+            d['about']['summary'] = metadata.description
 
             # This is similar logic from conda skeleton pypi
             entry_points = getattr(self.distribution, 'entry_points', [])
