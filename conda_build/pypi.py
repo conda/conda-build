@@ -329,6 +329,9 @@ def main(args, parser):
                     sys.exit("Error: Could not build recipe for %s. "
                         "Could not find any valid urls." % package)
                 U = parse_url(urls[0]['url'])
+                if not U.path:
+                    sys.exit("Error: Could not parse url for %s: %s" %
+                        (package, U))
                 urls[0]['filename'] = U.path.rsplit('/')[-1]
                 fragment = U.fragment or ''
                 if fragment.startswith('md5='):
