@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import sys
 
-try:
+if 'develop' in sys.argv:
     from setuptools import setup
-except ImportError:
+else:
     from distutils.core import setup
 
 import versioneer
