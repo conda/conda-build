@@ -44,7 +44,7 @@ def create_shell_files(dir_path, m):
             f.write(cmd)
             f.write('\n')
             if sys.platform == 'win32':
-                f.write("if errorlevel 1 exit 1")
+                f.write("if errorlevel 1 exit 1\n")
             has_tests = True
 
     return has_tests
