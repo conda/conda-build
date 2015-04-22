@@ -6,7 +6,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-import argparse
 import sys
 from collections import deque
 from glob import glob
@@ -16,71 +15,77 @@ from os.path import exists
 import conda.config as config
 from conda.compat import PY3
 from conda.cli.common import add_parser_channels
+from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__, exceptions
 
 
 def main():
-    p = argparse.ArgumentParser(
-        description='tool for building conda packages'
+    p = ArgumentParser(
+        description="""
+Tool for building conda packages. A conda package is a binary tarball
+containing system-level libraries, Python modules, executable programs, or
+other components. conda keeps track of dependencies between packages and
+platform specifics, making it simple to create working environments from
+different sets of packages."""
     )
-
+    p.add_argument(
+        '-V', '--version',
+        action='version',
+        help='Show the conda-build version number and exit.',
+        version = 'conda-build %s' % __version__,
+    )
     p.add_argument(
         "--check",
         action="store_true",
-        help="only check (validate) the recipe",
+        help="Only check (validate) the recipe.",
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="do not ask to upload the package to binstar",
+        help="Do not ask to upload the package to binstar.",
         dest='binstar_upload',
         default=config.binstar_upload,
     )
     p.add_argument(
         "--output",
         action="store_true",
-        help="output the conda package filename which would have been "
-               "created and exit",
+        help="Output the conda package filename which would have been "
+               "created and exit.",
     )
     p.add_argument(
         '-s', "--source",
         action="store_true",
-        help="only obtain the source (but don't build)",
+        help="Only obtain the source (but don't build).",
     )
     p.add_argument(
         '-t', "--test",
         action="store_true",
-        help="test package (assumes package is already build)",
+        help="Test package (assumes package is already build).",
     )
     p.add_argument(
         'recipe',
         action="store",
         metavar='RECIPE_PATH',
         nargs='+',
-        help="path to recipe directory"
+        help="Path to recipe directory.",
     )
     p.add_argument(
         '--no-test',
         action='store_true',
         dest='notest',
-        help="do not test the package"
+        help="Do not test the package.",
     )
     p.add_argument(
         '-b', '--build-only',
         action="store_true",
-        help="""only run the build, without any post processing or
-        testing. Implies --no-test and --no-binstar-upload""",
+        help="""Only run the build, without any post processing or
+        testing. Implies --no-test and --no-binstar-upload.""",
     )
     p.add_argument(
         '-p', '--post',
         action="store_true",
-        help="run the post-build logic. Implies --no-test and --no-binstar-upload",
-    )
-    p.add_argument(
-        '-V', '--version',
-        action='version',
-        version = 'conda-build %s' % __version__,
+        help="Run the post-build logic. Implies --no-test and --no-binstar-upload.",
     )
     p.add_argument(
         '-q', "--quiet",
