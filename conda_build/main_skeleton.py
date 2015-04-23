@@ -148,13 +148,7 @@ def main():
         "--version",
         action="store",
         nargs=1,
-        help="Version to use. Applies to all packages",
-    )
-    cran.add_argument(
-        "--all-urls",
-        action="store_true",
-        help="""Look at all URLs, not just source URLs. Use this if it can't
-                find the right URL.""",
+        help="Version to use. Applies to all packages.",
     )
     cran.add_argument(
         "--cran-url",
