@@ -64,12 +64,7 @@ def main():
         action="store",
         nargs=1,
         default='http://pypi.python.org/pypi',
-        help="Url to use for PyPI",
-    )
-    p.add_argument(
-        '-V', '--version',
-        action='version',
-        version='conda-pipbuild %s' % __version__,
+        help="Url to use for PyPI.",
     )
     p.set_defaults(func=execute)
 
