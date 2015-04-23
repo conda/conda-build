@@ -1,36 +1,44 @@
 from __future__ import absolute_import, division, print_function
 
-import argparse
 import os
 from locale import getpreferredencoding
 from os.path import abspath
 
 from conda.compat import PY3
+from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build.index import update_index
 
 
 def main():
-    p = argparse.ArgumentParser(
-        description="Update package index metadata files in given directories")
+    p = ArgumentParser(
+        description="Update package index metadata files in given directories.")
 
-    p.add_argument('dir',
-                   help='Directory that contains an index to be updated.',
-                   nargs='*',
-                   default=[os.getcwd()])
+    p.add_argument(
+        'dir',
+        help='Directory that contains an index to be updated.',
+        nargs='*',
+        default=[os.getcwd()],
+    )
 
-    p.add_argument('-c', "--check-md5",
-                   action="store_true",
-                   help="Use MD5 values instead of file modification times for\
-                         determining if a package's metadata needs to be \
-                         updated.")
+    p.add_argument(
+        '-c', "--check-md5",
+        action="store_true",
+        help="""Use MD5 values instead of file modification times for determining if a
+        package's metadata needs to be updated.""",
+    )
 
-    p.add_argument('-f', "--force",
-                   action="store_true",
-                   help="force reading all files")
+    p.add_argument(
+        '-f', "--force",
+        action="store_true",
+        help="Force reading all files.",
+    )
 
-    p.add_argument('-q', "--quiet",
-                   action="store_true")
+    p.add_argument(
+        '-q', "--quiet",
+        action="store_true",
+        help="Don't show any output.",
+    )
 
     args = p.parse_args()
 
