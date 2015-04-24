@@ -151,6 +151,12 @@ def main():
         help="Version to use. Applies to all packages",
     )
     cran.add_argument(
+        "--git-tag",
+        action="store",
+        nargs=1,
+        help="Git tag to use for GitHub recipes.",
+    )
+    cran.add_argument(
         "--all-urls",
         action="store_true",
         help="""Look at all URLs, not just source URLs. Use this if it can't

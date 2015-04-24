@@ -384,7 +384,7 @@ def main(args, parser):
             d['filename'] = ''
             d['cranurl'] = ''
             d['git_url'] = url
-            d['git_tag'] = get_latest_git_tag()
+            d['git_tag'] = args.git_tag[0] if args.git_tag else get_latest_git_tag()
         else:
             d['url_key'] = 'url:'
             d['fn_key'] = 'fn:'
