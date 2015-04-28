@@ -363,8 +363,8 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
         files1 = prefix_files()
         for f in m.always_include_files():
             if f not in files1:
-                sys.exit("Error: File %s from always_include_files not found"
-                    % f)
+                print("Error: File %s from always_include_files not found" % f,
+                      file=sys.stderr)
         files1 = files1.difference(set(m.always_include_files()))
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
