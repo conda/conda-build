@@ -40,6 +40,7 @@ setup(
     description = "tools for building conda packages",
     long_description = open('README.rst').read(),
     packages = ['conda_build'],
+    py_modules=["versioneer"],
     scripts = [
         'bin/conda-build',
         'bin/conda-convert',
