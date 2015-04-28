@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+from glob import glob
 
 if 'develop' in sys.argv:
     from setuptools import setup
@@ -41,16 +42,7 @@ setup(
     long_description = open('README.rst').read(),
     packages = ['conda_build'],
     py_modules=["versioneer"],
-    scripts = [
-        'bin/conda-build',
-        'bin/conda-convert',
-        'bin/conda-index',
-        'bin/conda-skeleton',
-        'bin/conda-pipbuild',
-        'bin/conda-metapackage',
-        'bin/conda-develop',
-        'bin/conda-inspect',
-        ],
+    scripts = glob('bin/*'),
     install_requires = ['conda'],
 
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
