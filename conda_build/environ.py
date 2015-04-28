@@ -85,6 +85,10 @@ def get_dict(m=None, prefix=None):
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
+    if "HTTPS_PROXY" in os.environ:
+        d['HTTPS_PROXY'] = os.environ['HTTPS_PROXY']
+    if "HTTP_PROXY" in os.environ:
+        d['HTTP_PROXY'] = os.environ['HTTP_PROXY']
 
     if m:
         for var_name in m.get_value('build/script_env', []):
