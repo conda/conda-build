@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import sys
+from glob import glob
 
 if 'develop' in sys.argv:
     from setuptools import setup
@@ -13,6 +14,7 @@ if sys.version_info[:2] < (2, 7):
     sys.exit("conda-build is only meant for Python >=2.7"
              "Current Python version: %d.%d" % sys.version_info[:2])
 
+versioneer.VCS = 'git'
 versioneer.versionfile_source = 'conda_build/_version.py'
 versioneer.versionfile_build = 'conda_build/_version.py'
 versioneer.tag_prefix = ''
@@ -39,16 +41,8 @@ setup(
     description = "tools for building conda packages",
     long_description = open('README.rst').read(),
     packages = ['conda_build'],
-    scripts = [
-        'bin/conda-build',
-        'bin/conda-convert',
-        'bin/conda-index',
-        'bin/conda-skeleton',
-        'bin/conda-pipbuild',
-        'bin/conda-metapackage',
-        'bin/conda-develop',
-        'bin/conda-inspect',
-        ],
+    py_modules=["versioneer"],
+    scripts = glob('bin/*'),
     install_requires = ['conda'],
 
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
