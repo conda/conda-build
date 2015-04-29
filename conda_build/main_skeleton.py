@@ -165,7 +165,6 @@ def main():
     cran.add_argument(
         "--cran-url",
         action="store",
-        nargs=1,
         default='http://cran.r-project.org/',
         help="URL to use for CRAN (default: %(default)s)",
     )
