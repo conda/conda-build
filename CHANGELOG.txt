@@ -1,4 +1,9 @@
+2015-05-XX   1.13.0:
+--------------------
+
+
 2015-04-28   1.12.1:
+--------------------
   * fix regression in always_include_files that causes build failure (#386)
 
 
