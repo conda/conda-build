@@ -1,5 +1,7 @@
 2015-05-XX   1.13.0:
 --------------------
+  * always_include_files errors out (exits) on files that aren't there (#387)
+  * use versioneer 0.14 (#385)
 
 
 2015-04-28   1.12.1:
