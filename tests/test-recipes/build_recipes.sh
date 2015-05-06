@@ -3,12 +3,12 @@
 set -e
 set -x
 
-cd $(dirname ${BASH_SOURCE[0]})
+cd "$(dirname "${BASH_SOURCE[0]}")"
 
 # Recipes that should fail and give some error
 
 for recipe in metadata/*/; do
-    if [[ $(ls -A $recipe) ]]; then
+    if [[ $(ls -A "$recipe") ]]; then
         if [[ $recipe =~ .*osx_is_app.* && $(uname) != "Darwin" ]]; then
             continue
         fi
