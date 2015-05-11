@@ -265,6 +265,9 @@ def execute(args, parser):
             if args.output:
                 print(build.bldpkg_path(m))
                 continue
+            if m.skip():
+                print("SKIPPING BUILD (unsupported platform):", m.dist())
+                continue
             elif args.test:
                 build.test(m, verbose=not args.quiet)
             elif args.source:
