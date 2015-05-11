@@ -2,6 +2,19 @@
 conda-build
 ===========
 
+Installation
+--------------
+.. code:: bash
+
+    # Display information about current conda install.
+    conda info
+
+    # Install conda-build in the current env
+    conda install conda-build
+
+    # Install conda-build (from the conda channel) in the current env
+    conda install -c conda conda-build
+
 
 Building Your Own Packages
 --------------------------
