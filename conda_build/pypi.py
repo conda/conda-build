@@ -301,12 +301,14 @@ def main(args, parser):
                     # is apparently not (the last time I checked,
                     # len(set(all_packages_lower)) == len(set(all_packages)))
                     if package.lower() in all_packages_lower:
-                        print("%s not found, trying %s" % (package, package.capitalize()))
-                        args.packages.append(all_packages[all_packages_lower.index(package.lower())])
-                        del package_dicts[package]
-                        continue
-                    sys.exit("Error: Could not find any versions of package %s" %
-                             package)
+                        cased_package = all_packages[all_packages_lower.index(package.lower())]
+                        if cased_package != package:
+                            print("%s not found, trying %s" % (package, cased_package))
+                            print(len(args.packages))
+                            args.packages.append(cased_package)
+                            del package_dicts[package]
+                            continue
+                    sys.exit("Error: Could not find any versions of package %s" % package)
                 if len(versions) > 1:
                     print("Warning, the following versions were found for %s" %
                           package)
