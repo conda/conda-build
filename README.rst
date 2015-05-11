@@ -10,7 +10,7 @@ Installation
     conda info
 
     # Install conda-build in the current env
-    conda install conda-build
+    conda install -n root conda-build
 
 
 Building Your Own Packages
