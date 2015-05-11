@@ -214,14 +214,15 @@ class bdist_conda(install):
                 if not isinstance(entry_points, dict):
                     raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" + entry_points)
                 else:
+                    rs = entry_points.get('scripts', [])
                     cs = entry_points.get('console_scripts', [])
                     gs = entry_points.get('gui_scripts', [])
                     # We have *other* kinds of entry-points so we need
                     # setuptools at run-time
-                    if not cs and not gs and len(entry_points) > 1:
+                    if not rs and not cs and not gs and len(entry_points) > 1:
                         d['requirements']['run'].append('setuptools')
                         d['requirements']['build'].append('setuptools')
-                    entry_list = cs + gs
+                    entry_list = rs + cs + gs
                     if gs and conda.config.platform == 'osx':
                         d['build']['osx_is_app'] = True
                     if len(cs + gs) != 0:
