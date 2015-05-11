@@ -59,6 +59,14 @@ def _check_call(args, **kwargs):
 
 
 def tar_xf(tarball, dir_path, mode='r:*'):
+    if tarball.lower().endswith('.tar.z'):
+        uncompress = external.find_executable('uncompress')
+        if not uncompress:
+            sys.exit("""\
+uncompress is required to unarchive .z source files.
+""")
+        subprocess.check_call([uncompress, '-f', tarball])
+        tarball = tarball[:-2]
     if not PY3 and tarball.endswith('.tar.xz'):
         unxz = external.find_executable('unxz')
         if not unxz:
