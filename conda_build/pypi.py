@@ -346,11 +346,16 @@ def main(args, parser):
         if len(urls) > 1 and not args.noprompt:
             print("More than one source version is available for %s:" %
                   package)
-            for i, url in enumerate(urls):
-                print("%d: %s (%s) %s" % (i, url['url'],
-                                          human_bytes(url['size']),
-                                          url['comment_text']))
-            n = int(input("Which version should I use? "))
+            if args.manual_url:
+                for i, url in enumerate(urls):
+                    print("%d: %s (%s) %s" % (i, url['url'],
+                          human_bytes(url['size']), url['comment_text']))
+                n = int(input("which version should i use? "))
+            else:
+                print("Using the one with the least source size")
+                print("use --manual-url to override this behavior")
+                min_siz, n = min([(url['size'], i)
+                                  for (i, url) in enumerate(urls)])
         else:
             n = 0
 
