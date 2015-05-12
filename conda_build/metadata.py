@@ -6,7 +6,7 @@ import sys
 import textwrap
 from os.path import isdir, isfile, join
 
-from conda.compat import iteritems, PY3, text_type, string_types
+from conda.compat import iteritems, PY3, text_type
 from conda.utils import memoized, md5_file
 import conda.config as cc
 from conda.resolve import MatchSpec
@@ -363,7 +363,11 @@ class MetaData(object):
             res.append(ms)
         return res
 
-    def _build_id_deps(self):
+    def build_id(self):
+        ret = self.get_value('build/string')
+        if ret:
+            check_bad_chrs(ret, 'build/string')
+            return ret
         res = []
         version_re = re.compile(r'(?:==)?(\d)\.(\d)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl'), ('r', 'r')):
@@ -383,14 +387,6 @@ class MetaData(object):
                     else:
                         res.append(s + v.strip('*>=!<'))
                     break
-        return res
-
-    def build_id(self):
-        ret = self.get_value('build/string')
-        if ret:
-            check_bad_chrs(ret, 'build/string')
-            return ret
-        res = self._build_id_deps()
         if res:
             res.append('_')
         res.append('%d' % self.build_number())
@@ -463,22 +459,11 @@ class MetaData(object):
         return ret
 
     def skip(self):
-        build_id_deps = set(self._build_id_deps()) # e.g. like {'np19, 'py27'}
-        build_id_deps.add(cc.subdir)               # also use the platform
-
-        skip_section = self.get_value('build/skip')
-        if isinstance(skip_section, string_types):
-            skip_section = [skip_section]
-
-        for skip_spec in skip_section:
-            if not isinstance(skip_spec, string_types):
-                continue
-            # skip_spec looks potentially like "py27" (skip every py27 build)
-            # or "py27_win-32" (skip py27 only on win-32), or similar.
-            remaining = set(skip_spec.split('_')).difference(build_id_deps)
-            if len(remaining) == 0:
-                return True
-        return False
+        skip_expression = self.get_value('build/skip')
+        try:
+            return bool(eval(skip_expression, ns_cfg(), {}))
+        except:
+            return False
 
     def __unicode__(self):
         '''
