@@ -20,5 +20,5 @@ setup(
     packages = ['conda_build_test'],
     scripts = [
         'bin/test-script-setup.py',
-        ],
+    ],
 )
