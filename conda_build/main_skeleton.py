@@ -94,6 +94,14 @@ def main():
         choices=['2.6', '2.7', '3.3', '3.4'],
         )
 
+    pypi.add_argument(
+        "--manual-url",
+        action='store_true',
+        default=False,
+        help="Manually choose source url when more than one urls are present." +
+             "Default is the one with least source size."
+        )
+
     cpan = repos.add_parser(
         "cpan",
         help="Create recipes from packages on CPAN",
