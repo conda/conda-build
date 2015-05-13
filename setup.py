@@ -21,14 +21,14 @@ versioneer.tag_prefix = ''
 versioneer.parentdir_prefix = 'conda-build-'
 
 setup(
-    name = "conda-build",
+    name="conda-build",
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    author = "Continuum Analytics, Inc.",
-    author_email = "ilan@continuum.io",
-    url = "https://github.com/conda/conda-build",
-    license = "BSD",
-    classifiers = [
+    author="Continuum Analytics, Inc.",
+    author_email="ilan@continuum.io",
+    url="https://github.com/conda/conda-build",
+    license="BSD",
+    classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
@@ -38,12 +38,12 @@ setup(
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
     ],
-    description = "tools for building conda packages",
-    long_description = open('README.rst').read(),
-    packages = ['conda_build'],
+    description="tools for building conda packages",
+    long_description=open('README.rst').read(),
+    packages=['conda_build'],
     py_modules=["versioneer"],
-    scripts = glob('bin/*'),
-    install_requires = ['conda'],
+    scripts=glob('bin/*'),
+    install_requires=['conda'],
 
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
 )
