@@ -226,6 +226,7 @@ def execute(args, parser):
         if not len(str(config.CONDA_NPY)) == 2:
             raise RuntimeError("CONDA_NPY must be major.minor, like 1.8, not %s" % config.CONDA_NPY)
 
+    args.built_recipes = []
     with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
@@ -298,13 +299,18 @@ def execute(args, parser):
                         if exists(dep_pkg):
                             recipe_glob.append(dep_pkg)
                         if recipe_glob:
-                            recipes.appendleft(arg)
+                            if arg not in args.built_recipes:
+                                recipes.appendleft(arg)
+                                args.built_recipes.append(arg)
                             try_again = True
                             for recipe_dir in recipe_glob:
                                 print(("Missing dependency {0}, but found" +
                                        " recipe directory, so building " +
                                        "{0} first").format(dep_pkg))
-                                recipes.appendleft(recipe_dir)
+
+                                if recipe_dir not in args.built_recipes:
+                                    recipes.appendleft(recipe_dir)
+                                    args.built_recipes.append(recipe_dir)
                         else:
                             raise
                     else:
