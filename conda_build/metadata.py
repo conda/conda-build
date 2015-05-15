@@ -459,11 +459,10 @@ class MetaData(object):
         return ret
 
     def skip(self):
-        skip_expression = self.get_value('build/skip')
-        try:
+        skip_expression = self.get_value('build/skip', None)
+        if skip_expression is not None:
             return bool(eval(skip_expression, ns_cfg(), {}))
-        except:
-            return False
+        return False
 
     def __unicode__(self):
         '''
