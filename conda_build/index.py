@@ -107,5 +107,8 @@ Error:
             except KeyError:
                 pass
 
+        if 'requires' in info and 'depends' not in info:
+            info['depends'] = info['requires']
+
     repodata = {'packages': index, 'info': {}}
     write_repodata(repodata, dir_path)
