@@ -1,3 +1,10 @@
+2015-XX-XX   1.XX.X:
+--------------------
+  * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
+    Unix, they where originally added in #228, but are causing problem for
+    some people and are not really necessary
+
+
 2015-05-19   1.13.0:
 --------------------
   * skeleton pypi: fail better for packages with bad urls
