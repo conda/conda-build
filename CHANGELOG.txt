@@ -1,4 +1,4 @@
-2015-05-XX   1.13.0:
+2015-05-19   1.13.0:
 --------------------
   * skeleton pypi: fail better for packages with bad urls
   * fix summary in bdist_conda
@@ -20,6 +20,7 @@
   * always_include_files errors out (exits) on files that aren't there (#387)
   * automatically lowercase the package name in bdist_conda (see
     aplpy/aplpy#259)
+
 
 2015-04-28   1.12.1:
 --------------------
