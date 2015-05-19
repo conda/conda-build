@@ -3,7 +3,8 @@
   * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
     Unix, they where originally added in #228, but are causing problem for
     some people and are not really necessary
-
+  * don't rename meta.yaml to meta.yaml.orig in the recipe that is copied into
+    built packages
 
 2015-05-19   1.13.0:
 --------------------
