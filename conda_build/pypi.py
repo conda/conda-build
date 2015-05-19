@@ -255,10 +255,12 @@ def main(args, parser):
     all_packages = client.list_packages()
     all_packages_lower = [i.lower() for i in all_packages]
 
+    args.created_recipes = []
     while args.packages:
         [output_dir] = args.output_dir
 
         package = args.packages.pop()
+        args.created_recipes.append(package)
 
         is_url = ':' in package
 
@@ -553,7 +555,8 @@ def get_package_metadata(args, package, d, data):
                 for dep in deps:
                     dep = dep.split()[0]
                     if not exists(join(output_dir, dep)):
-                        args.packages.append(dep)
+                        if dep not in args.created_recipes:
+                            args.packages.append(dep)
 
         if 'packagename' not in d:
             d['packagename'] = pkginfo['name'].lower()
