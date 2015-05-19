@@ -41,9 +41,7 @@ setup(
     description="tools for building conda packages",
     long_description=open('README.rst').read(),
     packages=['conda_build'],
-    py_modules=["versioneer"],
     scripts=glob('bin/*'),
     install_requires=['conda'],
-
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
 )
