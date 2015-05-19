@@ -148,13 +148,6 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    if isfile(join(recipe_dir, 'meta.yaml')):
-        shutil.move(join(recipe_dir, 'meta.yaml'),
-                    join(recipe_dir, 'meta.yaml.orig'))
-
-    with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
-        yaml.safe_dump(m.meta, fo)
-
     readme = m.get_value('about/readme')
     if readme:
         src = join(source.get_dir(), readme)
