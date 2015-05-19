@@ -1,9 +1,23 @@
 2015-05-XX   1.13.0:
 --------------------
-  * always_include_files errors out (exits) on files that aren't there (#387)
-  * use versioneer 0.14 (#385)
+  * skeleton pypi: fail better for packages with bad urls
+  * fix summary in bdist_conda
+  * fix compiling pyc files in Python 3
+  * convert: correctly set the subdir key in the metadata
+  * add --git-tag to skeleton cran
+  * include LANG in the build environment
+  * export proxy environment variables
+  * fix conda skeleton cran --cran-url
+  * set CONDA_DEFAULT_ENV in the build environment
+  * fix conda index -c
+  * correctly extract .tar.Z files
+  * avoid infinite loops in conda skeleton pypi --recursive
+  * add --all to conda inspect linkages and conda inspect objects
+  * add --manual-url to skeleton pypi
+  * fix issue where 'conda index' with old packages would create bad metadata
   * resolve circular dependencies in conda-skeleton (#409)
-
+  * use versioneer 0.14 (#385)
+  * always_include_files errors out (exits) on files that aren't there (#387)
 
 2015-04-28   1.12.1:
 --------------------
