@@ -18,6 +18,8 @@
   * resolve circular dependencies in conda-skeleton (#409)
   * use versioneer 0.14 (#385)
   * always_include_files errors out (exits) on files that aren't there (#387)
+  * automatically lowercase the package name in bdist_conda (see
+    aplpy/aplpy#259)
 
 2015-04-28   1.12.1:
 --------------------
