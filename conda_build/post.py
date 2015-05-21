@@ -180,7 +180,9 @@ def find_lib(link):
             if len(md5s) > 1:
                 sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
             else:
-                return sorted(file_names[link])[0]
+                file_names[link].sort()
+                print("Found multiple instances of %s (%s).  "
+                    "Choosing the first one." % (link, file_names[link]))
         return file_names[link][0]
     print("Don't know how to find %s, skipping" % link)
 
