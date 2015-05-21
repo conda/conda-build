@@ -23,6 +23,7 @@ from conda_build import utils
 from conda_build import source
 from conda.compat import lchmod
 from conda.misc import walk_prefix
+from conda.utils import md5_file
 
 if sys.platform.startswith('linux'):
     from conda_build import elf
@@ -171,7 +172,15 @@ def find_lib(link):
         if link not in file_names:
             sys.exit("Error: Could not find %s" % link)
         if len(file_names[link]) > 1:
-            sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+            # Allow for the possibility of the same library appearing in
+            # multiple places.
+            md5s = set()
+            for f in file_names[link]:
+                md5s.add(md5_file(join(config.build_prefix, f)))
+            if len(md5s) > 1:
+                sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+            else:
+                return sorted(file_names[link])[0]
         return file_names[link][0]
     print("Don't know how to find %s, skipping" % link)
 
