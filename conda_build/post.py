@@ -150,7 +150,7 @@ def post_process(files, preserve_egg_dir=False):
         compile_missing_pyc()
 
 
-def find_lib(link):
+def find_lib(link, path=None):
     from conda_build.build import prefix_files
     files = prefix_files()
     if link.startswith(config.build_prefix):
@@ -172,6 +172,9 @@ def find_lib(link):
         if link not in file_names:
             sys.exit("Error: Could not find %s" % link)
         if len(file_names[link]) > 1:
+            if path and basename(path) == link:
+                # The link is for the file itself, just use it
+                return path
             # Allow for the possibility of the same library appearing in
             # multiple places.
             md5s = set()
@@ -189,7 +192,7 @@ def find_lib(link):
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
     print("Fixing linking of %s in %s" % (link, path))
-    link_loc = find_lib(link)
+    link_loc = find_lib(link, path)
     if not link_loc:
         return
 
