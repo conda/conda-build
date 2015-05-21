@@ -188,6 +188,7 @@ def find_lib(link):
 
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
+    print("Fixing linking of %s in %s" % (link, path))
     link_loc = find_lib(link)
     if not link_loc:
         return
