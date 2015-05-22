@@ -68,6 +68,16 @@ uncompress is required to unarchive .z source files.
         subprocess.check_call([uncompress, '-f', tarball])
         tarball = tarball[:-2]
     if not PY3 and tarball.endswith('.tar.xz'):
+        # try extracting directly with tar,
+        # which may be able to cope with xz compression
+        tar = external.find_executable('tar')
+        if tar:
+            try:
+                subprocess.check_call([tar, '-x', '-C', dir_path, '-f', tarball])
+                return
+            except:
+                # try another approach, using 'unxz' first.
+                pass
         unxz = external.find_executable('unxz')
         if not unxz:
             sys.exit("""\
