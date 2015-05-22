@@ -31,6 +31,13 @@ def main():
 
     p.add_argument('-q', "--quiet",
                    action="store_true")
+    p.add_argument(
+        '--no-remove',
+        action="store_false",
+        dest="remove",
+        default=True,
+        help="Don't remove entries for files that don't exist",
+        )
 
     args = p.parse_args()
 
@@ -40,7 +47,8 @@ def main():
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
     for path in dir_paths:
-        update_index(path, verbose=(not args.quiet), force=args.force, check_md5=args.check_md5)
+        update_index(path, verbose=(not args.quiet), force=args.force,
+            check_md5=args.check_md5, remove=args.remove)
 
 
 if __name__ == '__main__':
