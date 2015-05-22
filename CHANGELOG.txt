@@ -5,6 +5,8 @@
     some people and are not really necessary
   * don't rename meta.yaml to meta.yaml.orig in the recipe that is copied into
     built packages
+  * handle links to libraries that exist in multiple places better on OS X
+  * add --no-remove option to conda index
 
 2015-05-19   1.13.0:
 --------------------
