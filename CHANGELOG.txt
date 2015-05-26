@@ -8,6 +8,7 @@
   * handle links to libraries that exist in multiple places better on OS X
   * add --no-remove option to conda index
   * various fixes for --python, --numpy, --perl, and --R
+  * various cleanups for the command documentation
 
 2015-05-19   1.13.0:
 --------------------
