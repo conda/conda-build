@@ -8,14 +8,14 @@ from __future__ import print_function, division, absolute_import
 
 import sys
 import os.path
-import argparse
 import subprocess
 import yaml
 
 #from conda.cli import common
 import conda.config as cc
+from conda.cli.conda_argparse import ArgumentParser
+
 from conda_build.main_build import args_func
-from conda_build import __version__
 from conda.install import rm_rf
 import conda_build.build as build
 from conda_build.metadata import MetaData
@@ -27,21 +27,25 @@ else:
 
 
 def main():
-    p = argparse.ArgumentParser(
-        description='tool for building conda packages just using pip install'
+    p = ArgumentParser(
+        description="""
+Tool for building conda packages using pip install. NOTE: this command is
+experimental.  The recommended way to build conda packages from packages on
+PyPI is using conda skeleton pypi and conda build.
+        """,
     )
 
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="do not ask to upload the package to binstar",
+        help="Do not ask to upload the package to binstar.",
         dest='binstar_upload',
         default=cc.binstar_upload,
     )
     p.add_argument(
         "--binstar-upload",
         action="store_true",
-        help="upload the package to binstar",
+        help="Upload the package to binstar.",
         dest='binstar_upload',
         default=cc.binstar_upload,
     )
@@ -50,13 +54,13 @@ def main():
         action="store",
         metavar='<PYPI_NAME>',
         nargs=1,
-        help="name of package on PYPI"
+        help="Name of package on PyPI."
     )
     p.add_argument(
         "--release",
         action='store',
         nargs=1,
-        help="specify version of package to build",
+        help="Version of the package to build.",
         default="latest"
     )
     p.add_argument(
@@ -64,12 +68,7 @@ def main():
         action="store",
         nargs=1,
         default='http://pypi.python.org/pypi',
-        help="Url to use for PyPI",
-    )
-    p.add_argument(
-        '-V', '--version',
-        action='version',
-        version='conda-pipbuild %s' % __version__,
+        help="Url to use for PyPI.",
     )
     p.set_defaults(func=execute)
 

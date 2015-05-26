@@ -6,21 +6,23 @@
 
 from __future__ import absolute_import, division, print_function
 
-import argparse
 import sys
 from os.path import join, isdir, abspath, expanduser
 
 from conda.cli.common import add_parser_prefix, get_prefix
+from conda.cli.conda_argparse import ArgumentParser
 from conda_build.main_build import args_func
 
 from conda.install import linked
 
 def main():
-    p = argparse.ArgumentParser(
-        description="""Install a Python package in 'development mode'.
+    p = ArgumentParser(
+        description="""
 
-    This works by creating a conda.pth file in site-packages, and using
-    setup.py to determine any entry-points to install."""
+Install a Python package in 'development mode'.
+
+This works by creating a conda.pth file in site-packages."""
+        # TODO: Use setup.py to determine any entry-points to install.
     )
 
     p.add_argument(
@@ -28,7 +30,7 @@ def main():
         action="store",
         metavar='PATH',
         nargs='+',
-        help="path to the source directory"
+        help="Path to the source directory."
     )
     add_parser_prefix(p)
     p.set_defaults(func=execute)

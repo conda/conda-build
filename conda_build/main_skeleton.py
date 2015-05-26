@@ -6,23 +6,49 @@
 
 from __future__ import absolute_import, division, print_function
 
-import argparse
-
 from conda.config import default_python
 from conda_build.main_build import args_func
+from conda.cli.conda_argparse import ArgumentParser
 
 def main():
-    p = argparse.ArgumentParser(
-        description='create skeleton recipes for packages from hosting sites'
+    p = ArgumentParser(
+        description="""
+Generates a boilerplate/skeleton recipe, which you can then edit to create a
+full recipe. Some simple skeleton recipes may not even need edits.
+        """,
+        epilog="""
+Run --help on the subcommands like 'conda skeleton pypi --help' to see the
+options available.
+        """,
     )
 
     repos = p.add_subparsers(
         dest="repo"
     )
 
+    pypi_example = """
+Examples:
+
+Create a recipe for the sympy package:
+
+    conda skeleton pypi sympy
+
+Create a recipes for the flake8 package and all its dependencies:
+
+    conda skeleton pypi --recursive flake8
+
+Use the --pypi-url flag to point to a PyPI mirror url:
+
+    conda skeleton pypi --pypi-url <mirror-url> package_name
+"""
+
     pypi = repos.add_parser(
         "pypi",
-        help="Create recipes from packages on PyPI",
+        help="""
+Create recipe skeleton for packages hosted on the Python Packaging Index
+(PyPI) (pypi.python.org).
+        """,
+        epilog=pypi_example,
     )
     pypi.add_argument(
         "packages",
@@ -35,14 +61,14 @@ def main():
         "--output-dir",
         action="store",
         nargs=1,
-        help="Directory to write recipes to",
+        help="Directory to write recipes to.",
         default=".",
     )
     pypi.add_argument(
         "--version",
         action="store",
         nargs=1,
-        help="Version to use. Applies to all packages",
+        help="Version to use. Applies to all packages.",
     )
     pypi.add_argument(
         "--all-urls",
@@ -55,17 +81,17 @@ def main():
         action="store",
         nargs=1,
         default='https://pypi.python.org/pypi',
-        help="URL to use for PyPI",
+        help="URL to use for PyPI.",
     )
     pypi.add_argument(
         "--no-download",
         action="store_false",
         dest="download",
         default=True,
-        help="""Don't download the package. This will keep the recipe from
-                finding the right dependencies and entry points if the package
-                uses distribute.  WARNING: The default option downloads and runs
-                the package's setup.py script."""
+        help="""Don't download the package. This will keep the recipe from finding the
+                right dependencies and entry points if the package uses
+                distribute.  WARNING: Without this flag, conda skeleton pypi
+                downloads and runs the package's setup.py script."""
     )
     pypi.add_argument(
         "--no-prompt",
@@ -104,29 +130,32 @@ def main():
 
     cpan = repos.add_parser(
         "cpan",
-        help="Create recipes from packages on CPAN",
+        help="""
+Create recipe skeleton for packages hosted on the Comprehensive Perl Archive
+Network (CPAN) (cpan.org).
+        """,
     )
     cpan.add_argument(
         "packages",
         action="store",
         nargs='+',
-        help="CPAN packages to create recipe skeletons for",
+        help="CPAN packages to create recipe skeletons for.",
     )
     cpan.add_argument(
         "--output-dir",
-        help="Directory to write recipes to",
+        help="Directory to write recipes to.",
         default=".",
     )
     cpan.add_argument(
         "--version",
-        help="Version to use. Applies to all packages",
+        help="Version to use. Applies to all packages.",
     )
     cpan.add_argument(
         "--meta-cpan-url",
         action="store",
         nargs=1,
         default='http://api.metacpan.org',
-        help="URL to use for MetaCPAN API",
+        help="URL to use for MetaCPAN API.",
     )
     cpan.add_argument(
         "--recursive",
@@ -136,27 +165,29 @@ def main():
 
     cran = repos.add_parser(
         "cran",
-        help="Create recipes from packages on CRAN",
+        help="""
+Create recipe skeleton for packages hosted on the Comprehensive R Archive
+Network (CRAN) (cran.r-project.org).
+        """,
     )
     cran.add_argument(
         "packages",
         action="store",
         nargs='+',
-        help="""CRAN packages to create recipe skeletons for.
-                You can also specify package[extra,...] features.""",
+        help="""CRAN packages to create recipe skeletons for.""",
     )
     cran.add_argument(
         "--output-dir",
         action="store",
         nargs=1,
-        help="Directory to write recipes to",
+        help="Directory to write recipes to.",
         default=".",
     )
     cran.add_argument(
         "--version",
         action="store",
         nargs=1,
-        help="Version to use. Applies to all packages",
+        help="Version to use. Applies to all packages.",
     )
     cran.add_argument(
         "--git-tag",
@@ -174,7 +205,7 @@ def main():
         "--cran-url",
         action="store",
         default='http://cran.r-project.org/',
-        help="URL to use for CRAN (default: %(default)s)",
+        help="URL to use for CRAN (default: %(default)s).",
     )
     cran.add_argument(
         "--recursive",
@@ -192,7 +223,7 @@ def main():
         '--no-archive',
         action='store_false',
         dest='archive',
-        help="Don't include an Archive download url",
+        help="Don't include an Archive download url.",
     )
 
     p.set_defaults(func=execute)
