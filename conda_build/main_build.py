@@ -90,25 +90,29 @@ def main():
     p.add_argument(
         '--python',
         action="append",
-        help="Set the Python version used by conda build",
+        help="""Set the Python version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="PYTHON_VER",
     )
     p.add_argument(
         '--perl',
         action="append",
-        help="Set the Perl version used by conda build",
+        help="""Set the Perl version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="PERL_VER",
     )
     p.add_argument(
         '--numpy',
         action="append",
-        help="Set the NumPy version used by conda build",
+        help="""Set the NumPy version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="NUMPY_VER",
     )
     p.add_argument(
         '--R',
         action="append",
-        help="Set the R version used by conda build",
+        help="""Set the R version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="R_VER",
     )
     add_parser_channels(p)
