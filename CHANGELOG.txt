@@ -1,3 +1,43 @@
+2015-XX-XX   1.XX.X:
+--------------------
+  * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
+    Unix, they where originally added in #228, but are causing problem for
+    some people and are not really necessary
+  * don't rename meta.yaml to meta.yaml.orig in the recipe that is copied into
+    built packages
+  * handle links to libraries that exist in multiple places better on OS X
+  * add --no-remove option to conda index
+  * various fixes for --python, --numpy, --perl, and --R
+
+2015-05-19   1.13.0:
+--------------------
+  * skeleton pypi: fail better for packages with bad urls
+  * fix summary in bdist_conda
+  * fix compiling pyc files in Python 3
+  * convert: correctly set the subdir key in the metadata
+  * add --git-tag to skeleton cran
+  * include LANG in the build environment
+  * export proxy environment variables
+  * fix conda skeleton cran --cran-url
+  * set CONDA_DEFAULT_ENV in the build environment
+  * fix conda index -c
+  * correctly extract .tar.Z files
+  * avoid infinite loops in conda skeleton pypi --recursive
+  * add --all to conda inspect linkages and conda inspect objects
+  * add --manual-url to skeleton pypi
+  * fix issue where 'conda index' with old packages would create bad metadata
+  * resolve circular dependencies in conda-skeleton (#409)
+  * use versioneer 0.14 (#385)
+  * always_include_files errors out (exits) on files that aren't there (#387)
+  * automatically lowercase the package name in bdist_conda (see
+    aplpy/aplpy#259)
+
+
+2015-04-28   1.12.1:
+--------------------
+  * fix regression in always_include_files that causes build failure (#386)
+
+
 2015-04-10   1.12.0:
 --------------------
   * correctly fix egg directories that are part of the package

@@ -95,25 +95,29 @@ different sets of packages."""
     p.add_argument(
         '--python',
         action="append",
-        help="Set the Python version used by conda build",
+        help="""Set the Python version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="PYTHON_VER",
     )
     p.add_argument(
         '--perl',
         action="append",
-        help="Set the Perl version used by conda build",
+        help="""Set the Perl version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="PERL_VER",
     )
     p.add_argument(
         '--numpy',
         action="append",
-        help="Set the NumPy version used by conda build",
+        help="""Set the NumPy version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="NUMPY_VER",
     )
     p.add_argument(
         '--R',
         action="append",
-        help="Set the R version used by conda build",
+        help="""Set the R version used by conda build. Can be passed
+        multiple times to build against multiple versions.""",
         metavar="R_VER",
     )
     add_parser_channels(p)
@@ -198,38 +202,46 @@ def execute(args, parser):
 
     check_external()
 
-    if args.python:
-        if args.python == ['all']:
-            for py in [26, 27, 33, 34]:
-                args.python = [str(py)]
+    all_versions = {
+        'python': [26, 27, 33, 34],
+        'numpy': [16, 17, 18, 19],
+        'perl': None,
+        'R': None,
+        }
+    conda_version = {
+        'python': 'CONDA_PY',
+        'numpy': 'CONDA_NPY',
+        'perl': 'CONDA_PERL',
+        'R': 'CONDA_R',
+        }
+
+    for lang in ['python', 'numpy', 'perl', 'R']:
+        versions = getattr(args, lang)
+        if not versions:
+            continue
+        if versions == ['all']:
+            if all_versions[lang]:
+                versions = all_versions[lang]
+            else:
+                parser.error("'all' is not supported for --%s" % lang)
+        if len(versions) > 1:
+            for ver in versions[:]:
+                setattr(args, lang, [str(ver)])
                 execute(args, parser)
+                # This is necessary to make all combinations build.
+                setattr(args, lang, versions)
             return
-        if len(args.python) > 1:
-            for py in args.python[:]:
-                args.python = [py]
-                execute(args, parser)
         else:
-            config.CONDA_PY = int(args.python[0].replace('.', ''))
-        if not len(str(config.CONDA_PY)) == 2:
-            raise RuntimeError("CONDA_PY must be major.minor, like 3.4, not %s" % config.CONDA_PY)
-    if args.perl:
-        config.CONDA_PERL = args.perl
-    if args.R:
-        config.CONDA_R = args.R
-    if args.numpy:
-        if args.numpy == ['all']:
-            for npy in [16, 17, 18, 19]:
-                args.numpy = [str(npy)]
-                execute(args, parser)
-            return
-        if len(args.numpy) > 1:
-            for npy in args.numpy[:]:
-                args.numpy = [npy]
-                execute(args, parser)
-        else:
-            config.CONDA_NPY = int(args.numpy[0].replace('.', ''))
-        if not len(str(config.CONDA_NPY)) == 2:
-            raise RuntimeError("CONDA_NPY must be major.minor, like 1.8, not %s" % config.CONDA_NPY)
+            version = int(versions[0].replace('.', ''))
+            setattr(config, conda_version[lang], version)
+        if not len(str(version)) == 2:
+            if all_versions[lang]:
+                raise RuntimeError("%s must be major.minor, like %s, not %s" %
+                    (conda_version[lang], all_versions[lang][-1]/10, version))
+            else:
+                raise RuntimeError("%s must be major.minor, not %s" %
+                    (conda_version[lang], version))
+
 
     with Locked(config.croot):
         recipes = deque(args.recipe)

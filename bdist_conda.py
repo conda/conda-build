@@ -152,8 +152,9 @@ class bdist_conda(install):
 
         with Locked(config.croot):
             d = defaultdict(dict)
-            # Needs to be lowercase
-            d['package']['name'] = metadata.name
+            # PyPI allows uppercase letters but conda does not, so we fix the
+            # name here.
+            d['package']['name'] = metadata.name.lower()
             d['package']['version'] = metadata.version
             d['build']['number'] = metadata.conda_buildnum
 

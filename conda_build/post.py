@@ -23,6 +23,7 @@ from conda_build import utils
 from conda_build import source
 from conda.compat import lchmod
 from conda.misc import walk_prefix
+from conda.utils import md5_file
 
 if sys.platform.startswith('linux'):
     from conda_build import elf
@@ -149,7 +150,7 @@ def post_process(files, preserve_egg_dir=False):
         compile_missing_pyc()
 
 
-def find_lib(link):
+def find_lib(link, path=None):
     from conda_build.build import prefix_files
     files = prefix_files()
     if link.startswith(config.build_prefix):
@@ -171,13 +172,27 @@ def find_lib(link):
         if link not in file_names:
             sys.exit("Error: Could not find %s" % link)
         if len(file_names[link]) > 1:
-            sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+            if path and basename(path) == link:
+                # The link is for the file itself, just use it
+                return path
+            # Allow for the possibility of the same library appearing in
+            # multiple places.
+            md5s = set()
+            for f in file_names[link]:
+                md5s.add(md5_file(join(config.build_prefix, f)))
+            if len(md5s) > 1:
+                sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+            else:
+                file_names[link].sort()
+                print("Found multiple instances of %s (%s).  "
+                    "Choosing the first one." % (link, file_names[link]))
         return file_names[link][0]
     print("Don't know how to find %s, skipping" % link)
 
 def osx_ch_link(path, link):
     assert path.startswith(config.build_prefix + '/')
-    link_loc = find_lib(link)
+    print("Fixing linking of %s in %s" % (link, path))
+    link_loc = find_lib(link, path)
     if not link_loc:
         return
 

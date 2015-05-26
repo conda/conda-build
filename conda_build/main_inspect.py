@@ -64,6 +64,11 @@ libraries that ought to be dependent conda packages.  """
         action="store_true",
         help="Show the files in the package that link to each library",
     )
+    linkages.add_argument(
+        '--all',
+        action='store_true',
+        help="Generate a report for all packages in the environment.",
+    )
     add_parser_prefix(linkages)
 
     objects_help = """
@@ -89,12 +94,18 @@ package.
         help="""Inspect the untracked files in the environment. This is useful when used
         in conjunction with conda build --build-only.""",
     )
+    # TODO: Allow groupby to include the package (like for --all)
     objects.add_argument(
         '--groupby',
         action='store',
         default='filename',
         choices=('filename', 'filetype', 'rpath'),
         help='Attribute to group by (default: %(default)s).',
+    )
+    objects.add_argument(
+        '--all',
+        action='store_true',
+        help="Generate a report for all packages in the environment.",
     )
     add_parser_prefix(objects)
 
@@ -145,6 +156,12 @@ def print_object_info(info, key):
                 print()
         print()
 
+class _untracked_package:
+    def __str__(self):
+        return "<untracked>"
+
+untracked_package = _untracked_package()
+
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
@@ -152,10 +169,11 @@ def execute(args, parser):
     prefix = get_prefix(args)
     installed = ci.linked(prefix)
 
-    untracked_package = object()
+    if not args.packages and not args.untracked and not args.all:
+        parser.error("At least one package or --untracked or --all must be provided")
 
-    if not args.packages and not args.untracked:
-        parser.error("At least one package or --untracked must be provided")
+    if args.all:
+        args.packages = sorted([i.rsplit('-', 2)[0] for i in installed])
 
     if args.untracked:
         args.packages.append(untracked_package)
@@ -169,6 +187,10 @@ def execute(args, parser):
                     break
             else:
                 sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+
+        print(pkg)
+        print('-'*len(str(pkg)))
+        print()
 
         if args.subcommand == 'linkages':
             if not sys.platform.startswith(('linux', 'darwin')):

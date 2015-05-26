@@ -40,7 +40,7 @@ def write_repodata(repodata, dir_path):
     with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
         fo.write(bz2.compress(data.encode('utf-8')))
 
-def update_index(dir_path, verbose=False, force=False, check_md5=False):
+def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=True):
     """
     Update all index files in dir_path with changed packages.
 
@@ -88,11 +88,13 @@ Error:
         d.update(file_info(path))
         index[fn] = d
 
-    # remove files from the index which are not on disk
-    for fn in set(index) - files:
-        if verbose:
-            print("removing:", fn)
-        del index[fn]
+    if remove:
+        # remove files from the index which are not on disk
+        for fn in set(index) - files:
+            if verbose:
+                print("removing:", fn)
+            del index[fn]
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(index_path, **mode_dict) as fo:
@@ -106,6 +108,9 @@ Error:
                 del info[varname]
             except KeyError:
                 pass
+
+        if 'requires' in info and 'depends' not in info:
+            info['depends'] = info['requires']
 
     repodata = {'packages': index, 'info': {}}
     write_repodata(repodata, dir_path)

@@ -330,9 +330,22 @@ def main(args, parser):
         is_github_url = 'github.com' in package
         url = package
 
+
         if is_github_url:
             rm_rf(source.WORK_DIR)
             source.git_source({'git_url': package}, '.')
+            git_tag = args.git_tag[0] if args.git_tag else get_latest_git_tag()
+            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+            stdout, stderr = p.communicate()
+            stdout = stdout.decode('utf-8')
+            stderr = stderr.decode('utf-8')
+            if p.returncode:
+                sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" % (git_tag, stderr.strip()))
+            if stdout:
+                print(stdout, file=sys.stdout)
+            if stderr:
+                print(stderr, file=sys.stderr)
+
             DESCRIPTION = join(source.WORK_DIR, "DESCRIPTION")
             if not isfile(DESCRIPTION):
                 sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file)" % package)
@@ -384,7 +397,7 @@ def main(args, parser):
             d['filename'] = ''
             d['cranurl'] = ''
             d['git_url'] = url
-            d['git_tag'] = get_latest_git_tag()
+            d['git_tag'] = git_tag
         else:
             d['url_key'] = 'url:'
             d['fn_key'] = 'fn:'

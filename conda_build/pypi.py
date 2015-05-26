@@ -255,10 +255,12 @@ def main(args, parser):
     all_packages = client.list_packages()
     all_packages_lower = [i.lower() for i in all_packages]
 
+    args.created_recipes = []
     while args.packages:
         [output_dir] = args.output_dir
 
         package = args.packages.pop()
+        args.created_recipes.append(package)
 
         is_url = ':' in package
 
@@ -301,12 +303,14 @@ def main(args, parser):
                     # is apparently not (the last time I checked,
                     # len(set(all_packages_lower)) == len(set(all_packages)))
                     if package.lower() in all_packages_lower:
-                        print("%s not found, trying %s" % (package, package.capitalize()))
-                        args.packages.append(all_packages[all_packages_lower.index(package.lower())])
-                        del package_dicts[package]
-                        continue
-                    sys.exit("Error: Could not find any versions of package %s" %
-                             package)
+                        cased_package = all_packages[all_packages_lower.index(package.lower())]
+                        if cased_package != package:
+                            print("%s not found, trying %s" % (package, cased_package))
+                            print(len(args.packages))
+                            args.packages.append(cased_package)
+                            del package_dicts[package]
+                            continue
+                    sys.exit("Error: Could not find any versions of package %s" % package)
                 if len(versions) > 1:
                     print("Warning, the following versions were found for %s" %
                           package)
@@ -344,11 +348,16 @@ def main(args, parser):
         if len(urls) > 1 and not args.noprompt:
             print("More than one source version is available for %s:" %
                   package)
-            for i, url in enumerate(urls):
-                print("%d: %s (%s) %s" % (i, url['url'],
-                                          human_bytes(url['size']),
-                                          url['comment_text']))
-            n = int(input("Which version should I use? "))
+            if args.manual_url:
+                for i, url in enumerate(urls):
+                    print("%d: %s (%s) %s" % (i, url['url'],
+                          human_bytes(url['size']), url['comment_text']))
+                n = int(input("which version should i use? "))
+            else:
+                print("Using the one with the least source size")
+                print("use --manual-url to override this behavior")
+                min_siz, n = min([(url['size'], i)
+                                  for (i, url) in enumerate(urls)])
         else:
             n = 0
 
@@ -546,7 +555,8 @@ def get_package_metadata(args, package, d, data):
                 for dep in deps:
                     dep = dep.split()[0]
                     if not exists(join(output_dir, dep)):
-                        args.packages.append(dep)
+                        if dep not in args.created_recipes:
+                            args.packages.append(dep)
 
         if 'packagename' not in d:
             d['packagename'] = pkginfo['name'].lower()

@@ -148,13 +148,6 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    if isfile(join(recipe_dir, 'meta.yaml')):
-        shutil.move(join(recipe_dir, 'meta.yaml'),
-                    join(recipe_dir, 'meta.yaml.orig'))
-
-    with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
-        yaml.safe_dump(m.meta, fo)
-
     readme = m.get_value('about/readme')
     if readme:
         src = join(source.get_dir(), readme)
@@ -363,8 +356,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
         files1 = prefix_files()
         for f in m.always_include_files():
             if f not in files1:
-                sys.exit("Error: File %s from always_include_files not found"
-                    % f)
+                sys.exit("Error: File %s from always_include_files not found" % f)
         files1 = files1.difference(set(m.always_include_files()))
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:

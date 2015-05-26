@@ -120,6 +120,14 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         choices=['2.6', '2.7', '3.3', '3.4'],
         )
 
+    pypi.add_argument(
+        "--manual-url",
+        action='store_true',
+        default=False,
+        help="Manually choose source url when more than one urls are present." +
+             "Default is the one with least source size."
+        )
+
     cpan = repos.add_parser(
         "cpan",
         help="""
@@ -182,9 +190,20 @@ Network (CRAN) (cran.r-project.org).
         help="Version to use. Applies to all packages.",
     )
     cran.add_argument(
-        "--cran-url",
+        "--git-tag",
         action="store",
         nargs=1,
+        help="Git tag to use for GitHub recipes.",
+    )
+    cran.add_argument(
+        "--all-urls",
+        action="store_true",
+        help="""Look at all URLs, not just source URLs. Use this if it can't
+                find the right URL.""",
+    )
+    cran.add_argument(
+        "--cran-url",
+        action="store",
         default='http://cran.r-project.org/',
         help="URL to use for CRAN (default: %(default)s).",
     )

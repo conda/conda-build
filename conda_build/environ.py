@@ -71,6 +71,7 @@ def get_dict(m=None, prefix=None):
 
     python = config.build_python
     d = {'CONDA_BUILD': '1', 'PYTHONNOUSERSITE': '1'}
+    d['CONDA_DEFAULT_ENV'] = config.build_prefix
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
@@ -83,6 +84,12 @@ def get_dict(m=None, prefix=None):
     d['PY_VER'] = get_py_ver()
     d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
+    if "LANG" in os.environ:
+        d['LANG'] = os.environ['LANG']
+    if "HTTPS_PROXY" in os.environ:
+        d['HTTPS_PROXY'] = os.environ['HTTPS_PROXY']
+    if "HTTP_PROXY" in os.environ:
+        d['HTTP_PROXY'] = os.environ['HTTP_PROXY']
 
     if m:
         for var_name in m.get_value('build/script_env', []):
@@ -115,9 +122,6 @@ def get_dict(m=None, prefix=None):
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
-        d['INCLUDE_PATH'] = join(prefix, 'include')
-        d['LIBRARY_PATH'] = join(prefix, 'lib')
-
         d['R'] = join(prefix, 'bin', 'R')
 
     if sys.platform == 'darwin':         # -------- OSX
