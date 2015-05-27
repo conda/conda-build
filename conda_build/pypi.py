@@ -128,7 +128,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,39 @@ def setup (**attrs):
+@@ -166,5 +167,40 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -149,6 +149,7 @@ diff core.py core.py
 +def setup(*args, **kwargs):
 +    data = {{}}
 +    data['install_requires'] = kwargs.get('install_requires', [])
++    data['setup_requires'] = kwargs.get('setup_requires', {{}})
 +    data['extras_require'] = kwargs.get('extras_require', {{}})
 +    data['entry_points'] = kwargs.get('entry_points', [])
 +    data['packages'] = kwargs.get('packages', [])
@@ -516,7 +517,8 @@ def get_package_metadata(args, package, d, data):
                      % ','.join(extras))
         #... and collect all needed requirement specs in a single list:
         requires = []
-        for specs in [pkginfo['install_requires']] + extras_require:
+        for specs in [pkginfo['install_requires']] + \
+                [pkginfo['setup_requires']] + extras_require:
             if isinstance(specs, string_types):
                 requires.append(specs)
             else:
