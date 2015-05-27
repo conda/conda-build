@@ -86,7 +86,7 @@ requirements:
   # You can also put a file called run_test.py in the recipe that will be run
   # at test time.
 
-  # requires:
+  {requires_comment}requires:{tests_require}
     # Put any additional test requirements here.  For example
     # - nose
 
@@ -128,7 +128,7 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,39 @@ def setup (**attrs):
+@@ -166,5 +167,40 @@ def setup (**attrs):
  \n
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
@@ -148,6 +148,7 @@ diff core.py core.py
 +
 +def setup(*args, **kwargs):
 +    data = {{}}
++    data['tests_require'] = kwargs.get('tests_require', [])
 +    data['install_requires'] = kwargs.get('install_requires', [])
 +    data['extras_require'] = kwargs.get('extras_require', {{}})
 +    data['entry_points'] = kwargs.get('entry_points', [])
@@ -276,6 +277,8 @@ def main(args, parser):
                 'entry_points': '',
                 'build_comment': '# ',
                 'test_commands': '',
+                'requires_comment': '#',
+                'tests_require': '',
                 'usemd5': '',
                 'test_comment': '',
                 'entry_comment': '# ',
@@ -389,6 +392,12 @@ def main(args, parser):
         else:
             d['import_comment'] = ''
             d['import_tests'] = INDENT + d['import_tests']
+
+        if d['tests_require'] == '':
+            d['requires_comment'] = '# '
+        else:
+            d['requires_comment'] = ''
+            d['tests_require'] = INDENT + d['tests_require']
 
         if d['entry_comment'] == d['import_comment'] == '# ':
             d['test_comment'] = '# '
@@ -571,6 +580,8 @@ def get_package_metadata(args, package, d, data):
                 deps = set(olddeps) | deps
             d['import_tests'] = INDENT.join(sorted(deps))
             d['import_comment'] = ''
+
+            d['tests_require'] = INDENT.join(sorted(pkginfo['tests_require']))
 
         if pkginfo['homeurl'] is not None:
             d['homeurl'] = pkginfo['homeurl']
