@@ -81,7 +81,7 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         action="store",
         nargs=1,
         default='https://pypi.python.org/pypi',
-        help="URL to use for PyPI.",
+        help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
         "--no-download",
