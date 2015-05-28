@@ -66,7 +66,6 @@ PyPI is using conda skeleton pypi and conda build.
     p.add_argument(
         "--pypi-url",
         action="store",
-        nargs=1,
         default='http://pypi.python.org/pypi',
         help="Url to use for PyPI.",
     )
