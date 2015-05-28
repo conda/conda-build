@@ -380,10 +380,7 @@ def main(args, parser):
             # TODO: 'package' won't work with unpack()
             d['filename'] = U.path.rsplit('/', 1)[-1] or 'package'
 
-        if is_url:
-            d['import_tests'] = 'PLACEHOLDER'
-        else:
-            d['import_tests'] = valid(package).lower()
+        d['import_tests'] = ''
 
         get_package_metadata(args, package, d, data)
 
