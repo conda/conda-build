@@ -65,6 +65,14 @@ libraries that ought to be dependent conda packages.  """
         help="Show the files in the package that link to each library",
     )
     linkages.add_argument(
+        '--groupby',
+        action='store',
+        default='package',
+        choices=('package', 'dependency'),
+        help="""Attribute to group by (default: %(default)s). Useful when used
+        in conjunction with --all.""",
+    )
+    linkages.add_argument(
         '--all',
         action='store_true',
         help="Generate a report for all packages in the environment.",
@@ -116,7 +124,8 @@ package.
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
-    for dep in k + ['system', 'not found']:
+    all_deps = k if 'not found' not in depmap.keys() else k + ['system', 'not found']
+    for dep in all_deps:
         print("%s:" % dep)
         if show_files:
             for lib, path, binary in sorted(depmap[dep]):
@@ -178,21 +187,19 @@ def execute(args, parser):
     if args.untracked:
         args.packages.append(untracked_package)
 
-    for pkg in args.packages:
-        if pkg == untracked_package:
-            dist = untracked_package
-        else:
-            for dist in installed:
-                if pkg == dist.rsplit('-', 2)[0]:
-                    break
+
+    if args.subcommand == 'linkages':
+        pkgmap = {}
+        for pkg in args.packages:
+            if pkg == untracked_package:
+                dist = untracked_package
             else:
-                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+                for dist in installed:
+                    if pkg == dist.rsplit('-', 2)[0]:
+                        break
+                else:
+                    sys.exit("Package %s is not installed in %s" % (pkg, prefix))
 
-        print(pkg)
-        print('-'*len(str(pkg)))
-        print()
-
-        if args.subcommand == 'linkages':
             if not sys.platform.startswith(('linux', 'darwin')):
                 sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
 
@@ -202,6 +209,7 @@ def execute(args, parser):
                 obj_files = get_package_obj_files(dist, prefix)
             linkages = get_linkages(obj_files, prefix)
             depmap = defaultdict(list)
+            pkgmap[pkg] = depmap
             for binary in linkages:
                 for lib, path in linkages[binary]:
                     path = replace_path(binary, path, prefix) if path not in {'', 'not found'} else path
@@ -224,9 +232,47 @@ def execute(args, parser):
                     else:
                         depmap['system'].append((lib, path, binary))
 
-            print_linkages(depmap, show_files=args.show_files)
+        if args.groupby == 'package':
+            for pkg in args.packages:
+                print(pkg)
+                print('-'*len(str(pkg)))
+                print()
 
-        if args.subcommand == 'objects':
+                print_linkages(pkgmap[pkg], show_files=args.show_files)
+        elif args.groupby == 'dependency':
+            # {pkg: {dep: [files]}} -> {dep: {pkg: [files]}}
+            inverted_map = defaultdict(lambda: defaultdict(list))
+            for pkg in pkgmap:
+                for dep in pkgmap[pkg]:
+                    inverted_map[dep][pkg] = pkgmap[pkg][dep]
+
+            # print system and not found last
+            k = sorted(set(inverted_map.keys()) - {'system', 'not found'})
+            for dep in k + ['system', 'not found']:
+                print(dep)
+                print('-'*len(str(dep)))
+                print()
+
+                print_linkages(inverted_map[dep], show_files=args.show_files)
+
+        else:
+            raise ValueError("Unrecognized groupby: %s" % args.groupby)
+
+    if args.subcommand == 'objects':
+        for pkg in args.packages:
+            if pkg == untracked_package:
+                dist = untracked_package
+            else:
+                for dist in installed:
+                    if pkg == dist.rsplit('-', 2)[0]:
+                        break
+                else:
+                    sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+
+            print(pkg)
+            print('-'*len(str(pkg)))
+            print()
+
             if not sys.platform.startswith('darwin'):
                 sys.exit("Error: conda inspect objects is only implemented in OS X")
 
