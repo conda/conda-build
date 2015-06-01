@@ -1,3 +1,192 @@
+2015-XX-XX   1.XX.X:
+--------------------
+  * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
+    Unix, they where originally added in #228, but are causing problem for
+    some people and are not really necessary
+  * don't rename meta.yaml to meta.yaml.orig in the recipe that is copied into
+    built packages
+  * handle links to libraries that exist in multiple places better on OS X
+  * add --no-remove option to conda index
+  * various fixes for --python, --numpy, --perl, and --R
+  * various cleanups for the command documentation
+
+2015-05-19   1.13.0:
+--------------------
+  * skeleton pypi: fail better for packages with bad urls
+  * fix summary in bdist_conda
+  * fix compiling pyc files in Python 3
+  * convert: correctly set the subdir key in the metadata
+  * add --git-tag to skeleton cran
+  * include LANG in the build environment
+  * export proxy environment variables
+  * fix conda skeleton cran --cran-url
+  * set CONDA_DEFAULT_ENV in the build environment
+  * fix conda index -c
+  * correctly extract .tar.Z files
+  * avoid infinite loops in conda skeleton pypi --recursive
+  * add --all to conda inspect linkages and conda inspect objects
+  * add --manual-url to skeleton pypi
+  * fix issue where 'conda index' with old packages would create bad metadata
+  * resolve circular dependencies in conda-skeleton (#409)
+  * use versioneer 0.14 (#385)
+  * always_include_files errors out (exits) on files that aren't there (#387)
+  * automatically lowercase the package name in bdist_conda (see
+    aplpy/aplpy#259)
+
+
+2015-04-28   1.12.1:
+--------------------
+  * fix regression in always_include_files that causes build failure (#386)
+
+
+2015-04-10   1.12.0:
+--------------------
+  * correctly fix egg directories that are part of the package
+  * use the --force-rpath flag to patchelf
+  * update MACOSX_DEPLOYMENT_TARGET to 10.6
+  * fix running tests for Python packages whose version differs from the
+    version in conda
+  * fix some Python 3 issues with pipbuild
+  * don't allow packages to depend on themselves
+  * allow to use the r- prefix in conda skeleton cran
+  * make recommended r packages depend on r-base in skeleton cran
+  * new post-build logic on OS X. All libraries on OS X now include LC_RPATH,
+    which points to the environment lib directory, and use and install name
+    using @rpath
+  * don't set DYLD_FALLBACK_LIBRARY_PATH in cran recipes (the new LC_RPATH
+    logic on OS X makes this unnecessary)
+  * fix conda build --build-only when the long build prefix is used
+  * make conda inspect linkages work on OS X
+  * don't hide the traceback for maximum recursion depth exceeded errors
+  * add conda inspect objects, for inspecting object files in packages
+    (OS X only)
+  * add --untracked flag to conda inspect linkages
+  * build R packages against a specific version of R
+  * decompress .tar.z files
+  * add support for GitHub urls in conda skeleton cran
+
+
+2015-03-05   1.11.0:
+--------------------
+  * add 'script_env' key in build section of meta.yaml file, which is a list
+    of environment variable names which are made available in the build
+    script.  If a variable is listed here, but is not in the environment,
+    the value '<UNDEFINED>' is assigned.
+  * Handle OSError in conda index
+  * Fix how the PATH environment variable is set on Windows
+  * Remove the work directory earlier in the build
+  * Give a helpful error message for dependencies like "python >= 2.7"
+  * Add CYGWIN_PREFIX environment variable on Windows
+  * Handle list requires in skeleton pypi
+  * Correctly fail if the Windows bld.bat exits 1
+  * Give a better error message if no urls can be found for a package
+  * Add __main__ to allow python -m conda_build
+  * %R% is now set to R.exe instead of R.bat on Windows
+  * Write the build script to the source directory for build/script instead of
+    the recipe directory.
+  * Handle non-directories in copy_into (avoids an OSError, #332)
+  * Halt the build on YAML error without jinja2
+  * Clone git sources with the --recursive option
+  * Add --channel and --override-channels to conda build. -c is changed to
+    mean --channel instead of --check.
+  * Add --check-md5 flag to conda index
+  * Look for vcvarsall.bat from the Microsoft Visual C++ Compiler for Python 2.7
+  * Use PyPi XMLRCP client search in order to ignore case for PyPi package
+    names in pipbuild
+
+
+2015-02-10   1.10.2:
+--------------------
+  * don't set the GIT_* environment variables when the source is not a git repo
+  * skeleton cran: add extra metadata from CRAN to the recipe
+  * skeleton pypi: fix there not being a fragment in a url
+  * don't match comment only lines as selectors
+
+
+2015-02-06   1.10.1:
+--------------------
+  * greatly improved ability to create noarch_python packages
+  * added 'subdir' key to info/index.json
+  * allow url to be a list or urls, which are tried until one works
+  * use quotes instead of !!str for versions from the conda skeleton commands
+  * add conda skeleton cran to generate recipes for packages from CRAN
+  * add support for adding a readme to a recipe
+  * add a --quiet option to conda convert
+
+
+2015-01-15   1.10.0:
+--------------------
+  * automatically convert absolute symlinks to paths in the build prefix to
+    relative ones.
+  * error if there are symlinks to the source directory.
+  * use the placeholder prefix in text files rather than the build prefix
+  * allow non-Python packages to be converted to other platforms with conda
+    convert
+  * new command conda inspect for inspecting packages. The only subcommand so
+    far is conda inspect linkages, which shows the dynamic linkages of the
+    shared object files on Linux.
+  * correctly handle Unix style has_prefixes on Windows
+  * run the tests in Binstar build
+  * only modify egg directories that are part of the package being built
+  * don't exclude .dylib files from prefix replacement
+  * ability to build noarch packages
+  * allow specifying files to always include
+  * fix for building dependencies in some cases
+  * print the correct thing for binary files detected with a prefix
+
+
+2014-11-18   1.9.1:
+-------------------
+  * set PYTHONNOUSERSITE=1 while running build scripts
+  * conda index: add error if they try to mix their packages into Anaconda
+    channel
+  * fix building recipes with local git urls in Windows
+  * warn if conda-build is out of date
+
+
+2014-10-22   1.9.0:
+-------------------
+  * adapt tests for Windows
+  * don't use the long build prefix if the short build prefix is already long
+  * support rewriting library load path for libraries that are in
+    subdirectories of lib/ on OS X
+  * allow 'git_rev' as a valid key in 'source', which is identical in behavior
+    to git_branch and git_tag (all checkout the given revision)
+  * also grab the full HEAD sha1 and shove it into the environmental
+    variable GIT_FULL_HASH
+  * automatically detect text prefix files
+  * add detect_binary_files_with_prefix flag to meta.yaml to automatically
+    detect binary files with the prefix and add them to
+    binary_has_prefix_files
+  * fix git_info when the author or commit message contains Unicode characters
+  * allow to pass a url to skeleton pypi
+  * add NPY_VER environment variable
+  * fix conda convert --show-imports
+  * give better error message when encountering a corrupt tarfile in conda
+    index
+  * print{ some more helpful information about what is going on at the
+    beginning of a build
+  * allow source/path in the meta.yaml to specify a path to the source (which
+    can be relative to the recipe directory)
+  * support xz files in Python 3 without requiring unxz
+  * put spaces after skeleton pypi comments
+  * correctly detect when to preserve the egg directory and depend on
+    setuptools in skeleton pypi
+  * set LIBRARY_PATH and INCLUDE_PATH when building on Unix
+  * allow selectors to have text after them if they are in a comment
+  * add CPU_COUNT environment variable to the build
+
+
+2014-09-19   1.8.2:
+-------------------
+  * add substantially more tests
+  * add ability to set additional rpath directories using build/rpaths
+  * patch command on windows no-longer takes the --binary option
+  * fix post processing so that name-space packages can be 'flattened' into
+    a single directory
+  * don't remove the .svn directory when doing a svn checkout
+
+
 2014-09-03   1.8.1:
 -------------------
   * has_prefix paths must always use /, even on Windows

@@ -8,7 +8,7 @@ import conda.config as cc
 from conda_build.config import config
 
 def find_executable(executable):
-    # dir_paths is referenced as a module-level variable 
+    # dir_paths is referenced as a module-level variable
     #  in other code
     global dir_paths
     if sys.platform == 'win32':

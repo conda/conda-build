@@ -6,70 +6,75 @@
 
 from __future__ import absolute_import, division, print_function
 
-import argparse
-
 from collections import defaultdict
 
 import conda.config
-from conda_build.main_build import args_func
+from conda.cli.conda_argparse import ArgumentParser
 
+from conda_build.main_build import args_func
 from conda_build.metadata import MetaData
 from conda_build.build import build, bldpkg_path
 from conda_build.main_build import handle_binstar_upload
 
 def main():
-    p = argparse.ArgumentParser(
-        description='''tool for building conda metapackages. A metapackage is a
-    package with no files, only metadata'''
+    p = ArgumentParser(
+        description='''
+Tool for building conda metapackages.  A metapackage is a package with no
+files, only metadata.  They are typically used to collect several packages
+together into a single package via dependencies.
+
+NOTE: Metapackages can also be created by creating a recipe with the necessary
+metadata in the meta.yaml, but a metapackage can be created entirely from the
+command line with the conda metapackage command.
+''',
     )
 
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="do not ask to upload the package to binstar",
+        help="Do not ask to upload the package to binstar.",
         dest='binstar_upload',
         default=conda.config.binstar_upload,
     )
     p.add_argument(
         "name",
         action="store",
-        help="name of the created package",
+        help="Name of the created package.",
     )
     p.add_argument(
         "version",
         action="store",
-        help="version of the created package",
+        help="Version of the created package.",
     )
     p.add_argument(
         "--build-number",
         action="store",
         type=int,
         default=0,
-        help="build number for the package (default is 0)",
+        help="Build number for the package (default is 0).",
     )
     p.add_argument(
         "--build-string",
         action="store",
         default=None,
-        help="build string for the package (default is automatically generated)",
+        help="Build string for the package (default is automatically generated).",
     )
     p.add_argument(
         "--dependencies", "-d",
         nargs='*',
         default=(),
-        help="""The dependencies of the package. To specify a version
-        restriction for a dependency, wrap the dependency in quotes, like
-        'package >=2.0'""",
+        help="""The dependencies of the package. To specify a version restriction for a
+        dependency, wrap the dependency in quotes, like 'package >=2.0'.""",
     )
     p.add_argument(
         "--home",
         action="store",
-        help="The homepage for the metapackage"
+        help="The homepage for the metapackage."
     )
     p.add_argument(
         "--license",
         action="store",
-        help="The license of the metapackage",
+        help="The license of the metapackage.",
     )
     p.add_argument(
         "--summary",
@@ -86,7 +91,7 @@ def main():
         help="""Python entry points to create automatically. They should use the same
         syntax as in the meta.yaml of a recipe, e.g., --entry-points
         bsdiff4=bsdiff4.cli:main_bsdiff4 will create an entry point called
-        bsdiff4 that calls bsdiff4.cli.main_bsdiff4() """,
+        bsdiff4 that calls bsdiff4.cli.main_bsdiff4(). """,
     )
     p.set_defaults(func=execute)
 

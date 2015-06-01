@@ -43,6 +43,8 @@ def create_shell_files(dir_path, m):
         for cmd in m.get_value('test/commands', []):
             f.write(cmd)
             f.write('\n')
+            if sys.platform == 'win32':
+                f.write("if errorlevel 1 exit 1\n")
             has_tests = True
 
     return has_tests
@@ -64,6 +66,7 @@ def create_py_files(dir_path, m):
 
         try:
             with open(join(m.path, 'run_test.py')) as fi:
+                fo.write("print('running run_test.py')\n")
                 fo.write("# --- run_test.py (begin) ---\n")
                 fo.write(fi.read())
                 fo.write("# --- run_test.py (end) ---\n")

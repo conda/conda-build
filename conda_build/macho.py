@@ -1,8 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
+import sys
 import subprocess
 from os.path import islink, isfile
-import sys
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
@@ -18,17 +18,17 @@ MAGIC = {
 }
 
 FILETYPE = {
-    b'\x01\x00\x00\x00': 'MH_OBJECT',
-    b'\x02\x00\x00\x00': 'MH_EXECUTE',
-    b'\x03\x00\x00\x00': 'MH_FVMLIB',
-    b'\x04\x00\x00\x00': 'MH_CORE',
-    b'\x05\x00\x00\x00': 'MH_PRELOAD',
-    b'\x06\x00\x00\x00': 'MH_DYLIB',
-    b'\x07\x00\x00\x00': 'MH_DYLINKER',
-    b'\x08\x00\x00\x00': 'MH_BUNDLE',
-    b'\x09\x00\x00\x00': 'MH_DYLIB_STUB',
-    b'\x0a\x00\x00\x00': 'MH_DSYM',
-    b'\x0b\x00\x00\x00': 'MH_KEXT_BUNDLE',
+    1: 'MH_OBJECT',
+    2: 'MH_EXECUTE',
+    3: 'MH_FVMLIB',
+    4: 'MH_CORE',
+    5: 'MH_PRELOAD',
+    6: 'MH_DYLIB',
+    7: 'MH_DYLINKER',
+    8: 'MH_BUNDLE',
+    9: 'MH_DYLIB_STUB',
+    10: 'MH_DSYM',
+    11: 'MH_KEXT_BUNDLE',
 }
 
 
@@ -41,11 +41,17 @@ def is_macho(path):
 
 
 def is_dylib(path):
-    with open(path, 'rb') as fi:
-        # file type indicated by fourth 32-bit constant in the mach header
-        header = fi.read(16)[-4:]
-        return header in FILETYPE and FILETYPE[header] == 'MH_DYLIB'
+    return human_filetype(path) == 'DYLIB'
 
+def human_filetype(path):
+    lines = subprocess.check_output(['otool', '-h', path]).decode('utf-8').splitlines()
+    assert lines[0].startswith(path), path
+
+    for line in lines:
+        if line.strip().startswith('0x'):
+            header = line.split()
+            filetype = int(header[4])
+            return FILETYPE[filetype][3:]
 
 def otool(path):
     "thin wrapper around otool -L"
@@ -57,6 +63,16 @@ def otool(path):
         res.append(line.split()[0])
     return res
 
+def get_rpath(path):
+    lines = subprocess.check_output(['otool', '-l',
+        path]).decode('utf-8').splitlines()
+    check_for_rpath = False
+    for line in lines:
+        if 'cmd LC_RPATH' in line:
+            check_for_rpath = True
+        if check_for_rpath and 'path' in line:
+            _, rpath, _ = line.split(None, 2)
+            return rpath
 
 def install_name_change(path, cb_func):
     """
@@ -68,6 +84,9 @@ def install_name_change(path, cb_func):
     """
     changes = []
     for link in otool(path):
+        # The first link may be the install name of the library itself, but
+        # this isn't a big deal because install_name_tool -change is a no-op
+        # if given a dependent install name that doesn't exist.
         new_link = cb_func(path, link)
         if new_link:
             changes.append((link, new_link))
@@ -91,7 +110,6 @@ def install_name_change(path, cb_func):
     return ret
 
 if __name__ == '__main__':
-    import sys
     if sys.platform == 'darwin':
         for path in '/bin/ls', '/etc/locate.rc':
             print(path, is_macho(path))

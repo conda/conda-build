@@ -22,6 +22,7 @@ class Config(object):
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
     CONDA_NPY = int(os.getenv('CONDA_NPY', '19').replace('.', ''))
+    CONDA_R = os.getenv("CONDA_R", "3.1.3")
 
     PY3K = int(bool(CONDA_PY >= 30))
 
@@ -40,7 +41,7 @@ class Config(object):
         croot = abspath(expanduser('~/conda-bld'))
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = (short_build_prefix + 8 * '_placehold')[:80]
+    long_build_prefix = max(short_build_prefix, (short_build_prefix + 8 * '_placehold')[:80])
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False

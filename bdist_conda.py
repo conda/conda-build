@@ -152,8 +152,9 @@ class bdist_conda(install):
 
         with Locked(config.croot):
             d = defaultdict(dict)
-            # Needs to be lowercase
-            d['package']['name'] = metadata.name
+            # PyPI allows uppercase letters but conda does not, so we fix the
+            # name here.
+            d['package']['name'] = metadata.name.lower()
             d['package']['version'] = metadata.version
             d['build']['number'] = metadata.conda_buildnum
 
@@ -185,7 +186,7 @@ class bdist_conda(install):
             # someone writes their setup.py wrong and this doesn't work, it's
             # their fault.
             d['about']['license'] = metadata.license
-            d['about']['summary'] = self.distribution.description
+            d['about']['summary'] = metadata.description
 
             # This is similar logic from conda skeleton pypi
             entry_points = getattr(self.distribution, 'entry_points', [])

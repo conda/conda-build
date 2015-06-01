@@ -19,16 +19,20 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
+  - conda install --force --no-deps conda requests
   - conda install pytest requests patchelf
   - python setup.py install
   - conda info -a
 
 script:
-  # - py.test tests
-  - test-recipes/build_recipes.sh
+  - py.test tests
+  - tests/test-recipes/build_recipes.sh
+  - tests/test-skeleton/test-skeleton.sh
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb
 
 git:
   depth: 10000
+
+sudo: false

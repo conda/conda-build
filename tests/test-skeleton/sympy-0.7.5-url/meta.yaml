@@ -1,0 +1,162 @@
+package:
+  name: sympy
+  version: !!str 0.7.5
+
+source:
+  fn: sympy-0.7.5.tar.gz
+  url: https://pypi.python.org/packages/source/s/sympy/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9
+  md5: 7de1adb49972a15a3dd975e879a2bea9
+#  patches:
+   # List any patch files here
+   # - fix.patch
+
+# build:
+  #preserve_egg_dir: True
+  #entry_points:
+    # Put any entry points (scripts to be generated automatically) here. The
+    # syntax is module:function.  For example
+    #
+    # - sympy = sympy:main
+    #
+    # Would create an entry point called sympy that calls sympy.main()
+
+
+  # If this is a new build for the same version, increment the build
+  # number. If you do not include this key, it defaults to 0.
+  # number: 1
+
+requirements:
+  build:
+    - python
+
+  run:
+    - python
+
+test:
+  # Python imports
+  imports:
+    - sympy
+    - sympy.assumptions
+    - sympy.assumptions.handlers
+    - sympy.assumptions.tests
+    - sympy.calculus
+    - sympy.calculus.tests
+    - sympy.categories
+    - sympy.categories.tests
+    - sympy.combinatorics
+    - sympy.combinatorics.tests
+    - sympy.concrete
+    - sympy.concrete.tests
+    - sympy.core
+    - sympy.core.tests
+    - sympy.crypto
+    - sympy.crypto.tests
+    - sympy.diffgeom
+    - sympy.diffgeom.tests
+    - sympy.external
+    - sympy.external.tests
+    - sympy.functions
+    - sympy.functions.combinatorial
+    - sympy.functions.combinatorial.tests
+    - sympy.functions.elementary
+    - sympy.functions.elementary.tests
+    - sympy.functions.special
+    - sympy.functions.special.tests
+    - sympy.galgebra
+    - sympy.galgebra.tests
+    - sympy.geometry
+    - sympy.geometry.tests
+    - sympy.integrals
+    - sympy.integrals.tests
+    - sympy.interactive
+    - sympy.interactive.tests
+    - sympy.liealgebras
+    - sympy.liealgebras.tests
+    - sympy.logic
+    - sympy.logic.algorithms
+    - sympy.logic.tests
+    - sympy.logic.utilities
+    - sympy.matrices
+    - sympy.matrices.expressions
+    - sympy.matrices.expressions.tests
+    - sympy.matrices.tests
+    - sympy.mpmath
+    - sympy.mpmath.calculus
+    - sympy.mpmath.functions
+    - sympy.mpmath.libmp
+    - sympy.mpmath.matrices
+    - sympy.mpmath.tests
+    - sympy.ntheory
+    - sympy.ntheory.tests
+    - sympy.parsing
+    - sympy.parsing.tests
+    - sympy.physics
+    - sympy.physics.hep
+    - sympy.physics.hep.tests
+    - sympy.physics.mechanics
+    - sympy.physics.mechanics.tests
+    - sympy.physics.quantum
+    - sympy.physics.quantum.tests
+    - sympy.physics.tests
+    - sympy.physics.vector
+    - sympy.physics.vector.tests
+    - sympy.plotting
+    - sympy.plotting.intervalmath
+    - sympy.plotting.intervalmath.tests
+    - sympy.plotting.pygletplot
+    - sympy.plotting.pygletplot.tests
+    - sympy.plotting.tests
+    - sympy.polys
+    - sympy.polys.agca
+    - sympy.polys.agca.tests
+    - sympy.polys.domains
+    - sympy.polys.domains.tests
+    - sympy.polys.tests
+    - sympy.printing
+    - sympy.printing.pretty
+    - sympy.printing.pretty.tests
+    - sympy.printing.tests
+    - sympy.series
+    - sympy.series.tests
+    - sympy.sets
+    - sympy.sets.tests
+    - sympy.simplify
+    - sympy.simplify.tests
+    - sympy.solvers
+    - sympy.solvers.tests
+    - sympy.statistics
+    - sympy.statistics.tests
+    - sympy.stats
+    - sympy.stats.tests
+    - sympy.strategies
+    - sympy.strategies.branch
+    - sympy.strategies.branch.tests
+    - sympy.strategies.tests
+    - sympy.tensor
+    - sympy.tensor.tests
+    - sympy.unify
+    - sympy.unify.tests
+    - sympy.utilities
+    - sympy.utilities.mathml
+    - sympy.utilities.tests
+
+  #commands:
+    # You can put test commands to be run here.  Use this to test that the
+    # entry points work.
+
+
+  # You can also put a file called run_test.py in the recipe that will be run
+  # at test time.
+
+  # requires:
+    # Put any additional test requirements here.  For example
+    # - nose
+
+about:
+  home: http://code.google.com/p/sympy
+  license: BSD License
+  summary: 'Computer algebra system (CAS) in Python'
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml

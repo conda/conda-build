@@ -4,6 +4,7 @@ import os
 import sys
 from os.path import join
 import subprocess
+import multiprocessing
 
 import conda.config as cc
 
@@ -18,6 +19,9 @@ def get_perl_ver():
 def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
 
+def get_npy_ver():
+    return '.'.join(str(config.CONDA_NPY))
+
 def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % get_py_ver())
@@ -27,9 +31,14 @@ def get_sp_dir():
 
 def get_git_build_info(src_dir):
     env = os.environ.copy()
-    env['GIT_DIR'] = join(src_dir, '.git')
-
     d = {}
+    git_dir = join(src_dir, '.git')
+    if os.path.isdir(git_dir):
+        env['GIT_DIR'] = git_dir
+    else:
+        return d
+
+    # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     env = {str(key): str(value) for key, value in env.items()}
@@ -42,7 +51,14 @@ def get_git_build_info(src_dir):
     parts_length = len(parts)
     if parts_length == 3:
         d.update(dict(zip(keys, parts)))
-
+    # get the _full_ hash of the current HEAD
+    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env)
+    output = process.communicate()[0].strip()
+    output = output.decode('utf-8')
+    d['GIT_FULL_HASH'] = output
+    # set up the build string
     if key_name('NUMBER') in d and key_name('HASH') in d:
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])
@@ -81,7 +97,8 @@ def get_dict(m=None, prefix=None):
         prefix = config.build_prefix
 
     python = config.build_python
-    d = {'CONDA_BUILD': '1'}
+    d = {'CONDA_BUILD': '1', 'PYTHONNOUSERSITE': '1'}
+    d['CONDA_DEFAULT_ENV'] = config.build_prefix
     d['ARCH'] = str(cc.bits)
     d['PREFIX'] = prefix
     d['PYTHON'] = python
@@ -92,12 +109,28 @@ def get_dict(m=None, prefix=None):
     d['SYS_PYTHON'] = sys.executable
     d['PERL_VER'] = get_perl_ver()
     d['PY_VER'] = get_py_ver()
+    d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
+    if "HTTPS_PROXY" in os.environ:
+        d['HTTPS_PROXY'] = os.environ['HTTPS_PROXY']
+    if "HTTP_PROXY" in os.environ:
+        d['HTTP_PROXY'] = os.environ['HTTP_PROXY']
 
-    if os.path.isdir(os.path.join(d['SRC_DIR'], '.git')):
-        d.update(**get_git_build_info(d['SRC_DIR']))
+    if m:
+        for var_name in m.get_value('build/script_env', []):
+            value = os.getenv(var_name)
+            if value is None:
+                value = '<UNDEFINED>'
+            d[var_name] = value
+
+    try:
+        d['CPU_COUNT'] = str(multiprocessing.cpu_count())
+    except NotImplementedError:
+        d['CPU_COUNT'] = "1"
+
+    d.update(**get_git_build_info(d['SRC_DIR']))
 
     if os.path.isdir(os.path.join(d['SRC_DIR'], '.hg')):
         d.update(**get_hg_build_info(d['SRC_DIR']))
@@ -106,24 +139,28 @@ def get_dict(m=None, prefix=None):
     if sys.platform == 'win32':         # -------- Windows
         d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
                      join(prefix) + ';' +
-                     join(prefix, 'Scripts') + ';' + os.getenv('PATH'))
+                     join(prefix, 'Scripts') + ';%PATH%')
         d['SCRIPTS'] = join(prefix, 'Scripts')
         d['LIBRARY_PREFIX'] = join(prefix, 'Library')
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
+        # This probably should be done more generally
+        d['CYGWIN_PREFIX'] = prefix.replace('\\', '/').replace('C:', '/cygdrive/c')
 
+        d['R'] = join(prefix, 'Scripts', 'R.exe')
     else:                               # -------- Unix
         d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
+        d['R'] = join(prefix, 'bin', 'R')
 
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
         d['CFLAGS'] = '-arch %(OSX_ARCH)s' % d
         d['CXXFLAGS'] = d['CFLAGS']
         d['LDFLAGS'] = d['CFLAGS']
-        d['MACOSX_DEPLOYMENT_TARGET'] = '10.5'
+        d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'

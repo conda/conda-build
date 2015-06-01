@@ -4,30 +4,32 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 
 from __future__ import absolute_import, division, print_function
 
+import io
 import json
 import os
-import re
 import shutil
 import stat
 import subprocess
 import sys
 import tarfile
 from os.path import exists, isdir, isfile, islink, join
-import yaml
+import fnmatch
 
+import yaml
 
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder
+from conda.install import prefix_placeholder, linked
 from conda.utils import url_path
+from conda.resolve import Resolve, MatchSpec
 
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
 from conda_build.scripts import create_entry_points, bin_dirname
-from conda_build.post import (post_process, post_build, is_obj,
+from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
@@ -74,50 +76,52 @@ def have_prefix_files(files):
     to replace the prefix with a placeholder.
 
     :param files: Filenames to check for instances of prefix
-    :type files: list of str
+    :type files: list of tuples containing strings (prefix, mode, filename)
     '''
-    prefix_bytes = config.build_prefix.encode('utf-8')
-    placeholder_bytes = prefix_placeholder.encode('utf-8')
-    alt_prefix_bytes = prefix_bytes.replace(b'\\', b'/')
-    alt_placeholder_bytes = placeholder_bytes.replace(b'\\', b'/')
+    prefix = config.build_prefix
+    prefix_bytes = prefix.encode('utf-8')
+    alt_prefix = prefix.replace('\\', '/')
+    alt_prefix_bytes = alt_prefix.encode('utf-8')
+    prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
     for f in files:
-        if f.endswith(('.pyc', '.pyo', '.a', '.dylib')):
+        if f.endswith(('.pyc', '.pyo', '.a')):
             continue
-        path = join(config.build_prefix, f)
+        path = join(prefix, f)
         if isdir(path):
             continue
         if sys.platform != 'darwin' and islink(path):
             # OSX does not allow hard-linking symbolic links, so we cannot
             # skip symbolic links (as we can on Linux)
             continue
-        if sys.platform != 'win32' and is_obj(path):
-            continue
-        # Open file as binary, since it might have any crazy encoding
         with open(path, 'rb') as fi:
             data = fi.read()
-        # Skip files that are truly binary
-        if b'\x00' in data:
-            continue
-        # This may end up mixing encodings, but since paths are usually ASCII,
-        # this shouldn't be a problem very often. The only way to completely
-        # avoid this would be to use chardet (or cChardet) to detect the
-        # encoding on the fly.
-        if prefix_bytes in data:
-            data = data.replace(prefix_bytes, placeholder_bytes)
-        elif (sys.platform == 'win32') and (alt_prefix_bytes in data):
-            # some windows libraries use unix-style path separators
-            data = data.replace(alt_prefix_bytes, alt_placeholder_bytes)
-        else:
-            continue
-        st = os.stat(path)
-        # Save as
-        with open(path, 'wb') as fo:
-            fo.write(data)
-        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
-        if sys.platform == 'win32':
-            f = f.replace('\\', '/')
-        yield f
+        mode = 'binary' if b'\x00' in data else 'text'
+        if mode == 'text':
+            if not (sys.platform == 'win32' and alt_prefix_bytes in data):
+                # Use the placeholder for maximal backwards compatibility, and
+                # to minimize the occurrences of usernames appearing in built
+                # packages.
+                data = rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
 
+        if prefix_bytes in data:
+            yield (prefix, mode, f)
+        if (sys.platform == 'win32') and (alt_prefix_bytes in data):
+            # some windows libraries use unix-style path separators
+            yield (alt_prefix, mode, f)
+        if prefix_placeholder_bytes in data:
+            yield (prefix_placeholder, mode, f)
+
+
+def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
+    # Old and new prefix should be bytes
+    data = data.replace(old_prefix, new_prefix)
+
+    st = os.stat(path)
+    # Save as
+    with open(path, 'wb') as fo:
+        fo.write(data)
+    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+    return data
 
 def create_info_files(m, files, include_recipe=True):
     '''
@@ -144,20 +148,16 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    if isfile(join(recipe_dir, 'meta.yaml')):
-        shutil.move(join(recipe_dir, 'meta.yaml'),
-                    join(recipe_dir, 'meta.yaml.orig'))
-
-    with open(join(recipe_dir, 'meta.yaml'), 'w') as fo:
-        yaml.safe_dump(m.meta, fo)
-
-    if sys.platform == 'win32':
-        for i, f in enumerate(files):
-            files[i] = f.replace('\\', '/')
-
-    with open(join(config.info_dir, 'files'), 'w') as fo:
-        for f in files:
-            fo.write(f + '\n')
+    readme = m.get_value('about/readme')
+    if readme:
+        src = join(source.get_dir(), readme)
+        if not os.path.exists(src):
+            sys.exit("Error: Could not find the readme: %s" % readme)
+        dst = join(config.info_dir, readme)
+        shutil.copy(src, dst)
+        if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
+            print("WARNING: Binstar only recognizes about/readme as README.md and README.rst",
+                file=sys.stderr)
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
@@ -167,65 +167,68 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
         json.dump(m.meta, fo, indent=2, sort_keys=True)
 
-    files_with_prefix = m.has_prefix_files()
-    binary_files_with_prefix = m.binary_has_prefix_files()
+    if sys.platform == 'win32':
+        # make sure we use '/' path separators in metadata
+        files = [f.replace('\\', '/') for f in files]
 
-    for file in files_with_prefix:
-        if file not in files:
-            raise RuntimeError("file %s from build/has_prefix_files was "
-                               "not found" % file)
+    with open(join(config.info_dir, 'files'), 'w') as fo:
+        if m.get_value('build/noarch_python'):
+            fo.write('\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
 
-    for file in binary_files_with_prefix:
-        if file not in files:
-            raise RuntimeError("file %s from build/has_prefix_files was "
-                               "not found" % file)
+    files_with_prefix = sorted(have_prefix_files(files))
+    binary_has_prefix_files = m.binary_has_prefix_files()
+    text_has_prefix_files = m.has_prefix_files()
+    if files_with_prefix and not m.get_value('build/noarch_python'):
+        auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
             # to worry about nested quotes.
-            fmt_str = '"%s" %s "%s"'
+            fmt_str = '"%s" %s "%s"\n'
         else:
             # Don't do it everywhere because paths on Unix can contain quotes,
             # and we don't have a good method of escaping, and because older
             # versions of conda don't support quotes in has_prefix
-            fmt_str = '%s %s %s'
-        prefix = config.build_prefix
-        with open(os.path.join(prefix, file), 'rb') as f:
-            data = f.read()
-        if prefix.encode('utf-8') in data:
-            files_with_prefix.append(fmt_str % (prefix, 'binary', file))
-        elif sys.platform == 'win32':
-            # some windows libraries encode prefix with unix path separators
-            alt_p = prefix.replace('\\', '/')
-            if alt_p.encode('utf-8') in data:
-                files_with_prefix.append(fmt_str % (alt_p, 'binary', file))
-            else:
-                print('Warning: prefix %s not found in %s' % (prefix, file))
-        else:
-            print('Warning: prefix %s not found in %s' % (prefix, file))
-
-    files_with_prefix += list(have_prefix_files(files))
-    files_with_prefix = sorted(set(files_with_prefix))
-    if files_with_prefix:
+            fmt_str = '%s %s %s\n'
         with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
-            for f in files_with_prefix:
-                fo.write(f + '\n')
+            for pfix, mode, fn in files_with_prefix:
+                if (fn in text_has_prefix_files):
+                    # register for text replacement, regardless of mode
+                    fo.write(fmt_str % (pfix, 'text', fn))
+                    text_has_prefix_files.remove(fn)
+                elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
+                    print("Detected hard-coded path in binary file %s" % fn)
+                    fo.write(fmt_str % (pfix, mode, fn))
+                    binary_has_prefix_files.remove(fn)
+                elif (auto_detect or (mode == 'text')):
+                    print("Detected hard-coded path in %s file %s" % (mode, fn))
+                    fo.write(fmt_str % (pfix, mode, fn))
+                else:
+                    print("Ignored hard-coded path in %s" % fn)
+
+    # make sure we found all of the files expected
+    errstr = ""
+    for f in text_has_prefix_files:
+        errstr += "Did not detect hard-coded path in %s from has_prefix_files\n" % f
+    for f in binary_has_prefix_files:
+        errstr += "Did not detect hard-coded path in %s from binary_has_prefix_files\n" % f
+    if errstr:
+        raise RuntimeError(errstr)
 
     no_link = m.get_value('build/no_link')
     if no_link:
-        def w2rx(p):
-            return p.replace('.', r'\.').replace('*', r'.*')
         if not isinstance(no_link, list):
             no_link = [no_link]
-        rx = '(%s)$' % '|'.join(w2rx(p) for p in no_link)
-        pat = re.compile(rx)
         with open(join(config.info_dir, 'no_link'), 'w') as fo:
             for f in files:
-                if pat.match(f):
+                if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with open(join(config.info_dir, 'git'), 'w') as fo:
+        with io.open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
@@ -233,7 +236,8 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def create_env(pref, specs, clear_cache=True, verbose=True):
+def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
+    override_channels=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -245,15 +249,42 @@ def create_env(pref, specs, clear_cache=True, verbose=True):
             # remove the cache such that a refetch is made,
             # this is necessary because we add the local build repo URL
             fetch_index.cache = {}
-        index = get_index([url_path(config.croot)])
+        index = get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+            prepend=not override_channels)
+
+        warn_on_old_conda_build(index)
 
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        actions = plan.install_actions(pref, index, specs)
+        actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
-    if not isdir(pref):
-        os.makedirs(pref)
+    if not isdir(prefix):
+        os.makedirs(prefix)
+
+def warn_on_old_conda_build(index):
+    root_linked = linked(cc.root_dir)
+    vers_inst = [dist.rsplit('-', 2)[1] for dist in root_linked
+        if dist.rsplit('-', 2)[0] == 'conda-build']
+    if not len(vers_inst) == 1:
+        print("WARNING: Could not detect installed version of conda-build", file=sys.stderr)
+        return
+    r = Resolve(index)
+    pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
+    if not pkgs:
+        print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)
+        return
+    if pkgs[-1].version != vers_inst[0]:
+        print("""
+WARNING: conda-build appears to be out of date. You have version %s but the
+latest version is %s. Run
+
+conda update -n root conda-build
+
+to get the latest version.
+""" % (vers_inst[0], pkgs[-1].version), file=sys.stderr)
+
+
 
 def rm_pkgs_cache(dist):
     '''
@@ -270,7 +301,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, verbose=True, post=None):
+def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_channels=False):
     '''
     Build the package with the specified metadata.
 
@@ -281,24 +312,29 @@ def build(m, get_src=True, verbose=True, post=None):
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     '''
+    if (m.get_value('build/detect_binary_files_with_prefix')
+        or m.binary_has_prefix_files()):
+        # We must use a long prefix here as the package will only be
+        # installable into prefixes shorter than this one.
+        config.use_long_build_prefix = True
+    else:
+        # In case there are multiple builds in the same process
+        config.use_long_build_prefix = False
+
     if post in [False, None]:
+        print("Removing old build directory")
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
-
-        if m.binary_has_prefix_files():
-            # We must use a long prefix here as the package will only be
-            # installable into prefixes shorter than this one.
-            config.use_long_build_prefix = True
-        else:
-            # In case there are multiple builds in the same process
-            config.use_long_build_prefix = False
+        print("Removing old work directory")
+        rm_rf(source.WORK_DIR)
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
         create_env(config.build_prefix,
-                   [ms.spec for ms in m.ms_depends('build')],
-                   verbose=verbose)
+            [ms.spec for ms in m.ms_depends('build')],
+            verbose=verbose, channel_urls=channel_urls,
+            override_channels=override_channels)
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
@@ -318,6 +354,10 @@ def build(m, get_src=True, verbose=True, post=None):
 
         rm_rf(config.info_dir)
         files1 = prefix_files()
+        for f in m.always_include_files():
+            if f not in files1:
+                sys.exit("Error: File %s from always_include_files not found" % f)
+        files1 = files1.difference(set(m.always_include_files()))
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
@@ -334,6 +374,7 @@ def build(m, get_src=True, verbose=True, post=None):
             if script:
                 if isinstance(script, list):
                     script = '\n'.join(script)
+                build_file = join(source.get_dir(), 'conda_build.sh')
                 with open(build_file, 'w') as bf:
                     bf.write(script)
                 os.chmod(build_file, 0o766)
@@ -351,13 +392,20 @@ def build(m, get_src=True, verbose=True, post=None):
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
-        post_process(preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
         assert not exists(config.info_dir)
         files2 = prefix_files()
 
+        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+
+        # The post processing may have deleted some files (like easy-install.pth)
+        files2 = prefix_files()
         post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1), include_recipe=bool(m.path))
+        create_info_files(m, sorted(files2 - files1),
+                          include_recipe=bool(m.path))
+        if m.get_value('build/noarch_python'):
+            import conda_build.noarch_python as noarch_python
+            noarch_python.transform(m, sorted(files2 - files1))
+
         files3 = prefix_files()
         fix_permissions(files3 - files1)
 
@@ -376,7 +424,7 @@ def build(m, get_src=True, verbose=True, post=None):
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
-def test(m, verbose=True):
+def test(m, verbose=True, channel_urls=(), override_channels=False):
     '''
     Execute any test scripts for the given package.
 
@@ -407,17 +455,22 @@ def test(m, verbose=True):
     rm_rf(config.test_prefix)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
-    if py_files:
+    # add packages listed in test/requires
+    specs_include_python = False
+    for spec in m.get_value('test/requires', []):
+        specs.append(spec)
+        if spec.startswith('python ') or spec == 'python':
+            specs_include_python = True
+
+    if py_files and not specs_include_python:
         # as the tests are run by python, we need to specify it
         specs += ['python %s*' % environ.get_py_ver()]
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
-    # add packages listed in test/requires
-    for spec in m.get_value('test/requires', []):
-        specs.append(spec)
 
-    create_env(config.test_prefix, specs, verbose=verbose)
+    create_env(config.test_prefix, specs, verbose=verbose,
+        channel_urls=channel_urls, override_channels=override_channels)
 
     env = dict(os.environ)
     # TODO: Include all the same environment variables that are used in
@@ -426,7 +479,7 @@ def test(m, verbose=True):
 
     # prepend bin (or Scripts) directory
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
-                   env['PATH'])
+                   os.getenv('PATH'))
 
     for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
         env[varname] = str(getattr(config, varname))
@@ -453,7 +506,7 @@ def test(m, verbose=True):
     if shell_files:
         if sys.platform == 'win32':
             test_file = join(tmp_dir, 'run_test.bat')
-            cmd = [os.environ['COMSPEC'], '/c', test_file]
+            cmd = [os.environ['COMSPEC'], '/c', 'call', test_file]
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:

@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
+import textwrap
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -10,6 +11,8 @@ from conda.utils import memoized, md5_file
 import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
+
+from . import exceptions
 
 try:
     import yaml
@@ -36,7 +39,7 @@ def ns_cfg():
     pl = config.CONDA_PERL
     for x in py, np:
         assert isinstance(x, int), x
-    return dict(
+    d = dict(
         linux = plat.startswith('linux-'),
         linux32 = bool(plat == 'linux-32'),
         linux64 = bool(plat == 'linux-64'),
@@ -55,17 +58,24 @@ def ns_cfg():
         py33 = bool(py == 33),
         py34 = bool(py == 34),
         np = np,
+        os = os,
+        environ = os.environ,
     )
+    d.update(os.environ)
+    return d
 
 
-sel_pat = re.compile(r'(.+?)\s*\[(.+)\]$')
+sel_pat = re.compile(r'(.+?)\s*(#.*)?\[(.+)\](?(2).*)$')
 def select_lines(data, namespace):
     lines = []
     for i, line in enumerate(data.splitlines()):
         line = line.rstrip()
+        if line.lstrip().startswith('#'):
+            # Don't bother with comment only lines
+            continue
         m = sel_pat.match(line)
         if m:
-            cond = m.group(2)
+            cond = m.group(3)
             try:
                 if eval(cond, namespace, {}):
                     lines.append(m.group(1))
@@ -82,7 +92,14 @@ Error: Invalid selector in meta.yaml line %d:
 
 @memoized
 def yamlize(data):
-    return yaml.load(data)
+    try:
+        return yaml.load(data)
+    except yaml.parser.ParserError as e:
+        try:
+            import jinja2
+        except ImportError:
+            raise exceptions.UnableToParseMissingJinja2(original=e)
+        raise exceptions.UnableToParse(original=e)
 
 
 def parse(data):
@@ -96,7 +113,7 @@ def parse(data):
             raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
-                  'build/entry_points',
+                  'build/entry_points', 'build/script_env',
                   'build/features', 'build/track_features',
                   'requirements/build', 'requirements/run',
                   'requirements/conflicts', 'test/requires',
@@ -108,7 +125,8 @@ def parse(data):
             res[section][key] = []
     # ensure those are strings
     for field in ('package/version', 'build/string', 'source/svn_rev',
-                  'source/git_tag', 'source/git_branch', 'source/md5'):
+                  'source/git_tag', 'source/git_branch', 'source/md5',
+                  'source/git_rev', 'source/path'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -116,27 +134,81 @@ def parse(data):
         if val is None:
             val = ''
         res[section][key] = text_type(val)
-    return res
+    return sanitize(res)
+
+
+def sanitize(meta):
+    """
+    Sanitize the meta-data to remove aliases/handle deprecation
+
+    """
+    # make a copy to avoid side-effects
+    meta = dict(meta)
+    sanitize_funs = [('source', _git_clean), ]
+    for section, func in sanitize_funs:
+        if section in meta:
+            meta[section] = func(meta[section])
+    return meta
+
+
+def _git_clean(source_meta):
+    """
+    Reduce the redundancy in git specification by removing git_tag and
+    git_branch.
+
+    If one is specified, copy to git_rev.
+
+    If more than one field is used to specified, exit
+    and complain.
+    """
+
+    git_rev_tags_old = ('git_branch', 'git_tag')
+    git_rev = 'git_rev'
+
+    git_rev_tags = (git_rev,) + git_rev_tags_old
+
+    has_rev_tags = tuple(bool(source_meta[tag]) for
+                          tag in git_rev_tags)
+    if sum(has_rev_tags) > 1:
+        msg = "Error: mulitple git_revs:"
+        msg += ', '.join("{}".format(key) for key, has in
+                         zip(git_rev_tags, has_rev_tags) if has)
+        sys.exit(msg)
+
+    # make a copy of the input so we have no side-effects
+    ret_meta = dict(source_meta)
+    # loop over the old versions
+    for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
+        # update if needed
+        if has:
+            ret_meta[git_rev_tags[0]] = ret_meta[key]
+        # and remove
+        del ret_meta[key]
+
+    return ret_meta
 
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1', 'sha256',
-               'git_url', 'git_tag', 'git_branch',
+    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
+               'git_url', 'git_tag', 'git_branch', 'git_rev',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'noarch',
-              'has_prefix_files', 'binary_has_prefix_files'],
+              'no_link', 'binary_relocation', 'script', 'noarch_python',
+              'has_prefix_files', 'binary_has_prefix_files', 'script_env',
+              'detect_binary_files_with_prefix', 'rpaths',
+              'always_include_files', ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary'],
+    'about': ['home', 'license', 'summary', 'readme'],
 }
+
 
 def check_bad_chrs(s, field):
     bad_chrs = '=!@#$%^&*:;"\'\\|<>?/ '
@@ -145,6 +217,7 @@ def check_bad_chrs(s, field):
     for c in bad_chrs:
         if c in s:
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
+
 
 def get_contents(meta_path):
     '''
@@ -167,8 +240,8 @@ def get_contents(meta_path):
                jinja2.FileSystemLoader(path)
                ]
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
-    env.globals.update(context_processor())
     env.globals.update(ns_cfg())
+    env.globals.update(context_processor())
 
     template = env.get_or_select_template(filename)
 
@@ -198,11 +271,10 @@ class MetaData(object):
             return
         self.meta = parse(get_contents(self.meta_path))
 
-        if isfile(self.requirements_path):
+        if isfile(self.requirements_path) and not self.meta['requirements']['run']:
             self.meta.setdefault('requirements', {})
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
-
 
     @classmethod
     def fromdict(cls, metadata):
@@ -212,7 +284,7 @@ class MetaData(object):
         m = super(MetaData, cls).__new__(cls)
         m.path = ''
         m.meta_path = ''
-        m.meta = metadata
+        m.meta = sanitize(metadata)
         return m
 
     def get_section(self, section):
@@ -253,16 +325,23 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [('python', config.CONDA_PY), ('numpy', config.CONDA_NPY),
-                         ('perl', config.CONDA_PERL)]
+        name_ver_list = [
+            ('python', config.CONDA_PY),
+            ('numpy', config.CONDA_NPY),
+            ('perl', config.CONDA_PERL),
+            ('r', config.CONDA_R),
+        ]
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
+            if ms.name == self.name():
+                raise RuntimeError("Error: %s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if ms.strictness != 1:
+                    if (ms.strictness != 1 or
+                             self.get_value('build/noarch_python')):
                         continue
                     str_ver = text_type(ver)
                     if '.' not in str_ver:
@@ -272,6 +351,15 @@ class MetaData(object):
                 if c in ms.name:
                     sys.exit("Error: bad character '%s' in package name "
                              "dependency '%s'" % (c, ms.name))
+                parts = spec.split()
+                if len(parts) >= 2:
+                    if parts[1] in {'>', '>=', '=', '==', '!=', '<', '<='}:
+                        msg = ("Error: bad character '%s' in package version "
+                            "dependency '%s'" % (parts[1], ms.name))
+                        if len(parts) >= 3:
+                            msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
+                                parts[1], parts[2])
+                        sys.exit(msg)
             res.append(ms)
         return res
 
@@ -282,13 +370,17 @@ class MetaData(object):
             return ret
         res = []
         version_re = re.compile(r'(?:==)?(\d)\.(\d)')
-        for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl')):
+        for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl'), ('r', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
-                    v = ms.spec.split()[1]
+                    try:
+                        v = ms.spec.split()[1]
+                    except IndexError:
+                        res.append(s)
+                        break
                     if ',' in v or '|' in v:
                         break
-                    if name != 'perl':
+                    if name not in ['perl', 'r']:
                         match = version_re.match(v)
                         if match:
                             res.append(s + match.group(1) + match.group(2))
@@ -331,14 +423,16 @@ class MetaData(object):
             license = self.get_value('about/license'),
             platform = cc.platform,
             arch = cc.arch_name,
+            subdir = cc.subdir,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch'):
+        if self.get_value('build/noarch_python'):
             d['platform'] = d['arch'] = None
+            d['subdir'] = 'noarch'
         if self.is_app():
             d.update(self.app_meta())
         return d
@@ -351,6 +445,9 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
+
+    def always_include_files(self):
+        return self.get_value('build/always_include_files', [])
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])

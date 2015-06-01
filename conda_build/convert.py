@@ -47,7 +47,7 @@ def has_cext(t, show=False):
                 return True
     return matched
 
-def has_nonpy_entry_points(t, unix_to_win=True, show=False):
+def has_nonpy_entry_points(t, unix_to_win=True, show=False, quiet=False):
     """
     If unix_to_win=True, assumes a Unix type package (i.e., entry points
     are in the bin directory).
@@ -55,7 +55,8 @@ def has_nonpy_entry_points(t, unix_to_win=True, show=False):
     unix_to_win=False means win to unix, which is not implemented yet, so it
     will only succeed if there are no entry points.
     """
-    print("Checking entry points")
+    if not quiet:
+        print("Checking entry points")
     bindir = 'bin/' if unix_to_win else 'Scripts/'
     matched = False
     for m in t.getmembers():
@@ -84,7 +85,7 @@ def has_nonpy_entry_points(t, unix_to_win=True, show=False):
     return matched
 
 
-def tar_update(source, dest, file_map, verbose=True):
+def tar_update(source, dest, file_map, verbose=True, quiet=False):
     """
     update a tarball, i.e. repack it and insert/update or remove some
     archives according file_map, which is a dictionary mapping archive names
@@ -135,7 +136,8 @@ def tar_update(source, dest, file_map, verbose=True):
                     else:
                         t.add(file_map[p], p)
                 continue
-            print("keeping %r" % p)
+            if not quiet:
+                print("keeping %r" % p)
             t.addfile(m, s.extractfile(p))
 
         s_names_set = set(m.path for m in s.getmembers())
@@ -193,18 +195,20 @@ def get_pure_py_file_map(t, platform):
     newinfo = info.copy()
     newinfo['platform'] = dest_plat
     newinfo['arch'] = 'x86_64' if dest_arch == '64' else 'x86'
+    newinfo['subdir'] = platform
 
     pythons = list(filter(None, [pyver_re.match(p) for p in info['depends']]))
     if len(pythons) > 1:
         raise RuntimeError("Found more than one Python dependency in package %s"
             % t.name)
     if len(pythons) == 0:
-        raise RuntimeError("Package %s does not appear to be a Python package"
-            % t.name)
-    pyver = pythons[0].group(1)
+        # not a Python package
+        mapping = []
+    else:
+        pyver = pythons[0].group(1)
 
-    mapping = [(re.compile(i[0].format(pyver=pyver)),
-        i[1].format(pyver=pyver)) for i in mapping]
+        mapping = [(re.compile(i[0].format(pyver=pyver)),
+            i[1].format(pyver=pyver)) for i in mapping]
 
     members = t.getmembers()
     file_map = {}
