@@ -7,7 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-from os.path import abspath, join, dirname, exists
+from os.path import abspath, join, dirname, exists, basename
 from collections import defaultdict
 from operator import itemgetter
 
@@ -139,6 +139,8 @@ def replace_path(binary, path, prefix):
     if sys.platform.startswith('linux'):
         return abspath(path)
     elif sys.platform.startswith('darwin'):
+        if path == basename(binary):
+            return abspath(join(prefix, binary))
         if '@rpath' in path:
             rpath = get_rpath(join(prefix, binary))
             if not rpath:
