@@ -378,7 +378,7 @@ class MetaData(object):
                     except IndexError:
                         res.append(s)
                         break
-                    if any(i in v for i in ',|*>!<'):
+                    if any(i in v for i in ',|>!<'):
                         break
                     if name not in ['perl', 'r']:
                         match = version_re.match(v)
