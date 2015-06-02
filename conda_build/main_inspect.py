@@ -247,7 +247,8 @@ def execute(args, parser):
             inverted_map = defaultdict(lambda: defaultdict(list))
             for pkg in pkgmap:
                 for dep in pkgmap[pkg]:
-                    inverted_map[dep][pkg] = pkgmap[pkg][dep]
+                    if pkgmap[pkg][dep]:
+                        inverted_map[dep][pkg] = pkgmap[pkg][dep]
 
             # print system and not found last
             k = sorted(set(inverted_map.keys()) - {'system', 'not found'})
