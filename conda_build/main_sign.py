@@ -10,7 +10,7 @@ from os.path import isdir, join
 from Crypto.PublicKey import RSA
 from Crypto import Random
 
-from conda.signature import hash_file, sig2ascii, KEYS_DIR
+from conda.signature import KEYS_DIR, hash_file, sig2ascii, verify
 
 
 
@@ -65,6 +65,11 @@ def main():
         if args:
             p.error('no arguments expected for --keygen')
         keygen(opts.keygen)
+        return
+
+    if opts.verify:
+        for path in args:
+            print('%-65s %s' % (path, verify(path)))
         return
 
     key_name = get_default_keyname()
