@@ -212,6 +212,7 @@ def execute(args, parser):
             linkages = get_linkages(obj_files, prefix)
             depmap = defaultdict(list)
             pkgmap[pkg] = depmap
+            depmap['not found'] = []
             for binary in linkages:
                 for lib, path in linkages[binary]:
                     path = replace_path(binary, path, prefix) if path not in {'', 'not found'} else path
