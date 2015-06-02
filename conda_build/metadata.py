@@ -385,7 +385,7 @@ class MetaData(object):
                         if match:
                             res.append(s + match.group(1) + match.group(2))
                     else:
-                        res.append(s + v)
+                        res.append(s + v.strip('*'))
                     break
         if res:
             res.append('_')
