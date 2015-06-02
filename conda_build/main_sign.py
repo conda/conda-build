@@ -30,6 +30,18 @@ def keygen(name):
         fo.write(b'\n')
 
 
+def get_default_keyname():
+    if isdir(KEYS_DIR):
+        for fn in os.listdir(KEYS_DIR):
+            if not fn.endswith('.pub'):
+                return fn
+    return None
+
+
+def sign(path, key):
+    return sig2ascii(key.sign(hash_file(path), '')[0])
+
+
 def main():
     from optparse import OptionParser
 
@@ -45,7 +57,7 @@ def main():
 
     p.add_option('-v', '--verify',
                  action="store_true",
-                 help="verify a FILE(s) file using NAME.pub")
+                 help="verify FILE(s)")
 
     opts, args = p.parse_args()
 
@@ -54,6 +66,16 @@ def main():
             p.error('no arguments expected for --keygen')
         keygen(opts.keygen)
         return
+
+    key_name = get_default_keyname()
+    print("Using private key '%s' for signing." % key_name)
+    key = RSA.importKey(open(join(KEYS_DIR, key_name)).read())
+    for path in args:
+        print('signing: %s' % path)
+        with open('%s.sig' % path, 'w') as fo:
+            fo.write('%s ' % key_name)
+            fo.write(sign(path, key))
+            fo.write('\n')
 
 
 if __name__ == '__main__':
