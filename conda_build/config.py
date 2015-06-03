@@ -93,7 +93,9 @@ class Config(object):
     def broken_dir(self):
         return join(self.croot, "broken")
 
-    bldpkgs_dir = join(croot, cc.subdir)
+    @property
+    def bldpkgs_dir(self):
+        return join(self.croot, cc.subdir)
 
 config = Config()
 
