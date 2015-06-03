@@ -36,6 +36,8 @@ from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
 from conda_build.config import config
+from conda_build import environ
+
 
 from requests.packages.urllib3.util.url import parse_url
 
@@ -66,6 +68,70 @@ source:
   # If this is a new build for the same version, increment the build
   # number. If you do not include this key, it defaults to 0.
   # number: 1
+
+requirements:
+  build:
+    - python{build_depends}
+
+  run:
+    - python{run_depends}
+
+{test_comment}test:
+  # Python imports
+  {import_comment}imports:{import_tests}
+
+  {entry_comment}commands:
+    # You can put test commands to be run here.  Use this to test that the
+    # entry points work.
+{test_commands}
+
+  # You can also put a file called run_test.py in the recipe that will be run
+  # at test time.
+
+  # requires:
+    # Put any additional test requirements here.  For example
+    # - nose
+
+about:
+  {home_comment}home: {homeurl}
+  license: {license}
+  {summary_comment}summary: {summary}
+
+# See
+# http://docs.continuum.io/conda/build.html for
+# more information about meta.yaml
+"""
+
+PYPI_META_VCS = """\
+package:
+  name: {packagename}
+  version: "{VCS_VERSION}"
+
+source:
+  hg_url: {VCS_URL}
+  hg_tag: {VCS_VERSION}
+
+#  patches:
+   # List any patch files here
+   # - fix.patch
+
+{build_comment}build:
+  {egg_comment}preserve_egg_dir: True
+  {entry_comment}entry_points:
+    # Put any entry points (scripts to be generated automatically) here. The
+    # syntax is module:function.  For example
+    #
+    # - {packagename} = {packagename}:main
+    #
+    # Would create an entry point called {packagename} that calls {packagename}.main()
+{entry_points}
+
+  # If this is a new build for the same version, increment the build
+  # number. If you do not include this key, it defaults to 0.
+  # number: 1
+  number: {VCS_DESCRIBE_NUMBER}
+  string: {VCS_BUILD_STR}
+
 
 requirements:
   build:
@@ -241,6 +307,7 @@ class RequestsTransport(Transport):
         scheme = 'https' if self.use_https else 'http'
         return '%s://%s/%s' % (scheme, host, handler)
 
+
 def main(args, parser):
     proxies = get_proxy_servers()
 
@@ -262,7 +329,9 @@ def main(args, parser):
         package = args.packages.pop()
         args.created_recipes.append(package)
 
-        is_url = ':' in package
+        is_vcs = 'hg:' in package
+        is_url = ':' in package and not is_vcs
+        visit_pypi = not (is_url or is_vcs)
 
         if not is_url:
             dir_path = join(output_dir, package.lower())
@@ -283,10 +352,10 @@ def main(args, parser):
                 'summary_comment': '',
                 'home_comment': '',
             })
-        if is_url:
+        if is_url or is_vcs:
             del d['packagename']
 
-        if is_url:
+        if is_url or is_vcs:
             d['version'] = 'UNKNOWN'
         else:
             if args.version:
@@ -320,9 +389,9 @@ def main(args, parser):
                     print("Use --version to specify a different version.")
                 d['version'] = versions[0]
 
-        data = client.release_data(package, d['version']) if not is_url else None
-        urls = client.release_urls(package, d['version']) if not is_url else [package]
-        if not is_url and not args.all_urls:
+        data = client.release_data(package, d['version']) if visit_pypi else None
+        urls = client.release_urls(package, d['version']) if visit_pypi else [package]
+        if not is_url and not is_vcs and not args.all_urls:
             # Try to find source urls
             urls = [url for url in urls if url['python_version'] == 'source']
         if not urls:
@@ -361,13 +430,13 @@ def main(args, parser):
         else:
             n = 0
 
-        if not is_url:
+        if not is_url and not is_vcs:
             print("Using url %s (%s) for %s." % (urls[n]['url'],
                 human_bytes(urls[n]['size'] or 0), package))
             d['pypiurl'] = urls[n]['url']
             d['md5'] = urls[n]['md5_digest']
             d['filename'] = urls[n]['filename']
-        else:
+        elif not is_vcs:
             print("Using url %s" % package)
             d['pypiurl'] = package
             U = parse_url(package)
@@ -379,10 +448,21 @@ def main(args, parser):
                 d['md5'] = ''
             # TODO: 'package' won't work with unpack()
             d['filename'] = U.path.rsplit('/', 1)[-1] or 'package'
+        else:
+            # vcs part
+            if package.startswith("hg:"):
+                d['VCS'] = 'hg'
+                package = package[3:]
+            else:
+                raise RuntimeError("GIT not supported")
+            d['filename'] = package.rsplit('/', 1)[-1] or 'package'
 
         d['import_tests'] = ''
 
-        get_package_metadata(args, package, d, data)
+        if not is_vcs:
+            get_package_metadata(args, package, d, data)
+        else:
+            get_package_metadata_vcs(args, package, d, data)
 
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -398,14 +478,64 @@ def main(args, parser):
         name = d['packagename']
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
+        if 'VCS' in d:
+            meta = PYPI_META_VCS
+        else:
+            meta = PYPI_META
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(PYPI_META.format(**d))
+            f.write(meta.format(**d))
         with open(join(output_dir, name, 'build.sh'), 'w') as f:
             f.write(PYPI_BUILD_SH.format(**d))
         with open(join(output_dir, name, 'bld.bat'), 'w') as f:
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
+
+
+def get_package_metadata_vcs(args, package, d, data):
+    print("Using VCS in %s" % package)
+    tempdir = mkdtemp('conda_skeleton_' + d['filename'])
+
+    vcs = d['VCS']
+
+    [output_dir] = args.output_dir
+
+    if not isdir(SRC_CACHE):
+        makedirs(SRC_CACHE)
+
+    d['VCS_URL'] = package
+
+    try:
+        if vcs == 'hg':
+            info = environ.get_hg_build_info(package)
+
+            d.update(info)
+            # defaults because of .format()
+            d.setdefault('HG_DESCRIBE_TAG', '')
+            d.setdefault('HG_DESCRIBE_NUMBER', 0)
+
+            # insert unified names (VCS_)
+            for k, v in info.iteritems():
+                kk = k.replace('HG', 'VCS')
+                d[kk] = v
+            d['VCS_VERSION'] = d['HG_DESCRIBE_TAG']
+            archive_cmd = 'hg archive %s' % tempdir
+            archive_cmd = archive_cmd.split(' ')
+            env = os.environ.copy()
+            env['HG_DIR'] = join(package, '.hg')
+        else:
+            raise RuntimeError("Not supported VCS %r" % vcs)
+
+        print("Archiving repository in %s" % tempdir)
+        out = subprocess.check_output(archive_cmd,
+                                      env=env,
+                                      cwd=package)
+        print("Archive done")
+        src_dir = tempdir
+        get_full_info(package, d, src_dir, tempdir, output_dir, args)
+        d['build_comment'] = ''
+    finally:
+        rm_rf(tempdir)
 
 def get_package_metadata(args, package, d, data):
     # Unfortunately, two important pieces of metadata are only stored in
@@ -438,199 +568,204 @@ def get_package_metadata(args, package, d, data):
         print("done")
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
-        run_setuppy(src_dir, tempdir, args)
-        with open(join(tempdir, 'pkginfo.yaml')) as fn:
-            pkginfo = yaml.load(fn)
-
-        setuptools_build = pkginfo['setuptools']
-        setuptools_run = False
-
-        # Look at the entry_points and construct console_script and
-        #  gui_scripts entry_points for conda
-        entry_points = pkginfo['entry_points']
-        if entry_points:
-            if isinstance(entry_points, str):
-                # makes sure it is left-shifted
-                newstr = "\n".join(x.strip()
-                                   for x in entry_points.split('\n'))
-                config = configparser.ConfigParser()
-                entry_points = {}
-                try:
-                    config.readfp(StringIO(newstr))
-                except Exception as err:
-                    print("WARNING: entry-points not understood: ",
-                          err)
-                    print("The string was", newstr)
-                    entry_points = pkginfo['entry_points']
-                else:
-                    setuptools_run = True
-                    for section in config.sections():
-                        if section in ['console_scripts', 'gui_scripts']:
-                            value = ['%s=%s' % (option, config.get(section, option))
-                                     for option in config.options(section)]
-                            entry_points[section] = value
-            if not isinstance(entry_points, dict):
-                print("WARNING: Could not add entry points. They were:")
-                print(entry_points)
-            else:
-                cs = entry_points.get('console_scripts', [])
-                gs = entry_points.get('gui_scripts', [])
-                if isinstance(cs, string_types):
-                    cs = [cs]
-                if isinstance(gs, string_types):
-                    gs = [gs]
-                # We have *other* kinds of entry-points so we need
-                # setuptools at run-time
-                if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
-                    setuptools_build = True
-                    setuptools_run = True
-                entry_list = (
-                    cs
-                    # TODO: Use pythonw for these
-                    + gs)
-                if len(cs + gs) != 0:
-                    d['entry_points'] = INDENT.join([''] + entry_list)
-                    d['entry_comment'] = ''
-                    d['build_comment'] = ''
-                    d['test_commands'] = INDENT.join([''] + make_entry_tests(entry_list))
-
-        # Look for package[extra,...] features spec:
-        match_extras = re.match(r'^([^[]+)\[([^]]+)\]$', package)
-        if match_extras:
-            package, extras = match_extras.groups()
-            extras = extras.split(',')
-        else:
-            extras = []
-
-        # Extract requested extra feature requirements...
-        if args.all_extras:
-            extras_require = list(pkginfo['extras_require'].values())
-        else:
-            try:
-                extras_require = [pkginfo['extras_require'][x] for x in extras]
-            except KeyError:
-                sys.exit("Error: Invalid extra features: [%s]"
-                     % ','.join(extras))
-        #... and collect all needed requirement specs in a single list:
-        requires = []
-        for specs in [pkginfo['install_requires']] + extras_require:
-            if isinstance(specs, string_types):
-                requires.append(specs)
-            else:
-                requires.extend(specs)
-        if requires or setuptools_build or setuptools_run:
-            deps = []
-            if setuptools_run:
-                deps.append('setuptools')
-            for deptext in requires:
-                if isinstance(deptext, string_types):
-                    deptext = deptext.split('\n')
-                # Every item may be a single requirement
-                #  or a multiline requirements string...
-                for dep in deptext:
-                    #... and may also contain comments...
-                    dep = dep.split('#')[0].strip()
-                    if dep: #... and empty (or comment only) lines
-                        spec = spec_from_line(dep)
-                        if spec is None:
-                            sys.exit("Error: Could not parse: %s" % dep)
-                        deps.append(spec)
-
-            if 'setuptools' in deps:
-                setuptools_build = False
-                setuptools_run = False
-                d['egg_comment'] = ''
-                d['build_comment'] = ''
-            d['build_depends'] = INDENT.join([''] +
-                                             ['setuptools'] * setuptools_build +
-                                             deps)
-            d['run_depends'] = INDENT.join([''] +
-                                           ['setuptools'] * setuptools_run +
-                                           deps)
-
-            if args.recursive:
-                for dep in deps:
-                    dep = dep.split()[0]
-                    if not exists(join(output_dir, dep)):
-                        if dep not in args.created_recipes:
-                            args.packages.append(dep)
-
-        if 'packagename' not in d:
-            d['packagename'] = pkginfo['name'].lower()
-        if d['version'] == 'UNKNOWN':
-            d['version'] = pkginfo['version']
-
-        if pkginfo['packages']:
-            deps = set(pkginfo['packages'])
-            if d['import_tests']:
-                if not d['import_tests'] or d['import_tests'] == 'PLACEHOLDER':
-                    olddeps = []
-                else:
-                    olddeps = [x for x in d['import_tests'].split()
-                           if x != '-']
-                deps = set(olddeps) | deps
-            d['import_tests'] = INDENT.join(sorted(deps))
-            d['import_comment'] = ''
-
-        if pkginfo['homeurl'] is not None:
-            d['homeurl'] = pkginfo['homeurl']
-        else:
-            if data and 'homeurl' in data:
-                d['homeurl'] = data['homeurl']
-            else:
-                d['homeurl'] = "The package home page"
-                d['home_comment'] = '#'
-
-        if pkginfo['summary']:
-            d['summary'] = repr(pkginfo['summary'])
-        else:
-            if data:
-                d['summary'] = repr(data['summary'])
-            else:
-                d['summary'] = "Summary of the package"
-                d['summary_comment'] = '#'
-
-        license_classifier = "License :: OSI Approved :: "
-        if pkginfo['classifiers']:
-            licenses = [classifier.split(license_classifier, 1)[1] for
-                classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
-        elif data and 'classifiers' in data:
-            licenses = [classifier.split(license_classifier, 1)[1] for classifier in
-                    data['classifiers'] if classifier.startswith(license_classifier)]
-        else:
-            licenses = []
-        if not licenses:
-            if pkginfo['license']:
-                license = pkginfo['license']
-            elif data and 'license' in data:
-                license = data['license']
-            else:
-                license = None
-            if license:
-                if args.noprompt:
-                    pass
-                elif '\n' not in license:
-                    print('Using "%s" for the license' % license)
-                else:
-                    # Some projects put the whole license text in this field
-                    print("This is the license for %s" % package)
-                    print()
-                    print(license)
-                    print()
-                    license = input("What license string should I use? ")
-            else:
-                if args.noprompt:
-                    license = "UNKNOWN"
-                else:
-                    license = input(("No license could be found for %s on " +
-                                     "PyPI or in the source. What license should I use? ") %
-                                    package)
-        else:
-            license = ' or '.join(licenses)
-        d['license'] = license
-
+        get_full_info(package, d, src_dir, tempdir, output_dir, args)
     finally:
         rm_rf(tempdir)
+
+
+def get_full_info(package, d, src_dir, tempdir, output_dir, args):
+    import yaml
+    run_setuppy(src_dir, tempdir, args)
+    with open(join(tempdir, 'pkginfo.yaml')) as fn:
+        pkginfo = yaml.load(fn)
+
+    setuptools_build = pkginfo['setuptools']
+    setuptools_run = False
+
+    # Look at the entry_points and construct console_script and
+    #  gui_scripts entry_points for conda
+    entry_points = pkginfo['entry_points']
+    if entry_points:
+        if isinstance(entry_points, str):
+            # makes sure it is left-shifted
+            newstr = "\n".join(x.strip()
+                               for x in entry_points.split('\n'))
+            config = configparser.ConfigParser()
+            entry_points = {}
+            try:
+                config.readfp(StringIO(newstr))
+            except Exception as err:
+                print("WARNING: entry-points not understood: ",
+                      err)
+                print("The string was", newstr)
+                entry_points = pkginfo['entry_points']
+            else:
+                setuptools_run = True
+                for section in config.sections():
+                    if section in ['console_scripts', 'gui_scripts']:
+                        value = ['%s=%s' % (option, config.get(section, option))
+                                 for option in config.options(section)]
+                        entry_points[section] = value
+        if not isinstance(entry_points, dict):
+            print("WARNING: Could not add entry points. They were:")
+            print(entry_points)
+        else:
+            cs = entry_points.get('console_scripts', [])
+            gs = entry_points.get('gui_scripts', [])
+            if isinstance(cs, string_types):
+                cs = [cs]
+            if isinstance(gs, string_types):
+                gs = [gs]
+            # We have *other* kinds of entry-points so we need
+            # setuptools at run-time
+            if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
+                setuptools_build = True
+                setuptools_run = True
+            entry_list = (
+                cs
+                # TODO: Use pythonw for these
+                + gs)
+            if len(cs + gs) != 0:
+                d['entry_points'] = INDENT.join([''] + entry_list)
+                d['entry_comment'] = ''
+                d['build_comment'] = ''
+                d['test_commands'] = INDENT.join([''] + make_entry_tests(entry_list))
+
+    # Look for package[extra,...] features spec:
+    match_extras = re.match(r'^([^[]+)\[([^]]+)\]$', package)
+    if match_extras:
+        package, extras = match_extras.groups()
+        extras = extras.split(',')
+    else:
+        extras = []
+
+    # Extract requested extra feature requirements...
+    if args.all_extras:
+        extras_require = list(pkginfo['extras_require'].values())
+    else:
+        try:
+            extras_require = [pkginfo['extras_require'][x] for x in extras]
+        except KeyError:
+            sys.exit("Error: Invalid extra features: [%s]"
+                 % ','.join(extras))
+    #... and collect all needed requirement specs in a single list:
+    requires = []
+    for specs in [pkginfo['install_requires']] + extras_require:
+        if isinstance(specs, string_types):
+            requires.append(specs)
+        else:
+            requires.extend(specs)
+    if requires or setuptools_build or setuptools_run:
+        deps = []
+        if setuptools_run:
+            deps.append('setuptools')
+        for deptext in requires:
+            if isinstance(deptext, string_types):
+                deptext = deptext.split('\n')
+            # Every item may be a single requirement
+            #  or a multiline requirements string...
+            for dep in deptext:
+                #... and may also contain comments...
+                dep = dep.split('#')[0].strip()
+                if dep: #... and empty (or comment only) lines
+                    spec = spec_from_line(dep)
+                    if spec is None:
+                        sys.exit("Error: Could not parse: %s" % dep)
+                    deps.append(spec)
+
+        if 'setuptools' in deps:
+            setuptools_build = False
+            setuptools_run = False
+            d['egg_comment'] = ''
+            d['build_comment'] = ''
+        d['build_depends'] = INDENT.join([''] +
+                                         ['setuptools'] * setuptools_build +
+                                         deps)
+        d['run_depends'] = INDENT.join([''] +
+                                       ['setuptools'] * setuptools_run +
+                                       deps)
+
+        if args.recursive:
+            for dep in deps:
+                dep = dep.split()[0]
+                if not exists(join(output_dir, dep)):
+                    if dep not in args.created_recipes:
+                        args.packages.append(dep)
+
+    if 'packagename' not in d:
+        d['packagename'] = pkginfo['name'].lower()
+    if d['version'] == 'UNKNOWN':
+        d['version'] = pkginfo['version']
+
+    if pkginfo['packages']:
+        deps = set(pkginfo['packages'])
+        if d['import_tests']:
+            if not d['import_tests'] or d['import_tests'] == 'PLACEHOLDER':
+                olddeps = []
+            else:
+                olddeps = [x for x in d['import_tests'].split()
+                       if x != '-']
+            deps = set(olddeps) | deps
+        d['import_tests'] = INDENT.join(sorted(deps))
+        d['import_comment'] = ''
+
+    if pkginfo['homeurl'] is not None:
+        d['homeurl'] = pkginfo['homeurl']
+    else:
+        if data and 'homeurl' in data:
+            d['homeurl'] = data['homeurl']
+        else:
+            d['homeurl'] = "The package home page"
+            d['home_comment'] = '#'
+
+    if pkginfo['summary']:
+        d['summary'] = repr(pkginfo['summary'])
+    else:
+        if data:
+            d['summary'] = repr(data['summary'])
+        else:
+            d['summary'] = "Summary of the package"
+            d['summary_comment'] = '#'
+
+    license_classifier = "License :: OSI Approved :: "
+    if pkginfo['classifiers']:
+        licenses = [classifier.split(license_classifier, 1)[1] for
+            classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
+    elif data and 'classifiers' in data:
+        licenses = [classifier.split(license_classifier, 1)[1] for classifier in
+                data['classifiers'] if classifier.startswith(license_classifier)]
+    else:
+        licenses = []
+    if not licenses:
+        if pkginfo['license']:
+            license = pkginfo['license']
+        elif data and 'license' in data:
+            license = data['license']
+        else:
+            license = None
+        if license:
+            if args.noprompt:
+                pass
+            elif '\n' not in license:
+                print('Using "%s" for the license' % license)
+            else:
+                # Some projects put the whole license text in this field
+                print("This is the license for %s" % package)
+                print()
+                print(license)
+                print()
+                license = input("What license string should I use? ")
+        else:
+            if args.noprompt:
+                license = "UNKNOWN"
+            else:
+                license = input(("No license could be found for %s on " +
+                                 "PyPI or in the source. What license should I use? ") %
+                                package)
+    else:
+        license = ' or '.join(licenses)
+    d['license'] = license
+
 
 
 def valid(name):
