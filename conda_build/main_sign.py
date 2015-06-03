@@ -5,10 +5,19 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
 import os
+import sys
 from os.path import isdir, join
 
-from Crypto.PublicKey import RSA
-from Crypto import Random
+try:
+    from Crypto.PublicKey import RSA
+    from Crypto import Random
+except ImportError:
+    sys.exit("""\
+Error: could not import Crypto (required for "conda sign").
+    Run the following command:
+
+    $ conda install -n root pycrypto
+""")
 
 from conda.utils import sha256_file
 from conda.signature import KEYS_DIR, sig2ascii, verify
