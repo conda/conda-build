@@ -25,17 +25,22 @@ from conda.signature import KEYS_DIR, sig2ascii, verify
 
 
 def keygen(name):
+    print("Generating public/private key pair...")
     random_generator = Random.new().read
     key = RSA.generate(1024, random_generator)
 
     if not isdir(KEYS_DIR):
         os.makedirs(KEYS_DIR)
 
-    with open(join(KEYS_DIR, name), 'wb') as fo:
+    path = join(KEYS_DIR, name)
+    print("Storing private key: %s" % path)
+    with open(path, 'wb') as fo:
         fo.write(key.exportKey())
         fo.write(b'\n')
 
-    with open(join(KEYS_DIR, '%s.pub' % name), 'wb') as fo:
+    path = join(KEYS_DIR, '%s.pub' % name)
+    print("Storing public key : %s" % path)
+    with open(path, 'wb') as fo:
         fo.write(key.publickey().exportKey())
         fo.write(b'\n')
 
