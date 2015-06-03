@@ -20,7 +20,7 @@ Error: could not import Crypto (required for "conda sign").
 """)
 
 from conda.utils import sha256_file
-from conda.signature import KEYS_DIR, sig2ascii, verify
+from conda.signature import KEYS_DIR, sig2ascii, verify, SignatureError
 
 
 
@@ -84,7 +84,11 @@ def main():
 
     if opts.verify:
         for path in args:
-            print('%-65s %s' % (path, verify(path)))
+            try:
+                disp = 'VALID' if verify(path) else 'INVALID'
+            except SignatureError as e:
+                disp = 'ERROR: %s' % e
+            print('%-40s %s' % (path, disp))
         return
 
     key_name = get_default_keyname()
