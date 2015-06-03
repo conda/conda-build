@@ -266,7 +266,7 @@ def main(args, parser):
 
         if not is_url:
             dir_path = join(output_dir, package.lower())
-            if exists(dir_path):
+            if exists(dir_path) and not args.version_compare:
                 raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package,
             {
@@ -289,15 +289,16 @@ def main(args, parser):
         if is_url:
             d['version'] = 'UNKNOWN'
         else:
+            versions = client.package_releases(package, True)
+            if args.version_compare:
+                version_compare(args, package, versions)
             if args.version:
                 [version] = args.version
-                versions = client.package_releases(package, True)
                 if version not in versions:
                     sys.exit("Error: Version %s of %s is not available on PyPI."
                              % (version, package))
                 d['version'] = version
             else:
-                versions = client.package_releases(package)
                 if not versions:
                     # The xmlrpc interface is case sensitive, but the index itself
                     # is apparently not (the last time I checked,
@@ -406,6 +407,41 @@ def main(args, parser):
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
+
+
+def version_compare(args, package, versions):
+    if not versions:
+        # PyPI is case sensitive, this will pass control
+        # to a method in main() to take care of that.
+        return
+
+    from os.path import abspath, isdir
+    from conda_build.metadata import MetaData
+    from conda.resolve import normalized_version
+    nv = normalized_version
+
+    norm_versions = [nv(ver) for ver in versions]
+
+    recipe_dir = abspath(package.lower())
+    if not isdir(recipe_dir):
+        sys.exit("Error: no such directory: %s" % recipe_dir)
+    m = MetaData(recipe_dir)
+    local_version = nv(m.version())
+    print("Local recipe for %s has version %s" % (package, local_version))
+    if local_version not in versions:
+        sys.exit("Error: %s %s is not available on PyPI."
+                 % (package, local_version))
+    else:
+        # Comparing normalized versions, displaying non normalized ones
+        new_versions = versions[:norm_versions.index(local_version)]
+        if len(new_versions) > 0:
+            print("Following new versions of %s are avaliable" % (package))
+            for ver in new_versions:
+                print(ver)
+        else:
+            print("No new version for %s is available" % (package))
+        sys.exit()
+
 
 def get_package_metadata(args, package, d, data):
     # Unfortunately, two important pieces of metadata are only stored in
