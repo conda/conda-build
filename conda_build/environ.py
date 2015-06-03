@@ -69,7 +69,7 @@ def get_hg_build_info(src_dir):
     env = os.environ.copy()
     env['HG_DIR'] = join(src_dir, '.hg')
     env = {str(key): str(value) for key, value in env.items()}
-    
+
     d = {}
     cmd = ["hg", "log", "--template",
            "{rev}|{node|short}|{latesttag}|{latesttagdistance}|{branch}",
@@ -82,14 +82,14 @@ def get_hg_build_info(src_dir):
     output = output.decode('utf-8')
     rev, short_id, tag, distance, branch = output.split('|')
     if tag != 'null':
-        d['HG_LATEST_TAG'] = tag
+        d['HG_DESCRIBE_TAG'] = tag
     if branch == "":
         branch = 'default'
     d['HG_BRANCH'] = branch
     d['HG_NUM_ID'] = rev
-    d['HG_LATEST_TAG_DISTANCE'] = distance
-    d['HG_SHORT_ID'] = short_id
-    d['HG_BUILD_STR'] = '{}_{}'.format(d['HG_NUM_ID'], d['HG_SHORT_ID'])
+    d['HG_DESCRIBE_NUMBER'] = distance
+    d['HG_DESCRIBE_HASH'] = short_id
+    d['HG_BUILD_STR'] = '{}_{}'.format(d['HG_DESCRIBE_NUMBER'], d['HG_DESCRIBE_HASH'])
     return d
 
 def get_dict(m=None, prefix=None):
