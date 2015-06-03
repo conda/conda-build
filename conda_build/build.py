@@ -24,7 +24,7 @@ from conda.compat import PY3
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked
 from conda.utils import url_path
-from conda.resolve import Resolve, MatchSpec
+from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
@@ -270,8 +270,9 @@ def warn_on_old_conda_build(index):
         print("WARNING: Could not detect installed version of conda-build", file=sys.stderr)
         return
     r = Resolve(index)
-    pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
-    if not pkgs:
+    try:
+        pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
+    except NoPackagesFound:
         print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)
         return
     if pkgs[-1].version != vers_inst[0]:
