@@ -10,7 +10,8 @@ from os.path import isdir, join
 from Crypto.PublicKey import RSA
 from Crypto import Random
 
-from conda.signature import KEYS_DIR, hash_file, sig2ascii, verify
+from conda.utils import sha256_file
+from conda.signature import KEYS_DIR, sig2ascii, verify
 
 
 
@@ -39,7 +40,7 @@ def get_default_keyname():
 
 
 def sign(path, key):
-    return sig2ascii(key.sign(hash_file(path), '')[0])
+    return sig2ascii(key.sign(sha256_file(path), '')[0])
 
 
 def main():
