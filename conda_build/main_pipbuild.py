@@ -295,6 +295,7 @@ def make_recipe(package, version):
 
 def build_package(package, version=None):
     if conda_package_exists(package):
+        print("conda package for %s already exist" % (package))
         return 0
     if ' ' in package:
         package, version = package.split(' ')
