@@ -92,6 +92,8 @@ def main():
         return
 
     key_name = get_default_keyname()
+    if key_name is None:
+        sys.exit("Error: no private key found in %s" % KEYS_DIR)
     print("Using private key '%s' for signing." % key_name)
     key = RSA.importKey(open(join(KEYS_DIR, key_name)).read())
     for path in args:
