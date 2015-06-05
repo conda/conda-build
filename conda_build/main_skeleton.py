@@ -133,6 +133,13 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
              "Default is the one with least source size."
         )
 
+    pypi.add_argument(
+        "--noarch-python",
+        action='store_true',
+        default=False,
+        help="Creates recipe as noarch python"
+        )
+
     cpan = repos.add_parser(
         "cpan",
         help="""
