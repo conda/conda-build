@@ -81,10 +81,13 @@ def get_hg_build_info(src_dir):
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
     rev, short_id, tag, distance, branch = output.split('|')
-    if tag != 'null':
-        d['HG_DESCRIBE_TAG'] = tag
     if branch == "":
         branch = 'default'
+    if tag != 'null':
+        d['HG_DESCRIBE_TAG'] = tag
+    else:
+        # when no tag given, then use branch name
+        d['HG_DESCRIBE_TAG'] = branch
     d['HG_BRANCH'] = branch
     d['HG_NUM_ID'] = rev
     d['HG_DESCRIBE_NUMBER'] = distance
