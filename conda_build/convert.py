@@ -265,7 +265,7 @@ def get_pure_py_file_map(t, platform):
                     batseen.add(oldpath)
                     files = files + newpath + "\n"
 
-    files = '\n'.join(sorted(files.split())) + '\n'
+    files = '\n'.join(sorted(files.splitlines())) + '\n'
     if PY3:
         files = bytes(files, 'utf-8')
     filemember.size = len(files)
