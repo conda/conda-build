@@ -503,22 +503,15 @@ def get_package_metadata_vcs(args, package, d, data):
     if not isdir(SRC_CACHE):
         makedirs(SRC_CACHE)
 
-    d['VCS_URL'] = package
+    d['VCS_URL'] = os.path.abspath(package)  # full path
 
     try:
         if vcs == 'hg':
-            info = environ.get_hg_build_info(package)
+            ptrn = '{{ environ.get("%s", %s) }}'
+            d['VCS_BUILD_STR'] = ptrn % ('HG_BUILD_STR', "''")
+            d['VCS_DESCRIBE_NUMBER'] = ptrn % ('HG_DESCRIBE_NUMBER', 0)
+            d['VCS_VERSION'] = ptrn % ('HG_DESCRIBE_TAG', "''")
 
-            d.update(info)
-            # defaults because of .format()
-            d.setdefault('HG_DESCRIBE_TAG', '')
-            d.setdefault('HG_DESCRIBE_NUMBER', 0)
-
-            # insert unified names (VCS_)
-            for k, v in info.iteritems():
-                kk = k.replace('HG', 'VCS')
-                d[kk] = v
-            d['VCS_VERSION'] = d['HG_DESCRIBE_TAG']
             archive_cmd = 'hg archive %s' % tempdir
             archive_cmd = archive_cmd.split(' ')
             env = os.environ.copy()
@@ -532,7 +525,7 @@ def get_package_metadata_vcs(args, package, d, data):
                                       cwd=package)
         print("Archive done")
         src_dir = tempdir
-        get_full_info(package, d, src_dir, tempdir, output_dir, args)
+        get_full_info(package, d, data, src_dir, tempdir, output_dir, args)
         d['build_comment'] = ''
     finally:
         rm_rf(tempdir)
@@ -568,12 +561,12 @@ def get_package_metadata(args, package, d, data):
         print("done")
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
-        get_full_info(package, d, src_dir, tempdir, output_dir, args)
+        get_full_info(package, d, data, src_dir, tempdir, output_dir, args)
     finally:
         rm_rf(tempdir)
 
 
-def get_full_info(package, d, src_dir, tempdir, output_dir, args):
+def get_full_info(package, d, data, src_dir, tempdir, output_dir, args):
     import yaml
     run_setuppy(src_dir, tempdir, args)
     with open(join(tempdir, 'pkginfo.yaml')) as fn:
