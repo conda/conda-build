@@ -53,6 +53,7 @@ source:
    # - fix.patch
 
 {build_comment}build:
+  {noarch_python_comment}noarch_python: True
   {egg_comment}preserve_egg_dir: True
   {entry_comment}entry_points:
     # Put any entry points (scripts to be generated automatically) here. The
@@ -275,6 +276,7 @@ def main(args, parser):
                 'build_depends': '',
                 'entry_points': '',
                 'build_comment': '# ',
+                'noarch_python_comment': '# ',
                 'test_commands': '',
                 'usemd5': '',
                 'test_comment': '',
@@ -589,6 +591,10 @@ def get_package_metadata(args, package, d, data):
                     if not exists(join(output_dir, dep)):
                         if dep not in args.created_recipes:
                             args.packages.append(dep)
+
+        if d['build_comment'] == '':
+            if args.noarch_python:
+                d['noarch_python_comment'] = ''
 
         if 'packagename' not in d:
             d['packagename'] = pkginfo['name'].lower()
