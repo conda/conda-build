@@ -26,6 +26,8 @@ class Config(object):
 
     PY3K = int(bool(CONDA_PY >= 30))
 
+    noarch = False
+
     def get_conda_py(self):
         return self.CONDA_PY
 
@@ -95,7 +97,10 @@ class Config(object):
 
     @property
     def bldpkgs_dir(self):
-        return join(self.croot, cc.subdir)
+        if self.noarch:
+            return join(self.croot, "noarch")
+        else:
+            return join(self.croot, cc.subdir)
 
 config = Config()
 
