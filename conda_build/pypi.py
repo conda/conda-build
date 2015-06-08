@@ -307,7 +307,6 @@ def main(args, parser):
                         cased_package = all_packages[all_packages_lower.index(package.lower())]
                         if cased_package != package:
                             print("%s not found, trying %s" % (package, cased_package))
-                            print(len(args.packages))
                             args.packages.append(cased_package)
                             del package_dicts[package]
                             continue
