@@ -581,7 +581,8 @@ def get_package_metadata(args, package, d, data):
             d['import_tests'] = INDENT.join(sorted(deps))
             d['import_comment'] = ''
 
-            d['tests_require'] = INDENT.join(sorted(pkginfo['tests_require']))
+            d['tests_require'] = INDENT.join(sorted([spec_from_line(pkg) for pkg
+                                                     in pkginfo['tests_require']]))
 
         if pkginfo['homeurl'] is not None:
             d['homeurl'] = pkginfo['homeurl']
