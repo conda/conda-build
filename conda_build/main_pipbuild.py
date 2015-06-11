@@ -69,6 +69,11 @@ PyPI is using conda skeleton pypi and conda build.
         default='http://pypi.python.org/pypi',
         help="Url to use for PyPI.",
     )
+    p.add_argument(
+        "--noarch-python",
+        action="store_true",
+        default=False,
+        help="Creates package as noarch")
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -125,6 +130,9 @@ meta_template = """package:
   name: {packagename}
   version: !!str {version}
 
+{build_comment}build:
+  {noarch_python_comment}noarch_python: True
+
 requirements:
   build:
     - python
@@ -166,7 +174,7 @@ def build_recipe(package, version=None):
     return os.path.abspath(direc)
 
 
-def convert_recipe(direc, package):
+def convert_recipe(direc, package, noarch_python=False):
     print("Converting recipe in {0}".format(direc))
     buildstr = 'pip install %s\n' % package
     # convert build.sh file and bld.bat file
@@ -198,6 +206,13 @@ def convert_recipe(direc, package):
     d['homeurl'] = meta['about']['home']
     d['license'] = meta['about']['license']
     d['summary'] = meta['about']['summary']
+
+    if noarch_python:
+        d['build_comment'] = ''
+        d['noarch_python_comment'] = ''
+    else:
+        d['build_comment'] = '# '
+        d['noarch_python_comment'] = '# '
 
     with open(os.path.join(direc, 'meta.yaml'), 'w') as fid:
         fid.write(meta_template.format(**d))
@@ -238,7 +253,7 @@ def get_all_dependencies(package, version):
     return depends
 
 
-def make_recipe(package, version):
+def make_recipe(package, version, noarch_python=False):
     if version is None:
         release = client.package_releases(package)
         if len(release) > 0:
@@ -287,22 +302,31 @@ def make_recipe(package, version):
     d['license'] = license
     d['summary'] = repr(data['summary'])
 
+    if noarch_python:
+        d['build_comment'] = ''
+        d['noarch_python_comment'] = ''
+    else:
+        d['build_comment'] = '# '
+        d['noarch_python_comment'] = '# '
+
     with open(os.path.join(direc, 'meta.yaml'), 'w') as fid:
         fid.write(meta_template.format(**d))
 
     return direc, depends
 
 
-def build_package(package, version=None):
+def build_package(package, version=None, noarch_python=False):
     if conda_package_exists(package):
         return 0
     if ' ' in package:
         package, version = package.split(' ')
     try:
         directory = build_recipe(package, version=version)
-        dependencies = convert_recipe(directory, package)
+        dependencies = convert_recipe(directory, package,
+                                      noarch_python=noarch_python)
     except RuntimeError:
-        directory, dependencies = make_recipe(package, version)
+        directory, dependencies = make_recipe(package, version,
+                                              noarch_python=noarch_python)
 
     try:
         print("package = %s" % package)
@@ -355,10 +379,10 @@ def execute(args, parser):
               (version, package))
 
     if all_versions:
-        build_package(package, version)
+        build_package(package, version, noarch_python=args.noarch_python)
     else:
         version = releases[0]
-        build_package(package, version)
+        build_package(package, version, noarch_python=args.noarch_python)
 
 
 if __name__ == '__main__':
