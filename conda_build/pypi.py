@@ -759,12 +759,12 @@ def run_setuppy(src_dir, temp_dir, args):
         env[str('PYTHONPATH')] = str(src_dir)
     cwd = getcwd()
     chdir(src_dir)
-    args = [config.build_python, 'setup.py', 'install']
+    cmdargs = [config.build_python, 'setup.py', 'install']
     try:
-        subprocess.check_call(args, env=env)
+        subprocess.check_call(cmdargs, env=env)
     except subprocess.CalledProcessError:
         print('$PYTHONPATH = %s' % env['PYTHONPATH'])
-        sys.exit('Error: command failed: %s' % ' '.join(args))
+        sys.exit('Error: command failed: %s' % ' '.join(cmdargs))
     finally:
         chdir(cwd)
 
