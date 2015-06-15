@@ -462,7 +462,7 @@ def get_package_metadata(args, package, d, data):
     # distribute itself already works by monkeypatching distutils.
 
     import yaml
-    print("Downloading %s (use --no-download to skip this step)" % package)
+    print("Downloading %s" % package)
     tempdir = mkdtemp('conda_skeleton_' + d['filename'])
 
     [output_dir] = args.output_dir

@@ -83,16 +83,6 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
-        "--no-download",
-        action="store_false",
-        dest="download",
-        default=True,
-        help="""Don't download the package. This will keep the recipe from finding the
-                right dependencies and entry points if the package uses
-                distribute.  WARNING: Without this flag, conda skeleton pypi
-                downloads and runs the package's setup.py script."""
-    )
-    pypi.add_argument(
         "--no-prompt",
         action="store_true",
         default=False,
