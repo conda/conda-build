@@ -99,29 +99,6 @@ Error: cannot locate binstar (required for upload)
 # Modify the recipe directory to make a new recipe with just the dependencies
 #   and a build script that says pip install for both build.sh and build.bat
 
-
-def conda_package_exists(pkgname, version=None):
-    from conda.api import get_index
-    from conda.resolve import MatchSpec, Resolve
-
-    pyver = 'py%s' % sys.version[:3].replace('.', '')
-    index = get_index(use_cache=True)
-    r = Resolve(index)
-    try:
-        pkgs = r.get_pkgs(MatchSpec(pkgname))
-    except RuntimeError:
-        return False
-    exists = False
-    for pkg in pkgs:
-        match_pyver = pkg.build.startswith(pyver)
-        if not match_pyver:
-            continue
-        if version and pkg.version != version:
-            continue
-        exists = True
-        break
-    return exists
-
 skeleton_template = "conda skeleton pypi {0} --no-prompt"
 skeleton_template_wversion = "conda skeleton pypi {0} --version {1} --no-prompt"
 build_template = "conda build {0} --no-binstar-upload --no-test"
@@ -316,8 +293,6 @@ def make_recipe(package, version, noarch_python=False):
 
 
 def build_package(package, version=None, noarch_python=False):
-    if conda_package_exists(package):
-        return 0
     if ' ' in package:
         package, version = package.split(' ')
     try:
