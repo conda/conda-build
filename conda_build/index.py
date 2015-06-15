@@ -9,7 +9,7 @@ import bz2
 import sys
 import json
 import tarfile
-from os.path import join, getmtime
+from os.path import isfile, join, getmtime
 
 from conda_build.utils import file_info
 from conda.compat import PY3
@@ -87,6 +87,9 @@ Error:
         d = read_index_tar(path)
         d.update(file_info(path))
         index[fn] = d
+
+    for fn in files:
+        index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
 
     if remove:
         # remove files from the index which are not on disk
