@@ -7,12 +7,11 @@ import tarfile
 import zipfile
 import subprocess
 import operator
-import urlparse
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
 
 from conda.utils import md5_file
-from conda.compat import PY3, iteritems
+from conda.compat import PY3, iteritems, urlparse
 
 from conda_build import external
 
@@ -22,7 +21,7 @@ rm_rf
 
 def valid_url(url):
     """ Check to see if url is valid by checking the scheme and netloc portions """
-    parts = urlparse.urlparse(url)
+    parts = urlparse(url)
     if parts.scheme and parts.netloc:
         return True
     return False
