@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
+import urlparse
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, ignore_patterns, copy2
 from subprocess import check_call, Popen, PIPE
@@ -219,10 +220,20 @@ def svn_source(meta):
 
 
 def apply_patch(src_dir, path):
+    """
+    Patches can be requested directly from github pull requests
+    or applied from local patch files.
+
+    All remote patches conda has to download are assumed to be 
+    patch -p1 patches.
+
+    All local patches (in the recipe directory) are assumed to be
+    patch -p0 patches
+    """
     print('Applying patch: %r' % path)
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
-
+    
     patch = external.find_executable('patch')
     if patch is None:
         sys.exit("""\
@@ -231,7 +242,16 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    
+    if isfile(path):
+        patch_level = '-p0'
+        patch_file = path
+    elif valid_url(path):
+        patch_file = '.github.diff'
+        download(path, patch_file)
+        patch_level = '-p1'
+
+    check_call([patch, patch_level, '-i', patch_file], cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):

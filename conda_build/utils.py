@@ -7,6 +7,7 @@ import tarfile
 import zipfile
 import subprocess
 import operator
+import urlparse
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
 
@@ -18,6 +19,13 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 rm_rf
+
+def valid_url(url):
+    """ Check to see if url is valid by checking the scheme and netloc portions """
+    parts = urlparse.urlparse(url)
+    if parts.scheme and parts.netloc:
+        return True
+    return False
 
 def copy_into(src, dst):
     "Copy all the files and directories in src to the directory dst"
