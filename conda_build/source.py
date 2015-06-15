@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-import urlparse
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, ignore_patterns, copy2
 from subprocess import check_call, Popen, PIPE
