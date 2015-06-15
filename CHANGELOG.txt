@@ -9,6 +9,22 @@
   * add --no-remove option to conda index
   * various fixes for --python, --numpy, --perl, and --R
   * various cleanups for the command documentation
+  * fix conda skeleton pypi --pypi-url
+  * don't add the module name to the import tests in conda skeleton pypi
+  * add --groupby option to conda inspect linkages
+  * fix some incorrect "not found" instances from conda inspect linkages on OS
+    X
+  * don't include versions with restrictions in the build string
+  * don't fail if conda-build cannot be found for the version check
+  * remove special logic if the username on Windows is "builder"
+  * conda skeleton pypi: add --noarch-python
+  * fix issue with filenames with spaces in conda convert
+  * place noarch packages in the noarch directory
+  * handle tests_require in conda skeleton pypi
+  * pipbuild: don't check if package already exists
+  * skeleton pypi: remove --no-download option
+  * add noarch option to pipbuild
+  * add ability to sign packages
 
 2015-05-19   1.13.0:
 --------------------
