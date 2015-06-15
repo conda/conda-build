@@ -257,7 +257,7 @@ def make_recipe(package, version, noarch_python=False):
     if version is None:
         release = client.package_releases(package)
         if len(release) > 0:
-            version = [0]
+            version = release[0]
         else:
             raise RuntimeError("Empty releases for %s" % package)
     depends = get_all_dependencies(package, version)
