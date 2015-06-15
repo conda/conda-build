@@ -322,65 +322,16 @@ def main(args, parser):
                     print("Use --version to specify a different version.")
                 d['version'] = versions[0]
 
-        data = client.release_data(package, d['version']) if not is_url else None
-        urls = client.release_urls(package, d['version']) if not is_url else [package]
-        if not is_url and not args.all_urls:
-            # Try to find source urls
-            urls = [url for url in urls if url['python_version'] == 'source']
-        if not urls:
-            if 'download_url' in data:
-                urls = [defaultdict(str, {'url': data['download_url']})]
-                if not urls[0]['url']:
-                    # The package doesn't have a url, or maybe it only has a wheel.
-                    sys.exit("Error: Could not build recipe for %s. "
-                        "Could not find any valid urls." % package)
-                U = parse_url(urls[0]['url'])
-                if not U.path:
-                    sys.exit("Error: Could not parse url for %s: %s" %
-                        (package, U))
-                urls[0]['filename'] = U.path.rsplit('/')[-1]
-                fragment = U.fragment or ''
-                if fragment.startswith('md5='):
-                    d['usemd5'] = ''
-                    d['md5'] = fragment[len('md5='):]
-                else:
-                    d['usemd5'] = '#'
-            else:
-                sys.exit("Error: No source urls found for %s" % package)
-        if len(urls) > 1 and not args.noprompt:
-            print("More than one source version is available for %s:" %
-                  package)
-            if args.manual_url:
-                for i, url in enumerate(urls):
-                    print("%d: %s (%s) %s" % (i, url['url'],
-                          human_bytes(url['size']), url['comment_text']))
-                n = int(input("which version should i use? "))
-            else:
-                print("Using the one with the least source size")
-                print("use --manual-url to override this behavior")
-                min_siz, n = min([(url['size'], i)
-                                  for (i, url) in enumerate(urls)])
-        else:
-            n = 0
+        data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(args,
+                                                                        client,
+                                                                        package,
+                                                                        d['version'],
+                                                                        is_url)
 
-        if not is_url:
-            print("Using url %s (%s) for %s." % (urls[n]['url'],
-                human_bytes(urls[n]['size'] or 0), package))
-            d['pypiurl'] = urls[n]['url']
-            d['md5'] = urls[n]['md5_digest']
-            d['filename'] = urls[n]['filename']
+        if d['md5'] == '':
+            d['usemd5'] = '# '
         else:
-            print("Using url %s" % package)
-            d['pypiurl'] = package
-            U = parse_url(package)
-            if U.fragment and U.fragment.startswith('md5='):
-                d['usemd5'] = ''
-                d['md5'] = U.fragment[len('md5='):]
-            else:
-                d['usemd5'] = '#'
-                d['md5'] = ''
-            # TODO: 'package' won't work with unpack()
-            d['filename'] = U.path.rsplit('/', 1)[-1] or 'package'
+            d['usemd5'] = ''
 
         d['import_tests'] = ''
 
@@ -414,6 +365,67 @@ def main(args, parser):
             f.write(PYPI_BLD_BAT.format(**d))
 
     print("Done")
+
+
+def get_download_data(args, client, package, version, is_url):
+    data = client.release_data(package, version) if not is_url else None
+    urls = client.release_urls(package, version) if not is_url else [package]
+    if not is_url and not args.all_urls:
+        # Try to find source urls
+        urls = [url for url in urls if url['python_version'] == 'source']
+    if not urls:
+        if 'download_url' in data:
+            urls = [defaultdict(str, {'url': data['download_url']})]
+            if not urls[0]['url']:
+                # The package doesn't have a url, or maybe it only has a wheel.
+                sys.exit("Error: Could not build recipe for %s. "
+                    "Could not find any valid urls." % package)
+            U = parse_url(urls[0]['url'])
+            if not U.path:
+                sys.exit("Error: Could not parse url for %s: %s" %
+                    (package, U))
+            urls[0]['filename'] = U.path.rsplit('/')[-1]
+            fragment = U.fragment or ''
+            if fragment.startswith('md5='):
+                md5 = fragment[len('md5='):]
+            else:
+                md5 = ''
+        else:
+            sys.exit("Error: No source urls found for %s" % package)
+    if len(urls) > 1 and not args.noprompt:
+        print("More than one source version is available for %s:" %
+                package)
+        if args.manual_url:
+            for i, url in enumerate(urls):
+                print("%d: %s (%s) %s" % (i, url['url'],
+                        human_bytes(url['size']), url['comment_text']))
+            n = int(input("which version should i use? "))
+        else:
+            print("Using the one with the least source size")
+            print("use --manual-url to override this behavior")
+            min_siz, n = min([(url['size'], i)
+                                for (i, url) in enumerate(urls)])
+    else:
+        n = 0
+
+    if not is_url:
+        print("Using url %s (%s) for %s." % (urls[n]['url'],
+            human_bytes(urls[n]['size'] or 0), package))
+        pypiurl = urls[n]['url']
+        md5 = urls[n]['md5_digest']
+        filename = urls[n]['filename']
+    else:
+        print("Using url %s" % package)
+        pypiurl = package
+        U = parse_url(package)
+        if U.fragment and U.fragment.startswith('md5='):
+            md5 = U.fragment[len('md5='):]
+        else:
+            md5 = ''
+        # TODO: 'package' won't work with unpack()
+        filename = U.path.rsplit('/', 1)[-1] or 'package'
+
+    return (data, pypiurl, filename, md5)
 
 
 def version_compare(args, package, versions):
@@ -452,7 +464,6 @@ def version_compare(args, package, versions):
 
 def get_package_metadata(args, package, d, data):
 
-    import yaml
     print("Downloading %s" % package)
 
     [output_dir] = args.output_dir
