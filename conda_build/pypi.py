@@ -515,30 +515,8 @@ def get_package_metadata(args, package, d, data):
                 d['build_comment'] = ''
                 d['test_commands'] = INDENT.join([''] + make_entry_tests(entry_list))
 
-    # Look for package[extra,...] features spec:
-    match_extras = re.match(r'^([^[]+)\[([^]]+)\]$', package)
-    if match_extras:
-        package, extras = match_extras.groups()
-        extras = extras.split(',')
-    else:
-        extras = []
+    requires = get_requirements(package, pkginfo, all_extras=args.all_extras)
 
-    # Extract requested extra feature requirements...
-    if args.all_extras:
-        extras_require = list(pkginfo['extras_require'].values())
-    else:
-        try:
-            extras_require = [pkginfo['extras_require'][x] for x in extras]
-        except KeyError:
-            sys.exit("Error: Invalid extra features: [%s]"
-                    % ','.join(extras))
-    #... and collect all needed requirement specs in a single list:
-    requires = []
-    for specs in [pkginfo['install_requires']] + extras_require:
-        if isinstance(specs, string_types):
-            requires.append(specs)
-        else:
-            requires.extend(specs)
     if requires or setuptools_build or setuptools_run:
         deps = []
         if setuptools_run:
@@ -685,6 +663,35 @@ def get_dir(tempdir):
         if isdir(dir_path):
             return dir_path
     raise Exception("could not find unpacked source dir")
+
+
+def get_requirements(package, pkginfo, all_extras=True):
+    # Look for package[extra,...] features spec:
+    match_extras = re.match(r'^([^[]+)\[([^]]+)\]$', package)
+    if match_extras:
+        package, extras = match_extras.groups()
+        extras = extras.split(',')
+    else:
+        extras = []
+
+    # Extract requested extra feature requirements...
+    if all_extras:
+        extras_require = list(pkginfo['extras_require'].values())
+    else:
+        try:
+            extras_require = [pkginfo['extras_require'][x] for x in extras]
+        except KeyError:
+            sys.exit("Error: Invalid extra features: [%s]" % ','.join(extras))
+
+    # ... and collect all needed requirement specs in a single list:
+    requires = []
+    for specs in [pkginfo['install_requires']] + extras_require:
+        if isinstance(specs, string_types):
+            requires.append(specs)
+        else:
+            requires.extend(specs)
+
+    return requires
 
 
 def get_pkginfo(package, filename, pypiurl, md5, python_version):
