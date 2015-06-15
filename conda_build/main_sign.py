@@ -19,8 +19,8 @@ Error: could not import Crypto (required for "conda sign").
     $ conda install -n root pycrypto
 """)
 
-from conda.utils import sha256_file
-from conda.signature import KEYS_DIR, sig2ascii, verify, SignatureError
+from conda.signature import (KEYS_DIR, hash_file, sig2ascii,
+                             verify, SignatureError)
 
 
 
@@ -54,7 +54,7 @@ def get_default_keyname():
 
 
 def sign(path, key):
-    return sig2ascii(key.sign(sha256_file(path), '')[0])
+    return sig2ascii(key.sign(hash_file(path), '')[0])
 
 
 def main():
