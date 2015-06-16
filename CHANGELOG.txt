@@ -1,5 +1,6 @@
-2015-XX-XX   1.XX.X:
+2015-XX-XX   1.14.X:
 --------------------
+  * add support for signing packages, and indexing them
   * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
     Unix, they where originally added in #228, but are causing problem for
     some people and are not really necessary
@@ -25,6 +26,7 @@
   * skeleton pypi: remove --no-download option
   * add noarch option to pipbuild
   * add ability to sign packages
+
 
 2015-05-19   1.13.0:
 --------------------
