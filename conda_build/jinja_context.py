@@ -9,7 +9,6 @@ import json
 import os
 
 from conda.compat import PY3
-from conda_build import environ
 from .environ import get_dict as get_environ
 
 _setuptools_data = None

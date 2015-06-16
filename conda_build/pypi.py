@@ -19,11 +19,8 @@ from shutil import copy2
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy, Transport, ProtocolError
-    from urllib2 import build_opener, ProxyHandler, Request, HTTPError
 else:
     from xmlrpc.client import ServerProxy, Transport, ProtocolError
-    from urllib.request import build_opener, ProxyHandler, Request
-    from urllib.error import HTTPError
 
 from conda.fetch import (download, handle_proxy_407)
 from conda.connection import CondaSession

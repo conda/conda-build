@@ -197,7 +197,8 @@ def osx_ch_link(path, link):
         return
 
     lib_to_link = relpath(dirname(link_loc), 'lib')
-    path_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
+    # path_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
+
     # e.g., if
     # path = '/build_prefix/lib/some/stuff/libstuff.dylib'
     # link_loc = 'lib/things/libthings.dylib'

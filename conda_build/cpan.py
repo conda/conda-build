@@ -505,7 +505,7 @@ def get_release_info(cpan_url, package, version, perl_version,
             with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
                 rel_dict = json.load(dist_json_file)
                 rel_dict['version'] = rel_dict['version'].lstrip('v')
-    except RuntimeError as e:
+    except RuntimeError:
         core_version = core_module_version(orig_package, perl_version)
         if core_version is not None and (version is None or
                                          (version == core_version)):
