@@ -58,32 +58,35 @@ def sign(path, key):
 
 
 def main():
-    from optparse import OptionParser
+    from conda.cli.conda_argparse import ArgumentParser
 
-    p = OptionParser(
-        usage="usage: %prog [option] [FILE ...]",
-        description="tool for signing conda packages")
+    p = ArgumentParser(
+        description="Tool for signing conda packages.")
 
-    p.add_option('-k', '--keygen',
+    p.add_argument('files',
+        help="Files to sign.",
+        nargs='*',
+        metavar="FILE",
+        )
+    p.add_argument('-k', '--keygen',
                  action="store",
-                 help="generate a public-private "
-                      "key pair ~/.conda/keys/<NAME>(.pub)",
+                 help="Generate a public-private "
+                      "key pair ~/.conda/keys/<NAME>(.pub).",
                  metavar="NAME")
-
-    p.add_option('-v', '--verify',
+    p.add_argument('-v', '--verify',
                  action="store_true",
-                 help="verify FILE(s)")
+                 help="Verify FILE(s).")
 
-    opts, args = p.parse_args()
+    args = p.parse_args()
 
-    if opts.keygen:
-        if args:
+    if args.keygen:
+        if args.files:
             p.error('no arguments expected for --keygen')
-        keygen(opts.keygen)
+        keygen(args.keygen)
         return
 
-    if opts.verify:
-        for path in args:
+    if args.verify:
+        for path in args.files:
             try:
                 disp = 'VALID' if verify(path) else 'INVALID'
             except SignatureError as e:
@@ -96,7 +99,7 @@ def main():
         sys.exit("Error: no private key found in %s" % KEYS_DIR)
     print("Using private key '%s' for signing." % key_name)
     key = RSA.importKey(open(join(KEYS_DIR, key_name)).read())
-    for path in args:
+    for path in args.files:
         print('signing: %s' % path)
         with open('%s.sig' % path, 'w') as fo:
             fo.write('%s ' % key_name)
