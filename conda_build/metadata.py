@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import re
 import sys
-import textwrap
 from os.path import isdir, isfile, join
 
 from conda.compat import iteritems, PY3, text_type
@@ -97,6 +96,7 @@ def yamlize(data):
     except yaml.parser.ParserError as e:
         try:
             import jinja2
+            jinja2
         except ImportError:
             raise exceptions.UnableToParseMissingJinja2(original=e)
         raise exceptions.UnableToParse(original=e)

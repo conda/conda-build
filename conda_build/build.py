@@ -15,8 +15,6 @@ import tarfile
 from os.path import exists, isdir, isfile, islink, join
 import fnmatch
 
-import yaml
-
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index

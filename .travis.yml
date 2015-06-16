@@ -20,11 +20,12 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda install --force --no-deps conda requests
-  - conda install pytest requests patchelf
+  - conda install pytest requests patchelf pyflakes
   - python setup.py install
   - conda info -a
 
 script:
+  - pyflakes conda_build tests bin/* bdist_conda.py setup.py example_packages
   - py.test tests
   - tests/test-recipes/build_recipes.sh
   - tests/test-skeleton/test-skeleton.sh

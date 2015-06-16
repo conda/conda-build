@@ -1,8 +1,17 @@
+"""
+This is code that is added to noarch Python packages. See
+conda_build/noarch_python.py.
+
+"""
 import os
 import sys
 import shutil
 from os.path import dirname, exists, isdir, join, normpath
 
+# Silence pyflakes. This variable is added when link.py is written by
+# conda_build.noarch_python.
+if False:
+    DATA = None
 
 THIS_DIR = dirname(__file__)
 PREFIX = normpath(sys.prefix)

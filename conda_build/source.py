@@ -3,12 +3,11 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser
-from shutil import copytree, ignore_patterns, copy2
+from shutil import copytree, copy2
 from subprocess import check_call, Popen, PIPE
 
 from conda.fetch import download
 from conda.utils import hashsum_file
-from conda.cli.common import error_and_exit
 
 from conda_build import external
 from conda_build.config import config
