@@ -1,6 +1,6 @@
-2015-XX-XX   1.14.X:
+2015-06-16   1.14.0:
 --------------------
-  * add support for signing packages, and indexing them
+  * add support for signing packages, and indexing them, #430
   * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
     Unix, they where originally added in #228, but are causing problem for
     some people and are not really necessary
