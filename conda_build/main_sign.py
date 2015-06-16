@@ -37,6 +37,7 @@ def keygen(name):
     with open(path, 'wb') as fo:
         fo.write(key.exportKey())
         fo.write(b'\n')
+    os.chmod(path, 0o600)
 
     path = join(KEYS_DIR, '%s.pub' % name)
     print("Storing public key : %s" % path)
