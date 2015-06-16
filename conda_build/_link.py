@@ -1,3 +1,8 @@
+"""
+This is code that is added to noarch Python packages. See
+conda_build/noarch_python.py.
+
+"""
 import os
 import sys
 import shutil
