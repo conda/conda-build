@@ -61,7 +61,8 @@ def main():
     from conda.cli.conda_argparse import ArgumentParser
 
     p = ArgumentParser(
-        description="Tool for signing conda packages.")
+        description="""Tool for signing conda packages. Signatures will be
+        written alongside the files as FILE.sig.""")
 
     p.add_argument('files',
         help="Files to sign.",
