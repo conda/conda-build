@@ -5,6 +5,7 @@ import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
 from subprocess import check_call, Popen, PIPE
+import locale
 
 from conda.fetch import download
 from conda.utils import hashsum_file
@@ -148,8 +149,9 @@ def git_info(fo=None):
                 ('git status', True)]:
         p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
         stdout, stderr = p.communicate()
-        stdout = stdout.decode('utf-8')
-        stderr = stderr.decode('utf-8')
+        encoding = locale.getpreferredencoding() or 'utf-8'
+        stdout = stdout.decode(encoding, 'ignore')
+        stderr = stderr.decode(encoding, 'ignore')
         if check_error and stderr and stderr.strip():
             raise Exception("git error: %s" % stderr)
         if fo:
