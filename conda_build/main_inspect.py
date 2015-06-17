@@ -176,6 +176,7 @@ untracked_package = _untracked_package()
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
+        exit()
 
     prefix = get_prefix(args)
     installed = ci.linked(prefix)
