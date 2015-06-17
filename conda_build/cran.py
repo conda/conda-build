@@ -531,6 +531,11 @@ grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
                         if not exists(join(output_dir, conda_name)):
                             args.packages.append(name)
 
+            if cran_package.get("NeedsCompilation", 'no') == 'yes':
+                if dep_type == 'build':
+                    deps.append('{indent}gcc # [not win]'.format(indent=INDENT))
+                else:
+                    deps.append('{indent}libgcc # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
         if manual_deps:
