@@ -18,14 +18,17 @@ from conda.utils import md5_file
 
 def read_index_tar(tar_path):
     """ Returns the index.json dict inside the given package tarball. """
-    with tarfile.open(tar_path) as t:
-        try:
-            return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
-        except EOFError:
-            raise RuntimeError("Could not extract %s. File probably corrupt."
-                % tar_path)
-        except OSError as e:
-            raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
+    try:
+        with tarfile.open(tar_path) as t:
+            try:
+                return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+            except EOFError:
+                raise RuntimeError("Could not extract %s. File probably corrupt."
+                    % tar_path)
+            except OSError as e:
+                raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
+    except tarfile.ReadError:
+        raise RuntimeError("Could not extract metadata from %s. File probably corrupt." % tar_path)
 
 def write_repodata(repodata, dir_path):
     """ Write updated repodata.json and repodata.json.bz2 """
