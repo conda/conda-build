@@ -227,6 +227,12 @@ Network (CRAN) (cran.r-project.org).
         dest='archive',
         help="Don't include an Archive download url.",
     )
+    cran.add_argument(
+        "--version-compare",
+        action='store_true',
+        help="""Compare the package version of the recipe with the one available
+        on CRAN. Exits 1 if a newer version is available and 0 otherwise."""
+    )
 
     p.set_defaults(func=execute)
 

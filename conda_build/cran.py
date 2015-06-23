@@ -10,13 +10,13 @@ import yaml
 import re
 import sys
 from os import makedirs
-from os.path import join, exists, isfile
+from os.path import join, exists, isfile, basename
 from itertools import chain
 import subprocess
 
 from conda.install import rm_rf
 
-from conda_build import source
+from conda_build import source, metadata
 
 CRAN_META = """\
 package:
@@ -369,7 +369,7 @@ def main(args, parser):
             package, session))
 
         dir_path = join(output_dir, 'r-' + package.lower())
-        if exists(dir_path):
+        if exists(dir_path) and not args.version_compare:
             raise RuntimeError("directory already exists: %s" % dir_path)
 
         cran_package = cran_metadata[package.lower()]
@@ -420,6 +420,9 @@ grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
         d['cran_version'] = cran_package['Version']
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .
         d['conda_version'] = d['cran_version'].replace('-', '_')
+        if args.version_compare:
+            sys.exit(not version_compare(dir_path, d['conda_version']))
+
         if not is_github_url:
             d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
             if args.archive:
@@ -562,3 +565,14 @@ conda install --no-deps {deps}
             f.write(CRAN_BLD_BAT.format(**d))
 
     print("Done")
+
+def version_compare(recipe_dir, newest_conda_version):
+    m = metadata.MetaData(recipe_dir)
+    local_version = m.version()
+    package = basename(recipe_dir)
+
+    print("Local recipe for %s has version %s." % (package, local_version))
+
+    print("The version on CRAN for %s is %s." % (package, newest_conda_version))
+
+    return local_version == newest_conda_version
