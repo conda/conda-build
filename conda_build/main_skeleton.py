@@ -104,8 +104,8 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
     pypi.add_argument(
         "--version-compare",
         action='store_true',
-        help='Compare the package version of the recipe with the one available'
-        'on PyPI'
+        help="""Compare the package version of the recipe with the one available
+        on PyPI."""
         )
     pypi.add_argument(
         "--python-version",
