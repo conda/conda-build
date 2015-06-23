@@ -297,6 +297,9 @@ def get_latest_git_tag():
     return tags[-1]
 
 def main(args, parser):
+    if len(args.packages) > 1 and args.version_compare:
+        parser.error("--version-compare only works with one package at a time")
+
     package_dicts = {}
 
     [output_dir] = args.output_dir
