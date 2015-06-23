@@ -9,7 +9,7 @@ with open('"$(dirname "${BASH_SOURCE[0]}")"/sympy-0.7.5/meta.yaml') as f:
     expected = yaml.load(f)
 with open('$DIR/sympy/meta.yaml') as f:
     actual = yaml.load(f)
-assert expected == actual
+assert expected == actual, (expected, actual)
 "
 # XXX: This won't run if the test fails.
 rm -rf $DIR
@@ -23,7 +23,7 @@ with open('"$(dirname "${BASH_SOURCE[0]}")"/sympy-0.7.5-url/meta.yaml') as f:
     expected = yaml.load(f)
 with open('$DIR/sympy/meta.yaml') as f:
     actual = yaml.load(f)
-assert expected == actual
+assert expected == actual, (expected, actual)
 "
 # XXX: This won't run if the test fails.
 rm -rf $DIR
