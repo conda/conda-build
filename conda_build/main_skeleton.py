@@ -233,7 +233,12 @@ Network (CRAN) (cran.r-project.org).
         help="""Compare the package version of the recipe with the one available
         on CRAN. Exits 1 if a newer version is available and 0 otherwise."""
     )
-
+    cran.add_argument(
+        "--update-outdated",
+        action="store_true",
+        help="""Update all outdated packages in the output directory (set by
+        --output-dir).""",
+    )
     p.set_defaults(func=execute)
 
     args = p.parse_args()
