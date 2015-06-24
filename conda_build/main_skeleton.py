@@ -61,7 +61,7 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         "--output-dir",
         action="store",
         nargs=1,
-        help="Directory to write recipes to.",
+        help="Directory to write recipes to (default: %(default)s).",
         default=".",
     )
     pypi.add_argument(
@@ -145,7 +145,7 @@ Network (CPAN) (cpan.org).
     )
     cpan.add_argument(
         "--output-dir",
-        help="Directory to write recipes to.",
+        help="Directory to write recipes to (default: %(default)s).",
         default=".",
     )
     cpan.add_argument(
@@ -175,14 +175,14 @@ Network (CRAN) (cran.r-project.org).
     cran.add_argument(
         "packages",
         action="store",
-        nargs='+',
+        nargs='*',
         help="""CRAN packages to create recipe skeletons for.""",
     )
     cran.add_argument(
         "--output-dir",
         action="store",
         nargs=1,
-        help="Directory to write recipes to.",
+        help="Directory to write recipes to (default: %(default)s).",
         default=".",
     )
     cran.add_argument(
