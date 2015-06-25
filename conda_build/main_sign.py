@@ -93,7 +93,7 @@ files as FILE.sig.""")
         try:
             keygen(args.keygen, int(2048 if args.size is None else args.size))
         except ValueError as e:
-            sys.exit(e)
+            sys.exit('Error: %s' % e)
         return
 
     if args.size is not None:
