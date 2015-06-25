@@ -201,6 +201,7 @@ def execute(args, parser):
     from conda_build.metadata import MetaData
 
     check_external()
+    channel_urls = args.channel or ()
 
     all_versions = {
         'python': [26, 27, 33, 34],
@@ -283,7 +284,8 @@ def execute(args, parser):
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
-                build.test(m, verbose=not args.quiet)
+                build.test(m, verbose=not args.quiet,
+                    channel_urls=channel_urls, override_channels=args.override_channels)
             elif args.source:
                 source.provide(m.path, m.get_section('source'))
                 print('Source tree in:', source.get_dir())
@@ -299,7 +301,6 @@ def execute(args, parser):
                     args.binstar_upload = False
                 else:
                     post = None
-                channel_urls = args.channel or ()
                 try:
                     build.build(m, verbose=not args.quiet, post=post,
                         channel_urls=channel_urls, override_channels=args.override_channels)
