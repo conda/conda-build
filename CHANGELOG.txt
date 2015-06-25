@@ -1,3 +1,9 @@
+2015-06-XX   1.14.1:
+--------------------
+  * add --size option to change RSA modulus length when generating RSA key
+    pairs (defaults to 2048)
+
+
 2015-06-16   1.14.0:
 --------------------
   * add support for signing packages, and indexing them, #430
