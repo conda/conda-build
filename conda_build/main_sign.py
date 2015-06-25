@@ -24,10 +24,10 @@ from conda.signature import (KEYS_DIR, hash_file, sig2ascii,
 
 
 
-def keygen(name):
-    print("Generating public/private key pair...")
+def keygen(name, size=2048):
+    print("Generating public/private key pair (%d bits)..." % size)
     random_generator = Random.new().read
-    key = RSA.generate(1024, random_generator)
+    key = RSA.generate(size, random_generator)
 
     if not isdir(KEYS_DIR):
         os.makedirs(KEYS_DIR)
@@ -76,6 +76,11 @@ files as FILE.sig.""")
                  help="Generate a public-private "
                       "key pair ~/.conda/keys/<NAME>(.pub).",
                  metavar="NAME")
+    p.add_argument('--size',
+                 action="store",
+                 help="Size of generated RSA public-private key pair in bits "
+                      "(defaults to 2048).",
+                 metavar="BITS")
     p.add_argument('-v', '--verify',
                  action="store_true",
                  help="Verify FILE(s).")
@@ -85,8 +90,14 @@ files as FILE.sig.""")
     if args.keygen:
         if args.files:
             p.error('no arguments expected for --keygen')
-        keygen(args.keygen)
+        try:
+            keygen(args.keygen, int(2048 if args.size is None else args.size))
+        except ValueError as e:
+            sys.exit(e)
         return
+
+    if args.size is not None:
+        p.error('--size option is only allowed with --keygen option')
 
     if args.verify:
         for path in args.files:
