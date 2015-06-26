@@ -6,11 +6,13 @@
 
 import os
 import sys
+import base64
 from os.path import isdir, join
 
 try:
-    from Crypto.PublicKey import RSA
     from Crypto import Random
+    from Crypto.PublicKey import RSA
+    from Crypto.Signature import PKCS1_PSS
 except ImportError:
     sys.exit("""\
 Error: could not import Crypto (required for "conda sign").
@@ -19,8 +21,7 @@ Error: could not import Crypto (required for "conda sign").
     $ conda install -n root pycrypto
 """)
 
-from conda.signature import (KEYS_DIR, hash_file, sig2ascii,
-                             verify, SignatureError)
+from conda.signature import KEYS_DIR, hash_file, verify, SignatureError
 
 
 
@@ -55,7 +56,9 @@ def get_default_keyname():
 
 
 def sign(path, key):
-    return sig2ascii(key.sign(hash_file(path), '')[0])
+    signer = PKCS1_PSS.new(key)
+    sig = signer.sign(hash_file(path))
+    return base64.b64encode(sig).decode('utf-8')
 
 
 def main():
