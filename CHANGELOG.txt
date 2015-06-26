@@ -1,7 +1,12 @@
 2015-06-XX   1.14.1:
 --------------------
   * add --size option to change RSA modulus length when generating RSA key
-    pairs (defaults to 2048)
+    pairs (defaults to 2048 bit)
+  * update default for CONDA_R to 3.2.0
+  * manually install dependencies of recommended R packages in the
+    build.sh, #457
+  * fix issues when git commits have non-ASCII characters, #458
+  * catch tarfile.ReadError in conda index, #460 
 
 
 2015-06-16   1.14.0:
