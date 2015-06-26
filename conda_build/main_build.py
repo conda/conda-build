@@ -271,6 +271,8 @@ def execute(args, parser):
 
             try:
                 m = MetaData(recipe_dir)
+                if m.get_value('build/noarch_python'):
+                    config.noarch = True
             except exceptions.YamlParsingError as e:
                 sys.stderr.write(e.error_msg())
                 sys.exit(1)

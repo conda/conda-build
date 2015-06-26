@@ -311,8 +311,6 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     '''
-    if m.get_value('build/noarch_python'):
-        config.noarch = True
 
     if (m.get_value('build/detect_binary_files_with_prefix')
         or m.binary_has_prefix_files()):
