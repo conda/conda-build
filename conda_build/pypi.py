@@ -598,9 +598,9 @@ def get_package_metadata(args, package, d, data):
                         if dep not in args.created_recipes:
                             args.packages.append(dep)
 
-        if d['build_comment'] == '':
-            if args.noarch_python:
-                d['noarch_python_comment'] = ''
+        if args.noarch_python:
+            d['noarch_python_comment'] = ''
+            d['build_comment'] = ''
 
         if 'packagename' not in d:
             d['packagename'] = pkginfo['name'].lower()
