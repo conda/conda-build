@@ -1,7 +1,8 @@
-2015-06-XX   1.14.1:
+2015-06-29   1.14.1:
 --------------------
   * add --size option to change RSA modulus length when generating RSA key
     pairs (defaults to 2048 bit)
+  * make use of Crypto.Signature.PKCS1_PSS module, see #469
   * update default for CONDA_R to 3.2.0
   * manually install dependencies of recommended R packages in the
     build.sh, #457
