@@ -190,7 +190,6 @@ def find_lib(link, path=None):
     print("Don't know how to find %s, skipping" % link)
 
 def osx_ch_link(path, link):
-    assert path.startswith(config.build_prefix + '/')
     print("Fixing linking of %s in %s" % (link, path))
     link_loc = find_lib(link, path)
     if not link_loc:
@@ -226,7 +225,15 @@ def osx_ch_link(path, link):
     ret = ret.replace('/./', '/')
     return ret
 
-def mk_relative_osx(path):
+def mk_relative_osx(path, develop=False):
+    '''
+    if develop=True, do not check the object is in conda's build environment.
+    The assertion is valid in conda build mode, which is used prior to
+    installing packages
+    '''
+    if not develop:
+        assert path.startswith(config.build_prefix + '/')
+
     assert sys.platform == 'darwin' and is_obj(path)
     s = macho.install_name_change(path, osx_ch_link)
 
