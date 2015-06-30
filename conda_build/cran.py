@@ -83,7 +83,10 @@ about:
 CRAN_BUILD_SH = """\
 #!/bin/bash
 
-{build_sh_recommended_extra}{build_sh_extra}
+# R refuses to build packages that mark themselves as Priority: Recommended
+mv DESCRIPTION DESCRIPTION.old
+grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
+
 $R CMD INSTALL --build .
 
 # Add more build steps here, if they are necessary.
@@ -360,7 +363,6 @@ def main(args, parser):
 
         if package.startswith('r-'):
             package = package[2:]
-        package = package.rstrip('/')
         if package.lower() not in cran_metadata:
             sys.exit("Package %s not found" % package)
 
@@ -388,16 +390,8 @@ def main(args, parser):
                 'homeurl': '',
                 'summary_comment': '#',
                 'summary': '',
-                'build_sh_recommended_extra': '',
-                'build_sh_extra': '',
             })
 
-        if d['cran_packagename'] in R_RECOMMENDED_PACKAGE_NAMES:
-            d['build_sh_recommended_extra'] = """\
-# R refuses to build packages that mark themselves as Priority: Recommended
-mv DESCRIPTION DESCRIPTION.old
-grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
-"""
         if is_github_url:
             d['url_key'] = ''
             d['fn_key'] = ''
@@ -491,7 +485,6 @@ grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
 
-        manual_deps = set()
         for dep_type in ['build', 'run']:
             deps = []
             for name in sorted(dep_dict):
@@ -516,15 +509,7 @@ grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
 
                     # The r package on Windows includes the recommended packages
                     if name in R_RECOMMENDED_PACKAGE_NAMES:
-                        if d['cran_packagename'] not in R_RECOMMENDED_PACKAGE_NAMES:
-                            end = ' # [not win]'
-                        else:
-                            # We assume that recommended packages all work
-                            # with the latest versions of each other.
-
-                            # TODO: What about recursive dependencies
-                            manual_deps.add(conda_name)
-                            continue
+                        end = ' # [not win]'
                     else:
                         end = ''
                     if dep_dict[name]:
@@ -543,17 +528,6 @@ grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
                 else:
                     deps.append('{indent}libgcc # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
-
-        if manual_deps:
-            # We have to install the package in the build
-            # script manually.
-            d['build_sh_extra'] += """
-# These recursively depend on {package}, since it is a recommended package, so
-# install them manually
-
-conda install --no-deps {deps}
-""".format(package=d['packagename'], deps=' '.join(sorted(manual_deps)))
-
 
     for package in package_dicts:
         d = package_dicts[package]

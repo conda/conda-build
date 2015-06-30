@@ -233,6 +233,13 @@ def create_info_files(m, files, include_recipe=True):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'))
 
+def get_build_index(clear_cache=True, channel_urls=(), override_channels=False):
+    if clear_cache:
+        # remove the cache such that a refetch is made,
+        # this is necessary because we add the local build repo URL
+        fetch_index.cache = {}
+    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+        prepend=not override_channels)
 
 def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
     override_channels=False):
@@ -243,12 +250,8 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
-        if clear_cache:
-            # remove the cache such that a refetch is made,
-            # this is necessary because we add the local build repo URL
-            fetch_index.cache = {}
-        index = get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
-            prepend=not override_channels)
+        index = get_build_index(clear_cache=True, channel_urls=(),
+            override_channels=False)
 
         warn_on_old_conda_build(index)
 
@@ -335,6 +338,15 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
             [ms.spec for ms in m.ms_depends('build')],
             verbose=verbose, channel_urls=channel_urls,
             override_channels=override_channels)
+
+        if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
+            print("%s is installed as a build dependency. Removing." %
+                m.name())
+            index = get_build_index(clear_cache=False, channel_urls=channel_urls, override_channels=override_channels)
+            actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
+            assert not plan.nothing_to_do(actions), actions
+            plan.display_actions(actions, index)
+            plan.execute_actions(actions, index)
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
