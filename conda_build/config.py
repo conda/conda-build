@@ -92,6 +92,10 @@ class Config(object):
         return join(self.build_prefix, 'info')
 
     @property
+    def meta_dir(self):
+        return join(self.build_prefix, 'conda-meta')
+
+    @property
     def broken_dir(self):
         return join(self.croot, "broken")
 
