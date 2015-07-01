@@ -405,13 +405,13 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
         assert not exists(config.info_dir)
-        assert not exists(config.meta_dir)
         files2 = prefix_files()
 
         post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files()
+        assert not any(config.meta_dir in join(config.build_prefix, f) for f in files2 - files1)
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
