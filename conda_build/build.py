@@ -250,8 +250,8 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
-        index = get_build_index(clear_cache=True, channel_urls=(),
-            override_channels=False)
+        index = get_build_index(clear_cache=True, channel_urls=channel_urls,
+            override_channels=override_channels)
 
         warn_on_old_conda_build(index)
 
