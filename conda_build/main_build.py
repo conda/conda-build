@@ -294,7 +294,7 @@ def execute(args, parser):
                 channel_urls=channel_urls,
                     override_channels=args.override_channels)
                 if m.pkg_fn() in index:
-                    print("%s is already built, skipping." % arg)
+                    print("%s is already built, skipping." % m.dist())
                     continue
             if args.output:
                 print(build.bldpkg_path(m))
