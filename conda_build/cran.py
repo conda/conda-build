@@ -573,6 +573,7 @@ def get_outdated(output_dir, cran_metadata):
 
         if recipe_name not in cran_metadata:
             print("Skipping %s, not found on CRAN" % recipe)
+            continue
 
         up_to_date = version_compare(join(output_dir, recipe),
             cran_metadata[recipe_name]['Version'].replace('-', '_'))
