@@ -18,7 +18,7 @@ from conda.cli.common import add_parser_channels
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__, exceptions
-
+from conda_build.index import update_index
 
 def main():
     p = ArgumentParser(
@@ -87,6 +87,12 @@ different sets of packages."""
         action="store_true",
         help="Run the post-build logic. Implies --no-test and --no-binstar-upload.",
     )
+    p.add_argument(
+        '--skip-existing',
+        action='store_true',
+        help="""Skip recipes for which there already exists an existing build
+        (locally or in the channels). """
+        )
     p.add_argument(
         '-q', "--quiet",
         action="store_true",
@@ -282,6 +288,14 @@ def execute(args, parser):
             m.check_fields()
             if args.check:
                 continue
+            if args.skip_existing:
+                update_index(config.bldpkgs_dir)
+                index = build.get_build_index(clear_cache=True,
+                channel_urls=channel_urls,
+                    override_channels=args.override_channels)
+                if m.pkg_fn() in index:
+                    print("%s is already built, skipping." % arg)
+                    continue
             if args.output:
                 print(build.bldpkg_path(m))
                 continue
