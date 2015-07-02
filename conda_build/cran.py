@@ -9,8 +9,8 @@ import yaml
 
 import re
 import sys
-from os import makedirs
-from os.path import join, exists, isfile, basename
+from os import makedirs, listdir
+from os.path import join, exists, isfile, basename, isdir
 from itertools import chain
 import subprocess
 
@@ -302,6 +302,12 @@ def get_latest_git_tag():
 def main(args, parser):
     if len(args.packages) > 1 and args.version_compare:
         parser.error("--version-compare only works with one package at a time")
+    if args.update_outdated:
+        if args.packages:
+            parser.error("No packages should be supplied with --update-outdated")
+    else:
+        if not args.packages:
+            parser.error("At least one package must be supplied")
 
     package_dicts = {}
 
@@ -326,6 +332,9 @@ def main(args, parser):
 
     cran_metadata = {d['Package'].lower(): d for d in map(dict_from_cran_lines,
         package_list)}
+
+    if args.update_outdated:
+        args.packages = get_outdated(args.output_dir, cran_metadata)
 
     while args.packages:
         package = args.packages.pop()
@@ -553,3 +562,27 @@ def version_compare(recipe_dir, newest_conda_version):
     print("The version on CRAN for %s is %s." % (package, newest_conda_version))
 
     return local_version == newest_conda_version
+
+def get_outdated(output_dir, cran_metadata):
+    to_update = []
+    for recipe in listdir(output_dir):
+        if not recipe.startswith('r-') or not isdir(recipe):
+            continue
+
+        recipe_name = recipe[2:]
+
+        if recipe_name not in cran_metadata:
+            print("Skipping %s, not found on CRAN" % recipe)
+
+        up_to_date = version_compare(join(output_dir, recipe),
+            cran_metadata[recipe_name]['Version'].replace('-', '_'))
+
+        if up_to_date:
+            print("%s is up-to-date." % recipe)
+            continue
+
+        print("Updating %s" % recipe)
+        to_update.append(recipe_name)
+        rm_rf(join(output_dir, recipe))
+
+    return to_update
