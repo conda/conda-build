@@ -249,6 +249,11 @@ def execute(args, parser):
                 raise RuntimeError("%s must be major.minor, not %s" %
                     (conda_version[lang], version))
 
+    if args.skip_existing:
+        update_index(config.bldpkgs_dir)
+        index = build.get_build_index(clear_cache=True,
+            channel_urls=channel_urls,
+            override_channels=args.override_channels)
 
     with Locked(config.croot):
         recipes = deque(args.recipe)
@@ -289,10 +294,6 @@ def execute(args, parser):
             if args.check:
                 continue
             if args.skip_existing:
-                update_index(config.bldpkgs_dir)
-                index = build.get_build_index(clear_cache=True,
-                channel_urls=channel_urls,
-                    override_channels=args.override_channels)
                 if m.pkg_fn() in index:
                     print("%s is already built, skipping." % m.dist())
                     continue
