@@ -395,6 +395,9 @@ class MetaData(object):
     def dist(self):
         return '%s-%s-%s' % (self.name(), self.version(), self.build_id())
 
+    def pkg_fn(self):
+        return "%s.tar.bz2" % self.dist()
+
     def is_app(self):
         return bool(self.get_value('app/entry'))
 
