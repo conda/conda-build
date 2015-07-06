@@ -84,7 +84,8 @@ def relink_sharedobjects(pkg_path):
     for b_file in bin_files:
         if sys.platform.startswith('linux'):
             # mk_relative_linux(f, rpaths=m.get_value('build/rpaths', ['lib']))
-            raise NotImplementedError("unclear what to do for this on linux")
+            print("unclear what to do for this on linux")
+
         elif sys.platform == 'darwin':
             mk_relative_osx(b_file, develop=True)
 
