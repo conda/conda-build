@@ -255,6 +255,7 @@ def execute(args, parser):
             channel_urls=channel_urls,
             override_channels=args.override_channels)
 
+    already_built = []
     with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
@@ -294,7 +295,7 @@ def execute(args, parser):
             if args.check:
                 continue
             if args.skip_existing:
-                if m.pkg_fn() in index:
+                if m.pkg_fn() in index or m.pkg_fn() in already_built:
                     print("%s is already built, skipping." % m.dist())
                     continue
             if args.output:
@@ -358,6 +359,7 @@ def execute(args, parser):
             if binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
 
+            already_built.append(m.pkg_fn())
 
 def args_func(args, p):
     try:
