@@ -236,8 +236,9 @@ Network (CRAN) (cran.r-project.org).
     cran.add_argument(
         "--update-outdated",
         action="store_true",
-        help="""Update all outdated packages in the output directory (set by
-        --output-dir).""",
+        help="""Update outdated packages in the output directory (set by
+        --output-dir).  If packages are given, they are updated; otherwise, all
+        recipes in the output directory are updated.""",
     )
     p.set_defaults(func=execute)
 
