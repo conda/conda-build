@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import shutil
+import textwrap
 from os.path import dirname, isdir, isfile, join, exists
 
 import conda.config as cc
@@ -54,36 +55,62 @@ def fix_staged_scripts():
 
 
 def msvc_env_cmd():
-    if 'ProgramFiles(x86)' in os.environ:
-        program_files = os.environ['ProgramFiles(x86)']
+    if config.CONDA_MSVC is not None:
+        msvc = config.CONDA_MSVC
+    elif config.PY3K:
+        msvc = 100
     else:
-        program_files = os.environ['ProgramFiles']
+        msvc = 90
 
-    localappdata = os.environ.get("localappdata")
-
-    if config.PY3K:
-        vcvarsall = os.path.join(program_files,
-                                 r'Microsoft Visual Studio 10.0'
-                                 r'\VC\vcvarsall.bat')
+    if msvc == 100:
+        setenv_paths = [
+            # SetEnv must be first choice because the default installation of
+            # Visual Studio 2010 Express has a 'vcvarsall.bat' that does not work
+            # for amd64 (even though it fails silently)
+            r'%ProgramFiles%\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd',
+            r'%ProgramFiles(x86)%\Microsoft Visual Studio 10.0\VC\vcvarsall.bat',
+            r'%ProgramFiles%\Microsoft Visual Studio 10.0\VC\vcvarsall.bat',
+        ]
+    elif msvc == 90:
+        setenv_paths = [
+            r'%ProgramFiles(x86)%\Microsoft Visual Studio 9.0\VC\vcvarsall.bat',
+            r'%ProgramFiles%\Microsoft Visual Studio 9.0\VC\vcvarsall.bat',
+            r'%LOCALAPPDATA%\Programs\Common\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat',
+            r'%ProgramFiles(x86)%\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat',
+            r'%ProgramFiles%\Common Files\Microsoft\Visual C++ for Python\9.0\vcvarsall.bat',
+        ]
     else:
-        vcvarsall = os.path.join(program_files,
-                                 r'Microsoft Visual Studio 9.0'
-                                 r'\VC\vcvarsall.bat')
+        raise ValueError('Unknown MSVC version "%s"' % msvc)
 
-    # Try the Microsoft Visual C++ Compiler for Python 2.7
-    if not isfile(vcvarsall) and localappdata and not config.PY3K:
-        vcvarsall = os.path.join(localappdata, "Programs", "Common",
-            "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
-    if not isfile(vcvarsall) and program_files and not config.PY3K:
-        vcvarsall = os.path.join(program_files, 'Common Files',
-            'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
-    if not isfile(vcvarsall):
-        print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)
+    for filename in setenv_paths:
+        filename = os.path.expandvars(filename)
+        if isfile(filename):
+            if 'SetEnv.cmd' in filename:
+                # When using SDK to build python 2.7 in MSVC100, we need to set
+                # additional variables and pass different parameters from vcvarsall
+                # see http://bugs.python.org/issue14708
+                mssdk = filename.replace(r'\Bin\SetEnv.cmd', '')
+                return textwrap.dedent('''
+                    set MSSDK=%s
+                    set DISTUTILS_USE_SDK=1
+                    call "%s" %s /Release
+                    ''' % (mssdk, filename, {32: '/x86', 64: '/x64'}[cc.bits])
+                )
+
+            # Otherwise, its a simple vcvarsall.bat call
+            return textwrap.dedent('''
+                call "%s" %s /Release
+                ''' % (filename, {32: 'x86', 64: 'amd64'}[cc.bits])
+            )
+
+    # If code reaches this point, we could not find MSVC.
+    # If the user specified a --msvc version, raise an error. Otherwise, just print a warning.
+    message = "Couldn't find Visual Studio in any of these paths: %r" % setenv_paths
+    if config.CONDA_MSVC is not None:
+        raise RuntimeError('Error: ' + message)
+    else:
+        print("Warning: " + message)
         return ''
-
-    return '''\
-call "%s" %s
-''' % (vcvarsall, {32: 'x86', 64: 'amd64'}[cc.bits])
 
 
 def kill_processes():

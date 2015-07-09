@@ -23,6 +23,7 @@ class Config(object):
         '')).replace('.', ''))
     CONDA_NPY = int(os.getenv('CONDA_NPY', '19').replace('.', ''))
     CONDA_R = os.getenv("CONDA_R", "3.2.0")
+    CONDA_MSVC = os.getenv("CONDA_MSVC")
 
     PY3K = int(bool(CONDA_PY >= 30))
 
