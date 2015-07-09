@@ -302,12 +302,8 @@ def get_latest_git_tag():
 def main(args, parser):
     if len(args.packages) > 1 and args.version_compare:
         parser.error("--version-compare only works with one package at a time")
-    if args.update_outdated:
-        if args.packages:
-            parser.error("No packages should be supplied with --update-outdated")
-    else:
-        if not args.packages:
-            parser.error("At least one package must be supplied")
+    if not args.update_outdated and not args.packages:
+        parser.error("At least one package must be supplied")
 
     package_dicts = {}
 
@@ -334,7 +330,10 @@ def main(args, parser):
         package_list)}
 
     if args.update_outdated:
-        args.packages = get_outdated(args.output_dir, cran_metadata)
+        args.packages = get_outdated(args.output_dir, cran_metadata, args.packages)
+        for pkg in args.packages:
+            rm_rf(join(args.output_dir, 'r-' + pkg))
+
 
     while args.packages:
         package = args.packages.pop()
@@ -563,13 +562,21 @@ def version_compare(recipe_dir, newest_conda_version):
 
     return local_version == newest_conda_version
 
-def get_outdated(output_dir, cran_metadata):
+def get_outdated(output_dir, cran_metadata, packages=()):
     to_update = []
-    for recipe in listdir(output_dir):
+    recipes = listdir(output_dir)
+    for recipe in recipes:
         if not recipe.startswith('r-') or not isdir(recipe):
             continue
 
         recipe_name = recipe[2:]
+
+        for i, package in enumerate(packages):
+            if package.endswith('/'):
+                packages[i] = package[:-1]
+
+        if not (recipe_name in packages or recipe in packages):
+            continue
 
         if recipe_name not in cran_metadata:
             print("Skipping %s, not found on CRAN" % recipe)
@@ -584,6 +591,5 @@ def get_outdated(output_dir, cran_metadata):
 
         print("Updating %s" % recipe)
         to_update.append(recipe_name)
-        rm_rf(join(output_dir, recipe))
 
     return to_update
