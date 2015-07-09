@@ -1,3 +1,12 @@
+
+  * add conda build --skip-existing
+  * show default in help for conda skeleton --output-dir
+  * add --update-outdated option to conda skeleton cran
+  * skeleton: fix noarch_python option when build_comment is "#"
+  * don't allow to build a package with the conda-meta directory
+  * automatically remove a package of the recipe itself if it is installed as
+    a build dependency
+
 2015-06-29   1.14.1:
 --------------------
   * add --size option to change RSA modulus length when generating RSA key
@@ -7,7 +16,7 @@
   * manually install dependencies of recommended R packages in the
     build.sh, #457
   * fix issues when git commits have non-ASCII characters, #458
-  * catch tarfile.ReadError in conda index, #460 
+  * catch tarfile.ReadError in conda index, #460
 
 
 2015-06-16   1.14.0:
