@@ -90,6 +90,16 @@ def relink_sharedobjects(pkg_path):
             mk_relative_osx(b_file, develop=True)
 
 
+def write_to_conda_pth(sp_dir, pkg_path):
+    '''
+    site-packages directory for current environment
+    append pkg_path to conda.pth
+    '''
+    with open(join(sp_dir, 'conda.pth'), 'a') as f:
+        f.write(pkg_path + '\n')
+        print("added " + pkg_path)
+
+
 def execute(args, parser):
     prefix = get_prefix(args)
     if not isdir(prefix):
@@ -109,14 +119,14 @@ Error: environment does not exist: %s
     for path in args.source:
         pkg_path = abspath(expanduser(path))
         if not args.post_link:
-            # build the package if setup.py is found then 
             stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
                               'lib/python%s' % py_ver)
             sp_dir = join(stdlib_dir, 'site-packages')
-            with open(join(sp_dir, 'conda.pth'), 'a') as f:
-                for path in args.source:
-                    f.write(pkg_path + '\n')
-                    print("added " + pkg_path)
+
+            # build the package if setup.py is found then invoke it with
+            # build_ext --inplace - this only exists for extensions
+
+            write_to_conda_pth(sp_dir, pkg_path)
 
         # go through the source looking for compiled extensions and make sure
         # they use the conda build environment for loading libraries at runtime
