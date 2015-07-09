@@ -126,6 +126,24 @@ different sets of packages."""
         multiple times to build against multiple versions.""",
         metavar="R_VER",
     )
+
+    if sys.platform == 'win32':
+        p.add_argument(
+            '--msvc',
+            action="append",
+            help="""Set the Microsoft Visual Studio Compiler version used by
+            conda build. Can be passed multiple times to build against multiple
+            versions.
+
+            By default, MSVC 9.0 (2008) is used for Python 2.*, and MSVC 10.0 (2010) for Python 3.*
+
+            Please keep in mind that Python 2.* and all extensions are compiled
+            with MSVC 2008 by default. If you wish to build anything with MSVC 2010,
+            you will have to build all packages (including python) with the same version.""",
+            choices=['9.0', '10.0'],
+            metavar="MSVC_VER",
+        )
+
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -215,14 +233,19 @@ def execute(args, parser):
         'perl': None,
         'R': None,
         }
+    if sys.platform == 'win32':
+        all_versions['msvc'] = None
+
     conda_version = {
         'python': 'CONDA_PY',
         'numpy': 'CONDA_NPY',
         'perl': 'CONDA_PERL',
         'R': 'CONDA_R',
         }
+    if sys.platform == 'win32':
+        conda_version['msvc'] = 'CONDA_MSVC'
 
-    for lang in ['python', 'numpy', 'perl', 'R']:
+    for lang in all_versions.keys():
         versions = getattr(args, lang)
         if not versions:
             continue
@@ -242,7 +265,11 @@ def execute(args, parser):
             version = int(versions[0].replace('.', ''))
             setattr(config, conda_version[lang], version)
         if not len(str(version)) == 2:
-            if all_versions[lang]:
+            if lang == 'msvc':
+                # msvc has a different version format, and parsing is handled
+                # by argparse choiches.
+                pass
+            elif all_versions[lang]:
                 raise RuntimeError("%s must be major.minor, like %s, not %s" %
                     (conda_version[lang], all_versions[lang][-1]/10, version))
             else:
