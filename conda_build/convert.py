@@ -161,7 +161,7 @@ path_mapping_bat_proxy = [
     ]
 
 path_mapping_unix_windows = [
-    (r'lib/python{pyver}/', r'Lib/'),
+    (r'lib/python(\d.\d)/', r'Lib/'),
     # Handle entry points already ending in .py. This is OK because these are
     # parsed in order. Only concern is if there are both script and script.py,
     # which seems unlikely
@@ -174,7 +174,7 @@ path_mapping_windows_unix = [
     (r'Scripts/', r'bin/'), # Not supported right now anyway
     ]
 
-pyver_re = re.compile(r'python\s+(\d.\d)')
+pyver_re = re.compile(r'python(?:(?:\s+[<>=]*)(\d.\d))?')
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
@@ -201,14 +201,21 @@ def get_pure_py_file_map(t, platform):
     if len(pythons) > 1:
         raise RuntimeError("Found more than one Python dependency in package %s"
             % t.name)
-    if len(pythons) == 0:
+    elif len(pythons) == 0:
         # not a Python package
         mapping = []
-    else:
+    elif pythons[0].group(1):
         pyver = pythons[0].group(1)
 
         mapping = [(re.compile(i[0].format(pyver=pyver)),
             i[1].format(pyver=pyver)) for i in mapping]
+    else:
+        # No python version dependency was specified
+        # Only a problem when converting from windows to unix, since 
+        # the python version is part of the folder structure on unix. 
+        if source_type == 'win' and dest_type == 'unix':
+            raise RuntimeError("Python dependency must explicit when converting"
+                               "from windows package to a linux packages")
 
     members = t.getmembers()
     file_map = {}
