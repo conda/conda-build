@@ -6,6 +6,9 @@
   * don't allow to build a package with the conda-meta directory
   * automatically remove a package of the recipe itself if it is installed as
     a build dependency
+  * allow 'extra' key in meta.yaml, see #483
+  * move echo command in Windows build, see #274
+
 
 2015-06-29   1.14.1:
 --------------------
