@@ -397,14 +397,13 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
                 _check_call(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
-        if post == True:
-            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                files1 = set(f.read().splitlines())
-
+        if exists(config.info_dir):
+            shutil.rmtree(config.info_dir)
+        with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
+            files1 = set(f.read().splitlines())
         get_build_metadata(m)
         create_post_scripts(m)
         create_entry_points(m.get_value('build/entry_points'))
-        assert not exists(config.info_dir)
         files2 = prefix_files()
 
         post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
