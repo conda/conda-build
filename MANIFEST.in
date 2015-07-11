@@ -1,0 +1,2 @@
+include versioneer.py
+include conda_build/_version.py
