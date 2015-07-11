@@ -1,0 +1,14 @@
+package:
+  name: always_include_files_regex
+  version: 0.1
+
+build:
+  number: 0
+  always_include_files:
+    - lib/libpng.*\.dylib$  [osx]
+    - lib/libpng\d*\.so     [linux]
+
+requirements:
+    build:
+        - libpng
+
