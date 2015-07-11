@@ -296,6 +296,8 @@ class MetaData(object):
 
     def check_fields(self):
         for section, submeta in iteritems(self.meta):
+            if section == 'extra':
+                continue
             if section not in FIELDS:
                 sys.exit("Error: unknown section: %s" % section)
             for key in submeta:
