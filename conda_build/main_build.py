@@ -241,7 +241,7 @@ def execute(args, parser):
         else:
             version = int(versions[0].replace('.', ''))
             setattr(config, conda_version[lang], version)
-        if not len(str(version)) == 2:
+        if not len(str(version)) == 2 and lang in ['python', 'numpy']:
             if all_versions[lang]:
                 raise RuntimeError("%s must be major.minor, like %s, not %s" %
                     (conda_version[lang], all_versions[lang][-1]/10, version))
