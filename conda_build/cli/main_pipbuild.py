@@ -9,13 +9,15 @@ from __future__ import print_function, division, absolute_import
 import sys
 import os.path
 import subprocess
+
 import yaml
+
 
 #from conda.cli import common
 import conda.config as cc
 from conda.cli.conda_argparse import ArgumentParser
 
-from conda_build.main_build import args_func
+from conda_build.cli.main_build import args_func
 from conda.install import rm_rf
 import conda_build.build as build
 from conda_build.metadata import MetaData

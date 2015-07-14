@@ -11,10 +11,10 @@ from collections import defaultdict
 import conda.config
 from conda.cli.conda_argparse import ArgumentParser
 
-from conda_build.main_build import args_func
+from conda_build.cli.main_build import args_func
 from conda_build.metadata import MetaData
 from conda_build.build import build, bldpkg_path
-from conda_build.main_build import handle_binstar_upload
+from conda_build.cli.main_build import handle_binstar_upload
 
 def main():
     p = ArgumentParser(
