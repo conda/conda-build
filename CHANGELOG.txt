@@ -9,6 +9,7 @@
   * allow 'extra' key in meta.yaml, see #483
   * move echo command in Windows build, see #274
   * add regex to always included files, see #484
+  * add ppc64le variable to selector (rename armv6 to armv6l)
 
 
 2015-06-29   1.14.1:
