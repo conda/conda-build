@@ -225,14 +225,19 @@ def osx_ch_link(path, link):
     ret = ret.replace('/./', '/')
     return ret
 
-def mk_relative_osx(path, develop=False):
+def mk_relative_osx(path, build_prefix=None):
     '''
-    if develop=True, do not check the object is in conda's build environment.
-    The assertion is valid in conda build mode, which is used prior to
-    installing packages
+    if build_prefix is None, then this is a standard conda build. The path
+    and all dependencies are in the build_prefix.
+
+    if package is built in develop mode, build_prefix is specified. Object
+    specified by 'path' needs to relink runtime dependences to libs found in
+    build_prefix/lib/. Also, in develop mode, 'path' is not in 'build_prefix'
     '''
-    if not develop:
+    if build_prefix is None:
         assert path.startswith(config.build_prefix + '/')
+    else:
+        config.short_build_prefix = build_prefix
 
     assert sys.platform == 'darwin' and is_obj(path)
     s = macho.install_name_change(path, osx_ch_link)
