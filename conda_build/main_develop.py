@@ -37,11 +37,11 @@ This works by creating a conda.pth file in site-packages."""
         help="Path to the source directory."
     )
     p.add_argument(
-                   '-l', '--post-link',
+                   '-l', '--no-pth-file',
                    action='store_true',
-                   help=("Look in user specified dir for compiled extensions "
-                         "and ensure they link against libraries found in "
-                         "current conda env"))
+                   help=("Relink compiled extension dependencies against "
+                         "libraries found in current conda env. "
+                         "Do not add source to conda.pth."))
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -122,7 +122,7 @@ Error: environment does not exist: %s
 
     for path in args.source:
         pkg_path = abspath(expanduser(path))
-        if not args.post_link:
+        if not args.no_pth_file:
             stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
                               'lib/python%s' % py_ver)
             sp_dir = join(stdlib_dir, 'site-packages')
