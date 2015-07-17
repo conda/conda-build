@@ -13,6 +13,9 @@ from conda.cli.common import specs_from_url
 
 from . import exceptions
 
+if sys.version_info < (3, 0):
+	str = unicode
+
 try:
     import yaml
     from yaml import Loader, SafeLoader
