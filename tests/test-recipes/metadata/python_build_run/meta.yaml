@@ -1,0 +1,9 @@
+package:
+  name: conda-build-test-python-build-run
+  version: 1.0
+
+requirements:
+  build:
+    - python
+  run:
+    - python
