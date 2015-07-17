@@ -190,7 +190,6 @@ def find_lib(link, path=None):
     print("Don't know how to find %s, skipping" % link)
 
 def osx_ch_link(path, link):
-    assert path.startswith(config.build_prefix + '/')
     print("Fixing linking of %s in %s" % (link, path))
     link_loc = find_lib(link, path)
     if not link_loc:
@@ -226,7 +225,20 @@ def osx_ch_link(path, link):
     ret = ret.replace('/./', '/')
     return ret
 
-def mk_relative_osx(path):
+def mk_relative_osx(path, build_prefix=None):
+    '''
+    if build_prefix is None, then this is a standard conda build. The path
+    and all dependencies are in the build_prefix.
+
+    if package is built in develop mode, build_prefix is specified. Object
+    specified by 'path' needs to relink runtime dependences to libs found in
+    build_prefix/lib/. Also, in develop mode, 'path' is not in 'build_prefix'
+    '''
+    if build_prefix is None:
+        assert path.startswith(config.build_prefix + '/')
+    else:
+        config.short_build_prefix = build_prefix
+
     assert sys.platform == 'darwin' and is_obj(path)
     s = macho.install_name_change(path, osx_ch_link)
 
