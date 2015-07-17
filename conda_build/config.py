@@ -21,7 +21,7 @@ class Config(object):
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
-    CONDA_NPY = int(os.getenv('CONDA_NPY', '19').replace('.', ''))
+    CONDA_NPY = int(os.getenv('CONDA_NPY', '0').replace('.', '')) or None
     CONDA_R = os.getenv("CONDA_R", "3.2.0")
 
     PY3K = int(bool(CONDA_PY >= 30))
