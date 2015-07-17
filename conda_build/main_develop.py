@@ -37,7 +37,7 @@ This works by creating a conda.pth file in site-packages."""
         help="Path to the source directory."
     )
     p.add_argument(
-                   '-l', '--no-pth-file',
+                   '-npf', '--no-pth-file',
                    action='store_true',
                    help=("Relink compiled extension dependencies against "
                          "libraries found in current conda env. "
