@@ -9,6 +9,18 @@ from __future__ import absolute_import, division, print_function
 from conda.config import default_python
 from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
+from conda.cli.common import Completer
+
+class PyPIPackagesCompleter(Completer):
+    def __init__(self, prefix, parsed_args, **kwargs):
+        self.prefix = prefix
+        self.parsed_args = parsed_args
+
+    def _get_items(self):
+        from conda_build.pypi import get_xmlrpc_client
+        args = self.parsed_args
+        client = get_xmlrpc_client(getattr(args, 'pypi_url', 'https://pypi.python.org/pypi'))
+        return [i.lower() for i in client.list_packages()]
 
 def main():
     p = ArgumentParser(
@@ -56,7 +68,7 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         nargs='+',
         help="""PyPi packages to create recipe skeletons for.
                 You can also specify package[extra,...] features.""",
-    )
+    ).completer = PyPIPackagesCompleter
     pypi.add_argument(
         "--output-dir",
         action="store",
