@@ -21,6 +21,13 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
 
+all_versions = {
+    'python': [26, 27, 33, 34],
+    'numpy': [16, 17, 18, 19],
+    'perl': None,
+    'R': None,
+    }
+
 class RecipeCompleter(Completer):
     def _get_items(self):
         completions = []
@@ -35,11 +42,11 @@ class RecipeCompleter(Completer):
 
 class PythonVersionCompleter(Completer):
     def _get_items(self):
-        return ['2.6', '2.7', '3.3', '3.4', 'all']
+        return ['all'] + [str(i/10) for i in all_versions['python']]
 
 class NumPyVersionCompleter(Completer):
     def _get_items(self):
-        return ['1.6', '1.7', '1.8', '1.9', 'all']
+        return ['all'] + [str(i/10) for i in all_versions['numpy']]
 
 class RVersionsCompleter(Completer):
     def _get_items(self):
@@ -242,12 +249,6 @@ def execute(args, parser):
     check_external()
     channel_urls = args.channel or ()
 
-    all_versions = {
-        'python': [26, 27, 33, 34],
-        'numpy': [16, 17, 18, 19],
-        'perl': None,
-        'R': None,
-        }
     conda_version = {
         'python': 'CONDA_PY',
         'numpy': 'CONDA_NPY',
