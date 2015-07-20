@@ -22,6 +22,20 @@ class PyPIPackagesCompleter(Completer):
         client = get_xmlrpc_client(getattr(args, 'pypi_url', 'https://pypi.python.org/pypi'))
         return [i.lower() for i in client.list_packages()]
 
+class CRANPackagesCompleter(Completer):
+    def __init__(self, prefix, parsed_args, **kwargs):
+        self.prefix = prefix
+        self.parsed_args = parsed_args
+
+    def _get_items(self):
+        from conda_build.cran import get_cran_metadata
+        args = self.parsed_args
+        cran_url = getattr(args, 'cran_url', 'http://cran.r-project.org/')
+        output_dir = getattr(args, 'output_dir', '.')
+        cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
+        return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
+            in cran_metadata]
+
 def main():
     p = ArgumentParser(
         description="""
@@ -189,7 +203,7 @@ Network (CRAN) (cran.r-project.org).
         action="store",
         nargs='*',
         help="""CRAN packages to create recipe skeletons for.""",
-    )
+    ).completer = CRANPackagesCompleter
     cran.add_argument(
         "--output-dir",
         action="store",
