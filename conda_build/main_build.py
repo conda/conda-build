@@ -10,15 +10,26 @@ import sys
 from collections import deque
 from glob import glob
 from locale import getpreferredencoding
-from os.path import exists
+from os import listdir
+from os.path import exists, isdir, isfile, join
 
 import conda.config as config
 from conda.compat import PY3
-from conda.cli.common import add_parser_channels
+from conda.cli.common import add_parser_channels, Completer
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
+
+class RecipeCompleter(Completer):
+    def _get_items(self):
+        completions = []
+        for path in listdir():
+            if isdir(path) and isfile(join(path, 'meta.yaml')):
+                completions.append(path)
+        if isfile('meta.yaml'):
+            completions.append('.')
+        return completions
 
 def main():
     p = ArgumentParser(
@@ -68,6 +79,7 @@ different sets of packages."""
         action="store",
         metavar='RECIPE_PATH',
         nargs='+',
+        choices=RecipeCompleter(),
         help="Path to recipe directory.",
     )
     p.add_argument(
