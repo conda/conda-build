@@ -31,6 +31,20 @@ class RecipeCompleter(Completer):
             completions.append('.')
         return completions
 
+# These don't represent all supported versions. It's just for tab completion.
+
+class PythonVersionCompleter(Completer):
+    def _get_items(self):
+        return ['2.6', '2.7', '3.3', '3.4', 'all']
+
+class NumPyVersionCompleter(Completer):
+    def _get_items(self):
+        return ['1.6', '1.7', '1.8', '1.9', 'all']
+
+class RVersionsCompleter(Completer):
+    def _get_items(self):
+        return ['3.1.2', '3.1.3', '3.2.0']
+
 def main():
     p = ArgumentParser(
         description="""
@@ -114,8 +128,11 @@ different sets of packages."""
         '--python',
         action="append",
         help="""Set the Python version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
+        multiple times to build against multiple versions. Can be 'all' to
+    build against all known versions (%r)""" % [i for i in
+    PythonVersionCompleter() if '.' in i],
         metavar="PYTHON_VER",
+        choices=PythonVersionCompleter(),
     )
     p.add_argument(
         '--perl',
@@ -128,8 +145,11 @@ different sets of packages."""
         '--numpy',
         action="append",
         help="""Set the NumPy version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
+        multiple times to build against multiple versions. Can be 'all' to
+    build against all known versions (%r)""" % [i for i in
+    NumPyVersionCompleter() if '.' in i],
         metavar="NUMPY_VER",
+        choices=NumPyVersionCompleter(),
     )
     p.add_argument(
         '--R',
@@ -137,6 +157,7 @@ different sets of packages."""
         help="""Set the R version used by conda build. Can be passed
         multiple times to build against multiple versions.""",
         metavar="R_VER",
+        choices=RVersionsCompleter(),
     )
     add_parser_channels(p)
     p.set_defaults(func=execute)
