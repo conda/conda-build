@@ -341,7 +341,7 @@ def main(args, parser):
     cran_metadata = get_cran_metadata(args.cran_url, output_dir)
 
     if args.update_outdated:
-        args.packages = get_outdated(args.output_dir, cran_metadata, args.packages)
+        args.packages = get_outdated(output_dir, cran_metadata, args.packages)
         for pkg in args.packages:
             rm_rf(join(args.output_dir, 'r-' + pkg))
 
