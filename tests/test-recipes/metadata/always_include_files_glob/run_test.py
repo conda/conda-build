@@ -11,8 +11,8 @@ def main():
         info = json.load(fh)
 
     if sys.platform == 'darwin':
-        assert sorted(info['files']) == [u'lib/libpng.dylib', u'lib/libpng16.16.dylib', u'lib/libpng16.dylib']
-    elif sys.platform == 'linux2':
+        assert sorted(info['files']) == ['lib/libpng.dylib', 'lib/libpng16.16.dylib', 'lib/libpng16.dylib']
+    elif sys.platform.startswith('linux'):
         assert sorted(info['files']) == ['lib/libpng.so', 'lib/libpng16.so', 'lib/libpng16.so.16', 'lib/libpng16.so.16.17.0']
 
 if __name__ == '__main__':
