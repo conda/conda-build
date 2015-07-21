@@ -587,7 +587,7 @@ def get_outdated(output_dir, cran_metadata, packages=()):
             if package.endswith('/'):
                 packages[i] = package[:-1]
 
-        if not (recipe_name in packages or recipe in packages):
+        if packages and not (recipe_name in packages or recipe in packages):
             continue
 
         if recipe_name not in cran_metadata:
