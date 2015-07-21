@@ -14,7 +14,7 @@ import sys
 import tarfile
 from os.path import exists, isdir, isfile, islink, join
 import fnmatch
-import re
+
 
 import conda.config as cc
 import conda.plan as plan
@@ -367,16 +367,15 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
 
         rm_rf(config.info_dir)
         files1 = prefix_files()
-        for rx in m.always_include_files():
-            pat = re.compile(rx)
+        for pat in m.always_include_files():
             has_matches = False
             for f in set(files1):
-                if pat.match(f):
+                if fnmatch.fnmatch(f, pat):
                     print("Including in package existing file", f)
                     files1.discard(f)
                     has_matches = True
             if not has_matches:
-                sys.exit("Error: Regex %s from always_include_files does not match any files" % rx)
+                sys.exit("Error: Glob %s from always_include_files does not match any files" % pat)
         # Save this for later
         with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))

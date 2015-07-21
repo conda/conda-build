@@ -5,10 +5,9 @@ package:
 build:
   number: 0
   always_include_files:
-    - lib/libpng.*\.dylib$  [osx]
-    - lib/libpng\d*\.so     [linux]
+    - lib/libpng*.dylib  [osx]
+    - lib/libpng*.so     [linux]
 
 requirements:
     build:
         - libpng
-
