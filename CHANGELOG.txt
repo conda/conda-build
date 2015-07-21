@@ -1,3 +1,4 @@
+  * fix conda skeleton cran --update-outdated --output-dir .
   * add argcomplete completers for recipes, --python, --numpy, --R, CRAN
     packages (with conda skeleton cran), and PyPI packages (with conda
     skeleton pypi)
