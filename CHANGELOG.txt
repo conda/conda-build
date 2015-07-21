@@ -1,4 +1,10 @@
-
+  * add argcomplete completers for recipes, --python, --numpy, --R, CRAN
+    packages (with conda skeleton cran), and PyPI packages (with conda
+    skeleton pypi)
+  * conda develop now relinks object files on OS X (#490)
+  * allow a glob for always-include-files
+  * allow an extra section in meta.yaml, with free-form content (#483)
+  * don't echo environment variables when building on Windows (#274)
   * add conda build --skip-existing
   * show default in help for conda skeleton --output-dir
   * add --update-outdated option to conda skeleton cran
