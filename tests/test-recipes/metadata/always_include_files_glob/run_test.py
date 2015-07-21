@@ -11,9 +11,9 @@ def main():
         info = json.load(fh)
 
     if sys.platform == 'darwin':
-        assert set(info['files']) == {'lib/libpng.dylib', 'lib/libpng16.16.dylib', 'lib/libpng16.dylib'}
+        assert set(info['files']) == {'lib/libpng.dylib', 'lib/libpng16.16.dylib', 'lib/libpng16.dylib'}, info['files']
     elif sys.platform.startswith('linux'):
-        assert set(info['files']) == {'lib/libpng.so', 'lib/libpng16.so', 'lib/libpng16.so.16', 'lib/libpng16.so.16.17.0'}
+        assert set(info['files']) == {'lib/libpng.so', 'lib/libpng16.so', 'lib/libpng16.so.16', 'lib/libpng16.so.16.17.0'}, info['files']
 
 if __name__ == '__main__':
     main()
