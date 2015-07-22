@@ -1,3 +1,5 @@
+2015-07-22   1.15.0:
+--------------------
   * fix conda skeleton cran --update-outdated --output-dir .
   * add argcomplete completers for recipes, --python, --numpy, --R, CRAN
     packages (with conda skeleton cran), and PyPI packages (with conda
@@ -16,7 +18,8 @@
   * allow 'extra' key in meta.yaml, see #483
   * move echo command in Windows build, see #274
   * add regex to always included files, see #484
-  * add ppc64le variable to selector (rename armv6 to armv6l)
+  * add strings in conda.config.non_x86_linux_machines, e.g. "ppc64le",
+    as selector variables (renames armv6 to armv6l)
 
 
 2015-06-29   1.14.1:
