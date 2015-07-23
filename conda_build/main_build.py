@@ -31,7 +31,7 @@ all_versions = {
 class RecipeCompleter(Completer):
     def _get_items(self):
         completions = []
-        for path in listdir():
+        for path in listdir('.'):
             if isdir(path) and isfile(join(path, 'meta.yaml')):
                 completions.append(path)
         if isfile('meta.yaml'):
