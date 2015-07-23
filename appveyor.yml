@@ -28,8 +28,12 @@ install:
 
 test_script:
   # This will be effectively a no-op for recipes without bld.bat
-  - cmd: |
-         for /D %%f in ("tests\test-recipes\metadata\*") do (
-             C:\Miniconda\Scripts\conda-build --no-binstar-upload "%%~nf"
-             if errorlevel 1 exit 1
-         )
+  - ps: |
+         cd tests\test-recipes\metadata
+         $files = Get-ChildItem .
+         for ($i=0; $i -lt $files.Count; $i++) {
+             C:\Miniconda\Scripts\conda-build.exe --no-binstar-upload $files[$i]
+             if (!$?) {
+                 exit 1
+             }
+         }
