@@ -41,7 +41,6 @@ def ns_cfg():
         linux = plat.startswith('linux-'),
         linux32 = bool(plat == 'linux-32'),
         linux64 = bool(plat == 'linux-64'),
-        armv6 = bool(plat == 'linux-armv6l'),
         osx = plat.startswith('osx-'),
         unix = plat.startswith(('linux-', 'osx-')),
         win = plat.startswith('win-'),
@@ -59,6 +58,9 @@ def ns_cfg():
         os = os,
         environ = os.environ,
     )
+    for machine in cc.non_x86_linux_machines:
+        d[machine] = bool(plat == 'linux-%s' % machine)
+
     d.update(os.environ)
     return d
 

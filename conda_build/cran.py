@@ -299,6 +299,35 @@ def get_latest_git_tag():
     print("Using tag %s" % tags[-1])
     return tags[-1]
 
+def get_session(output_dir, verbose=True, cache=[]):
+    if cache:
+        return cache[0]
+    session = requests.Session()
+    try:
+        import cachecontrol
+        import cachecontrol.caches
+    except ImportError:
+        if verbose:
+            print("Tip: install CacheControl to cache the CRAN metadata")
+    else:
+        session = cachecontrol.CacheControl(session,
+            cache=cachecontrol.caches.FileCache(join(output_dir,
+                '.web_cache')))
+
+    cache.append(session)
+    return session
+
+def get_cran_metadata(cran_url, output_dir, verbose=True):
+    session = get_session(output_dir, verbose=verbose)
+    if verbose:
+        print("Fetching metadata from %s" % cran_url)
+    r = session.get(cran_url + "src/contrib/PACKAGES")
+    r.raise_for_status()
+    PACKAGES = r.text
+    package_list =  [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
+    return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
+        package_list)}
+
 def main(args, parser):
     if len(args.packages) > 1 and args.version_compare:
         parser.error("--version-compare only works with one package at a time")
@@ -309,28 +338,10 @@ def main(args, parser):
 
     [output_dir] = args.output_dir
 
-    session = requests.Session()
-    try:
-        import cachecontrol
-        import cachecontrol.caches
-    except ImportError:
-        print("Tip: install CacheControl to cache the CRAN metadata")
-    else:
-        session = cachecontrol.CacheControl(session,
-            cache=cachecontrol.caches.FileCache(join(output_dir,
-                '.web_cache')))
-
-    print("Fetching metadata from %s" % args.cran_url)
-    r = session.get(args.cran_url + "src/contrib/PACKAGES")
-    r.raise_for_status()
-    PACKAGES = r.text
-    package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
-
-    cran_metadata = {d['Package'].lower(): d for d in map(dict_from_cran_lines,
-        package_list)}
+    cran_metadata = get_cran_metadata(args.cran_url, output_dir)
 
     if args.update_outdated:
-        args.packages = get_outdated(args.output_dir, cran_metadata, args.packages)
+        args.packages = get_outdated(output_dir, cran_metadata, args.packages)
         for pkg in args.packages:
             rm_rf(join(args.output_dir, 'r-' + pkg))
 
@@ -378,6 +389,7 @@ def main(args, parser):
         package = cran_metadata[package.lower()]['Package']
 
         if not is_github_url:
+            session = get_session(output_dir)
             cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
             package, session))
 
@@ -575,7 +587,7 @@ def get_outdated(output_dir, cran_metadata, packages=()):
             if package.endswith('/'):
                 packages[i] = package[:-1]
 
-        if not (recipe_name in packages or recipe in packages):
+        if packages and not (recipe_name in packages or recipe in packages):
             continue
 
         if recipe_name not in cran_metadata:

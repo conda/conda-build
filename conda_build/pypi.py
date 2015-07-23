@@ -240,14 +240,17 @@ class RequestsTransport(Transport):
         scheme = 'https' if self.use_https else 'http'
         return '%s://%s/%s' % (scheme, host, handler)
 
-def main(args, parser):
+def get_xmlrpc_client(pypi_url):
     proxies = get_proxy_servers()
 
     if proxies:
         transport = RequestsTransport()
     else:
         transport = None
-    client = ServerProxy(args.pypi_url, transport=transport)
+    return ServerProxy(pypi_url, transport=transport)
+
+def main(args, parser):
+    client = get_xmlrpc_client(args.pypi_url)
     package_dicts = {}
     [output_dir] = args.output_dir
 

@@ -10,15 +10,47 @@ import sys
 from collections import deque
 from glob import glob
 from locale import getpreferredencoding
-from os.path import exists
+from os import listdir
+from os.path import exists, isdir, isfile, join
 
 import conda.config as config
 from conda.compat import PY3
-from conda.cli.common import add_parser_channels
+from conda.cli.common import add_parser_channels, Completer
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
+
+all_versions = {
+    'python': [26, 27, 33, 34],
+    'numpy': [16, 17, 18, 19],
+    'perl': None,
+    'R': None,
+    }
+
+class RecipeCompleter(Completer):
+    def _get_items(self):
+        completions = []
+        for path in listdir('.'):
+            if isdir(path) and isfile(join(path, 'meta.yaml')):
+                completions.append(path)
+        if isfile('meta.yaml'):
+            completions.append('.')
+        return completions
+
+# These don't represent all supported versions. It's just for tab completion.
+
+class PythonVersionCompleter(Completer):
+    def _get_items(self):
+        return ['all'] + [str(i/10) for i in all_versions['python']]
+
+class NumPyVersionCompleter(Completer):
+    def _get_items(self):
+        return ['all'] + [str(i/10) for i in all_versions['numpy']]
+
+class RVersionsCompleter(Completer):
+    def _get_items(self):
+        return ['3.1.2', '3.1.3', '3.2.0']
 
 def main():
     p = ArgumentParser(
@@ -68,6 +100,7 @@ different sets of packages."""
         action="store",
         metavar='RECIPE_PATH',
         nargs='+',
+        choices=RecipeCompleter(),
         help="Path to recipe directory.",
     )
     p.add_argument(
@@ -102,8 +135,11 @@ different sets of packages."""
         '--python',
         action="append",
         help="""Set the Python version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
+        multiple times to build against multiple versions. Can be 'all' to
+    build against all known versions (%r)""" % [i for i in
+    PythonVersionCompleter() if '.' in i],
         metavar="PYTHON_VER",
+        choices=PythonVersionCompleter(),
     )
     p.add_argument(
         '--perl',
@@ -116,8 +152,11 @@ different sets of packages."""
         '--numpy',
         action="append",
         help="""Set the NumPy version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
+        multiple times to build against multiple versions. Can be 'all' to
+    build against all known versions (%r)""" % [i for i in
+    NumPyVersionCompleter() if '.' in i],
         metavar="NUMPY_VER",
+        choices=NumPyVersionCompleter(),
     )
     p.add_argument(
         '--R',
@@ -125,6 +164,7 @@ different sets of packages."""
         help="""Set the R version used by conda build. Can be passed
         multiple times to build against multiple versions.""",
         metavar="R_VER",
+        choices=RVersionsCompleter(),
     )
     add_parser_channels(p)
     p.set_defaults(func=execute)
@@ -209,12 +249,6 @@ def execute(args, parser):
     check_external()
     channel_urls = args.channel or ()
 
-    all_versions = {
-        'python': [26, 27, 33, 34],
-        'numpy': [16, 17, 18, 19],
-        'perl': None,
-        'R': None,
-        }
     conda_version = {
         'python': 'CONDA_PY',
         'numpy': 'CONDA_NPY',

@@ -1,4 +1,13 @@
-
+2015-07-22   1.15.0:
+--------------------
+  * fix conda skeleton cran --update-outdated --output-dir .
+  * add argcomplete completers for recipes, --python, --numpy, --R, CRAN
+    packages (with conda skeleton cran), and PyPI packages (with conda
+    skeleton pypi)
+  * conda develop now relinks object files on OS X (#490)
+  * allow a glob for always-include-files
+  * allow an extra section in meta.yaml, with free-form content (#483)
+  * don't echo environment variables when building on Windows (#274)
   * add conda build --skip-existing
   * show default in help for conda skeleton --output-dir
   * add --update-outdated option to conda skeleton cran
@@ -9,6 +18,8 @@
   * allow 'extra' key in meta.yaml, see #483
   * move echo command in Windows build, see #274
   * add regex to always included files, see #484
+  * add strings in conda.config.non_x86_linux_machines, e.g. "ppc64le",
+    as selector variables (renames armv6 to armv6l)
 
 
 2015-06-29   1.14.1:
@@ -148,7 +159,7 @@
 
 2015-02-06   1.10.1:
 --------------------
-  * greatly improved ability to create noarch_python packages
+  * greatly improved ability to create noarch_python packages, #317
   * added 'subdir' key to info/index.json
   * allow url to be a list or urls, which are tried until one works
   * use quotes instead of !!str for versions from the conda skeleton commands
