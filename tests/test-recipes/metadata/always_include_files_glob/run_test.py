@@ -15,7 +15,7 @@ def main():
     elif sys.platform.startswith('linux'):
         assert set(info['files']) == {'lib/libpng.so', 'lib/libpng16.so', 'lib/libpng16.so.16', 'lib/libpng16.so.16.17.0'}, info['files']
     elif sys.platform == 'win32':
-        assert sorted(info['files']) == ['Library/lib/libpng.lib', 'Library/lib/libpng16.lib', 'Library/lib/libpng16_static.lib', 'libpng_static.lib']
+        assert sorted(info['files']) == ['Library/lib/libpng.lib', 'Library/lib/libpng16.lib', 'Library/lib/libpng16_static.lib', 'Library/lib/libpng_static.lib']
 
 if __name__ == '__main__':
     main()
