@@ -30,5 +30,5 @@ test_script:
   - cd tests\test-recipes\metadata
   # This will be effectively a no-op for recipes without bld.bat
   - |
-    for /D %%f in (*) do (C:\Miniconda\Scripts\conda-build --no-binstar-upload %%~nf
-    if errorlevel1 exit 1)
+    for /D %%f in (*) do (C:\Miniconda\Scripts\conda-build --no-binstar-upload "%%~nf"
+    if errorlevel 1 exit 1)
