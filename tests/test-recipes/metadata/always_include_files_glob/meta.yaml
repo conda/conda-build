@@ -1,6 +1,6 @@
 package:
   name: always_include_files_regex
-  version: 0.1
+  version: 1.0
 
 build:
   number: 0

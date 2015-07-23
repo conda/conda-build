@@ -6,7 +6,7 @@ import json
 def main():
     prefix = os.environ['PREFIX']
     info_file = os.path.join(prefix, 'conda-meta',
-                             'always_include_files_regex-0.1-0.json')
+                             'always_include_files_regex-1.0-0.json')
     with open(info_file, 'r') as fh:
         info = json.load(fh)
 
