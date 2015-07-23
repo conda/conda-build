@@ -1,5 +1,5 @@
 package:
-  name: always_include_files_regex
+  name: conda-build-test-always_include_files-glob
   version: 1.0
 
 build:
