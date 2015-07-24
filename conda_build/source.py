@@ -105,7 +105,7 @@ def git_source(meta, recipe_dir):
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
     if sys.platform == 'win32':
         p = Popen(['uname', '-s'], stderr=PIPE, stdout=PIPE)
-        uname = p.communicate().decode('utf-8').lower()
+        uname = p.communicate()[0].decode('utf-8').lower()
         is_cygwin = 'cygwin' in uname
         cache_repo_arg = cache_repo_arg.replace('\\', '/')
         if is_cygwin:
