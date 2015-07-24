@@ -34,7 +34,7 @@ test_script:
          $files = Get-ChildItem .
          for ($i=0; $i -lt $files.Count; $i++) {
              C:\Miniconda\Scripts\conda-build.exe --no-binstar-upload $files[$i]
-             if (!$?) {
+             if ($LastExitCode -ne 0) {
                  exit 1
              }
          }
