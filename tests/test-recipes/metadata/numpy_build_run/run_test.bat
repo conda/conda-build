@@ -1,3 +1,4 @@
+@echo on
 conda list -p "%PREFIX%" --canonical
 if errorlevel 1 exit 1
 for /f "delims=" %%i in ('conda list -p "%PREFIX%" --canonical') do set condalist=%%i
