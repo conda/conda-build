@@ -28,6 +28,7 @@ install:
 
 test_script:
   # This will be effectively a no-op for recipes without bld.bat
+  - set PATH=C:\Miniconda\Scripts;C:\Miniconda;%PATH%
   - ps: |
          cd tests\test-recipes\metadata
          $files = Get-ChildItem .
