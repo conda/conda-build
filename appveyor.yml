@@ -35,7 +35,7 @@ test_script:
          for ($i=0; $i -lt $files.Count; $i++) {
              C:\Miniconda\Scripts\conda-build.exe --no-binstar-upload $files[$i]
              if ($LastExitCode -ne 0) {
-                 echo $Error[0].CategoryInfo
+                 echo $Error[0].Exception
                  exit 1
              }
          }
