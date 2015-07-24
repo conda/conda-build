@@ -104,9 +104,7 @@ def git_source(meta, recipe_dir):
         git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
     if sys.platform == 'win32':
-        p = Popen(['uname', '-s'], stderr=PIPE, stdout=PIPE)
-        uname = p.communicate()[0].decode('utf-8').lower()
-        is_cygwin = 'cygwin' in uname
+        is_cygwin = 'cygwin' in git.lower()
         cache_repo_arg = cache_repo_arg.replace('\\', '/')
         if is_cygwin:
             cache_repo_arg = '/cygdrive/c/' + cache_repo_arg[3:]
