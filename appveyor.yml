@@ -29,6 +29,9 @@ install:
 test_script:
   # This will be effectively a no-op for recipes without bld.bat
   - set PATH=C:\Miniconda\Scripts;C:\Miniconda;%PATH%
+  # If we don't do this, the git tests will fail because the executable bit is
+  # set incorrectly, making the checkout be dirty.
+  - git config core.fileMode false
   - ps: |
          cd tests\test-recipes\metadata
          $files = Get-ChildItem .
