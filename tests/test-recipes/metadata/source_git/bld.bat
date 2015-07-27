@@ -1,5 +1,5 @@
 if not exist .git exit 1
-git describe
+git describe --tags --dirty
 if errorlevel 1 exit 1
 for /f "delims=" %%i in ('git describe') do set gitdesc=%%i
 if errorlevel 1 exit 1
