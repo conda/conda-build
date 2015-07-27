@@ -1,6 +1,4 @@
 conda list -p "%PREFIX%" --canonical
 if errorlevel 1 exit 1
-for /f "delims=" %%i in ('conda list -p "%PREFIX%" --canonical') do set condalist=%%i
+conda list -p $PREFIX --canonical | grep "conda-build-test-python-run-1\.0-py.._0"
 if errorlevel 1 exit 1
-echo "%condalist%"
-if not "%condalist%"=="conda-build-test-python-build-1.0-0" exit 1
