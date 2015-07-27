@@ -33,7 +33,7 @@ test_script:
   - set PATH=C:\Miniconda\Scripts;C:\Miniconda;%PATH%
   # If we don't do this, the git tests will fail because the executable bit is
   # set incorrectly, making the checkout be dirty.
-  - git config --global core.fileMode false
+  - git config --add --global core.fileMode false
   - ps: |
          cd tests\test-recipes\metadata
          $files = Get-ChildItem .
