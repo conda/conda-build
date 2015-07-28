@@ -1,3 +1,12 @@
+...
+-------------------
+  * Cygwin git now works correctly.
+  * the prefix itself is now included in the PATH in the test script on
+    Windows (previously it was just the Scripts directory)
+  * by default, recipes that runtime depend on numpy will no longer depend on
+    an explicit version of numpy. The old behavior is still available by
+    setting the CONDA_NPY environment variable or using conda build --numpy
+
 2015-07-22   1.15.0:
 --------------------
   * fix conda skeleton cran --update-outdated --output-dir .
