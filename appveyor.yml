@@ -19,7 +19,9 @@ init:
   - cmd: C:\Miniconda.exe /S /D=C:\Miniconda
   - ps: ls C:\Miniconda/Scripts
   - C:\Miniconda\Scripts\conda config --set always_yes yes
-  - C:\Miniconda\Scripts\conda install pytest requests conda-build --quiet
+  - C:\Miniconda\Scripts\conda install pytest requests conda-build jinja2 --quiet
+  - cmd: if "%PYTHON%"=="2.7" C:\Miniconda\Scripts\conda install ndg-httpsclient
+
 
 install:
   - C:\Miniconda\python.exe setup.py install
@@ -27,6 +29,18 @@ install:
   - C:\Miniconda\Scripts\conda list
 
 test_script:
-  - cd tests\test-recipes\metadata
   # This will be effectively a no-op for recipes without bld.bat
-  - for /D %%f in (*) do (C:\Miniconda\Scripts\conda-build --no-binstar-upload %%~nf)
+  - set PATH=C:\Miniconda\Scripts;C:\Miniconda;%PATH%
+  # If we don't do this, the git tests will fail because the executable bit is
+  # set incorrectly, making the checkout be dirty.
+  - git config --add --global core.fileMode false
+  - ps: |
+         cd tests\test-recipes\metadata
+         $files = Get-ChildItem .
+         for ($i=0; $i -lt $files.Count; $i++) {
+             C:\Miniconda\Scripts\conda-build.exe --no-binstar-upload $files[$i]
+             if ($LastExitCode -ne 0) {
+                 echo $error[0].ToString() + $error[0].InvocationInfo.PositionMessage
+                 exit 1
+             }
+         }

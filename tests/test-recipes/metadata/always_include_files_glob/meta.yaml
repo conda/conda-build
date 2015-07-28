@@ -1,12 +1,13 @@
 package:
-  name: always_include_files_regex
-  version: 0.1
+  name: conda-build-test-always_include_files-glob
+  version: 1.0
 
 build:
   number: 0
   always_include_files:
     - lib/libpng*.dylib  [osx]
     - lib/libpng*.so*     [linux]
+    - Library\lib\libpng*.lib [win]
 
 requirements:
     build:

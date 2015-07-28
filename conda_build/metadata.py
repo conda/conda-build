@@ -36,8 +36,7 @@ def ns_cfg():
     py = config.CONDA_PY
     np = config.CONDA_NPY
     pl = config.CONDA_PERL
-    for x in py, np:
-        assert isinstance(x, int), x
+    assert isinstance(py, int), py
     d = dict(
         linux = plat.startswith('linux-'),
         linux32 = bool(plat == 'linux-32'),
@@ -346,6 +345,9 @@ class MetaData(object):
                 if ms.name == name:
                     if (ms.strictness != 1 or
                              self.get_value('build/noarch_python')):
+                        continue
+                    if ver is None:
+                        ms = MatchSpec(name)
                         continue
                     str_ver = text_type(ver)
                     if '.' not in str_ver:

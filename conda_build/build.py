@@ -500,6 +500,8 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
                    os.getenv('PATH'))
 
+    if sys.platform == 'win32':
+        env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
     for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
         env[varname] = str(getattr(config, varname))
     env['PREFIX'] = config.test_prefix
