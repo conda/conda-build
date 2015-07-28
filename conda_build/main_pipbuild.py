@@ -213,7 +213,7 @@ def get_all_dependencies(package, version):
     fid.write("import pkg_resources;\n")
     fid.write("reqs = pkg_resources.get_distribution('%s').requires();\n" %
               package)
-    fid.write("print [(req.key, req.specs) for req in reqs]\n")
+    fid.write("print([(req.key, req.specs) for req in reqs])\n")
     fid.close()
     print("Getting dependencies...")
     output = subprocess.check_output(cmd3args)
