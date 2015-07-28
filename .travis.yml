@@ -29,6 +29,7 @@ script:
   - py.test tests
   - tests/test-recipes/build_recipes.sh
   - tests/test-skeleton/test-skeleton.sh
+  - conda build --help
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb
