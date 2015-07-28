@@ -1,5 +1,6 @@
 ...
 -------------------
+  * handle trailing backslashes in package names in conda skeleton cran
   * Cygwin git now works correctly.
   * the prefix itself is now included in the PATH in the test script on
     Windows (previously it was just the Scripts directory)
