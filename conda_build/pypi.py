@@ -609,7 +609,7 @@ def get_package_metadata(args, package, d, data):
         else:
             d['summary'] = "Summary of the package"
             d['summary_comment'] = '#'
-    if d['summary'].startswith("u'"):
+    if d['summary'].startswith("u'") or d['summary'].startswith('u"'):
         d['summary'] = d['summary'][1:]
 
     license_classifier = "License :: OSI Approved :: "
