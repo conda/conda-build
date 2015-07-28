@@ -17,11 +17,10 @@ from os.path import abspath, expanduser, isdir, join, split
 
 from conda.compat import PY3
 from conda.cli.conda_argparse import ArgumentParser
-from conda_build.main_build import args_func
 
+from conda_build.cli.main_build import args_func
 from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
                                  has_nonpy_entry_points)
-
 
 epilog = """
 

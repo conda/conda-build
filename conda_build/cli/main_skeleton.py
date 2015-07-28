@@ -7,7 +7,6 @@
 from __future__ import absolute_import, division, print_function
 
 from conda.config import default_python
-from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
 from conda.cli.common import Completer
 
@@ -35,6 +34,9 @@ class CRANPackagesCompleter(Completer):
         cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
         return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
             in cran_metadata]
+
+from conda_build.cli.main_build import args_func
+
 
 def main():
     p = ArgumentParser(

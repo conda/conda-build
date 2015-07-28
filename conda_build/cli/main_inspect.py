@@ -16,10 +16,11 @@ from conda.cli.common import add_parser_prefix, get_prefix
 from conda.cli.conda_argparse import ArgumentParser
 import conda.install as ci
 
-from conda_build.main_build import args_func
+from conda_build.cli.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpath, human_filetype
 from conda_build.utils import groupby, getter
+
 
 def main():
     p = ArgumentParser(

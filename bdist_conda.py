@@ -5,7 +5,6 @@ bdist_conda
 from __future__ import print_function, division, unicode_literals
 
 from collections import defaultdict
-
 from distutils.command.install import install
 from distutils.errors import DistutilsOptionError, DistutilsGetoptError
 from distutils.dist import Distribution
@@ -15,10 +14,11 @@ as unicode)
 from conda.lock import Locked
 import conda.config
 from conda.cli.common import spec_from_line
+
 from conda_build.metadata import MetaData
 from conda_build import build, pypi
 from conda_build.config import config
-from conda_build.main_build import handle_binstar_upload
+from conda_build.cli.main_build import handle_binstar_upload
 
 # TODO: Add support for all the options that conda build has
 
