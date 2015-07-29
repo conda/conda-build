@@ -107,14 +107,25 @@ def relink_sharedobjects(pkg_path, build_prefix):
 def write_to_conda_pth(sp_dir, pkg_path):
     '''
     append pkg_path to conda.pth in site-packages directory for current
-    environment
+    environment. Only add path if it doens't already exist.
 
     :param sp_dir: path to site-packages/. directory
     :param pkg_path: the package path to append to site-packes/. dir.
     '''
-    with open(join(sp_dir, 'conda.pth'), 'a') as f:
-        f.write(pkg_path + '\n')
-        print("added " + pkg_path)
+    c_file = join(sp_dir, 'conda.pth')
+    with open(c_file, 'a') as f:
+        with open(c_file, 'r') as cf:
+            # make sure file exists, before we try to read from it hence nested
+            # in append with block
+            # expect conda.pth to be small so read it all in at once
+            pkgs_in_dev_mode = cf.readlines()
+
+        # only append pkg_path if it doesn't already exist in conda.pth
+        if pkg_path + '\n' in pkgs_in_dev_mode:
+            print("path exits, skipping " + pkg_path)
+        else:
+            f.write(pkg_path + '\n')
+            print("added " + pkg_path)
 
 
 def get_site_pkg(prefix, py_ver):
