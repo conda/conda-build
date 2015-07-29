@@ -46,11 +46,15 @@ This works by creating a conda.pth file in site-packages."""
     p.add_argument(
                    '-b', '--build_ext',
                    action='store_true',
-                   help=("Invoke clean, then build extensions inplace: "
-                         "python setup.py clean && "
+                   help=("Build extensions inplace, invoking: "
                          "python setup.py build_ext --inplace; "
                          "add to conda.pth; relink runtime libraries to "
                          "environment's lib/."))
+    p.add_argument(
+                   '-c', '--clean',
+                   action='store_true',
+                   help=("Used with build_ext; invoke clean before "
+                         "building extensions via build_ext"))
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -140,7 +144,7 @@ def get_setup_py(path_):
     return setup_py
 
 
-def build_ext(pkg_path):
+def build_ext(pkg_path, clean_=False):
     '''
     define a develop function - similar to build function
     todo: still need to test on win32 and linux
@@ -155,11 +159,12 @@ def build_ext(pkg_path):
     '''
     setup_py = get_setup_py(pkg_path)
 
-    # first call setup.py clean
-    cmd = ['python', setup_py, 'clean']
-    _check_call(cmd)
-    print("Completed: " + " ".join(cmd))
-    print("===============================================")
+    if clean_:
+        # first call setup.py clean
+        cmd = ['python', setup_py, 'clean']
+        _check_call(cmd)
+        print("Completed: " + " ".join(cmd))
+        print("===============================================")
 
     # next call setup.py develop
     cmd = ['python', setup_py, 'build_ext', '--inplace']
@@ -192,7 +197,7 @@ Error: environment does not exist: %s
 
         # build extensions before adding to conda.pth
         if args.build_ext:
-            build_ext(pkg_path)
+            build_ext(pkg_path, clean_=args.clean)
 
         if not args.no_pth_file:
             write_to_conda_pth(sp_dir, pkg_path)
