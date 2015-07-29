@@ -51,10 +51,13 @@ This works by creating a conda.pth file in site-packages."""
                          "add to conda.pth; relink runtime libraries to "
                          "environment's lib/."))
     p.add_argument(
-                   '-c', '--clean',
+                   '-c', '--clean_build_ext',
                    action='store_true',
-                   help=("Used with build_ext; invoke clean before "
-                         "building extensions via build_ext"))
+                   help=("Invoke clean then build_ext: "
+                         "python setup.py clean && "
+                         "python setup.py build_ext --inplace; "
+                         "add to conda.pth; relink runtime libraries to "
+                         "environment's lib/."))
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -207,8 +210,8 @@ Error: environment does not exist: %s
         pkg_path = abspath(expanduser(path))
 
         # build extensions before adding to conda.pth
-        if args.build_ext:
-            build_ext(pkg_path, clean_=args.clean)
+        if args.build_ext or args.clean_build_ext:
+            build_ext(pkg_path, clean_=args.clean_build_ext)
 
         if not args.no_pth_file:
             write_to_conda_pth(sp_dir, pkg_path)
