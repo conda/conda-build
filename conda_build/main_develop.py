@@ -7,7 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-from os.path import join, isdir, abspath, expanduser
+from os.path import join, isdir, abspath, expanduser, exists
 from os import walk
 import fnmatch
 
@@ -15,6 +15,7 @@ from conda.cli.common import add_parser_prefix, get_prefix
 from conda.cli.conda_argparse import ArgumentParser
 from conda_build.main_build import args_func
 from conda_build.post import mk_relative_osx
+from conda_build.utils import _check_call
 
 from conda.install import linked
 
@@ -42,6 +43,14 @@ This works by creating a conda.pth file in site-packages."""
                    help=("Relink compiled extension dependencies against "
                          "libraries found in current conda env. "
                          "Do not add source to conda.pth."))
+    p.add_argument(
+                   '-b', '--build_ext',
+                   action='store_true',
+                   help=("Invoke clean, then build extensions inplace: "
+                         "python setup.py clean && "
+                         "python setup.py build_ext --inplace; "
+                         "add to conda.pth; relink runtime libraries to "
+                         "environment's lib/."))
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -104,6 +113,61 @@ def write_to_conda_pth(sp_dir, pkg_path):
         print("added " + pkg_path)
 
 
+def get_site_pkg(prefix, py_ver):
+    '''
+    Given the path to conda environment, find the site-packages directory
+
+    :param prefix: path to conda environment. Look here for current
+        environment's site-packages
+    :returns: absolute path to site-packages directory
+    '''
+    # get site-packages directory
+    stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
+                      'lib/python%s' % py_ver)
+    sp_dir = join(stdlib_dir, 'site-packages')
+
+    return sp_dir
+
+
+def get_setup_py(path_):
+    ''' return full path to setup.py or exit if not found '''
+    # build path points to source dir, builds are placed in the
+    setup_py = join(path_, 'setup.py')
+
+    if not exists(setup_py):
+        sys.exit("No setup.py found in {0}. Exiting.".format(path_))
+
+    return setup_py
+
+
+def build_ext(pkg_path):
+    '''
+    define a develop function - similar to build function
+    todo: still need to test on win32 and linux
+
+    It invokes $ python setup.py develop
+    The entry_points are automatically installed in bin/ however the setup.py's
+    uninstall command does not remove them.
+
+    develop mode has an --exclude-scripts options, if that is True, then don't
+    install these in bin/. Conda exposes --exclude-scripts option for develop
+    and simply passes it down to setup.py
+    '''
+    setup_py = get_setup_py(pkg_path)
+
+    # first call setup.py clean
+    cmd = ['python', setup_py, 'clean']
+    _check_call(cmd)
+    print("Completed: " + " ".join(cmd))
+    print("===============================================")
+
+    # next call setup.py develop
+    cmd = ['python', setup_py, 'build_ext', '--inplace']
+    _check_call(cmd)
+    print("Completed: " + " ".join(cmd))
+    print("===============================================")
+
+
 def execute(args, parser):
     prefix = get_prefix(args)
     if not isdir(prefix):
@@ -115,22 +179,22 @@ Error: environment does not exist: %s
     for package in linked(prefix):
         name, ver, _ = package .rsplit('-', 2)
         if name == 'python':
-            py_ver = ver[:3] # x.y
+            py_ver = ver[:3]  # x.y
             break
     else:
         raise RuntimeError("python is not installed in %s" % prefix)
 
+    # current environment's site-packages directory
+    sp_dir = get_site_pkg(prefix, py_ver)
+
     for path in args.source:
         pkg_path = abspath(expanduser(path))
+
+        # build extensions before adding to conda.pth
+        if args.build_ext:
+            build_ext(pkg_path)
+
         if not args.no_pth_file:
-            stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
-                              'lib/python%s' % py_ver)
-            sp_dir = join(stdlib_dir, 'site-packages')
-
-            # todo:
-            # build the package if setup.py is found then invoke it with
-            # build_ext --inplace - this only exists for extensions
-
             write_to_conda_pth(sp_dir, pkg_path)
 
         # go through the source looking for compiled extensions and make sure
