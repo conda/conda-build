@@ -569,7 +569,7 @@ def get_package_metadata(args, package, d, data):
                         args.packages.append(dep)
 
     if args.noarch_python:
-        d['build_comment'] == ''
+        d['build_comment'] = ''
         d['noarch_python_comment'] = ''
 
     if 'packagename' not in d:
