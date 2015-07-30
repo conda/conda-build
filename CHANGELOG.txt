@@ -1,4 +1,4 @@
-...
+2015-...
 -------------------
   * handle trailing backslashes in package names in conda skeleton cran
   * Cygwin git now works correctly.
@@ -7,6 +7,8 @@
   * by default, recipes that runtime depend on numpy will no longer depend on
     an explicit version of numpy. The old behavior is still available by
     setting the CONDA_NPY environment variable or using conda build --numpy
+  * add py35 variable to selector namespace
+
 
 2015-07-22   1.15.0:
 --------------------
