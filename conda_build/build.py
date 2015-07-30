@@ -417,7 +417,10 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files()
-        assert not any(config.meta_dir in join(config.build_prefix, f) for f in files2 - files1)
+        if any(config.meta_dir in join(config.build_prefix, f) for f in
+            files2 - files1):
+            sys.exit("Error: Untracked file found in conda-meta directory. This error "
+                "usually comes from using conda in the build script.")
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
