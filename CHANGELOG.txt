@@ -9,6 +9,7 @@
     setting the CONDA_NPY environment variable or using conda build --numpy
   * add py35 variable to selector namespace
   * improve conda-meta untracked files error message
+  * fix conda build --help in Python 2
 
 2015-07-22   1.15.0:
 --------------------
