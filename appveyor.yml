@@ -45,3 +45,8 @@ test_script:
                  exit 1
              }
          }
+         C:\Miniconda\Scripts\conda-build.ext --no-binstar-upload fail\conda-meta
+         if ($LastExitCode -eq 0) {
+             echo "conda-meta fail recipe did not fail"
+             exit 1
+         }
