@@ -326,7 +326,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
         config.use_long_build_prefix = False
 
     if post in [False, None]:
-        print("Removing old build directory")
+        print("Removing old build environment")
         rm_rf(config.short_build_prefix)
         rm_rf(config.long_build_prefix)
         print("Removing old work directory")
