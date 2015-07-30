@@ -8,7 +8,7 @@
     an explicit version of numpy. The old behavior is still available by
     setting the CONDA_NPY environment variable or using conda build --numpy
   * add py35 variable to selector namespace
-
+  * improve conda-meta untracked files error message
 
 2015-07-22   1.15.0:
 --------------------
