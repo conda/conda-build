@@ -10,6 +10,8 @@
   * add py35 variable to selector namespace
   * improve conda-meta untracked files error message
   * fix conda build --help in Python 2
+  * add conda_build.sub_commands object which is a list of conda sub-commands
+
 
 2015-07-22   1.15.0:
 --------------------
