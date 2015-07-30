@@ -421,8 +421,8 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
         if any(config.meta_dir in join(config.build_prefix, f) for f in
             files2 - files1):
             sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
-usually comes from using conda in the build script.  Avoid doing
-this, as it can lead to packages that include their dependencies.""" %
+usually comes from using conda in the build script.  Avoid doing this, as it
+can lead to packages that include their dependencies.""" %
                 [f for f in files2 - files1 if config.meta_dir in
                 join(config.build_prefix, f)]))
         post_build(m, sorted(files2 - files1))
