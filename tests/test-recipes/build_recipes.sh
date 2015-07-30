@@ -23,4 +23,6 @@ done
 echo "$OUTPUT" | grep "Error" | wc -l | grep 6
 
 ! OUTPUT=$(conda build --no-binstar-upload fail/conda-meta/ 2>&1)
-echo "$OUTPUT" | grep "Error: Untracked file(s) ('conda-meta/nope')"
+echo "$OUTPUT" | grep 'Error: Untracked file(s) ('\''conda-meta/nope'\'',)'
+
+echo "TESTS PASSED"
