@@ -34,6 +34,7 @@ from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
+from conda_build.exceptions import indent
 
 def prefix_files():
     '''
@@ -419,8 +420,11 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
         files2 = prefix_files()
         if any(config.meta_dir in join(config.build_prefix, f) for f in
             files2 - files1):
-            sys.exit("Error: Untracked file found in conda-meta directory. This error "
-                "usually comes from using conda in the build script.")
+            sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
+usually comes from using conda in the build script.  Avoid doing
+this, as it can lead to packages that include their dependencies.""" %
+                [f for f in files2 - files1 if config.meta_dir in
+                join(config.build_prefix, f)]))
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
                           include_recipe=bool(m.path))
