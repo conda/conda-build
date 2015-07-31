@@ -51,13 +51,11 @@ This works by creating a conda.pth file in site-packages."""
                          "add to conda.pth; relink runtime libraries to "
                          "environment's lib/."))
     p.add_argument(
-                   '-c', '--clean_build_ext',
+                   '-c', '--clean',
                    action='store_true',
-                   help=("Invoke clean then build_ext: "
-                         "python setup.py clean && "
-                         "python setup.py build_ext --inplace; "
-                         "add to conda.pth; relink runtime libraries to "
-                         "environment's lib/."))
+                   help=("Invoke clean on setup.py: "
+                         "python setup.py clean "
+                         "use with build_ext to clean before building."))
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -158,27 +156,30 @@ def get_setup_py(path_):
     return setup_py
 
 
-def build_ext(pkg_path, clean_=False):
+def clean(setup_py):
+    '''
+    This invokes:
+    $ python setup.py clean
+
+    :param setup_py: path to setup.py
+    '''
+    # first call setup.py clean
+    cmd = ['python', setup_py, 'clean']
+    _check_call(cmd)
+    print("Completed: " + " ".join(cmd))
+    print("===============================================")
+
+
+def build_ext(setup_py):
     '''
     define a develop function - similar to build function
-    todo: still need to test on win32 and linux
+    todo: need to test on win32 and linux
 
-    It invokes $ python setup.py develop
-    The entry_points are automatically installed in bin/ however the setup.py's
-    uninstall command does not remove them.
+    It invokes:
+    $ python setup.py build_ext --inplace
 
-    develop mode has an --exclude-scripts options, if that is True, then don't
-    install these in bin/. Conda exposes --exclude-scripts option for develop
-    and simply passes it down to setup.py
+    :param setup_py: path to setup.py
     '''
-    setup_py = get_setup_py(pkg_path)
-
-    if clean_:
-        # first call setup.py clean
-        cmd = ['python', setup_py, 'clean']
-        _check_call(cmd)
-        print("Completed: " + " ".join(cmd))
-        print("===============================================")
 
     # next call setup.py develop
     cmd = ['python', setup_py, 'build_ext', '--inplace']
@@ -208,10 +209,16 @@ Error: environment does not exist: %s
 
     for path in args.source:
         pkg_path = abspath(expanduser(path))
+        setup_py = get_setup_py(pkg_path)
+
+        if args.clean:
+            clean(setup_py)
+            if not args.build_ext:
+                sys.exit()
 
         # build extensions before adding to conda.pth
-        if args.build_ext or args.clean_build_ext:
-            build_ext(pkg_path, clean_=args.clean_build_ext)
+        if args.build_ext:
+            build_ext(setup_py)
 
         if not args.no_pth_file:
             write_to_conda_pth(sp_dir, pkg_path)
