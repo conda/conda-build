@@ -487,7 +487,7 @@ def get_package_metadata(args, package, d, data):
         if isinstance(entry_points, str):
             # makes sure it is left-shifted
             newstr = "\n".join(x.strip()
-                                for x in entry_points.split('\n'))
+                                for x in entry_points.splitlines())
             config = configparser.ConfigParser()
             entry_points = {}
             try:
@@ -537,7 +537,7 @@ def get_package_metadata(args, package, d, data):
             deps.append('setuptools')
         for deptext in requires:
             if isinstance(deptext, string_types):
-                deptext = deptext.split('\n')
+                deptext = deptext.splitlines()
             # Every item may be a single requirement
             #  or a multiline requirements string...
             for dep in deptext:
