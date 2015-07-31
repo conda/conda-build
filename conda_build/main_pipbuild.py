@@ -143,7 +143,7 @@ def build_recipe(package, version=None):
         print(err.output)
         raise RuntimeError((" ".join(args)))
 
-    output = result.strip().split('\n')
+    output = result.strip().splitlines()
     if output[-1] == 'Done':
         direc = output[-2].split()[-1]
     else:
