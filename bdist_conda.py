@@ -194,7 +194,7 @@ class bdist_conda(install):
                 if isinstance(entry_points, string_types):
                     # makes sure it is left-shifted
                     newstr = "\n".join(x.strip() for x in
-                        entry_points.split('\n'))
+                        entry_points.splitlines())
                     c = configparser.ConfigParser()
                     entry_points = {}
                     try:
