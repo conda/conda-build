@@ -34,7 +34,7 @@ def write_repodata(repodata, dir_path):
     """ Write updated repodata.json and repodata.json.bz2 """
     data = json.dumps(repodata, indent=2, sort_keys=True)
     # strip trailing whitespace
-    data = '\n'.join(line.rstrip() for line in data.split('\n'))
+    data = '\n'.join(line.rstrip() for line in data.splitlines())
     # make sure we have newline at the end
     if not data.endswith('\n'):
         data += '\n'
