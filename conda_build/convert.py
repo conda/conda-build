@@ -74,7 +74,7 @@ def has_nonpy_entry_points(t, unix_to_win=True, show=False, quiet=False):
                     print("Binary file %s" % m.path)
                 matched = True
             else:
-                firstline = r.split('\n')[0]
+                firstline = r.splitlines()[0]
                 if 'python' not in firstline:
                     if show:
                         print("Non-Python plaintext file %s" % m.path)
