@@ -73,9 +73,16 @@ different sets of packages."""
         help="Only check (validate) the recipe.",
     )
     p.add_argument(
+        "--no-anaconda-upload",
+        action="store_false",
+        help="Do not ask to upload the package to anaconda.org.",
+        dest='binstar_upload',
+        default=config.binstar_upload,
+    )
+    p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="Do not ask to upload the package to binstar.",
+        help="Do not ask to upload the package to anaconda.org.",
         dest='binstar_upload',
         default=config.binstar_upload,
     )
@@ -113,12 +120,12 @@ different sets of packages."""
         '-b', '--build-only',
         action="store_true",
         help="""Only run the build, without any post processing or
-        testing. Implies --no-test and --no-binstar-upload.""",
+        testing. Implies --no-test and --no-anaconda-upload.""",
     )
     p.add_argument(
         '-p', '--post',
         action="store_true",
-        help="Run the post-build logic. Implies --no-test and --no-binstar-upload.",
+        help="Run the post-build logic. Implies --no-test and --no-anaconda-upload.",
     )
     p.add_argument(
         '--skip-existing',
@@ -189,7 +196,7 @@ def handle_binstar_upload(path, args):
         upload = args.binstar_upload
 
     no_upload_message = """\
-# If you want to upload this package to binstar.org later, type:
+# If you want to upload this package to anaconda.org later, type:
 #
 # $ binstar upload %s
 #
@@ -200,15 +207,15 @@ def handle_binstar_upload(path, args):
         print(no_upload_message)
         return
 
-    binstar = find_executable('binstar')
+    binstar = find_executable('anaconda')
     if binstar is None:
         print(no_upload_message)
         sys.exit('''
-Error: cannot locate binstar (required for upload)
+Error: cannot locate anaconda command (required for upload)
 # Try:
-# $ conda install binstar
+# $ conda install anaconda-client
 ''')
-    print("Uploading to binstar")
+    print("Uploading to anaconda.org")
     args = [binstar, 'upload', path]
     try:
         subprocess.call(args)
