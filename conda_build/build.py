@@ -156,7 +156,7 @@ def create_info_files(m, files, include_recipe=True):
         dst = join(config.info_dir, readme)
         shutil.copy(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
-            print("WARNING: Binstar only recognizes about/readme as README.md and README.rst",
+            print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                 file=sys.stderr)
 
     # Deal with Python 2 and 3's different json module type reqs
