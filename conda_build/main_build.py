@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 import sys
 from collections import deque
 from glob import glob
@@ -82,7 +83,7 @@ different sets of packages."""
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="Do not ask to upload the package to anaconda.org.",
+        help=argparse.SUPPRESS,
         dest='binstar_upload',
         default=config.binstar_upload,
     )

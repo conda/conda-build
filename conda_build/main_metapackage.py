@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 from collections import defaultdict
 
 import conda.config
@@ -39,7 +40,7 @@ command line with the conda metapackage command.
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="Do not ask to upload the package to anaconda.org.",
+        help=argparse.SUPPRESS,
         dest='binstar_upload',
         default=conda.config.binstar_upload,
     )
