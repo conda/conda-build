@@ -30,9 +30,16 @@ command line with the conda metapackage command.
     )
 
     p.add_argument(
+        "--no-anaconda-upload",
+        action="store_false",
+        help="Do not ask to upload the package to anaconda.org.",
+        dest='binstar_upload',
+        default=conda.config.binstar_upload,
+    )
+    p.add_argument(
         "--no-binstar-upload",
         action="store_false",
-        help="Do not ask to upload the package to binstar.",
+        help="Do not ask to upload the package to anaconda.org.",
         dest='binstar_upload',
         default=conda.config.binstar_upload,
     )
