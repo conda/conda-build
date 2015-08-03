@@ -23,6 +23,8 @@ from conda.compat import PY3
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked
 from conda.utils import url_path
+import conda.instructions as inst
+import conda.install as ci
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import environ, source, tarcheck
@@ -35,6 +37,8 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
+on_win = bool(sys.platform == 'win32')
+
 
 def prefix_files():
     '''
@@ -248,6 +252,8 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
+    copy = on_win
+
     if not isdir(config.bldpkgs_dir):
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
@@ -259,6 +265,16 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
 
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
+        if copy:
+            new_link = []
+            for pkg in actions["LINK"]:
+                dist, pkgs_dir, lt = inst.split_linkarg(pkg)
+                if dist.split('-')[0] == 'markupsafe':
+                    lt = ci.LINK_COPY
+                    new_link.append("%s %s %d" % (dist, pkgs_dir, lt))
+                else:
+                    new_link.append(pkg)
+            actions["LINK"] = new_link
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
