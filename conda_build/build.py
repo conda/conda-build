@@ -269,8 +269,11 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
             new_link = []
             for pkg in actions["LINK"]:
                 dist, pkgs_dir, lt = inst.split_linkarg(pkg)
-                lt = ci.LINK_COPY
-                new_link.append("%s %s %d" % (dist, pkgs_dir, lt))
+                if dist.split('-')[0] == 'markupsafe':
+                    lt = ci.LINK_COPY
+                    new_link.append("%s %s %d" % (dist, pkgs_dir, lt))
+                else:
+                    new_link.append(pkg)
             actions["LINK"] = new_link
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
