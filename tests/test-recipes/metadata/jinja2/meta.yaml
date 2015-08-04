@@ -8,6 +8,7 @@ build:
 requirements:
     build:
         - jinja2
+        - python
 
 test:
   commands:
