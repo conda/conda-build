@@ -20,6 +20,8 @@ from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
+from conda.install import delete_trash
+on_win = (sys.platform == 'win32')
 
 all_versions = {
     'python': [26, 27, 33, 34],
@@ -248,6 +250,13 @@ def execute(args, parser):
 
     check_external()
     channel_urls = args.channel or ()
+
+    if on_win:
+        # needs to happen before any c extensions are imported that might be
+        # hard-linked by files in the trash. one of those is markupsafe, used
+        # by jinja2. see https://github.com/conda/conda-build/pull/520
+        assert 'markupsafe' not in sys.modules
+        delete_trash(None)
 
     conda_version = {
         'python': 'CONDA_PY',

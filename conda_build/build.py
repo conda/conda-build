@@ -21,7 +21,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked
+from conda.install import prefix_placeholder, linked, move_to_trash
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
@@ -35,6 +35,8 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
+on_win = (sys.platform == 'win32')
+
 
 def prefix_files():
     '''
@@ -328,10 +330,20 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_ch
 
     if post in [False, None]:
         print("Removing old build environment")
-        rm_rf(config.short_build_prefix)
-        rm_rf(config.long_build_prefix)
+        if on_win:
+            if isdir(config.short_build_prefix):
+                move_to_trash(config.short_build_prefix, '')
+            if isdir(config.long_build_prefix):
+                move_to_trash(config.long_build_prefix, '')
+        else:
+            rm_rf(config.short_build_prefix)
+            rm_rf(config.long_build_prefix)
         print("Removing old work directory")
-        rm_rf(source.WORK_DIR)
+        if on_win:
+            if isdir(source.WORK_DIR):
+                move_to_trash(source.WORK_DIR, '')
+        else:
+            rm_rf(source.WORK_DIR)
 
         # Display the name only
         # Version number could be missing due to dependency on source info.
@@ -477,8 +489,14 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         return
 
     print("TEST START:", m.dist())
-    rm_rf(config.build_prefix)
-    rm_rf(config.test_prefix)
+    if on_win:
+        if isdir(config.build_prefix):
+            move_to_trash(config.build_prefix, '')
+        if isdir(config.test_prefix):
+            move_to_trash(config.test_prefix, '')
+    else:
+        rm_rf(config.build_prefix)
+        rm_rf(config.test_prefix)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
