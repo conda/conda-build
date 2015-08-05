@@ -116,7 +116,7 @@ def build(m):
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
             fo.write(msvc_env_cmd())
             for kv in iteritems(env):
-                fo.write('set %s=%s\n' % kv)
+                fo.write('set "%s=%s"\n' % kv)
             # more debuggable with echo on
             fo.write('@echo on\n')
             fo.write("REM ===== end generated header =====\n")
