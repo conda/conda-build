@@ -36,16 +36,16 @@ PyPI is using conda skeleton pypi and conda build.
     )
 
     p.add_argument(
-        "--no-binstar-upload",
+        "--no-anaconda-upload",
         action="store_false",
-        help="Do not ask to upload the package to binstar.",
+        help="Do not ask to upload the package to anaconda.org.",
         dest='binstar_upload',
         default=cc.binstar_upload,
     )
     p.add_argument(
-        "--binstar-upload",
+        "--anaconda-upload",
         action="store_true",
-        help="Upload the package to binstar.",
+        help="Upload the package to anaconda.org.",
         dest='binstar_upload',
         default=cc.binstar_upload,
     )
@@ -82,14 +82,14 @@ PyPI is using conda skeleton pypi and conda build.
 
 def handle_binstar_upload(path):
     from conda_build.external import find_executable
-    binstar = find_executable('binstar')
+    binstar = find_executable('anaconda')
     if binstar is None:
         sys.exit('''
-Error: cannot locate binstar (required for upload)
+Error: cannot locate anaconda command (required for upload)
 # Try:
-# $ conda install binstar
+# $ conda install anaconda-client
 ''')
-    print("Uploading to binstar")
+    print("Uploading to anaconda.org")
     args = [binstar, 'upload', path]
     subprocess.call(args)
 
@@ -101,7 +101,7 @@ Error: cannot locate binstar (required for upload)
 
 skeleton_template = "conda skeleton pypi {0} --no-prompt"
 skeleton_template_wversion = "conda skeleton pypi {0} --version {1} --no-prompt"
-build_template = "conda build {0} --no-binstar-upload --no-test"
+build_template = "conda build {0} --no-anaconda-upload --no-test"
 
 meta_template = """package:
   name: {packagename}

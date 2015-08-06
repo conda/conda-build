@@ -39,7 +39,7 @@ test_script:
          cd tests\test-recipes\metadata
          $files = Get-ChildItem .
          for ($i=0; $i -lt $files.Count; $i++) {
-             C:\Miniconda\Scripts\conda-build.exe --no-binstar-upload $files[$i]
+             C:\Miniconda\Scripts\conda-build.exe --no-anaconda-upload $files[$i]
              if ($LastExitCode -ne 0) {
                  echo $error[0].ToString() + $error[0].InvocationInfo.PositionMessage
                  exit 1

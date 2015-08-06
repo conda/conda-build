@@ -265,9 +265,9 @@ class bdist_conda(install):
                 handle_binstar_upload(build.bldpkg_path(m), args)
             else:
                 no_upload_message = """\
-# If you want to upload this package to binstar.org later, type:
+# If you want to upload this package to anaconda.org later, type:
 #
-# $ binstar upload %s
+# $ anaconda upload %s
 """ % build.bldpkg_path(m)
                 print(no_upload_message)
 
@@ -282,7 +282,7 @@ bdist_conda.user_options.extend([
     the conda package. Defaults to 0, or the conda_buildnum specified in the
     setup() function. The command line flag overrides the option to
     setup().''')),
-    (str('binstar-upload'), None, ("""Upload the finished package to binstar""")),
+    (str('anaconda-upload'), None, ("""Upload the finished package to anaconda.org""")),
     ])
 
-bdist_conda.boolean_options.extend([str('binstar-upload')])
+bdist_conda.boolean_options.extend([str('anaconda-upload')])
