@@ -1,7 +1,8 @@
   * quote set calls in bld.bat
   * use the trash on Windows when deleting environments
   * improve documentation in noarch_python source
-  * rename 'binstar' -> 'anaconda'
+  * rename 'binstar' -> 'anaconda', see #519
+
 
 2015-07-30   1.16.0:
 --------------------
