@@ -111,7 +111,11 @@ def parse(data):
     if res is None:
         res = {}
     for field in FIELDS:
-        if field in res and not isinstance(res[field], dict):
+        if field not in res:
+            continue
+        if res[field] is None:
+            res[field] = {}
+        if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
