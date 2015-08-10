@@ -3,6 +3,7 @@
   * improve documentation in noarch_python source
   * rename 'binstar' -> 'anaconda', see #519
   * allow blank sections in meta.yaml, see #533
+  * add --no-include-recipe option to conda-build, see #535
 
 
 2015-07-30   1.16.0:
