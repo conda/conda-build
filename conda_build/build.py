@@ -307,7 +307,8 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, verbose=True, post=None, channel_urls=(), override_channels=False):
+def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
+    override_channels=False, include_recipe=True):
     '''
     Build the package with the specified metadata.
 
@@ -439,7 +440,7 @@ can lead to packages that include their dependencies.""" %
                     join(config.build_prefix, f)),)))
         post_build(m, sorted(files2 - files1))
         create_info_files(m, sorted(files2 - files1),
-                          include_recipe=bool(m.path))
+                          include_recipe=bool(m.path) and include_recipe)
         if m.get_value('build/noarch_python'):
             import conda_build.noarch_python as noarch_python
             noarch_python.transform(m, sorted(files2 - files1))
