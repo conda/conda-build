@@ -90,6 +90,13 @@ different sets of packages."""
         default=config.binstar_upload,
     )
     p.add_argument(
+        "--no-include-recipe",
+        action="store_false",
+        help="Don't include the recipe inside the built package.",
+        dest='include_recipe',
+        default=True,
+    )
+    p.add_argument(
         "--output",
         action="store_true",
         help="Output the conda package filename which would have been "
@@ -372,7 +379,8 @@ def execute(args, parser):
                     post = None
                 try:
                     build.build(m, verbose=not args.quiet, post=post,
-                        channel_urls=channel_urls, override_channels=args.override_channels)
+                        channel_urls=channel_urls,
+                        override_channels=args.override_channels, include_recipe=args.include_recipe)
                 except RuntimeError as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
