@@ -166,8 +166,9 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(m.info_index(), fo, indent=2, sort_keys=True)
 
-    with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
-        json.dump(m.meta, fo, indent=2, sort_keys=True)
+    if include_recipe:
+        with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
+            json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     if sys.platform == 'win32':
         # make sure we use '/' path separators in metadata
