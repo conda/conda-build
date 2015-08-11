@@ -33,7 +33,7 @@ def get_git_build_info(src_dir):
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
-    if os.path.isdir(git_dir):
+    if os.path.exists(git_dir):
         env['GIT_DIR'] = git_dir
     else:
         return d
