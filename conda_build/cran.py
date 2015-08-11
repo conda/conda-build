@@ -370,9 +370,12 @@ def main(args, parser):
 
             DESCRIPTION = join(source.WORK_DIR, "DESCRIPTION")
             if not isfile(DESCRIPTION):
-                sub_description = join(source.WORK_DIR, 'pkg', "DESCRIPTION")
-                if isfile(sub_description):
-                    DESCRIPTION = sub_description
+                sub_description_pkg = join(source.WORK_DIR, 'pkg', "DESCRIPTION")
+                sub_description_name = join(source.WORK_DIR, package.split('/')[-1], "DESCRIPTION")
+                if isfile(sub_description_pkg):
+                    DESCRIPTION = sub_description_pkg
+                elif isfile(sub_description_name):
+                    DESCRIPTION = sub_description_name
                 else:
                     sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file)" % package)
 
