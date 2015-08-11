@@ -314,7 +314,7 @@ def execute(args, parser):
             override_channels=args.override_channels)
 
     already_built = []
-    to_build = args.recipe.copy()
+    to_build = args.recipe[:]
     with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
