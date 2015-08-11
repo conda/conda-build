@@ -377,7 +377,7 @@ def main(args, parser):
                     sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file)" % package)
 
             with open(DESCRIPTION) as f:
-                description_text = f.read()
+                description_text = clear_trailing_whitespace(f.read())
 
             d = dict_from_cran_lines(remove_package_line_continuations(description_text.splitlines()))
             d['orig_description'] = description_text
