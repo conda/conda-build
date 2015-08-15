@@ -136,10 +136,10 @@ def create_info_files(m, files, include_recipe=True):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
-    recipe_dir = join(config.info_dir, 'recipe')
-    os.makedirs(recipe_dir)
-
     if include_recipe:
+        recipe_dir = join(config.info_dir, 'recipe')
+        os.makedirs(recipe_dir)
+
         for fn in os.listdir(m.path):
             if fn.startswith('.'):
                 continue
@@ -167,13 +167,13 @@ def create_info_files(m, files, include_recipe=True):
     readme = m.get_value('about/readme')
     if readme:
         src = join(source.get_dir(), readme)
-        if not os.path.exists(src):
-            sys.exit("Error: Could not find the readme: %s" % readme)
+        if not isfile(src):
+            sys.exit("Error: no readme file: %s" % readme)
         dst = join(config.info_dir, readme)
         shutil.copy(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
-                file=sys.stderr)
+                  file=sys.stderr)
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
@@ -426,7 +426,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
                     bf.write(script)
                 os.chmod(build_file, 0o766)
 
-            if exists(build_file):
+            if isfile(build_file):
                 cmd = ['/bin/bash', '-x', '-e', build_file]
 
                 _check_call(cmd, env=env, cwd=src_dir)
