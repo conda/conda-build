@@ -150,6 +150,20 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
+    license_file =  m.get_value('build/license_file')
+    if license_file:
+        filenames = 'LICENSE', 'LICENSE.txt', 'license.txt'
+        if license_file is True:
+            for fn in filenames:
+                src = join(source.get_dir(), fn)
+                if isfile(src):
+                    break
+            else:
+                sys.exit("Error: could not locate license file")
+        else:
+            src = join(source.get_dir(), license_file)
+        shutil.copy(src, join(config.info_dir, 'license.txt'))
+
     readme = m.get_value('about/readme')
     if readme:
         src = join(source.get_dir(), readme)
