@@ -150,16 +150,18 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    license_file =  m.get_value('build/license_file')
+    license_file = m.get_value('build/license_file')
     if license_file:
-        filenames = 'LICENSE', 'LICENSE.txt', 'license.txt'
+        filenames = 'LICENSE', 'LICENSE.txt', 'license', 'license.txt'
         if license_file is True:
             for fn in filenames:
                 src = join(source.get_dir(), fn)
                 if isfile(src):
                     break
             else:
-                sys.exit("Error: could not locate license file")
+                sys.exit("Error: could not locate license file (any of "
+                         "%s) in: %s" % (', '.join(filenames),
+                                         source.get_dir()))
         else:
             src = join(source.get_dir(), license_file)
         shutil.copy(src, join(config.info_dir, 'license.txt'))
