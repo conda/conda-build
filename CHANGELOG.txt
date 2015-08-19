@@ -4,6 +4,7 @@
   * rename 'binstar' -> 'anaconda', see #519
   * allow blank sections in meta.yaml, see #533
   * add --no-include-recipe option to conda-build, see #535
+  * add ability to add license file in info/license.txt, see #545
 
 
 2015-07-30   1.16.0:
