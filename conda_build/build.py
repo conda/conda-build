@@ -150,7 +150,7 @@ def create_info_files(m, files, include_recipe=True):
             else:
                 shutil.copy(src_path, dst_path)
 
-    license_file = m.get_value('build/license_file')
+    license_file = m.get_value('about/license_file')
     if license_file:
         filenames = 'LICENSE', 'LICENSE.txt', 'license', 'license.txt'
         if license_file is True:
