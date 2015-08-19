@@ -207,12 +207,12 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
-              'always_include_files', ],
+              'always_include_files'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary', 'readme'],
+    'about': ['home', 'license', 'summary', 'readme', 'license_file' ],
 }
 
 
