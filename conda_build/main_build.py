@@ -208,10 +208,10 @@ def handle_binstar_upload(path, args):
     no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
-# $ binstar upload %s
+# $ anaconda upload %s
 #
-# To have conda build upload to binstar automatically, use
-# $ conda config --set binstar_upload yes
+# To have conda build upload to anaconda.org automatically, use
+# $ conda config --set anaconda_upload yes
 """ % path
     if not upload:
         print(no_upload_message)
