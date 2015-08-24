@@ -314,6 +314,7 @@ def execute(args, parser):
             override_channels=args.override_channels)
 
     already_built = []
+    to_build = args.recipe[:]
     with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
@@ -396,10 +397,13 @@ def execute(args, parser):
                             recipes.appendleft(arg)
                             try_again = True
                             for recipe_dir in recipe_glob:
+                                if dep_pkg in to_build:
+                                    sys.exit(str(e))
                                 print(("Missing dependency {0}, but found" +
                                        " recipe directory, so building " +
                                        "{0} first").format(dep_pkg))
                                 recipes.appendleft(recipe_dir)
+                                to_build.append(dep_pkg)
                         else:
                             raise
                     else:

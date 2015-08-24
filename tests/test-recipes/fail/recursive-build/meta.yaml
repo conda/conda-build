@@ -1,0 +1,9 @@
+package:
+  name: conda-build-test-recursive-build-fail
+  version: 1.0
+
+# This is a version of the package that doesn't exist. The test is that this
+# doesn't run infinitely.
+requirements:
+  build:
+    - recursive-build2 2.0
