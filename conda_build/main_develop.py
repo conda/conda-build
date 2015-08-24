@@ -209,16 +209,17 @@ Error: environment does not exist: %s
 
     for path in args.source:
         pkg_path = abspath(expanduser(path))
-        setup_py = get_setup_py(pkg_path)
 
-        if args.clean:
-            clean(setup_py)
-            if not args.build_ext:
-                sys.exit()
+        if args.clean or args.build_ext:
+            setup_py = get_setup_py(pkg_path)
+            if args.clean:
+                clean(setup_py)
+                if not args.build_ext:
+                    sys.exit()
 
-        # build extensions before adding to conda.pth
-        if args.build_ext:
-            build_ext(setup_py)
+            # build extensions before adding to conda.pth
+            if args.build_ext:
+                build_ext(setup_py)
 
         if not args.no_pth_file:
             write_to_conda_pth(sp_dir, pkg_path)
