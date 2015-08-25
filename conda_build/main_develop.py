@@ -7,7 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-from os.path import join, isdir, abspath, expanduser
+from os.path import join, isdir, abspath, expanduser, exists
 from os import walk
 import fnmatch
 
@@ -15,6 +15,7 @@ from conda.cli.common import add_parser_prefix, get_prefix
 from conda.cli.conda_argparse import ArgumentParser
 from conda_build.main_build import args_func
 from conda_build.post import mk_relative_osx
+from conda_build.utils import _check_call
 
 from conda.install import linked
 
@@ -42,6 +43,19 @@ This works by creating a conda.pth file in site-packages."""
                    help=("Relink compiled extension dependencies against "
                          "libraries found in current conda env. "
                          "Do not add source to conda.pth."))
+    p.add_argument(
+                   '-b', '--build_ext',
+                   action='store_true',
+                   help=("Build extensions inplace, invoking: "
+                         "python setup.py build_ext --inplace; "
+                         "add to conda.pth; relink runtime libraries to "
+                         "environment's lib/."))
+    p.add_argument(
+                   '-c', '--clean',
+                   action='store_true',
+                   help=("Invoke clean on setup.py: "
+                         "python setup.py clean "
+                         "use with build_ext to clean before building."))
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -94,14 +108,84 @@ def relink_sharedobjects(pkg_path, build_prefix):
 def write_to_conda_pth(sp_dir, pkg_path):
     '''
     append pkg_path to conda.pth in site-packages directory for current
-    environment
+    environment. Only add path if it doens't already exist.
 
     :param sp_dir: path to site-packages/. directory
     :param pkg_path: the package path to append to site-packes/. dir.
     '''
-    with open(join(sp_dir, 'conda.pth'), 'a') as f:
-        f.write(pkg_path + '\n')
-        print("added " + pkg_path)
+    c_file = join(sp_dir, 'conda.pth')
+    with open(c_file, 'a') as f:
+        with open(c_file, 'r') as cf:
+            # make sure file exists, before we try to read from it hence nested
+            # in append with block
+            # expect conda.pth to be small so read it all in at once
+            pkgs_in_dev_mode = cf.readlines()
+
+        # only append pkg_path if it doesn't already exist in conda.pth
+        if pkg_path + '\n' in pkgs_in_dev_mode:
+            print("path exits, skipping " + pkg_path)
+        else:
+            f.write(pkg_path + '\n')
+            print("added " + pkg_path)
+
+
+def get_site_pkg(prefix, py_ver):
+    '''
+    Given the path to conda environment, find the site-packages directory
+
+    :param prefix: path to conda environment. Look here for current
+        environment's site-packages
+    :returns: absolute path to site-packages directory
+    '''
+    # get site-packages directory
+    stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
+                      'lib/python%s' % py_ver)
+    sp_dir = join(stdlib_dir, 'site-packages')
+
+    return sp_dir
+
+
+def get_setup_py(path_):
+    ''' return full path to setup.py or exit if not found '''
+    # build path points to source dir, builds are placed in the
+    setup_py = join(path_, 'setup.py')
+
+    if not exists(setup_py):
+        sys.exit("No setup.py found in {0}. Exiting.".format(path_))
+
+    return setup_py
+
+
+def clean(setup_py):
+    '''
+    This invokes:
+    $ python setup.py clean
+
+    :param setup_py: path to setup.py
+    '''
+    # first call setup.py clean
+    cmd = ['python', setup_py, 'clean']
+    _check_call(cmd)
+    print("Completed: " + " ".join(cmd))
+    print("===============================================")
+
+
+def build_ext(setup_py):
+    '''
+    define a develop function - similar to build function
+    todo: need to test on win32 and linux
+
+    It invokes:
+    $ python setup.py build_ext --inplace
+
+    :param setup_py: path to setup.py
+    '''
+
+    # next call setup.py develop
+    cmd = ['python', setup_py, 'build_ext', '--inplace']
+    _check_call(cmd)
+    print("Completed: " + " ".join(cmd))
+    print("===============================================")
 
 
 def execute(args, parser):
@@ -115,22 +199,29 @@ Error: environment does not exist: %s
     for package in linked(prefix):
         name, ver, _ = package .rsplit('-', 2)
         if name == 'python':
-            py_ver = ver[:3] # x.y
+            py_ver = ver[:3]  # x.y
             break
     else:
         raise RuntimeError("python is not installed in %s" % prefix)
 
+    # current environment's site-packages directory
+    sp_dir = get_site_pkg(prefix, py_ver)
+
     for path in args.source:
         pkg_path = abspath(expanduser(path))
+
+        if args.clean or args.build_ext:
+            setup_py = get_setup_py(pkg_path)
+            if args.clean:
+                clean(setup_py)
+                if not args.build_ext:
+                    sys.exit()
+
+            # build extensions before adding to conda.pth
+            if args.build_ext:
+                build_ext(setup_py)
+
         if not args.no_pth_file:
-            stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
-                              'lib/python%s' % py_ver)
-            sp_dir = join(stdlib_dir, 'site-packages')
-
-            # todo:
-            # build the package if setup.py is found then invoke it with
-            # build_ext --inplace - this only exists for extensions
-
             write_to_conda_pth(sp_dir, pkg_path)
 
         # go through the source looking for compiled extensions and make sure
