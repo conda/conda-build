@@ -1,3 +1,9 @@
+2015-XX-XX   1.17.1:
+--------------------
+  * develop options --build_ext, --clean_build_ext, #512
+  * fix directory not existing when using --no-include-recipe option
+
+
 2015-08-24   1.17.0:
 --------------------
   * quote set calls in bld.bat
