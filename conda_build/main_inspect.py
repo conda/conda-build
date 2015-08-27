@@ -18,7 +18,7 @@ import conda.install as ci
 
 from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
-from conda_build.macho import get_rpath, human_filetype
+from conda_build.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter
 
 def main():
@@ -142,11 +142,18 @@ def replace_path(binary, path, prefix):
         if path == basename(binary):
             return abspath(join(prefix, binary))
         if '@rpath' in path:
-            rpath = get_rpath(join(prefix, binary))
-            if not rpath:
+            rpaths = get_rpaths(join(prefix, binary))
+            if not rpaths:
                 return "NO LC_RPATH FOUND"
             else:
-                path = path.replace("@rpath", rpath)
+                for rpath in rpaths:
+                    path1 = path.replace("@rpath", rpath)
+                    path1 = path1.replace('@loader_path', join(prefix, dirname(binary)))
+                    if exists(abspath(join(prefix, path1))):
+                        path = path1
+                        break
+                else:
+                    return 'not found'
         path = path.replace('@loader_path', join(prefix, dirname(binary)))
         if path.startswith('/'):
             return abspath(path)
@@ -291,7 +298,7 @@ def execute(args, parser):
                 f_info = {}
                 path = join(prefix, f)
                 f_info['filetype'] = human_filetype(path)
-                f_info['rpath'] = get_rpath(path)
+                f_info['rpath'] = ':'.join(get_rpaths(path))
                 f_info['filename'] = f
                 info.append(f_info)
 
