@@ -104,6 +104,19 @@ def yamlize(data):
         raise exceptions.UnableToParse(original=e)
 
 
+allowed_license_families = set("""AGPL GPL2 GPL3 LGPL BSD MIT Apache PSF
+Public-Domain Proprietary Other """.split())
+
+def ensure_valid_license_family(meta):
+    try:
+        license_family = meta['about']['license_family']
+    except KeyError:
+        return
+    if license_family not in allowed_license_families:
+        raise RuntimeError("about/license_family '%s' not allowed" %
+                           license_family)
+
+
 def parse(data):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
@@ -140,6 +153,7 @@ def parse(data):
         if val is None:
             val = ''
         res[section][key] = text_type(val)
+    ensure_valid_license_family(res)
     return sanitize(res)
 
 
