@@ -212,7 +212,8 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary', 'readme', 'license_file' ],
+    'about': ['home', 'license', 'license_family',
+              'summary', 'readme', 'license_file'],
 }
 
 
@@ -434,12 +435,16 @@ class MetaData(object):
             version = self.version(),
             build = self.build_id(),
             build_number = self.build_number(),
-            license = self.get_value('about/license'),
             platform = cc.platform,
             arch = cc.arch_name,
             subdir = cc.subdir,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
+        for key in ('license', 'license_family'):
+            value = self.get_value('about/' + key)
+            if value:
+                d[key] = value
+
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
