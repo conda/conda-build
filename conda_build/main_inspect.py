@@ -19,7 +19,7 @@ import conda.install as ci
 from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter
+from conda_build.utils import groupby, getter, comma_join
 
 def main():
     p = ArgumentParser(
@@ -227,7 +227,7 @@ def execute(args, parser):
                     if path.startswith(prefix):
                         deps = list(which_package(path))
                         if len(deps) > 1:
-                            print("Warning: %s comes from multiple packages: %s" % (path, ' and '.join(deps)), file=sys.stderr)
+                            print("Warning: %s comes from multiple packages: %s" % (path, comma_join(deps)), file=sys.stderr)
                         if not deps:
                             if exists(path):
                                 depmap['untracked'].append((lib, path.split(prefix
