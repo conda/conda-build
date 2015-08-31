@@ -141,3 +141,18 @@ def getter(index):
             return lambda x: ()
     else:
         return operator.itemgetter(index)
+
+def comma_join(items):
+    """
+    Like ', '.join(items) but with and
+
+    Examples:
+
+    >>> comma_join(['a'])
+    'a'
+    >>> comma_join(['a', 'b'])
+    'a and b'
+    >>> comma_join(['a', 'b', 'c])
+    'a, b, and c'
+    """
+    return ' and '.join(items) if len(items) <= 2 else ', '.join(items[:-1]) + ', and ' + items[-1]

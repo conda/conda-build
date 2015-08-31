@@ -28,7 +28,7 @@ Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
 from conda_build.config import config
-
+from conda_build.utils import comma_join
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
@@ -104,8 +104,19 @@ def yamlize(data):
         raise exceptions.UnableToParse(original=e)
 
 
-allowed_license_families = set("""AGPL GPL2 GPL3 LGPL BSD MIT Apache PSF
-Public-Domain Proprietary Other """.split())
+allowed_license_families = set("""
+AGPL
+Apache
+BSD
+GPL2
+GPL3
+LGPL
+MIT
+Other
+PSF
+Proprietary
+Public-Domain
+""".split())
 
 def ensure_valid_license_family(meta):
     try:
@@ -113,9 +124,8 @@ def ensure_valid_license_family(meta):
     except KeyError:
         return
     if license_family not in allowed_license_families:
-        raise RuntimeError("about/license_family '%s' not allowed" %
-                           license_family)
-
+        raise RuntimeError(exceptions.indent("""about/license_family '%s' not allowed. Allowed families are %s.""" %
+            (license_family, comma_join(sorted(allowed_license_families)))))
 
 def parse(data):
     data = select_lines(data, ns_cfg())
