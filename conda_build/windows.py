@@ -89,7 +89,7 @@ call "%s" %s
 def kill_processes():
     if psutil is None:
         return
-    for n in psutil.get_pid_list():
+    for n in psutil.pids():
         try:
             p = psutil.Process(n)
             if p.name.lower() == 'msbuild.exe':
