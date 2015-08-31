@@ -30,7 +30,7 @@ from conda_build.config import config
 from conda_build.scripts import create_entry_points, bin_dirname
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.utils import rm_rf, _check_call
+from conda_build.utils import rm_rf, _check_call, comma_join
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -163,7 +163,7 @@ def create_info_files(m, files, include_recipe=True):
                     break
             else:
                 sys.exit("Error: could not locate license file (any of "
-                         "%s) in: %s" % (', '.join(filenames),
+                         "%s) in: %s" % (comma_join(filenames),
                                          source.get_dir()))
         else:
             src = join(source.get_dir(), license_file)
