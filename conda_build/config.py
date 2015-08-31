@@ -24,7 +24,9 @@ class Config(object):
     CONDA_NPY = int(os.getenv('CONDA_NPY', '0').replace('.', '')) or None
     CONDA_R = os.getenv("CONDA_R", "3.2.1")
 
-    PY3K = int(bool(CONDA_PY >= 30))
+    @property
+    def PY3K(self):
+        return int(bool(self.CONDA_PY >= 30))
 
     noarch = False
 
