@@ -207,7 +207,7 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
-              'always_include_files'],
+              'always_include_files', 'skip'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
@@ -471,6 +471,9 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/binary_has_prefix_files paths must use / as the path delimiter on Windows")
         return ret
+
+    def skip(self):
+        return self.get_value('build/skip', False)
 
     def __unicode__(self):
         '''
