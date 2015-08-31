@@ -104,6 +104,19 @@ def yamlize(data):
         raise exceptions.UnableToParse(original=e)
 
 
+allowed_license_families = set("""AGPL GPL2 GPL3 LGPL BSD MIT Apache PSF
+Public-Domain Proprietary Other """.split())
+
+def ensure_valid_license_family(meta):
+    try:
+        license_family = meta['about']['license_family']
+    except KeyError:
+        return
+    if license_family not in allowed_license_families:
+        raise RuntimeError("about/license_family '%s' not allowed" %
+                           license_family)
+
+
 def parse(data):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
@@ -140,6 +153,7 @@ def parse(data):
         if val is None:
             val = ''
         res[section][key] = text_type(val)
+    ensure_valid_license_family(res)
     return sanitize(res)
 
 
@@ -212,7 +226,8 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'summary', 'readme', 'license_file' ],
+    'about': ['home', 'license', 'license_family',
+              'summary', 'readme', 'license_file'],
 }
 
 
@@ -434,12 +449,16 @@ class MetaData(object):
             version = self.version(),
             build = self.build_id(),
             build_number = self.build_number(),
-            license = self.get_value('about/license'),
             platform = cc.platform,
             arch = cc.arch_name,
             subdir = cc.subdir,
             depends = sorted(ms.spec for ms in self.ms_depends())
         )
+        for key in ('license', 'license_family'):
+            value = self.get_value('about/' + key)
+            if value:
+                d[key] = value
+
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
