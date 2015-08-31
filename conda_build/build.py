@@ -349,6 +349,11 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
         # In case there are multiple builds in the same process
         config.use_long_build_prefix = False
 
+    if m.skip():
+        print("Skipped: The %s recipe defines build/skip for this "
+              "configuration." % m.dist())
+        sys.exit(0)
+
     if post in [False, None]:
         print("Removing old build environment")
         if on_win:

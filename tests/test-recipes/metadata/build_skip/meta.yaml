@@ -1,0 +1,10 @@
+package:
+  name: conda-build-skip
+  version: 1.0
+
+build:
+  skip: True
+
+requirements:
+  run:
+    - python
