@@ -21,7 +21,11 @@ class Config(object):
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
-    CONDA_NPY = int(os.getenv('CONDA_NPY', '0').replace('.', '')) or None
+    CONDA_NPY = os.getenv("CONDA_NPY")
+    if not CONDA_NPY:
+        CONDA_NPY = None
+    else:
+        CONDA_NPY = int(CONDA_NPY.replace('.', '')) or None
     CONDA_R = os.getenv("CONDA_R", "3.2.1")
 
     @property
