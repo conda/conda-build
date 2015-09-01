@@ -255,6 +255,7 @@ def execute(args, parser):
     import shutil
     import tarfile
     import tempfile
+    from os import makedirs
     from os.path import abspath, isdir, isfile
 
     from conda.lock import Locked
@@ -308,8 +309,9 @@ def execute(args, parser):
                     (conda_version[lang], version))
 
     if args.skip_existing:
-        if exists(config.bldpkgs_dir):
-            update_index(config.bldpkgs_dir)
+        if not isdir(config.bldpkgs_dir):
+            makedirs(config.bldpkgs_dir)
+        update_index(config.bldpkgs_dir)
         index = build.get_build_index(clear_cache=True,
             channel_urls=channel_urls,
             override_channels=args.override_channels)
