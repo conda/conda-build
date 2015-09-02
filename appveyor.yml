@@ -18,6 +18,7 @@ init:
   - ps: if($env:PYTHON -eq "3.4" -and $env:Platform -eq "x86"){Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda3-3.5.5-Windows-x86.exe' C:\Miniconda.exe; echo "Done"}
   - ps: C:\Miniconda.exe /S /D=C:\Miniconda
   - ps: ls C:\Miniconda/Scripts
+  - ps: env
   - C:\Miniconda\Scripts\conda config --set always_yes yes
   - C:\Miniconda\Scripts\conda install pytest requests conda-build jinja2 --quiet
   - cmd: if "%PYTHON%"=="2.7" C:\Miniconda\Scripts\conda install ndg-httpsclient
