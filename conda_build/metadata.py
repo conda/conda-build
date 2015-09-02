@@ -96,11 +96,12 @@ def yamlize(data):
     try:
         return yaml.load(data)
     except yaml.parser.ParserError as e:
-        try:
-            import jinja2
-            jinja2
-        except ImportError:
-            raise exceptions.UnableToParseMissingJinja2(original=e)
+        if '{{' in data:
+            try:
+                import jinja2
+                jinja2
+            except ImportError:
+                raise exceptions.UnableToParseMissingJinja2(original=e)
         raise exceptions.UnableToParse(original=e)
 
 
