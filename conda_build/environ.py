@@ -20,7 +20,7 @@ def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
 
 def get_npy_ver():
-    return '.'.join(str(config.CONDA_NPY))
+    return '.'.join(str(config.CONDA_NPY or ''))
 
 def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
