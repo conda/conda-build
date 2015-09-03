@@ -3,6 +3,9 @@
   * develop options --build_ext, --clean_build_ext, #512
   * fix directory not existing when using --no-include-recipe option
   * add support for multiple rpaths on OS X to conda inspect
+  * don't add 'np' to build string when package depends on numpy, but not
+    a specific version
+
 
 2015-08-24   1.17.0:
 --------------------

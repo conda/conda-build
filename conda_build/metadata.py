@@ -414,7 +414,8 @@ class MetaData(object):
                     try:
                         v = ms.spec.split()[1]
                     except IndexError:
-                        res.append(s)
+                        if name not in ['numpy']:
+                            res.append(s)
                         break
                     if any(i in v for i in ',|>!<'):
                         break
