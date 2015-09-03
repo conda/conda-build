@@ -41,6 +41,7 @@ def ns_cfg():
         linux = plat.startswith('linux-'),
         linux32 = bool(plat == 'linux-32'),
         linux64 = bool(plat == 'linux-64'),
+        arm = plat.startswith('linux-arm'),
         osx = plat.startswith('osx-'),
         unix = plat.startswith(('linux-', 'osx-')),
         win = plat.startswith('win-'),
