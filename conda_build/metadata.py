@@ -282,7 +282,7 @@ def get_contents(meta_path):
     return contents
 
 
-def special_spec(ms, ver):
+def handle_config_version(ms, ver):
     """
     'ms' is an instance of MatchSpec, and 'ver' is the version from the
     configuration, e.g. for ms.name == 'python', ver = 26 or None,

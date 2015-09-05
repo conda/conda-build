@@ -2,7 +2,7 @@ import unittest
 
 from conda.resolve import MatchSpec
 
-from conda_build.metadata import select_lines, special_spec
+from conda_build.metadata import select_lines, handle_config_version
 
 
 def test_select_lines():
@@ -45,10 +45,12 @@ class SpecialSpecTests(unittest.TestCase):
             ('python',        27,   'python 2.7*'),
             ]:
             ms = MatchSpec(spec)
-            self.assertEqual(special_spec(ms, ver), MatchSpec(res_spec))
+            self.assertEqual(handle_config_version(ms, ver),
+                             MatchSpec(res_spec))
 
         self.assertRaises(RuntimeError,
-                          special_spec, MatchSpec('python x.x'), None)
+                          handle_config_version,
+                          MatchSpec('python x.x'), None)
 
     def test_numpy(self):
         for spec, ver, res_spec in [
@@ -59,7 +61,9 @@ class SpecialSpecTests(unittest.TestCase):
             ('numpy 1.9.0 py27_2', None,  'numpy 1.9.0 py27_2'),
             ]:
             ms = MatchSpec(spec)
-            self.assertEqual(special_spec(ms, ver), MatchSpec(res_spec))
+            self.assertEqual(handle_config_version(ms, ver),
+                             MatchSpec(res_spec))
 
         self.assertRaises(RuntimeError,
-                          special_spec, MatchSpec('numpy x.x'), None)
+                          handle_config_version,
+                          MatchSpec('numpy x.x'), None)
