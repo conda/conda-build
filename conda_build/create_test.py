@@ -13,7 +13,7 @@ def create_files(dir_path, m):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
-    numpy version, CE/Pro) independent.
+    numpy version, ...) independent.
     Return False, if the package has no tests (for any configuration), and
     True if it has.
     """
