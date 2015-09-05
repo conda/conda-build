@@ -403,24 +403,7 @@ class MetaData(object):
                 if ms.name == name:
                     if self.get_value('build/noarch_python'):
                         continue
-                    if ms.strictness == 3:
-                        continue
-                    if ms.strictness == 2:
-                        if spec.split()[1] == 'x.x':
-                            if ver is None:
-                                raise RuntimeError('%s requires more input' % spec)
-                        else:
-                            continue
-                    if ms.strictness == 1 and name == 'numpy':
-                        ms = MatchSpec(name)
-                        continue
-                    if ver is None:
-                        ms = MatchSpec(name)
-                        continue
-                    str_ver = text_type(ver)
-                    if '.' not in str_ver:
-                        str_ver = '.'.join(str_ver)
-                    ms = MatchSpec('%s %s*' % (name, str_ver))
+                    ms = handle_config_version(ms, ver)
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
