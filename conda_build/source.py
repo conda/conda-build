@@ -222,6 +222,15 @@ def svn_source(meta):
     return WORK_DIR
 
 
+def _ensure_unix_line_endings(path):
+    """Replace windows line endings with Unix.  Return path to modified file."""
+    out_path = path + "_unix"
+    with open(path) as inputfile:
+        with open(out_path, "w") as outputfile:
+            for line in inputfile:
+                outputfile.write(line.replace("\r\n", "\n"))
+    return out_path
+
 def apply_patch(src_dir, path):
     print('Applying patch: %r' % path)
     if not isfile(path):
@@ -235,7 +244,10 @@ Error:
     You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
     or conda, cygwin (Windows),
 """ % (os.pathsep.join(external.dir_paths)))
-    check_call([patch, '-p0', '-i', path], cwd=src_dir)
+    patch_args = ['-p0', '-i', path]
+    if sys.platform == 'win32':
+        patch_args[-1] =  _ensure_unix_line_endings(path)
+    check_call([patch, ] + patch_args, cwd=src_dir)
 
 
 def provide(recipe_dir, meta, patch=True):

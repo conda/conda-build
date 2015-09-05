@@ -119,6 +119,34 @@ class Config(object):
         else:
             return join(self.croot, cc.subdir)
 
+    @property
+    def bits(self):
+        return cc.bits
+
+    @bits.setter
+    def bits(self, value):
+        cc.bits = value
+
+    @property
+    def platform(self):
+        return cc.platform
+
+    @property
+    def subdir(self):
+        return cc.subdir
+
+    @subdir.setter
+    def subdir(self, value):
+        cc.subdir = value
+
+    @property
+    def arch_name(self):
+        return cc.arch_name
+
+    @arch_name.setter
+    def arch_name(self, value):
+        cc.arch_name = value
+
 config = Config()
 
 croot = config.croot
