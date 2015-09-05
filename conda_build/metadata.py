@@ -372,11 +372,21 @@ class MetaData(object):
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
             if ms.name == self.name():
-                raise RuntimeError("Error: %s cannot depend on itself" % self.name())
+                raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if (ms.strictness != 1 or
-                             self.get_value('build/noarch_python')):
+                    if self.get_value('build/noarch_python'):
+                        continue
+                    if ms.strictness == 3:
+                        continue
+                    if ms.strictness == 2:
+                        if spec.split()[1] == 'x.x':
+                            if ver is None:
+                                raise RuntimeError('%s requires more input' % spec)
+                            else:
+                                continue
+                    if ms.strictness == 1 and name == 'numpy':
+                        ms = MatchSpec(name)
                         continue
                     if ver is None:
                         ms = MatchSpec(name)
@@ -385,6 +395,7 @@ class MetaData(object):
                     if '.' not in str_ver:
                         str_ver = '.'.join(str_ver)
                     ms = MatchSpec('%s %s*' % (name, str_ver))
+
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
                     sys.exit("Error: bad character '%s' in package name "
