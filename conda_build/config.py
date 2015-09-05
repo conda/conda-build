@@ -32,6 +32,13 @@ class Config(object):
     def PY3K(self):
         return int(bool(self.CONDA_PY >= 30))
 
+    @property
+    def use_MSVC2015(self):
+        """Returns whether python version is above 3.4
+
+        (3.5 is compiler switch to MSVC 2015)"""
+        return bool(self.CONDA_PY >= 35)
+
     noarch = False
 
     def get_conda_py(self):

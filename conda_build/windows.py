@@ -62,9 +62,14 @@ def msvc_env_cmd():
     localappdata = os.environ.get("localappdata")
 
     if config.PY3K:
-        vcvarsall = os.path.join(program_files,
-                                 r'Microsoft Visual Studio 10.0'
-                                 r'\VC\vcvarsall.bat')
+        if config.use_MSVC2015:
+            vcvarsall = os.path.join(program_files,
+                                     r'Microsoft Visual Studio 14.0'
+                                     r'\VC\vcvarsall.bat')
+        else:
+            vcvarsall = os.path.join(program_files,
+                                     r'Microsoft Visual Studio 10.0'
+                                     r'\VC\vcvarsall.bat')
     else:
         vcvarsall = os.path.join(program_files,
                                  r'Microsoft Visual Studio 9.0'
