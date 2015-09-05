@@ -25,11 +25,11 @@ from conda.install import delete_trash
 on_win = (sys.platform == 'win32')
 
 all_versions = {
-    'python': [26, 27, 33, 34],
+    'python': [26, 27, 33, 34, 35],
     'numpy': [16, 17, 18, 19],
     'perl': None,
     'R': None,
-    }
+}
 
 class RecipeCompleter(Completer):
     def _get_items(self):
