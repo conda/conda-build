@@ -286,7 +286,7 @@ def special_spec(ms, ver):
     """
     'ms' is an instance of MatchSpec, and 'ver' is the version from the
     configuration, e.g. for ms.name == 'python', ver = 26 or None,
-    return the new MatchSpec object
+    return a (sometimes new) MatchSpec object
     """
     if ms.strictness == 3:
         return ms
@@ -295,13 +295,11 @@ def special_spec(ms, ver):
         if ms.spec.split()[1] == 'x.x':
             if ver is None:
                 raise RuntimeError("'%s' requires external setting" % ms.spec)
-        else: # normal version
+            # (no return here - proceeds below)
+        else: # regular version
             return ms
 
-    if ms.strictness == 1 and ms.name == 'numpy':
-        return MatchSpec(ms.name)
-
-    if ver is None:
+    if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
         return MatchSpec(ms.name)
 
     ver = text_type(ver)
