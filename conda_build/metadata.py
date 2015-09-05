@@ -282,6 +282,34 @@ def get_contents(meta_path):
     return contents
 
 
+def special_spec(ms, ver):
+    """
+    'ms' is an instance of MatchSpec, and 'ver' is the version from the
+    configuration, e.g. for ms.name == 'python', ver = 26 or None,
+    return the new MatchSpec object
+    """
+    if ms.strictness == 3:
+        return ms
+
+    if ms.strictness == 2:
+        if ms.spec.split()[1] == 'x.x':
+            if ver is None:
+                raise RuntimeError("'%s' requires external setting" % ms.spec)
+        else: # normal version
+            return ms
+
+    if ms.strictness == 1 and ms.name == 'numpy':
+        return MatchSpec(ms.name)
+
+    if ver is None:
+        return MatchSpec(ms.name)
+
+    ver = text_type(ver)
+    if '.' not in ver:
+        ver = '.'.join(ver)
+    return MatchSpec('%s %s*' % (ms.name, ver))
+
+
 class MetaData(object):
 
     def __init__(self, path):
@@ -383,8 +411,8 @@ class MetaData(object):
                         if spec.split()[1] == 'x.x':
                             if ver is None:
                                 raise RuntimeError('%s requires more input' % spec)
-                            else:
-                                continue
+                        else:
+                            continue
                     if ms.strictness == 1 and name == 'numpy':
                         ms = MatchSpec(name)
                         continue
