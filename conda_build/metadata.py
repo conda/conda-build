@@ -269,9 +269,19 @@ def get_contents(meta_path):
     from conda_build.jinja_context import context_processor
 
     path, filename = os.path.split(meta_path)
-    loaders = [jinja2.PackageLoader('conda_build'),
+    loaders = [# search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
+               jinja2.PackageLoader('conda_build'),
+               # search relative to RECIPE_DIR
                jinja2.FileSystemLoader(path)
                ]
+    
+    # search relative to current conda environment directory
+    conda_env_path = os.environ.get('CONDA_ENV_PATH')  # path to current conda environment
+    if conda_env_path:
+        conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
+        env_loader = jinja2.FileSystemLoader(conda_env_path)
+        loaders.append(jinja2.PrefixLoader({'CONDA_ENVIRONMENT': env_loader}))
+
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(ns_cfg())
     env.globals.update(context_processor())
