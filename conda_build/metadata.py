@@ -277,7 +277,6 @@ def get_contents(meta_path):
     
     # search relative to current conda environment directory
     conda_env_path = os.environ.get('CONDA_ENV_PATH',  # path to current conda environment
-                     os.environ.get('CONDA_PATH',      # else: path to conda root environment
                                     ''))               # else: nothing
     conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
     if conda_env_path:
