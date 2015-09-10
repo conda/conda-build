@@ -280,7 +280,7 @@ def get_contents(meta_path):
     if conda_env_path:
         conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
         env_loader = jinja2.FileSystemLoader(conda_env_path)
-        loaders.append(jinja2.PrefixLoader({'CONDA_ENVIRONMENT': env_loader}))
+        loaders.append(jinja2.PrefixLoader({'$CONDA_ENV_PATH': env_loader}))
 
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(ns_cfg())
