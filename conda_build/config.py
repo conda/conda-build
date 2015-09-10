@@ -32,6 +32,13 @@ class Config(object):
     def PY3K(self):
         return int(bool(self.CONDA_PY >= 30))
 
+    @property
+    def use_MSVC2015(self):
+        """Returns whether python version is above 3.4
+
+        (3.5 is compiler switch to MSVC 2015)"""
+        return bool(self.CONDA_PY >= 35)
+
     noarch = False
 
     def get_conda_py(self):
@@ -111,6 +118,34 @@ class Config(object):
             return join(self.croot, "noarch")
         else:
             return join(self.croot, cc.subdir)
+
+    @property
+    def bits(self):
+        return cc.bits
+
+    @bits.setter
+    def bits(self, value):
+        cc.bits = value
+
+    @property
+    def platform(self):
+        return cc.platform
+
+    @property
+    def subdir(self):
+        return cc.subdir
+
+    @subdir.setter
+    def subdir(self, value):
+        cc.subdir = value
+
+    @property
+    def arch_name(self):
+        return cc.arch_name
+
+    @arch_name.setter
+    def arch_name(self, value):
+        cc.arch_name = value
 
 config = Config()
 

@@ -159,6 +159,11 @@ different sets of packages."""
         choices=PythonVersionCompleter(),
     )
     p.add_argument(
+        '--force32',
+        action="store_true",
+        help="""When passed on a 64-bit platform, will build 32-bit packages""",
+    )
+    p.add_argument(
         '--perl',
         action="append",
         help="""Set the Perl version used by conda build. Can be passed
@@ -280,6 +285,11 @@ def execute(args, parser):
         'perl': 'CONDA_PERL',
         'R': 'CONDA_R',
         }
+
+    if args.force32:
+        config.bits = 32
+        config.arch_name = 'x86'
+        config.subdir = '%s-%d' % (config.platform, 32)
 
     for lang in ['python', 'numpy', 'perl', 'R']:
         versions = getattr(args, lang)
