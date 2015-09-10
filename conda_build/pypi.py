@@ -676,6 +676,8 @@ def get_dir(tempdir):
         dir_path = join(tempdir, lst[0])
         if isdir(dir_path):
             return dir_path
+    if not lst:
+        return tempdir
     raise Exception("could not find unpacked source dir")
 
 
