@@ -14,6 +14,7 @@ import sys
 import tarfile
 from os.path import exists, isdir, isfile, islink, join
 import fnmatch
+import time
 
 
 import conda.config as cc
@@ -500,6 +501,8 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
 
     tmp_dir = join(config.croot, 'test-tmp_dir')
     rm_rf(tmp_dir)
+    time.sleep(2)  # give the OS some time to complete the rm_rf() command
+                   # (otherwise, makedirs() occasionally failed on Windows)
     os.makedirs(tmp_dir)
     create_files(tmp_dir, m)
     # Make Perl or Python-specific test files
