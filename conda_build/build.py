@@ -1,7 +1,6 @@
 '''
 Module that does most of the heavy lifting for the ``conda build`` command.
 '''
-
 from __future__ import absolute_import, division, print_function
 
 import io
@@ -12,9 +11,8 @@ import stat
 import subprocess
 import sys
 import tarfile
-from os.path import exists, isdir, isfile, islink, join
 import fnmatch
-
+from os.path import exists, isdir, isfile, islink, join
 
 import conda.config as cc
 import conda.plan as plan
@@ -35,6 +33,8 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
+
+
 on_win = (sys.platform == 'win32')
 
 
