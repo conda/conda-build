@@ -523,23 +523,24 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     else:
         rm_rf(config.build_prefix)
         rm_rf(config.test_prefix)
-    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+    test_specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
-    specs_include_python = False
-    for spec in m.get_value('test/requires', []):
-        specs.append(spec)
-        if spec.startswith('python ') or spec == 'python':
-            specs_include_python = True
+    test_specs += m.get_value('test/requires', [])
+
+    # Do we need to add the python spec ourselves?
+    test_and_run_specs = test_specs + m.get_value('requirements/run', [])
+    python_specs = list(filter(lambda spec: spec.startswith('python ') or spec == 'python', test_and_run_specs))
+    specs_include_python = len(python_specs) > 0
 
     if py_files and not specs_include_python:
         # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.get_py_ver()]
+        test_specs += ['python %s*' % environ.get_py_ver()]
     if pl_files:
         # as the tests are run by perl, we need to specify it
-        specs += ['perl %s*' % environ.get_perl_ver()]
+        test_specs += ['perl %s*' % environ.get_perl_ver()]
 
-    create_env(config.test_prefix, specs, verbose=verbose,
+    create_env(config.test_prefix, test_specs, verbose=verbose,
         channel_urls=channel_urls, override_channels=override_channels)
 
     env = dict(os.environ)
