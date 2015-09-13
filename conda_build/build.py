@@ -526,15 +526,12 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
-    specs_include_python = False
-    for spec in m.get_value('test/requires', []):
-        specs.append(spec)
-        if spec.startswith('python ') or spec == 'python':
-            specs_include_python = True
+    specs += m.get_value('test/requires', [])
 
-    if py_files and not specs_include_python:
-        # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.get_py_ver()]
+    if py_files:
+        # as the tests are run by python, ensure that python is installed.
+        # (If they already provided python as a run or test requirement, this won't hurt anything.)
+        specs += ['python']
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
