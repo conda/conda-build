@@ -31,7 +31,7 @@ test [abc] no
 
 """
 
-class SpecialSpecTests(unittest.TestCase):
+class HandleConfigVersionTests(unittest.TestCase):
 
     def test_python(self):
         for spec, ver, res_spec in [
