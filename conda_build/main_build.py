@@ -317,7 +317,7 @@ def execute(args, parser):
             override_channels=args.override_channels)
 
     already_built = []
-    to_build = args.recipe[:]
+    to_build_recursive = []
     with Locked(config.croot):
         recipes = deque(args.recipe)
         while recipes:
@@ -400,13 +400,13 @@ def execute(args, parser):
                             recipes.appendleft(arg)
                             try_again = True
                             for recipe_dir in recipe_glob:
-                                if dep_pkg in to_build:
+                                if dep_pkg in to_build_recursive:
                                     sys.exit(str(e))
                                 print(("Missing dependency {0}, but found" +
                                        " recipe directory, so building " +
                                        "{0} first").format(dep_pkg))
                                 recipes.appendleft(recipe_dir)
-                                to_build.append(dep_pkg)
+                                to_build_recursive.append(dep_pkg)
                         else:
                             raise
                     elif error_str.strip().startswith("Hint:"):
@@ -431,14 +431,14 @@ def execute(args, parser):
                                 recipes.appendleft(arg)
                                 try_again = True
                                 for recipe_dir in recipe_glob:
-                                    if pkg in to_build:
+                                    if pkg in to_build_recursive:
                                         sys.exit(str(e))
                                     print(error_str)
                                     print(("Missing dependency {0}, but found" +
                                            " recipe directory, so building " +
                                            "{0} first").format(pkg))
                                     recipes.appendleft(recipe_dir)
-                                    to_build.append(pkg)
+                                    to_build_recursive.append(pkg)
                             else:
                                 raise
                     else:
