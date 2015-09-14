@@ -433,6 +433,7 @@ def execute(args, parser):
                                 for recipe_dir in recipe_glob:
                                     if pkg in to_build:
                                         sys.exit(str(e))
+                                    print(error_str)
                                     print(("Missing dependency {0}, but found" +
                                            " recipe directory, so building " +
                                            "{0} first").format(pkg))
