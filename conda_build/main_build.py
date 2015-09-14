@@ -53,7 +53,7 @@ class NumPyVersionCompleter(Completer):
 
 class RVersionsCompleter(Completer):
     def _get_items(self):
-        return ['3.1.2', '3.1.3', '3.2.0', '3.2.1']
+        return ['3.1.2', '3.1.3', '3.2.0', '3.2.1', '3.2.2']
 
 def main():
     p = ArgumentParser(
