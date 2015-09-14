@@ -26,7 +26,7 @@ class Config(object):
         CONDA_NPY = None
     else:
         CONDA_NPY = int(CONDA_NPY.replace('.', '')) or None
-    CONDA_R = os.getenv("CONDA_R", "3.2.1")
+    CONDA_R = os.getenv("CONDA_R", "3.2.2")
 
     @property
     def PY3K(self):
