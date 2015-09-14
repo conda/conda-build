@@ -385,7 +385,7 @@ def execute(args, parser):
                     build.build(m, verbose=not args.quiet, post=post,
                         channel_urls=channel_urls,
                         override_channels=args.override_channels, include_recipe=args.include_recipe)
-                except RuntimeError as e:
+                except (RuntimeError, SystemExit) as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
                         # Build dependency if recipe exists
@@ -409,6 +409,37 @@ def execute(args, parser):
                                 to_build.append(dep_pkg)
                         else:
                             raise
+                    elif error_str.strip().startswith("Hint:"):
+                        lines = [line for line in error_str.splitlines() if line.strip().startswith('- ')]
+                        pkgs = [line.lstrip('- ') for line in lines]
+                        # Typically if a conflict is with one of these
+                        # packages, the other package needs to be rebuilt
+                        # (e.g., a conflict with 'python 3.5*' and 'x' means
+                        # 'x' isn't build for Python 3.5 and needs to be
+                        # rebuilt).
+                        skip_names = ['python', 'r']
+                        pkgs = [pkg for pkg in pkgs if pkg.split(' ')[0] not
+                            in skip_names]
+                        for pkg in pkgs:
+                            # Handle package names that contain version deps.
+                            if ' ' in pkg:
+                                pkg = pkg.split(' ')[0]
+                            recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                            if exists(pkg):
+                                recipe_glob.append(pkg)
+                            if recipe_glob:
+                                recipes.appendleft(arg)
+                                try_again = True
+                                for recipe_dir in recipe_glob:
+                                    if pkg in to_build:
+                                        sys.exit(str(e))
+                                    print(("Missing dependency {0}, but found" +
+                                           " recipe directory, so building " +
+                                           "{0} first").format(pkg))
+                                    recipes.appendleft(recipe_dir)
+                                    to_build.append(pkg)
+                            else:
+                                raise
                     else:
                         raise
                 if try_again:
