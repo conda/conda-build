@@ -382,6 +382,10 @@ def execute(args, parser):
                 else:
                     post = None
                 try:
+                    if m.skip():
+                        print("Skipped: The %s recipe defines build/skip for this "
+                              "configuration." % m.dist())
+                        continue
                     build.build(m, verbose=not args.quiet, post=post,
                         channel_urls=channel_urls,
                         override_channels=args.override_channels, include_recipe=args.include_recipe)
