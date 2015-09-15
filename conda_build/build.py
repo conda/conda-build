@@ -352,7 +352,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
     if m.skip():
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
-        sys.exit(0)
+        return
 
     if post in [False, None]:
         print("Removing old build environment")
