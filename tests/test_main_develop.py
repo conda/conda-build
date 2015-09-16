@@ -107,5 +107,5 @@ def test_uninstall(sp_dir, conda_pth, request):
 
         with open(conda_pth, 'r') as f:
             lines = f.readlines()
-            assert to_rm not in lines
+            assert to_rm + '\n' not in lines
             assert len(lines) == exp_num_pths
