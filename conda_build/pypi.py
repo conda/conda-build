@@ -416,7 +416,7 @@ def get_download_data(args, client, package, version, is_url):
             human_bytes(urls[n]['size'] or 0), package))
         pypiurl = urls[n]['url']
         md5 = urls[n]['md5_digest']
-        filename = urls[n]['filename']
+        filename = urls[n]['filename'] or 'package'
     else:
         print("Using url %s" % package)
         pypiurl = package
