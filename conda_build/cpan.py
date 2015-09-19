@@ -4,6 +4,8 @@ Tools for converting CPAN packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
+import contextlib
+import gzip
 import json
 import subprocess
 import sys
@@ -458,8 +460,8 @@ def dist_for_module(cpan_url, module, perl_version):
     try:
         with TmpDownload('{}/v0/release/{}'.format(cpan_url,
                                                    module)) as json_path:
-            with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
-                rel_dict = json.load(dist_json_file)
+            with contextlib.closing(gzip.open(json_path)) as dist_json_file:
+                rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
     # If there was an error, module may actually be a module
     except RuntimeError:
         rel_dict = None
@@ -471,8 +473,8 @@ def dist_for_module(cpan_url, module, perl_version):
         try:
             with TmpDownload('{}/v0/module/{}'.format(cpan_url,
                                                       module)) as json_path:
-                with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
-                    mod_dict = json.load(dist_json_file)
+                with contextlib.closing(gzip.open(json_path)) as dist_json_file:
+                    mod_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
         # If there was an error, report it
         except RuntimeError:
             core_version = core_module_version(module, perl_version)
@@ -502,8 +504,8 @@ def get_release_info(cpan_url, package, version, perl_version,
     # specific version
     try:
         with TmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
-            with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
-                rel_dict = json.load(dist_json_file)
+            with contextlib.closing(gzip.open(json_path)) as dist_json_file:
+                rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
                 rel_dict['version'] = rel_dict['version'].lstrip('v')
     except RuntimeError:
         core_version = core_module_version(orig_package, perl_version)
@@ -530,8 +532,8 @@ def get_release_info(cpan_url, package, version, perl_version,
                                                              author,
                                                              package,
                                                              version_str)) as json_path:
-                with io.open(json_path, encoding='utf-8-sig') as dist_json_file:
-                    new_rel_dict = json.load(dist_json_file)
+                with contextlib.closing(gzip.open(json_path)) as dist_json_file:
+                    new_rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
                     new_rel_dict['version'] = new_rel_dict['version'].lstrip()
         # Check if this is a core module, and don't die if it is
         except RuntimeError:
