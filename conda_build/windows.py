@@ -53,7 +53,7 @@ def fix_staged_scripts():
         os.remove(join(scripts_dir, fn))
 
 
-def msvc_env_cmd():
+def msvc_env_cmd(override=None):
     if 'ProgramFiles(x86)' in os.environ:
         program_files = os.environ['ProgramFiles(x86)']
     else:
@@ -61,19 +61,18 @@ def msvc_env_cmd():
 
     localappdata = os.environ.get("localappdata")
 
-    if config.PY3K:
-        if config.use_MSVC2015:
-            vcvarsall = os.path.join(program_files,
-                                     r'Microsoft Visual Studio 14.0'
-                                     r'\VC\vcvarsall.bat')
+    vcvarsall = os.path.join(program_files,
+                                 r'Microsoft Visual Studio {version}',
+                                 'VC', 'vcvarsall.bat')
+
+    if config.PY3K or override in {'msvc10', 'msvc14'}:
+        if config.use_MSVC2015 or override == 'msvc14':
+            vcvarsall = vcvarsall.format(version='14.0')
         else:
-            vcvarsall = os.path.join(program_files,
-                                     r'Microsoft Visual Studio 10.0'
-                                     r'\VC\vcvarsall.bat')
+            vcvarsall = vcvarsall.format(version='10.0')
     else:
-        vcvarsall = os.path.join(program_files,
-                                 r'Microsoft Visual Studio 9.0'
-                                 r'\VC\vcvarsall.bat')
+        vcvarsall = vcvarsall.format(version='9.0')
+
 
     # Try the Microsoft Visual C++ Compiler for Python 2.7
     if not isfile(vcvarsall) and localappdata and not config.PY3K:
@@ -119,7 +118,7 @@ def build(m):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
-            fo.write(msvc_env_cmd())
+            fo.write(msvc_env_cmd(override=m.get_value('build/msvc_compiler', None)))
             for kv in iteritems(env):
                 fo.write('set "%s=%s"\n' % kv)
             # more debuggable with echo on
