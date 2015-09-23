@@ -93,7 +93,7 @@ Error: Invalid selector in meta.yaml line %d:
 @memoized
 def yamlize(data):
     try:
-        return yaml.load(data, Loader=yaml.BaseLoader)
+        return yaml.load(data, Loader=BaseLoader)
     except yaml.parser.ParserError as e:
         if '{{' in data:
             try:
