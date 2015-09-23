@@ -58,13 +58,16 @@ def msvc_env_cmd(override=None):
         program_files = os.environ['ProgramFiles(x86)']
     else:
         program_files = os.environ['ProgramFiles']
-
-    if config.PY3K and config.use_MSVC2015 or override == 'msvc14':
+        
+    if config.PY3K and config.use_MSVC2015:
         version = '14.0'
-    elif config.PY3K or override == 'msvc10':
+    elif config.PY3K:
         version = '10.0'
     else:
         version = '9.0'
+
+    if override not None:
+        version = override
 
     vcvarsall = os.path.join(program_files,
                              r'Microsoft Visual Studio {version}'.format(version=version),
