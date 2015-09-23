@@ -59,35 +59,31 @@ def msvc_env_cmd(override=None):
     else:
         program_files = os.environ['ProgramFiles']
 
-    localappdata = os.environ.get("localappdata")
+    if config.PY3K and config.use_MSVC2015 or override == 'msvc14':
+        version = '14.0'
+    elif config.PY3K or override == 'msvc10':
+        version = '10.0'
+    else:
+        version = '9.0'
 
     vcvarsall = os.path.join(program_files,
-                                 r'Microsoft Visual Studio {version}',
-                                 'VC', 'vcvarsall.bat')
-
-    if config.PY3K or override in {'msvc10', 'msvc14'}:
-        if config.use_MSVC2015 or override == 'msvc14':
-            vcvarsall = vcvarsall.format(version='14.0')
-        else:
-            vcvarsall = vcvarsall.format(version='10.0')
-    else:
-        vcvarsall = vcvarsall.format(version='9.0')
-
+                             r'Microsoft Visual Studio {version}'.format(version=version),
+                             'VC', 'vcvarsall.bat')
 
     # Try the Microsoft Visual C++ Compiler for Python 2.7
-    if not isfile(vcvarsall) and localappdata and not config.PY3K:
+    localappdata = os.environ.get("localappdata")
+    not_vcvars = not isfile(vcvarsall)
+    if not_vcvars and localappdata and not config.PY3K:
         vcvarsall = os.path.join(localappdata, "Programs", "Common",
             "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
-    if not isfile(vcvarsall) and program_files and not config.PY3K:
+    if not_vcvars and program_files and not config.PY3K:
         vcvarsall = os.path.join(program_files, 'Common Files',
             'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
-    if not isfile(vcvarsall):
+    if not_vcvars:
         print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)
         return ''
 
-    return '''\
-call "%s" %s
-''' % (vcvarsall, {32: 'x86', 64: 'amd64'}[cc.bits])
+    return 'call "%s" %s' % (vcvarsall, 'x86' if cc.bits == 32 else 'amd64')
 
 
 def kill_processes():
@@ -119,8 +115,10 @@ def build(m):
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
             fo.write(msvc_env_cmd(override=m.get_value('build/msvc_compiler', None)))
+
             for kv in iteritems(env):
                 fo.write('set "%s=%s"\n' % kv)
+
             # more debuggable with echo on
             fo.write('@echo on\n')
             fo.write("REM ===== end generated header =====\n")
