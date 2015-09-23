@@ -11,6 +11,7 @@ import conda.config as cc
 from conda_build.config import config
 
 from conda_build import source
+from conda_build.scripts import prepend_bin_path
 
 
 def get_perl_ver():
@@ -104,11 +105,9 @@ def get_dict(m=None, prefix=None):
         d['CPU_COUNT'] = "1"
 
     d.update(**get_git_build_info(d['SRC_DIR']))
+    d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':         # -------- Windows
-        d['PATH'] = (join(prefix, 'Library', 'bin') + ';' +
-                     join(prefix) + ';' +
-                     join(prefix, 'Scripts') + ';%PATH%')
         d['SCRIPTS'] = join(prefix, 'Scripts')
         d['LIBRARY_PREFIX'] = join(prefix, 'Library')
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
@@ -119,7 +118,6 @@ def get_dict(m=None, prefix=None):
 
         d['R'] = join(prefix, 'Scripts', 'R.exe')
     else:                               # -------- Unix
-        d['PATH'] = '%s/bin:%s' % (prefix, os.getenv('PATH'))
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
         d['R'] = join(prefix, 'bin', 'R')

@@ -58,3 +58,10 @@ def create_entry_points(items):
         os.mkdir(bin_dir)
     for cmd, module, func in iter_entry_points(items):
         create_entry_point(join(bin_dir, cmd), module, func)
+
+
+def prepend_bin_path(env, prefix=config.test_prefix):
+    env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
+    if sys.platform == "win32":
+        env['PATH'] = join(test_prefix, "Library", "bin") + os.pathsep + env['PATH']
+    return env
