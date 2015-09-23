@@ -58,7 +58,9 @@ def msvc_env_cmd(override=None):
         program_files = os.environ['ProgramFiles(x86)']
     else:
         program_files = os.environ['ProgramFiles']
-        
+
+    msvc_env_lines = []
+
     if config.PY3K and config.use_MSVC2015:
         version = '14.0'
     elif config.PY3K:
@@ -66,8 +68,10 @@ def msvc_env_cmd(override=None):
     else:
         version = '9.0'
 
-    if override not None:
+    if override is not None:
         version = override
+        msvc_env_lines.append('set DISTUTILS_USE_SDK=1')
+        msvc_env_lines.append('set MSSdk=1')
 
     vcvarsall = os.path.join(program_files,
                              r'Microsoft Visual Studio {version}'.format(version=version),
@@ -86,7 +90,8 @@ def msvc_env_cmd(override=None):
         print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)
         return ''
 
-    return 'call "%s" %s' % (vcvarsall, 'x86' if cc.bits == 32 else 'amd64')
+    msvc_env_lines.append('call "%s" %s' % (vcvarsall, 'x86' if cc.bits == 32 else 'amd64'))
+    return '\n'.join(msvc_env_lines)
 
 
 def kill_processes():
