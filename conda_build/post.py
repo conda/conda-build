@@ -89,7 +89,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
 
             print('found egg dir:', egg_path)
             try:
-                os.rename(join(egg_path, 'EGG-INFO/PKG-INFO'),
+                os.rename(join(egg_path, 'EGG-INFO'),
                           egg_path + '-info')
             except OSError:
                 pass
