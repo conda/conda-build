@@ -13,7 +13,6 @@ from distutils.version import LooseVersion
 from glob import glob
 from os import makedirs
 from os.path import basename, dirname, join, exists
-import io
 
 from conda.api import get_index
 from conda.fetch import TmpDownload
