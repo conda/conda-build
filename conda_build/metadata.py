@@ -277,7 +277,8 @@ def get_contents(meta_path):
     
     # search relative to current conda environment directory
     conda_env_path = os.environ.get('CONDA_ENV_PATH')  # path to current conda environment
-    if conda_env_path:
+    if conda_env_path and os.path.isdir(conda_env_path):
+        conda_env_path = os.path.abspath(conda_env_path)
         conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
         env_loader = jinja2.FileSystemLoader(conda_env_path)
         loaders.append(jinja2.PrefixLoader({'$CONDA_ENV_PATH': env_loader}))
