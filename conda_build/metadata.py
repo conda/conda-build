@@ -224,7 +224,7 @@ def _git_clean(source_meta):
 FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
-               'git_url', 'git_tag', 'git_branch', 'git_rev',
+               'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
