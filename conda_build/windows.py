@@ -123,7 +123,8 @@ def build(m):
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
             fo.write(msvc_env_cmd(override=m.get_value('build/msvc_compiler', None)))
-
+            fo.write('\n')
+            
             for kv in iteritems(env):
                 fo.write('set "%s=%s"\n' % kv)
 
