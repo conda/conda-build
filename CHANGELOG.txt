@@ -8,6 +8,18 @@
   * be more explicit when numpy version is included in dependency specs, #573
   * correctly remove egg directories on Windows, #536
   * add new option msvc_compiler to build section for forcing MSVC compiler version
+  * add new command conda inspect channels --test-installable
+  * fix a Unicode issue with conda skeleton cpan
+  * when auto-adding python spec to execute run_test.py, don't require a
+    specific version
+  * add uninstall option to conda develop
+  * give a better error message in skeleton pypi for packages with invalid
+    urls
+  * don't try to test skipped recipes
+  * don't exit on a skipped recipe
+  * recursively build packages from unsatisfiable install hints
+  * make recursive building work better with --skip-existing
+  * update CONDA_R to 3.2.2
 
 
 2015-08-24   1.17.0:
