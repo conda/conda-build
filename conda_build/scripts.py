@@ -61,6 +61,7 @@ def create_entry_points(items):
 
 
 def prepend_bin_path(env, prefix):
+    env['PATH'] = prefix + os.pathsep + env['PATH']
     env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
     if sys.platform == "win32":
         env['PATH'] = join(prefix, "Library", "bin") + os.pathsep + env['PATH']
