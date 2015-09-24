@@ -7,6 +7,7 @@
     a specific version
   * be more explicit when numpy version is included in dependency specs, #573
   * correctly remove egg directories on Windows, #536
+  * add new option msvc_compiler to build section for forcing MSVC compiler version
 
 
 2015-08-24   1.17.0:
