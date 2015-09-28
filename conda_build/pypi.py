@@ -159,7 +159,7 @@ diff core.py core.py
 +    data['classifiers'] = kwargs.get('classifiers', None)
 +    data['version'] = kwargs.get('version', '??PACKAGE-VERSION-UNKNOWN??')
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
-+        fn.write(yaml.dump(data, encoding=None))
++        fn.write(yaml.safe_dump(data, encoding=None))
 +
 +
 +# ======= END CONDA SKELETON PYPI PATCH ======
