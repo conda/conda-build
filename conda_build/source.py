@@ -95,7 +95,7 @@ def git_source(meta, recipe_dir):
     if not git:
         sys.exit("Error: git is not installed")
     git_url = meta['git_url']
-    git_depth = int(meta.get_value('build/git_depth', -1))
+    git_depth = int(meta.get('git_depth', -1))
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
         os.chdir(recipe_dir)
