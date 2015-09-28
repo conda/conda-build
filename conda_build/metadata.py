@@ -173,11 +173,18 @@ def parse(data):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
-        val = res[section].get(key, '').lower()
+
+        try:
+            val = res[section].get(key, '').lower()
+        except AttributeError:
+            # val wasn't a string
+            continue
+
         if val in trues:
             res[section][key] = True
         elif val in falses:
             res[section][key] = False
+
     ensure_valid_license_family(res)
     return sanitize(res)
 
