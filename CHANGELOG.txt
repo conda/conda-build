@@ -1,4 +1,4 @@
-2015-XX-XX   1.17.1:
+2015-10-01   1.18.0:
 --------------------
   * develop options --build_ext, --clean_build_ext, #512
   * fix directory not existing when using --no-include-recipe option
@@ -7,7 +7,8 @@
     a specific version
   * be more explicit when numpy version is included in dependency specs, #573
   * correctly remove egg directories on Windows, #536
-  * add new option msvc_compiler to build section for forcing MSVC compiler version
+  * add new option msvc_compiler to build section for forcing MSVC compiler
+    version
   * add new command conda inspect channels --test-installable
   * fix a Unicode issue with conda skeleton cpan
   * when auto-adding python spec to execute run_test.py, don't require a
