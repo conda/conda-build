@@ -20,6 +20,9 @@
   * recursively build packages from unsatisfiable install hints
   * make recursive building work better with --skip-existing
   * update CONDA_R to 3.2.2
+  * fix encoding issues with git_info on Windows
+  * test Python 3.5 in Travis CI
+  * add support for absolute rpaths on Linux
 
 
 2015-08-24   1.17.0:
