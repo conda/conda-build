@@ -153,9 +153,7 @@ def git_info(fo=None):
         p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
         stdout, stderr = p.communicate()
         encoding = locale.getpreferredencoding() or 'utf-8'
-        if fo:
-            encoding = locale.getpreferredencoding() or 'utf-8'
-        else:
+        if not fo:
             encoding = sys.stdout.encoding or 'utf-8'
         stdout = stdout.decode(encoding, 'ignore')
         stderr = stderr.decode(encoding, 'ignore')
