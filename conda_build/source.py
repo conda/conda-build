@@ -156,7 +156,7 @@ def git_info(fo=None):
         if fo:
             encoding = locale.getpreferredencoding() or 'utf-8'
         else:
-            encoding = sys.stdout.encoding
+            encoding = sys.stdout.encoding or 'utf-8'
         stdout = stdout.decode(encoding, 'ignore')
         stderr = stderr.decode(encoding, 'ignore')
         if check_error and stderr and stderr.strip():
