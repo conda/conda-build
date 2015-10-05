@@ -127,6 +127,9 @@ def build(m):
 
             # more debuggable with echo on
             fo.write('@echo on\n')
+            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
+            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+            fo.write("set PATH={};%PATH%\n".format(env["LIBRARY_BIN"]))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
