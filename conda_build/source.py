@@ -4,15 +4,13 @@ import os
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
-from subprocess import check_call, Popen, PIPE
-import locale
 
 from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip
+from conda_build.utils import rm_rf, tar_xf, unzip, execute
 
 
 SRC_CACHE = join(config.croot, 'src_cache')
@@ -111,9 +109,10 @@ def git_source(meta, recipe_dir):
 
     # update (or create) the cache repo
     if isdir(cache_repo):
-        check_call([git, 'fetch'], cwd=cache_repo)
+        execute([git, 'fetch'], cwd=cache_repo, check_exit_code=True)
     else:
-        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg], cwd=recipe_dir)
+        execute([git, 'clone', '--mirror', git_url, cache_repo_arg],
+                cwd=recipe_dir, check_exit_code=True)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -121,17 +120,17 @@ def git_source(meta, recipe_dir):
     # if rev is not specified, and the git_url is local,
     # assume the user wants the current HEAD
     if not checkout and git_url.startswith('.'):
-        process = Popen(["git", "rev-parse", "HEAD"],
-                    stdout=PIPE, stderr=PIPE,
-                               cwd=git_url)
-        output = process.communicate()[0].strip()
-        checkout = output.decode('utf-8')
+        stdout, _ = execute(["git", "rev-parse", "HEAD"], cwd=git_url)
+        checkout = stdout.strip()
+
     if checkout:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR])
+    execute([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR],
+            check_exit_code=True)
     if checkout:
-        check_call([git, 'checkout', checkout], cwd=WORK_DIR)
+        execute([git, 'checkout', checkout],
+                cwd=WORK_DIR, check_exit_code=True)
 
     git_info()
     return WORK_DIR
@@ -146,18 +145,11 @@ def git_info(fo=None):
     env = os.environ.copy()
     env['GIT_DIR'] = join(WORK_DIR, '.git')
     env = {str(key): str(value) for key, value in env.items()}
-    for cmd, check_error in [
-                ('git log -n1', True),
-                ('git describe --tags --dirty', False),
-                ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
-        stdout, stderr = p.communicate()
-        encoding = locale.getpreferredencoding()
-        if not fo:
-            encoding = sys.stdout.encoding
-        encoding = encoding or 'utf-8'
-        stdout = stdout.decode(encoding, 'ignore')
-        stderr = stderr.decode(encoding, 'ignore')
+    for cmd, check_error in [('git log -n1', True),
+                             ('git describe --tags --dirty', False),
+                             ('git status', True)]:
+        stdout, stderr = execute(cmd.split(), cwd=WORK_DIR, env=env,
+                                 check_exit_code=check_error)
         if check_error and stderr and stderr.strip():
             raise Exception("git error: %s" % stderr)
         if fo:
@@ -179,17 +171,19 @@ def hg_source(meta):
     hg_dn = hg_url.split(':')[-1].replace('/', '_')
     cache_repo = join(HG_CACHE, hg_dn)
     if isdir(cache_repo):
-        check_call([hg, 'pull'], cwd=cache_repo)
+        execute([hg, 'pull'], cwd=cache_repo, check_exit_code=True)
     else:
-        check_call([hg, 'clone', hg_url, cache_repo])
+        execute([hg, 'clone', hg_url, cache_repo], check_exit_code=True)
         assert isdir(cache_repo)
 
     # now clone in to work directory
     update = meta.get('hg_tag') or 'tip'
     print('checkout: %r' % update)
 
-    check_call([hg, 'clone', cache_repo, WORK_DIR])
-    check_call([hg, 'update', '-C', update], cwd=WORK_DIR)
+    execute([hg, 'clone', cache_repo, WORK_DIR],
+            check_exit_code=True)
+    execute([hg, 'update', '-C', update], cwd=WORK_DIR,
+            check_exit_code=True)
     return WORK_DIR
 
 
@@ -214,10 +208,11 @@ def svn_source(meta):
     else:
         extra_args = []
     if isdir(cache_repo):
-        check_call([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo)
+        execute([svn, 'up', '-r', svn_revision] + extra_args,
+                cwd=cache_repo, check_exit_code=True)
     else:
-        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url,
-                                                                   cache_repo])
+        execute([svn, 'co', '-r', svn_revision] + extra_args +
+                [svn_url, cache_repo], check_exit_code=True)
         assert isdir(cache_repo)
 
     # now copy into work directory
@@ -250,10 +245,10 @@ Error:
     patch_args = ['-p0', '-i', path]
     if sys.platform == 'win32':
         patch_args[-1] =  _ensure_unix_line_endings(path)
-    check_call([patch, ] + patch_args, cwd=src_dir)
+
+    execute([patch, ] + patch_args, cwd=src_dir, check_exit_code=True)
     if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
         os.remove(patch_args[-1])  # clean up .patch_unix file
-
 
 
 def provide(recipe_dir, meta, patch=True):
