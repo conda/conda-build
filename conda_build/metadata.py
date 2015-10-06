@@ -304,7 +304,10 @@ def handle_config_version(ms, ver):
 
     ver = text_type(ver)
     if '.' not in ver:
-        ver = '.'.join(ver)
+        if ms.name == 'numpy':
+            ver = '%s.%s' % (ver[0], ver[1:])
+        else:
+            ver = '.'.join(ver)
     return MatchSpec('%s %s*' % (ms.name, ver))
 
 
@@ -427,7 +430,7 @@ class MetaData(object):
             check_bad_chrs(ret, 'build/string')
             return ret
         res = []
-        version_pat = re.compile(r'(?:==)?(\d)\.(\d)')
+        version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl'), ('r', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:

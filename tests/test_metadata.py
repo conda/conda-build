@@ -56,7 +56,9 @@ class HandleConfigVersionTests(unittest.TestCase):
         for spec, ver, res_spec in [
             ('numpy',        None,  'numpy'),
             ('numpy',        18,    'numpy'),
+            ('numpy',        110,   'numpy'),
             ('numpy x.x',    17,    'numpy 1.7*'),
+            ('numpy x.x',    110,   'numpy 1.10*'),
             ('numpy 1.9.1',  18,    'numpy 1.9.1'),
             ('numpy 1.9.0 py27_2', None,  'numpy 1.9.0 py27_2'),
             ]:
