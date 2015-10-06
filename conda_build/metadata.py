@@ -304,7 +304,10 @@ def handle_config_version(ms, ver):
 
     ver = text_type(ver)
     if '.' not in ver:
-        ver = '.'.join(ver)
+        if ms.name == 'numpy':
+            ver = '%s.%s' % (ver[0], ver[1:])
+        else:
+            ver = '.'.join(ver)
     return MatchSpec('%s %s*' % (ms.name, ver))
 
 
