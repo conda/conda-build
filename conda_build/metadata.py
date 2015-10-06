@@ -427,7 +427,7 @@ class MetaData(object):
             check_bad_chrs(ret, 'build/string')
             return ret
         res = []
-        version_pat = re.compile(r'(?:==)?(\d)\.(\d)')
+        version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
         for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl'), ('r', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
