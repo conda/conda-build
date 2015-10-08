@@ -321,7 +321,6 @@ class MetaData(object):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
         self.parse_again()
-        self.autofeatures = False
 
     def parse_again(self):
         """Redo parsing for key-value pairs that are not initialized in the
