@@ -86,8 +86,8 @@ def handle_file(f, d):
 def transform(m, files):
     assert 'py_' in m.dist()
     if sys.platform == 'win32':
-        _error_exit("Error: Python noarch packages can currently "
-                    "not be created on Windows systems.")
+        _error_exit("Error: Python noarch packages can't currently "
+                    "be created on Windows systems.")
 
     prefix = config.build_prefix
     name = m.name()
