@@ -449,8 +449,12 @@ class MetaData(object):
                     else:
                         res.append(s + v.strip('*'))
                     break
+
+        features = self.get_value('build/features', [])
         if res:
             res.append('_')
+        if features:
+            res.extend(('_'.join(features), '_'))
         res.append('%d' % self.build_number())
         return ''.join(res)
 
