@@ -15,17 +15,15 @@ from . import exceptions
 
 try:
     import yaml
-    from yaml import Loader, SafeLoader
+
+    # try to import C loader
+    try:
+        from yaml import CBaseLoader as BaseLoader
+    except ImportError:
+        from yaml import BaseLoader
 except ImportError:
     sys.exit('Error: could not import yaml (required to read meta.yaml '
              'files of conda recipes)')
-
-# Override the default string handling function to always return unicode
-# objects (taken from StackOverflow)
-def construct_yaml_str(self, node):
-    return self.construct_scalar(node)
-Loader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
-SafeLoader.add_constructor(u'tag:yaml.org,2002:str', construct_yaml_str)
 
 from conda_build.config import config
 from conda_build.utils import comma_join
@@ -95,7 +93,7 @@ Error: Invalid selector in meta.yaml line %d:
 @memoized
 def yamlize(data):
     try:
-        return yaml.load(data)
+        return yaml.load(data, Loader=BaseLoader)
     except yaml.parser.ParserError as e:
         if '{{' in data:
             try:
@@ -165,6 +163,28 @@ def parse(data):
         if val is None:
             val = ''
         res[section][key] = text_type(val)
+
+    # ensure these fields are booleans
+    trues = {'y', 'on', 'true', 'yes'}
+    falses = {'n', 'no', 'false', 'off'}
+    for field in ('build/osx_is_app', 'build/preserve_egg_dir',
+                  'build/binary_relocation', 'build/detect_binary_files_with_prefix',
+                  'build/skip', 'app/own_environment'):
+        section, key = field.split('/')
+        if res.get(section) is None:
+            res[section] = {}
+
+        try:
+            val = res[section].get(key, '').lower()
+        except AttributeError:
+            # val wasn't a string
+            continue
+
+        if val in trues:
+            res[section][key] = True
+        elif val in falses:
+            res[section][key] = False
+
     ensure_valid_license_family(res)
     return sanitize(res)
 
@@ -354,7 +374,8 @@ class MetaData(object):
 
     def get_value(self, field, default=None):
         section, key = field.split('/')
-        return self.get_section(section).get(key, default)
+        value = self.get_section(section).get(key, default)
+        return value
 
     def check_fields(self):
         for section, submeta in iteritems(self.meta):
