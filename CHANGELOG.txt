@@ -1,3 +1,10 @@
+2015-10-XX   1.18.1:
+--------------------
+  * allow config system to handle versions with have more than a single digit
+    in the minor version, #626
+  * fix None encoding bug, #614
+
+
 2015-10-01   1.18.0:
 --------------------
   * develop options --build_ext, --clean_build_ext, #512
