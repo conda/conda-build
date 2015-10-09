@@ -124,7 +124,8 @@ def ensure_valid_license_family(meta):
     except KeyError:
         return
     if license_family not in allowed_license_families:
-        raise RuntimeError(exceptions.indent("""about/license_family '%s' not allowed. Allowed families are %s.""" %
+        raise RuntimeError(exceptions.indent(
+            "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
 
 def parse(data):
@@ -139,7 +140,8 @@ def parse(data):
         if res[field] is None:
             res[field] = {}
         if not isinstance(res[field], dict):
-            raise RuntimeError("The %s field should be a dict, not %s" % (field, res[field].__class__.__name__))
+            raise RuntimeError("The %s field should be a dict, not %s" %
+                               (field, res[field].__class__.__name__))
     # ensure those are lists
     for field in ('source/patches',
                   'build/entry_points', 'build/script_env',
@@ -168,7 +170,8 @@ def parse(data):
     trues = {'y', 'on', 'true', 'yes'}
     falses = {'n', 'no', 'false', 'off'}
     for field in ('build/osx_is_app', 'build/preserve_egg_dir',
-                  'build/binary_relocation', 'build/detect_binary_files_with_prefix',
+                  'build/binary_relocation',
+                  'build/detect_binary_files_with_prefix',
                   'build/skip', 'app/own_environment'):
         section, key = field.split('/')
         if res.get(section) is None:
@@ -353,7 +356,8 @@ class MetaData(object):
             return
         self.meta = parse(get_contents(self.meta_path))
 
-        if isfile(self.requirements_path) and not self.meta['requirements']['run']:
+        if (isfile(self.requirements_path) and
+                   not self.meta['requirements']['run']):
             self.meta.setdefault('requirements', {})
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
@@ -437,7 +441,7 @@ class MetaData(object):
                 if len(parts) >= 2:
                     if parts[1] in {'>', '>=', '=', '==', '!=', '<', '<='}:
                         msg = ("Error: bad character '%s' in package version "
-                            "dependency '%s'" % (parts[1], ms.name))
+                               "dependency '%s'" % (parts[1], ms.name))
                         if len(parts) >= 3:
                             msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
                                 parts[1], parts[2])
@@ -452,7 +456,8 @@ class MetaData(object):
             return ret
         res = []
         version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
-        for name, s in (('numpy', 'np'), ('python', 'py'), ('perl', 'pl'), ('r', 'r')):
+        for name, s in (('numpy', 'np'), ('python', 'py'),
+                        ('perl', 'pl'), ('r', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     try:
