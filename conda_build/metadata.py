@@ -518,7 +518,8 @@ class MetaData(object):
             platform = cc.platform,
             arch = cc.arch_name,
             subdir = cc.subdir,
-            depends = sorted(ms.spec for ms in self.ms_depends())
+            depends = sorted(' '.join(ms.spec.split())
+                             for ms in self.ms_depends()),
         )
         for key in ('license', 'license_family'):
             value = self.get_value('about/' + key)
