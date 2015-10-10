@@ -157,7 +157,8 @@ def git_info(fo=None):
             encoding = sys.stdout.encoding
         encoding = encoding or 'utf-8'
         stdout = stdout.decode(encoding, 'ignore')
-        stderr = stderr.decode(encoding, 'ignore')
+        if stderr is not None:
+            stderr = stderr.decode(encoding, 'ignore')
         if check_error and stderr and stderr.strip():
             raise Exception("git error: %s" % stderr)
         if fo:
