@@ -531,7 +531,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     if py_files:
         # as the tests are run by python, ensure that python is installed.
         # (If they already provided python as a run or test requirement, this won't hurt anything.)
-        specs += ['python']
+        specs += ['python %s*' % environ.get_py_ver()]
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
