@@ -26,7 +26,7 @@ on_win = (sys.platform == 'win32')
 
 all_versions = {
     'python': [26, 27, 33, 34, 35],
-    'numpy': [16, 17, 18, 19],
+    'numpy': [16, 17, 18, 19, 110],
     'perl': None,
     'R': None,
 }
@@ -300,7 +300,7 @@ def execute(args, parser):
         else:
             version = int(versions[0].replace('.', ''))
             setattr(config, conda_version[lang], version)
-        if not len(str(version)) == 2 and lang in ['python', 'numpy']:
+        if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
             if all_versions[lang]:
                 raise RuntimeError("%s must be major.minor, like %s, not %s" %
                     (conda_version[lang], all_versions[lang][-1]/10, version))
