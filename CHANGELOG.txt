@@ -3,6 +3,7 @@
   * allow config system to handle versions with have more than a single digit
     in the minor version, #626
   * fix None encoding bug, #614
+  * add missing Python version when adding Python to test specs
 
 
 2015-10-01   1.18.0:
