@@ -1,9 +1,12 @@
-2015-10-XX   1.18.1:
+2015-10-16   1.18.1:
 --------------------
   * allow config system to handle versions with have more than a single digit
     in the minor version, #626
   * fix None encoding bug, #614
   * add missing Python version when adding Python to test specs
+  * add features to build string
+  * improve yaml loading (you don't have to quote version numbers anymore, eg.
+    if the version is 3.1), #603
 
 
 2015-10-01   1.18.0:
