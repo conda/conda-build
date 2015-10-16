@@ -10,6 +10,7 @@ import sys
 from os.path import join, isdir, abspath, expanduser, exists
 from os import walk
 import fnmatch
+import shutil
 
 from conda.cli.common import add_parser_prefix, get_prefix
 from conda.cli.conda_argparse import ArgumentParser
@@ -37,25 +38,28 @@ This works by creating a conda.pth file in site-packages."""
         nargs='+',
         help="Path to the source directory."
     )
-    p.add_argument(
-                   '-npf', '--no-pth-file',
+    p.add_argument('-npf', '--no-pth-file',
                    action='store_true',
                    help=("Relink compiled extension dependencies against "
                          "libraries found in current conda env. "
                          "Do not add source to conda.pth."))
-    p.add_argument(
-                   '-b', '--build_ext',
+    p.add_argument('-b', '--build_ext',
                    action='store_true',
                    help=("Build extensions inplace, invoking: "
                          "python setup.py build_ext --inplace; "
                          "add to conda.pth; relink runtime libraries to "
                          "environment's lib/."))
-    p.add_argument(
-                   '-c', '--clean',
+    p.add_argument('-c', '--clean',
                    action='store_true',
                    help=("Invoke clean on setup.py: "
                          "python setup.py clean "
                          "use with build_ext to clean before building."))
+    p.add_argument('-u', '--uninstall',
+                   action='store_true',
+                   help=("Removes package if installed in 'development mode' "
+                         "by deleting path from conda.pth file. Ignore other "
+                         "options - just uninstall and exit"))
+
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
@@ -107,7 +111,7 @@ def relink_sharedobjects(pkg_path, build_prefix):
 
 def write_to_conda_pth(sp_dir, pkg_path):
     '''
-    append pkg_path to conda.pth in site-packages directory for current
+    Append pkg_path to conda.pth in site-packages directory for current
     environment. Only add path if it doens't already exist.
 
     :param sp_dir: path to site-packages/. directory
@@ -146,7 +150,7 @@ def get_site_pkg(prefix, py_ver):
 
 
 def get_setup_py(path_):
-    ''' return full path to setup.py or exit if not found '''
+    ''' Return full path to setup.py or exit if not found '''
     # build path points to source dir, builds are placed in the
     setup_py = join(path_, 'setup.py')
 
@@ -172,7 +176,7 @@ def clean(setup_py):
 
 def build_ext(setup_py):
     '''
-    define a develop function - similar to build function
+    Define a develop function - similar to build function
     todo: need to test on win32 and linux
 
     It invokes:
@@ -186,6 +190,34 @@ def build_ext(setup_py):
     _check_call(cmd)
     print("Completed: " + " ".join(cmd))
     print("===============================================")
+
+
+def uninstall(sp_dir, pkg_path):
+    '''
+    Look for pkg_path in conda.pth file in site-packages directory and remove
+    it. If pkg_path is not found in conda.pth, it means package is not
+    installed in 'development mode' via conda develop.
+
+    :param sp_dir: path to site-packages/. directory
+    :param pkg_path: the package path to be uninstalled.
+    '''
+    o_c_pth = join(sp_dir, 'conda.pth')
+    n_c_pth = join(sp_dir, 'conda.pth.temp')
+    found = False
+    with open(n_c_pth, 'w') as new_c:
+        with open(o_c_pth, 'r') as orig_c:
+            for line in orig_c:
+                if line != pkg_path + '\n':
+                    new_c.write(line)
+                else:
+                    print("uninstalled: " + pkg_path)
+                    found = True
+
+    if not found:
+        print("conda.pth does not contain path: " + pkg_path)
+        print("package not installed via conda develop")
+
+    shutil.move(n_c_pth, o_c_pth)
 
 
 def execute(args, parser):
@@ -210,12 +242,17 @@ Error: environment does not exist: %s
     for path in args.source:
         pkg_path = abspath(expanduser(path))
 
+        if args.uninstall:
+            # uninstall then exit - does not do any other operations
+            uninstall(sp_dir, pkg_path)
+            sys.exit(0)
+
         if args.clean or args.build_ext:
             setup_py = get_setup_py(pkg_path)
             if args.clean:
                 clean(setup_py)
                 if not args.build_ext:
-                    sys.exit()
+                    sys.exit(0)
 
             # build extensions before adding to conda.pth
             if args.build_ext:

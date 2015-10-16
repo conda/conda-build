@@ -7,6 +7,13 @@ from __future__ import absolute_import, division, print_function
 import requests
 import yaml
 
+
+# try to import C dumper
+try:
+    from yaml import CSafeDumper as SafeDumper
+except ImportError:
+    from yaml import SafeDumper
+
 import re
 import sys
 from os import makedirs, listdir
@@ -263,7 +270,7 @@ def yaml_quote_string(string):
 
     Note that this function is NOT general.
     """
-    return yaml.dump(string).replace('\n...\n', '').replace('\n', '\n  ')
+    return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ')
 
 def clear_trailing_whitespace(string):
     lines = []

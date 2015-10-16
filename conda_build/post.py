@@ -89,7 +89,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
 
             print('found egg dir:', egg_path)
             try:
-                os.rename(join(egg_path, 'EGG-INFO/PKG-INFO'),
+                os.rename(join(egg_path, 'EGG-INFO'),
                           egg_path + '-info')
             except OSError:
                 pass
@@ -302,7 +302,8 @@ def mk_relative_osx(path, build_prefix=None):
 
 def mk_relative_linux(f, rpaths=('lib',)):
     path = join(config.build_prefix, f)
-    rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) for d in rpaths)
+    rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) if not
+        d.startswith('/') else d for d in rpaths)
     patchelf = external.find_executable('patchelf')
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, path])

@@ -7,6 +7,8 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
+import re
+import os
 from os.path import abspath, join, dirname, exists, basename
 from collections import defaultdict
 from operator import itemgetter
@@ -15,6 +17,10 @@ from conda.misc import which_package
 from conda.cli.common import add_parser_prefix, get_prefix
 from conda.cli.conda_argparse import ArgumentParser
 import conda.install as ci
+
+from conda.api import get_index
+from conda.cli.install import check_install
+from conda.config import get_default_urls, normalize_urls
 
 from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
@@ -117,6 +123,33 @@ package.
     )
     add_parser_prefix(objects)
 
+    channels_help = """
+Tools for investigating conda channels.
+"""
+    channels = subcommand.add_parser(
+        "channels",
+        help=channels_help,
+        description=channels_help,
+        )
+    channels.add_argument(
+        '--verbose',
+        action='store_true',
+        help="""Show verbose output. Note that error output to stderr will
+        always be shown regardless of this flag. """,
+        )
+    channels.add_argument(
+        '--test-installable', '-t',
+        action='store_true',
+        help="""Test every package in the channel to see if it is installable
+        by conda.""",
+    )
+    channels.add_argument(
+        "channel",
+        nargs='?',
+        default="defaults",
+        help="The channel to test. The default is %(default)s."
+        )
+
     p.set_defaults(func=execute)
     args = p.parse_args()
     args_func(args, p)
@@ -180,10 +213,64 @@ class _untracked_package:
 
 untracked_package = _untracked_package()
 
+def test_installable(channel='defaults', verbose=True):
+    if not verbose:
+        sys.stdout = open(os.devnull, 'w')
+
+    success = False
+    has_py = re.compile(r'py(\d)(\d)')
+    for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
+        print("######## Testing platform %s ########" % platform)
+        channels = [channel] + get_default_urls()
+        index = get_index(channel_urls=channels, prepend=False, platform=platform)
+        for package in sorted(index):
+            if channel != 'defaults':
+                # If we give channels at the command line, only look at
+                # packages from those channels (not defaults).
+                if index[package]['channel'] not in normalize_urls([channel], platform=platform):
+                    continue
+            name, version, build = package.rsplit('.tar.bz2', 1)[0].rsplit('-', 2)
+            if name in {'conda', 'conda-build'}:
+                # conda can only be installed in the root environment
+                continue
+            # Don't fail just because the package is a different version of Python
+            # than the default.  We should probably check depends rather than the
+            # build string.
+            match = has_py.search(build)
+            assert match if 'py' in build else True, build
+            if match:
+                additional_packages = ['python=%s.%s' % (match.group(1), match.group(2))]
+            else:
+                additional_packages = []
+
+            print('Testing %s=%s' % (name, version))
+            # if additional_packages:
+            #     print("Including %s" % additional_packages[0])
+
+            try:
+                check_install([name + '=' + version] + additional_packages,
+                    channel_urls=channels, prepend=False,
+                    platform=platform)
+            except KeyboardInterrupt:
+                raise
+            # sys.exit raises an exception that doesn't subclass from Exception
+            except BaseException as e:
+                success = True
+                print("FAIL: %s %s on %s with %s (%s)" % (name, version,
+                    platform, additional_packages, e), file=sys.stderr)
+
+    return success
+
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
         exit()
+
+    if args.subcommand == 'channels':
+        if not args.test_installable:
+            parser.error("At least one option (--test-installable) is required.")
+        else:
+            sys.exit(not test_installable(channel=args.channel, verbose=args.verbose))
 
     prefix = get_prefix(args)
     installed = ci.linked(prefix)

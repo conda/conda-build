@@ -159,7 +159,7 @@ diff core.py core.py
 +    data['classifiers'] = kwargs.get('classifiers', None)
 +    data['version'] = kwargs.get('version', '??PACKAGE-VERSION-UNKNOWN??')
 +    with io.open(os.path.join("{}", "pkginfo.yaml"), 'w', encoding='utf-8') as fn:
-+        fn.write(yaml.dump(data, encoding=None))
++        fn.write(yaml.safe_dump(data, encoding=None))
 +
 +
 +# ======= END CONDA SKELETON PYPI PATCH ======
@@ -416,7 +416,7 @@ def get_download_data(args, client, package, version, is_url):
             human_bytes(urls[n]['size'] or 0), package))
         pypiurl = urls[n]['url']
         md5 = urls[n]['md5_digest']
-        filename = urls[n]['filename']
+        filename = urls[n]['filename'] or 'package'
     else:
         print("Using url %s" % package)
         pypiurl = package
