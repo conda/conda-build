@@ -545,7 +545,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     env.update(environ.get_dict(m, prefix=config.test_prefix))
 
     # prepend bin (or Scripts) directory
-    env = prepend_bin_path(env)
+    env = prepend_bin_path(env, config.test_prefix)
 
     if sys.platform == 'win32':
         env['PATH'] = config.test_prefix + os.pathsep + env['PATH']

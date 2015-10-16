@@ -124,16 +124,16 @@ def build(m):
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
             fo.write(msvc_env_cmd(override=m.get_value('build/msvc_compiler', None)))
             fo.write('\n')
-            
-            for kv in iteritems(env):
-                fo.write('set "%s=%s"\n' % kv)
 
             # more debuggable with echo on
             fo.write('@echo on\n')
+            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
+            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+            fo.write("set PATH={};%PATH%\n".format(env["LIBRARY_BIN"]))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
-        _check_call(cmd, cwd=src_dir)
+        _check_call(cmd, cwd=src_dir, env={str(k): str(v) for k, v in env.items()})
         kill_processes()
         fix_staged_scripts()

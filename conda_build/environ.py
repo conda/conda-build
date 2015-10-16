@@ -105,6 +105,7 @@ def get_dict(m=None, prefix=None):
         d['CPU_COUNT'] = "1"
 
     d.update(**get_git_build_info(d['SRC_DIR']))
+    d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':         # -------- Windows
