@@ -251,8 +251,8 @@ Error:
     if sys.platform == 'win32':
         patch_args[-1] =  _ensure_unix_line_endings(path)
     check_call([patch, ] + patch_args, cwd=src_dir)
-    if sys.platform == 'win32' and os.path.exists(args[-1]):
-        os.remove(args[-1])  # clean up .patch_unix file
+    if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
+        os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
 
