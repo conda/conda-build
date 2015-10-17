@@ -6,7 +6,6 @@ import shutil
 from os.path import dirname, isdir, isfile, join, exists
 
 import conda.config as cc
-from conda.compat import iteritems
 
 from conda_build.config import config
 from conda_build import environ
