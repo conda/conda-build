@@ -540,12 +540,10 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         channel_urls=channel_urls, override_channels=override_channels)
 
     env = dict(os.environ)
-    # TODO: Include all the same environment variables that are used in
-    # building.
     env.update(environ.get_dict(m, prefix=config.test_prefix))
 
     # prepend bin (or Scripts) directory
-    env = prepend_bin_path(env, config.test_prefix)
+    env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
 
     if sys.platform == 'win32':
         env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
