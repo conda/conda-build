@@ -110,6 +110,7 @@ def kill_processes():
 def build(m):
     env = dict(os.environ)
     env.update(environ.get_dict(m))
+    env = environ.prepend_bin_path(env, config.build_prefix, True)
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
@@ -128,7 +129,6 @@ def build(m):
             fo.write('@echo on\n')
             fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
-            fo.write("set PATH={};%PATH%\n".format(env["LIBRARY_BIN"]))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
