@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function
+﻿from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -11,11 +11,6 @@ from conda_build.config import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
-
-try:
-    import psutil
-except ImportError:
-    psutil = None
 
 assert sys.platform == 'win32'
 
@@ -93,13 +88,23 @@ def msvc_env_cmd(override=None):
     return '\n'.join(msvc_env_lines)
 
 
-def kill_processes():
-    if psutil is None:
-        return
-    for n in psutil.pids():
+def kill_processes(process_names=["msbuild.exe"]):
+    # for things that uniform across both APIs
+    import psutil
+    # list of pids changed APIs from v1 to v2.
+    try:
+        # V1 API
+        from psutil import get_pid_list
+    except:
+        try:
+            # V2 API
+            from psutil import pids as get_pid_list
+        except:
+            raise ImportError("psutil failed to import.")
+    for n in psutil.get_pid_list():
         try:
             p = psutil.Process(n)
-            if p.name.lower() == 'msbuild.exe':
+            if p.name.lower() in (process_name.lower() for process_name in process_names):
                 print('Terminating:', p.name)
                 p.terminate()
         except:
