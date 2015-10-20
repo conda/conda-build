@@ -25,7 +25,7 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
-from conda_build.scripts import create_entry_points, bin_dirname
+from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import rm_rf, _check_call, comma_join
@@ -540,13 +540,10 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         channel_urls=channel_urls, override_channels=override_channels)
 
     env = dict(os.environ)
-    # TODO: Include all the same environment variables that are used in
-    # building.
     env.update(environ.get_dict(m, prefix=config.test_prefix))
 
     # prepend bin (or Scripts) directory
-    env['PATH'] = (join(config.test_prefix, bin_dirname) + os.pathsep +
-                   os.getenv('PATH'))
+    env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
 
     if sys.platform == 'win32':
         env['PATH'] = config.test_prefix + os.pathsep + env['PATH']

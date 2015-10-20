@@ -13,7 +13,9 @@ def find_executable(executable):
     global dir_paths
     if sys.platform == 'win32':
         dir_paths = [join(config.build_prefix, 'Scripts'),
+                     join(config.build_prefix, 'Library\\bin'),
                      join(cc.root_dir, 'Scripts'),
+                     join(cc.root_dir, 'Library\\bin'),
                      'C:\\cygwin\\bin']
     else:
         dir_paths = [join(config.build_prefix, 'bin'),

@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function
+﻿from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -6,17 +6,11 @@ import shutil
 from os.path import dirname, isdir, isfile, join, exists
 
 import conda.config as cc
-from conda.compat import iteritems
 
 from conda_build.config import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
-
-try:
-    import psutil
-except ImportError:
-    psutil = None
 
 assert sys.platform == 'win32'
 
@@ -94,13 +88,23 @@ def msvc_env_cmd(override=None):
     return '\n'.join(msvc_env_lines)
 
 
-def kill_processes():
-    if psutil is None:
-        return
-    for n in psutil.pids():
+def kill_processes(process_names=["msbuild.exe"]):
+    # for things that uniform across both APIs
+    import psutil
+    # list of pids changed APIs from v1 to v2.
+    try:
+        # V1 API
+        from psutil import get_pid_list
+    except:
+        try:
+            # V2 API
+            from psutil import pids as get_pid_list
+        except:
+            raise ImportError("psutil failed to import.")
+    for n in get_pid_list():
         try:
             p = psutil.Process(n)
-            if p.name.lower() == 'msbuild.exe':
+            if p.name.lower() in (process_name.lower() for process_name in process_names):
                 print('Terminating:', p.name)
                 p.terminate()
         except:
@@ -110,6 +114,7 @@ def kill_processes():
 def build(m):
     env = dict(os.environ)
     env.update(environ.get_dict(m))
+    env = environ.prepend_bin_path(env, config.build_prefix, True)
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
@@ -124,16 +129,14 @@ def build(m):
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
             fo.write(msvc_env_cmd(override=m.get_value('build/msvc_compiler', None)))
             fo.write('\n')
-
-            for kv in iteritems(env):
-                fo.write('set "%s=%s"\n' % kv)
-
             # more debuggable with echo on
             fo.write('@echo on\n')
+            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
+            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
-        _check_call(cmd, cwd=src_dir)
+        _check_call(cmd, cwd=src_dir, env={str(k): str(v) for k, v in env.items()})
         kill_processes()
         fix_staged_scripts()
