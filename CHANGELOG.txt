@@ -1,3 +1,8 @@
+2015-10-XX   1.18.2:
+--------------------
+  * move path prepending to function for uniformity, #601
+
+
 2015-10-16   1.18.1:
 --------------------
   * allow config system to handle versions with have more than a single digit
