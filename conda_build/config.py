@@ -26,11 +26,18 @@ class Config(object):
         CONDA_NPY = None
     else:
         CONDA_NPY = int(CONDA_NPY.replace('.', '')) or None
-    CONDA_R = os.getenv("CONDA_R", "3.2.1")
+    CONDA_R = os.getenv("CONDA_R", "3.2.2")
 
     @property
     def PY3K(self):
         return int(bool(self.CONDA_PY >= 30))
+
+    @property
+    def use_MSVC2015(self):
+        """Returns whether python version is above 3.4
+
+        (3.5 is compiler switch to MSVC 2015)"""
+        return bool(self.CONDA_PY >= 35)
 
     noarch = False
 

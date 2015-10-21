@@ -1,7 +1,6 @@
 '''
 Module that does most of the heavy lifting for the ``conda build`` command.
 '''
-
 from __future__ import absolute_import, division, print_function
 
 import io
@@ -12,9 +11,8 @@ import stat
 import subprocess
 import sys
 import tarfile
-from os.path import exists, isdir, isfile, islink, join
 import fnmatch
-
+from os.path import exists, isdir, isfile, islink, join
 
 import conda.config as cc
 import conda.plan as plan
@@ -35,6 +33,8 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
+
+
 on_win = (sys.platform == 'win32')
 
 
@@ -352,7 +352,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
     if m.skip():
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
-        sys.exit(0)
+        return
 
     if post in [False, None]:
         print("Removing old build environment")
@@ -526,15 +526,12 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
-    specs_include_python = False
-    for spec in m.get_value('test/requires', []):
-        specs.append(spec)
-        if spec.startswith('python ') or spec == 'python':
-            specs_include_python = True
+    specs += m.get_value('test/requires', [])
 
-    if py_files and not specs_include_python:
-        # as the tests are run by python, we need to specify it
-        specs += ['python %s*' % environ.get_py_ver()]
+    if py_files:
+        # as the tests are run by python, ensure that python is installed.
+        # (If they already provided python as a run or test requirement, this won't hurt anything.)
+        specs += ['python']
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]

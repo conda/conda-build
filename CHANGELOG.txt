@@ -5,6 +5,8 @@
   * add support for multiple rpaths on OS X to conda inspect
   * don't add 'np' to build string when package depends on numpy, but not
     a specific version
+  * be more explicit when numpy version is included in dependency specs, #573
+  * correctly remove egg directories on Windows, #536
 
 
 2015-08-24   1.17.0:

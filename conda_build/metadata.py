@@ -293,6 +293,32 @@ def get_contents(meta_path):
     return contents
 
 
+def handle_config_version(ms, ver):
+    """
+    'ms' is an instance of MatchSpec, and 'ver' is the version from the
+    configuration, e.g. for ms.name == 'python', ver = 26 or None,
+    return a (sometimes new) MatchSpec object
+    """
+    if ms.strictness == 3:
+        return ms
+
+    if ms.strictness == 2:
+        if ms.spec.split()[1] == 'x.x':
+            if ver is None:
+                raise RuntimeError("'%s' requires external setting" % ms.spec)
+            # (no return here - proceeds below)
+        else: # regular version
+            return ms
+
+    if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
+        return MatchSpec(ms.name)
+
+    ver = text_type(ver)
+    if '.' not in ver:
+        ver = '.'.join(ver)
+    return MatchSpec('%s %s*' % (ms.name, ver))
+
+
 class MetaData(object):
 
     def __init__(self, path):
@@ -383,19 +409,13 @@ class MetaData(object):
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
             if ms.name == self.name():
-                raise RuntimeError("Error: %s cannot depend on itself" % self.name())
+                raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if (ms.strictness != 1 or
-                             self.get_value('build/noarch_python')):
+                    if self.get_value('build/noarch_python'):
                         continue
-                    if ver is None:
-                        ms = MatchSpec(name)
-                        continue
-                    str_ver = text_type(ver)
-                    if '.' not in str_ver:
-                        str_ver = '.'.join(str_ver)
-                    ms = MatchSpec('%s %s*' % (name, str_ver))
+                    ms = handle_config_version(ms, ver)
+
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
                     sys.exit("Error: bad character '%s' in package name "

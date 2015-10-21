@@ -5,7 +5,7 @@ import glob
 def main():
     prefix = os.environ['PREFIX']
     info_files = glob.glob(os.path.join(prefix, 'conda-meta',
-                             'conda-build-test-numpy-run-1.0-nppy*0.json'))
+                             'conda-build-test-numpy-run-1.0-py*0.json'))
     assert len(info_files) == 1
     info_file = info_files[0]
     with open(info_file, 'r') as fh:
