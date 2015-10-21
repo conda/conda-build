@@ -274,14 +274,14 @@ def get_contents(meta_path):
                # search relative to RECIPE_DIR
                jinja2.FileSystemLoader(path)
                ]
-    
+
     # search relative to current conda environment directory
-    conda_env_path = os.environ.get('CONDA_ENV_PATH')  # path to current conda environment
+    conda_env_path = os.environ.get('CONDA_DEFAULT_ENV')  # path to current conda environment
     if conda_env_path and os.path.isdir(conda_env_path):
         conda_env_path = os.path.abspath(conda_env_path)
         conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
         env_loader = jinja2.FileSystemLoader(conda_env_path)
-        loaders.append(jinja2.PrefixLoader({'$CONDA_ENV_PATH': env_loader}))
+        loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
     env.globals.update(ns_cfg())
