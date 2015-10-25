@@ -10,8 +10,9 @@ import sys
 import shutil
 from os.path import dirname, isdir, join
 
-from conda_build.config import config
+import conda.config as cc
 
+from conda_build.config import config
 
 
 PY_TMPL = """\
@@ -40,8 +41,7 @@ def create_entry_point(path, module, func):
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w') as fo:
             fo.write(pyscript)
-        shutil.copyfile(join(dirname(__file__),
-                             'cli-%d.exe' % (8 * tuple.__itemsize__)),
+        shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % cc.bits),
                         path + '.exe')
     else:
         with open(path, 'w') as fo:

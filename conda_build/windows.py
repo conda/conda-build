@@ -1,4 +1,4 @@
-﻿from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division, print_function
 
 import os
 import sys
@@ -39,8 +39,7 @@ def fix_staged_scripts():
             with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
                 fo.write(f.read())
             # now create the .exe file
-            shutil.copyfile(join(dirname(__file__),
-                                 'cli-%d.exe' % (8 * tuple.__itemsize__)),
+            shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % cc.bits),
                             join(scripts_dir, fn + '.exe'))
 
         # remove the original script
