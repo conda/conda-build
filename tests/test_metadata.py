@@ -68,17 +68,18 @@ class HandleConfigVersionTests(unittest.TestCase):
                           MatchSpec('python x.x'), None)
 
     def test_numpy(self):
-        for spec, ver, res_spec in [
-                ('numpy', None, 'numpy'),
-                ('numpy', 18, 'numpy'),
-                ('numpy', 110, 'numpy'),
-                ('numpy x.x', 17, 'numpy 1.7*'),
-                ('numpy x.x', 110, 'numpy 1.10*'),
-                ('numpy 1.9.1', 18, 'numpy 1.9.1'),
-                ('numpy 1.9.0 py27_2', None, 'numpy 1.9.0 py27_2'),
+        for spec, ver, res_spec, kwargs in [
+                ('numpy', None, 'numpy', {}),
+                ('numpy', 18, 'numpy 1.8*', {'dep_type': 'build'}),
+                ('numpy', 18, 'numpy', {'dep_type': 'run'}),
+                ('numpy', 110, 'numpy', {}),
+                ('numpy x.x', 17, 'numpy 1.7*', {}),
+                ('numpy x.x', 110, 'numpy 1.10*', {}),
+                ('numpy 1.9.1', 18, 'numpy 1.9.1', {}),
+                ('numpy 1.9.0 py27_2', None, 'numpy 1.9.0 py27_2', {}),
         ]:
             ms = MatchSpec(spec)
-            self.assertEqual(handle_config_version(ms, ver),
+            self.assertEqual(handle_config_version(ms, ver, **kwargs),
                              MatchSpec(res_spec))
 
         self.assertRaises(RuntimeError,
