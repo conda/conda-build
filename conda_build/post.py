@@ -7,7 +7,7 @@ import sys
 import stat
 from glob import glob
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
-                     islink, realpath, relpath)
+                     islink, realpath, relpath, abspath)
 try:
     from os import readlink
 except ImportError:
@@ -226,7 +226,7 @@ def osx_ch_link(path, link):
     ret = ret.replace('/./', '/')
     return ret
 
-def mk_relative_osx(path, build_prefix=None):
+def mk_relative_osx(path, build_prefix=None, rel_rpath=True):
     '''
     if build_prefix is None, then this is a standard conda build. The path
     and all dependencies are in the build_prefix.
@@ -234,6 +234,9 @@ def mk_relative_osx(path, build_prefix=None):
     if package is built in develop mode, build_prefix is specified. Object
     specified by 'path' needs to relink runtime dependences to libs found in
     build_prefix/lib/. Also, in develop mode, 'path' is not in 'build_prefix'
+
+    In addition, when build in develop mode, use absolute when adding rpath to
+    library.
     '''
     if build_prefix is None:
         assert path.startswith(config.build_prefix + '/')
@@ -272,11 +275,17 @@ def mk_relative_osx(path, build_prefix=None):
 
         # Add an rpath to every executable to increase the chances of it
         # being found.
+        if rel_rpath:
+            rpth = relpath(join(config.build_prefix, 'lib'), dirname(path))
+        else:
+            rpth = abspath(join(config.build_prefix, 'lib'))
+
         args = [
             'install_name_tool',
             '-add_rpath',
-            join('@loader_path', relpath(join(config.build_prefix, 'lib'),
-                dirname(path)), '').replace('/./', '/'),
+            join('@loader_path',
+                 rpth,
+                 '').replace('/./', '/'),
             path,
             ]
         print(' '.join(args))

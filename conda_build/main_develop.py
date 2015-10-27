@@ -104,7 +104,11 @@ def relink_sharedobjects(pkg_path, build_prefix):
     bin_files = sharedobjects_list(pkg_path)
     for b_file in bin_files:
         if sys.platform == 'darwin':
-            mk_relative_osx(b_file, build_prefix)
+            try:
+                mk_relative_osx(b_file, build_prefix, rel_rpath=False)
+            except Exception as ex:
+                print("\nEncountered exception for " + b_file + " \n")
+                print(ex.message)
         else:
             print("Nothing to do on Linux or Windows.")
 
