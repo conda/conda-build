@@ -5,6 +5,12 @@ set -x
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
+# Set CONDA_NPY for all tests. Since CONDA_NPY should only affect recipes
+# that use a build requirement of 'numpy x.x' this should not affect
+# any existing tests that do not use that build requirement.
+
+export CONDA_NPY=1.9
+
 # Recipes that should fail and give some error
 
 for recipe in metadata/*/; do
