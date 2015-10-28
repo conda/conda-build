@@ -98,7 +98,6 @@ def yamlize(data):
         if '{{' in data:
             try:
                 import jinja2
-                jinja2
             except ImportError:
                 raise exceptions.UnableToParseMissingJinja2(original=e)
         raise exceptions.UnableToParse(original=e)
