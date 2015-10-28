@@ -19,6 +19,7 @@ requirements:
   run:
     - python
     - conda
+    - jinja2
     - patchelf      [linux]
 
 test:
