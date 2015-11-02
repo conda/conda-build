@@ -21,7 +21,13 @@ def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
 
 def get_npy_ver():
-    return '.'.join(str(config.CONDA_NPY or ''))
+    if config.CONDA_NPY:
+        # Convert int -> string, e.g.
+        #   17 -> '1.7'
+        #   110 -> '1.10'
+        conda_npy = str(config.CONDA_NPY)
+        return conda_npy[0] + '.' + conda_npy[1:]
+    return ''
 
 def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
