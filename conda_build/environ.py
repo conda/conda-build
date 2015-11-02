@@ -89,7 +89,8 @@ def get_dict(m=None, prefix=None):
     d['SYS_PYTHON'] = sys.executable
     d['PERL_VER'] = get_perl_ver()
     d['PY_VER'] = get_py_ver()
-    d['NPY_VER'] = get_npy_ver()
+    if get_npy_ver():
+        d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
