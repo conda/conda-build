@@ -1,0 +1,8 @@
+package:
+  name: conda-build-test-numpy-build-xx
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    - numpy 1.9*

@@ -423,6 +423,20 @@ class MetaData(object):
     def build_number(self):
         return int(self.get_value('build/number', 0))
 
+    def numpy_pinned(self):
+        """
+        If the version number was pinned in the build by specifying
+        'numpy x.x' as the dependency then that version of numpy
+        should be enforced in the runtime dependencies. This function
+        checks the build spec.
+        """
+        return_spec = ''
+        for spec in self.get_value('requirements/build', []):
+            if spec == 'numpy x.x':
+                return_spec = handle_config_version(MatchSpec(spec),
+                                                    config.CONDA_NPY)
+        return return_spec
+
     def ms_depends(self, typ='run'):
         res = []
         name_ver_list = [
@@ -443,6 +457,12 @@ class MetaData(object):
                     if self.get_value('build/noarch_python'):
                         continue
                     ms = handle_config_version(ms, ver)
+                    if name == 'numpy' and self.numpy_pinned():
+                        # Override the numpy runtime specification if:
+                        #   + numpy is a runtime requirement, and
+                        #   + the build had its numpy version pegged
+                        #     because it used the numpy x.x spec.
+                        ms = self.numpy_pinned()
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
