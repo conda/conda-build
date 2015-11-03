@@ -21,7 +21,13 @@ def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
 
 def get_npy_ver():
-    return '.'.join(str(config.CONDA_NPY or ''))
+    if config.CONDA_NPY:
+        # Convert int -> string, e.g.
+        #   17 -> '1.7'
+        #   110 -> '1.10'
+        conda_npy = str(config.CONDA_NPY)
+        return conda_npy[0] + '.' + conda_npy[1:]
+    return ''
 
 def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
@@ -83,7 +89,8 @@ def get_dict(m=None, prefix=None):
     d['SYS_PYTHON'] = sys.executable
     d['PERL_VER'] = get_perl_ver()
     d['PY_VER'] = get_py_ver()
-    d['NPY_VER'] = get_npy_ver()
+    if get_npy_ver():
+        d['NPY_VER'] = get_npy_ver()
     d['SRC_DIR'] = source.get_dir()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
