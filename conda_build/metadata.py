@@ -306,7 +306,7 @@ def get_contents(meta_path):
         env_loader = jinja2.FileSystemLoader(conda_env_path)
         loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
-    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
+    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=jinja2.StrictUndefined)
     env.globals.update(ns_cfg())
     env.globals.update(context_processor())
 
