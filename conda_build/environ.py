@@ -36,6 +36,13 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
+def get_git_build_info_variable_names():
+    return ["GIT_DESCRIBE_TAG",
+            "GIT_DESCRIBE_NUMBER",
+            "GIT_DESCRIBE_HASH",
+            "GIT_BUILD_STR",
+            "GIT_FULL_HASH"]
+
 def get_git_build_info(src_dir):
     env = os.environ.copy()
     d = {}
@@ -70,6 +77,8 @@ def get_git_build_info(src_dir):
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
                                             d[key_name('HASH')])
 
+    for key in get_git_build_info_variable_names():
+        assert key in d
     return d
 
 def get_dict(m=None, prefix=None):

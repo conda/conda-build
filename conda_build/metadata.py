@@ -275,7 +275,7 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def get_contents(meta_path):
+def get_contents(meta_path, provide_empty_git_variables=True):
     '''
     Get the contents of the [meta.yaml|conda.yaml] file.
     If jinja is installed, then the template.render function is called
@@ -308,7 +308,7 @@ def get_contents(meta_path):
 
     env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=jinja2.StrictUndefined)
     env.globals.update(ns_cfg())
-    env.globals.update(context_processor())
+    env.globals.update(context_processor(provide_empty_git_variables))
 
     try:
         template = env.get_or_select_template(filename)
@@ -360,13 +360,13 @@ class MetaData(object):
 
         self.parse_again()
 
-    def parse_again(self):
+    def parse_again(self, provide_empty_git_variables=True):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
         """
         if not self.meta_path:
             return
-        self.meta = parse(get_contents(self.meta_path))
+        self.meta = parse(get_contents(self.meta_path, provide_empty_git_variables))
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
