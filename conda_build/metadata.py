@@ -275,73 +275,6 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def get_contents(meta_path, permit_undefined_jinja):
-    '''
-    Get the contents of the [meta.yaml|conda.yaml] file.
-    If jinja is installed, then the template.render function is called
-    before standard conda macro processors.
-
-    permit_undefined_jinja: If True, *any* use of undefined jinja variables will
-                            evaluate to an emtpy string, without emitting an error.
-    '''
-    try:
-        import jinja2
-    except ImportError:
-        print("There was an error importing jinja2.", file=sys.stderr)
-        print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)
-        with open(meta_path) as fd:
-            return fd.read()
-
-    from conda_build.jinja_context import context_processor
-
-    path, filename = os.path.split(meta_path)
-    loaders = [# search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
-               jinja2.PackageLoader('conda_build'),
-               # search relative to RECIPE_DIR
-               jinja2.FileSystemLoader(path)
-               ]
-
-    # search relative to current conda environment directory
-    conda_env_path = os.environ.get('CONDA_DEFAULT_ENV')  # path to current conda environment
-    if conda_env_path and os.path.isdir(conda_env_path):
-        conda_env_path = os.path.abspath(conda_env_path)
-        conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
-        env_loader = jinja2.FileSystemLoader(conda_env_path)
-        loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
-
-    undefined_type = jinja2.StrictUndefined
-    if permit_undefined_jinja:
-        class UndefinedNeverFail(jinja2.Undefined):
-            """
-            A class for Undefined jinja variables.
-            This is even less strict than the default jinja2.Undefined class,
-            because we permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ float(MY_UNDEFINED_VAR) }}.
-            This can mask lots of errors in jinja templates, so it should only be used for a first-pass
-            parse, when you plan on running a 'strict' second pass later.
-            """
-            __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
-            __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
-            __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
-            __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = __int__ = \
-            __complex__ = __pow__ = __rpow__ = \
-                lambda *args, **kwargs: ''
-
-            __int__ = lambda _: 0
-            __float__ = lambda _: 0.0
-
-        undefined_type = UndefinedNeverFail
-
-    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
-    env.globals.update(ns_cfg())
-    env.globals.update(context_processor())
-
-    try:
-        template = env.get_or_select_template(filename)
-        return template.render(environment=env)
-    except jinja2.TemplateError as ex:
-        sys.exit("Error: Failed to render jinja template in {}:\n{}".format(meta_path, ex.message))
-
-
 def handle_config_version(ms, ver):
     """
     'ms' is an instance of MatchSpec, and 'ver' is the version from the
@@ -398,7 +331,7 @@ class MetaData(object):
         """
         if not self.meta_path:
             return
-        self.meta = parse(get_contents(self.meta_path, permit_undefined_jinja))
+        self.meta = parse(self._get_contents(permit_undefined_jinja))
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
@@ -604,6 +537,72 @@ class MetaData(object):
 
     def skip(self):
         return self.get_value('build/skip', False)
+
+    def _get_contents(self, permit_undefined_jinja):
+        '''
+        Get the contents of our [meta.yaml|conda.yaml] file.
+        If jinja is installed, then the template.render function is called
+        before standard conda macro processors.
+    
+        permit_undefined_jinja: If True, *any* use of undefined jinja variables will
+                                evaluate to an emtpy string, without emitting an error.
+        '''
+        try:
+            import jinja2
+        except ImportError:
+            print("There was an error importing jinja2.", file=sys.stderr)
+            print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)
+            with open(self.meta_path) as fd:
+                return fd.read()
+    
+        from conda_build.jinja_context import context_processor
+    
+        path, filename = os.path.split(self.meta_path)
+        loaders = [# search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
+                   jinja2.PackageLoader('conda_build'),
+                   # search relative to RECIPE_DIR
+                   jinja2.FileSystemLoader(path)
+                   ]
+    
+        # search relative to current conda environment directory
+        conda_env_path = os.environ.get('CONDA_DEFAULT_ENV')  # path to current conda environment
+        if conda_env_path and os.path.isdir(conda_env_path):
+            conda_env_path = os.path.abspath(conda_env_path)
+            conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
+            env_loader = jinja2.FileSystemLoader(conda_env_path)
+            loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
+    
+        undefined_type = jinja2.StrictUndefined
+        if permit_undefined_jinja:
+            class UndefinedNeverFail(jinja2.Undefined):
+                """
+                A class for Undefined jinja variables.
+                This is even less strict than the default jinja2.Undefined class,
+                because we permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ float(MY_UNDEFINED_VAR) }}.
+                This can mask lots of errors in jinja templates, so it should only be used for a first-pass
+                parse, when you plan on running a 'strict' second pass later.
+                """
+                __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
+                __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
+                __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
+                __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
+                __complex__ = __pow__ = __rpow__ = \
+                    lambda *args, **kwargs: ''
+    
+                __int__ = lambda _: 0
+                __float__ = lambda _: 0.0
+    
+            undefined_type = UndefinedNeverFail
+    
+        env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
+        env.globals.update(ns_cfg())
+        env.globals.update(context_processor())
+    
+        try:
+            template = env.get_or_select_template(filename)
+            return template.render(environment=env)
+        except jinja2.TemplateError as ex:
+            sys.exit("Error: Failed to render jinja template in {}:\n{}".format(self.meta_path, ex.message))
 
     def __unicode__(self):
         '''
