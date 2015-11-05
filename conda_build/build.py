@@ -392,7 +392,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
             source.provide(m.path, m.get_section('source'))
             # Parse our metadata again because we did not initialize the source
             # information before.
-            m.parse_again()
+            m.parse_again(provide_empty_git_variables=False)
 
         print("Package:", m.dist())
 

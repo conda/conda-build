@@ -10,6 +10,7 @@ import os
 
 from conda.compat import PY3
 from .environ import get_dict as get_environ
+from .environ import get_git_build_info_variable_names
 
 _setuptools_data = None
 
@@ -40,12 +41,18 @@ def load_npm():
     with open('package.json', **mode_dict) as pkg:
         return json.load(pkg)
 
-def context_processor():
-    ctx = get_environ()
-    environ = dict(os.environ)
-    environ.update(get_environ())
+def context_processor(provide_empty_git_variables=True):
+    conda_environ = get_environ()
 
+    if provide_empty_git_variables:
+        for var in get_git_build_info_variable_names():
+            conda_environ.setdefault(var, '')
+
+    os_environ = dict(os.environ)
+    os_environ.update(conda_environ)
+
+    ctx = conda_environ
     ctx.update(load_setuptools=load_setuptools,
                load_npm=load_npm,
-               environ=environ)
+               environ=os_environ)
     return ctx
