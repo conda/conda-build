@@ -310,12 +310,11 @@ def get_contents(meta_path):
     env.globals.update(ns_cfg())
     env.globals.update(context_processor())
 
-    template = env.get_or_select_template(filename)
-
     try:
+        template = env.get_or_select_template(filename)
         return template.render(environment=env)
     except jinja2.TemplateError as ex:
-        sys.exit("Error: Failed to parse jinja template in {}:\n{}".format(meta_path, ex.message))
+        sys.exit("Error: Failed to render jinja template in {}:\n{}".format(meta_path, ex.message))
 
 
 def handle_config_version(ms, ver):
