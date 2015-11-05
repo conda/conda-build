@@ -316,6 +316,11 @@ class MetaData(object):
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
+        # Start with bare-minimum contents so we can call environ.get_dict() with impunity
+        # We'll immediately replace these contents in parse_again()
+        self.meta = parse("package:\n"
+                          "  name: uninitialized")
+
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
@@ -596,7 +601,7 @@ class MetaData(object):
     
         env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
         env.globals.update(ns_cfg())
-        env.globals.update(context_processor())
+        env.globals.update(context_processor(self))
     
         try:
             template = env.get_or_select_template(filename)
