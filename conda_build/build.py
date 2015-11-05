@@ -390,9 +390,11 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
 
         if get_src:
             source.provide(m.path, m.get_section('source'))
-            # Parse our metadata again because we did not initialize the source
-            # information before.
-            m.parse_again()
+
+        # Parse our metadata again because we did not initialize the source
+        # information before.
+        # By now, all jinja variables should be defined, so don't permit undefined vars.
+        m.parse_again(permit_undefined_jinja=False)
 
         print("Package:", m.dist())
 
