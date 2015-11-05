@@ -306,14 +306,16 @@ def get_contents(meta_path):
         env_loader = jinja2.FileSystemLoader(conda_env_path)
         loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
-    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders))
+    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=jinja2.StrictUndefined)
     env.globals.update(ns_cfg())
     env.globals.update(context_processor())
 
     template = env.get_or_select_template(filename)
 
-    contents = template.render(environment=env)
-    return contents
+    try:
+        return template.render(environment=env)
+    except jinja2.TemplateError as ex:
+        sys.exit("Error: Failed to parse jinja template in {}:\n{}".format(meta_path, ex.message))
 
 
 def handle_config_version(ms, ver):
