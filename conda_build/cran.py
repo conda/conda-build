@@ -24,6 +24,7 @@ import subprocess
 from conda.install import rm_rf
 
 from conda_build import source, metadata
+from conda_build import utils
 
 CRAN_META = """\
 package:
@@ -293,11 +294,14 @@ def get_package_metadata(cran_url, package, session):
     return d
 
 def get_latest_git_tag():
-    p = subprocess.Popen(['git', 'tag'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
-    stdout, stderr = p.communicate()
-    stdout = stdout.decode('utf-8')
-    stderr = stderr.decode('utf-8')
-    if stderr or p.returncode:
+    return_code = 0
+    try:
+        stdout, stderr = utils.execute(['git', 'tag'], cwd=source.WORK_DIR)
+    except subprocess.CalledProcessError as exc:
+        return_code = exc.return_code
+        stdout, stderr = exc.output
+
+    if stderr or return_code:
         sys.exit("Error: git tag failed (%s)" % stderr)
     tags = stdout.strip().splitlines()
     if not tags:
@@ -359,16 +363,19 @@ def main(args, parser):
         is_github_url = 'github.com' in package
         url = package
 
-
         if is_github_url:
             rm_rf(source.WORK_DIR)
             source.git_source({'git_url': package}, '.')
             git_tag = args.git_tag[0] if args.git_tag else get_latest_git_tag()
-            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
-            stdout, stderr = p.communicate()
-            stdout = stdout.decode('utf-8')
-            stderr = stderr.decode('utf-8')
-            if p.returncode:
+            return_code = 0
+            try:
+                stdout, stderr = utils.execute(['git', 'checkout', git_tag],
+                                               cwd=source.WORK_DIR)
+            except subprocess.CalledProcessError as exc:
+                return_code = exc.return_code
+                stdout, stderr = exc.output
+
+            if return_code:
                 sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" % (git_tag, stderr.strip()))
             if stdout:
                 print(stdout, file=sys.stdout)
