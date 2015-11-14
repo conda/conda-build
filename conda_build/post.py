@@ -254,7 +254,8 @@ def mk_relative_osx(path, build_prefix=None):
             'install_name_tool',
             '-id',
             join('@rpath', relpath(dirname(path),
-                join(config.build_prefix, 'lib')), basename(names[0])),
+                                   join(config.build_prefix, 'lib')),
+                 basename(names[0])),
             path,
         ]
         print(' '.join(args))
@@ -280,8 +281,9 @@ def mk_relative_osx(path, build_prefix=None):
         args = [
             'install_name_tool',
             '-add_rpath',
-            join('@loader_path', relpath(join(config.build_prefix, 'lib'),
-                dirname(path)), '').replace('/./', '/'),
+            join('@loader_path',
+                 relpath(join(config.build_prefix, 'lib'),
+                         dirname(path)), '').replace('/./', '/'),
             path,
             ]
         print(' '.join(args))
