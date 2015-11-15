@@ -369,6 +369,20 @@ def main(args, parser):
         recipe_setup_options = ['--' + o for o in args.recipe_setup_options]
         d['recipe_setup_options'] = ' '.join(recipe_setup_options)
 
+        # Change requirements to use format that guarantees the numpy
+        # version will be pinned when the recipe is built and that
+        # the version is included in the build string.
+        if args.pin_numpy:
+            for depends in ['build_depends', 'run_depends']:
+                deps = d[depends].split(INDENT)
+                numpy_dep = [idx for idx, dep in enumerate(deps)
+                             if 'numpy' in dep]
+                if numpy_dep:
+                    # Turns out this needs to be inserted before the rest
+                    # of the numpy spec.
+                    deps.insert(numpy_dep[0], 'numpy x.x')
+                    d[depends] = INDENT.join(deps)
+
     for package in package_dicts:
         d = package_dicts[package]
         name = d['packagename']

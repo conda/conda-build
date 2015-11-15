@@ -177,6 +177,13 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
              "automatically and should not be included."
              "May be repeated to add several options.")
 
+    pypi.add_argument(
+        "--pin-numpy",
+        action='store_true',
+        help="Ensure that the generated recipe pins the version of numpy"
+             "to CONDA_NPY."
+    )
+
     cpan = repos.add_parser(
         "cpan",
         help="""
