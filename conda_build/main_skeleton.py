@@ -159,6 +159,15 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         help="Creates recipe as noarch python"
     )
 
+    pypi.add_argument(
+        "--skeleton-setup-options",
+        action='append',
+        default=[],
+        help="Options to be passed to setup.py when generating recipe. "
+             "The characters '--' will be prepended to each option "
+             "automatically and should not be included."
+             "May be repeated to add several options.")
+
     cpan = repos.add_parser(
         "cpan",
         help="""
