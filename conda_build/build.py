@@ -523,6 +523,8 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     else:
         rm_rf(config.build_prefix)
         rm_rf(config.test_prefix)
+
+    get_build_metadata(m)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
