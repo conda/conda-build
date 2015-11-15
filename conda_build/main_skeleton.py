@@ -168,6 +168,15 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
              "automatically and should not be included."
              "May be repeated to add several options.")
 
+    pypi.add_argument(
+        "--recipe-setup-options",
+        action='append',
+        default=[],
+        help="Options to be added to setup.py install in the recipe. "
+             "The characters '--' will be prepended to each option "
+             "automatically and should not be included."
+             "May be repeated to add several options.")
+
     cpan = repos.add_parser(
         "cpan",
         help="""

@@ -105,7 +105,7 @@ about:
 PYPI_BUILD_SH = """\
 #!/bin/bash
 
-$PYTHON setup.py install
+$PYTHON setup.py install {recipe_setup_options}
 
 # Add more build steps here, if they are necessary.
 
@@ -115,7 +115,7 @@ $PYTHON setup.py install
 """
 
 PYPI_BLD_BAT = """\
-"%PYTHON%" setup.py install
+"%PYTHON%" setup.py install {recipe_setup_options}
 if errorlevel 1 exit 1
 
 :: Add more build steps here, if they are necessary.
@@ -365,6 +365,9 @@ def main(args, parser):
 
         if d['entry_comment'] == d['import_comment'] == '# ':
             d['test_comment'] = '# '
+
+        recipe_setup_options = ['--' + o for o in args.recipe_setup_options]
+        d['recipe_setup_options'] = ' '.join(recipe_setup_options)
 
     for package in package_dicts:
         d = package_dicts[package]
