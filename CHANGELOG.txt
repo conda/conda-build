@@ -1,6 +1,11 @@
-2015-10-XX   1.18.2:
+2015-11-19   1.18.2:
 --------------------
   * move path prepending to function for uniformity, #601
+  * improve yaml loading, #603
+  * allow jinja2 templates to be located in current conda environment, #578
+  * fix NPY_VER for versions >= 1.10 (Should be '1.10', not '1.1.0'), #660
+  * create jinja2 environment with 'strict' mode for undefined values, #661
+  * add a method to shell out and execute a command through subprocess, #621
 
 
 2015-10-16   1.18.1:
