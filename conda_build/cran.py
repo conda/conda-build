@@ -22,6 +22,7 @@ from itertools import chain
 import subprocess
 
 from conda.install import rm_rf
+from conda import compat
 
 from conda_build import source, metadata
 from conda_build import utils
@@ -577,7 +578,7 @@ def main(args, parser):
         name = d['packagename']
     
         #Normalize the metadata values
-        d = {k:unicodedata.normalize("NFKD", unicode(v)).encode('ascii', 'ignore') for k, v in d.iteritems()}
+        d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore') for k, v in d.iteritems()}
 
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
