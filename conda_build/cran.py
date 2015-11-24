@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import requests
 import yaml
-
+import unicodedata
 
 # try to import C dumper
 try:
@@ -22,6 +22,7 @@ from itertools import chain
 import subprocess
 
 from conda.install import rm_rf
+from conda import compat
 
 from conda_build import source, metadata
 from conda_build import utils
@@ -575,6 +576,10 @@ def main(args, parser):
     for package in package_dicts:
         d = package_dicts[package]
         name = d['packagename']
+    
+        #Normalize the metadata values
+        d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore') for k, v in d.iteritems()}
+
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
