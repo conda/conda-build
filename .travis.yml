@@ -21,7 +21,7 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda install --force --no-deps conda requests
-  - conda install pytest requests patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
+  - conda install pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
   - python setup.py install
   - conda info -a
 
