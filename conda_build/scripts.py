@@ -18,14 +18,14 @@ from conda_build.config import config
 PY_TMPL = """\
 if __name__ == '__main__':
     import sys
-    from %s import %s
+    import %(module)s
 
-    sys.exit(%s())
+    sys.exit(%(module)s.%(func)s())
 """
 
 bin_dirname = 'Scripts' if sys.platform == 'win32' else 'bin'
 
-entry_pat = re.compile('\s*([\w\-\.]+)\s*=\s*([\w.]+):(\w+)\s*$')
+entry_pat = re.compile('\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$')
 
 
 def iter_entry_points(items):
@@ -37,7 +37,7 @@ def iter_entry_points(items):
 
 
 def create_entry_point(path, module, func):
-    pyscript = PY_TMPL % (module, func, func)
+    pyscript = PY_TMPL % {'module': module, 'func': func}
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w') as fo:
             fo.write(pyscript)
