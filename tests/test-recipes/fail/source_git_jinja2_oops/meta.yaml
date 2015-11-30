@@ -1,6 +1,6 @@
 package:
   name: conda-build-test-source-git-jinja2-oops
-  version: {{ GIT_DESCRIBE_TAG }}
+  version: {{ GIT_DSECRIBE_TAG }}
 
 source:
   git_url: https://github.com/conda/conda-build
