@@ -1,5 +1,5 @@
 package:
-  name: conda-build-test-source-git-jinja2
+  name: conda-build-test-source-git-jinja2-oops
   version: {{ GIT_DESCRIBE_TAG }}
 
 source:
