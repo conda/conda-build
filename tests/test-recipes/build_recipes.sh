@@ -12,7 +12,10 @@ for recipe in metadata/*/; do
         if [[ $recipe =~ .*osx_is_app.* && $(uname) != "Darwin" ]]; then
             continue
         fi
-        conda build --no-anaconda-upload $recipe
+        recipe_temp=$(mktemp -d -t 'tmpXXXXXXXXXX');
+        cp -a $recipe/. $recipe_temp;
+        conda build --no-anaconda-upload $recipe_temp;
+        rm -rf $recipe_temp;
     fi
 done
 
