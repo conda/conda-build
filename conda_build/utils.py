@@ -214,16 +214,17 @@ def execute(command, **kwargs):
             result = process.communicate()
             return_code = process.returncode
 
-            if PY3 and not binary and result is not None:
-                # pylint: disable=no-member
+            if result is not None:
+                if PY3 and not binary:
+                    # pylint: disable=no-member
 
-                # Decode from the locale using using the surrogate escape error
-                # handler (decoding cannot fail)
-                (stdout, stderr) = result
-                stdout = os.fsdecode(stdout)
-                stderr = os.fsdecode(stderr)
-            else:
-                stdout, stderr = result
+                    # Decode from the locale using using the surrogate escape error
+                    # handler (decoding cannot fail)
+                    (stdout, stderr) = result
+                    stdout = os.fsdecode(stdout)
+                    stderr = os.fsdecode(stderr)
+                else:
+                    stdout, stderr = result
 
             if not ignore_exit_code and return_code not in check_exit_code:
                 raise subprocess.CalledProcessError(returncode=return_code,
