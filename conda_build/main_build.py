@@ -12,6 +12,7 @@ from collections import deque
 from glob import glob
 from locale import getpreferredencoding
 from os import listdir
+from os import environ as os_environ
 from os.path import exists, isdir, isfile, join
 
 import conda.config as config
@@ -307,6 +308,13 @@ def execute(args, parser):
             else:
                 raise RuntimeError("%s must be major.minor, not %s" %
                     (conda_version[lang], version))
+
+    # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
+    # Auto-set those env variables
+    for var in conda_version.values():
+        if getattr(config, var):
+            # Set the env variable.
+            os_environ[var] = str(getattr(config, var))
 
     if args.skip_existing:
         if not isdir(config.bldpkgs_dir):
