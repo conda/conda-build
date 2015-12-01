@@ -50,14 +50,14 @@ def get_git_build_info(src_dir):
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     env = {str(key): str(value) for key, value in env.items()}
     output, _ = utils.execute(["git", "describe", "--tags", "--long", "HEAD"],
-                              env=env)
+                              env=env, cwd=git_dir)
     parts = output.strip().rsplit('-', 2)
     parts_length = len(parts)
     if parts_length == 3:
         d.update(dict(zip(keys, parts)))
     # get the _full_ hash of the current HEAD
     output, _ = utils.execute(["git", "rev-parse", "HEAD"],
-                              env=env)
+                              env=env, cwd=git_dir)
 
     d['GIT_FULL_HASH'] = output.strip()
     # set up the build string
