@@ -195,13 +195,15 @@ def execute(command, **kwargs):
     shell = kwargs.pop("shell", False)
 
     command = [str(argument) for argument in command]
-    ignore_exit_code = False
 
-    if isinstance(check_exit_code, bool):
-        ignore_exit_code = not check_exit_code
-        check_exit_code = [0]
-    elif isinstance(check_exit_code, int):
-        check_exit_code = [check_exit_code]
+    allowed_exit_codes = [0]
+    if not isinstance(check_exit_code, bool):
+        if isinstance(check_exit_code, int):
+            allowed_exit_codes = [check_exit_code]
+            check_exit_code = True
+        else:
+            allowed_exit_codes = list(check_exit_code)
+            check_exit_code = True
 
     while attempts > 0:
         attempts = attempts - 1
@@ -226,7 +228,7 @@ def execute(command, **kwargs):
                 else:
                     stdout, stderr = result
 
-            if not ignore_exit_code and return_code not in check_exit_code:
+            if check_exit_code and return_code not in allowed_exit_codes:
                 raise subprocess.CalledProcessError(returncode=return_code,
                                                     cmd=command,
                                                     output=(stdout, stderr))
