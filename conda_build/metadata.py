@@ -275,11 +275,14 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def get_contents(meta_path):
+def get_contents(meta_path, permit_undefined_jinja):
     '''
     Get the contents of the [meta.yaml|conda.yaml] file.
     If jinja is installed, then the template.render function is called
-    before standard conda macro processors
+    before standard conda macro processors.
+
+    permit_undefined_jinja: If True, *any* use of undefined jinja variables will
+                            evaluate to an emtpy string, without emitting an error.
     '''
     try:
         import jinja2
@@ -306,16 +309,37 @@ def get_contents(meta_path):
         env_loader = jinja2.FileSystemLoader(conda_env_path)
         loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
-    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=jinja2.StrictUndefined)
+    undefined_type = jinja2.StrictUndefined
+    if permit_undefined_jinja:
+        class UndefinedNeverFail(jinja2.Undefined):
+            """
+            A class for Undefined jinja variables.
+            This is even less strict than the default jinja2.Undefined class,
+            because we permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ float(MY_UNDEFINED_VAR) }}.
+            This can mask lots of errors in jinja templates, so it should only be used for a first-pass
+            parse, when you plan on running a 'strict' second pass later.
+            """
+            __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
+            __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
+            __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
+            __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = __int__ = \
+            __complex__ = __pow__ = __rpow__ = \
+                lambda *args, **kwargs: ''
+
+            __int__ = lambda _: 0
+            __float__ = lambda _: 0.0
+
+        undefined_type = UndefinedNeverFail
+
+    env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
     env.globals.update(ns_cfg())
     env.globals.update(context_processor())
 
-    template = env.get_or_select_template(filename)
-
     try:
+        template = env.get_or_select_template(filename)
         return template.render(environment=env)
     except jinja2.TemplateError as ex:
-        sys.exit("Error: Failed to parse jinja template in {}:\n{}".format(meta_path, ex.message))
+        sys.exit("Error: Failed to render jinja template in {}:\n{}".format(meta_path, ex.message))
 
 
 def handle_config_version(ms, ver):
@@ -359,15 +383,22 @@ class MetaData(object):
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
-        self.parse_again()
+        # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
+        # (e.g. GIT_FULL_HASH, etc. are undefined)
+        # Therefore, undefined jinja variables are permitted here
+        # In the second pass, we'll be more strict. See build.build()
+        self.parse_again(permit_undefined_jinja=True)
 
-    def parse_again(self):
+    def parse_again(self, permit_undefined_jinja):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
+
+        permit_undefined_jinja: If True, *any* use of undefined jinja variables will
+                                evaluate to an emtpy string, without emitting an error.
         """
         if not self.meta_path:
             return
-        self.meta = parse(get_contents(self.meta_path))
+        self.meta = parse(get_contents(self.meta_path, permit_undefined_jinja))
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):

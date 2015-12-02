@@ -5,7 +5,6 @@ import re
 import os
 import sys
 import stat
-import subprocess
 from glob import glob
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath)
@@ -14,6 +13,7 @@ try:
 except ImportError:
     readlink = False
 import io
+from subprocess import call, Popen, PIPE
 from collections import defaultdict
 
 from conda_build.config import config
@@ -259,22 +259,17 @@ def mk_relative_osx(path, build_prefix=None):
             path,
         ]
         print(' '.join(args))
-        return_code = 0
-        try:
-            stdout, stderr = utils.execute(args)
-        except subprocess.CalledProcessError as exc:
-            stdout, stderr = exc.output
-            return_code = exc.return_code
-
+        p = Popen(args, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
             return
-
         else:
             print(stderr, file=sys.stderr)
-            if return_code:
-                raise RuntimeError("install_name_tool failed with exit "
-                                   "status %d" % return_code)
+            if p.returncode:
+                raise RuntimeError("install_name_tool failed with exit status %d"
+            % p.returncode)
 
         # Add an rpath to every executable to increase the chances of it
         # being found.
@@ -287,13 +282,9 @@ def mk_relative_osx(path, build_prefix=None):
             path,
             ]
         print(' '.join(args))
-        return_code = 0
-        try:
-            stdout, strerr = utils.execute(args)
-        except subprocess.CalledProcessError as exc:
-            stdout, stderr = exc.output
-            return_code = exc.return_code
-
+        p = Popen(args, stderr=PIPE)
+        stdout, stderr = p.communicate()
+        stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
             return
@@ -302,9 +293,9 @@ def mk_relative_osx(path, build_prefix=None):
             return
         else:
             print(stderr, file=sys.stderr)
-            if return_code:
-                raise RuntimeError("install_name_tool failed with exit "
-                                   "status %d" % return_code)
+            if p.returncode:
+                raise RuntimeError("install_name_tool failed with exit status %d"
+            % p.returncode)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
@@ -317,7 +308,7 @@ def mk_relative_linux(f, rpaths=('lib',)):
         d.startswith('/') else d for d in rpaths)
     patchelf = external.find_executable('patchelf')
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-    utils.execute([patchelf, '--force-rpath', '--set-rpath', rpath, path])
+    call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 
 def assert_relative_osx(path):
     for name in macho.otool(path):

@@ -19,7 +19,6 @@ from conda_build.main_build import args_func
 from conda.install import rm_rf
 import conda_build.build as build
 from conda_build.metadata import MetaData
-from conda_build import utils
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy
@@ -139,7 +138,7 @@ def build_recipe(package, version=None):
         args = skeleton_template_wversion.format(package, version).split()
     print("Creating standard recipe for {0}".format(dirname))
     try:
-        result = utils.execute(args, check_exit_code=True)
+        result = subprocess.check_output(args, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as err:
         print(err.output)
         raise RuntimeError((" ".join(args)))
@@ -203,14 +202,12 @@ def get_all_dependencies(package, version):
     prefix = os.path.join(conda.config.default_prefix, 'envs', '_pipbuild_')
     cmd1 = "conda create -n _pipbuild_ --yes python pip"
     print(cmd1)
-    utils.execute(cmd1.split())
+    subprocess.Popen(cmd1.split()).wait()
     cmd2 = "%s/bin/pip install %s==%s" % (prefix, package, version)
     print(cmd2)
-    try:
-        execute(cmd2.split(), check_exit_code=True)
-    except subprocess.CalledProcessError:
+    ret = subprocess.Popen(cmd2.split()).wait()
+    if ret != 0:
         raise RuntimeError("Could not pip install %s==%s" % (package, version))
-
     cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
     fid = open('__tmpfile__.py', 'w')
     fid.write("import pkg_resources;\n")
@@ -219,7 +216,7 @@ def get_all_dependencies(package, version):
     fid.write("print([(req.key, req.specs) for req in reqs])\n")
     fid.close()
     print("Getting dependencies...")
-    output, _ = utils.execute(cmd3args, check_exit_code=True)
+    output = subprocess.check_output(cmd3args)
     deps = eval(output)
     os.unlink('__tmpfile__.py')
     depends = []
@@ -229,7 +226,7 @@ def get_all_dependencies(package, version):
         else:
             depends.append(dep[0])
     cmd4 = "conda remove -n _pipbuild_ --yes --all"
-    utils.execute(cmd4.split())
+    subprocess.Popen(cmd4.split()).wait()
     return depends
 
 
@@ -306,8 +303,6 @@ def build_package(package, version=None, noarch_python=False):
         directory, dependencies = make_recipe(package, version,
                                               noarch_python=noarch_python)
 
-    return_code = 0
-
     try:
         print("package = %s" % package)
         print("   dependencies = %s" % dependencies)
@@ -319,17 +314,13 @@ def build_package(package, version=None, noarch_python=False):
             build_package(depend)
         args = build_template.format(directory).split()
         print("Building conda package for {0}".format(package.lower()))
-
-        try:
-            utils.execute(args, check_exit_code=True)
-        except subprocess.CalledProcessError as exc:
-            return_code = exc.return_code
-        else:
+        result = subprocess.Popen(args).wait()
+        if result == 0 and binstar_upload:
             m = MetaData(directory)
             handle_binstar_upload(build.bldpkg_path(m))
     finally:
         rm_rf(directory)
-    return return_code
+    return result
 
 
 def execute(args, parser):
