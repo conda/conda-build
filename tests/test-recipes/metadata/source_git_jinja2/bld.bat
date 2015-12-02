@@ -8,7 +8,7 @@ if errorlevel 1 exit 1
 echo "%gitdesc%"
 if not "%gitdesc%"=="1.8.1" exit 1
 echo "%PKG_VERSION%"
-if not "%PKG_VERSION%"="1.8.1" exit 1
+if not "%PKG_VERSION%"=="1.8.1" exit 1
 git status
 if errorlevel 1 exit 1
 git diff
