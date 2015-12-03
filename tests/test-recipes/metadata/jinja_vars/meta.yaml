@@ -1,0 +1,11 @@
+package:
+  name: conda-build-test-jinja-vars
+  version: 1.0
+
+build:
+  number: 123
+  string: {{CONDA_TEST_VAR}}_{{PKG_BUILDNUM}}
+
+  script_env:
+    - CONDA_TEST_VAR
+  
