@@ -439,7 +439,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
                 os.chmod(build_file, 0o766)
 
             if isfile(build_file):
-                cmd = ['/bin/bash', '-x', '-e', build_file]
+                cmd = ['/bin/sh', '-x', '-e', build_file]
 
                 _check_call(cmd, env=env, cwd=src_dir)
 
