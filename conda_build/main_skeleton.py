@@ -160,22 +160,15 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
     )
 
     pypi.add_argument(
-        "--skeleton-setup-options",
+        "--setup-options",
         action='append',
         default=[],
-        help="Options to be passed to setup.py when generating recipe. "
-             "The characters '--' will be prepended to each option "
-             "automatically and should not be included."
-             "May be repeated to add several options.")
-
-    pypi.add_argument(
-        "--recipe-setup-options",
-        action='append',
-        default=[],
-        help="Options to be added to setup.py install in the recipe. "
-             "The characters '--' will be prepended to each option "
-             "automatically and should not be included."
-             "May be repeated to add several options.")
+        help='Options to be added to setup.py install in the recipe. '
+             'The same options are passed to setup.py install in both '
+             'the construction of the recipe and in the recipe itself.'
+             'For options that include a double-hypen or to pass multiple '
+             'options, use the syntax '
+             '--setup-options="--option1 --optin-with-arg arg"')
 
     pypi.add_argument(
         "--pin-numpy",
