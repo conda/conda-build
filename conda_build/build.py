@@ -582,7 +582,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         else:
             test_file = join(tmp_dir, 'run_test.sh')
             # TODO: Run the test/commands here instead of in run_test.py
-            cmd = ['/bin/bash', '-x', '-e', test_file]
+            cmd = ['/bin/sh', '-x', '-e', test_file]
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
