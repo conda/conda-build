@@ -299,7 +299,9 @@ def execute(args, parser):
                 setattr(args, lang, versions)
             return
         else:
-            version = int(versions[0].replace('.', ''))
+            version = versions[0]
+            if lang in ('python', 'numpy'):
+                version = int(version.replace('.', ''))
             setattr(config, conda_version[lang], version)
         if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
             if all_versions[lang]:
