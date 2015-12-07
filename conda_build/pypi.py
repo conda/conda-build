@@ -366,7 +366,7 @@ def main(args, parser):
         if d['entry_comment'] == d['import_comment'] == '# ':
             d['test_comment'] = '# '
 
-        d['recipe_setup_options'] = args.setup_options
+        d['recipe_setup_options'] = ' '.join(args.setup_options)
 
         # Change requirements to use format that guarantees the numpy
         # version will be pinned when the recipe is built and that
