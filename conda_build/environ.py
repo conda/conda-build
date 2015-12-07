@@ -144,6 +144,7 @@ def get_dict(m=None, prefix=None):
         d['PKG_NAME'] = m.name()
         d['PKG_VERSION'] = m.version()
         d['PKG_BUILDNUM'] = str(m.build_number())
+        d['PKG_BUILD_STRING'] = str(m.build_id())
         d['RECIPE_DIR'] = m.path
 
     return d
