@@ -40,10 +40,16 @@ def load_npm():
     with open('package.json', **mode_dict) as pkg:
         return json.load(pkg)
 
-def context_processor():
-    ctx = get_environ()
+def context_processor(initial_metadata=None):
+    """
+    Return a dictionary to use as context for jinja templates.
+
+    initial_metadata: Augment the context with values from this MetaData object.
+                      Used to bootstrap metadata contents via multiple parsing passes.
+    """
+    ctx = get_environ(m=initial_metadata)
     environ = dict(os.environ)
-    environ.update(get_environ())
+    environ.update(get_environ(m=initial_metadata))
 
     ctx.update(load_setuptools=load_setuptools,
                load_npm=load_npm,
