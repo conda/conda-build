@@ -320,7 +320,7 @@ def mk_relative(m, f):
     if not is_obj(path):
         return
 
-    if sys.platform.startswith('linux'):
+    if sys.platform.startswith('linux') or ('bsd' in sys.platform):
         mk_relative_linux(f, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
         mk_relative_osx(path)
