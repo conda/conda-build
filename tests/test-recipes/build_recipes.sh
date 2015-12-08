@@ -8,8 +8,10 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 # Recipes that should fail and give some error
 
 for recipe in metadata/*/; do
-    if [[ $(ls -A "$recipe") ]]; then
-        if [[ $recipe =~ .*osx_is_app.* && $(uname) != "Darwin" ]]; then
+    # Only consider directories
+    if [ -d "$recipe" ]; then
+        # Disable test recipe "osx_is_app" if not on OSX
+        if [ "${recipe#*osx_is_app}" != "$recipe" ] && [ $(uname) != "Darwin" ]; then
             continue
         fi
         conda build --no-anaconda-upload $recipe
