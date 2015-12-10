@@ -36,7 +36,7 @@ from conda_build.exceptions import indent
 
 
 on_win = (sys.platform == 'win32')
-if sys.platform.startswith('openbsd'):
+if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
     shell_path = '/bin/bash'
