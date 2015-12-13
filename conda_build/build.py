@@ -36,6 +36,10 @@ from conda_build.exceptions import indent
 
 
 on_win = (sys.platform == 'win32')
+if 'bsd' in sys.platform:
+    shell_path = '/bin/sh'
+else:
+    shell_path = '/bin/bash'
 
 
 def prefix_files():
@@ -439,7 +443,7 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
                 os.chmod(build_file, 0o766)
 
             if isfile(build_file):
-                cmd = ['/bin/bash', '-x', '-e', build_file]
+                cmd = [shell_path, '-x', '-e', build_file]
 
                 _check_call(cmd, env=env, cwd=src_dir)
 
@@ -582,7 +586,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         else:
             test_file = join(tmp_dir, 'run_test.sh')
             # TODO: Run the test/commands here instead of in run_test.py
-            cmd = ['/bin/bash', '-x', '-e', test_file]
+            cmd = [shell_path, '-x', '-e', test_file]
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
