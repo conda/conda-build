@@ -8,4 +8,3 @@ build:
 
   script_env:
     - CONDA_TEST_VAR
-  

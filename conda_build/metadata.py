@@ -548,7 +548,7 @@ class MetaData(object):
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
         before standard conda macro processors.
-    
+
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         '''
@@ -559,16 +559,16 @@ class MetaData(object):
             print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)
             with open(self.meta_path) as fd:
                 return fd.read()
-    
+
         from conda_build.jinja_context import context_processor
-    
+
         path, filename = os.path.split(self.meta_path)
         loaders = [# search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
                    jinja2.PackageLoader('conda_build'),
                    # search relative to RECIPE_DIR
                    jinja2.FileSystemLoader(path)
                    ]
-    
+
         # search relative to current conda environment directory
         conda_env_path = os.environ.get('CONDA_DEFAULT_ENV')  # path to current conda environment
         if conda_env_path and os.path.isdir(conda_env_path):
@@ -576,7 +576,7 @@ class MetaData(object):
             conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
-    
+
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
             class UndefinedNeverFail(jinja2.Undefined):
@@ -593,16 +593,16 @@ class MetaData(object):
                 __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
                 __complex__ = __pow__ = __rpow__ = \
                     lambda *args, **kwargs: ''
-    
+
                 __int__ = lambda _: 0
                 __float__ = lambda _: 0.0
-    
+
             undefined_type = UndefinedNeverFail
-    
+
         env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self))
-    
+
         try:
             template = env.get_or_select_template(filename)
             return template.render(environment=env)

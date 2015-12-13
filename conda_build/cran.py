@@ -569,7 +569,7 @@ def main(args, parser):
     for package in package_dicts:
         d = package_dicts[package]
         name = d['packagename']
-    
+
         #Normalize the metadata values
         d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore') for k, v in d.iteritems()}
 
