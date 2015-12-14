@@ -7,6 +7,8 @@ import tarfile
 import zipfile
 import subprocess
 import operator
+import time
+
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
 
@@ -18,6 +20,10 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 rm_rf
+
+ATTEMPTS = 3
+RETRY_INTERVAL = 0.1
+
 
 def copy_into(src, dst):
     "Copy all the files and directories in src to the directory dst"
@@ -156,3 +162,80 @@ def comma_join(items):
     'a, b, and c'
     """
     return ' and '.join(items) if len(items) <= 2 else ', '.join(items[:-1]) + ', and ' + items[-1]
+
+
+def execute(command, **kwargs):
+    """Helper method to shell out and execute a command through subprocess.
+
+    :param attempts:        How many times to retry running the command.
+    :param binary:          On Python 3, return stdout and stderr as bytes if
+                            binary is True, as Unicode otherwise.
+    :param check_exit_code: Single bool, int, or list of allowed exit
+                            codes.  Defaults to [0].  Raise
+                            :class:`CalledProcessError` unless
+                            program exits with one of these code.
+    :param command:         The command passed to the subprocess.Popen.
+    :param cwd:             Set the current working directory
+    :param env_variables:   Environment variables and their values that
+                            will be set for the process.
+    :param retry_interval:  Interval between execute attempts, in seconds
+    :param shell:           whether or not there should be a shell used to
+                            execute this command.
+
+    :raises:                :class:`subprocess.CalledProcessError`
+    """
+    # pylint: disable=too-many-locals
+
+    attempts = kwargs.pop("attempts", ATTEMPTS)
+    binary = kwargs.pop('binary', False)
+    check_exit_code = kwargs.pop('check_exit_code', False)
+    cwd = kwargs.pop('cwd', None)
+    env_variables = kwargs.pop("env_variables", None)
+    retry_interval = kwargs.pop("retry_interval", RETRY_INTERVAL)
+    shell = kwargs.pop("shell", False)
+
+    command = [str(argument) for argument in command]
+
+    allowed_exit_codes = [0]
+    if not isinstance(check_exit_code, bool):
+        if isinstance(check_exit_code, int):
+            allowed_exit_codes = [check_exit_code]
+            check_exit_code = True
+        else:
+            allowed_exit_codes = list(check_exit_code)
+            check_exit_code = True
+
+    while attempts > 0:
+        attempts = attempts - 1
+        try:
+            process = subprocess.Popen(command,
+                                       stdin=subprocess.PIPE,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.PIPE, shell=shell,
+                                       cwd=cwd, env=env_variables)
+            result = process.communicate()
+            return_code = process.returncode
+
+            if result is not None:
+                if PY3 and not binary:
+                    # pylint: disable=no-member
+
+                    # Decode from the locale using using the surrogate escape error
+                    # handler (decoding cannot fail)
+                    (stdout, stderr) = result
+                    stdout = os.fsdecode(stdout)
+                    stderr = os.fsdecode(stderr)
+                else:
+                    stdout, stderr = result
+
+            if check_exit_code and return_code not in allowed_exit_codes:
+                raise subprocess.CalledProcessError(returncode=return_code,
+                                                    cmd=command,
+                                                    output=(stdout, stderr))
+            else:
+                return (stdout, stderr)
+        except subprocess.CalledProcessError:
+            if attempts:
+                time.sleep(retry_interval)
+            else:
+                raise

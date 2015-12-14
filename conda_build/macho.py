@@ -4,6 +4,9 @@ import sys
 import subprocess
 from os.path import islink, isfile
 
+from conda_build import utils
+
+
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
     '.xml', '.png', '.jpg', '.gif', '.class',
@@ -44,7 +47,8 @@ def is_dylib(path):
     return human_filetype(path) == 'DYLIB'
 
 def human_filetype(path):
-    lines = subprocess.check_output(['otool', '-h', path]).decode('utf-8').splitlines()
+    output, _ = utils.execute(['otool', '-h', path], check_exit_code=True)
+    lines = output.splitlines()
     assert lines[0].startswith(path), path
 
     for line in lines:
@@ -55,7 +59,8 @@ def human_filetype(path):
 
 def otool(path):
     "thin wrapper around otool -L"
-    lines = subprocess.check_output(['otool', '-L', path]).decode('utf-8').splitlines()
+    output, _ = utils.execute(['otool', '-L', path], check_exit_code=True)
+    lines = output.splitlines()
     assert lines[0].startswith(path), path
     res = []
     for line in lines[1:]:
@@ -64,8 +69,8 @@ def otool(path):
     return res
 
 def get_rpaths(path):
-    lines = subprocess.check_output(['otool', '-l',
-        path]).decode('utf-8').splitlines()
+    output, _ = utils.execute(['otool', '-l', path], check_exit_code=True)
+    lines = output.splitlines()
     check_for_rpath = False
     rpaths = []
     for line in lines:
@@ -95,20 +100,27 @@ def install_name_change(path, cb_func):
 
     ret = True
     for old, new in changes:
+        return_code = 0
         args = ['install_name_tool', '-change', old, new, path]
         print(' '.join(args))
-        p = subprocess.Popen(args, stderr=subprocess.PIPE)
-        stdout, stderr = p.communicate()
-        stderr = stderr.decode('utf-8')
+
+        try:
+            stdout, stderr = utils.execute(args, check_exit_code=True)
+        except subprocess.CalledProcessError as exc:
+            stdout, stderr = exc.output
+            return_code = exc.return_code
+
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
             ret = False
             continue
         else:
             print(stderr, file=sys.stderr)
-        if p.returncode:
-            raise RuntimeError("install_name_tool failed with exit status %d"
-                % p.returncode)
+
+        if return_code:
+            raise RuntimeError("install_name_tool failed with exit "
+                               "status %d" % return_code)
+
     return ret
 
 if __name__ == '__main__':

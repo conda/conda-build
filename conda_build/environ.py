@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 from os.path import join
-import subprocess
 import multiprocessing
 
 import conda.config as cc
@@ -12,6 +11,7 @@ from conda_build.config import config
 
 from conda_build import source
 from conda_build.scripts import prepend_bin_path
+from conda_build import utils
 
 
 def get_perl_ver():
@@ -49,22 +49,17 @@ def get_git_build_info(src_dir):
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     env = {str(key): str(value) for key, value in env.items()}
-    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=env)
-    output = process.communicate()[0].strip()
-    output = output.decode('utf-8')
-    parts = output.rsplit('-', 2)
+    output, _ = utils.execute(["git", "describe", "--tags", "--long", "HEAD"],
+                              env=env, cwd=git_dir)
+    parts = output.strip().rsplit('-', 2)
     parts_length = len(parts)
     if parts_length == 3:
         d.update(dict(zip(keys, parts)))
     # get the _full_ hash of the current HEAD
-    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=env)
-    output = process.communicate()[0].strip()
-    output = output.decode('utf-8')
-    d['GIT_FULL_HASH'] = output
+    output, _ = utils.execute(["git", "rev-parse", "HEAD"],
+                              env=env, cwd=git_dir)
+
+    d['GIT_FULL_HASH'] = output.strip()
     # set up the build string
     if key_name('NUMBER') in d and key_name('HASH') in d:
         d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
