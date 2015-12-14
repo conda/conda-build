@@ -4,7 +4,7 @@ import os
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
-from subprocess import check_call, Popen, PIPE
+from subprocess import check_call, Popen, PIPE, CalledProcessError
 import locale
 
 from conda.fetch import download
@@ -250,7 +250,10 @@ Error:
     patch_args = ['-p0', '-i', path]
     if sys.platform == 'win32':
         patch_args[-1] =  _ensure_unix_line_endings(path)
-    check_call([patch, ] + patch_args, cwd=src_dir)
+    try:
+        check_call([patch] + patch_args, cwd=src_dir)
+    except CalledProcessError:
+        sys.exit(1)
     if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
