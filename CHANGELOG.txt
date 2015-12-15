@@ -2,6 +2,7 @@
 --------------------
   * normalize unicode in conda skeleton cran, #681
   * use /bin/sh on openbsd, #707
+  * fail early during patching
 
 
 2015-11-19   1.18.2:
