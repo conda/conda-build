@@ -29,9 +29,10 @@ else:
 def main():
     p = ArgumentParser(
         description="""
-Tool for building conda packages using pip install. NOTE: this command is
-experimental.  The recommended way to build conda packages from packages on
+*** This command is no longer supported.  It will be removed in a future release of conda-build. ***
+The recommended way to build conda packages from packages on
 PyPI is using conda skeleton pypi and conda build.
+Tool for building conda packages using pip install.
         """,
     )
 
@@ -324,6 +325,9 @@ def build_package(package, version=None, noarch_python=False):
 
 
 def execute(args, parser):
+    print("*** conda pipbuild is no longer supported.  It will be removmed in a future release of conda-build. ***")
+    print("Please use conda build instead.")
+
     global binstar_upload
     global client
     binstar_upload = args.binstar_upload
