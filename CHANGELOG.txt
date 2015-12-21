@@ -4,6 +4,7 @@
   * use /bin/sh on openbsd, #707
   * fail early during patching
   * use symlinks=True in copytree() for SVN sources, #665
+  * support entry points with dots (to suppoer classes), #690
 
 
 2015-11-19   1.18.2:
