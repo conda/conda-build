@@ -28,7 +28,7 @@ from conda_build.config import config
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.utils import rm_rf, _check_call, comma_join
+from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -159,19 +159,8 @@ def create_info_files(m, files, include_recipe=True):
 
     license_file = m.get_value('about/license_file')
     if license_file:
-        filenames = 'LICENSE', 'LICENSE.txt', 'license', 'license.txt'
-        if license_file is True:
-            for fn in filenames:
-                src = join(source.get_dir(), fn)
-                if isfile(src):
-                    break
-            else:
-                sys.exit("Error: could not locate license file (any of "
-                         "%s) in: %s" % (comma_join(filenames),
-                                         source.get_dir()))
-        else:
-            src = join(source.get_dir(), license_file)
-        shutil.copy(src, join(config.info_dir, 'license.txt'))
+        shutil.copy(join(source.get_dir(), license_file),
+                    join(config.info_dir, 'LICENSE.txt'))
 
     readme = m.get_value('about/readme')
     if readme:
