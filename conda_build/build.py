@@ -31,7 +31,8 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
-                                     create_py_files, create_pl_files)
+                                     create_py_files, create_pl_files,
+                                     create_lua_files)
 from conda_build.exceptions import indent
 
 
@@ -501,11 +502,17 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     if m.name().startswith('perl-'):
         pl_files = create_pl_files(tmp_dir, m)
         py_files = False
+        lua_files = False
+    elif m.name().startswith('lua-'):
+        lua_files = create_lua_files(tmp_dir, m)
+        pl_files = False
+        py_files = False
     else:
         py_files = create_py_files(tmp_dir, m)
         pl_files = False
+        lua_files = False
     shell_files = create_shell_files(tmp_dir, m)
-    if not (py_files or shell_files or pl_files):
+    if not (py_files or shell_files or pl_files or lua_files):
         print("Nothing to test for:", m.dist())
         return
 
@@ -530,6 +537,9 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
+    if lua_files:
+        # not sure how this shakes out
+        specs += ['lua %s*' % environ.get_lua_ver()]
 
     create_env(config.test_prefix, specs, verbose=verbose,
         channel_urls=channel_urls, override_channels=override_channels)
@@ -542,7 +552,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
 
     if sys.platform == 'win32':
         env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
-    for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
+    for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
         env[varname] = str(getattr(config, varname) or '')
     env['PREFIX'] = config.test_prefix
 
@@ -563,6 +573,15 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
             tests_failed(m)
+
+    if lua_files:
+        try:
+            subprocess.check_call([config.test_lua,
+                                   join(tmp_dir, 'run_test.lua')],
+                                  env=env, cwd=tmp_dir)
+        except subprocess.CalledProcessError:
+            tests_failed(m)
+
 
     if shell_files:
         if sys.platform == 'win32':

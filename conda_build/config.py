@@ -19,6 +19,7 @@ class Config(object):
     __doc__ = __doc__
 
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
+    CONDA_LUA = os.getenv('CONDA_LUA', 'jit2.0')
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
     CONDA_NPY = os.getenv("CONDA_NPY")
@@ -76,6 +77,14 @@ class Config(object):
             res = join(prefix, 'bin/perl')
         return res
 
+    def _get_lua(self, prefix):
+        binary_name = "luajit" if "jit" in self.CONDA_LUA else "lua"
+        if sys.platform == 'win32':
+            res = join(prefix, '{}.exe'.format(binary_name))
+        else:
+            res = join(prefix, 'bin/{}'.format(binary_name))
+        return res
+
     @property
     def build_prefix(self):
         if self.use_long_build_prefix is None:
@@ -99,6 +108,14 @@ class Config(object):
     @property
     def test_perl(self):
         return self._get_perl(self.test_prefix)
+
+    @property
+    def build_lua(self):
+        return self._get_lua(self.build_prefix)
+
+    @property
+    def test_lua(self):
+        return self._get_lua(self.test_prefix)
 
     @property
     def info_dir(self):
