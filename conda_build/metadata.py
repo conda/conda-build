@@ -151,6 +151,7 @@ def parse(data):
         if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s" %
                                (field, res[field].__class__.__name__))
+                  'build/pyc_compilation',
 
 
 
