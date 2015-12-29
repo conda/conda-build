@@ -160,7 +160,8 @@ def compile_missing_pyc():
 def post_process(files, preserve_egg_dir=False):
     remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
-    if config.CONDA_PY < 30:
+    skip_pyc_compilation = bool(m.get_value('build/skip_pyc_compilation', False))
+    if config.CONDA_PY < 30 and skip_pyc_compilation:
         compile_missing_pyc()
 
 

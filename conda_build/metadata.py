@@ -259,7 +259,8 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends' # pin_depends is experimental still
+              'pin_depends', # pin_depends is experimental still
+              'skip-pyc-compilation'
              ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
