@@ -29,7 +29,12 @@ def load_setuptools(setup_file='setup.py'):
         #Patch setuptools
         setuptools_setup = setuptools.setup
         setuptools.setup = setup
-        exec(open(setup_file).read())
+        ns = {
+            '__name__': os.path.splitext(os.path.basename(setup_file))[0],
+            '__doc__': None,
+            '__file__': setup_file,
+        }
+        exec(open(setup_file).read(), ns, ns)
         setuptools.setup = setuptools_setup
         del sys.path[-1]
     return _setuptools_data
