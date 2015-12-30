@@ -19,7 +19,7 @@ class Config(object):
     __doc__ = __doc__
 
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
-    CONDA_LUA = os.getenv('CONDA_LUA', 'jit2.0')
+    CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
     CONDA_NPY = os.getenv("CONDA_NPY")
@@ -78,7 +78,7 @@ class Config(object):
         return res
 
     def _get_lua(self, prefix):
-        binary_name = "luajit" if "jit" in self.CONDA_LUA else "lua"
+        binary_name = "luajit" if "2" == self.CONDA_LUA[0] else "lua"
         if sys.platform == 'win32':
             res = join(prefix, '{}.exe'.format(binary_name))
         else:

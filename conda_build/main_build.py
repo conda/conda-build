@@ -30,7 +30,7 @@ all_versions = {
     'numpy': [16, 17, 18, 19, 110],
     'perl': None,
     'R': None,
-    'lua': ["jit2.0", "5.2"]
+    'lua': ["2.0", "5.2", "5.3"]
 }
 
 class RecipeCompleter(Completer):

@@ -33,15 +33,18 @@ def get_npy_ver():
     return ''
 
 def get_stdlib_dir():
-    print(get_py_ver())
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                                 'lib/python%s' % get_py_ver())
 
-def get_lua_stdlib_dir():
+def get_lua_include_dir():
     suffix = get_lua_ver().lower()
-    # TODO: UNTESTED ON WINDOWS
-    return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
-                                'lib/lua{}'.format(suffix))
+    if "2" == suffix[0]:
+        if "2.0" in suffix:
+            return join(config.build_prefix, "include", "luajit-2.0")
+        elif "2.1" in suffix:
+            return join(config.build_prefix, "include", "luajit-2.1")
+    else:
+        return join(config.build_prefix, "include")
 
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
@@ -95,7 +98,9 @@ def get_dict(m=None, prefix=None):
     d['PYTHON'] = python
     d['PY3K'] = str(config.PY3K)
     d['STDLIB_DIR'] = get_stdlib_dir()
-    d['LUA_STDLIB_DIR'] = get_lua_stdlib_dir()
+    lua_incl_dir= get_lua_include_dir()
+    if lua_incl_dir:
+        d['LUA_INCLUDE_DIR'] = lua_incl_dir
     d['SP_DIR'] = get_sp_dir()
     d['SYS_PREFIX'] = sys.prefix
     d['SYS_PYTHON'] = sys.executable
