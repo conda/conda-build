@@ -34,7 +34,8 @@ def load_setuptools(setup_file='setup.py'):
             '__doc__': None,
             '__file__': setup_file,
         }
-        exec(open(setup_file).read(), ns, ns)
+        code = compile(open(setup_file).read(), setup_file, 'exec')
+        exec(code, ns, ns)
         setuptools.setup = setuptools_setup
         del sys.path[-1]
     return _setuptools_data
