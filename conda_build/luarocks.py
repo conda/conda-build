@@ -308,7 +308,7 @@ def main(args, parser):
         # TODO: mingw32 support
         modules = None
         if "modules" in spec['build']:
-            modules = spec['build']["modules']"]
+            modules = spec['build']["modules"]
         elif "platforms" in spec['build']:
             if our_plat in spec['build']['platforms']:
                 if "modules" in spec['build']['platforms'][our_plat]:
