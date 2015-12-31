@@ -1,6 +1,11 @@
 """
 Tools for converting luarocks packages to conda recipes.
 """
+
+# TODO:
+# - mingw32 support (really any windows support, completely untested)
+# - replace manual "luajit -e require 'blah'" with built-in entry-point testing
+
 import os
 import subprocess
 import tempfile
@@ -298,14 +303,12 @@ def main(args, parser):
                 d['run_depends'] = d['build_depends']
 
     # Build some entry-point tests.
-    # TODO: build first-class support for Lua import testing.
     if "build" in spec:
         if platform == "darwin":
             our_plat = "macosx"
         elif platform == "linux":
             our_plat = "unix"
 
-        # TODO: mingw32 support
         modules = None
         if "modules" in spec['build']:
             modules = spec['build']["modules"]
