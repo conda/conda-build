@@ -49,6 +49,7 @@ def ns_cfg():
         pl = pl,
         py = py,
         lua = lua,
+        luajit = bool(lua[0] == "2"),
         luajit20 = bool(lua == "2.0"),
         luajit21 = bool(lua == "2.1"),
         lua51 = bool(lua == "5.1"),
