@@ -90,7 +90,7 @@ requirements:
   # at test time.
 
 about:
-  {home_comment}home:{homeurl}
+  {home_comment}home: {homeurl}
   license: {license}
   {summary_comment}summary: {summary}
 
