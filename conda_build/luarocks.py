@@ -159,7 +159,8 @@ def format_dep(dep):
     dep = dep.replace(" ", "").lower()
 
     # Ensure a space between the first special-character that specifies version logic
-    special_char_test = [c.isalnum() == False for c in dep]
+    # Not "-", because that's used in e.g. lua-penlight
+    special_char_test = [c in "<>=~" for c in dep]
     for i,v in enumerate(special_char_test):
         if v == True:
             split_dep = [c for c in dep]
@@ -318,7 +319,7 @@ def main(args, parser):
                     modules = spec['build']['platforms'][our_plat]["modules"]
         if modules:
             d['test_commands'] =  INDENT.join([''] + \
-                            ["""lua -e "require '%s'" """ % r \
+                            ["""lua -e "require '%s'\"""" % r \
                             for r in modules.keys()])
 
     # If we didn't find any modules to import, import the base name
