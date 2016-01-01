@@ -329,12 +329,10 @@ def main(args, parser):
     # Build the luarocks skeleton
     os.chdir(cwd)
     for package in package_dicts:
-        print(package)
         d = package_dicts[package]
         name = d['packagename']
         os.makedirs(os.path.join(output_dir, name))
-        print(os.path.join(output_dir, name, 'meta.yaml'))
-        print("Writing recipe for %s" % package.lower())
+        print("Writing recipe for %s to %s" % (package.lower(),os.path.join(output_dir,name)))
         with open(os.path.join(output_dir, name, 'meta.yaml'), 'w') as f:
             f.write(LUAROCKS_META.format(**d))
         with open(os.path.join(output_dir, name, 'build.sh'), 'w') as f:
