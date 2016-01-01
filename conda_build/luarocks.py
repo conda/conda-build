@@ -277,7 +277,7 @@ def main(args, parser):
             elif "branch" in source:
                 d['usegittag'] = ""
                 d['gittag'] = getval(source, "branch")
-                warn_against_branches()
+                warn_against_branches(d['gittag'])
             else:
                 d['usegittag'] = ""
                 d['gittag'] = "master"
