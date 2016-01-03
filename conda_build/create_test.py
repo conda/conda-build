@@ -112,10 +112,3 @@ def create_pl_files(dir_path, m):
         print('\nprint("===== %s OK =====\\n");' % m.dist(), file=fo)
 
     return has_tests
-
-def create_lua_files(dir_path, m):
-    has_tests = False
-    with open(join(dir_path, 'run_test.lua'), 'w') as fo:
-        print(r'-- Tests for %s (this is a generated file)' % m.dist(), file=fo)
-        print(r'print("===== testing package %s =====\n");' % m.dist(), file=fo)
-        # TODO

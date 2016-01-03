@@ -31,8 +31,7 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
-                                     create_py_files, create_pl_files,
-                                     create_lua_files)
+                                     create_py_files, create_pl_files)
 from conda_build.exceptions import indent
 
 
@@ -503,10 +502,6 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         pl_files = create_pl_files(tmp_dir, m)
         py_files = False
         lua_files = False
-    elif m.name().startswith('lua-'):
-        lua_files = create_lua_files(tmp_dir, m)
-        pl_files = False
-        py_files = False
     else:
         py_files = create_py_files(tmp_dir, m)
         pl_files = False
