@@ -209,9 +209,7 @@ def get_all_dependencies(package, version):
     cmd2 = "%s/bin/pip install %s==%s" % (prefix, package, version)
     cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
 
-    lsdir = os.listdir(prefix)
-    if not "bin" in lsdir and "Scripts" in lsdir:
-        # Windows
+    if sys.platform == "win32":
         cmd2 = "{} install {}=={}".format(
             os.path.join(prefix, "Scripts", "pip"), package, version)
         cmd3args = [os.path.join(prefix, "python"), '__tmpfile__.py']
