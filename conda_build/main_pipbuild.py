@@ -7,6 +7,7 @@
 from __future__ import print_function, division, absolute_import
 
 import sys
+import os
 import os.path
 import subprocess
 import yaml
@@ -204,12 +205,19 @@ def get_all_dependencies(package, version):
     cmd1 = "conda create -n _pipbuild_ --yes python pip"
     print(cmd1)
     subprocess.Popen(cmd1.split()).wait()
+
     cmd2 = "%s/bin/pip install %s==%s" % (prefix, package, version)
+    cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
+
+    if sys.platform == "win32":
+        cmd2 = "{} install {}=={}".format(
+            os.path.join(prefix, "Scripts", "pip"), package, version)
+        cmd3args = [os.path.join(prefix, "python"), '__tmpfile__.py']
+
     print(cmd2)
     ret = subprocess.Popen(cmd2.split()).wait()
     if ret != 0:
         raise RuntimeError("Could not pip install %s==%s" % (package, version))
-    cmd3args = ['%s/bin/python' % prefix, '__tmpfile__.py']
     fid = open('__tmpfile__.py', 'w')
     fid.write("import pkg_resources;\n")
     fid.write("reqs = pkg_resources.get_distribution('%s').requires();\n" %
