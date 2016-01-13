@@ -1,0 +1,15 @@
+{% set data = load_setuptools(from_recipe_dir=True) %}
+
+package:
+  name: test-jinja-setuptools
+  version: {{ data.get('test_attr') }}
+
+source:
+  path: ../../test-package
+
+requirements:
+  build:
+    - python
+    {% for req in data.get('install_requires', []) -%}
+    - {{req}}
+    {% endfor %}
