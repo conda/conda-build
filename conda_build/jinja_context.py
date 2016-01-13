@@ -7,13 +7,15 @@ from __future__ import absolute_import, division, print_function
 
 import json
 import os
+from functools import partial
 
 from conda.compat import PY3
 from .environ import get_dict as get_environ
 
 _setuptools_data = None
 
-def load_setuptools(setup_file='setup.py'):
+def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
+                    recipe_dir=None):
     global _setuptools_data
 
     if _setuptools_data is None:
@@ -26,6 +28,9 @@ def load_setuptools(setup_file='setup.py'):
         #Add current directory to path
         import sys
         sys.path.append('.')
+
+        if from_recipe_dir and recipe_dir:
+            setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
 
         #Patch setuptools, distutils
         setuptools_setup = setuptools.setup
@@ -50,7 +55,7 @@ def load_npm():
     with open('package.json', **mode_dict) as pkg:
         return json.load(pkg)
 
-def context_processor(initial_metadata=None):
+def context_processor(initial_metadata, recipe_dir):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -61,7 +66,7 @@ def context_processor(initial_metadata=None):
     environ = dict(os.environ)
     environ.update(get_environ(m=initial_metadata))
 
-    ctx.update(load_setuptools=load_setuptools,
+    ctx.update(load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
                load_npm=load_npm,
                environ=environ)
     return ctx

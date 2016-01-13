@@ -601,7 +601,7 @@ class MetaData(object):
 
         env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
         env.globals.update(ns_cfg())
-        env.globals.update(context_processor(self))
+        env.globals.update(context_processor(self, path))
 
         try:
             template = env.get_or_select_template(filename)
