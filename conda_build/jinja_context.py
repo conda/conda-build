@@ -22,13 +22,15 @@ def load_setuptools(setup_file='setup.py'):
             _setuptools_data.update(kw)
 
         import setuptools
+        import distutils.core
         #Add current directory to path
         import sys
         sys.path.append('.')
 
-        #Patch setuptools
+        #Patch setuptools, distutils
         setuptools_setup = setuptools.setup
-        setuptools.setup = setup
+        distutils_setup = distutils.core.setup
+        setuptools.setup = distutils.core.setup = setup
         ns = {
             '__name__': os.path.splitext(os.path.basename(setup_file))[0],
             '__doc__': None,
@@ -37,6 +39,7 @@ def load_setuptools(setup_file='setup.py'):
         code = compile(open(setup_file).read(), setup_file, 'exec',
                        dont_inherit=1)
         exec(code, ns, ns)
+        distutils.core.setup = distutils_setup
         setuptools.setup = setuptools_setup
         del sys.path[-1]
     return _setuptools_data
