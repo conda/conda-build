@@ -286,12 +286,9 @@ def handle_config_version(ms, ver):
         return ms
 
     if ms.strictness == 2:
-        v = ms.spec.split()[1].split(',')
-        if 'x.x' in v or (ms.name in ('python', 'perl', 'R')):
+        if ms.spec.split()[1] == 'x.x':
             if ver is None:
                 raise RuntimeError("'%s' requires external setting" % ms.spec)
-            if v != ['x.x'] and not any(vs.match(text_type(ver)) for vs in ms.vspecs):
-                raise RuntimeError("External setting of '%s' violates constraints (%s)." % (ver, ms.spec))
             # (no return here - proceeds below)
         else: # regular version
             return ms
