@@ -184,6 +184,13 @@ different sets of packages."""
         metavar="R_VER",
         choices=RVersionsCompleter(),
     )
+    p.add_argument(
+        '--versions',
+        nargs='+',
+        metavar='PACKAGE=VERSION',
+        help='Set the version of of any number of packages. The resulting build '
+             'will strictly depend on this version.'
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -310,6 +317,11 @@ def execute(args, parser):
             else:
                 raise RuntimeError("%s must be major.minor, not %s" %
                     (conda_version[lang], version))
+
+    if args.versions:
+        for spec in args.versions:
+            name, version = spec.split('=')
+            config.versions[name] = version
 
     # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
     # Auto-set those env variables

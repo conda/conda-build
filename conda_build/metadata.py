@@ -281,21 +281,25 @@ def handle_config_version(ms, ver):
     configuration, e.g. for ms.name == 'python', ver = 26 or None,
     return a (sometimes new) MatchSpec object
     """
+    ver = text_type(ver)
+
     if ms.strictness == 3:
         return ms
 
     if ms.strictness == 2:
-        if ms.spec.split()[1] == 'x.x':
+        v = ms.spec.split()[1].split(',')
+        if 'x.x' in v or (ms.name in ('python', 'perl', 'R')):
             if ver is None:
                 raise RuntimeError("'%s' requires external setting" % ms.spec)
+            if v != ['x.x'] and not any(vs.match(ver) for vs in ms.vspecs):
+                raise RuntimeError("External setting of '%s' violates constraints." % ms.spec)
             # (no return here - proceeds below)
         else: # regular version
             return ms
 
-    if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
+    if ver is None or (ms.strictness == 1 and ms.name not in ('python', 'perl', 'R')):
         return MatchSpec(ms.name)
 
-    ver = text_type(ver)
     if '.' not in ver:
         if ms.name == 'numpy':
             ver = '%s.%s' % (ver[0], ver[1:])
@@ -396,12 +400,12 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [
-            ('python', config.CONDA_PY),
-            ('numpy', config.CONDA_NPY),
-            ('perl', config.CONDA_PERL),
-            ('r', config.CONDA_R),
-        ]
+        versions = {
+            'python': config.CONDA_PY,
+            'numpy': config.CONDA_NPY,
+            'perl': config.CONDA_PERL,
+            'r': config.CONDA_R,
+        }
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -409,11 +413,16 @@ class MetaData(object):
                 raise RuntimeError("Invalid package specification: %r" % spec)
             if ms.name == self.name():
                 raise RuntimeError("%s cannot depend on itself" % self.name())
-            for name, ver in name_ver_list:
-                if ms.name == name:
-                    if self.get_value('build/noarch_python'):
-                        continue
-                    ms = handle_config_version(ms, ver)
+            #for name, ver in name_ver_list:
+            #if ms.name == name:
+            if not self.get_value('build/noarch_python'):
+                try:
+                    ms = handle_config_version(ms, versions[ms.name])
+                except KeyError:
+                    try:
+                        ms = handle_config_version(ms, config.versions[ms.name])
+                    except KeyError:
+                        pass
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
@@ -457,6 +466,17 @@ class MetaData(object):
                     else:
                         res.append(s + v.strip('*'))
                     break
+
+        for ms in self.ms_depends():
+            if ms.name in config.versions:
+                try:
+                    v = ms.spec.split()[1]
+                except IndexError:
+                    break
+                if any(i in v for i in ',|>!<'):
+                    break
+                res.append(ms.name + v.strip('*'))
+
 
         features = self.get_value('build/features', [])
         if res:
