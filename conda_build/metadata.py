@@ -281,7 +281,6 @@ def handle_config_version(ms, ver):
     configuration, e.g. for ms.name == 'python', ver = 26 or None,
     return a (sometimes new) MatchSpec object
     """
-    ver = text_type(ver)
 
     if ms.strictness == 3:
         return ms
@@ -291,8 +290,8 @@ def handle_config_version(ms, ver):
         if 'x.x' in v or (ms.name in ('python', 'perl', 'R')):
             if ver is None:
                 raise RuntimeError("'%s' requires external setting" % ms.spec)
-            if v != ['x.x'] and not any(vs.match(ver) for vs in ms.vspecs):
-                raise RuntimeError("External setting of '%s' violates constraints." % ms.spec)
+            if v != ['x.x'] and not any(vs.match(text_type(ver)) for vs in ms.vspecs):
+                raise RuntimeError("External setting of '%s' violates constraints (%s)." % (ver, ms.spec))
             # (no return here - proceeds below)
         else: # regular version
             return ms
@@ -300,6 +299,7 @@ def handle_config_version(ms, ver):
     if ver is None or (ms.strictness == 1 and ms.name not in ('python', 'perl', 'R')):
         return MatchSpec(ms.name)
 
+    ver = text_type(ver)
     if '.' not in ver:
         if ms.name == 'numpy':
             ver = '%s.%s' % (ver[0], ver[1:])
