@@ -6,6 +6,9 @@
   * use symlinks=True in copytree() for SVN sources, #665
   * support entry points with dots (to suppoer classes), #690
   * deprecate conda pipbuild in favor of conda skeleton. #710
+  * fix Win references to PipBuild scripts, #723
+  * allow git shallow clones, #604
+  * remove broken license file detection code
 
 
 2015-11-19   1.18.2:
