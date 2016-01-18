@@ -632,5 +632,11 @@ if __name__ == '__main__':
     from pprint import pprint
     from os.path import expanduser
 
-    m = MetaData(expanduser('~/conda-recipes/pycosat'))
-    pprint(m.info_index())
+    recipes = sys.argv[1:] or [expanduser('~/conda-recipes/pycosat')]
+    for recipe in recipes:
+        try:
+            m = MetaData(recipe)
+            pprint(m.info_index())
+            m.check_fields()
+        except (Exception, SystemExit) as e:
+            sys.stderr.write('***** Error in %s:\n  %s\n' % (recipe, e))
