@@ -159,8 +159,8 @@ def create_info_files(m, files, include_recipe=True):
 
     license_file = m.get_value('about/license_file')
     if license_file:
-        shutil.copy(join(source.get_dir(), license_file),
-                    join(config.info_dir, 'LICENSE.txt'))
+        shutil.copyfile(join(source.get_dir(), license_file),
+                        join(config.info_dir, 'LICENSE.txt'))
 
     readme = m.get_value('about/readme')
     if readme:
@@ -168,7 +168,7 @@ def create_info_files(m, files, include_recipe=True):
         if not isfile(src):
             sys.exit("Error: no readme file: %s" % readme)
         dst = join(config.info_dir, readme)
-        shutil.copy(src, dst)
+        shutil.copyfile(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                   file=sys.stderr)
