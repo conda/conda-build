@@ -62,8 +62,10 @@ def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.lower().endswith('.tar.z'):
         uncompress = external.find_executable('uncompress')
         if not uncompress:
+            uncompress = external.find_executable('gunzip')
+        if not uncompress:
             sys.exit("""\
-uncompress is required to unarchive .z source files.
+uncompress (or gunzip) is required to unarchive .z source files.
 """)
         subprocess.check_call([uncompress, '-f', tarball])
         tarball = tarball[:-2]
