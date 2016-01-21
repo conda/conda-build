@@ -307,7 +307,7 @@ def handle_config_version(ms, ver):
 class MetaData(object):
 
     def __init__(self, path):
-        assert isdir(path)
+        assert isdir(path), "Not a directory: %s" % path
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
         self.requirements_path = join(path, 'requirements.txt')
@@ -630,13 +630,13 @@ class MetaData(object):
 
 if __name__ == '__main__':
     from pprint import pprint
-    from os.path import expanduser
 
-    recipes = sys.argv[1:] or [expanduser('~/conda-recipes/pycosat')]
-    for recipe in recipes:
+    print('Quick check of meta.yaml files. Args: recipe directories.\n'
+          'Stdout: index info after FIRST-PASS parse. Stderr: parsing errors.')
+    for recipe in sys.argv[1:]:
         try:
-            m = MetaData(recipe)
-            pprint(m.info_index())
-            m.check_fields()
+            met = MetaData(recipe)
+            pprint(met.info_index())
+            met.check_fields()
         except (Exception, SystemExit) as e:
-            sys.stderr.write('***** Error in %s:\n  %s\n' % (recipe, e))
+            print('***** Error in %s:\n  %s' % (recipe, e), file=sys.stderr)
