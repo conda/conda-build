@@ -37,14 +37,7 @@ def get_stdlib_dir():
                                 'lib/python%s' % get_py_ver())
 
 def get_lua_include_dir():
-    suffix = get_lua_ver().lower()
-    if "2" == suffix[0]:
-        if "2.0" in suffix:
-            return join(config.build_prefix, "include", "luajit-2.0")
-        elif "2.1" in suffix:
-            return join(config.build_prefix, "include", "luajit-2.1")
-    else:
-        return join(config.build_prefix, "include")
+    return join(config.build_prefix, "include")
 
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
