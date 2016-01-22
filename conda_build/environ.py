@@ -106,10 +106,16 @@ def get_dict(m=None, prefix=None):
                 value = '<UNDEFINED>'
             d[var_name] = value
 
-    try:
-        d['CPU_COUNT'] = str(multiprocessing.cpu_count())
-    except NotImplementedError:
-        d['CPU_COUNT'] = "1"
+    if sys.platform == "darwin":
+        # multiprocessing.cpu_count() is not reliable on OSX
+        # See issue #645 on github.com/conda/conda-build
+        out, err = subprocess.Popen('sysctl -n hw.logicalcpu', shell=True, stdout=subprocess.PIPE).communicate()
+        d['CPU_COUNT'] = out.decode('utf-8').strip()
+    else:
+        try:
+            d['CPU_COUNT'] = str(multiprocessing.cpu_count())
+        except NotImplementedError:
+            d['CPU_COUNT'] = "1"
 
     d.update(**get_git_build_info(d['SRC_DIR']))
     d['PATH'] = dict(os.environ)['PATH']
