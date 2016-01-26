@@ -577,6 +577,9 @@ class MetaData(object):
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
+        loaders.append(jinja2.FileSystemLoader('/'))
+        loaders.append(jinja2.FileSystemLoader(os.getcwd()))
+
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
             class UndefinedNeverFail(jinja2.Undefined):
