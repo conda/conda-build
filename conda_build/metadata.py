@@ -577,6 +577,19 @@ class MetaData(object):
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
+        class FilteredLoader(jinja2.BaseLoader):
+            """
+            A pass-through for the given loader, except that the loaded source is
+            filtered according to any metadata selectors in the source text.
+            """
+            def __init__(self, unfiltered_loader):
+                self._unfiltered_loader = unfiltered_loader
+                self.list_templates = unfiltered_loader.list_templates
+
+            def get_source(self, environment, template):
+                contents, filename, uptodate = self._unfiltered_loader.get_source(environment, template)
+                return select_lines(contents, ns_cfg()), filename, uptodate
+
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
             class UndefinedNeverFail(jinja2.Undefined):
@@ -599,7 +612,8 @@ class MetaData(object):
 
             undefined_type = UndefinedNeverFail
 
-        env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
+        loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
+        env = jinja2.Environment(loader=loader, undefined=undefined_type)
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
 
