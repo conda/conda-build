@@ -12,7 +12,7 @@ from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip
+from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
 
 
 SRC_CACHE = join(config.croot, 'src_cache')
@@ -170,7 +170,7 @@ def git_info(fo=None):
             fo.write(stdout + u'\n')
         else:
             print(u'==> %s <==\n' % cmd)
-            print(stdout + u'\n')
+            safe_print_unicode(stdout + u'\n')
 
 
 def hg_source(meta):
