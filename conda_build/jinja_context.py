@@ -37,7 +37,7 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
         distutils_setup = distutils.core.setup
         setuptools.setup = distutils.core.setup = setup
         ns = {
-            '__name__': os.path.splitext(os.path.basename(setup_file))[0],
+            '__name__': '__main__',
             '__doc__': None,
             '__file__': setup_file,
         }
