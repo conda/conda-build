@@ -379,7 +379,7 @@ def execute(args, parser):
                 continue
             elif args.test:
                 build.test(m, verbose=not args.quiet,
-                    channel_urls=channel_urls, override_channels=args.override_channels)
+                    channel_urls=channel_urls, override_channels=args.override_channels, move_broken=False)
             elif args.source:
                 source.provide(m.path, m.get_section('source'))
                 print('Source tree in:', source.get_dir())

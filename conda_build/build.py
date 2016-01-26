@@ -483,7 +483,7 @@ can lead to packages that include their dependencies.""" %
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
-def test(m, verbose=True, channel_urls=(), override_channels=False):
+def test(m, verbose=True, channel_urls=(), override_channels=False, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
@@ -554,7 +554,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
                                    join(tmp_dir, 'run_test.py')],
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
-            tests_failed(m)
+            tests_failed(m, move_broken=move_broken)
 
     if pl_files:
         try:
@@ -562,7 +562,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
                                    join(tmp_dir, 'run_test.pl')],
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
-            tests_failed(m)
+            tests_failed(m, move_broken=move_broken)
 
     if shell_files:
         if sys.platform == 'win32':
@@ -571,7 +571,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
-                tests_failed(m)
+                tests_failed(m, move_broken=move_broken)
         else:
             test_file = join(tmp_dir, 'run_test.sh')
             # TODO: Run the test/commands here instead of in run_test.py
@@ -579,11 +579,11 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
-                tests_failed(m)
+                tests_failed(m, move_broken=move_broken)
 
     print("TEST END:", m.dist())
 
-def tests_failed(m):
+def tests_failed(m, move_broken):
     '''
     Causes conda to exit if any of the given package's tests failed.
 
@@ -593,5 +593,6 @@ def tests_failed(m):
     if not isdir(config.broken_dir):
         os.makedirs(config.broken_dir)
 
-    shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
+    if move_broken: 
+        shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
