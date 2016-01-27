@@ -173,6 +173,12 @@ def create_info_files(m, files, include_recipe=True):
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                   file=sys.stderr)
 
+    if m.get_value('build/pin_depends'):
+        with open(join(config.info_dir, 'requires'), 'w') as fo:
+            for dist in sorted(linked(config.test_prefix)):
+                if dist != m.dist():
+                    fo.write('%s\n' % dist)
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:

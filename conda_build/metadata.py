@@ -154,10 +154,11 @@ def parse(data):
             res[section] = {}
         if res[section].get(key, None) is None:
             res[section][key] = []
+
     # ensure those are strings
-    for field in ('package/version', 'build/string', 'source/svn_rev',
-                  'source/git_tag', 'source/git_branch', 'source/md5',
-                  'source/git_rev', 'source/path'):
+    for field in ('package/version', 'build/string', 'build/pin_depends',
+                  'source/svn_rev', 'source/git_tag', 'source/git_branch',
+                  'source/md5', 'source/git_rev', 'source/path'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -257,7 +258,7 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_versions'],
+              'pin_depends'],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
