@@ -266,7 +266,9 @@ def execute(args, parser):
     from conda_build.metadata import MetaData
 
     check_external()
-    channel_urls = args.channel or ()
+    build.channel_urls = args.channel or ()
+    build.override_channels = args.override_channels
+    build.verbose = not args.quiet
 
     if on_win:
         # needs to happen before any c extensions are imported that might be
@@ -322,9 +324,7 @@ def execute(args, parser):
         if not isdir(config.bldpkgs_dir):
             makedirs(config.bldpkgs_dir)
         update_index(config.bldpkgs_dir)
-        index = build.get_build_index(clear_cache=True,
-            channel_urls=channel_urls,
-            override_channels=args.override_channels)
+        index = build.get_build_index(clear_cache=True)
 
     already_built = []
     to_build_recursive = []
@@ -378,8 +378,7 @@ def execute(args, parser):
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
-                build.test(m, verbose=not args.quiet,
-                    channel_urls=channel_urls, override_channels=args.override_channels, move_broken=False)
+                build.test(m, move_broken=False)
             elif args.source:
                 source.provide(m.path, m.get_section('source'))
                 print('Source tree in:', source.get_dir())
@@ -396,9 +395,8 @@ def execute(args, parser):
                 else:
                     post = None
                 try:
-                    build.build(m, verbose=not args.quiet, post=post,
-                        channel_urls=channel_urls,
-                        override_channels=args.override_channels, include_recipe=args.include_recipe)
+                    build.build(m, post=post,
+                                include_recipe=args.include_recipe)
                 except (RuntimeError, SystemExit) as e:
                     error_str = str(e)
                     if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
@@ -461,8 +459,8 @@ def execute(args, parser):
                     continue
 
                 if not args.notest:
-                    build.test(m, verbose=not args.quiet,
-                        channel_urls=channel_urls, override_channels=args.override_channels)
+                    build.test(m)
+
                 binstar_upload = True
 
             if need_cleanup:

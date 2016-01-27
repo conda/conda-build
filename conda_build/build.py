@@ -41,6 +41,9 @@ if 'bsd' in sys.platform:
 else:
     shell_path = '/bin/bash'
 
+channel_urls=()
+override_channels = False
+verbose = True
 
 def prefix_files():
     '''
@@ -135,9 +138,9 @@ def get_pinned_dists(m):
         return None
     prefix = join(cc.envs_dirs[0], '_pin')
     rm_rf(prefix)
-    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
-    create_env(prefix, specs)
-    return sorted(linked(prefix))
+    create_env(prefix, [ms.spec for ms in m.ms_depends()])
+    res = sorted(linked(prefix))
+    return res
 
 
 def create_info_files(m, files, include_recipe=True):
@@ -277,16 +280,15 @@ def create_info_files(m, files, include_recipe=True):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'))
 
-def get_build_index(clear_cache=True, channel_urls=(), override_channels=False):
+def get_build_index(clear_cache=True):
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
     return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
-        prepend=not override_channels)
+                     prepend=not override_channels)
 
-def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
-    override_channels=False):
+def create_env(prefix, specs, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -294,8 +296,7 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
-        index = get_build_index(clear_cache=True, channel_urls=channel_urls,
-            override_channels=override_channels)
+        index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
 
@@ -346,8 +347,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
-    override_channels=False, include_recipe=True):
+def build(m, get_src=True, post=None, include_recipe=True):
     '''
     Build the package with the specified metadata.
 
@@ -394,14 +394,12 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
         create_env(config.build_prefix,
-            [ms.spec for ms in m.ms_depends('build')],
-            verbose=verbose, channel_urls=channel_urls,
-            override_channels=override_channels)
+                   [ms.spec for ms in m.ms_depends('build')])
 
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
                 m.name())
-            index = get_build_index(clear_cache=False, channel_urls=channel_urls, override_channels=override_channels)
+            index = get_build_index(clear_cache=False)
             actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
             assert not plan.nothing_to_do(actions), actions
             plan.display_actions(actions, index)
@@ -509,7 +507,7 @@ can lead to packages that include their dependencies.""" %
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
-def test(m, verbose=True, channel_urls=(), override_channels=False, move_broken=True):
+def test(m, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
@@ -559,8 +557,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False, move_broken=
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
 
-    create_env(config.test_prefix, specs, verbose=verbose,
-        channel_urls=channel_urls, override_channels=override_channels)
+    create_env(config.test_prefix, specs)
 
     env = dict(os.environ)
     env.update(environ.get_dict(m, prefix=config.test_prefix))
