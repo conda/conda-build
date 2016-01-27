@@ -136,11 +136,10 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
 def get_pinned_dists(m):
     if not m.get_value('build/pin_depends'):
         return None
-    prefix = join(cc.envs_dirs[0], '_pin')
+    prefix = join(cc.envs_dirs[0], '_run')
     rm_rf(prefix)
-    create_env(prefix, [ms.spec for ms in m.ms_depends()])
-    res = sorted(linked(prefix))
-    return res
+    create_env(prefix, [ms.spec for ms in m.ms_depends('run')])
+    return sorted(linked(prefix))
 
 
 def create_info_files(m, files, include_recipe=True):
