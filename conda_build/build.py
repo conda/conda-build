@@ -133,7 +133,7 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     return data
 
 
-def get_pinned_dists(m):
+def get_run_dists(m):
     if not m.get_value('build/pin_depends'):
         return None
     prefix = join(cc.envs_dirs[0], '_run')
@@ -189,7 +189,7 @@ def create_info_files(m, files, include_recipe=True):
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
-        dists = get_pinned_dists(m)
+        dists = get_run_dists(m)
         with open(join(config.info_dir, 'requires'), 'w') as fo:
             fo.write("""\
 # This file may be used to create the test environment of this package using:
