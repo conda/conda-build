@@ -130,6 +130,16 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     return data
 
 
+def get_pinned_dists(m):
+    if not m.get_value('build/pin_depends'):
+        return None
+    prefix = join(cc.envs_dirs[0], '_pin')
+    rm_rf(prefix)
+    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+    create_env(prefix, specs)
+    return sorted(linked(prefix))
+
+
 def create_info_files(m, files, include_recipe=True):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -177,7 +187,7 @@ def create_info_files(m, files, include_recipe=True):
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
-        dists = sorted(linked(config.test_prefix))
+        dists = get_pinned_dists(m)
         with open(join(config.info_dir, 'requires'), 'w') as fo:
             fo.write("""\
 # This file may be used to create the test environment of this package using:
@@ -319,7 +329,6 @@ conda update -n root conda-build
 
 to get the latest version.
 """ % (vers_inst[0], pkgs[-1].version), file=sys.stderr)
-
 
 
 def rm_pkgs_cache(dist):
