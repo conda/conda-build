@@ -196,11 +196,11 @@ def create_info_files(m, files, include_recipe=True):
 # $ conda create --name <env> --file <this file>
 # platform: %s
 """ % cc.subdir)
-            for dist in dists:
+            for dist in sorted(dists + [m.dist()]):
                 fo.write('%s\n' % '='.join(dist.rsplit('-', 2)))
         if pin_depends == 'strict':
             info_index['depends'] = [' '.join(dist.rsplit('-', 2))
-                                     for dist in dists if dist != m.dist()]
+                                     for dist in dists]
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
