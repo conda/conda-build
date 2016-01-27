@@ -128,6 +128,14 @@ def ensure_valid_license_family(meta):
             "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
 
+def ensure_valid_fields(meta):
+    try:
+        pin_depends = meta['build']['pin_depends']
+    except KeyError:
+        pin_depends = ''
+    if pin_depends not in ('', 'record', 'strict'):
+        raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
+
 def parse(data):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
@@ -189,6 +197,7 @@ def parse(data):
         elif val in falses:
             res[section][key] = False
 
+    ensure_valid_fields(res)
     ensure_valid_license_family(res)
     return sanitize(res)
 
