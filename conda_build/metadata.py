@@ -327,7 +327,7 @@ class MetaData(object):
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(permit_undefined_jinja=True)
 
-    def parse_again(self, permit_undefined_jinja):
+    def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
