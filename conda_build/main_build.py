@@ -184,6 +184,13 @@ different sets of packages."""
         metavar="R_VER",
         choices=RVersionsCompleter(),
     )
+    p.add_argument(
+        '--versions',
+        nargs='+',
+        metavar='PACKAGE=VERSION',
+        help='Set the version of of any number of packages. The resulting build '
+             'will strictly depend on this version.'
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -311,6 +318,11 @@ def execute(args, parser):
                 raise RuntimeError("%s must be major.minor, not %s" %
                     (conda_version[lang], version))
 
+    if args.versions:
+        for spec in args.versions:
+            name, version = spec.split('=')
+            config.versions[name] = version
+
     # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
     # Auto-set those env variables
     for var in conda_version.values():
@@ -370,10 +382,6 @@ def execute(args, parser):
                 if m.pkg_fn() in index or m.pkg_fn() in already_built:
                     print("%s is already built, skipping." % m.dist())
                     continue
-            if m.skip():
-                print("Skipped: The %s recipe defines build/skip for this "
-                      "configuration." % m.dist())
-                continue
             if args.output:
                 print(build.bldpkg_path(m))
                 continue
@@ -396,6 +404,10 @@ def execute(args, parser):
                 else:
                     post = None
                 try:
+                    if m.skip():
+                        print("Skipped: The %s recipe defines build/skip for this "
+                              "configuration." % m.dist())
+                        continue
                     build.build(m, verbose=not args.quiet, post=post,
                         channel_urls=channel_urls,
                         override_channels=args.override_channels, include_recipe=args.include_recipe)
