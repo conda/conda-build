@@ -173,16 +173,22 @@ def create_info_files(m, files, include_recipe=True):
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                   file=sys.stderr)
 
-    if m.get_value('build/pin_depends'):
+    info_index = m.info_index()
+    pin_depends = m.get_value('build/pin_depends')
+    if pin_depends:
+        dists = [dist for dist in sorted(linked(config.test_prefix))
+                 if dist != m.dist()]
         with open(join(config.info_dir, 'requires'), 'w') as fo:
-            for dist in sorted(linked(config.test_prefix)):
-                if dist != m.dist():
-                    fo.write('%s\n' % dist)
+            for dist in dists:
+                fo.write('%s\n' % dist)
+        if pin_depends == 'strict':
+            info_index['depends'] = [' '.join(dist.rsplit('-', 2))
+                                     for dist in dists]
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
-        json.dump(m.info_index(), fo, indent=2, sort_keys=True)
+        json.dump(info_index, fo, indent=2, sort_keys=True)
 
     if include_recipe:
         with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
@@ -601,6 +607,6 @@ def tests_failed(m, move_broken):
     if not isdir(config.broken_dir):
         os.makedirs(config.broken_dir)
 
-    if move_broken: 
+    if move_broken:
         shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
