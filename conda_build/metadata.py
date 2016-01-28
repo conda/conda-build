@@ -128,6 +128,14 @@ def ensure_valid_license_family(meta):
             "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
 
+def ensure_valid_fields(meta):
+    try:
+        pin_depends = meta['build']['pin_depends']
+    except KeyError:
+        pin_depends = ''
+    if pin_depends not in ('', 'record', 'strict'):
+        raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
+
 def parse(data):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
@@ -154,10 +162,11 @@ def parse(data):
             res[section] = {}
         if res[section].get(key, None) is None:
             res[section][key] = []
+
     # ensure those are strings
-    for field in ('package/version', 'build/string', 'source/svn_rev',
-                  'source/git_tag', 'source/git_branch', 'source/md5',
-                  'source/git_rev', 'source/path'):
+    for field in ('package/version', 'build/string', 'build/pin_depends',
+                  'source/svn_rev', 'source/git_tag', 'source/git_branch',
+                  'source/md5', 'source/git_rev', 'source/path'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -188,6 +197,7 @@ def parse(data):
         elif val in falses:
             res[section][key] = False
 
+    ensure_valid_fields(res)
     ensure_valid_license_family(res)
     return sanitize(res)
 
@@ -256,7 +266,9 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
-              'always_include_files', 'skip', 'msvc_compiler'],
+              'always_include_files', 'skip', 'msvc_compiler',
+              'pin_depends' # pin_depends is experimental still
+             ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
