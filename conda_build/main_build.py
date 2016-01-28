@@ -14,6 +14,7 @@ from locale import getpreferredencoding
 from os import listdir
 from os import environ as os_environ
 from os.path import exists, isdir, isfile, join
+import warnings
 
 import conda.config as config
 from conda.compat import PY3
@@ -271,11 +272,18 @@ def execute(args, parser):
     build.verbose = not args.quiet
 
     if on_win:
-        # needs to happen before any c extensions are imported that might be
-        # hard-linked by files in the trash. one of those is markupsafe, used
-        # by jinja2. see https://github.com/conda/conda-build/pull/520
-        assert 'markupsafe' not in sys.modules
-        delete_trash(None)
+        try:
+            # needs to happen before any c extensions are imported that might be
+            # hard-linked by files in the trash. one of those is markupsafe, 
+            # used by jinja2. see https://github.com/conda/conda-build/pull/520
+            delete_trash(None)
+        except:
+            # when we can't delete the trash, don't crash on AssertionError,
+            # instead inform the user and try again next time.
+            # see https://github.com/conda/conda-build/pull/744
+            warnings.warn("Cannot delete trash; some c extension has been "
+                          "imported that is hard-linked by files in the trash. "
+                          "Will try again on next run.")
 
     conda_version = {
         'python': 'CONDA_PY',
