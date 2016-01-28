@@ -274,7 +274,7 @@ def execute(args, parser):
     if on_win:
         try:
             # needs to happen before any c extensions are imported that might be
-            # hard-linked by files in the trash. one of those is markupsafe, 
+            # hard-linked by files in the trash. one of those is markupsafe,
             # used by jinja2. see https://github.com/conda/conda-build/pull/520
             delete_trash(None)
         except:
