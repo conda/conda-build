@@ -11,6 +11,7 @@
   * remove broken license file detection code
   * allow pinning dependencies when building a package, #741
   * fix to restore building for multiple python versions on Windows, #744
+  * fix building (git unrelated things) when git is not installed, #745
 
 
 2015-11-19   1.18.2:
