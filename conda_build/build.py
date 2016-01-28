@@ -134,8 +134,6 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
 
 
 def get_run_dists(m):
-    if not m.get_value('build/pin_depends'):
-        return None
     prefix = join(cc.envs_dirs[0], '_run')
     rm_rf(prefix)
     create_env(prefix, [ms.spec for ms in m.ms_depends('run')])
@@ -192,10 +190,13 @@ def create_info_files(m, files, include_recipe=True):
         dists = get_run_dists(m)
         with open(join(config.info_dir, 'requires'), 'w') as fo:
             fo.write("""\
-# This file may be used to create the test environment of this package using:
+# This file as created when building:
+#
+#     %s.tar.bz2  (on '%s')
+#
+# It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
-# platform: %s
-""" % cc.subdir)
+""" % (m.dist(), cc.subdir))
             for dist in sorted(dists + [m.dist()]):
                 fo.write('%s\n' % '='.join(dist.rsplit('-', 2)))
         if pin_depends == 'strict':
