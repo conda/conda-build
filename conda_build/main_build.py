@@ -275,13 +275,13 @@ def execute(args, parser):
             # hard-linked by files in the trash. one of those is markupsafe, 
             # used by jinja2. see https://github.com/conda/conda-build/pull/520
             delete_trash(None)
-        except PermissionError:
+        except:
             # when we can't delete the trash, don't crash on AssertionError,
             # instead inform the user and try again next time.
             # see https://github.com/conda/conda-build/pull/744
-            warnings.warn("Cannot delete trash; some c extension has been " \
-                          "imported that is hard-linked by files in the " \
-                          "trash. Will try again on next run.")
+            warnings.warn("Cannot delete trash; some c extension has been "
+                          "imported that is hard-linked by files in the trash. "
+                          "Will try again on next run.")
 
     conda_version = {
         'python': 'CONDA_PY',
