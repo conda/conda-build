@@ -117,7 +117,9 @@ def get_dict(m=None, prefix=None):
         except NotImplementedError:
             d['CPU_COUNT'] = "1"
 
-    d.update(**get_git_build_info(d['SRC_DIR']))
+    if m.get_value('build/git_url'):
+        d.update(**get_git_build_info(d['SRC_DIR']))
+
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
 
