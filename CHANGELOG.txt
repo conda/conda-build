@@ -1,4 +1,4 @@
-2015-XX-XX   1.18.3:
+2015-XX-XX   1.19.0:
 --------------------
   * normalize unicode in conda skeleton cran, #681
   * use /bin/sh on openbsd, #707
@@ -9,6 +9,7 @@
   * fix Win references to PipBuild scripts, #723
   * allow git shallow clones, #604
   * remove broken license file detection code
+  * allow pinning dependencies when building a package, #741
 
 
 2015-11-19   1.18.2:
