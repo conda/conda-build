@@ -267,6 +267,8 @@ def execute(args, parser):
     from conda_build.metadata import MetaData
 
     check_external()
+
+    # change globals in build module, see comment there as well
     build.channel_urls = args.channel or ()
     build.override_channels = args.override_channels
     build.verbose = not args.quiet

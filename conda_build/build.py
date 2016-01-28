@@ -41,9 +41,11 @@ if 'bsd' in sys.platform:
 else:
     shell_path = '/bin/bash'
 
-channel_urls=()
+# these gloabls may be modified after importing this module
+channel_urls = ()
 override_channels = False
 verbose = True
+
 
 def prefix_files():
     '''
