@@ -61,7 +61,7 @@ def ns_cfg():
         os = os,
         environ = os.environ,
     )
-    for machine in cc.non_x86_linux_machines:
+    for machine in getattr(cc, 'non_x86_linux_machines', []):
         d[machine] = bool(plat == 'linux-%s' % machine)
 
     d.update(os.environ)
@@ -458,6 +458,55 @@ class MetaData(object):
                         sys.exit(msg)
             res.append(ms)
         return res
+
+    def resolve_depends(self, typ='run', index=None):
+        import conda.resolve
+        import conda.api
+
+        if index is None:
+            index = conda.api.get_index()
+
+        specs = [ms.spec for ms in self.ms_depends(typ)]
+        r = conda.resolve.Resolve(index)
+        # TODO: What should features be? Do we build with features on? e.g. scipy mkl?
+        result = r.solve2(specs, features=set())
+        return {pkg: index[pkg] for pkg in result}
+
+    def pinned_specs(self, index=None):
+        def extract_version(version, match_pattern, build_string=''):
+            """
+            Given a pattern such as 'x.*', return '1.*' from '1.2.3'.
+
+            """
+            if match_pattern == 'x.*':
+                return '{}.*'.format(version.split('.')[0])
+            elif match_pattern == 'x.x.*':
+                return '{}.{}.*'.format(*version.split('.')[:2])
+            else:
+                raise NotYetImplemented('General form not yet implemented.')
+
+        build_dep_names = [spec.name
+                           for spec in self.ms_depends('build')]
+        build_deps = self.resolve_depends('build', index=index)
+        build_deps_by_name = {pkg['name']: pkg for pkg in build_deps.values()}
+        pinned = self.get_value('requirements/pin_from_build', [])
+        unresolved_pinned_specs = {MatchSpec(spec).name: MatchSpec(spec)
+                                   for spec in pinned}
+        print(unresolved_pinned_specs, build_dep_names)
+        unexpected_pinned = set(unresolved_pinned_specs) - set(build_dep_names)
+        if unexpected_pinned:
+            msg = "Found requirements/pin_from_build which aren't part of the requirements/build ({}).".format(', '.join(sorted(unexpected_pinned)))
+            raise ValueError(msg)
+        pinned_specs = []
+        if 'python' not in unresolved_pinned_specs:
+            unresolved_pinned_specs['python'] = MatchSpec('python x.x.*')
+        for ms in unresolved_pinned_specs.values():
+            pkg_info = build_deps_by_name[ms.name]
+            assert ms.strictness == 2
+            pattern = ms.spec.split(' ', 1)[1]
+            new_spec = extract_version(pkg_info['version'], pattern)
+            pinned_specs.append('{} {}'.format(ms.name, new_spec))
+        return pinned_specs
 
     def build_id(self):
         ret = self.get_value('build/string')

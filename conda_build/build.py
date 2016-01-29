@@ -206,6 +206,9 @@ def create_info_files(m, files, include_recipe=True):
             info_index['depends'] = [' '.join(dist.rsplit('-', 2))
                                      for dist in dists]
 
+    dists = get_run_dists(m)
+    print(dists)
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
