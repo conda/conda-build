@@ -14,7 +14,7 @@ from collections import defaultdict
 from operator import itemgetter
 
 from conda.misc import which_package
-from conda.cli.common import add_parser_prefix, get_prefix
+from conda.cli.common import add_parser_prefix, get_prefix, InstalledPackages
 from conda.cli.conda_argparse import ArgumentParser
 import conda.install as ci
 
@@ -58,7 +58,7 @@ libraries that ought to be dependent conda packages.  """
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    )
+    ).completer=InstalledPackages
     linkages.add_argument(
         '--untracked',
         action='store_true',
@@ -101,7 +101,7 @@ package.
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    )
+    ).completer=InstalledPackages
     objects.add_argument(
         '--untracked',
         action='store_true',
