@@ -250,7 +250,11 @@ def meta_vars(meta):
     d['PKG_NAME'] = meta.name()
     d['PKG_VERSION'] = meta.version()
     d['PKG_BUILDNUM'] = str(meta.build_number())
-    d['PKG_BUILD_STRING'] = str(meta.build_id())
+
+    # Passing the build string requires the build dependencies to be resolved.
+    # Added with https://github.com/conda/conda-build/pull/667/
+    # d['PKG_BUILD_STRING'] = str(meta.build_id())
+
     d['RECIPE_DIR'] = meta.path
     return d
 

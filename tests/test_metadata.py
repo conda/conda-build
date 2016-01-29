@@ -33,7 +33,7 @@ test [abc] no
 """
 
 @contextmanager
-def tmp_meta(spec):
+def tmp_meta(spec, index=None):
     import os.path
     import shutil
     import tempfile
@@ -43,7 +43,10 @@ def tmp_meta(spec):
     try:
         with open(os.path.join(recipe_dir, 'meta.yaml'), 'w') as fh:
             fh.write(textwrap.dedent(spec))
-        yield MetaData(recipe_dir)
+        m = MetaData(recipe_dir)
+        if index is not None:
+            m._index = index
+        yield m
     finally:
         shutil.rmtree(recipe_dir)
 
@@ -61,6 +64,19 @@ class TestResolvedDepends(unittest.TestCase):
         index.add_pkg('numpy', '1.10.1', 'py35', depends=('python 3.5.*',))
         self.index = index
 
+    def test_build_id(self):
+        spec = """
+        package:
+            name: foo
+            version: 2
+        requirements:
+            build:
+                - python <3
+                - numpy 1.* 
+        """
+        with tmp_meta(spec, index=self.index) as m:
+            self.assertEqual(m.build_id(), 'py27_0')
+
     def test_resolve_build(self):
         spec = """
         package:
@@ -68,34 +84,12 @@ class TestResolvedDepends(unittest.TestCase):
             version: 2
         requirements:
             build:
-                - python
-                - numpy
-            run:
-                - python x.x
-                - numpy x.x
-            pin_from_build:
-                - python x.*
-                - numpy x.x.*
+                - python <3
+                - numpy 1.*
         """
-        with tmp_meta(spec) as m:
-            self.assertEqual(sorted(m.resolve_depends('build', index=self.index)),
+        with tmp_meta(spec, index=self.index) as m:
+            self.assertEqual(sorted(m.resolve_build_deps()),
                              ['numpy-1.10.1-py27_0.tar.bz2',
-                              'python-2.7.3-0.tar.bz2',
-                              'zlib-1.2-0.tar.bz2'])
-
-    def test_resolve_run(self):
-        spec = """
-        package:
-            name: foo
-            version: 2
-        requirements:
-            run:
-                - python >1,<3
-                - numpy 1.9.*
-        """
-        with tmp_meta(spec) as m:
-            self.assertEqual(sorted(m.resolve_depends('run', index=self.index)),
-                             ['numpy-1.9.2-py27_0.tar.bz2',
                               'python-2.7.3-0.tar.bz2',
                               'zlib-1.2-0.tar.bz2'])
 
@@ -115,10 +109,11 @@ class TestResolvedDepends(unittest.TestCase):
                 - python >1,<3
                 - numpy 1.9.*
         """
-        with tmp_meta(spec) as m:
-            self.assertEqual(sorted(m.pinned_specs(index=self.index)),
+        with tmp_meta(spec, index=self.index) as m:
+            self.assertEqual(sorted(m.pinned_specs()),
                              ['numpy 1.9.*',
                               'python 2.*'])
+            self.assertEqual(m.build_id(), 'py2np19_0')
 
     def test_pinned_specs_python_default(self):
         spec = """
@@ -135,10 +130,10 @@ class TestResolvedDepends(unittest.TestCase):
                 - python >1,<3
                 - numpy 1.9.*
         """
-        with tmp_meta(spec) as m:
+        with tmp_meta(spec, index=self.index) as m:
             # Despite the lack of a Python in the pin_from_build, we still
             # get a sensible pinned spec.
-            self.assertEqual(sorted(m.pinned_specs(index=self.index)),
+            self.assertEqual(sorted(m.pinned_specs()),
                              ['numpy 1.9.*',
                               'python 2.7.*'])
 
@@ -155,8 +150,8 @@ class TestResolvedDepends(unittest.TestCase):
                 - numpy x.x.*
         """
         with self.assertRaises(ValueError):
-            with tmp_meta(spec) as m:
-                m.pinned_specs(index=self.index)
+            with tmp_meta(spec, index=self.index) as m:
+                m.pinned_specs()
 
 
 class HandleConfigVersionTests(unittest.TestCase):

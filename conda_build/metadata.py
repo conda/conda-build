@@ -261,7 +261,7 @@ FIELDS = {
               'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends' # pin_depends is experimental still
              ],
-    'requirements': ['build', 'run', 'conflicts'],
+    'requirements': ['build', 'run', 'conflicts', 'pin_from_build'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
@@ -332,6 +332,9 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(permit_undefined_jinja=True)
+
+        self._index = None
+        self._resolved_build_pkgs = None
 
     def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
@@ -421,6 +424,27 @@ class MetaData(object):
     def build_number(self):
         return int(self.get_value('build/number', 0))
 
+    def config_deps(self):
+        # Return the specs needed to adhere to the desired environment variables.
+        name_ver_list = [
+            ('python', config.CONDA_PY),
+            ('numpy', config.CONDA_NPY),
+            ('perl', config.CONDA_PERL),
+            ('r', config.CONDA_R),
+        ]
+        specs = []
+        for spec in self.get_value('requirements/build', []):
+            try:
+                ms = MatchSpec(spec)
+            except AssertionError:
+                raise RuntimeError("Invalid package specification: %r" % spec)
+            if ms.name == self.name():
+                raise RuntimeError("%s cannot depend on itself" % self.name())
+            for name, ver in name_ver_list:
+                if ms.name == name:
+                    specs.append(handle_config_version(ms, ver).spec)
+        return specs
+
     def ms_depends(self, typ='run'):
         res = []
         name_ver_list = [
@@ -459,47 +483,70 @@ class MetaData(object):
             res.append(ms)
         return res
 
-    def resolve_depends(self, typ='run', index=None):
+    def resolve_build_deps(self, index=None):
+        """
+        Turn the version specifications of this meta into concrete versions.
+
+        """
         import conda.resolve
-        import conda.api
+        if index:
+            self._index = index
+        if self._index is None:
+            raise RuntimeError('Please supply an index from which to resolve.')
 
-        if index is None:
-            index = conda.api.get_index()
+        specs = [ms.spec for ms in self.ms_depends('build')]
+        config_specs = self.config_deps()
+        r = conda.resolve.Resolve(self._index)
+        result = r.solve(specs + config_specs)
+        # Clear to a newline after the solve stage.
+        print('\n')
+        self._resolved_build_pkgs = {pkg: self._index[pkg] for pkg in result}
+        return self._resolved_build_pkgs
 
-        specs = [ms.spec for ms in self.ms_depends(typ)]
-        r = conda.resolve.Resolve(index)
-        # TODO: What should features be? Do we build with features on? e.g. scipy mkl?
-        result = r.solve2(specs, features=set())
-        return {pkg: index[pkg] for pkg in result}
-
-    def pinned_specs(self, index=None):
+    def pinned_specs(self):
         def extract_version(version, match_pattern, build_string=''):
             """
             Given a pattern such as 'x.*', return '1.*' from '1.2.3'.
 
             """
-            if match_pattern == 'x.*':
+            if match_pattern == '*':
+                return '*'
+            elif match_pattern == 'x.*':
                 return '{}.*'.format(version.split('.')[0])
             elif match_pattern == 'x.x.*':
                 return '{}.{}.*'.format(*version.split('.')[:2])
             else:
-                raise NotYetImplemented('General form not yet implemented.')
+                # TODO
+                raise NotYetImplemented('General form for pin_from_build not '
+                                        'yet implemented.')
+
+        if self._resolved_build_pkgs is None:
+            self.resolve_build_deps()
+        build_deps = self._resolved_build_pkgs
 
         build_dep_names = [spec.name
                            for spec in self.ms_depends('build')]
-        build_deps = self.resolve_depends('build', index=index)
         build_deps_by_name = {pkg['name']: pkg for pkg in build_deps.values()}
         pinned = self.get_value('requirements/pin_from_build', [])
         unresolved_pinned_specs = {MatchSpec(spec).name: MatchSpec(spec)
                                    for spec in pinned}
-        print(unresolved_pinned_specs, build_dep_names)
-        unexpected_pinned = set(unresolved_pinned_specs) - set(build_dep_names)
+        unexpected_pinned = (set(unresolved_pinned_specs) -
+                             set(build_dep_names))
         if unexpected_pinned:
-            msg = "Found requirements/pin_from_build which aren't part of the requirements/build ({}).".format(', '.join(sorted(unexpected_pinned)))
+            msg = ("Found requirements/pin_from_build which aren't part of "
+                   "the requirements/build ({})."
+                   "".format(', '.join(sorted(unexpected_pinned))))
             raise ValueError(msg)
+
         pinned_specs = []
-        if 'python' not in unresolved_pinned_specs:
+        # Put python in there as a special case. This has been the behaviour
+        # of conda-build since immemorial, and can be overridden by adding
+        # "python *" as a pinned spec.
+        if ('python' not in unresolved_pinned_specs and
+                'python' in build_deps_by_name):
             unresolved_pinned_specs['python'] = MatchSpec('python x.x.*')
+
+        # Compute the appropriate specs based on the resolved dependencies.
         for ms in unresolved_pinned_specs.values():
             pkg_info = build_deps_by_name[ms.name]
             assert ms.strictness == 2
@@ -509,39 +556,28 @@ class MetaData(object):
         return pinned_specs
 
     def build_id(self):
-        ret = self.get_value('build/string')
-        if ret:
-            check_bad_chrs(ret, 'build/string')
-            return ret
-        res = []
-        version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
-        for name, s in (('numpy', 'np'), ('python', 'py'),
-                        ('perl', 'pl'), ('lua', 'lua'), ('r', 'r')):
-            for ms in self.ms_depends():
-                if ms.name == name:
-                    try:
-                        v = ms.spec.split()[1]
-                    except IndexError:
-                        if name not in ['numpy']:
-                            res.append(s)
-                        break
-                    if any(i in v for i in ',|>!<'):
-                        break
-                    if name not in ['perl', 'r', 'lua']:
-                        match = version_pat.match(v)
-                        if match:
-                            res.append(s + match.group(1) + match.group(2))
-                    else:
-                        res.append(s + v.strip('*'))
-                    break
+        if self._resolved_build_pkgs is None:
+            self.resolve_build_deps()
+        build_deps = self._resolved_build_pkgs
+
+        template = self.get_value('build/string')
+        if not template:
+            template = '{extras}'
+        
+        tidy_names = {'python': 'py', 'numpy': 'np', 'perl': 'pl'}
+        pinned = ''
+        for pinned_spec in self.pinned_specs():
+            name, spec = pinned_spec.split(' ', 1)
+            nicer_vn = spec.replace('*', '').replace('.', '')
+            pinned += '{}{}'.format(tidy_names.get(name, name),
+                                    nicer_vn)
 
         features = self.get_value('build/features', [])
-        if res:
-            res.append('_')
-        if features:
-            res.extend(('_'.join(features), '_'))
-        res.append('%d' % self.build_number())
-        return ''.join(res)
+
+        extras = [pinned, '_'.join(features), unicode(self.build_number())]
+        result = template.format(extras='_'.join(extra for extra in extras if extra))
+        check_bad_chrs(result, 'build/string')
+        return result
 
     def dist(self):
         return '%s-%s-%s' % (self.name(), self.version(), self.build_id())

@@ -21,6 +21,7 @@ from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, move_to_trash
+from conda import instructions as inst
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
@@ -187,6 +188,8 @@ def create_info_files(m, files, include_recipe=True):
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                   file=sys.stderr)
 
+    pkg_index = get_build_index(clear_cache=False)
+
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
@@ -206,8 +209,11 @@ def create_info_files(m, files, include_recipe=True):
             info_index['depends'] = [' '.join(dist.rsplit('-', 2))
                                      for dist in dists]
 
-    dists = get_run_dists(m)
-    print(dists)
+    if not m._resolved_build_pkgs:
+        m.resolve_build_deps(get_build_index(clear_cache=False))
+
+    # Insert the pinned build dependencies into the resulting distribution.
+    info_index.setdefault('depends', []).extend(m.pinned_specs())
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
@@ -294,16 +300,21 @@ def get_build_index(clear_cache=True):
     return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
                      prepend=not override_channels)
 
-def create_env(prefix, specs, clear_cache=True):
+
+def create_env(prefix, specs, index=None):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
     for d in config.bldpkgs_dirs:
         if not isdir(d):
             os.makedirs(d)
+
         update_index(d)
-    if specs: # Don't waste time if there is nothing to do
-        index = get_build_index(clear_cache=True)
+
+    # We don't need to waste time if there is nothing to do.
+    if specs:
+        if index is None:
+            index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
 
@@ -311,9 +322,14 @@ def create_env(prefix, specs, clear_cache=True):
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
+    else:
+        actions = {code: [] for code in inst.action_codes}
+
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
+    return index, actions
+
 
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
@@ -397,11 +413,21 @@ def build(m, get_src=True, post=None, include_recipe=True):
         else:
             rm_rf(source.WORK_DIR)
 
-        # Display the name only
-        # Version number could be missing due to dependency on source info.
-        print("BUILD START:", m.dist())
-        create_env(config.build_prefix,
-                   [ms.spec for ms in m.ms_depends('build')])
+        index = get_build_index(clear_cache=True)
+        m._index = index
+        dist_name = m.dist()
+        print("BUILD START: {}".format(dist_name))
+
+        build_env_specs = ([ms.spec for ms in m.ms_depends('build')] +
+                           m.config_deps())
+        index, actions = create_env(config.build_prefix,
+                                    build_env_specs, index=index)
+        build_pkgs = {}
+        for pkg in actions['LINK']:
+            pkg_name = pkg.split(' ')[0] + '.tar.bz2'
+            build_pkgs[pkg_name] = index[pkg_name]
+        m._index = index
+        m._resolved_build_pkgs = build_pkgs
 
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
@@ -570,8 +596,7 @@ def test(m, move_broken=True):
 
     if py_files:
         # as the tests are run by python, ensure that python is installed.
-        # (If they already provided python as a run or test requirement, this won't hurt anything.)
-        specs += ['python %s*' % environ.get_py_ver()]
+        specs += ['python']
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
@@ -592,6 +617,8 @@ def test(m, move_broken=True):
     for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
         env[varname] = str(getattr(config, varname) or '')
     env['PREFIX'] = config.test_prefix
+
+    env['PKG_NAME'] = m.dist()
 
     # Python 2 Windows requires that envs variables be string, not unicode
     env = {str(key): str(value) for key, value in env.items()}
