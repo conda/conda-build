@@ -1,4 +1,4 @@
-2015-01-XX   1.19.0:
+2015-01-29   1.19.0:
 --------------------
   * normalize unicode in conda skeleton cran, #681
   * use /bin/sh on openbsd, #707
@@ -8,10 +8,13 @@
   * deprecate conda pipbuild in favor of conda skeleton. #710
   * fix Win references to PipBuild scripts, #723
   * allow git shallow clones, #604
-  * remove broken license file detection code, license_file expects filename now
+  * remove broken license file detection code, about/license_file
+    expects filename now
   * allow pinning dependencies when building a package, #741
   * fix to restore building for multiple python versions on Windows, #744
   * fix building (git unrelated things) when git is not installed, #745
+  * enable tab completion for the packages argument of the conda inspect
+    commands, #748
 
 
 2015-11-19   1.18.2:
