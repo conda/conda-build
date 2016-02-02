@@ -385,6 +385,10 @@ def execute(args, parser):
                       "configuration." % m.dist())
                 continue
             if args.output:
+                source.provide(m.path, m.get_section('source'))
+                # Parse our metadata again because we did not initialize the source
+                # information before.
+                m.parse_again()
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
