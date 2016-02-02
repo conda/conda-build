@@ -181,7 +181,8 @@ def parse(data):
     for field in ('build/osx_is_app', 'build/preserve_egg_dir',
                   'build/binary_relocation',
                   'build/detect_binary_files_with_prefix',
-                  'build/skip', 'app/own_environment'):
+                  'build/skip', 'app/own_environment',
+                  'source/git_recursive'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -258,6 +259,7 @@ FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
                'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
+               'git_recursive',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
