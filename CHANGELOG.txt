@@ -1,4 +1,4 @@
-2015-01-29   1.19.0:
+2016-01-29   1.19.0:
 --------------------
   * normalize unicode in conda skeleton cran, #681
   * use /bin/sh on openbsd, #707
