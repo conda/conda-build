@@ -385,6 +385,17 @@ def execute(args, parser):
                       "configuration." % m.dist())
                 continue
             if args.output:
+                try:
+                    m.parse_again(permit_undefined_jinja=False)
+                except SystemExit:
+                    # Something went wrong; possibly due to undefined GIT_ jinja variables.
+                    # Maybe we need to actually download the source in order to resolve the build_id.
+                    source.provide(m.path, m.get_section('source'))
+                    
+                    # Parse our metadata again because we did not initialize the source
+                    # information before.
+                    m.parse_again(permit_undefined_jinja=False)
+
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
