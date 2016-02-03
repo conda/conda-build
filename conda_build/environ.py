@@ -92,11 +92,8 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     if parts_length == 3:
         d.update(dict(zip(keys, parts)))
     # get the _full_ hash of the current HEAD
-    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=env)
-    output = process.communicate()[0].strip()
-    output = output.decode('utf-8')
+    output = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], stderr=subprocess.STDOUT, env=env).decode()
     d['GIT_FULL_HASH'] = output
     # set up the build string
     if key_name('NUMBER') in d and key_name('HASH') in d:

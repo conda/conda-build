@@ -4,8 +4,7 @@ import os
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
-from subprocess import (check_call, Popen, PIPE, CalledProcessError,
-                        check_output, DEVNULL, STDOUT)
+from subprocess import (check_call, CalledProcessError, check_output, STDOUT)
 import locale
 
 from conda.fetch import download
