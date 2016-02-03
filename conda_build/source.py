@@ -5,14 +5,13 @@ import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
 from subprocess import (check_call, CalledProcessError, check_output, STDOUT)
-import locale
 
 from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode, logger
+from conda_build.utils import rm_rf, tar_xf, unzip, logger
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
