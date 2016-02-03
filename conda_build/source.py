@@ -163,7 +163,7 @@ def git_info(fo=None):
         stdout = check_output(cmd.split(), cwd=WORK_DIR, env=env,
                               stderr=STDOUT).decode()
         if fo:
-            logger.debugfo.write(u'==> %s <==\n' % cmd)
+            logger.debug(u'==> %s <==\n' % cmd)
             logger.debug(stdout + u'\n')
         else:
             logger.debug(u'==> %s <==\n' % cmd)
