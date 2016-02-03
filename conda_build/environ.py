@@ -46,20 +46,26 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
-        current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"], env=env)
+        current_commit = subprocess.check_output(
+            ["git", "log", "-n1", "--format=%H"], env=env,
+            stderr=subprocess.STDOUT)
         current_commit = current_commit.decode('utf-8')
-        expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H", expected_rev], env=env)
+        expected_tag_commit = subprocess.check_output(
+            ["git", "log", "-n1", "--format=%H", expected_rev], env=env,
+            stderr=subprocess.STDOUT)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
         # Verify correct remote url.
         # (Need to find the git cache directory, and check the remote from there.)
-        cache_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        cache_details = subprocess.check_output(
+            ["git", "remote", "-v"], env=env, stderr=subprocess.STDOUT)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
         assert "conda-bld/git_cache" in cache_dir
 
         env['GIT_DIR'] = cache_dir
-        remote_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        remote_details = subprocess.check_output(
+            ["git", "remote", "-v"], env=env, stderr=subprocess.STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
 

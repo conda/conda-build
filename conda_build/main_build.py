@@ -185,10 +185,28 @@ different sets of packages."""
         metavar="R_VER",
         choices=RVersionsCompleter(),
     )
+    p.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help="Enable verbose mode. Turns on extra debug output"
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
     args = p.parse_args()
+    # enable logging. Default to warning
+    import logging
+    stream = logging.StreamHandler()
+    from .utils import logger
+    if args.verbose:
+        loglevel = logging.DEBUG
+    else:
+        loglevel = logging.WARNING
+    stream.setLevel(loglevel)
+    logger.setLevel(loglevel)
+    logger.addHandler(stream)
+
     args_func(args, p)
 
 

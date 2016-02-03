@@ -4,7 +4,8 @@ import os
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
-from subprocess import check_call, Popen, PIPE, CalledProcessError
+from subprocess import (check_call, Popen, PIPE, CalledProcessError,
+                        check_output, DEVNULL, STDOUT)
 import locale
 
 from conda.fetch import download
@@ -12,8 +13,7 @@ from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
-
+from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode, logger
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
@@ -35,7 +35,7 @@ def get_dir():
 
 def download_to_cache(meta):
     ''' Download a source to the local cache. '''
-    print('Source cache directory is: %s' % SRC_CACHE)
+    logger.debug('Source cache directory is: %s' % SRC_CACHE)
     if not isdir(SRC_CACHE):
         os.makedirs(SRC_CACHE)
 
@@ -43,20 +43,20 @@ def download_to_cache(meta):
     path = join(SRC_CACHE, fn)
 
     if isfile(path):
-        print('Found source in cache: %s' % fn)
+        logger.debug('Found source in cache: %s' % fn)
     else:
-        print('Downloading source to cache: %s' % fn)
+        logger.debug('Downloading source to cache: %s' % fn)
         if not isinstance(meta['url'], list):
             meta['url'] = [meta['url']]
 
         for url in meta['url']:
             try:
-                print("Downloading %s" % url)
+                logger.debug("Downloading %s" % url)
                 download(url, path)
             except RuntimeError as e:
-                print("Error: %s" % str(e).strip(), file=sys.stderr)
+                logger.debug("Error: %s" % str(e).strip(), file=sys.stderr)
             else:
-                print("Success")
+                logger.debug("Success")
                 break
         else: # no break
             raise RuntimeError("Could not download %s" % fn)
@@ -74,7 +74,7 @@ def unpack(meta):
     src_path = download_to_cache(meta)
 
     os.makedirs(WORK_DIR)
-    print("Extracting download")
+    logger.debug("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
         '.tar', 'tar.z')):
         tar_xf(src_path, WORK_DIR)
@@ -82,7 +82,7 @@ def unpack(meta):
         unzip(src_path, WORK_DIR)
     else:
         # In this case, the build script will need to deal with unpacking the source
-        print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
+        logger.debug("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
         copy2(src_path, WORK_DIR)
 
 
@@ -112,13 +112,16 @@ def git_source(meta, recipe_dir):
 
     # update (or create) the cache repo
     if isdir(cache_repo):
-        check_call([git, 'fetch'], cwd=cache_repo)
+        output = check_output([git, 'fetch'], cwd=cache_repo, stderr=STDOUT).decode()
+        logger.debug(output)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', git_depth]
 
-        check_call(args + [git_url, cache_repo_arg],  cwd=recipe_dir)
+        output = check_output(args + [git_url, cache_repo_arg],
+                                  stderr=STDOUT, cwd=recipe_dir).decode()
+        logger.debug(output)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -126,24 +129,27 @@ def git_source(meta, recipe_dir):
     # if rev is not specified, and the git_url is local,
     # assume the user wants the current HEAD
     if not checkout and git_url.startswith('.'):
-        process = Popen(["git", "rev-parse", "HEAD"],
-                    stdout=PIPE, stderr=PIPE,
-                               cwd=git_url)
-        output = process.communicate()[0].strip()
-        checkout = output.decode('utf-8')
+        checkout = check_output(["git", "rev-parse", "HEAD"], cwd=git_url,
+                                stderr=STDOUT).decode()
     if checkout:
-        print('checkout: %r' % checkout)
+        logger.debug('checkout: %r' % checkout)
 
-    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR])
+    output = check_output(
+        [git, 'clone', '--recursive', cache_repo_arg, WORK_DIR],
+        stderr=STDOUT).decode()
+    logger.debug(output)
     if checkout:
-        check_call([git, 'checkout', checkout], cwd=WORK_DIR)
+        output = check_output([git, 'checkout', checkout], cwd=WORK_DIR,
+                              stderr=STDOUT).decode()
+        logger.debug(output)
+
 
     git_info()
     return WORK_DIR
 
 
 def git_info(fo=None):
-    ''' Print info about a Git repo. '''
+    ''' logger.debug info about a Git repo. '''
     assert isdir(WORK_DIR)
 
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
@@ -155,22 +161,14 @@ def git_info(fo=None):
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),
                 ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
-        stdout, stderr = p.communicate()
-        encoding = locale.getpreferredencoding()
-        if not fo:
-            encoding = sys.stdout.encoding
-        encoding = encoding or 'utf-8'
-        stdout = stdout.decode(encoding, 'ignore')
-        stderr = stderr.decode(encoding, 'ignore')
-        if check_error and stderr and stderr.strip():
-            raise Exception("git error: %s" % stderr)
+        stdout = check_output(cmd.split(), cwd=WORK_DIR, env=env,
+                              stderr=STDOUT).decode()
         if fo:
-            fo.write(u'==> %s <==\n' % cmd)
-            fo.write(stdout + u'\n')
+            logger.debugfo.write(u'==> %s <==\n' % cmd)
+            logger.debug(stdout + u'\n')
         else:
-            print(u'==> %s <==\n' % cmd)
-            safe_print_unicode(stdout + u'\n')
+            logger.debug(u'==> %s <==\n' % cmd)
+            logger.debug(stdout + u'\n')
 
 
 def hg_source(meta):
@@ -191,7 +189,7 @@ def hg_source(meta):
 
     # now clone in to work directory
     update = meta.get('hg_tag') or 'tip'
-    print('checkout: %r' % update)
+    logger.debug('checkout: %r' % update)
 
     check_call([hg, 'clone', cache_repo, WORK_DIR])
     check_call([hg, 'update', '-C', update], cwd=WORK_DIR)
@@ -240,7 +238,7 @@ def _ensure_unix_line_endings(path):
     return out_path
 
 def apply_patch(src_dir, path):
-    print('Applying patch: %r' % path)
+    logger.debug('Applying patch: %r' % path)
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
 
@@ -271,7 +269,7 @@ def provide(recipe_dir, meta, patch=True):
       - unpack
       - apply patches (if any)
     """
-    print("Removing old work directory")
+    logger.debug("Removing old work directory")
     rm_rf(WORK_DIR)
     if 'fn' in meta:
         unpack(meta)
@@ -282,7 +280,7 @@ def provide(recipe_dir, meta, patch=True):
     elif 'svn_url' in meta:
         svn_source(meta)
     elif 'path' in meta:
-        print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
+        logger.debug("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
         copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
     else: # no source
         os.makedirs(WORK_DIR)
