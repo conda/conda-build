@@ -197,7 +197,7 @@ different sets of packages."""
     args = p.parse_args()
     # enable logging. Default to warning
     import logging
-    stream = logging.StreamHandler()
+    stream = logging.StreamHandler(sys.stdout)
     from .utils import logger
     if args.verbose:
         loglevel = logging.DEBUG
