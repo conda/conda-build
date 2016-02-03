@@ -144,9 +144,13 @@ def git_source(meta, recipe_dir):
         stderr=STDOUT).decode()
     logger.debug(output)
     if checkout:
-        output = check_output([git, 'checkout', checkout], cwd=WORK_DIR,
-                              stderr=STDOUT).decode()
-        logger.debug(output)
+        try:
+            output = check_output([git, 'checkout', checkout], cwd=WORK_DIR,
+                                  stderr=STDOUT).decode()
+            logger.debug(output)
+        except CalledProcessError as cpe:
+            print(cpe.output.decode())
+            raise
 
 
     git_info()
