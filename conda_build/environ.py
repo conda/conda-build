@@ -36,14 +36,41 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
-def get_git_build_info(src_dir):
+def get_git_build_info(src_dir, git_url, expected_rev):
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
-    if os.path.exists(git_dir):
-        env['GIT_DIR'] = git_dir
-    else:
+    if not os.path.exists(git_dir):
         return d
+
+    env['GIT_DIR'] = git_dir
+    try:
+        # Verify current commit matches expected commit
+        current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"], env=env)
+        current_commit = current_commit.decode('utf-8')
+        expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H", expected_rev], env=env)
+        expected_tag_commit = expected_tag_commit.decode('utf-8')
+
+        # Verify correct remote url.
+        # (Need to find the git cache directory, and check the remote from there.)
+        cache_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        cache_details = cache_details.decode('utf-8')
+        cache_dir = cache_details.split('\n')[0].split()[1]
+        assert "conda-bld/git_cache" in cache_dir
+
+        env['GIT_DIR'] = cache_dir
+        remote_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        remote_details = remote_details.decode('utf-8')
+        remote_url = remote_details.split('\n')[0].split()[1]
+
+        # If the current source directory in conda-bld/work doesn't match the user's
+        # metadata git_url or git_rev, then we aren't looking at the right source.
+        if remote_url != git_url or current_commit != expected_tag_commit:
+            return d
+    except subprocess.CalledProcessError:
+        return d
+
+    env['GIT_DIR'] = git_dir
 
     # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
@@ -118,7 +145,9 @@ def get_dict(m=None, prefix=None):
             d['CPU_COUNT'] = "1"
 
     if m.get_value('source/git_url'):
-        d.update(**get_git_build_info(d['SRC_DIR']))
+        d.update(**get_git_build_info(d['SRC_DIR'],
+                                      m.get_value('source/git_url'),
+                                      m.get_value('source/git_rev', default='master')))
 
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
