@@ -135,7 +135,7 @@ def git_source(meta, recipe_dir):
     # assume the user wants the current HEAD
     if not checkout and git_url.startswith('.'):
         checkout = check_output(["git", "rev-parse", "HEAD"], cwd=git_url,
-                                stderr=STDOUT).decode()
+                                stderr=STDOUT).decode().strip()
     if checkout:
         logger.debug('checkout: %r' % checkout)
 
