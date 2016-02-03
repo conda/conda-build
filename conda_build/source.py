@@ -110,8 +110,15 @@ def git_source(meta, recipe_dir):
 
     # update (or create) the cache repo
     if isdir(cache_repo):
-        output = check_output([git, 'fetch'], cwd=cache_repo, stderr=STDOUT).decode()
-        logger.debug(output)
+        try:
+            output = check_output([git, 'fetch'], cwd=cache_repo,
+                                  stderr=STDOUT).decode()
+            logger.debug(output)
+        except CalledProcessError as cpe:
+            # output the actual git error message in case something goes wrong.
+            # then reraise the exception
+            print(cpe.output.decode())
+            raise
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
