@@ -5,7 +5,7 @@ import sys
 from os.path import join, isdir, isfile, abspath, expanduser
 from shutil import copytree, copy2
 from subprocess import (check_call, CalledProcessError, check_output, STDOUT)
-
+import pdb
 from conda.fetch import download
 from conda.utils import hashsum_file
 
@@ -110,15 +110,7 @@ def git_source(meta, recipe_dir):
 
     # update (or create) the cache repo
     if isdir(cache_repo):
-        try:
-            output = check_output([git, 'fetch'], cwd=cache_repo,
-                                  stderr=STDOUT).decode()
-            logger.debug(output)
-        except CalledProcessError as cpe:
-            # output the actual git error message in case something goes wrong.
-            # then reraise the exception
-            print(cpe.output.decode())
-            raise
+        _git_call([git, 'fetch'], cwd=cache_repo)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
@@ -134,28 +126,45 @@ def git_source(meta, recipe_dir):
     # if rev is not specified, and the git_url is local,
     # assume the user wants the current HEAD
     if not checkout and git_url.startswith('.'):
-        checkout = check_output(["git", "rev-parse", "HEAD"], cwd=git_url,
-                                stderr=STDOUT).decode().strip()
+        checkout = _git_call(["git", "rev-parse", "HEAD"], cwd=git_url).strip()
     if checkout:
         logger.debug('checkout: %r' % checkout)
 
-    output = check_output(
-        [git, 'clone', '--recursive', cache_repo_arg, WORK_DIR],
-        stderr=STDOUT).decode()
+    output = _git_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR])
     logger.debug(output)
     if checkout:
-        try:
-            output = check_output([git, 'checkout', checkout], cwd=WORK_DIR,
-                                  stderr=STDOUT).decode()
-            logger.debug(output)
-        except CalledProcessError as cpe:
-            print(cpe.output.decode())
-            raise
+        _git_call([git, 'checkout', checkout], cwd=WORK_DIR)
 
 
     git_info()
     return WORK_DIR
 
+def _git_call(cmd, cwd=None, env=None):
+    """Wrap git calls in a try/except block
+
+    Parameters
+    ----------
+    cmd : list
+        The first argument to `subprocess.check_output`
+    cwd : string
+        The `cwd` kwarg for `subprocess.check_output`
+    env
+        The `env` kwarg for `subprocess.check_output`
+
+    Returns
+    -------
+    str
+        The decoded output from the call to `subprocess.check_output()`
+    """
+    try:
+        output = check_output(cmd, cwd=cwd, env=env, stderr=STDOUT).decode()
+        logger.debug(output)
+    except CalledProcessError as cpe:
+        # output the actual git error message in case something goes wrong.
+        # then reraise the exception
+        print(cpe.output.decode())
+        raise
+    return output
 
 def git_info(fo=None):
     ''' logger.debug info about a Git repo. '''
@@ -170,8 +179,7 @@ def git_info(fo=None):
                 ('git log -n1', True),
                 ('git describe --tags --dirty', False),
                 ('git status', True)]:
-        stdout = check_output(cmd.split(), cwd=WORK_DIR, env=env,
-                              stderr=STDOUT).decode()
+        stdout = _git_call(cmd.split(), cwd=WORK_DIR, env=env)
         if fo:
             logger.debug(u'==> %s <==\n' % cmd)
             logger.debug(stdout + u'\n')
