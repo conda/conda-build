@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from os.path import join
+from os.path import join, normpath, isabs
 import subprocess
 import multiprocessing
 
@@ -37,6 +37,7 @@ def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
 def get_git_build_info(src_dir, git_url, expected_rev):
+    expected_rev = expected_rev or 'master'
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
@@ -62,6 +63,9 @@ def get_git_build_info(src_dir, git_url, expected_rev):
         remote_details = subprocess.check_output(["git", "remote", "-v"], env=env)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
+        if '://' not in remote_url:
+            # Local filepaths are allowed, but make sure we normalize them
+            remote_url = normpath(remote_url)
 
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
@@ -145,9 +149,15 @@ def get_dict(m=None, prefix=None):
             d['CPU_COUNT'] = "1"
 
     if m.get_value('source/git_url'):
+        git_url = m.get_value('source/git_url')
+        if '://' not in git_url:
+            # If git_url is a relative path instead of a url, convert it to an abspath
+            if not isabs(git_url):
+                git_url = join(m.path, git_url)
+            git_url = normpath(join(m.path, git_url))
         d.update(**get_git_build_info(d['SRC_DIR'],
-                                      m.get_value('source/git_url'),
-                                      m.get_value('source/git_rev', default='master')))
+                                      git_url,
+                                      m.get_value('source/git_rev')))
 
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
