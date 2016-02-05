@@ -1,3 +1,10 @@
+2016-01-29   1.19.1:
+--------------------
+  * Environment variables defined in the 'script_env' build section of
+    the meta.yaml file were previously assigned the value '<UNDEFINED>'
+    if not found in the environment. Now they are left unset and a
+    warning is raised instead, #763.
+
 2016-01-29   1.19.0:
 --------------------
   * normalize unicode in conda skeleton cran, #681

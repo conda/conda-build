@@ -5,6 +5,7 @@ import sys
 from os.path import join, normpath, isabs
 import subprocess
 import multiprocessing
+import warnings
 
 import conda.config as cc
 
@@ -134,8 +135,12 @@ def get_dict(m=None, prefix=None):
         for var_name in m.get_value('build/script_env', []):
             value = os.getenv(var_name)
             if value is None:
-                value = '<UNDEFINED>'
-            d[var_name] = value
+                warnings.warn(
+                    "The environment variable '%s' is undefined." % var_name,
+                    UserWarning
+                )
+            else:
+                d[var_name] = value
 
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
