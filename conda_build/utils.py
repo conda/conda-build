@@ -15,6 +15,8 @@ from conda.compat import PY3, iteritems
 
 from conda_build import external
 
+import logging
+logger = logging.getLogger('conda-build')
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 rm_rf

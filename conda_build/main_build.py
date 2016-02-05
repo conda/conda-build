@@ -185,10 +185,28 @@ different sets of packages."""
         metavar="R_VER",
         choices=RVersionsCompleter(),
     )
+    p.add_argument(
+        '-v',
+        '--verbose',
+        action='store_true',
+        help="Enable verbose mode. Turns on extra debug output"
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
     args = p.parse_args()
+    # enable logging. Default to warning
+    import logging
+    stream = logging.StreamHandler(sys.stdout)
+    from .utils import logger
+    if args.verbose:
+        loglevel = logging.DEBUG
+    else:
+        loglevel = logging.WARNING
+    stream.setLevel(loglevel)
+    logger.setLevel(loglevel)
+    logger.addHandler(stream)
+
     args_func(args, p)
 
 
@@ -391,7 +409,7 @@ def execute(args, parser):
                     # Something went wrong; possibly due to undefined GIT_ jinja variables.
                     # Maybe we need to actually download the source in order to resolve the build_id.
                     source.provide(m.path, m.get_section('source'))
-                    
+
                     # Parse our metadata again because we did not initialize the source
                     # information before.
                     m.parse_again(permit_undefined_jinja=False)
