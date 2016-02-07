@@ -571,7 +571,7 @@ def main(args, parser):
         name = d['packagename']
 
         #Normalize the metadata values
-        d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore') for k, v in d.items()}
+        d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore') for k, v in compat.iteritems(d)}
 
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
