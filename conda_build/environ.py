@@ -153,7 +153,7 @@ def get_dict(m=None, prefix=None):
         except NotImplementedError:
             d['CPU_COUNT'] = "1"
 
-    if m.get_value('source/git_url'):
+    if m and m.get_value('source/git_url'):
         git_url = m.get_value('source/git_url')
         if '://' not in git_url:
             # If git_url is a relative path instead of a url, convert it to an abspath
