@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import collections
 import os
 import sys
 from os.path import join, normpath, isabs
@@ -13,6 +14,12 @@ from conda_build.config import config
 
 from conda_build import source
 from conda_build.scripts import prepend_bin_path
+
+
+try:
+    basestring = basestring
+except NameError:
+    basestring = (str, bytes)
 
 
 def get_perl_ver():
@@ -133,13 +140,42 @@ def get_dict(m=None, prefix=None):
 
     if m:
         for var_name in m.get_value('build/script_env', []):
+            default_value = None
+            assert (
+                isinstance(var_name, basestring) or
+                isinstance(var_name, collections.Mapping)
+            ), (
+                "Environment variables may be a string or dictionary of one"
+                " element."
+            )
+            if isinstance(var_name, collections.Mapping):
+                assert (
+                    len(var_name) == 1,
+                    "Environment variables may be a string or dictionary of"
+                    " one element."
+                )
+                var_name, default_value = list(var_name.items())[0]
+                default_value = str(default_value)
+
             value = os.getenv(var_name)
             if value is None:
-                warnings.warn(
-                    "The environment variable '%s' is undefined." % var_name,
-                    UserWarning
-                )
-            else:
+                if default_value is not None:
+                    value = default_value
+                    warnings.warn(
+                        "The environment variable '%s' is undefined."
+                        " Will assign it the value '%s'." %
+                        (var_name, str(value)),
+                        UserWarning
+                    )
+                else:
+                    warnings.warn(
+                        "The environment variable '%s' is undefined."
+                        " It will remain undefined." %
+                        var_name,
+                        UserWarning
+                    )
+
+            if value is not None:
                 d[var_name] = value
 
     if sys.platform == "darwin":

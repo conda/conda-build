@@ -3,7 +3,8 @@
   * Environment variables defined in the 'script_env' build section of
     the meta.yaml file were previously assigned the value '<UNDEFINED>'
     if not found in the environment. Now they are left unset and a
-    warning is raised instead, #763.
+    warning is raised instead. However, it is possible to override
+    their default values by using a single element dictionary, #767.
 
 
 2016-01-29   1.19.0:
