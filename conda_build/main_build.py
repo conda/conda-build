@@ -51,7 +51,8 @@ class PythonVersionCompleter(Completer):
 
 class NumPyVersionCompleter(Completer):
     def _get_items(self):
-        return ['all'] + [str(i/10) for i in all_versions['numpy']]
+        versions = [str(i) for i in all_versions['numpy']]
+        return ['all'] + ['%s.%s' % (ver[0], ver[1:]) for ver in versions]
 
 class RVersionsCompleter(Completer):
     def _get_items(self):
