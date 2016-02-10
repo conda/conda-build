@@ -192,8 +192,8 @@ def get_dict(m=None, prefix=None):
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'
         if cc.bits == 32:
-            d['CFLAGS'] = '-m32'
-            d['CXXFLAGS'] = d['CFLAGS']
+            d['CFLAGS'] = ' '.join([os.getenv('CFLAGS', ''), d.get('CFLAGS', ''), '-m32'])
+            d['CXXFLAGS'] = ' '.join([os.getenv('CXXFLAGS', ''), d.get('CXXFLAGS', ''), '-m32'])
 
     if m:
         d['PKG_NAME'] = m.name()
