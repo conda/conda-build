@@ -182,18 +182,22 @@ def get_dict(m=None, prefix=None):
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
         d['R'] = join(prefix, 'bin', 'R')
 
+    cflags = d.get('CFLAGS', '') # in case CFLAGS was added in the `script_env` section above
+    cxxflags = d.get('CXXFLAGS', '')
+    ldflags = d.get('LDFLAGS', '')
+
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
-        d['CFLAGS'] = '-arch %(OSX_ARCH)s' % d
-        d['CXXFLAGS'] = d['CFLAGS']
-        d['LDFLAGS'] = d['CFLAGS']
+        d['CFLAGS'] = cflags + ' -arch %(OSX_ARCH)s' % d
+        d['CXXFLAGS'] = cxxflags + ' -arch %(OSX_ARCH)s' % d
+        d['LDFLAGS'] = ldflags + ' -arch %(OSX_ARCH)s' % d
         d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'
         if cc.bits == 32:
-            d['CFLAGS'] = ' '.join([os.getenv('CFLAGS', ''), d.get('CFLAGS', ''), '-m32'])
-            d['CXXFLAGS'] = ' '.join([os.getenv('CXXFLAGS', ''), d.get('CXXFLAGS', ''), '-m32'])
+            d['CFLAGS'] = cflags + ' -m32'
+            d['CXXFLAGS'] = cxxflags + ' -m32'
 
     if m:
         d['PKG_NAME'] = m.name()
