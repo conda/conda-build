@@ -595,7 +595,7 @@ class MetaData(object):
                 """
                 A class for Undefined jinja variables.
                 This is even less strict than the default jinja2.Undefined class,
-                because we permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ float(MY_UNDEFINED_VAR) }}.
+                because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ MY_UNDEFINED_VAR|int }}.
                 This can mask lots of errors in jinja templates, so it should only be used for a first-pass
                 parse, when you plan on running a 'strict' second pass later.
                 """
@@ -604,10 +604,22 @@ class MetaData(object):
                 __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
                 __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
                 __complex__ = __pow__ = __rpow__ = \
-                    lambda *args, **kwargs: ''
+                    lambda *args, **kwargs: UndefinedNeverFail()
+
+                __str__ = __repr__ = \
+                    lambda *args, **kwargs: u''
 
                 __int__ = lambda _: 0
                 __float__ = lambda _: 0.0
+
+                def __getattr__(self, k):
+                    try:
+                        return object.__getattr__(self, k)
+                    except AttributeError:
+                        return UndefinedNeverFail()
+
+                def __setattr__(self, k, v):
+                    pass
 
             undefined_type = UndefinedNeverFail
 
