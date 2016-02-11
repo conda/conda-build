@@ -1,8 +1,3 @@
-import sys
-import bokeh
+import foo
 
-if sys.platform != 'win32':
-    bokeh.test(verbosity=2, exit=False)
-
-print('bokeh.__version__: %s' % bokeh.__version__)
-#assert bokeh.__version__ == '0.7.1'
+assert foo.__version__ == '1.2.3'

@@ -1,46 +1,20 @@
 package:
-  name: bokeh
-  version: 0.7.1
-
-source:
-  fn: bokeh-0.7.1.tar.gz
-  url: https://pypi.python.org/packages/source/b/bokeh/bokeh-0.7.1.tar.gz
-  md5: 426f2b0850018fab1407f2e7ed129544
+  name: foo
+  version: 1.2.3
 
 build:
   noarch_python: True
-  number: 1
+  entry_points:
+    - foo = foo:main
 
 requirements:
   build:
     - python
   run:
     - python
-    - numpy
-    - pandas
-    - flask
-    - jinja2
-    - markupsafe
-    - werkzeug
-    - greenlet
-    - dateutil
-    - pytz
-    - requests
-    - six
-    - pygments
-    - pyyaml
-    - pyzmq
-    - tornado
 
 test:
-  requires:
-    - nose
-    - mock
   commands:
-    - bokeh-server -h
+    - foo
   imports:
-    - bokeh
-
-about:
-  home: https://github.com/ContinuumIO/Bokeh
-  license: New BSD
+    - foo

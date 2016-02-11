@@ -1,7 +1,6 @@
 #!/bin/bash
 
-$PYTHON setup.py install
+cp $RECIPE_DIR/foo.py $SRC_DIR
+cp $RECIPE_DIR/setup.py $SRC_DIR
 
-EXAMPLES=$PREFIX/Examples
-mkdir $EXAMPLES
-mv examples $EXAMPLES/bokeh
+$PYTHON setup.py install
