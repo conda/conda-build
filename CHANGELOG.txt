@@ -4,6 +4,7 @@
     the meta.yaml file were previously assigned the value '<UNDEFINED>'
     if not found in the environment. Now they are left unset and a
     warning is raised instead, #763.
+  * fix printing of NumPy 1.10 in help message, #776
 
 
 2016-01-29   1.19.0:
