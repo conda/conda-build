@@ -5,6 +5,7 @@
     if not found in the environment. Now they are left unset and a
     warning is raised instead, #763.
   * fix printing of NumPy 1.10 in help message, #776
+  * add -m32 to CFLAGS and CXXFLAGS for multilib gcc, #775
 
 
 2016-01-29   1.19.0:
