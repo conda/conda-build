@@ -122,6 +122,15 @@ def build(m):
 
     src_dir = source.get_dir()
     bld_bat = join(m.path, 'bld.bat')
+
+    if not exists(bld_bat):
+        script = m.get_value('build/script', None)
+        if script:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+            with open(bld_bat, 'w') as bf:
+                bf.write(script)
+
     if exists(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
