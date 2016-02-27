@@ -441,17 +441,25 @@ def build(m, get_src=True, post=None, include_recipe=True):
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
+        # Use script from recipe?
+        script = m.get_value('build/script', None)
+        if script:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+
         if sys.platform == 'win32':
+            build_file = join(m.path, 'bld.bat')
+            if script:
+                build_file = join(source.get_dir(), 'bld.bat')
+                with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
+                    bf.write(script)
             import conda_build.windows as windows
-            windows.build(m)
+            windows.build(m, build_file)
         else:
             env = environ.get_dict(m)
             build_file = join(m.path, 'build.sh')
 
-            script = m.get_value('build/script', None)
             if script:
-                if isinstance(script, list):
-                    script = '\n'.join(script)
                 build_file = join(source.get_dir(), 'conda_build.sh')
                 with open(build_file, 'w') as bf:
                     bf.write(script)
