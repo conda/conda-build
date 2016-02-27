@@ -114,10 +114,16 @@ class Config(object):
 
     @property
     def bldpkgs_dir(self):
+        """ Dir where the package is saved. """
         if self.noarch:
             return join(self.croot, "noarch")
         else:
             return join(self.croot, cc.subdir)
+
+    @property
+    def bldpkgs_dirs(self):
+        """ Dirs where previous build packages might be. """
+        return join(self.croot, cc.subdir), join(self.croot, "noarch")
 
 config = Config()
 

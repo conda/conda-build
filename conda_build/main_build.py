@@ -332,9 +332,10 @@ def execute(args, parser):
             os_environ[var] = str(getattr(config, var))
 
     if args.skip_existing:
-        if not isdir(config.bldpkgs_dir):
-            makedirs(config.bldpkgs_dir)
-        update_index(config.bldpkgs_dir)
+        for d in config.bldpkgs_dirs:
+            if not isdir(d):
+                makedirs(d)
+            update_index(d)
         index = build.get_build_index(clear_cache=True)
 
     already_built = []
