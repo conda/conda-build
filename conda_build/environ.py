@@ -2,9 +2,10 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from os.path import join
+from os.path import join, normpath, isabs
 import subprocess
 import multiprocessing
+import warnings
 
 import conda.config as cc
 
@@ -49,14 +50,45 @@ def get_lua_include_dir():
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
-def get_git_build_info(src_dir):
+def get_git_build_info(src_dir, git_url, expected_rev):
+    expected_rev = expected_rev or 'master'
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
-    if os.path.exists(git_dir):
-        env['GIT_DIR'] = git_dir
-    else:
+    if not os.path.exists(git_dir):
         return d
+
+    env['GIT_DIR'] = git_dir
+    try:
+        # Verify current commit matches expected commit
+        current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"], env=env)
+        current_commit = current_commit.decode('utf-8')
+        expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H", expected_rev], env=env)
+        expected_tag_commit = expected_tag_commit.decode('utf-8')
+
+        # Verify correct remote url.
+        # (Need to find the git cache directory, and check the remote from there.)
+        cache_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        cache_details = cache_details.decode('utf-8')
+        cache_dir = cache_details.split('\n')[0].split()[1]
+        assert "conda-bld/git_cache" in cache_dir
+
+        env['GIT_DIR'] = cache_dir
+        remote_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        remote_details = remote_details.decode('utf-8')
+        remote_url = remote_details.split('\n')[0].split()[1]
+        if '://' not in remote_url:
+            # Local filepaths are allowed, but make sure we normalize them
+            remote_url = normpath(remote_url)
+
+        # If the current source directory in conda-bld/work doesn't match the user's
+        # metadata git_url or git_rev, then we aren't looking at the right source.
+        if remote_url != git_url or current_commit != expected_tag_commit:
+            return d
+    except subprocess.CalledProcessError:
+        return d
+
+    env['GIT_DIR'] = git_dir
 
     # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
@@ -123,15 +155,35 @@ def get_dict(m=None, prefix=None):
         for var_name in m.get_value('build/script_env', []):
             value = os.getenv(var_name)
             if value is None:
-                value = '<UNDEFINED>'
-            d[var_name] = value
+                warnings.warn(
+                    "The environment variable '%s' is undefined." % var_name,
+                    UserWarning
+                )
+            else:
+                d[var_name] = value
 
-    try:
-        d['CPU_COUNT'] = str(multiprocessing.cpu_count())
-    except NotImplementedError:
-        d['CPU_COUNT'] = "1"
+    if sys.platform == "darwin":
+        # multiprocessing.cpu_count() is not reliable on OSX
+        # See issue #645 on github.com/conda/conda-build
+        out, err = subprocess.Popen('sysctl -n hw.logicalcpu', shell=True, stdout=subprocess.PIPE).communicate()
+        d['CPU_COUNT'] = out.decode('utf-8').strip()
+    else:
+        try:
+            d['CPU_COUNT'] = str(multiprocessing.cpu_count())
+        except NotImplementedError:
+            d['CPU_COUNT'] = "1"
 
-    d.update(**get_git_build_info(d['SRC_DIR']))
+    if m and m.get_value('source/git_url'):
+        git_url = m.get_value('source/git_url')
+        if '://' not in git_url:
+            # If git_url is a relative path instead of a url, convert it to an abspath
+            if not isabs(git_url):
+                git_url = join(m.path, git_url)
+            git_url = normpath(join(m.path, git_url))
+        d.update(**get_git_build_info(d['SRC_DIR'],
+                                      git_url,
+                                      m.get_value('source/git_rev')))
+
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
 
@@ -141,8 +193,9 @@ def get_dict(m=None, prefix=None):
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
         d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
-        # This probably should be done more generally
-        d['CYGWIN_PREFIX'] = prefix.replace('\\', '/').replace('C:', '/cygdrive/c')
+
+        drive, tail = prefix.split(':')
+        d['CYGWIN_PREFIX'] = ''.join(['/cygdrive/', drive.lower(), tail.replace('\\', '/')])
 
         d['R'] = join(prefix, 'Scripts', 'R.exe')
     else:                               # -------- Unix
@@ -150,15 +203,22 @@ def get_dict(m=None, prefix=None):
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
         d['R'] = join(prefix, 'bin', 'R')
 
+    cflags = d.get('CFLAGS', '') # in case CFLAGS was added in the `script_env` section above
+    cxxflags = d.get('CXXFLAGS', '')
+    ldflags = d.get('LDFLAGS', '')
+
     if sys.platform == 'darwin':         # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
-        d['CFLAGS'] = '-arch %(OSX_ARCH)s' % d
-        d['CXXFLAGS'] = d['CFLAGS']
-        d['LDFLAGS'] = d['CFLAGS']
+        d['CFLAGS'] = cflags + ' -arch %(OSX_ARCH)s' % d
+        d['CXXFLAGS'] = cxxflags + ' -arch %(OSX_ARCH)s' % d
+        d['LDFLAGS'] = ldflags + ' -arch %(OSX_ARCH)s' % d
         d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
     elif sys.platform.startswith('linux'):      # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'
+        if cc.bits == 32:
+            d['CFLAGS'] = cflags + ' -m32'
+            d['CXXFLAGS'] = cxxflags + ' -m32'
 
     if m:
         d['PKG_NAME'] = m.name()

@@ -12,7 +12,7 @@ from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip
+from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
 
 
 SRC_CACHE = join(config.croot, 'src_cache')
@@ -95,6 +95,7 @@ def git_source(meta, recipe_dir):
     if not git:
         sys.exit("Error: git is not installed")
     git_url = meta['git_url']
+    git_depth = int(meta.get('git_depth', -1))
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
         os.chdir(recipe_dir)
@@ -113,7 +114,11 @@ def git_source(meta, recipe_dir):
     if isdir(cache_repo):
         check_call([git, 'fetch'], cwd=cache_repo)
     else:
-        check_call([git, 'clone', '--mirror', git_url, cache_repo_arg], cwd=recipe_dir)
+        args = [git, 'clone', '--mirror']
+        if git_depth > 0:
+            args += ['--depth', git_depth]
+
+        check_call(args + [git_url, cache_repo_arg],  cwd=recipe_dir)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -165,7 +170,7 @@ def git_info(fo=None):
             fo.write(stdout + u'\n')
         else:
             print(u'==> %s <==\n' % cmd)
-            print(stdout + u'\n')
+            safe_print_unicode(stdout + u'\n')
 
 
 def hg_source(meta):

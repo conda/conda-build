@@ -62,8 +62,10 @@ def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.lower().endswith('.tar.z'):
         uncompress = external.find_executable('uncompress')
         if not uncompress:
+            uncompress = external.find_executable('gunzip')
+        if not uncompress:
             sys.exit("""\
-uncompress is required to unarchive .z source files.
+uncompress (or gunzip) is required to unarchive .z source files.
 """)
         subprocess.check_call([uncompress, '-f', tarball])
         tarball = tarball[:-2]
@@ -156,3 +158,25 @@ def comma_join(items):
     'a, b, and c'
     """
     return ' and '.join(items) if len(items) <= 2 else ', '.join(items[:-1]) + ', and ' + items[-1]
+
+
+def safe_print_unicode(*args, **kwargs):
+    """
+    prints unicode strings to stdout using configurable `errors` handler for
+    encoding errors
+
+    :param args: unicode strings to print to stdout
+    :param sep: separator (defaults to ' ')
+    :param end: ending character (defaults to '\n')
+    :param errors: error handler for encoding errors (defaults to 'replace')
+    """
+    sep = kwargs.pop('sep', u' ')
+    end = kwargs.pop('end', u'\n')
+    errors = kwargs.pop('errors', 'replace')
+    if PY3:
+        func = sys.stdout.buffer.write
+    else:
+        func = sys.stdout.write
+    line = sep.join(args) + end
+    encoding = sys.stdout.encoding or 'utf8'
+    func(line.encode(encoding, errors))

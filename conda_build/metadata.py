@@ -136,6 +136,14 @@ def ensure_valid_license_family(meta):
             "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
 
+def ensure_valid_fields(meta):
+    try:
+        pin_depends = meta['build']['pin_depends']
+    except KeyError:
+        pin_depends = ''
+    if pin_depends not in ('', 'record', 'strict'):
+        raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
+
 def parse(data):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
@@ -162,10 +170,11 @@ def parse(data):
             res[section] = {}
         if res[section].get(key, None) is None:
             res[section][key] = []
+
     # ensure those are strings
-    for field in ('package/version', 'build/string', 'source/svn_rev',
-                  'source/git_tag', 'source/git_branch', 'source/md5',
-                  'source/git_rev', 'source/path'):
+    for field in ('package/version', 'build/string', 'build/pin_depends',
+                  'source/svn_rev', 'source/git_tag', 'source/git_branch',
+                  'source/md5', 'source/git_rev', 'source/path'):
         section, key = field.split('/')
         if res.get(section) is None:
             res[section] = {}
@@ -196,6 +205,7 @@ def parse(data):
         elif val in falses:
             res[section][key] = False
 
+    ensure_valid_fields(res)
     ensure_valid_license_family(res)
     return sanitize(res)
 
@@ -255,7 +265,7 @@ def _git_clean(source_meta):
 FIELDS = {
     'package': ['name', 'version'],
     'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
-               'git_url', 'git_tag', 'git_branch', 'git_rev',
+               'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'],
@@ -264,7 +274,9 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
-              'always_include_files', 'skip', 'msvc_compiler'],
+              'always_include_files', 'skip', 'msvc_compiler',
+              'pin_depends' # pin_depends is experimental still
+             ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
@@ -335,7 +347,7 @@ class MetaData(object):
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(permit_undefined_jinja=True)
 
-    def parse_again(self, permit_undefined_jinja):
+    def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -592,7 +604,7 @@ class MetaData(object):
                 """
                 A class for Undefined jinja variables.
                 This is even less strict than the default jinja2.Undefined class,
-                because we permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ float(MY_UNDEFINED_VAR) }}.
+                because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ MY_UNDEFINED_VAR|int }}.
                 This can mask lots of errors in jinja templates, so it should only be used for a first-pass
                 parse, when you plan on running a 'strict' second pass later.
                 """
@@ -601,16 +613,28 @@ class MetaData(object):
                 __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
                 __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
                 __complex__ = __pow__ = __rpow__ = \
-                    lambda *args, **kwargs: ''
+                    lambda *args, **kwargs: UndefinedNeverFail()
+
+                __str__ = __repr__ = \
+                    lambda *args, **kwargs: u''
 
                 __int__ = lambda _: 0
                 __float__ = lambda _: 0.0
+
+                def __getattr__(self, k):
+                    try:
+                        return object.__getattr__(self, k)
+                    except AttributeError:
+                        return UndefinedNeverFail()
+
+                def __setattr__(self, k, v):
+                    pass
 
             undefined_type = UndefinedNeverFail
 
         env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
         env.globals.update(ns_cfg())
-        env.globals.update(context_processor(self))
+        env.globals.update(context_processor(self, path))
 
         try:
             template = env.get_or_select_template(filename)

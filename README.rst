@@ -2,6 +2,10 @@
 conda-build
 ===========
 
+.. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
+               :target: https://travis-ci.org/conda/conda-build
+
+
 Installation
 --------------
 .. code:: bash

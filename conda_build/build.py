@@ -41,6 +41,11 @@ if 'bsd' in sys.platform:
 else:
     shell_path = '/bin/bash'
 
+# these gloabls may be modified after importing this module
+channel_urls = ()
+override_channels = False
+verbose = True
+
 
 def prefix_files():
     '''
@@ -129,6 +134,14 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
     return data
 
+
+def get_run_dists(m):
+    prefix = join(cc.envs_dirs[0], '_run')
+    rm_rf(prefix)
+    create_env(prefix, [ms.spec for ms in m.ms_depends('run')])
+    return sorted(linked(prefix))
+
+
 def create_info_files(m, files, include_recipe=True):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -159,8 +172,8 @@ def create_info_files(m, files, include_recipe=True):
 
     license_file = m.get_value('about/license_file')
     if license_file:
-        shutil.copy(join(source.get_dir(), license_file),
-                    join(config.info_dir, 'LICENSE.txt'))
+        shutil.copyfile(join(source.get_dir(), license_file),
+                        join(config.info_dir, 'LICENSE.txt'))
 
     readme = m.get_value('about/readme')
     if readme:
@@ -168,15 +181,34 @@ def create_info_files(m, files, include_recipe=True):
         if not isfile(src):
             sys.exit("Error: no readme file: %s" % readme)
         dst = join(config.info_dir, readme)
-        shutil.copy(src, dst)
+        shutil.copyfile(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                   file=sys.stderr)
 
+    info_index = m.info_index()
+    pin_depends = m.get_value('build/pin_depends')
+    if pin_depends:
+        dists = get_run_dists(m)
+        with open(join(config.info_dir, 'requires'), 'w') as fo:
+            fo.write("""\
+# This file as created when building:
+#
+#     %s.tar.bz2  (on '%s')
+#
+# It can be used to create the runtime environment of this package using:
+# $ conda create --name <env> --file <this file>
+""" % (m.dist(), cc.subdir))
+            for dist in sorted(dists + [m.dist()]):
+                fo.write('%s\n' % '='.join(dist.rsplit('-', 2)))
+        if pin_depends == 'strict':
+            info_index['depends'] = [' '.join(dist.rsplit('-', 2))
+                                     for dist in dists]
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
-        json.dump(m.info_index(), fo, indent=2, sort_keys=True)
+        json.dump(info_index, fo, indent=2, sort_keys=True)
 
     if include_recipe:
         with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
@@ -250,16 +282,15 @@ def create_info_files(m, files, include_recipe=True):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'))
 
-def get_build_index(clear_cache=True, channel_urls=(), override_channels=False):
+def get_build_index(clear_cache=True):
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
     return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
-        prepend=not override_channels)
+                     prepend=not override_channels)
 
-def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
-    override_channels=False):
+def create_env(prefix, specs, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -267,8 +298,7 @@ def create_env(prefix, specs, clear_cache=True, verbose=True, channel_urls=(),
         os.makedirs(config.bldpkgs_dir)
     update_index(config.bldpkgs_dir)
     if specs: # Don't waste time if there is nothing to do
-        index = get_build_index(clear_cache=True, channel_urls=channel_urls,
-            override_channels=override_channels)
+        index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
 
@@ -304,7 +334,6 @@ to get the latest version.
 """ % (vers_inst[0], pkgs[-1].version), file=sys.stderr)
 
 
-
 def rm_pkgs_cache(dist):
     '''
     Removes dist from the package cache.
@@ -320,8 +349,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
-    override_channels=False, include_recipe=True):
+def build(m, get_src=True, post=None, include_recipe=True):
     '''
     Build the package with the specified metadata.
 
@@ -368,14 +396,12 @@ def build(m, get_src=True, verbose=True, post=None, channel_urls=(),
         # Version number could be missing due to dependency on source info.
         print("BUILD START:", m.dist())
         create_env(config.build_prefix,
-            [ms.spec for ms in m.ms_depends('build')],
-            verbose=verbose, channel_urls=channel_urls,
-            override_channels=override_channels)
+                   [ms.spec for ms in m.ms_depends('build')])
 
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
                 m.name())
-            index = get_build_index(clear_cache=False, channel_urls=channel_urls, override_channels=override_channels)
+            index = get_build_index(clear_cache=False)
             actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
             assert not plan.nothing_to_do(actions), actions
             plan.display_actions(actions, index)
@@ -483,7 +509,7 @@ can lead to packages that include their dependencies.""" %
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
 
-def test(m, verbose=True, channel_urls=(), override_channels=False):
+def test(m, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
@@ -520,6 +546,8 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
     else:
         rm_rf(config.build_prefix)
         rm_rf(config.test_prefix)
+
+    get_build_metadata(m)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
@@ -536,8 +564,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
         # not sure how this shakes out
         specs += ['lua %s*' % environ.get_lua_ver()]
 
-    create_env(config.test_prefix, specs, verbose=verbose,
-        channel_urls=channel_urls, override_channels=override_channels)
+    create_env(config.test_prefix, specs)
 
     env = dict(os.environ)
     env.update(environ.get_dict(m, prefix=config.test_prefix))
@@ -559,7 +586,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
                                    join(tmp_dir, 'run_test.py')],
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
-            tests_failed(m)
+            tests_failed(m, move_broken=move_broken)
 
     if pl_files:
         try:
@@ -567,7 +594,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
                                    join(tmp_dir, 'run_test.pl')],
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
-            tests_failed(m)
+            tests_failed(m, move_broken=move_broken)
 
     if lua_files:
         try:
@@ -585,7 +612,7 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
-                tests_failed(m)
+                tests_failed(m, move_broken=move_broken)
         else:
             test_file = join(tmp_dir, 'run_test.sh')
             # TODO: Run the test/commands here instead of in run_test.py
@@ -593,11 +620,11 @@ def test(m, verbose=True, channel_urls=(), override_channels=False):
             try:
                 subprocess.check_call(cmd, env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
-                tests_failed(m)
+                tests_failed(m, move_broken=move_broken)
 
     print("TEST END:", m.dist())
 
-def tests_failed(m):
+def tests_failed(m, move_broken):
     '''
     Causes conda to exit if any of the given package's tests failed.
 
@@ -607,5 +634,6 @@ def tests_failed(m):
     if not isdir(config.broken_dir):
         os.makedirs(config.broken_dir)
 
-    shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
+    if move_broken:
+        shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
