@@ -106,6 +106,7 @@ def transform(m, files):
     _force_dir(bin_dir)
 
     # Create *nix prelink script
+    # Note: it's important to set newline to LF or it wont work if we build on Win
     with open(join(bin_dir, '.%s-pre-link.sh' % name), 'w', newline='\n') as fo:
         fo.write('''\
 #!/bin/bash
