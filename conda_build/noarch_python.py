@@ -4,7 +4,7 @@ import sys
 import json
 import shutil
 import locale
-from os.path import basename, dirname, isdir, join
+from os.path import basename, dirname, isdir, join, isfile
 
 from conda_build.config import config
 from conda_build.post import SHEBANG_PAT
@@ -50,7 +50,7 @@ def rewrite_script(fn):
     # Rewrite the file to the python-scripts directory
     dst_dir = join(config.build_prefix, 'python-scripts')
     _force_dir(dst_dir)
-    with open(join(dst_dir, fn), 'w', newline='\n') as fo:
+    with open(join(dst_dir, fn), 'w') as fo:
         fo.write(new_data)
     return fn
 
@@ -65,8 +65,11 @@ def handle_file(f, d):
         os.unlink(path)
 
     # The presence of .so indicated this is not a noarch package
-    elif f.endswith(('.so', '.dll', '.pyd', '.dylib')):
-        _error_exit("Error: Shared object file found: %s" % f)
+    elif f.endswith(('.so', '.dll', '.pyd', '.exe', '.dylib')):
+        if f.endswith('.exe') and f.startswith('Scripts'):
+            os.unlink(path)  # we use the xx-script.py
+            return
+        _error_exit("Error: Binary library or executable found: %s" % f)
 
     elif 'site-packages' in f:
         nsp = join(config.build_prefix, 'site-packages')
@@ -81,9 +84,6 @@ def handle_file(f, d):
 
     # Treat scripts specially with the logic from above
     elif f.startswith(('bin/', 'Scripts')):
-        if f.endswith('.exe'):
-            os.unlink(path)  # we use the xx-script.py
-            return
         fn = basename(path)
         fn = rewrite_script(fn)
         d['python-scripts'].append(fn)
@@ -116,7 +116,7 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
     scripts_dir = join(prefix, 'Scripts')
     _force_dir(scripts_dir)
 
-    # Create windows prelink script
+    # Create windows prelink script (be nice and use Windows newlines)
     with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'w', newline='\r\n') as fo:
         fo.write('''\
 @echo off
@@ -151,7 +151,7 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
         link_code = fi.read()
 
     # Write the package metadata, and bumper with code for linking
-    with open(join(prefix, 'link.py'), 'w', newline='\n') as fo:
+    with open(join(prefix, 'link.py'), 'w') as fo:
         fo.write('DATA = ')
         json.dump(d, fo, indent=2, sort_keys=True)
         fo.write('\n## END DATA\n\n')
