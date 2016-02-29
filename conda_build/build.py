@@ -294,9 +294,10 @@ def create_env(prefix, specs, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
-    if not isdir(config.bldpkgs_dir):
-        os.makedirs(config.bldpkgs_dir)
-    update_index(config.bldpkgs_dir)
+    for d in config.bldpkgs_dirs:
+        if not isdir(d):
+            os.makedirs(d)
+        update_index(d)
     if specs: # Don't waste time if there is nothing to do
         index = get_build_index(clear_cache=True)
 
