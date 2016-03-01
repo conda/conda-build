@@ -118,7 +118,7 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
     _force_dir(scripts_dir)
 
     # Create windows prelink script (be nice and use Windows newlines)
-    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'w') as fo:
+    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:
         fo.write('''\
 @echo off
 "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
