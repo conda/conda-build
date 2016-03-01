@@ -107,22 +107,22 @@ def transform(m, files):
     _force_dir(bin_dir)
 
     # Create *nix prelink script
-    # Note: it's important to set newline to LF or it wont work if we build on Win
-    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'w', newline='\n') as fo:
+    # Note: it's important to use LF newlines or it wont work if we build on Win
+    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
         fo.write('''\
 #!/bin/bash
 $PREFIX/bin/python $SOURCE_DIR/link.py
-''')
+'''.encode('utf-8'))
 
     scripts_dir = join(prefix, 'Scripts')
     _force_dir(scripts_dir)
 
     # Create windows prelink script (be nice and use Windows newlines)
-    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'w', newline='\r\n') as fo:
+    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'w') as fo:
         fo.write('''\
 @echo off
 "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
-''')
+'''.replace('\n', '\r\n').encode('utf-8'))
 
     d = {'dist': m.dist(),
          'site-packages': [],
