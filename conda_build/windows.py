@@ -110,7 +110,7 @@ def kill_processes(process_names=["msbuild.exe"]):
             continue
 
 
-def build(m):
+def build(m, bld_bat):
     env = dict(os.environ)
     env.update(environ.get_dict(m))
     env = environ.prepend_bin_path(env, config.build_prefix, True)
@@ -121,7 +121,6 @@ def build(m):
             os.makedirs(path)
 
     src_dir = source.get_dir()
-    bld_bat = join(m.path, 'bld.bat')
     if exists(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
