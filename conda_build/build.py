@@ -81,7 +81,7 @@ def create_post_scripts(m):
         os.chmod(dst, int('755', 8))
 
 
-def have_prefix_files(files):
+def have_prefix_files(files, chunksize=2**15):
     '''
     Yields files that contain the current prefix in them, and modifies them
     to replace the prefix with a placeholder.
@@ -104,9 +104,17 @@ def have_prefix_files(files):
             # OSX does not allow hard-linking symbolic links, so we cannot
             # skip symbolic links (as we can on Linux)
             continue
+
+        mode = "text"
         with open(path, 'rb') as fi:
-            data = fi.read()
-        mode = 'binary' if b'\x00' in data else 'text'
+            while True:
+                data = fi.read(chunksize)
+                if not data:
+                    break
+                if b'\x00' in data:
+                    mode = 'binary'
+                    break
+
         if mode == 'text':
             if not (sys.platform == 'win32' and alt_prefix_bytes in data):
                 # Use the placeholder for maximal backwards compatibility, and
