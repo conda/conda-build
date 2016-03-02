@@ -12,6 +12,7 @@ import conda.config as cc
 from conda_build.config import config
 
 from conda_build import source
+from conda_build import external
 from conda_build.scripts import prepend_bin_path
 
 
@@ -42,7 +43,7 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
-    if not os.path.exists(git_dir):
+    if not (os.path.exists(git_dir) and external.find_executable('git')):
         return d
 
     env['GIT_DIR'] = git_dir
