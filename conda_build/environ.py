@@ -41,11 +41,10 @@ def get_sp_dir():
 def get_git_build_info(src_dir, git_url, expected_rev='master'):
     env = os.environ.copy()
     d = {}
-    git_dir = join(src_dir, '.git')
-    if not (os.path.exists(git_dir) and external.find_executable('git')):
+    env['GIT_DIR'] = join(src_dir, '.git')
+    if not (os.path.exists(env['GIT_DIR']) and external.find_executable('git')):
         return d
 
-    env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
         current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"], env=env)
@@ -60,8 +59,7 @@ def get_git_build_info(src_dir, git_url, expected_rev='master'):
         cache_dir = cache_details.split('\n')[0].split()[1]
         assert "conda-bld/git_cache" in cache_dir
 
-        env['GIT_DIR'] = cache_dir
-        remote_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        remote_details = subprocess.check_output(["git", "remote", "-v", "--git-dir", cache_dir], env=env)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
         if '://' not in remote_url:
@@ -74,8 +72,6 @@ def get_git_build_info(src_dir, git_url, expected_rev='master'):
             return d
     except subprocess.CalledProcessError:
         return d
-
-    env['GIT_DIR'] = git_dir
 
     # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
