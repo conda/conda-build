@@ -142,6 +142,24 @@ def get_dict(m=None, prefix=None):
             else:
                 d[var_name] = value
 
+        if m.get_value('source/git_url'):
+            git_url = m.get_value('source/git_url')
+            if '://' not in git_url:
+                # If git_url is a relative path instead of a url, convert it to an abspath
+                if not isabs(git_url):
+                    git_url = join(m.path, git_url)
+                git_url = normpath(join(m.path, git_url))
+            d.update(**get_git_build_info(d['SRC_DIR'],
+                                          git_url,
+                                          m.get_value('source/git_rev')))
+
+        d['PKG_NAME'] = m.name()
+        d['PKG_VERSION'] = m.version()
+        d['PKG_BUILDNUM'] = str(m.build_number())
+        d['PKG_BUILD_STRING'] = str(m.build_id())
+        d['RECIPE_DIR'] = m.path
+
+
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
@@ -152,17 +170,6 @@ def get_dict(m=None, prefix=None):
             d['CPU_COUNT'] = str(multiprocessing.cpu_count())
         except NotImplementedError:
             d['CPU_COUNT'] = "1"
-
-    if m and m.get_value('source/git_url'):
-        git_url = m.get_value('source/git_url')
-        if '://' not in git_url:
-            # If git_url is a relative path instead of a url, convert it to an abspath
-            if not isabs(git_url):
-                git_url = join(m.path, git_url)
-            git_url = normpath(join(m.path, git_url))
-        d.update(**get_git_build_info(d['SRC_DIR'],
-                                      git_url,
-                                      m.get_value('source/git_rev')))
 
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
@@ -199,13 +206,6 @@ def get_dict(m=None, prefix=None):
         if cc.bits == 32:
             d['CFLAGS'] = cflags + ' -m32'
             d['CXXFLAGS'] = cxxflags + ' -m32'
-
-    if m:
-        d['PKG_NAME'] = m.name()
-        d['PKG_VERSION'] = m.version()
-        d['PKG_BUILDNUM'] = str(m.build_number())
-        d['PKG_BUILD_STRING'] = str(m.build_id())
-        d['RECIPE_DIR'] = m.path
 
     return d
 
