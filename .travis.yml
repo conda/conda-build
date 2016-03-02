@@ -21,13 +21,14 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda install --force --no-deps conda requests
-  - conda install pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
+  - conda install pip pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
+  - pip install pytest-cov
   - python setup.py install
   - conda info -a
 
 script:
   - pyflakes conda_build tests bin/* bdist_conda.py setup.py example_packages
-  - py.test tests
+  - py.test --cov conda_build --cov-report xml tests
   - tests/test-recipes/build_recipes.sh
   - tests/test-skeleton/test-skeleton.sh
   - conda build --help
@@ -39,3 +40,7 @@ git:
   depth: 10000
 
 sudo: false
+
+after_success:
+  - pip install codecov
+  - codecov --env TRAVIS_PYTHON_VERSION
