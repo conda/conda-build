@@ -38,7 +38,7 @@ def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
 def get_git_build_info(src_dir, git_url, expected_rev):
-    expected_rev = expected_rev or 'master'
+    expected_rev = expected_rev or 'HEAD'
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
