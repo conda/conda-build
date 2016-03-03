@@ -116,7 +116,7 @@ def git_source(meta, recipe_dir):
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
-            args += ['--depth', git_depth]
+            args += ['--depth', str(git_depth)]
 
         check_call(args + [git_url, cache_repo_arg],  cwd=recipe_dir)
         assert isdir(cache_repo)
