@@ -7,6 +7,7 @@ import tarfile
 import zipfile
 import subprocess
 import operator
+import fnmatch
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
 
@@ -180,3 +181,14 @@ def safe_print_unicode(*args, **kwargs):
     line = sep.join(args) + end
     encoding = sys.stdout.encoding or 'utf8'
     func(line.encode(encoding, errors))
+
+
+def rec_glob(path, patterns):
+    result = []
+    for d_f in os.walk(path):
+        m = []
+        for pattern in patterns:
+            m.extend(fnmatch.filter(d_f[2], pattern))
+        if m:
+            result.extend([os.path.join(d_f[0], f) for f in m])
+    return result

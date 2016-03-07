@@ -63,6 +63,12 @@ def is_dylib_info(lines):
     return False
 
 
+def is_id_dylib(lines):
+    if len(lines) > 1 and lines[1].split()[1] == 'LC_ID_DYLIB':
+        return True
+    return False
+
+
 def is_load_dylib(lines):
     if len(lines) > 1 and lines[1].split()[1] == 'LC_LOAD_DYLIB':
         return True
@@ -153,6 +159,15 @@ def get_dylibs(path):
     """Return a list of the loaded dylib pathnames"""
     dylib_loads = otool(path, is_load_dylib)
     return [dylib_load['name'] for dylib_load in dylib_loads]
+
+
+def get_id(path):
+    """Returns the id name of the Mach-O file `path` or an empty string"""
+    dylib_loads = otool(path, is_id_dylib)
+    try:
+        return [dylib_load['name'] for dylib_load in dylib_loads][0]
+    except:
+        return ''
 
 
 def get_rpaths(path):
