@@ -182,6 +182,27 @@ def add_rpath(path, rpath, verbose = False):
         % p.returncode)
 
 
+def delete_rpath(path, rpath, verbose = False):
+    """Delete an `rpath` from the Mach-O file at `path`"""
+    args = ['install_name_tool', '-delete_rpath', rpath, path]
+    if verbose:
+        print(' '.join(args))
+    p = Popen(args, stderr=PIPE)
+    stdout, stderr = p.communicate()
+    stderr = stderr.decode('utf-8')
+    if "Mach-O dynamic shared library stub file" in stderr:
+        print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+        return
+    elif "no LC_RPATH load command with path:" in stderr:
+        print("Skipping -delete_rpath, file doesn't contain that LC_RPATH")
+        return
+    else:
+        print(stderr, file=sys.stderr)
+        if p.returncode:
+            raise RuntimeError("install_name_tool failed with exit status %d"
+        % p.returncode)
+
+
 def install_name_change(path, cb_func, verbose = False):
     """Change dynamic shared library load name or id name of Mach-O Binary `path`.
 
