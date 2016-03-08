@@ -20,6 +20,7 @@ import conda.config as config
 from conda.compat import PY3
 from conda.cli.common import add_parser_channels, Completer
 from conda.cli.conda_argparse import ArgumentParser
+from conda.resolve import NoPackagesFound, Unsatisfiable
 
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
@@ -420,64 +421,36 @@ def execute(args, parser):
                 try:
                     build.build(m, post=post,
                                 include_recipe=args.include_recipe)
-                except (RuntimeError, SystemExit) as e:
+                except (NoPackagesFound, Unsatisfiable) as e:
                     error_str = str(e)
-                    if error_str.startswith('No packages found') or error_str.startswith('Could not find some'):
-                        # Build dependency if recipe exists
-                        dep_pkg = error_str.split(': ')[1]
-                        # Handle package names that contain version deps.
-                        if ' ' in dep_pkg:
-                            dep_pkg = dep_pkg.split(' ')[0]
-                        recipe_glob = glob(dep_pkg + '-[v0-9][0-9.]*')
-                        if exists(dep_pkg):
-                            recipe_glob.append(dep_pkg)
+                    # Typically if a conflict is with one of these
+                    # packages, the other package needs to be rebuilt
+                    # (e.g., a conflict with 'python 3.5*' and 'x' means
+                    # 'x' isn't build for Python 3.5 and needs to be
+                    # rebuilt).
+                    skip_names = ['python', 'r']
+                    for line in error_str.splitlines():
+                        if not line.startswith('  - '):
+                            continue
+                        pkg = line.lstrip('  - ').split(' -> ')[-1]
+                        pkg = pkg.strip().split(' ')[0]
+                        recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                        if exists(pkg):
+                            recipe_glob.append(pkg)
                         if recipe_glob:
                             recipes.appendleft(arg)
                             try_again = True
                             for recipe_dir in recipe_glob:
-                                if dep_pkg in to_build_recursive:
+                                if pkg in to_build_recursive:
                                     sys.exit(str(e))
+                                print(error_str)
                                 print(("Missing dependency {0}, but found" +
                                        " recipe directory, so building " +
-                                       "{0} first").format(dep_pkg))
+                                       "{0} first").format(pkg))
                                 recipes.appendleft(recipe_dir)
-                                to_build_recursive.append(dep_pkg)
+                                to_build_recursive.append(pkg)
                         else:
                             raise
-                    elif error_str.strip().startswith("Hint:"):
-                        lines = [line for line in error_str.splitlines() if line.strip().startswith('- ')]
-                        pkgs = [line.lstrip('- ') for line in lines]
-                        # Typically if a conflict is with one of these
-                        # packages, the other package needs to be rebuilt
-                        # (e.g., a conflict with 'python 3.5*' and 'x' means
-                        # 'x' isn't build for Python 3.5 and needs to be
-                        # rebuilt).
-                        skip_names = ['python', 'r']
-                        pkgs = [pkg for pkg in pkgs if pkg.split(' ')[0] not
-                            in skip_names]
-                        for pkg in pkgs:
-                            # Handle package names that contain version deps.
-                            if ' ' in pkg:
-                                pkg = pkg.split(' ')[0]
-                            recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
-                            if exists(pkg):
-                                recipe_glob.append(pkg)
-                            if recipe_glob:
-                                recipes.appendleft(arg)
-                                try_again = True
-                                for recipe_dir in recipe_glob:
-                                    if pkg in to_build_recursive:
-                                        sys.exit(str(e))
-                                    print(error_str)
-                                    print(("Missing dependency {0}, but found" +
-                                           " recipe directory, so building " +
-                                           "{0} first").format(pkg))
-                                    recipes.appendleft(recipe_dir)
-                                    to_build_recursive.append(pkg)
-                            else:
-                                raise
-                    else:
-                        raise
                 if try_again:
                     continue
 
