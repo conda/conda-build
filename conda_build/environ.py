@@ -38,44 +38,46 @@ def get_stdlib_dir():
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
-def get_git_build_info(src_dir, git_url, expected_rev='master'):
+def get_git_build_info(src_dir, git_url, expected_rev='HEAD'):
     env = os.environ.copy()
     d = {}
     env['GIT_DIR'] = join(src_dir, '.git')
-    if not (os.path.exists(env['GIT_DIR']) and external.find_executable('git')):
+    if not (os.path.exists(env['GIT_DIR']) and external.find_executable('git')) or not expected_rev:
         return d
 
     try:
         # Verify current commit matches expected commit
         current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"], env=env)
         current_commit = current_commit.decode('utf-8')
+
         expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H", expected_rev], env=env)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
+
+        if current_commit != expected_tag_commit:
+            return d
 
         # Verify correct remote url.
         # (Need to find the git cache directory, and check the remote from there.)
         cache_details = subprocess.check_output(["git", "remote", "-v"], env=env)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
-        assert "conda-bld/git_cache" in cache_dir
 
-        remote_details = subprocess.check_output(["git", "remote", "-v", "--git-dir", cache_dir], env=env)
+        remote_details = subprocess.check_output(["git", "--git-dir", cache_dir, "remote", "-v"], env=env)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
-        if '://' not in remote_url:
+        if os.path.exists(remote_url):
             # Local filepaths are allowed, but make sure we normalize them
             remote_url = normpath(remote_url)
 
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
-        if remote_url != git_url or current_commit != expected_tag_commit:
+        if remote_url != git_url:
             return d
     except subprocess.CalledProcessError:
         return d
 
     # grab information from describe
-    key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
-    keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
+    keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
     env = {str(key): str(value) for key, value in env.items()}
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -83,8 +85,7 @@ def get_git_build_info(src_dir, git_url, expected_rev='master'):
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
     parts = output.rsplit('-', 2)
-    parts_length = len(parts)
-    if parts_length == 3:
+    if len(parts) == 3:
         d.update(dict(zip(keys, parts)))
     # get the _full_ hash of the current HEAD
     process = subprocess.Popen(["git", "rev-parse", "HEAD"],
@@ -94,9 +95,9 @@ def get_git_build_info(src_dir, git_url, expected_rev='master'):
     output = output.decode('utf-8')
     d['GIT_FULL_HASH'] = output
     # set up the build string
-    if key_name('NUMBER') in d and key_name('HASH') in d:
-        d['GIT_BUILD_STR'] = '{}_{}'.format(d[key_name('NUMBER')],
-                                            d[key_name('HASH')])
+    if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
+                                            d["GIT_DESCRIBE_HASH"])
 
     return d
 
@@ -138,16 +139,13 @@ def get_dict(m=None, prefix=None):
             else:
                 d[var_name] = value
 
-        if m.get_value('source/git_url'):
-            git_url = m.get_value('source/git_url')
-            if '://' not in git_url:
-                # If git_url is a relative path instead of a url, convert it to an abspath
-                if not isabs(git_url):
-                    git_url = join(m.path, git_url)
-                git_url = normpath(join(m.path, git_url))
-            d.update(**get_git_build_info(d['SRC_DIR'],
-                                          git_url,
-                                          m.get_value('source/git_rev')))
+        git_url = m.get_value('source/git_url', '') or m.get_value('source/path', '')
+        if os.path.exists(git_url):
+            # If git_url is a relative path instead of a url, convert it to an abspath
+            git_url = normpath(join(m.path, git_url))
+        d.update(**get_git_build_info(d['SRC_DIR'],
+                                      git_url,
+                                      m.get_value('source/git_rev', 'HEAD')))
 
         d['PKG_NAME'] = m.name()
         d['PKG_VERSION'] = m.version()
@@ -155,7 +153,7 @@ def get_dict(m=None, prefix=None):
         d['PKG_BUILD_STRING'] = str(m.build_id())
         d['RECIPE_DIR'] = m.path
 
-
+        #print("D==", '\n'.join("{}: {}".format(k,v) for k, v in d.items()))
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
