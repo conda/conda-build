@@ -434,6 +434,8 @@ def execute(args, parser):
                             continue
                         pkg = line.lstrip('  - ').split(' -> ')[-1]
                         pkg = pkg.strip().split(' ')[0]
+                        if pkg in skip_names:
+                            continue
                         recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
                         if exists(pkg):
                             recipe_glob.append(pkg)
