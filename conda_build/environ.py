@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 from os.path import join, normpath, isabs
-import subprocess
+from subprocess import STDOUT, check_output, CalledProcessError, Popen, PIPE
 import multiprocessing
 import warnings
 
@@ -18,8 +18,10 @@ from conda_build.scripts import prepend_bin_path
 def get_perl_ver():
     return str(config.CONDA_PERL)
 
+
 def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
+
 
 def get_npy_ver():
     if config.CONDA_NPY:
@@ -30,12 +32,15 @@ def get_npy_ver():
         return conda_npy[0] + '.' + conda_npy[1:]
     return ''
 
+
 def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
-                                'lib/python%s' % get_py_ver())
+                'lib/python%s' % get_py_ver())
+
 
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
+
 
 def get_git_build_info(src_dir, git_url, expected_rev):
     expected_rev = expected_rev or 'HEAD'
@@ -48,31 +53,37 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
-        current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"], env=env)
+        current_commit = check_output(["git", "log", "-n1", "--format=%H"],
+                                      env=env, stderr=STDOUT)
         current_commit = current_commit.decode('utf-8')
-        expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H", expected_rev], env=env)
+        expected_tag_commit = check_output(["git", "log", "-n1", "--format=%H",
+                                            expected_rev],
+                                           env=env, stderr=STDOUT)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
-        # Verify correct remote url.
-        # (Need to find the git cache directory, and check the remote from there.)
-        cache_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        # Verify correct remote url. Need to find the git cache directory,
+        # and check the remote from there.
+        cache_details = check_output(["git", "remote", "-v"], env=env,
+                                     stderr=STDOUT)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
         assert "conda-bld/git_cache" in cache_dir
 
         env['GIT_DIR'] = cache_dir
-        remote_details = subprocess.check_output(["git", "remote", "-v"], env=env)
+        remote_details = check_output(["git", "remote", "-v"], env=env,
+                                      stderr=STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
         if '://' not in remote_url:
             # Local filepaths are allowed, but make sure we normalize them
             remote_url = normpath(remote_url)
 
-        # If the current source directory in conda-bld/work doesn't match the user's
-        # metadata git_url or git_rev, then we aren't looking at the right source.
+        # If the current source directory in conda-bld/work doesn't match the
+        # user's metadata git_url or git_rev, then we aren't looking at the
+        # right source.
         if remote_url != git_url or current_commit != expected_tag_commit:
             return d
-    except subprocess.CalledProcessError:
+    except CalledProcessError:
         return d
 
     env['GIT_DIR'] = git_dir
@@ -81,9 +92,9 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
     env = {str(key): str(value) for key, value in env.items()}
-    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=env)
+    process = Popen(["git", "describe", "--tags", "--long", "HEAD"],
+                    stdout=PIPE, stderr=PIPE,
+                    env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
     parts = output.rsplit('-', 2)
@@ -91,9 +102,8 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     if parts_length == 3:
         d.update(dict(zip(keys, parts)))
     # get the _full_ hash of the current HEAD
-    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=env)
+    process = Popen(["git", "rev-parse", "HEAD"],
+                    stdout=PIPE, stderr=PIPE, env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
     d['GIT_FULL_HASH'] = output
@@ -103,6 +113,7 @@ def get_git_build_info(src_dir, git_url, expected_rev):
                                             d[key_name('HASH')])
 
     return d
+
 
 def get_dict(m=None, prefix=None):
     if not prefix:
@@ -145,7 +156,8 @@ def get_dict(m=None, prefix=None):
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
-        out, err = subprocess.Popen('sysctl -n hw.logicalcpu', shell=True, stdout=subprocess.PIPE).communicate()
+        out, err = Popen('sysctl -n hw.logicalcpu', shell=True,
+                         stdout=PIPE).communicate()
         d['CPU_COUNT'] = out.decode('utf-8').strip()
     else:
         try:
@@ -156,7 +168,8 @@ def get_dict(m=None, prefix=None):
     if m and m.get_value('source/git_url'):
         git_url = m.get_value('source/git_url')
         if '://' not in git_url:
-            # If git_url is a relative path instead of a url, convert it to an abspath
+            # If git_url is a relative path instead of a url, convert it to an
+            # abspath
             if not isabs(git_url):
                 git_url = join(m.path, git_url)
             git_url = normpath(join(m.path, git_url))
@@ -167,7 +180,8 @@ def get_dict(m=None, prefix=None):
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
 
-    if sys.platform == 'win32':         # -------- Windows
+    if sys.platform == 'win32':
+        # -------- Windows
         d['SCRIPTS'] = join(prefix, 'Scripts')
         d['LIBRARY_PREFIX'] = join(prefix, 'Library')
         d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
@@ -175,19 +189,23 @@ def get_dict(m=None, prefix=None):
         d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
 
         drive, tail = prefix.split(':')
-        d['CYGWIN_PREFIX'] = ''.join(['/cygdrive/', drive.lower(), tail.replace('\\', '/')])
+        d['CYGWIN_PREFIX'] = ''.join(['/cygdrive/', drive.lower(),
+                                     tail.replace('\\', '/')])
 
         d['R'] = join(prefix, 'Scripts', 'R.exe')
-    else:                               # -------- Unix
+    else:
+        # -------- Unix
         d['HOME'] = os.getenv('HOME', 'UNKNOWN')
         d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
         d['R'] = join(prefix, 'bin', 'R')
 
-    cflags = d.get('CFLAGS', '') # in case CFLAGS was added in the `script_env` section above
+    # in case CFLAGS was added in the `script_env` section above
+    cflags = d.get('CFLAGS', '')
     cxxflags = d.get('CXXFLAGS', '')
     ldflags = d.get('LDFLAGS', '')
 
-    if sys.platform == 'darwin':         # -------- OSX
+    if sys.platform == 'darwin':
+        # -------- OSX
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
         d['CFLAGS'] = cflags + ' -arch %(OSX_ARCH)s' % d
         d['CXXFLAGS'] = cxxflags + ' -arch %(OSX_ARCH)s' % d
@@ -195,7 +213,8 @@ def get_dict(m=None, prefix=None):
         d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
         d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
-    elif sys.platform.startswith('linux'):      # -------- Linux
+    elif sys.platform.startswith('linux'):
+        # -------- Linux
         d['LD_RUN_PATH'] = prefix + '/lib'
         if cc.bits == 32:
             d['CFLAGS'] = cflags + ' -m32'
