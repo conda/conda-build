@@ -104,6 +104,33 @@ def get_git_build_info(src_dir, git_url, expected_rev):
 
     return d
 
+def get_hg_build_info(src_dir):
+    env = os.environ.copy()
+    env['HG_DIR'] = join(src_dir, '.hg')
+    env = {str(key): str(value) for key, value in env.items()}
+    
+    d = {}
+    cmd = ["hg", "log", "--template",
+           "{rev}|{node|short}|{latesttag}|{latesttagdistance}|{branch}",
+           "--rev", "."]
+    process = subprocess.Popen(cmd,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env,
+                               cwd=src_dir)
+    output = process.communicate()[0].strip()
+    output = output.decode('utf-8')
+    rev, short_id, tag, distance, branch = output.split('|')
+    if tag != 'null':
+        d['HG_LATEST_TAG'] = tag
+    if branch == "":
+        branch = 'default'
+    d['HG_BRANCH'] = branch
+    d['HG_NUM_ID'] = rev
+    d['HG_LATEST_TAG_DISTANCE'] = distance
+    d['HG_SHORT_ID'] = short_id
+    d['HG_BUILD_STR'] = '{}_{}'.format(d['HG_NUM_ID'], d['HG_SHORT_ID'])
+    return d
+
 def get_dict(m=None, prefix=None):
     if not prefix:
         prefix = config.build_prefix
@@ -166,6 +193,10 @@ def get_dict(m=None, prefix=None):
 
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
+
+    if os.path.isdir(os.path.join(d['SRC_DIR'], '.hg')):
+        d.update(**get_hg_build_info(d['SRC_DIR']))
+
 
     if sys.platform == 'win32':         # -------- Windows
         d['SCRIPTS'] = join(prefix, 'Scripts')
