@@ -41,7 +41,7 @@ set -e
 if [[ $IS_CONDA_3 -eq 0 ]]; then
     echo "$OUTPUT" | grep 'No packages found in current .* channels matching: recursive-build2 2\.0'
 else
-    echo "$OUTPUT" |  tail -n2 | head -n1 | grep 'Error:  Package missing in current .* channels: '
+    echo "$OUTPUT" |  tail -n2 | head -n1 | grep 'Package missing in current .* channels: '
     echo "$OUTPUT" |  tail -n1 | grep '  - recursive-build2 2.0'
 fi
 
