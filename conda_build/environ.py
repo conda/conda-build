@@ -209,7 +209,7 @@ def get_dict(m=None, prefix=None):
         d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
         d['CFLAGS'] = cflags + ' -arch %(OSX_ARCH)s' % d
         d['CXXFLAGS'] = cxxflags + ' -arch %(OSX_ARCH)s' % d
-        rpath = ' -rpath %(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
+        rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
         d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
         d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
 
