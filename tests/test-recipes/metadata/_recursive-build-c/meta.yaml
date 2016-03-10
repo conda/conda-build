@@ -1,0 +1,5 @@
+# this is a utility package for recursive-build-two-packages
+
+package:
+  name: _recursive-build-c
+  version: 1.0

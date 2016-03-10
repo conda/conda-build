@@ -1,0 +1,10 @@
+package:
+  name: conda-build-test-recursive-build-two-layers
+  version: 1.0
+
+  # This test should build both _recursive-build-c and _recursive-build-d
+  #    so that it can then build the current package
+requirements:
+  build:
+    - _recursive-build-c
+    - _recursive-build-d

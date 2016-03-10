@@ -12,7 +12,9 @@ export CONDA_TEST_VAR_2="conda_test_2"
 
 for recipe in metadata/*/; do
     if [[ $(ls -A "$recipe") ]]; then
-        if [[ $recipe =~ .*osx_is_app.* && $(uname) != "Darwin" ]]; then
+        if [[ $recipe == _* ]]; then
+            continue
+        elif [[ $recipe =~ .*osx_is_app.* && $(uname) != "Darwin" ]]; then
             continue
         fi
         conda build --no-anaconda-upload $recipe
