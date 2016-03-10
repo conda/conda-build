@@ -19,11 +19,7 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
-      conda install --force --no-deps 'conda=3.*' requests;
-    else
-      conda install --force --no-deps conda requests;
-    fi
+  - conda install --force --no-deps conda requests
   - conda install pip pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
   - pip install pytest-cov
   - python setup.py install
