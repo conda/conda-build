@@ -241,7 +241,7 @@ def install_name_change(path, cb_func, verbose = False):
         if dylibs[index]['cmd'] == 'LC_ID_DYLIB':
             args.extend(('-id', new_name, path))
         else:
-            args.extend(('-change', dylib['name'], new_name, path))
+            args.extend(('-change', dylibs[index]['name'], new_name, path))
         if verbose:
             print(' '.join(args))
         p = Popen(args, stderr=PIPE)
