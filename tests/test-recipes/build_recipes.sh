@@ -10,7 +10,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 export CONDA_TEST_VAR="conda_test"
 export CONDA_TEST_VAR_2="conda_test_2"
 
-for recipe in metadata/*/; do
+pushd metadata
+for recipe in */; do
     if [[ $(ls -A "$recipe") ]]; then
         if [[ $recipe == _* ]]; then
             continue
@@ -20,6 +21,7 @@ for recipe in metadata/*/; do
         conda build --no-anaconda-upload $recipe
     fi
 done
+popd
 
 # Recipes that should fail and give some error
 cd fail
