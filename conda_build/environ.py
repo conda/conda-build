@@ -180,9 +180,9 @@ def get_dict(m=None, prefix=None):
             if not isabs(git_url):
                 git_url = join(m.path, git_url)
             git_url = normpath(join(m.path, git_url))
-        d.update(**get_git_build_info(d['SRC_DIR'],
-                                      git_url,
-                                      m.get_value('source/git_rev')))
+        d.update(get_git_build_info(d['SRC_DIR'],
+                                    git_url,
+                                    m.get_value('source/git_rev')))
 
     d['PATH'] = dict(os.environ)['PATH']
     d = prepend_bin_path(d, prefix)
