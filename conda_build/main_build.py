@@ -429,6 +429,7 @@ def execute(args, parser):
                     # 'x' isn't build for Python 3.5 and needs to be
                     # rebuilt).
                     skip_names = ['python', 'r']
+                    add_recipes = []
                     for line in error_str.splitlines():
                         if not line.startswith('  - '):
                             continue
@@ -440,7 +441,6 @@ def execute(args, parser):
                         if exists(pkg):
                             recipe_glob.append(pkg)
                         if recipe_glob:
-                            recipes.appendleft(arg)
                             try_again = True
                             for recipe_dir in recipe_glob:
                                 if pkg in to_build_recursive:
@@ -449,10 +449,13 @@ def execute(args, parser):
                                 print(("Missing dependency {0}, but found" +
                                        " recipe directory, so building " +
                                        "{0} first").format(pkg))
-                                recipes.appendleft(recipe_dir)
+                                add_recipes.append(recipe_dir)
                                 to_build_recursive.append(pkg)
                         else:
                             raise
+                    recipes.appendleft(arg)
+                    recipes.extendleft(reversed(add_recipes))
+
                 if try_again:
                     continue
 
@@ -468,6 +471,7 @@ def execute(args, parser):
                 handle_binstar_upload(build.bldpkg_path(m), args)
 
             already_built.append(m.pkg_fn())
+
 
 def args_func(args, p):
     try:
