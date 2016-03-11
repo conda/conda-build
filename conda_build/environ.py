@@ -47,6 +47,10 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     env = os.environ.copy()
     d = {}
     git_dir = join(src_dir, '.git')
+    if not isinstance(git_dir, str):
+        # On Windows, subprocess env can't handle unicode.
+        git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
+
     if not os.path.exists(git_dir):
         return d
 
@@ -68,6 +72,9 @@ def get_git_build_info(src_dir, git_url, expected_rev):
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
         assert "conda-bld/git_cache" in cache_dir
+        if not isinstance(cache_dir, str):
+            # On Windows, subprocess env can't handle unicode.
+            cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
         env['GIT_DIR'] = cache_dir
         remote_details = check_output(["git", "remote", "-v"], env=env,
