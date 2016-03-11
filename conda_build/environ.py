@@ -54,6 +54,7 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     if not os.path.exists(git_dir):
         return d
 
+    env = {str(k): str(v) for k, v in env.items()}
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
@@ -98,7 +99,6 @@ def get_git_build_info(src_dir, git_url, expected_rev):
     # grab information from describe
     key_name = lambda a: "GIT_DESCRIBE_{}".format(a)
     keys = [key_name("TAG"), key_name("NUMBER"), key_name("HASH")]
-    env = {str(key): str(value) for key, value in env.items()}
     process = Popen(["git", "describe", "--tags", "--long", "HEAD"],
                     stdout=PIPE, stderr=PIPE,
                     env=env)
