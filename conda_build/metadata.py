@@ -273,8 +273,10 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'license_family', 'summary', 'description',
-              'readme', 'license_file', 'dev_url', 'doc_url'],
+    'about': ['home', 'dev_url', 'doc_url', 'license_url', # these are URLs
+              'license', 'summary', 'description', 'license_family', # text
+              'license_file', 'readme', # paths in source tree
+             ],
 }
 
 
