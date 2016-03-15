@@ -1,3 +1,8 @@
+2016-XX-XX   1.20.0:
+--------------------
+  * allow additional keys in "about" section, #831
+
+
 2016-03-10   1.19.2:
 --------------------
   * silence some errors when subprocessing git #790
