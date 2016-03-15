@@ -13,6 +13,7 @@ import sys
 import time
 import tarfile
 import fnmatch
+import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
@@ -361,7 +362,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, post=None, include_recipe=True):
+def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
     '''
     Build the package with the specified metadata.
 
@@ -371,6 +372,7 @@ def build(m, get_src=True, post=None, include_recipe=True):
     :type get_src: bool
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
+    :type keep_old_work: bool: Keep any previous work directory.
     '''
 
     if (m.get_value('build/detect_binary_files_with_prefix')
@@ -386,6 +388,20 @@ def build(m, get_src=True, post=None, include_recipe=True):
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
         return
+
+    # If --keep-old-work, then move the contents of source.WORK_DIR to a
+    # temporary directory for the duration of the build.
+    # The source unpacking procedure is too varied and complex
+    # to allow this to be written cleanly (see source.get_dir() for example)
+    if keep_old_work:
+        old_WORK_DIR = tempfile.mkdtemp()
+        old_sub_dirs = [name for name in os.listdir(source.WORK_DIR)
+                        if os.path.isdir(os.path.join(source.WORK_DIR, name))]
+        if len(old_sub_dirs):
+            print("Keeping old work directory backup: %s => %s"
+                  % (old_sub_dirs, old_WORK_DIR))
+            for old_sub in old_sub_dirs:
+                shutil.move(os.path.join(source.WORK_DIR, old_sub), old_WORK_DIR)
 
     if post in [False, None]:
         print("Removing old build environment")
@@ -547,6 +563,15 @@ can lead to packages that include their dependencies.""" %
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
+    if keep_old_work and len(old_sub_dirs):
+        print("Restoring old work directory backup: %s :: %s => %s"
+              % (old_WORK_DIR, old_sub_dirs, source.WORK_DIR))
+        for old_sub in old_sub_dirs:
+            if os.path.exists(os.path.join(source.WORK_DIR, old_sub)):
+                print("Not restoring old source directory %s over new build's version" % (old_sub))
+            else:
+                shutil.move(os.path.join(old_WORK_DIR, old_sub), source.WORK_DIR)
+        shutil.rmtree(old_WORK_DIR, ignore_errors=True)
 
 def test(m, move_broken=True):
     '''
