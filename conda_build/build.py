@@ -529,7 +529,11 @@ def test(m, move_broken=True):
     rm_pkgs_cache(m.dist())
 
     tmp_dir = join(config.croot, 'test-tmp_dir')
-    rm_rf(tmp_dir)
+    if os.path.exists(tmp_dir):
+        # rename it and then delete
+        tmp_dir_ = '{}_'.format(tmp_dir)
+        os.rename(tmp_dir, tmp_dir_)
+        rm_rf(tmp_dir_)
     os.makedirs(tmp_dir)
     create_files(tmp_dir, m)
     # Make Perl or Python-specific test files
