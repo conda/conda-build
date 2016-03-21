@@ -90,9 +90,8 @@ def handle_file(f, d):
         d['python-scripts'].append(fn)
 
     # Include examples in the metadata doc
-    elif os.path.split(f)[0] == 'Examples':
+    elif f.startswith(('Examples/', 'Examples\\')):
         d['Examples'].append(f[9:])
-
     else:
         _error_exit("Error: Don't know how to handle file: %s" % f)
 
