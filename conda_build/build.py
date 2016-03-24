@@ -350,6 +350,19 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
+def scan_metadata(path):
+    '''
+    Scan all json files in 'path' and return a dictionary with their contents.
+    Files are assumed to be in 'index.json' format.
+    '''
+    import glob, json, os
+    installed = dict()
+    for filename in glob.glob(os.path.join(path, '*.json')):
+        with open(filename) as file:
+            data = json.load(file)
+            installed[data['name']] = data
+    return installed
+
 def build(m, get_src=True, post=None, include_recipe=True):
     '''
     Build the package with the specified metadata.
@@ -414,10 +427,15 @@ def build(m, get_src=True, post=None, include_recipe=True):
         # set CONDA_DEFAULT_ENV to the build dir, so that jinja2 see the right path
         os.environ['CONDA_DEFAULT_ENV'] = config.build_prefix
 
+        def jinja_config(jinja_env):
+            # make all metadata from build_prefix/conda-meta/*.json available to
+            # jinja in a dictionary 'installed'
+            jinja_env.globals['installed'] = scan_metadata(os.path.join(config.build_prefix, 'conda-meta'))
+
         # Parse our metadata again because we did not initialize the source
         # information before.
         # By now, all jinja variables should be defined, so don't permit undefined vars.
-        m.parse_again(permit_undefined_jinja=False)
+        m.parse_again(permit_undefined_jinja=False, jinja_config=jinja_config)
 
         print("Package:", m.dist())
 

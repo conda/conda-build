@@ -341,16 +341,19 @@ class MetaData(object):
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(permit_undefined_jinja=True)
 
-    def parse_again(self, permit_undefined_jinja=False):
+    def parse_again(self, permit_undefined_jinja=False, jinja_config=lambda *x: None):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
+
+        jinja_config: A function to customize jinja's global namespace. It is called as
+                      `jinja_config(jinja_env)` just before parsing starts.
         """
         if not self.meta_path:
             return
-        self.meta = parse(self._get_contents(permit_undefined_jinja))
+        self.meta = parse(self._get_contents(permit_undefined_jinja, jinja_config))
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
@@ -557,7 +560,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja):
+    def _get_contents(self, permit_undefined_jinja, jinja_config):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -628,6 +631,7 @@ class MetaData(object):
         env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
+        jinja_config(env)
 
         try:
             template = env.get_or_select_template(filename)
