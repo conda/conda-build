@@ -411,6 +411,9 @@ def build(m, get_src=True, post=None, include_recipe=True):
         if get_src:
             source.provide(m.path, m.get_section('source'))
 
+        # set CONDA_DEFAULT_ENV to the build dir, so that jinja2 see the right path
+        os.environ['CONDA_DEFAULT_ENV'] = config.build_prefix
+
         # Parse our metadata again because we did not initialize the source
         # information before.
         # By now, all jinja variables should be defined, so don't permit undefined vars.
