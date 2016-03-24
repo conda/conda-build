@@ -330,6 +330,21 @@ class MetaData(object):
             if not isfile(self.meta_path):
                 sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
 
+        # Check if the file $RECIPE_DIR/jinja_config.py exists and import the
+        # callback function jinja_config(jinja_env) if so.
+        try:
+            callback_filename = os.path.join(path, 'jinja_config.py')
+            if PY3:
+                from importlib.machinery import SourceFileLoader
+                jinja_plugin = SourceFileLoader("jinja_plugin", callback_filename).load_module()
+            else:
+                import imp
+                jinja_plugin = imp.load_source('jinja_plugin', callback_filename)
+        except:
+            self.jinja_config_callback = lambda *x: None
+        else:
+            self.jinja_config_callback = jinja_plugin.jinja_config
+
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
         self.meta = parse("package:\n"
@@ -632,6 +647,7 @@ class MetaData(object):
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
         jinja_config(env)
+        self.jinja_config_callback(env)
 
         try:
             template = env.get_or_select_template(filename)
