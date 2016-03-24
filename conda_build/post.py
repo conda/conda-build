@@ -256,9 +256,10 @@ def mk_relative_osx(path, build_prefix=None):
                              dirname(path)), '').replace('/./', '/')
         macho.add_rpath(path, rpath, verbose = True)
 
+        # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
         # .. and remove config.build_prefix/lib which was added in-place of
         # DYLD_FALLBACK_LIBRARY_PATH since El Capitan's SIP.
-        macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
+        #macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be

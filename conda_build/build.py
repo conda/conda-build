@@ -10,6 +10,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import time
 import tarfile
 import fnmatch
 from os.path import exists, isdir, isfile, islink, join
@@ -530,6 +531,8 @@ def test(m, move_broken=True):
 
     tmp_dir = join(config.croot, 'test-tmp_dir')
     rm_rf(tmp_dir)
+    if on_win:
+        time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
     os.makedirs(tmp_dir)
     create_files(tmp_dir, m)
     # Make Perl or Python-specific test files
