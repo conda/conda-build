@@ -180,7 +180,7 @@ def get_dict(m=None, prefix=None):
             git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
         if git_url:
             # verify git repo
-            verify_git_repo(git_dir
+            verify_git_repo(git_dir,
                             git_url,
                             m.get_value('source/git_rev', 'HEAD'))
 
