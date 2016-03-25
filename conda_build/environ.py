@@ -43,16 +43,11 @@ def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
 
 
-def get_git_build_info(src_dir, git_url, expected_rev='HEAD'):
+def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
     env = os.environ.copy()
-    d = {}
-    git_dir = join(src_dir, '.git')
-    if not isinstance(git_dir, str):
-        # On Windows, subprocess env can't handle unicode.
-        git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
     if not (os.path.exists(git_dir) and external.find_executable('git')) or not expected_rev:
-        return d
+        return False
 
     env['GIT_DIR'] = git_dir
     try:
@@ -66,7 +61,8 @@ def get_git_build_info(src_dir, git_url, expected_rev='HEAD'):
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
         if current_commit != expected_tag_commit:
-            return d
+            raise ValueError("Commits don't match\n"
+                             "Expected: {}\nGot: {}".format(current_commit, expected_tag_commit))
 
         # Verify correct remote url. Need to find the git cache directory,
         # and check the remote from there.
@@ -80,7 +76,7 @@ def get_git_build_info(src_dir, git_url, expected_rev='HEAD'):
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
 
-        remote_details = subprocess.check_output(["git", "--git-dir", cache_dir, "remote", "-v"], env=env,
+        remote_details = check_output(["git", "--git-dir", cache_dir, "remote", "-v"], env=env,
                                                  stderr=STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
@@ -91,26 +87,44 @@ def get_git_build_info(src_dir, git_url, expected_rev='HEAD'):
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if remote_url != git_url:
-            return d
+            raise ValueError("Unexpected remote: {}".format(remote_url))
     except CalledProcessError:
-        return d
+        return False
+    return True
 
+
+def get_git_info(repo):
+    """
+    Given a repo to a git repo, return a dictionary of:
+      GIT_DESCRIBE_TAG
+      GIT_DESCRIBE_NUMBER
+      GIT_DESCRIBE_HASH
+      GIT_FULL_HASH
+      GIT_BUILD_STR
+    from the output of git describe.
+    :return:
+    """
     # grab information from describe
+    env = os.environ.copy()
+    d = {}
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
-    env = {str(key): str(value) for key, value in env.items()}
+
     process = Popen(["git", "describe", "--tags", "--long", "HEAD"],
                     stdout=PIPE, stderr=PIPE,
                     env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
+
     parts = output.rsplit('-', 2)
     if len(parts) == 3:
         d.update(dict(zip(keys, parts)))
+
     # get the _full_ hash of the current HEAD
     process = Popen(["git", "rev-parse", "HEAD"],
                     stdout=PIPE, stderr=PIPE, env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
+
     d['GIT_FULL_HASH'] = output
     # set up the build string
     if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
@@ -158,13 +172,21 @@ def get_dict(m=None, prefix=None):
             else:
                 d[var_name] = value
 
-        git_url = m.get_value('source/git_url', '') or m.get_value('source/path', '')
+        git_url = m.get_value('source/git_url')
+        git_dir = join(d['SRC_DIR'], '.git')
+        if not isinstance(git_dir, str):
+            # On Windows, subprocess env can't handle unicode.
+            git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
+        if git_url:
+            # verify git repo
+            verify_git_repo(git_dir
+                            git_url,
+                            m.get_value('source/git_rev', 'HEAD'))
+
         if os.path.exists(git_url):
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(m.path, git_url))
-        d.update(**get_git_build_info(d['SRC_DIR'],
-                                      git_url,
-                                      m.get_value('source/git_rev', 'HEAD')))
+        d.update(get_git_info(git_dir))
 
         d['PKG_NAME'] = m.name()
         d['PKG_VERSION'] = m.version()
