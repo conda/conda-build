@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from os.path import join, normpath, isabs
+from os.path import join, normpath
 from subprocess import STDOUT, check_output, CalledProcessError, Popen, PIPE
 import multiprocessing
 import warnings
