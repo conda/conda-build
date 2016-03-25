@@ -181,6 +181,7 @@ default_stucts = {
     'source/md5': text_type,
     'source/git_rev': text_type,
     'source/path': text_type,
+    'source/git_url': text_type,
     'build/osx_is_app': bool,
     'build/preserve_egg_dir': bool,
     'build/binary_relocation': bool,
