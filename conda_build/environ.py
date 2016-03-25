@@ -195,7 +195,6 @@ def get_dict(m=None, prefix=None):
         d['PKG_BUILD_STRING'] = str(m.build_id())
         d['RECIPE_DIR'] = m.path
 
-        #print("D==", '\n'.join("{}: {}".format(k,v) for k, v in d.items()))
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
