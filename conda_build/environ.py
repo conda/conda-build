@@ -46,7 +46,7 @@ def get_sp_dir():
 def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
     env = os.environ.copy()
 
-    if not (os.path.exists(git_dir) and external.find_executable('git')) or not expected_rev:
+    if not expected_rev:
         return False
 
     env['GIT_DIR'] = git_dir
@@ -61,8 +61,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
         if current_commit != expected_tag_commit:
-            raise ValueError("Commits don't match\n"
-                             "Expected: {}\nGot: {}".format(current_commit, expected_tag_commit))
+            return False
 
         # Verify correct remote url. Need to find the git cache directory,
         # and check the remote from there.
@@ -88,7 +87,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if remote_url != git_url:
-            raise ValueError("Unexpected remote: {}".format(remote_url))
+            return False
     except CalledProcessError:
         return False
     return True
@@ -105,9 +104,11 @@ def get_git_info(repo):
     from the output of git describe.
     :return:
     """
+    d = {}
+
     # grab information from describe
     env = os.environ.copy()
-    d = {}
+    env['GIT_DIR'] = repo
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
     process = Popen(["git", "describe", "--tags", "--long", "HEAD"],
@@ -173,21 +174,24 @@ def get_dict(m=None, prefix=None):
             else:
                 d[var_name] = value
 
-        git_url = m.get_value('source/git_url')
         git_dir = join(d['SRC_DIR'], '.git')
         if not isinstance(git_dir, str):
             # On Windows, subprocess env can't handle unicode.
             git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
-        if git_url:
-            # verify git repo
-            verify_git_repo(git_dir,
-                            git_url,
-                            m.get_value('source/git_rev', 'HEAD'))
 
-        if os.path.exists(git_url):
-            # If git_url is a relative path instead of a url, convert it to an abspath
-            git_url = normpath(join(m.path, git_url))
-        d.update(get_git_info(git_dir))
+        if external.find_executable('git') and os.path.exists(git_dir):
+            git_url = m.get_value('source/git_url')
+
+            if os.path.exists(git_url):
+                # If git_url is a relative path instead of a url, convert it to an abspath
+                git_url = normpath(join(m.path, git_url))
+
+            _x = verify_git_repo(git_dir,
+                                 git_url,
+                                 m.get_value('source/git_rev', 'HEAD'))
+
+            if (git_url and _x) or m.get_value('source/path'):
+                d.update(get_git_info(git_dir))
 
         d['PKG_NAME'] = m.name()
         d['PKG_VERSION'] = m.version()
