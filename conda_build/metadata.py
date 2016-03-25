@@ -360,11 +360,19 @@ class MetaData(object):
     def get_section(self, section):
         return self.meta.get(section, {})
 
-    def get_value(self, field, default=None):
+    def get_value(self, field, default=None, autotype=True):
+        """
+        Get a value from a meta.yaml.
+        :param field: Field to return
+        :param default: Default object to return if field doesn't exist
+        :param autotype: If True, return the default type of field if one exists.
+        False will return the default object.
+        :return:
+        """
         section, key = field.split('/')
 
         # get correct default
-        if default is None and field in default_stucts:
+        if autotype and default is None and field in default_stucts:
             default = default_stucts[field]()
 
         value = self.get_section(section).get(key, default)
