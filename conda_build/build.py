@@ -539,11 +539,13 @@ def test(m, move_broken=True):
     if m.name().startswith('perl-'):
         pl_files = create_pl_files(tmp_dir, m)
         py_files = False
+        lua_files = False
     else:
         py_files = create_py_files(tmp_dir, m)
         pl_files = False
+        lua_files = False
     shell_files = create_shell_files(tmp_dir, m)
-    if not (py_files or shell_files or pl_files):
+    if not (py_files or shell_files or pl_files or lua_files):
         print("Nothing to test for:", m.dist())
         return
 
@@ -570,6 +572,9 @@ def test(m, move_broken=True):
     if pl_files:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
+    if lua_files:
+        # not sure how this shakes out
+        specs += ['lua %s*' % environ.get_lua_ver()]
 
     create_env(config.test_prefix, specs)
 
@@ -581,7 +586,7 @@ def test(m, move_broken=True):
 
     if sys.platform == 'win32':
         env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
-    for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL':
+    for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
         env[varname] = str(getattr(config, varname) or '')
     env['PREFIX'] = config.test_prefix
 
@@ -602,6 +607,15 @@ def test(m, move_broken=True):
                                   env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
             tests_failed(m, move_broken=move_broken)
+
+    if lua_files:
+        try:
+            subprocess.check_call([config.test_lua,
+                                   join(tmp_dir, 'run_test.lua')],
+                                  env=env, cwd=tmp_dir)
+        except subprocess.CalledProcessError:
+            tests_failed(m)
+
 
     if shell_files:
         if sys.platform == 'win32':

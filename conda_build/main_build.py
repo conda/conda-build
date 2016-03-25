@@ -32,6 +32,7 @@ all_versions = {
     'numpy': [16, 17, 18, 19, 110],
     'perl': None,
     'R': None,
+    'lua': ["2.0", "5.1", "5.2", "5.3"]
 }
 
 class RecipeCompleter(Completer):
@@ -58,6 +59,10 @@ class NumPyVersionCompleter(Completer):
 class RVersionsCompleter(Completer):
     def _get_items(self):
         return ['3.1.2', '3.1.3', '3.2.0', '3.2.1', '3.2.2']
+
+class LuaVersionsCompleter(Completer):
+    def _get_items(self):
+        return ['all'] + [i for i in all_versions['lua']]
 
 def main():
     p = ArgumentParser(
@@ -187,6 +192,15 @@ different sets of packages."""
         metavar="R_VER",
         choices=RVersionsCompleter(),
     )
+    p.add_argument(
+        '--lua',
+        action="append",
+        help="""Set the Lua version used by conda build. Can be passed
+        multiple times to build against multiple versions (%r).""" % [i for i in LuaVersionsCompleter()],
+        metavar="LUA_VER",
+        choices=LuaVersionsCompleter(),
+    )
+
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -294,9 +308,10 @@ def execute(args, parser):
         'numpy': 'CONDA_NPY',
         'perl': 'CONDA_PERL',
         'R': 'CONDA_R',
+        'lua': 'CONDA_LUA',
         }
 
-    for lang in ['python', 'numpy', 'perl', 'R']:
+    for lang in ['python', 'numpy', 'perl', 'R', 'lua']:
         versions = getattr(args, lang)
         if not versions:
             continue

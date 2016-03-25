@@ -18,6 +18,8 @@ from conda_build.scripts import prepend_bin_path
 def get_perl_ver():
     return str(config.CONDA_PERL)
 
+def get_lua_ver():
+    return str(config.CONDA_LUA)
 
 def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
@@ -37,6 +39,9 @@ def get_stdlib_dir():
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
                 'lib/python%s' % get_py_ver())
 
+
+def get_lua_include_dir():
+    return join(config.build_prefix, "include")
 
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
@@ -127,6 +132,7 @@ def get_dict(m=None, prefix=None):
         prefix = config.build_prefix
 
     python = config.build_python
+    lua = config.build_lua
     d = {'CONDA_BUILD': '1', 'PYTHONNOUSERSITE': '1'}
     d['CONDA_DEFAULT_ENV'] = config.build_prefix
     d['ARCH'] = str(cc.bits)
@@ -134,10 +140,16 @@ def get_dict(m=None, prefix=None):
     d['PYTHON'] = python
     d['PY3K'] = str(config.PY3K)
     d['STDLIB_DIR'] = get_stdlib_dir()
+    lua_incl_dir= get_lua_include_dir()
+    if lua_incl_dir:
+        d['LUA_INCLUDE_DIR'] = lua_incl_dir
     d['SP_DIR'] = get_sp_dir()
     d['SYS_PREFIX'] = sys.prefix
     d['SYS_PYTHON'] = sys.executable
     d['PERL_VER'] = get_perl_ver()
+    d['LUA_VER'] = get_lua_ver()
+    if lua:
+        d['LUA'] = lua
     d['PY_VER'] = get_py_ver()
     if get_npy_ver():
         d['NPY_VER'] = get_npy_ver()

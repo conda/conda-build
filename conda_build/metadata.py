@@ -34,6 +34,7 @@ def ns_cfg():
     py = config.CONDA_PY
     np = config.CONDA_NPY
     pl = config.CONDA_PERL
+    lua = config.CONDA_LUA
     assert isinstance(py, int), py
     d = dict(
         linux = plat.startswith('linux-'),
@@ -47,6 +48,8 @@ def ns_cfg():
         win64 = bool(plat == 'win-64'),
         pl = pl,
         py = py,
+        lua = lua,
+        luajit = bool(lua[0] == "2"),
         py3k = bool(30 <= py < 40),
         py2k = bool(20 <= py < 30),
         py26 = bool(py == 26),
@@ -414,6 +417,7 @@ class MetaData(object):
             ('python', config.CONDA_PY),
             ('numpy', config.CONDA_NPY),
             ('perl', config.CONDA_PERL),
+            ('lua', config.CONDA_LUA),
             ('r', config.CONDA_R),
         ]
         for spec in self.get_value('requirements/' + typ, []):
@@ -453,7 +457,7 @@ class MetaData(object):
         res = []
         version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
         for name, s in (('numpy', 'np'), ('python', 'py'),
-                        ('perl', 'pl'), ('r', 'r')):
+                        ('perl', 'pl'), ('lua', 'lua'), ('r', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     try:
@@ -464,7 +468,7 @@ class MetaData(object):
                         break
                     if any(i in v for i in ',|>!<'):
                         break
-                    if name not in ['perl', 'r']:
+                    if name not in ['perl', 'r', 'lua']:
                         match = version_pat.match(v)
                         if match:
                             res.append(s + match.group(1) + match.group(2))

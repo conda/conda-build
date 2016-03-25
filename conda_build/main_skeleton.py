@@ -266,6 +266,32 @@ Network (CRAN) (cran.r-project.org).
         --output-dir).  If packages are given, they are updated; otherwise, all
         recipes in the output directory are updated.""",
     )
+    luarocks = repos.add_parser(
+        "luarocks",
+        help="""
+Create recipe skeleton for luarocks, hosted at luarocks.org
+        """,
+    )
+    luarocks.add_argument(
+        "packages",
+        action="store",
+        nargs='+',
+        help="luarocks packages to create recipe skeletons for.",
+    )
+    luarocks.add_argument(
+        "--output-dir",
+        help="Directory to write recipes to (default: %(default)s).",
+        default=".",
+    )
+    luarocks.add_argument(
+        "--version",
+        help="Version to use. Applies to all packages.",
+    )
+    luarocks.add_argument(
+        "--recursive",
+        action='store_true',
+        help='Create recipes for dependencies if they do not already exist.')
+
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -276,6 +302,7 @@ def execute(args, parser):
     import conda_build.pypi as pypi
     import conda_build.cpan as cpan
     import conda_build.cran as cran
+    import conda_build.luarocks as luarocks
     from conda.lock import Locked
     from conda_build.config import config
 
@@ -288,6 +315,8 @@ def execute(args, parser):
             cpan.main(args, parser)
         elif args.repo == 'cran':
             cran.main(args, parser)
+        elif args.repo == 'luarocks':
+            luarocks.main(args, parser)
 
 if __name__ == '__main__':
     main()
