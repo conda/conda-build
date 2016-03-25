@@ -1,0 +1,5 @@
+# this is a utility package for recursive-build-two-layer
+
+package:
+  name: _recursive-build-b
+  version: 1.0

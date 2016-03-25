@@ -1,4 +1,19 @@
-2016-XX-XX   1.19.1:
+2016-XX-XX   1.20.0:
+--------------------
+  * allow additional keys in "about" section, #831
+
+
+2016-03-10   1.19.2:
+--------------------
+  * silence some errors when subprocessing git #790
+  * fixes conda skeleton cran under python3 #817
+  * fixes some bugs introduced with the #808 otools refactor, #821, #825
+  * fixes #818 conda-build 1.19.1 breaks C compilation, #825
+  * actually fix #807 recurisive builds after conda 4.0 release, #826
+  * fixes #820 crash when building from a git repo on Windows, #824
+
+
+2016-03-09   1.19.1:
 --------------------
   * Environment variables defined in the 'script_env' build section of
     the meta.yaml file were previously assigned the value '<UNDEFINED>'
@@ -6,6 +21,10 @@
     warning is raised instead, #763.
   * fix printing of NumPy 1.10 in help message, #776
   * add -m32 to CFLAGS and CXXFLAGS for multilib gcc, #775
+  * fixes CYGWIN_PREFIX for drive letters other than C:, #788
+  * fixes for noarch package building on Windows, #799
+  * work-arounds for System Integrity Protection on OS X El Capitan, #808
+  * fix recurisive builds after conda 4.0 release, #813
 
 
 2016-01-29   1.19.0:

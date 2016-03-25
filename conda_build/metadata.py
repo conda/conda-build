@@ -182,7 +182,7 @@ def parse(data):
     trues = {'y', 'on', 'true', 'yes'}
     falses = {'n', 'no', 'false', 'off'}
     for field in ('build/osx_is_app', 'build/preserve_egg_dir',
-                  'build/binary_relocation',
+                  'build/binary_relocation', 'build/noarch_python',
                   'build/detect_binary_files_with_prefix',
                   'build/skip', 'app/own_environment'):
         section, key = field.split('/')
@@ -276,8 +276,10 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'license', 'license_family',
-              'summary', 'readme', 'license_file'],
+    'about': ['home', 'dev_url', 'doc_url', 'license_url', # these are URLs
+              'license', 'summary', 'description', 'license_family', # text
+              'license_file', 'readme', # paths in source tree
+             ],
 }
 
 

@@ -13,7 +13,7 @@ try:
 except ImportError:
     readlink = False
 import io
-from subprocess import call, Popen, PIPE
+from subprocess import call
 from collections import defaultdict
 
 from conda_build.config import config
@@ -190,7 +190,9 @@ def find_lib(link, path=None):
         return file_names[link][0]
     print("Don't know how to find %s, skipping" % link)
 
-def osx_ch_link(path, link):
+
+def osx_ch_link(path, link_dict):
+    link = link_dict['name']
     print("Fixing linking of %s in %s" % (link, path))
     link_loc = find_lib(link, path)
     if not link_loc:
@@ -216,7 +218,7 @@ def osx_ch_link(path, link):
     # @loader_path/path_to_lib/lib_to_link/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
-    ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
+    ret = '@rpath/%s/%s' % (lib_to_link, basename(link))
 
     # XXX: IF the above fails for whatever reason, the below can be used
     # TODO: This might contain redundant ..'s if link and path are both in
@@ -224,7 +226,9 @@ def osx_ch_link(path, link):
     # ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
 
     ret = ret.replace('/./', '/')
+
     return ret
+
 
 def mk_relative_osx(path, build_prefix=None):
     '''
@@ -245,57 +249,17 @@ def mk_relative_osx(path, build_prefix=None):
 
     names = macho.otool(path)
     if names:
-        # Strictly speaking, not all object files have install names (e.g.,
-        # bundles and executables do not). In that case, the first name here
-        # will not be the install name (i.e., the id), but it isn't a problem,
-        # because in that case it will be a no-op (with the exception of stub
-        # files, which give an error, which is handled below).
-        args = [
-            'install_name_tool',
-            '-id',
-            join('@rpath', relpath(dirname(path),
-                                   join(config.build_prefix, 'lib')),
-                 basename(names[0])),
-            path,
-        ]
-        print(' '.join(args))
-        p = Popen(args, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        stderr = stderr.decode('utf-8')
-        if "Mach-O dynamic shared library stub file" in stderr:
-            print("Skipping Mach-O dynamic shared library stub file %s" % path)
-            return
-        else:
-            print(stderr, file=sys.stderr)
-            if p.returncode:
-                raise RuntimeError("install_name_tool failed with exit status %d"
-            % p.returncode)
-
         # Add an rpath to every executable to increase the chances of it
         # being found.
-        args = [
-            'install_name_tool',
-            '-add_rpath',
-            join('@loader_path',
-                 relpath(join(config.build_prefix, 'lib'),
-                         dirname(path)), '').replace('/./', '/'),
-            path,
-            ]
-        print(' '.join(args))
-        p = Popen(args, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        stderr = stderr.decode('utf-8')
-        if "Mach-O dynamic shared library stub file" in stderr:
-            print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
-            return
-        elif "would duplicate path, file already has LC_RPATH for:" in stderr:
-            print("Skipping -add_rpath, file already has LC_RPATH set")
-            return
-        else:
-            print(stderr, file=sys.stderr)
-            if p.returncode:
-                raise RuntimeError("install_name_tool failed with exit status %d"
-            % p.returncode)
+        rpath = join('@loader_path',
+                     relpath(join(config.build_prefix, 'lib'),
+                             dirname(path)), '').replace('/./', '/')
+        macho.add_rpath(path, rpath, verbose = True)
+
+        # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
+        # .. and remove config.build_prefix/lib which was added in-place of
+        # DYLD_FALLBACK_LIBRARY_PATH since El Capitan's SIP.
+        #macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
@@ -310,9 +274,11 @@ def mk_relative_linux(f, rpaths=('lib',)):
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 
+
 def assert_relative_osx(path):
-    for name in macho.otool(path):
+    for name in macho.get_dylibs(path):
         assert not name.startswith(config.build_prefix), path
+
 
 def mk_relative(m, f):
     assert sys.platform != 'win32'
@@ -390,6 +356,7 @@ def check_symlinks(files):
         for msg in msgs:
             print("Error: %s" % msg, file=sys.stderr)
         sys.exit(1)
+
 
 def get_build_metadata(m):
     src_dir = source.get_dir()

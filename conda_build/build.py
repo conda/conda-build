@@ -10,6 +10,7 @@ import shutil
 import stat
 import subprocess
 import sys
+import time
 import tarfile
 import fnmatch
 from os.path import exists, isdir, isfile, islink, join
@@ -294,9 +295,10 @@ def create_env(prefix, specs, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
-    if not isdir(config.bldpkgs_dir):
-        os.makedirs(config.bldpkgs_dir)
-    update_index(config.bldpkgs_dir)
+    for d in config.bldpkgs_dirs:
+        if not isdir(d):
+            os.makedirs(d)
+        update_index(d)
     if specs: # Don't waste time if there is nothing to do
         index = get_build_index(clear_cache=True)
 
@@ -441,17 +443,25 @@ def build(m, get_src=True, post=None, include_recipe=True):
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
+        # Use script from recipe?
+        script = m.get_value('build/script', None)
+        if script:
+            if isinstance(script, list):
+                script = '\n'.join(script)
+
         if sys.platform == 'win32':
+            build_file = join(m.path, 'bld.bat')
+            if script:
+                build_file = join(source.get_dir(), 'bld.bat')
+                with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
+                    bf.write(script)
             import conda_build.windows as windows
-            windows.build(m)
+            windows.build(m, build_file)
         else:
             env = environ.get_dict(m)
             build_file = join(m.path, 'build.sh')
 
-            script = m.get_value('build/script', None)
             if script:
-                if isinstance(script, list):
-                    script = '\n'.join(script)
                 build_file = join(source.get_dir(), 'conda_build.sh')
                 with open(build_file, 'w') as bf:
                     bf.write(script)
@@ -521,6 +531,8 @@ def test(m, move_broken=True):
 
     tmp_dir = join(config.croot, 'test-tmp_dir')
     rm_rf(tmp_dir)
+    if on_win:
+        time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
     os.makedirs(tmp_dir)
     create_files(tmp_dir, m)
     # Make Perl or Python-specific test files

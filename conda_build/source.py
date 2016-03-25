@@ -112,11 +112,23 @@ def git_source(meta, recipe_dir):
 
     # update (or create) the cache repo
     if isdir(cache_repo):
-        check_call([git, 'fetch'], cwd=cache_repo)
+        if meta.get('git_rev', 'HEAD') != 'HEAD':
+            check_call([git, 'fetch'], cwd=cache_repo)
+        else:
+            # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
+            # So here we explicitly store the remote HEAD in the cache's local refs/heads,
+            # and then explicitly set the cache's HEAD.
+            # This is important when the git repo is a local path like "git_url: ../",
+            # but the user is working with a branch other than 'master' without
+            # explicitly providing git_rev.
+            check_call([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
+                       cwd=cache_repo)
+            check_call([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
+                       cwd=cache_repo)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
-            args += ['--depth', git_depth]
+            args += ['--depth', str(git_depth)]
 
         check_call(args + [git_url, cache_repo_arg],  cwd=recipe_dir)
         assert isdir(cache_repo)
