@@ -28,6 +28,7 @@ from conda.install import delete_trash
 on_win = (sys.platform == 'win32')
 
 from conda_build.metadata import parse
+from conda_build.build import scan_metadata
 
 all_versions = {
     'python': [26, 27, 33, 34, 35],
@@ -195,6 +196,11 @@ different sets of packages."""
         concatenated to the build requirements from the recipe.""",
         action="store"
     )
+    p.add_argument(
+        '--bootstrap',
+        help="""Construct build requirements that replicate the given environment.""",
+        action="store"
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -275,6 +281,7 @@ def execute(args, parser):
     import conda_build.source as source
     from conda_build.config import config
     from conda_build.metadata import MetaData
+    import conda.config as cc
 
     check_external()
 
@@ -393,6 +400,19 @@ def execute(args, parser):
                     print("Unable to read config file '%s':" % args.build_config)
                     print(e)
                     sys.exit(1)
+
+            # construct build requirements that replicate the given bootstrap environment
+            # and concatenate them to the build requirements from the recipe
+            if args.bootstrap:
+                bootstrap_metadir = join(cc.envs_dirs[0], args.bootstrap, 'conda-meta')
+                if not isdir(bootstrap_metadir):
+                    print("Bootstrap environment '%s' not found" % args.bootstrap)
+                    sys.exit(1)
+                bootstrap_metadata = scan_metadata(bootstrap_metadir)
+                bootstrap_requirements = []
+                for package, data in bootstrap_metadata.items():
+                    bootstrap_requirements.append("%s %s %s" % (package, data['version'], data['build']))
+                m.meta['requirements']['build'] += bootstrap_requirements
 
             binstar_upload = False
             if args.check and len(args.recipe) > 1:
