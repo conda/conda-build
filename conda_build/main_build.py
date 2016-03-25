@@ -27,6 +27,8 @@ from conda_build.index import update_index
 from conda.install import delete_trash
 on_win = (sys.platform == 'win32')
 
+from conda_build.metadata import parse
+
 all_versions = {
     'python': [26, 27, 33, 34, 35],
     'numpy': [16, 17, 18, 19, 110],
@@ -186,6 +188,12 @@ different sets of packages."""
         multiple times to build against multiple versions.""",
         metavar="R_VER",
         choices=RVersionsCompleter(),
+    )
+    p.add_argument(
+        '--build-config',
+        help="""Provide a yaml-config file whose 'requirements/build' section is
+        concatenated to the build requirements from the recipe.""",
+        action="store"
     )
     add_parser_channels(p)
     p.set_defaults(func=execute)
@@ -373,6 +381,19 @@ def execute(args, parser):
             except exceptions.YamlParsingError as e:
                 sys.stderr.write(e.error_msg())
                 sys.exit(1)
+
+            # concatenate build requirements from the build config file to the build
+            # requirements from the recipe
+            if args.build_config:
+                try:
+                    with open(args.build_config) as configfile:
+                        build_config = parse(configfile.read())
+                    m.meta['requirements']['build'] += build_config['requirements']['build']
+                except Exception as e:
+                    print("Unable to read config file '%s':" % args.build_config)
+                    print(e)
+                    sys.exit(1)
+
             binstar_upload = False
             if args.check and len(args.recipe) > 1:
                 print(m.path)
