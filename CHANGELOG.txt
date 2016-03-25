@@ -1,6 +1,10 @@
-2016-XX-XX   1.20.0:
+2016-03-25   1.20.0:
 --------------------
+  * support for Lua as a built-in language (Alex Wiltschko), #719
   * allow additional keys in "about" section, #831
+  * fix Examples directory in noarch_python, #838
+  * revert OS X SIP fix, part of #808, #844
+  * fixed race condition between removal and creation of tmp_dir on win, #847
 
 
 2016-03-10   1.19.2:
