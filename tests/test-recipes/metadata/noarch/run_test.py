@@ -16,8 +16,8 @@ fname_prelink_win = os.path.join(pkg_dir, 'Scripts', '.noarch_test_package-pre-l
 prelink_unix = open(fname_prelink_unix, 'rb').read().decode('utf-8')
 prelink_win = open(fname_prelink_win, 'rb').read().decode('utf-8')
 
-assert prelink_unix.count('\n') and not prelink_unix.count('\r') 
-assert prelink_win.count('\n') == prelink_win.count('\r') 
+assert prelink_unix.count('\n') and not prelink_unix.count('\r')
+assert prelink_win.count('\n') == prelink_win.count('\r')
 
 # Check module
 
