@@ -186,11 +186,13 @@ def get_dict(m=None, prefix=None):
                 # If git_url is a relative path instead of a url, convert it to an abspath
                 git_url = normpath(join(m.path, git_url))
 
-            _x = verify_git_repo(git_dir,
-                                 git_url,
-                                 m.get_value('source/git_rev', 'HEAD'))
+            _x = False
+            if git_url:
+                _x = verify_git_repo(git_dir,
+                                     git_url,
+                                     m.get_value('source/git_rev', 'HEAD'))
 
-            if (git_url and _x) or m.get_value('source/path'):
+            if _x or m.get_value('source/path'):
                 d.update(get_git_info(git_dir))
 
         d['PKG_NAME'] = m.name()
