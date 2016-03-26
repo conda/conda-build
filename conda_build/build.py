@@ -1,4 +1,4 @@
-'''
+﻿'''
 Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
@@ -152,9 +152,12 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     st = os.stat(path)
     data = data.replace(old_prefix, new_prefix)
     # Save as
-    with open(path, 'wb') as fo:
-        fo.write(data)
-    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
+    try:
+        with open(path, 'wb') as fo:
+            fo.write(data)
+        os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+    except IOError:
+        sys.stderr.write("Failed to rewrite file {} with new prefix.\n".format(path))
     return data
 
 
