@@ -148,62 +148,51 @@ def parse(data):
     for field in FIELDS:
         if field not in res:
             continue
-        if not res[field]:
-            res[field] = {}
         if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s" %
                                (field, res[field].__class__.__name__))
-    # ensure those are lists
-    for field in ('source/patches',
-                  'build/entry_points', 'build/script_env',
-                  'build/features', 'build/track_features',
-                  'requirements/build', 'requirements/run',
-                  'requirements/conflicts', 'test/requires',
-                  'test/files', 'test/commands', 'test/imports'):
-        section, key = field.split('/')
-        if res.get(section) is None:
-            res[section] = {}
-        if res[section].get(key, None) is None:
-            res[section][key] = []
 
-    # ensure those are strings
-    for field in ('package/version', 'build/string', 'build/pin_depends',
-                  'source/svn_rev', 'source/git_tag', 'source/git_branch',
-                  'source/md5', 'source/git_rev', 'source/path'):
-        section, key = field.split('/')
-        if res.get(section) is None:
-            res[section] = {}
-        val = res[section].get(key, '')
-        if val is None:
-            val = ''
-        res[section][key] = text_type(val)
 
-    # ensure these fields are booleans
-    trues = {'y', 'on', 'true', 'yes'}
-    falses = {'n', 'no', 'false', 'off'}
-    for field in ('build/osx_is_app', 'build/preserve_egg_dir',
-                  'build/binary_relocation', 'build/noarch_python',
-                  'build/detect_binary_files_with_prefix',
-                  'build/skip', 'app/own_environment'):
-        section, key = field.split('/')
-        if res.get(section) is None:
-            res[section] = {}
-
-        try:
-            val = res[section].get(key, '').lower()
-        except AttributeError:
-            # val wasn't a string
-            continue
-
-        if val in trues:
-            res[section][key] = True
-        elif val in falses:
-            res[section][key] = False
 
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
     return sanitize(res)
 
+
+trues = {'y', 'on', 'true', 'yes'}
+falses = {'n', 'no', 'false', 'off'}
+
+default_stucts = {
+    'source/patches': list,
+    'build/entry_points': list,
+    'build/script_env': list,
+    'build/features': list,
+    'build/track_features': list,
+    'requirements/build': list,
+    'requirements/run': list,
+    'requirements/conflicts': list,
+    'test/requires': list,
+    'test/files': list,
+    'test/commands': list,
+    'test/imports': list,
+    'package/version': text_type,
+    'build/string': text_type,
+    'build/pin_depends': text_type,
+    'source/svn_rev': text_type,
+    'source/git_tag': text_type,
+    'source/git_branch': text_type,
+    'source/md5': text_type,
+    'source/git_rev': text_type,
+    'source/path': text_type,
+    'source/git_url': text_type,
+    'build/osx_is_app': bool,
+    'build/preserve_egg_dir': bool,
+    'build/binary_relocation': bool,
+    'build/noarch_python': bool,
+    'build/detect_binary_files_with_prefix': bool,
+    'build/skip': bool,
+    'app/own_environment': bool
+}
 
 def sanitize(meta):
     """
@@ -211,7 +200,7 @@ def sanitize(meta):
 
     """
     # make a copy to avoid side-effects
-    meta = dict(meta)
+    meta = meta.copy()
     sanitize_funs = [('source', _git_clean), ]
     for section, func in sanitize_funs:
         if section in meta:
@@ -235,7 +224,7 @@ def _git_clean(source_meta):
 
     git_rev_tags = (git_rev,) + git_rev_tags_old
 
-    has_rev_tags = tuple(bool(source_meta[tag]) for
+    has_rev_tags = tuple(bool(source_meta.get(tag, text_type())) for
                           tag in git_rev_tags)
     if sum(has_rev_tags) > 1:
         msg = "Error: mulitple git_revs:"
@@ -244,14 +233,14 @@ def _git_clean(source_meta):
         sys.exit(msg)
 
     # make a copy of the input so we have no side-effects
-    ret_meta = dict(source_meta)
+    ret_meta = source_meta.copy()
     # loop over the old versions
     for key, has in zip(git_rev_tags[1:], has_rev_tags[1:]):
         # update if needed
         if has:
             ret_meta[git_rev_tags[0]] = ret_meta[key]
         # and remove
-        del ret_meta[key]
+        ret_meta.pop(key, None)
 
     return ret_meta
 
@@ -375,9 +364,30 @@ class MetaData(object):
     def get_section(self, section):
         return self.meta.get(section, {})
 
-    def get_value(self, field, default=None):
+    def get_value(self, field, default=None, autotype=True):
+        """
+        Get a value from a meta.yaml.
+        :param field: Field to return
+        :param default: Default object to return if field doesn't exist
+        :param autotype: If True, return the default type of field if one exists.
+        False will return the default object.
+        :return:
+        """
         section, key = field.split('/')
+
+        # get correct default
+        if autotype and default is None and field in default_stucts:
+            default = default_stucts[field]()
+
         value = self.get_section(section).get(key, default)
+
+        # handle yaml 1.1 boolean values
+        if isinstance(value, text_type):
+            if value.lower() in trues:
+                value = True
+            elif value.lower() in falses:
+                value = False
+
         return value
 
     def check_fields(self):
