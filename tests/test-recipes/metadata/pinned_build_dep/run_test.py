@@ -1,13 +1,13 @@
 import os
 import json
-import glob
 
 
 def main():
+    prefix = os.environ['PREFIX']
     fname = os.path.join(prefix, 'conda-meta',
                          '{env[PKG_NAME]}.json'.format(env=os.environ))
     print('Info from {}'.format(fname))
-    prefix = os.environ['PREFIX']
+
     with open(fname, 'r') as fh:
         info = json.load(fh)
 

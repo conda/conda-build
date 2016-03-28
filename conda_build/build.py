@@ -188,8 +188,6 @@ def create_info_files(m, files, include_recipe=True):
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
                   file=sys.stderr)
 
-    pkg_index = get_build_index(clear_cache=False)
-
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
@@ -208,9 +206,6 @@ def create_info_files(m, files, include_recipe=True):
         if pin_depends == 'strict':
             info_index['depends'] = [' '.join(dist.rsplit('-', 2))
                                      for dist in dists]
-
-    if not m._resolved_build_pkgs:
-        m.resolve_build_deps(get_build_index(clear_cache=False))
 
     # Insert the pinned build dependencies into the resulting distribution.
     info_index.setdefault('depends', []).extend(m.pinned_specs())
@@ -292,25 +287,27 @@ def create_info_files(m, files, include_recipe=True):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'))
 
+
 def get_build_index(clear_cache=True):
+    for d in config.bldpkgs_dirs:
+        if not isdir(d):
+            os.makedirs(d)
+        update_index(d)
+
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
+
     return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
                      prepend=not override_channels)
 
 
 def create_env(prefix, specs, index=None):
-    '''
+    """
     Create a conda envrionment for the given prefix and specs.
-    '''
-    for d in config.bldpkgs_dirs:
-        if not isdir(d):
-            os.makedirs(d)
 
-        update_index(d)
-
+    """
     # We don't need to waste time if there is nothing to do.
     if specs:
         if index is None:
@@ -364,11 +361,13 @@ def rm_pkgs_cache(dist):
               'RM_EXTRACTED %s' % dist]
     plan.execute_plan(rmplan)
 
+
 def bldpkg_path(m):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
+
 
 def build(m, get_src=True, post=None, include_recipe=True):
     '''
@@ -390,6 +389,8 @@ def build(m, get_src=True, post=None, include_recipe=True):
     else:
         # In case there are multiple builds in the same process
         config.use_long_build_prefix = False
+
+    m._index = index = get_build_index(clear_cache=True)
 
     if m.skip():
         print("Skipped: The %s recipe defines build/skip for this "
@@ -413,27 +414,27 @@ def build(m, get_src=True, post=None, include_recipe=True):
         else:
             rm_rf(source.WORK_DIR)
 
-        index = get_build_index(clear_cache=True)
-        m._index = index
         dist_name = m.dist()
         print("BUILD START: {}".format(dist_name))
 
         build_env_specs = ([ms.spec for ms in m.ms_depends('build')] +
                            m.config_deps())
-        index, actions = create_env(config.build_prefix,
-                                    build_env_specs, index=index)
+        _, actions = create_env(config.build_prefix,
+                                build_env_specs, index=index)
+
+        # Pick out the packages which will be installed, and make them available
+        # to the meta - that way, the meta doesn't need to compute them again.
         build_pkgs = {}
         for pkg in actions['LINK']:
             pkg_name = pkg.split(' ')[0] + '.tar.bz2'
             build_pkgs[pkg_name] = index[pkg_name]
-        m._index = index
         m._resolved_build_pkgs = build_pkgs
 
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
                 m.name())
-            index = get_build_index(clear_cache=False)
-            actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
+            actions = plan.remove_actions(config.build_prefix, [m.name()],
+                                          index=index)
             assert not plan.nothing_to_do(actions), actions
             plan.display_actions(actions, index)
             plan.execute_actions(actions, index)
@@ -444,7 +445,7 @@ def build(m, get_src=True, post=None, include_recipe=True):
         # Parse our metadata again because we did not initialize the source
         # information before.
         # By now, all jinja variables should be defined, so don't permit undefined vars.
-        m.parse_again(permit_undefined_jinja=False)
+        m.parse_again(second_pass=True)
 
         print("Package:", m.dist())
 
@@ -549,12 +550,16 @@ can lead to packages that include their dependencies.""" %
 
 
 def test(m, move_broken=True):
-    '''
+    """
     Execute any test scripts for the given package.
 
     :param m: Package's metadata.
     :type m: Metadata
-    '''
+
+    """
+    # Ensure the metadata has an up to date index.
+    m._index = get_build_index(clear_cache=True)
+
     # remove from package cache
     rm_pkgs_cache(m.dist())
 
@@ -604,7 +609,7 @@ def test(m, move_broken=True):
         # not sure how this shakes out
         specs += ['lua %s*' % environ.get_lua_ver()]
 
-    create_env(config.test_prefix, specs)
+    create_env(config.test_prefix, specs, index=m._index)
 
     env = dict(os.environ)
     env.update(environ.get_dict(m, prefix=config.test_prefix))

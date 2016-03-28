@@ -317,6 +317,13 @@ class MetaData(object):
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
         self.requirements_path = join(path, 'requirements.txt')
+
+        # The index used to resolve dependencies for this meta.
+        self._index = None
+
+        # The resolved dependencies for this meta.
+        self._resolved_build_pkgs = None
+
         if not isfile(self.meta_path):
             self.meta_path = join(path, 'conda.yaml')
             if not isfile(self.meta_path):
@@ -331,21 +338,19 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
-        self.parse_again(permit_undefined_jinja=True)
+        self.parse_again(second_pass=False)
 
-        self._index = None
-        self._resolved_build_pkgs = None
-
-    def parse_again(self, permit_undefined_jinja=False):
+    def parse_again(self, second_pass=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
-        permit_undefined_jinja: If True, *any* use of undefined jinja variables will
-                                evaluate to an emtpy string, without emitting an error.
+        second_pass: If True, *any* use of undefined jinja variables will
+                     evaluate to an emtpy string, without emitting an error.
+
         """
         if not self.meta_path:
             return
-        self.meta = parse(self._get_contents(permit_undefined_jinja))
+        self.meta = parse(self._get_contents(second_pass))
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
@@ -425,7 +430,12 @@ class MetaData(object):
         return int(self.get_value('build/number', 0))
 
     def config_deps(self):
-        # Return the specs needed to adhere to the desired environment variables.
+        """
+        Returns specifications defined by the conda-build config.
+
+        It is here that things like --python=27 and CONDA_NPY=19 get honoured.
+
+        """
         name_ver_list = [
             ('python', config.CONDA_PY),
             ('numpy', config.CONDA_NPY),
@@ -517,8 +527,8 @@ class MetaData(object):
                 return '{}.{}.*'.format(*version.split('.')[:2])
             else:
                 # TODO
-                raise NotYetImplemented('General form for pin_from_build not '
-                                        'yet implemented.')
+                raise NotImplementedError('General form for pin_from_build '
+                                          'not yet implemented.')
 
         if self._resolved_build_pkgs is None:
             self.resolve_build_deps()
@@ -556,10 +566,6 @@ class MetaData(object):
         return pinned_specs
 
     def build_id(self):
-        if self._resolved_build_pkgs is None:
-            self.resolve_build_deps()
-        build_deps = self._resolved_build_pkgs
-
         template = self.get_value('build/string')
         if not template:
             template = '{extras}'
@@ -656,15 +662,18 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja):
-        '''
+    def _get_contents(self, second_pass=False):
+        """
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
         before standard conda macro processors.
 
-        permit_undefined_jinja: If True, *any* use of undefined jinja variables will
-                                evaluate to an emtpy string, without emitting an error.
-        '''
+        second_pass: If False, *any* use of undefined jinja variables will
+                     evaluate to an emtpy string, without emitting an error.
+
+        """
+        permit_undefined_jinja = not second_pass
+
         try:
             import jinja2
         except ImportError:
@@ -727,6 +736,10 @@ class MetaData(object):
         env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
+
+        # For the second pass, we put ourself into the namespace.
+        if second_pass:
+            env.globals['meta'] = self
 
         try:
             template = env.get_or_select_template(filename)
