@@ -74,7 +74,6 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
                                      stderr=STDOUT)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
-        assert "conda-bld/git_cache" in cache_dir
 
         if not isinstance(cache_dir, str):
             # On Windows, subprocess env can't handle unicode.
