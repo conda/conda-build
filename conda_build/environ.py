@@ -1,26 +1,29 @@
 from __future__ import absolute_import, division, print_function
 
+import multiprocessing
 import os
 import sys
+import warnings
+from collections import defaultdict
 from os.path import join, normpath
 from subprocess import STDOUT, check_output, CalledProcessError, Popen, PIPE
-import multiprocessing
-import warnings
 
 import conda.config as cc
+from conda.compat import text_type
 
-from conda_build.config import config
-
-from conda_build import source
 from conda_build import external
+from conda_build import source
+from conda_build.config import config
 from conda_build.scripts import prepend_bin_path
 
 
 def get_perl_ver():
     return str(config.CONDA_PERL)
 
+
 def get_lua_ver():
     return str(config.CONDA_LUA)
+
 
 def get_py_ver():
     return '.'.join(str(config.CONDA_PY))
@@ -43,6 +46,7 @@ def get_stdlib_dir():
 
 def get_lua_include_dir():
     return join(config.build_prefix, "include")
+
 
 def get_sp_dir():
     return join(get_stdlib_dir(), 'site-packages')
@@ -145,130 +149,191 @@ def get_dict(m=None, prefix=None):
     if not prefix:
         prefix = config.build_prefix
 
-    python = config.build_python
-    lua = config.build_lua
-    d = {'CONDA_BUILD': '1', 'PYTHONNOUSERSITE': '1'}
-    d['CONDA_DEFAULT_ENV'] = config.build_prefix
-    d['ARCH'] = str(cc.bits)
-    d['PREFIX'] = prefix
-    d['PYTHON'] = python
-    d['PY3K'] = str(config.PY3K)
-    d['STDLIB_DIR'] = get_stdlib_dir()
-    lua_incl_dir= get_lua_include_dir()
-    if lua_incl_dir:
-        d['LUA_INCLUDE_DIR'] = lua_incl_dir
-    d['SP_DIR'] = get_sp_dir()
-    d['SYS_PREFIX'] = sys.prefix
-    d['SYS_PYTHON'] = sys.executable
-    d['PERL_VER'] = get_perl_ver()
-    d['LUA_VER'] = get_lua_ver()
-    if lua:
-        d['LUA'] = lua
-    d['PY_VER'] = get_py_ver()
-    if get_npy_ver():
-        d['NPY_VER'] = get_npy_ver()
-    d['SRC_DIR'] = source.get_dir()
-    if "LANG" in os.environ:
-        d['LANG'] = os.environ['LANG']
-    if "HTTPS_PROXY" in os.environ:
-        d['HTTPS_PROXY'] = os.environ['HTTPS_PROXY']
-    if "HTTP_PROXY" in os.environ:
-        d['HTTP_PROXY'] = os.environ['HTTP_PROXY']
+    # conda-build specific vars
+    d = conda_build_vars(prefix)
+
+    # languages
+    d.update(python_vars())
+    d.update(perl_vars())
+    d.update(lua_vars())
 
     if m:
-        for var_name in m.get_value('build/script_env', []):
-            value = os.getenv(var_name)
-            if value is None:
-                warnings.warn(
-                    "The environment variable '%s' is undefined." % var_name,
-                    UserWarning
-                )
-            else:
-                d[var_name] = value
+        d.update(meta_vars(m))
 
-        git_dir = join(d['SRC_DIR'], '.git')
-        if not isinstance(git_dir, str):
-            # On Windows, subprocess env can't handle unicode.
-            git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
+    # system
+    d.update(system_vars(d, prefix))
 
-        if external.find_executable('git') and os.path.exists(git_dir):
-            git_url = m.get_value('source/git_url')
+    return d
 
-            if os.path.exists(git_url):
-                # If git_url is a relative path instead of a url, convert it to an abspath
-                git_url = normpath(join(m.path, git_url))
 
-            _x = False
-            if git_url:
-                _x = verify_git_repo(git_dir,
-                                     git_url,
-                                     m.get_value('source/git_rev', 'HEAD'))
+def conda_build_vars(prefix):
+    return {
+        'CONDA_BUILD': '1',
+        'PYTHONNOUSERSITE': '1',
+        'CONDA_DEFAULT_ENV': config.build_prefix,
+        'ARCH': str(cc.bits),
+        'PREFIX': prefix,
+        'SYS_PREFIX': sys.prefix,
+        'SYS_PYTHON': sys.executable,
+        'SRC_DIR': source.get_dir(),
+        'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
+        'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
+    }
 
-            if _x or m.get_value('source/path'):
-                d.update(get_git_info(git_dir))
 
-        d['PKG_NAME'] = m.name()
-        d['PKG_VERSION'] = m.version()
-        d['PKG_BUILDNUM'] = str(m.build_number())
-        d['PKG_BUILD_STRING'] = str(m.build_id())
-        d['RECIPE_DIR'] = m.path
+def python_vars():
+    return {
+        'PYTHON': config.build_python,
+        'PY3K': str(config.PY3K),
+        'STDLIB_DIR': get_stdlib_dir(),
+        'SP_DIR': get_sp_dir(),
+        'PY_VER': get_py_ver(),
+        'NPY_VER': get_npy_ver(),
+    }
 
+
+def perl_vars():
+    return {
+        'PERL_VER': get_perl_ver(),
+    }
+
+
+def lua_vars():
+    lua = config.build_lua
+    if lua:
+        return {
+            'LUA': lua,
+            'LUA_INCLUDE_DIR': get_lua_include_dir(),
+            'LUA_VER': get_lua_ver(),
+        }
+    else:
+        return {}
+
+
+def meta_vars(meta):
+    d = {}
+    for var_name in meta.get_value('build/script_env', []):
+        value = os.getenv(var_name)
+        if value is None:
+            warnings.warn(
+                "The environment variable '%s' is undefined." % var_name,
+                UserWarning
+            )
+        else:
+            d[var_name] = value
+
+    git_dir = join(source.get_dir(), '.git')
+    if not isinstance(git_dir, str):
+        # On Windows, subprocess env can't handle unicode.
+        git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
+
+    if external.find_executable('git') and os.path.exists(git_dir):
+        git_url = meta.get_value('source/git_url')
+
+        if os.path.exists(git_url):
+            # If git_url is a relative path instead of a url, convert it to an abspath
+            git_url = normpath(join(meta.path, git_url))
+
+        _x = False
+        if git_url:
+            _x = verify_git_repo(git_dir,
+                                 git_url,
+                                 meta.get_value('source/git_rev', 'HEAD'))
+
+        if _x or meta.get_value('source/path'):
+            d.update(get_git_info(git_dir))
+
+    d['PKG_NAME'] = meta.name()
+    d['PKG_VERSION'] = meta.version()
+    d['PKG_BUILDNUM'] = str(meta.build_number())
+    d['PKG_BUILD_STRING'] = str(meta.build_id())
+    d['RECIPE_DIR'] = meta.path
+    return d
+
+
+def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
         out, err = Popen('sysctl -n hw.logicalcpu', shell=True,
                          stdout=PIPE).communicate()
-        d['CPU_COUNT'] = out.decode('utf-8').strip()
+        return out.decode('utf-8').strip()
     else:
         try:
-            d['CPU_COUNT'] = str(multiprocessing.cpu_count())
+            return str(multiprocessing.cpu_count())
         except NotImplementedError:
-            d['CPU_COUNT'] = "1"
+            return "1"
 
-    d['PATH'] = dict(os.environ)['PATH']
+
+def windows_vars(prefix):
+    library_prefix = join(prefix, 'Library')
+    drive, tail = prefix.split(':')
+    return {
+        'SCRIPTS': join(prefix, 'Scripts'),
+        'LIBRARY_PREFIX': library_prefix,
+        'LIBRARY_BIN': join(library_prefix, 'bin'),
+        'LIBRARY_INC': join(library_prefix, 'include'),
+        'LIBRARY_LIB': join(library_prefix, 'lib'),
+        'R': join(prefix, 'Scripts', 'R.exe'),
+        'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/')))
+    }
+
+
+def unix_vars(prefix):
+    return {
+        'HOME': os.getenv('HOME', 'UNKNOWN'),
+        'PKG_CONFIG_PATH': join(prefix, 'lib', 'pkgconfig'),
+        'R': join(prefix, 'bin', 'R'),
+    }
+
+
+def osx_vars(compiler_vars):
+    OSX_ARCH = 'i386' if cc.bits == 32 else 'x86_64'
+    compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
+    compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
+    compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
+    # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
+    #rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
+    #d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
+    return {
+        'OSX_ARCH': OSX_ARCH,
+        'MACOSX_DEPLOYMENT_TARGET': '10.6',
+    }
+
+
+def linux_vars(compiler_vars, prefix):
+    compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
+    if cc.bits == 32:
+        compiler_vars['CFLAGS'] += ' -m 32'
+        compiler_vars['CXXFLAGS'] += ' -m 32'
+    return {}
+
+
+def system_vars(env_dict, prefix):
+    d = dict()
+    compiler_vars = defaultdict(text_type)
+
+    d['CPU_COUNT'] = get_cpu_count()
+    if "LANG" in os.environ:
+        d['LANG'] = os.environ['LANG']
+    d['PATH'] = os.environ['PATH']
     d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
-        # -------- Windows
-        d['SCRIPTS'] = join(prefix, 'Scripts')
-        d['LIBRARY_PREFIX'] = join(prefix, 'Library')
-        d['LIBRARY_BIN'] = join(d['LIBRARY_PREFIX'], 'bin')
-        d['LIBRARY_INC'] = join(d['LIBRARY_PREFIX'], 'include')
-        d['LIBRARY_LIB'] = join(d['LIBRARY_PREFIX'], 'lib')
-
-        drive, tail = prefix.split(':')
-        d['CYGWIN_PREFIX'] = ''.join(['/cygdrive/', drive.lower(),
-                                     tail.replace('\\', '/')])
-
-        d['R'] = join(prefix, 'Scripts', 'R.exe')
+        d.update(windows_vars(prefix))
     else:
-        # -------- Unix
-        d['HOME'] = os.getenv('HOME', 'UNKNOWN')
-        d['PKG_CONFIG_PATH'] = join(prefix, 'lib', 'pkgconfig')
-        d['R'] = join(prefix, 'bin', 'R')
-
-    # in case CFLAGS was added in the `script_env` section above
-    cflags = d.get('CFLAGS', '')
-    cxxflags = d.get('CXXFLAGS', '')
-    ldflags = d.get('LDFLAGS', '')
+        d.update(unix_vars(prefix))
 
     if sys.platform == 'darwin':
-        # -------- OSX
-        d['OSX_ARCH'] = 'i386' if cc.bits == 32 else 'x86_64'
-        d['CFLAGS'] = cflags + ' -arch %(OSX_ARCH)s' % d
-        d['CXXFLAGS'] = cxxflags + ' -arch %(OSX_ARCH)s' % d
-        # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
-        #rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
-        #d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
-        d['LDFLAGS'] = ldflags + ' -arch %(OSX_ARCH)s' % d
-        d['MACOSX_DEPLOYMENT_TARGET'] = '10.6'
-
+        d.update(osx_vars(compiler_vars))
     elif sys.platform.startswith('linux'):
-        # -------- Linux
-        d['LD_RUN_PATH'] = prefix + '/lib'
-        if cc.bits == 32:
-            d['CFLAGS'] = cflags + ' -m32'
-            d['CXXFLAGS'] = cxxflags + ' -m32'
+        d.update(linux_vars(compiler_vars, prefix))
+
+    # make sure compiler_vars get appended to anything already set, including build/script_env
+    for key in compiler_vars:
+        if key in env_dict:
+            compiler_vars[key] += env_dict[key]
+    d.update(compiler_vars)
 
     return d
 
