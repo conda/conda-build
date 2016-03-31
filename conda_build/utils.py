@@ -10,6 +10,7 @@ import operator
 import fnmatch
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
+import distutils.dir_util
 
 from conda.utils import md5_file
 from conda.compat import PY3, iteritems
@@ -32,7 +33,7 @@ def copy_into(src, dst):
         dstname = os.path.join(dst, afile)
 
         if os.path.isdir(srcname):
-            shutil.copytree(srcname, dstname)
+            distutils.dir_util.copy_tree(srcname, dstname)
         else:
             shutil.copy2(srcname, dstname)
 
