@@ -51,39 +51,81 @@ def msvc_env_cmd(override=None):
         program_files = os.environ['ProgramFiles(x86)']
     else:
         program_files = os.environ['ProgramFiles']
+    arch_selector = 'x86' if cc.bits == 32 else 'amd64'
 
     msvc_env_lines = []
 
-    if config.PY3K and config.use_MSVC2015:
-        version = '14.0'
-    elif config.PY3K:
-        version = '10.0'
-    else:
-        version = '9.0'
-
+    version = None
     if override is not None:
         version = override
         msvc_env_lines.append('set DISTUTILS_USE_SDK=1')
         msvc_env_lines.append('set MSSdk=1')
 
-    vcvarsall = os.path.join(program_files,
-                             r'Microsoft Visual Studio {version}'.format(version=version),
-                             'VC', 'vcvarsall.bat')
+    if not version:
+        if config.PY3K and config.use_MSVC2015:
+            version = '14.0'
+        elif config.PY3K:
+            version = '10.0'
+        else:
+            version = '9.0'
 
-    # Try the Microsoft Visual C++ Compiler for Python 2.7
-    localappdata = os.environ.get("localappdata")
-    not_vcvars = not isfile(vcvarsall)
-    if not_vcvars and localappdata and not config.PY3K:
-        vcvarsall = os.path.join(localappdata, "Programs", "Common",
-            "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
-    if not_vcvars and program_files and not config.PY3K:
-        vcvarsall = os.path.join(program_files, 'Common Files',
-            'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
+    vcvarsall_vs_path = os.path.join(program_files,
+                                     r'Microsoft Visual Studio {version}'.format(version=version),
+                                     'VC', 'vcvarsall.bat')
+
+    def build_vcvarsall_cmd(cmd):
+        return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch_selector)
+
+    if version == '10.0':
+        vcvarsall = vcvarsall_vs_path
+        vcvars_cmd = build_vcvarsall_cmd(vcvarsall)
+        # x64 is broken in VS 2010 Express due to a missing call to the
+        # Microsoft SDK for Windows 7.1
+        if arch_selector == 'amd64':
+            win_sdk_cmd = r'call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64'
+            vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
+        msvc_env_lines.append(vcvars_cmd)
+        not_vcvars = not isfile(vcvarsall)
+    elif version == '9.0':
+        # First, check for Microsoft Visual C++ Compiler for Python 2.7 in LOCALAPPDATA
+        localappdata = os.environ.get("localappdata")
+        if localappdata:
+            vcvarsall = os.path.join(localappdata, "Programs", "Common",
+                "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
+            not_vcvars = not isfile(vcvarsall)
+        # If it isn't there, look in 'Common Files'
+        if not_vcvars:
+            vcvarsall = os.path.join(program_files, 'Common Files',
+                'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
+            not_vcvars = not isfile(vcvarsall)
+        # Finally, fall back to Visual Studio 2008
+        if not_vcvars:
+            # The Visual Studio 2008 Express edition does not properly contain
+            # the amd64 build files, so we call the vcvars64.bat manually,
+            # rather than using the vcvarsall.bat which would try and call the
+            # missing bat file.
+            if arch_selector == 'amd64':
+                vcvarsall = os.path.join(program_files,
+                                         'Microsoft Visual Studio 9.0', 'VC',
+                                         'bin', 'vcvars64.bat')
+                msvc_env_lines.append('call "%s"' % (vcvarsall))
+                not_vcvars = not isfile(vcvarsall)
+            else:
+                vcvarsall = vcvarsall_vs_path
+                msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
+                not_vcvars = not isfile(vcvarsall)
+        else:
+            msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
+    else:
+        # Visual Studio 14 or otherwise
+        vcvarsall = vcvarsall_vs_path
+        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
+        not_vcvars = not isfile(vcvarsall)
+
     if not_vcvars:
         print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)
         return ''
 
-    msvc_env_lines.append('call "%s" %s' % (vcvarsall, 'x86' if cc.bits == 32 else 'amd64'))
     return '\n'.join(msvc_env_lines)
 
 
