@@ -46,12 +46,12 @@ def fix_staged_scripts():
         os.remove(join(scripts_dir, fn))
 
 
-def msvc_env_cmd(override=None):
+def msvc_env_cmd(bits, override=None):
     if 'ProgramFiles(x86)' in os.environ:
         program_files = os.environ['ProgramFiles(x86)']
     else:
         program_files = os.environ['ProgramFiles']
-    arch_selector = 'x86' if cc.bits == 32 else 'amd64'
+    arch_selector = 'x86' if bits == 32 else 'amd64'
 
     msvc_env_lines = []
 
@@ -70,7 +70,7 @@ def msvc_env_cmd(override=None):
             version = '9.0'
 
     vcvarsall_vs_path = os.path.join(program_files,
-                                     r'Microsoft Visual Studio {version}'.format(version=version),
+                                     'Microsoft Visual Studio {version}'.format(version=version),
                                      'VC', 'vcvarsall.bat')
 
     def build_vcvarsall_cmd(cmd):
@@ -82,7 +82,8 @@ def msvc_env_cmd(override=None):
         # x64 is broken in VS 2010 Express due to a missing call to the
         # Microsoft SDK for Windows 7.1
         if arch_selector == 'amd64':
-            win_sdk_cmd = r'call "C:\Program Files\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" /x64'
+            win_sdk_cmd = 'call "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd" /x64'.\
+                          format(program_files=program_files)
             vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
         msvc_env_lines.append(vcvars_cmd)
         not_vcvars = not isfile(vcvarsall)
@@ -167,7 +168,7 @@ def build(m, bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
-            fo.write(msvc_env_cmd(override=m.get_value('build/msvc_compiler', None)))
+            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             fo.write('\n')
             # more debuggable with echo on
             fo.write('@echo on\n')
