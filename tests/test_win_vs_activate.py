@@ -39,8 +39,9 @@ def write_bat_files(good_locations):
         if not os.path.isdir(os.path.dirname(location)):
             os.makedirs(os.path.dirname(location))  # if any of these are made, they are not currently cleaned up.  Sorry.
         with open(location, "w") as f:
+            print("writing {} (exit /b {})".format(location, int(label not in good_locations)))
             f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.")
-            f.write("exit {}".format(int(label in good_locations)))
+            f.write("exit /b {}".format(int(label not in good_locations)))
 
 
 @pytest.fixture(scope="function", params=vcvars_backup_files.keys())
@@ -81,6 +82,7 @@ def test_activation(bits, compiler):
     try:
         subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'])
     except:
+        print("failed activation: {}, {}".format(bits, compiler))
         raise
     finally:
         os.remove('tmp_call.bat')
