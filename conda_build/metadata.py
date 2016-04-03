@@ -227,7 +227,7 @@ def _git_clean(source_meta):
     has_rev_tags = tuple(bool(source_meta.get(tag, text_type())) for
                           tag in git_rev_tags)
     if sum(has_rev_tags) > 1:
-        msg = "Error: mulitple git_revs:"
+        msg = "Error: multiple git_revs:"
         msg += ', '.join("{}".format(key) for key, has in
                          zip(git_rev_tags, has_rev_tags) if has)
         sys.exit(msg)
