@@ -2,36 +2,36 @@ from __future__ import print_function
 
 import os
 import subprocess
+import sys
 
 import pytest
 
-from conda_build.windows import msvc_env_cmd
+vcvars_backup_files={}
+if sys.platform == "win32":
+    if 'ProgramFiles(x86)' in os.environ:
+        program_files = os.environ['ProgramFiles(x86)']
+    else:
+        program_files = os.environ['ProgramFiles']
 
+    vcvars_backup_files = {"vs{}".format(version): os.path.join(program_files,
+                                  r'Microsoft Visual Studio {version}'.format(version=version),
+                                  'VC', 'vcvarsall.bat') for version in ["9.0", "10.0", "14.0"]}
+    # VC9 compiler for python - local user install
+    localappdata = os.environ.get("localappdata")
+    vcvars_backup_files["python_local"]=os.path.join(localappdata, 'Programs', 'Common',
+                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
+    # VC9 compiler for python - common files
+    vcvars_backup_files["python_system"] = os.path.join(program_files, 'Common Files',
+                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
+    # Windows SDK 7.1
+    vcvars_backup_files["win71sdk"] = "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
+                                      format(program_files=program_files)
 
-if 'ProgramFiles(x86)' in os.environ:
-    program_files = os.environ['ProgramFiles(x86)']
-else:
-    program_files = os.environ['ProgramFiles']
+    vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
+    vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0', 'win71sdk']}
+    vs14 = {key:vcvars_backup_files[key] for key in ['vs14.0']}
 
-vcvars_backup_files = {"vs{}".format(version): os.path.join(program_files,
-                              r'Microsoft Visual Studio {version}'.format(version=version),
-                              'VC', 'vcvarsall.bat') for version in ["9.0", "10.0", "14.0"]}
-# VC9 compiler for python - local user install
-localappdata = os.environ.get("localappdata")
-vcvars_backup_files["python_local"]=os.path.join(localappdata, 'Programs', 'Common',
-                'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
-# VC9 compiler for python - common files
-vcvars_backup_files["python_system"] = os.path.join(program_files, 'Common Files',
-                'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
-# Windows SDK 7.1
-vcvars_backup_files["win71sdk"] = "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
-                                  format(program_files=program_files)
-
-vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
-vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0', 'win71sdk']}
-vs14 = {key:vcvars_backup_files[key] for key in ['vs14.0']}
-
-vcs = {"9.0": vs9, "10.0": vs10, "14.0": vs14}
+    vcs = {"9.0": vs9, "10.0": vs10, "14.0": vs14}
 
 def write_bat_files(good_locations):
     for label, location in vcvars_backup_files.items():
@@ -68,7 +68,9 @@ def compiler(request):
 def bits(request):
     return request.param
 
+@pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
 def test_activation(bits, compiler):
+    from conda_build.windows import msvc_env_cmd
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
     # this will throw an exception if the subprocess return code is not 0
