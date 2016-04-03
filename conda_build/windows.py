@@ -70,7 +70,7 @@ def msvc_env_cmd(bits, override=None):
             version = '9.0'
 
     vcvarsall_vs_path = os.path.join(program_files,
-                                     r'Microsoft Visual Studio {version}'.format(version=version),
+                                     'Microsoft Visual Studio {version}'.format(version=version),
                                      'VC', 'vcvarsall.bat')
 
     def build_vcvarsall_cmd(cmd):
@@ -82,7 +82,7 @@ def msvc_env_cmd(bits, override=None):
         # x64 is broken in VS 2010 Express due to a missing call to the
         # Microsoft SDK for Windows 7.1
         if arch_selector == 'amd64':
-            win_sdk_cmd = r'call "{program_files}\Microsoft SDKs\Windows\v7.1\Bin\SetEnv.cmd" \/x64'.\
+            win_sdk_cmd = 'call "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd" /x64'.\
                           format(program_files=program_files)
             vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
         msvc_env_lines.append(vcvars_cmd)

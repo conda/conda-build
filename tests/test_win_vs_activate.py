@@ -1,9 +1,12 @@
-import unittest
+from __future__ import print_function
+
 import os
+import subprocess
+
+import pytest
 
 from conda_build.windows import msvc_env_cmd
 
-import pytest
 
 if 'ProgramFiles(x86)' in os.environ:
     program_files = os.environ['ProgramFiles(x86)']
@@ -12,7 +15,7 @@ else:
 
 vcvars_backup_files = {"vs{}".format(version): os.path.join(program_files,
                               r'Microsoft Visual Studio {version}'.format(version=version),
-                              'VC', 'vcvarsall.bat') for version in ["9.0", "10.0"]}
+                              'VC', 'vcvarsall.bat') for version in ["9.0", "10.0", "14.0"]}
 # VC9 compiler for python - local user install
 localappdata = os.environ.get("localappdata")
 vcvars_backup_files["python_local"]=os.path.join(localappdata, 'Programs', 'Common',
@@ -24,31 +27,27 @@ vcvars_backup_files["python_system"] = os.path.join(program_files, 'Common Files
 vcvars_backup_files["win71sdk"] = "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
                                   format(program_files=program_files)
 
+vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
+vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0', 'win71sdk']}
+vs14 = {key:vcvars_backup_files[key] for key in ['vs14.0']}
+
+vcs = {"9.0": vs9, "10.0": vs10, "14.0": vs14}
 
 def write_bat_files(good_locations):
     for label, location in vcvars_backup_files.items():
         assert not os.path.exists(location)  # these should all have been moved!  bad to overwrite them!
-        os.makedirs(os.path.dirname(location))  # not currently cleaned up.  Sorry.
+        if not os.path.isdir(os.path.dirname(location)):
+            os.makedirs(os.path.dirname(location))  # if any of these are made, they are not currently cleaned up.  Sorry.
         with open(location, "w") as f:
+            f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.")
             f.write("exit {}".format(int(label in good_locations)))
 
 
-def call_subprocess_activate(bits, vcver):
-    cmd = msvc_env_cmd(bits, vcver)
-    # this will throw an exception if the subprocess return code is not 0
-    #     this is effectively the test condition for all below tests.
-    subprocess.check_call(cmd)
-
-
 @pytest.fixture(scope="function", params=vcvars_backup_files.keys())
-def bat(request):
-    for f in vcvars_backup_files:
-        if os.path.exists(f):
-            os.rename(f, f[:-1]+'k')
-    write_bat_files([request.param])
+def compiler(request):
     def fin():
         print ("teardown bat")
-        for f in vcvars_backup_files:
+        for f in vcvars_backup_files.values():
             # clean up any of the custom scripts we wrote to test
             if os.path.exists(f):
                 os.remove(f)
@@ -56,6 +55,12 @@ def bat(request):
             if os.path.exists(f[:-1]+'k'):
                 os.rename(f[:-1]+'k', f)
     request.addfinalizer(fin)
+
+    for f in vcvars_backup_files.values():
+        if os.path.exists(f):
+            os.rename(f, f[:-1]+'k')
+
+    write_bat_files([request.param])
     return request.param
 
 
@@ -63,6 +68,17 @@ def bat(request):
 def bits(request):
     return request.param
 
+def test_activation(bits, compiler):
+    # look up which VS version we're forcing here
+    compiler_version = [key for key in vcs if compiler in vcs[key]][0]
+    # this will throw an exception if the subprocess return code is not 0
+    #     this is effectively the test condition for all below tests.
+    with open('tmp_call.bat', "w") as f:
+        f.write(msvc_env_cmd(bits, compiler_version))
 
-def test_activation(bits, bat):
-    call_subprocess_activate(bats.bits, bats.location)
+    try:
+        subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'])
+    except:
+        raise
+    finally:
+        os.remove('tmp_call.bat')
