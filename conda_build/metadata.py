@@ -97,7 +97,7 @@ Error: Invalid selector in meta.yaml line %d:
 def yamlize(data):
     try:
         return yaml.load(data, Loader=BaseLoader)
-    except yaml.parser.ParserError as e:
+    except yaml.error.YAMLError as e:
         if '{{' in data:
             try:
                 import jinja2
