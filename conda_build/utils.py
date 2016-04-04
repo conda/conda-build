@@ -8,7 +8,7 @@ import zipfile
 import subprocess
 import operator
 import fnmatch
-from os.path import dirname, getmtime, getsize, isdir, join
+from os.path import dirname, getmtime, getsize, isdir, join, exists
 from collections import defaultdict
 import distutils.dir_util
 
@@ -33,7 +33,14 @@ def copy_into(src, dst):
         dstname = os.path.join(dst, afile)
 
         if os.path.isdir(srcname):
-            distutils.dir_util.copy_tree(srcname, dstname)
+            # make sure we will not replace files while we merge folders
+            files_to_be_copied = distutils.dir_util.copy_tree(srcname, dstname, dry_run=1)
+            existing_files = [path for path in files_to_be_copied if exists(path)]
+            if existing_files:
+                raise Exception('The following files already exist:\n' + \
+                                '\n'.join(existing_files))
+            else:
+                distutils.dir_util.copy_tree(srcname, dstname)
         else:
             shutil.copy2(srcname, dstname)
 
