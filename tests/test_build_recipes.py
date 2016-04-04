@@ -1,11 +1,8 @@
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 
 import pytest
-import yaml
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
