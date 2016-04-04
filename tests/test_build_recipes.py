@@ -47,6 +47,8 @@ def test_symlink_fail():
     error = error.decode('utf-8')
     assert error.count("Error") == 6
 
+@pytest.mark.skipif(sys.platform=="win32",
+                    reason="Windows doesn't show this error")
 def test_broken_conda_meta():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "conda-meta"))
     process = subprocess.Popen(cmd.split(),
