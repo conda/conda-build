@@ -181,15 +181,20 @@ def conda_build_vars(prefix):
 
 
 def python_vars():
-    return {
+    vars = {
         'PYTHON': config.build_python,
         'PY3K': str(config.PY3K),
         'STDLIB_DIR': get_stdlib_dir(),
         'SP_DIR': get_sp_dir(),
         'PY_VER': get_py_ver(),
-        'NPY_VER': get_npy_ver(),
+        'CONDA_PY': str(config.CONDA_PY),
     }
-
+    # Only define these variables if '--numpy=X.Y' was provided,
+    # otherwise any attempt to use them should be an error.
+    if get_npy_ver():
+        vars['NPY_VER'] = get_npy_ver()
+        vars['CONDA_NPY'] = str(config.CONDA_NPY)
+    return vars
 
 def perl_vars():
     return {
