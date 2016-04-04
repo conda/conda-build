@@ -12,15 +12,6 @@ metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
 
 
-@pytest.fixture(scope="function")
-def tmpdir(request):
-    tmpdir=tempfile.mkdtemp()
-    def fin():
-        shutil.rmtree(tmpdir)
-    request.addfinalizer(fin)
-    return tmpdir
-
-
 def is_valid_dir(parent_dir, dirname):
     valid = os.path.isdir(os.path.join(parent_dir, dirname))
     valid &= not dirname.startswith("_")
@@ -30,6 +21,11 @@ def is_valid_dir(parent_dir, dirname):
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir) if is_valid_dir(metadata_dir, dirname)])
 def recipe(request):
+    cwd = os.getcwd()
+    os.chdir(metadata_dir)
+    def fin():
+        os.chdir(cwd)
+    request.addfinalizer(fin)
     return os.path.join(metadata_dir, request.param)
 
 
