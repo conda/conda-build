@@ -33,6 +33,7 @@ if sys.platform == "win32":
 
     vcs = {"9.0": vs9, "10.0": vs10, "14.0": vs14}
 
+
 def write_bat_files(good_locations):
     for label, location in vcvars_backup_files.items():
         assert not os.path.exists(location)  # these should all have been moved!  bad to overwrite them!
@@ -40,8 +41,8 @@ def write_bat_files(good_locations):
             os.makedirs(os.path.dirname(location))  # if any of these are made, they are not currently cleaned up.  Sorry.
         with open(location, "w") as f:
             print("writing {} (exit /b {})".format(location, int(label not in good_locations)))
-            f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.")
-            f.write("exit /b {}".format(int(label not in good_locations)))
+            f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.\n")
+            f.write("exit /b {}\n".format(int(label not in good_locations)))
 
 
 @pytest.fixture(scope="function")
@@ -64,7 +65,6 @@ def setup_teardown(request):
     return request
 
 
-
 @pytest.fixture(scope="function", params=vcvars_backup_files.keys())
 def compiler(request, setup_teardown):
     return request.param
@@ -76,7 +76,7 @@ def bits(request):
 
 
 @pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
-@pytest.mark.xfail(reason="verification of test logic")
+@pytest.mark.xfail(reason="verification of test logic", strict=True)
 def test_activation_logic(bits, compiler):
     from conda_build.windows import msvc_env_cmd
     # empty list here means no configuration is valid.  We should get a
@@ -85,13 +85,14 @@ def test_activation_logic(bits, compiler):
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
     with open('tmp_call.bat', "w") as f:
+        f.write('type "{}"\n'.format(vcvars_backup_files[compiler]))
         f.write(msvc_env_cmd(bits, compiler_version))
-    subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'])
+    subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
 
 
 @pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
 def test_activation(bits, compiler):
-    write_bat_files([request.param])
+    write_bat_files([compiler])
     from conda_build.windows import msvc_env_cmd
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
@@ -101,8 +102,8 @@ def test_activation(bits, compiler):
         f.write(msvc_env_cmd(bits, compiler_version))
 
     try:
-        subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'])
-    except:
+        subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
+    except subprocess.CalledProcessError:
         print("failed activation: {}, {}".format(bits, compiler))
         raise
     finally:
