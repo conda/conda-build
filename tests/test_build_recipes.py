@@ -34,6 +34,12 @@ def test_recipe_builds(recipe):
     env["CONDA_TEST_VAR_2"] = "conda_test_2"
 
     cmd = 'conda build --no-anaconda-upload {}'.format(recipe)
+
+    # allow the recipe to customize its build
+    driver = os.path.join(recipe, '_driver.sh')
+    if os.access(driver, os.X_OK):
+        cmd = "{} {}".format(driver, cmd)
+
     subprocess.check_call(cmd.split(), env=env)
 
 
