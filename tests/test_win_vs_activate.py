@@ -44,10 +44,9 @@ def write_bat_files(good_locations):
             f.write("exit /b {}".format(int(label not in good_locations)))
 
 
-@pytest.fixture(scope="function", params=vcvars_backup_files.keys())
-def compiler(request):
+@pytest.fixture(scope="function")
+def setup_teardown(request):
     def fin():
-        print ("teardown bat")
         for f in vcvars_backup_files.values():
             # clean up any of the custom scripts we wrote to test
             if os.path.exists(f):
@@ -57,11 +56,17 @@ def compiler(request):
                 os.rename(f[:-1]+'k', f)
     request.addfinalizer(fin)
 
+    # backup known files
     for f in vcvars_backup_files.values():
         if os.path.exists(f):
             os.rename(f, f[:-1]+'k')
 
-    write_bat_files([request.param])
+    return request
+
+
+
+@pytest.fixture(scope="function", params=vcvars_backup_files.keys())
+def compiler(request, setup_teardown):
     return request.param
 
 
@@ -69,8 +74,24 @@ def compiler(request):
 def bits(request):
     return request.param
 
+
+@pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
+@pytest.mark.xfail(reason="verification of test logic")
+def test_activation_logic(bits, compiler):
+    from conda_build.windows import msvc_env_cmd
+    # empty list here means no configuration is valid.  We should get a
+    # failure.
+    write_bat_files([])
+    # look up which VS version we're forcing here
+    compiler_version = [key for key in vcs if compiler in vcs[key]][0]
+    with open('tmp_call.bat', "w") as f:
+        f.write(msvc_env_cmd(bits, compiler_version))
+    subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'])
+
+
 @pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
 def test_activation(bits, compiler):
+    write_bat_files([request.param])
     from conda_build.windows import msvc_env_cmd
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
