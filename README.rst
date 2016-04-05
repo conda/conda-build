@@ -5,6 +5,9 @@ conda-build
 .. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
                :target: https://travis-ci.org/conda/conda-build
 
+.. image:: https://ci.appveyor.com/api/projects/status/b315s53r55xwxhji?svg=true
+               :target: https://ci.appveyor.com/project/ironmancio54716/conda-build
+
 
 Installation
 --------------

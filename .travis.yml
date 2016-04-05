@@ -28,8 +28,6 @@ install:
 script:
   - pyflakes conda_build tests bin/* bdist_conda.py setup.py example_packages
   - py.test --cov conda_build --cov-report xml tests
-  - tests/test-recipes/build_recipes.sh
-  - tests/test-skeleton/test-skeleton.sh
   - conda build --help
 
 notifications:
