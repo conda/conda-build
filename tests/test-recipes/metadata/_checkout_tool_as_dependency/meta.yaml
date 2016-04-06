@@ -1,5 +1,5 @@
 package:
-  name: test-fetcher-as-build-dependency
+  name: test-checkout-tool-as-dependency
   version: 1.0
 
 source:

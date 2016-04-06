@@ -57,7 +57,7 @@ def test_checkout_tool_as_dependency():
 echo
 echo " ******* You've reached the dummy svn. It's likely there's a bug in conda  *******"
 echo " ******* that makes it not add the _build/bin directory onto the PATH      *******"
-echo " ******* before running the source fetcher                                 *******"
+echo " ******* before running the source checkout tool                           *******"
 echo
 exit -1
 """)
@@ -69,7 +69,7 @@ exit -1
         os.chmod(dummyfile, st.st_mode | stat.S_IEXEC)
     env = dict(os.environ)
     env["PATH"] = os.pathsep.join([tmpdir, env["PATH"]])
-    cmd = 'conda build --no-anaconda-upload {}/_fetcher_as_build_dependency'.format(metadata_dir)
+    cmd = 'conda build --no-anaconda-upload {}/_checkout_tool_as_dependency'.format(metadata_dir)
     try:
         subprocess.check_call(cmd.split(), env=env)
     except subprocess.CalledProcessError:
