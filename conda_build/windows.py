@@ -79,53 +79,34 @@ def msvc_env_cmd(bits, override=None):
     if version == '10.0':
         vcvarsall = vcvarsall_vs_path
         vcvars_cmd = build_vcvarsall_cmd(vcvarsall)
-        # x64 is broken in VS 2010 Express due to a missing call to the
-        # Microsoft SDK for Windows 7.1
-        if arch_selector == 'amd64':
-            win_sdk_cmd = 'call "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd" /x64'.\
-                          format(program_files=program_files)
-            vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
+        win_sdk_cmd = build_vcvarsall_cmd("{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
+                      format(program_files=program_files))
+        vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
         msvc_env_lines.append(vcvars_cmd)
         not_vcvars = not isfile(vcvarsall)
     elif version == '9.0':
-        # First, check for Microsoft Visual C++ Compiler for Python 2.7 in LOCALAPPDATA
-        localappdata = os.environ.get("localappdata")
-        if localappdata:
-            vcvarsall = os.path.join(localappdata, "Programs", "Common",
-                "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat")
-            not_vcvars = not isfile(vcvarsall)
-        # If it isn't there, look in 'Common Files'
-        if not_vcvars:
-            vcvarsall = os.path.join(program_files, 'Common Files',
-                'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
-            not_vcvars = not isfile(vcvarsall)
-        # Finally, fall back to Visual Studio 2008
-        if not_vcvars:
-            # The Visual Studio 2008 Express edition does not properly contain
-            # the amd64 build files, so we call the vcvars64.bat manually,
-            # rather than using the vcvarsall.bat which would try and call the
-            # missing bat file.
-            if arch_selector == 'amd64':
-                vcvarsall = os.path.join(program_files,
-                                         'Microsoft Visual Studio 9.0', 'VC',
-                                         'bin', 'vcvars64.bat')
-                msvc_env_lines.append('call "%s"' % (vcvarsall))
-                not_vcvars = not isfile(vcvarsall)
-            else:
-                vcvarsall = vcvarsall_vs_path
-                msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
-                not_vcvars = not isfile(vcvarsall)
+        # First, check for Microsoft Visual C++ Compiler for Python 2.7
+        localappdata = os.getenv("localappdata", "C:\\")
+        vcvars_cmd = build_vcvarsall_cmd(os.path.join(localappdata, "Programs", "Common",
+            "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat"))
+        vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(
+            os.path.join(program_files, 'Common Files',
+            'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat"))
+        # The Visual Studio 2008 Express edition does not properly contain
+        # the amd64 build files, so we call the vcvars64.bat manually,
+        # rather than using the vcvarsall.bat which would try and call the
+        # missing bat file.
+        if arch_selector == 'amd64':
+            vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(os.path.join(program_files,
+                                          'Microsoft Visual Studio 9.0', 'VC',
+                                          'bin', 'vcvars64.bat'))
         else:
-            msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
+            vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(vcvarsall_vs_path)
+        msvc_env_lines.append(vcvars_cmd)
     else:
         # Visual Studio 14 or otherwise
         vcvarsall = vcvarsall_vs_path
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
-        not_vcvars = not isfile(vcvarsall)
-
-    if not_vcvars:
-        print("Warning: Couldn't find Visual Studio: %r" % vcvarsall)
-        return ''
 
     return '\n'.join(msvc_env_lines)
 
