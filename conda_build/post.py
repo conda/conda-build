@@ -31,8 +31,7 @@ if sys.platform.startswith('linux'):
 elif sys.platform == 'darwin':
     from conda_build import macho
 
-SHEBANG_PAT = re.compile(r'^#!.+$', re.M)
-
+SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
 def is_obj(path):
     assert sys.platform != 'win32'
@@ -58,7 +57,7 @@ def fix_shebang(f, osx_is_app=False):
         mm = mmap.mmap(fi.fileno(), 0)
         m = SHEBANG_PAT.match(mm)
 
-        if not (m and 'python' in m.group()):
+        if not (m and b'python' in m.group()):
             return
 
         data = mm[:]
@@ -66,7 +65,7 @@ def fix_shebang(f, osx_is_app=False):
     py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
                config.build_prefix + '/bin/' + basename(config.build_python))
-    new_data = SHEBANG_PAT.sub('#!' + py_exec, data, count=1)
+    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode('ascii'), data, count=1)
     if new_data == data:
         return
     print("updating shebang:", f)
