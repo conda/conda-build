@@ -1,0 +1,12 @@
+package:
+  name: test-fetcher-as-build-dependency
+  version: 1.0
+
+source:
+  svn_url: file://{{ RECIPE_DIR }}/_svn_repo/dummy
+  svn_rev: 1
+
+requirements:
+  build:
+    # To test the conda_build version
+    - svn
