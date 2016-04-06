@@ -1,6 +1,8 @@
 import os
 import subprocess
+import shutil
 import sys
+import tempfile
 
 import pytest
 
@@ -34,7 +36,47 @@ def test_recipe_builds(recipe):
     env["CONDA_TEST_VAR_2"] = "conda_test_2"
 
     cmd = 'conda build --no-anaconda-upload {}'.format(recipe)
+
+    # allow the recipe to customize its build
+    driver = os.path.join(recipe, '_driver.sh')
+    if os.access(driver, os.X_OK):
+        cmd = "{} {}".format(driver, cmd)
     subprocess.check_call(cmd.split(), env=env)
+
+
+def test_checkout_tool_as_dependency():
+    # "hide" svn by putting a known bad one on PATH
+    tmpdir = tempfile.mkdtemp()
+    dummyfile = os.path.join(tmpdir, "svn")
+    # empty prefix by default - extra bit at beginning of file
+    prefix = ""
+    if sys.platform != "win32":
+        prefix = "#!/bin/bash\nexec 1>&2\n"
+    with open(dummyfile, 'w') as f:
+        f.write(prefix + """
+echo
+echo " ******* You've reached the dummy svn. It's likely there's a bug in conda  *******"
+echo " ******* that makes it not add the _build/bin directory onto the PATH      *******"
+echo " ******* before running the source checkout tool                           *******"
+echo
+exit -1
+""")
+    if sys.platform=="win32":
+        os.rename(dummyfile, dummyfile+".bat")
+    else:
+        import stat
+        st = os.stat(dummyfile)
+        os.chmod(dummyfile, st.st_mode | stat.S_IEXEC)
+    env = dict(os.environ)
+    env["PATH"] = os.pathsep.join([tmpdir, env["PATH"]])
+    cmd = 'conda build --no-anaconda-upload {}/_checkout_tool_as_dependency'.format(metadata_dir)
+    try:
+        subprocess.check_call(cmd.split(), env=env)
+    except subprocess.CalledProcessError:
+        raise
+    finally:
+        shutil.rmtree(tmpdir)
+
 
 
 @pytest.mark.skipif(sys.platform=="win32",

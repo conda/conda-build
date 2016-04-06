@@ -410,7 +410,15 @@ def build(m, get_src=True, post=None, include_recipe=True):
             plan.execute_actions(actions, index)
 
         if get_src:
-            source.provide(m.path, m.get_section('source'))
+            # Execute any commands fetching the source (e.g., git) in the _build environment.
+            # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+            # dependencies.
+            _old_path = os.environ['PATH']
+            try:
+                os.environ['PATH'] = prepend_bin_path({'PATH' : _old_path}, config.build_prefix)['PATH']
+                source.provide(m.path, m.get_section('source'))
+            finally:
+                os.environ['PATH'] = _old_path
 
         # Parse our metadata again because we did not initialize the source
         # information before.
