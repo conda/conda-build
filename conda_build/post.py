@@ -15,6 +15,7 @@ except ImportError:
 import io
 from subprocess import call
 from collections import defaultdict
+import mmap
 
 from conda_build.config import config
 from conda_build import external
@@ -45,14 +46,22 @@ def fix_shebang(f, osx_is_app=False):
         return
     elif os.path.islink(path):
         return
-    with io.open(path, encoding=locale.getpreferredencoding()) as fi:
+
+    with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
-            data = fi.read()
-        except UnicodeDecodeError: # file is binary
+            data = fi.read(100)
+        except UnicodeDecodeError:  # file is binary
             return
-    m = SHEBANG_PAT.match(data)
-    if not (m and 'python' in m.group()):
-        return
+
+        # regexp on the memory mapped file so we only read it into
+        # memory if the regexp matches.
+        mm = mmap.mmap(fi.fileno(), 0)
+        m = SHEBANG_PAT.match(mm)
+
+        if not (m and 'python' in m.group()):
+            return
+
+        data = mm[:]
 
     py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
@@ -323,7 +332,6 @@ def post_build(m, files):
             mk_relative(m, f)
 
     check_symlinks(files)
-
 
 def check_symlinks(files):
     if readlink is False:

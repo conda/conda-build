@@ -14,6 +14,7 @@ import time
 import tarfile
 import fnmatch
 from os.path import exists, isdir, isfile, islink, join
+import mmap
 
 import conda.config as cc
 import conda.plan as plan
@@ -105,30 +106,35 @@ def have_prefix_files(files):
             # OSX does not allow hard-linking symbolic links, so we cannot
             # skip symbolic links (as we can on Linux)
             continue
-        with open(path, 'rb') as fi:
-            data = fi.read()
-        mode = 'binary' if b'\x00' in data else 'text'
+
+        fi = open(path, 'rb+')
+        mm = mmap.mmap(fi.fileno(), 0)
+
+        mode = 'binary' if mm.find(b'\x00') != -1 else 'text'
         if mode == 'text':
-            if not (sys.platform == 'win32' and alt_prefix_bytes in data):
+            if sys.platform != 'win32' and mm.find(prefix_bytes) != -1:
                 # Use the placeholder for maximal backwards compatibility, and
                 # to minimize the occurrences of usernames appearing in built
                 # packages.
-                data = rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
-
-        if prefix_bytes in data:
+                rewrite_file_with_new_prefix(path, mm[:], prefix_bytes, prefix_placeholder_bytes)
+                mm.close() and fi.close()
+                fi = open(path, 'rb+')
+                mm = mmap.mmap(fi.fileno(), 0)
+        if mm.find(prefix_bytes) != -1:
             yield (prefix, mode, f)
-        if (sys.platform == 'win32') and (alt_prefix_bytes in data):
+        if (sys.platform == 'win32') and mm.find(alt_prefix_bytes) != -1:
             # some windows libraries use unix-style path separators
             yield (alt_prefix, mode, f)
-        if prefix_placeholder_bytes in data:
+        if mm.find(prefix_placeholder_bytes) != -1:
             yield (prefix_placeholder, mode, f)
+        mm.close() and fi.close()
 
 
 def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     # Old and new prefix should be bytes
-    data = data.replace(old_prefix, new_prefix)
 
     st = os.stat(path)
+    data = data.replace(old_prefix, new_prefix)
     # Save as
     with open(path, 'wb') as fo:
         fo.write(data)
