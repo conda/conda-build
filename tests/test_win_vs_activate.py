@@ -13,19 +13,20 @@ if sys.platform == "win32":
     else:
         program_files = os.environ['ProgramFiles']
 
-    vcvars_backup_files = {"vs{}".format(version): os.path.join(program_files,
-                                  r'Microsoft Visual Studio {version}'.format(version=version),
-                                  'VC', 'vcvarsall.bat') for version in ["9.0", "10.0", "14.0"]}
+    vcvars_backup_files = {"vs{}".format(version): [os.path.join(program_files,
+                                  'Microsoft Visual Studio {version}'.format(version=version),
+                                  'VC', 'vcvarsall.bat')] for version in ["9.0", "10.0", "14.0"]}
+    vcvars_backup_files['vs9.0'].append(os.path.dirname(vcvars_backup_files['vs9.0'][0])+"\\bin\\vcvars64.bat")
     # VC9 compiler for python - local user install
     localappdata = os.environ.get("localappdata")
-    vcvars_backup_files["python_local"]=os.path.join(localappdata, 'Programs', 'Common',
-                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
+    vcvars_backup_files["python_local"] = [os.path.join(localappdata, 'Programs', 'Common',
+                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")]
     # VC9 compiler for python - common files
-    vcvars_backup_files["python_system"] = os.path.join(program_files, 'Common Files',
-                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")
+    vcvars_backup_files["python_system"] = [os.path.join(program_files, 'Common Files',
+                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")]
     # Windows SDK 7.1
-    vcvars_backup_files["win71sdk"] = "{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
-                                      format(program_files=program_files)
+    vcvars_backup_files["win71sdk"] = ["{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
+                                      format(program_files=program_files)]
 
     vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
     vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0', 'win71sdk']}
@@ -35,32 +36,35 @@ if sys.platform == "win32":
 
 
 def write_bat_files(good_locations):
-    for label, location in vcvars_backup_files.items():
-        assert not os.path.exists(location)  # these should all have been moved!  bad to overwrite them!
-        if not os.path.isdir(os.path.dirname(location)):
-            os.makedirs(os.path.dirname(location))  # if any of these are made, they are not currently cleaned up.  Sorry.
-        with open(location, "w") as f:
-            print("writing {} (exit /b {})".format(location, int(label not in good_locations)))
-            f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.\n")
-            f.write("exit /b {}\n".format(int(label not in good_locations)))
+    for label, locations in vcvars_backup_files.items():
+        for location in locations:
+            assert not os.path.exists(location)  # these should all have been moved!  bad to overwrite them!
+            if not os.path.isdir(os.path.dirname(location)):
+                os.makedirs(os.path.dirname(location))  # if any of these are made, they are not currently cleaned up.  Sorry.
+            with open(location, "w") as f:
+                print("writing {} (exit /b {})".format(location, int(label not in good_locations)))
+                f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.\n")
+                f.write("exit /b {}\n".format(int(label not in good_locations)))
 
 
 @pytest.fixture(scope="function")
 def setup_teardown(request):
     def fin():
-        for f in vcvars_backup_files.values():
-            # clean up any of the custom scripts we wrote to test
-            if os.path.exists(f):
-                os.remove(f)
-            # restore the backups
-            if os.path.exists(f[:-1]+'k'):
-                os.rename(f[:-1]+'k', f)
+        for locations in vcvars_backup_files.values():
+            for location in locations:
+                # clean up any of the custom scripts we wrote to test
+                if os.path.exists(location):
+                    os.remove(location)
+                # restore the backups
+                if os.path.exists(location[:-1]+'k'):
+                    os.rename(location[:-1]+'k', location)
     request.addfinalizer(fin)
 
     # backup known files
-    for f in vcvars_backup_files.values():
-        if os.path.exists(f):
-            os.rename(f, f[:-1]+'k')
+    for locations in vcvars_backup_files.values():
+        for location in locations:
+            if os.path.exists(location):
+                os.rename(location, location[:-1]+'k')
 
     return request
 
@@ -85,7 +89,6 @@ def test_activation_logic(bits, compiler):
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
     with open('tmp_call.bat', "w") as f:
-        f.write('type "{}"\n'.format(vcvars_backup_files[compiler]))
         f.write(msvc_env_cmd(bits, compiler_version))
     subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
 

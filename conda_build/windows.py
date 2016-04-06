@@ -89,10 +89,19 @@ def msvc_env_cmd(bits, override=None):
         localappdata = os.getenv("localappdata", "C:\\")
         vcvars_cmd = build_vcvarsall_cmd(os.path.join(localappdata, "Programs", "Common",
             "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat"))
-        vcvars_cmd += "\nif errorlevel 1 call " + build_vcvarsall_cmd(
+        vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(
             os.path.join(program_files, 'Common Files',
             'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat"))
-        vcvars_cmd += "\nif errorlevel 1 call " + build_vcvarsall_cmd(vcvarsall_vs_path)
+        # The Visual Studio 2008 Express edition does not properly contain
+        # the amd64 build files, so we call the vcvars64.bat manually,
+        # rather than using the vcvarsall.bat which would try and call the
+        # missing bat file.
+        if arch_selector == 'amd64':
+            vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(os.path.join(program_files,
+                                          'Microsoft Visual Studio 9.0', 'VC',
+                                          'bin', 'vcvars64.bat'))
+        else:
+            vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(vcvarsall_vs_path)
         msvc_env_lines.append(vcvars_cmd)
     else:
         # Visual Studio 14 or otherwise
