@@ -99,7 +99,7 @@ def msvc_env_cmd(bits, override=None):
         msvc_env_lines.append(vcvars_cmd)
     elif version == '9.0':
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
-        localappdata = os.getenv('localappdata', 'C:\\')
+        localappdata = os.getenv('localappdata', program_files)
         vs_tools_py_local_path = os.path.join(
             localappdata, 'Programs', 'Common', 'Microsoft', 
             'Visual C++ for Python', '9.0', 'vcvarsall.bat')
