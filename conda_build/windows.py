@@ -69,39 +69,60 @@ def msvc_env_cmd(bits, override=None):
         else:
             version = '9.0'
 
-    vcvarsall_vs_path = os.path.join(program_files,
-                                     'Microsoft Visual Studio {version}'.format(version=version),
-                                     'VC', 'vcvarsall.bat')
+    vcvarsall_vs_path = os.path.join(
+        program_files, 'Microsoft Visual Studio {}'.format(version), 'VC', 
+        'vcvarsall.bat')
 
-    def build_vcvarsall_cmd(cmd):
-        return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch_selector)
+    def build_vcvarsall_cmd(cmd, arch=arch_selector):
+        return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
     if version == '10.0':
         vcvarsall = vcvarsall_vs_path
         vcvars_cmd = build_vcvarsall_cmd(vcvarsall)
-        win_sdk_cmd = build_vcvarsall_cmd("{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
-                      format(program_files=program_files))
-        vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
+        
+        # Note that we explicitly want "Program Files" and not 
+        # "Program Files (x86)"
+        win_sdk_bat_path = os.path.join(os.environ['ProgramFiles'], 
+                                        'Microsoft SDKs',  'Windows', 'v7.1', 
+                                        'Bin', 'SetEnv.cmd')
+        # Unfortunately, the Windows SDK takes a different command format for
+        # the arch selector - debug is default so explicitly set 'Release'
+        win_sdk_arch = '/x86 /Release' if bits == 32 else '/x64 /Release'
+        win_sdk_cmd = build_vcvarsall_cmd(win_sdk_bat_path, arch=win_sdk_arch)
+        
+        # Always call the Windows SDK first - if VS 2010 exists but was
+        # installed using the broken installer then it will try and call the 
+        # vcvars script, which will fail but NOT EXIT 1. To work around this,
+        # we always call the Windows SDK, and then try calling VS 2010 which
+        # will overwrite any environemnt variables it needs, if necessary.
+        msvc_env_lines.append(win_sdk_cmd)
         msvc_env_lines.append(vcvars_cmd)
     elif version == '9.0':
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
-        localappdata = os.getenv("localappdata", "C:\\")
-        vcvars_cmd = build_vcvarsall_cmd(os.path.join(localappdata, "Programs", "Common",
-            "Microsoft", "Visual C++ for Python", "9.0", "vcvarsall.bat"))
-        vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(
-            os.path.join(program_files, 'Common Files',
-            'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat"))
+        localappdata = os.getenv('localappdata', 'C:\\')
+        vs_tools_py_local_path = os.path.join(
+            localappdata, 'Programs', 'Common', 'Microsoft', 
+            'Visual C++ for Python', '9.0', 'vcvarsall.bat')
+        msvc_env_lines.append(build_vcvarsall_cmd(vs_tools_py_local_path))
+        
+        vs_tools_py_common_path = os.path.join(
+            localappdata, 'Common Files', 'Microsoft', 'Visual C++ for Python', 
+            '9.0', 'vcvarsall.bat')
+        msvc_env_lines.append('if errorlevel 1 {}'.format(
+            build_vcvarsall_cmd(vs_tools_py_common_path)))
         # The Visual Studio 2008 Express edition does not properly contain
         # the amd64 build files, so we call the vcvars64.bat manually,
         # rather than using the vcvarsall.bat which would try and call the
         # missing bat file.
         if arch_selector == 'amd64':
-            vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(os.path.join(program_files,
-                                          'Microsoft Visual Studio 9.0', 'VC',
-                                          'bin', 'vcvars64.bat'))
+            vcvars9x64_bat_path = os.path.join(program_files, 
+                                               'Microsoft Visual Studio 9.0', 
+                                               'VC', 'bin', 'vcvars64.bat')
+            msvc_env_lines.append('if errorlevel 1 {}'.format(
+                build_vcvarsall_cmd(vcvars9x64_bat_path)))
         else:
-            vcvars_cmd += "\nif errorlevel 1 " + build_vcvarsall_cmd(vcvarsall_vs_path)
-        msvc_env_lines.append(vcvars_cmd)
+            msvc_env_lines.append('if errorlevel 1 {}'.format(
+                build_vcvarsall_cmd(vcvarsall_vs_path)))
     else:
         # Visual Studio 14 or otherwise
         vcvarsall = vcvarsall_vs_path
