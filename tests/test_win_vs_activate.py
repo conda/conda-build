@@ -24,12 +24,9 @@ if sys.platform == "win32":
     # VC9 compiler for python - common files
     vcvars_backup_files["python_system"] = [os.path.join(program_files, 'Common Files',
                     'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")]
-    # Windows SDK 7.1
-    vcvars_backup_files["win71sdk"] = ["{program_files}\\Microsoft SDKs\\Windows\\v7.1\\Bin\\SetEnv.cmd".\
-                                      format(program_files=program_files)]
 
     vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
-    vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0', 'win71sdk']}
+    vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0']}
     vs14 = {key:vcvars_backup_files[key] for key in ['vs14.0']}
 
     vcs = {"9.0": vs9, "10.0": vs10, "14.0": vs14}
