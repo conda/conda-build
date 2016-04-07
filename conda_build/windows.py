@@ -83,7 +83,6 @@ def msvc_env_cmd(bits, override=None):
                       format(program_files=program_files))
         vcvars_cmd += '\nif errorlevel 1 {win_sdk_cmd}'.format(win_sdk_cmd=win_sdk_cmd)
         msvc_env_lines.append(vcvars_cmd)
-        not_vcvars = not isfile(vcvarsall)
     elif version == '9.0':
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
         localappdata = os.getenv("localappdata", "C:\\")
