@@ -46,6 +46,9 @@ def fix_shebang(f, osx_is_app=False):
     elif os.path.islink(path):
         return
 
+    if os.stat(path).st_size == 0:
+        return
+
     with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
