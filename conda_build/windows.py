@@ -82,9 +82,9 @@ def msvc_env_cmd(bits, override=None):
         
         # Note that we explicitly want "Program Files" and not 
         # "Program Files (x86)"
-        win_sdk_bat_path = os.path.join(os.environ['ProgramFiles'], 
-                                        'Microsoft SDKs',  'Windows', 'v7.1', 
-                                        'Bin', 'SetEnv.cmd')
+        win_sdk_bat_path = os.path.join(os.path.abspath(os.sep),
+                                        'Program Files', 'Microsoft SDKs',
+                                        'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
         # Unfortunately, the Windows SDK takes a different command format for
         # the arch selector - debug is default so explicitly set 'Release'
         win_sdk_arch = '/x86 /Release' if bits == 32 else '/x64 /Release'
