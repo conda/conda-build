@@ -107,6 +107,10 @@ def have_prefix_files(files):
             # skip symbolic links (as we can on Linux)
             continue
 
+        # dont try to mmap an empty file
+        if os.stat(path).st_size == 0:
+            continue
+
         fi = open(path, 'rb+')
         mm = mmap.mmap(fi.fileno(), 0)
 
