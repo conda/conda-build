@@ -524,7 +524,15 @@ can lead to packages that include their dependencies.""" %
 
         path = bldpkg_path(m)
         t = tarfile.open(path, 'w:bz2')
-        for f in sorted(files3 - files1):
+
+        def size(f):
+            # we don't care about empty files so send them back via 100000
+            return os.stat(join(config.build_prefix, f)).st_size or 100000
+
+        # add files in order of increasing size so we can access small manifest
+        # or json files without decompressing possible large binary or data
+        # files
+        for f in sorted(files3 - files1, key=size):
             t.add(join(config.build_prefix, f), f)
         t.close()
 
