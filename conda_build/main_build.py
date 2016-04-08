@@ -280,7 +280,7 @@ def execute(args, parser):
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
-    from conda_build.metadata import MetaData
+    from conda_build.metadata import MetaData, check_fields
 
     check_external()
 
@@ -391,6 +391,7 @@ def execute(args, parser):
             binstar_upload = False
             if args.check and len(args.recipe) > 1:
                 print(m.path)
+            check_fields(m)
             if args.check:
                 continue
             if args.skip_existing:

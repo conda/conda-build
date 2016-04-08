@@ -279,15 +279,18 @@ def check_fields(meta, strictness=.9):
     try:
         _ = _meta['package']['name']
         _ = _meta['package']['version']
-    except IndexError:
-        raise ValueError("Invalid recipe")
+    except KeyError:
+        sys.exit("Invalid meta.yaml: Missing package/name or package/version.")
 
     for mk in meta.get_all_keys():
         close_matches = set(get_close_matches(mk, RECOGNIZED_FIELDS, cutoff=strictness))
 
-        # if we don't have an exact match, notify the user
-        if mk not in close_matches:
-            print("{} is not a recognized key.  Perhaps you meant {}?".format(mk, ', '.join(close_matches)))
+        # If there was nothing even close, we allow it -- it's a user-defined key.
+        # But if we found a close match, notify the user -- it's probably a typo.
+        if close_matches and mk not in close_matches:
+            sys.exit("In meta.yaml: {} is not a recognized key, but it's similar to a standard key.\n"
+                     "Perhaps you meant {}?".format(mk, ', '.join(close_matches)))
+            
 
 
 def check_bad_chrs(s, field):
@@ -343,7 +346,8 @@ class MetaData(object):
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
         self.meta = parse("package:\n"
-                          "  name: uninitialized")
+                          "  name: uninitialized\n"
+                          "  version: uninitialized\n")
 
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
