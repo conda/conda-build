@@ -417,7 +417,7 @@ class MetaData(object):
         """
 
         def flatten_dict_keys(root):
-            for k, v in root.items():
+            for k, v in iteritems(root):
                 if isinstance(v, dict):
                     for x in flatten_dict_keys(v):
                         yield '/'.join((k, x))
