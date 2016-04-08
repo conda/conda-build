@@ -391,7 +391,6 @@ def execute(args, parser):
             binstar_upload = False
             if args.check and len(args.recipe) > 1:
                 print(m.path)
-            m.check_fields()
             if args.check:
                 continue
             if args.skip_existing:

@@ -4,6 +4,7 @@ import os
 import re
 import sys
 from os.path import isdir, isfile, join
+from difflib import get_close_matches
 
 from conda.compat import iteritems, PY3, text_type
 from conda.utils import memoized, md5_file
@@ -145,12 +146,12 @@ def parse(data):
     # ensure the result is a dict
     if res is None:
         res = {}
-    for field in FIELDS:
-        if field not in res:
-            continue
-        if not isinstance(res[field], dict):
-            raise RuntimeError("The %s field should be a dict, not %s" %
-                               (field, res[field].__class__.__name__))
+    #for field in FIELDS:
+    #    if field not in res:
+    #        continue
+    #    if not isinstance(res[field], dict):
+    #        raise RuntimeError("The %s field should be a dict, not %s" %
+    #                           (field, res[field].__class__.__name__))
 
 
 
@@ -162,7 +163,7 @@ def parse(data):
 trues = {'y', 'on', 'true', 'yes'}
 falses = {'n', 'no', 'false', 'off'}
 
-default_stucts = {
+default_structs = {
     'source/patches': list,
     'build/entry_points': list,
     'build/script_env': list,
@@ -246,30 +247,47 @@ def _git_clean(source_meta):
 
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
-FIELDS = {
-    'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
-               'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
-               'hg_url', 'hg_tag',
-               'svn_url', 'svn_rev', 'svn_ignore_externals',
-               'patches'],
-    'build': ['number', 'string', 'entry_points', 'osx_is_app',
-              'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'noarch_python',
-              'has_prefix_files', 'binary_has_prefix_files', 'script_env',
-              'detect_binary_files_with_prefix', 'rpaths',
-              'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends' # pin_depends is experimental still
-             ],
-    'requirements': ['build', 'run', 'conflicts'],
-    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
-            'own_environment'],
-    'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'dev_url', 'doc_url', 'license_url', # these are URLs
-              'license', 'summary', 'description', 'license_family', # text
-              'license_file', 'readme', # paths in source tree
-             ],
+RECOGNIZED_FIELDS = {
+    'package/name', 'package/version',
+
+    'source/fn', 'source/url', 'source/md5', 'source/sha1', 'source/patches',
+    'source/sha256', 'source/path', 'source/git_url', 'source/git_tag',
+    'source/git_branch', 'source/git_rev', 'source/git_depth',
+    'source/hg_url', 'source/hg_tag',
+    'source/snv_url', 'source/svn_rev', 'source/snv_ignore_externals',
+
+    'build/number', 'build/string', 'build/entry_points', 'build/osx_is_app',
+    'build/features', 'build/track_features', 'build/preserve_egg_dir',
+    'build/no_link', 'build/binary_relocation', 'build/script',
+    'build/noarch_python', 'build/has_prefix_files', 'build/binary_has_prefix_files',
+    'build/script_env', 'build/detect_binary_files_with_prefix', 'build/rpaths',
+    'build/always_include_files', 'build/skip', 'build/msvc_compiler',
+    'build/pin_depends',  # build/pin_depends is still experimental
+
+    'requirements/build', 'requirements/run', 'requirements/conflicts',
+    'app/entry', 'app/icon', 'app/summary', 'app/type', 'app/cli_opts', 'app/own_environment',
+
+    'test/requires', 'test/commands', 'test/files', 'test/imports',
+
+    'about/home', 'about/dev_url', 'about/doc_url', 'about/license_url', 'about/license',
+    'about/summary', 'about/description', 'about/license_family', 'about/license_file', 'about/readme'
 }
+
+def check_fields(meta, strictness=.9):
+    # Check that package/name and package/version exist
+    _meta = meta.meta
+    try:
+        _ = _meta['package']['name']
+        _ = _meta['package']['version']
+    except IndexError:
+        raise ValueError("Invalid recipe")
+
+    for mk in meta.get_all_keys():
+        close_matches = set(get_close_matches(mk, RECOGNIZED_FIELDS, cutoff=strictness))
+
+        # if we don't have an exact match, notify the user
+        if mk not in close_matches:
+            print("{} is not a recognized key.  Perhaps you meant {}?".format(mk, ', '.join(close_matches)))
 
 
 def check_bad_chrs(s, field):
@@ -376,8 +394,8 @@ class MetaData(object):
         section, key = field.split('/')
 
         # get correct default
-        if autotype and default is None and field in default_stucts:
-            default = default_stucts[field]()
+        if autotype and default is None and field in default_structs:
+            default = default_structs[field]()
 
         value = self.get_section(section).get(key, default)
 
@@ -390,16 +408,23 @@ class MetaData(object):
 
         return value
 
-    def check_fields(self):
-        for section, submeta in iteritems(self.meta):
-            if section == 'extra':
-                continue
-            if section not in FIELDS:
-                sys.exit("Error: unknown section: %s" % section)
-            for key in submeta:
-                if key not in FIELDS[section]:
-                    sys.exit("Error: in section %r: unknown key %r" %
-                             (section, key))
+    def get_all_keys(self):
+        """
+        Yield all keys in the meta structure.
+
+        The returned strings are usable with get_value().
+        :return:
+        """
+
+        def flatten_dict_keys(root):
+            for k, v in root.items():
+                if isinstance(v, dict):
+                    for x in flatten_dict_keys(v):
+                        yield '/'.join((k, x))
+                else:
+                    yield k
+
+        return iter(flatten_dict_keys(self.meta))
 
     def name(self):
         res = self.get_value('package/name')
