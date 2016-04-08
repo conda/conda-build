@@ -525,14 +525,17 @@ can lead to packages that include their dependencies.""" %
         path = bldpkg_path(m)
         t = tarfile.open(path, 'w:bz2')
 
-        def size(f):
+        def order(f):
             # we don't care about empty files so send them back via 100000
-            return os.stat(join(config.build_prefix, f)).st_size or 100000
+            fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
+            # info/* records will be False == 0, others will be 1.
+            info_order = int(os.path.dirname(f) != 'info')
+            return info_order, fsize
 
-        # add files in order of increasing size so we can access small manifest
-        # or json files without decompressing possible large binary or data
-        # files
-        for f in sorted(files3 - files1, key=size):
+        # add files in order of a) in info directory, b) increasing size so
+        # we can access small manifest or json files without decompressing
+        # possible large binary or data files
+        for f in sorted(files3 - files1, key=order):
             t.add(join(config.build_prefix, f), f)
         t.close()
 
