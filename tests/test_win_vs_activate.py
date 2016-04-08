@@ -96,6 +96,7 @@ def test_activation(bits, compiler):
     #     this is effectively the test condition for all below tests.
     with open('tmp_call.bat', "w") as f:
         f.write(msvc_env_cmd(bits, compiler_version))
+        f.write('\nif not %VS_VERSION% == "{}" exit /b 1'.format(compiler_version))
 
     try:
         subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)

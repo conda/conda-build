@@ -103,6 +103,7 @@ def msvc_env_cmd(bits, override=None):
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
+    msvc_env_lines.append('set VS_VERSION="{}"'.format(version))
     if version == '10.0':
         # Unfortunately, the Windows SDK takes a different command format for
         # the arch selector - debug is default so explicitly set 'Release'
