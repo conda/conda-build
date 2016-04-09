@@ -34,6 +34,14 @@ VS_TOOLS_PY_COMMON_PATH = os.path.join(PROGRAM_FILES_PATH, 'Common Files',
 VCVARS64_VS9_BAT_PATH = os.path.join(PROGRAM_FILES_PATH,
                                      'Microsoft Visual Studio 9.0', 'VC', 'bin',
                                      'vcvars64.bat')
+VS_VERSION_STRING = {
+    '8.0': 'Visual Studio 8 2005',
+    '9.0': 'Visual Studio 9 2008',
+    '10.0': 'Visual Studio 10 2010',
+    '11.0': 'Visual Studio 11 2012',
+    '12.0': 'Visual Studio 12 2013',
+    '14.0': 'Visual Studio 14 2015'
+}
 
 
 def build_vcvarsall_vs_path(version):
@@ -104,6 +112,10 @@ def msvc_env_cmd(bits, override=None):
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
     msvc_env_lines.append('set VS_VERSION="{}"'.format(version))
+    msvc_env_lines.append('set VS_MAJOR="{}"'.format(version.split('.')[0]))
+    msvc_env_lines.append('set VS_YEAR="{}"'.format(VS_VERSION_STRING[version][-4:]))
+    msvc_env_lines.append('set CMAKE_GENERATOR="{}"'.format(VS_VERSION_STRING[version] +
+                                                            {64: ' Win64', 32: ''}[bits]))
     if version == '10.0':
         # Unfortunately, the Windows SDK takes a different command format for
         # the arch selector - debug is default so explicitly set 'Release'
