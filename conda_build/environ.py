@@ -287,6 +287,7 @@ def unix_vars(prefix):
     return {
         'HOME': os.getenv('HOME', 'UNKNOWN'),
         'PKG_CONFIG_PATH': join(prefix, 'lib', 'pkgconfig'),
+        'CMAKE_GENERATOR': 'Unix Makefiles',
         'R': join(prefix, 'bin', 'R'),
     }
 
