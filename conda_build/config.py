@@ -56,8 +56,15 @@ class Config(object):
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
-    short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = max(short_build_prefix, (short_build_prefix + 8 * '_placehold')[:80])
+    # see: https://github.com/conda/conda/issues/1087
+    max_len, place_holder = 1000, '_placehold'
+    long_build_prefix = short_build_prefix = join(cc.envs_dirs[0], '_build')
+
+    if len(short_build_prefix) < max_len:
+        n = int(0.5 + max_len / len(place_holder))
+        place_holder * n
+        long_build_prefix = (short_build_prefix + n * place_holder)[:max_len]
+
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False
