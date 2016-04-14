@@ -65,7 +65,13 @@ class Config(object):
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
-            res = join(prefix, 'python.exe')
+            import conda.install
+            packages = conda.install.linked(prefix)
+            packages_names = (pkg.split('-')[0] for pkg in packages)
+            if 'debug' in packages_names:
+                res = join(prefix, 'python_d.exe')
+            else:
+                res = join(prefix, 'python.exe')
         else:
             res = join(prefix, 'bin/python')
         return res
