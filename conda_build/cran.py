@@ -294,7 +294,8 @@ def get_package_metadata(cran_url, package, session):
     return d
 
 def get_latest_git_tag():
-    p = subprocess.Popen(['git', 'tag'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+    p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
