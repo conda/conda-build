@@ -351,7 +351,7 @@ def main(args, parser):
     if args.update_outdated:
         args.packages = get_outdated(output_dir, cran_metadata, args.packages)
         for pkg in args.packages:
-            rm_rf(join(args.output_dir, 'r-' + pkg))
+            rm_rf(join(args.output_dir[0], 'r-' + pkg))
 
 
     while args.packages:
