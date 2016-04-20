@@ -386,7 +386,8 @@ def main(args, parser):
                 elif isfile(sub_description_name):
                     DESCRIPTION = sub_description_name
                 else:
-                    sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file)" % package)
+                    sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file in %s, %s)"
+                                 % (package, sub_description_pkg, sub_description_name))
 
             with open(DESCRIPTION) as f:
                 description_text = clear_trailing_whitespace(f.read())
