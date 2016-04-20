@@ -20,6 +20,7 @@ from os import makedirs, listdir
 from os.path import join, exists, isfile, basename, isdir
 from itertools import chain
 import subprocess
+from difflib import get_close_matches
 
 from conda.install import rm_rf
 from conda import compat
@@ -77,6 +78,7 @@ about:
   {home_comment}home:{homeurl}
   license: {license}
   {summary_comment}summary:{summary}
+  license_family: {license_family}
 
 # The original CRAN metadata for this package was:
 
@@ -473,6 +475,12 @@ def main(args, parser):
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
+
+        # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
+        if 'GPL (>=2)' in d['license'] or d['license'] == 'GPL':
+            d['license_family'] = 'GPL3'
+        else:
+            d['license_family'] = get_close_matches(d['license'], metadata.allowed_license_families, 1, 0.0)[0]
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
         if cran_package.get('License_restricts_use', None) == 'yes':
