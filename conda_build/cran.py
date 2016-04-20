@@ -28,6 +28,9 @@ from conda import compat
 from conda_build import source, metadata
 
 CRAN_META = """\
+{{% set posix = 'm2-' if win else '' %}}
+{{% set native = 'm2w64-' if win else '' %}}
+
 package:
   name: {packagename}
   # Note that conda versions cannot contain -, so any -'s in the version have
@@ -552,41 +555,33 @@ def main(args, parser):
                     continue
                 if name == 'R':
                     # Put R first
-                    if d['cran_packagename'] in R_RECOMMENDED_PACKAGE_NAMES and dep_type == 'build':
-                        # On Linux and OS X, r is a metapackage depending on
-                        # r-base and r-recommended. Recommended packages cannot
-                        # build depend on r as they would then build depend on
-                        # themselves and the built package would end up being
-                        # empty (because conda would find no new files)
-                        r_name = 'r-base'
-                    else:
-                        r_name = 'r'
+                    # Regarless of build or run, and whether this is a recommended package or not,
+                    # it can only depend on 'r-base' since anything else can and will cause cycles
+                    # in the dependency graph. The cran metadata lists all dependencies anyway, even
+                    # those packages that are in the recommended group.
+                    r_name = 'r-base'
                     # We don't include any R version restrictions because we
                     # always build R packages against an exact R version
                     deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
                 else:
                     conda_name = 'r-' + name.lower()
 
-                    # The r package on Windows includes the recommended packages
-                    if name in R_RECOMMENDED_PACKAGE_NAMES:
-                        end = ' # [not win]'
-                    else:
-                        end = ''
                     if dep_dict[name]:
-                        deps.append('{indent}{name} {version}{end}'.format(name=conda_name,
-                            version=dep_dict[name], end=end, indent=INDENT))
+                        deps.append('{indent}{name} {version}'.format(name=conda_name,
+                            version=dep_dict[name], indent=INDENT))
                     else:
-                        deps.append('{indent}{name}{end}'.format(name=conda_name,
-                            indent=INDENT, end=end))
+                        deps.append('{indent}{name}'.format(name=conda_name,
+                            indent=INDENT))
                     if args.recursive:
                         if not exists(join(output_dir, conda_name)):
                             args.packages.append(name)
 
             if cran_package.get("NeedsCompilation", 'no') == 'yes':
                 if dep_type == 'build':
-                    deps.append('{indent}gcc # [not win]'.format(indent=INDENT))
-                else:
-                    deps.append('{indent}libgcc # [not win]'.format(indent=INDENT))
+                    deps.append('{indent}{{{{posix}}}}base       # [win]'.format(indent=INDENT))
+                    deps.append('{indent}{{{{posix}}}}zip        # [win]'.format(indent=INDENT))
+                    deps.append('{indent}{{{{native}}}}toolchain # [win]'.format(indent=INDENT))
+                    deps.append('{indent}gcc                 # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:

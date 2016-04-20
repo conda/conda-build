@@ -437,7 +437,9 @@ class MetaData(object):
             ('numpy', config.CONDA_NPY),
             ('perl', config.CONDA_PERL),
             ('lua', config.CONDA_LUA),
+            # r is kept for legacy installations, r-base deprecates it.
             ('r', config.CONDA_R),
+            ('r-base', config.CONDA_R),
         ]
         for spec in self.get_value('requirements/' + typ, []):
             try:
@@ -476,7 +478,8 @@ class MetaData(object):
         res = []
         version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
         for name, s in (('numpy', 'np'), ('python', 'py'),
-                        ('perl', 'pl'), ('lua', 'lua'), ('r', 'r')):
+                        ('perl', 'pl'), ('lua', 'lua'),
+                        ('r', 'r'), ('r-base', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     try:
@@ -487,7 +490,7 @@ class MetaData(object):
                         break
                     if any(i in v for i in ',|>!<'):
                         break
-                    if name not in ['perl', 'r', 'lua']:
+                    if name not in ['perl', 'lua', 'r', 'r-base']:
                         match = version_pat.match(v)
                         if match:
                             res.append(s + match.group(1) + match.group(2))
