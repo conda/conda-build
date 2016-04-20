@@ -581,15 +581,21 @@ def test(m, move_broken=True):
     # add packages listed in test/requires
     specs += m.get_value('test/requires', [])
 
-    if py_files:
-        # as the tests are run by python, ensure that python is installed.
-        # (If they already provided python as a run or test requirement, this won't hurt anything.)
+    create_env(config.test_prefix, specs)
+    test_env_pkgs = scan_metadata(os.path.join(config.test_prefix, 'conda-meta'))
+
+    need_reinstall = False
+    if py_files and 'python' not in test_env_pkgs:
+        # Since the tests are run by python, ensure that python is installed.
         specs += ['python %s*' % environ.get_py_ver()]
-    if pl_files:
+        need_reinstall = True
+    if pl_files and 'python' not in test_env_pkgs:
         # as the tests are run by perl, we need to specify it
         specs += ['perl %s*' % environ.get_perl_ver()]
+        need_reinstall = True
 
-    create_env(config.test_prefix, specs)
+    if need_reinstall:
+        create_env(config.test_prefix, specs)
 
     env = dict(os.environ)
     env.update(environ.get_dict(m, prefix=config.test_prefix))
