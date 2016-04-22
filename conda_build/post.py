@@ -75,7 +75,7 @@ def fix_shebang(f, osx_is_app=False):
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        fo.write(new_data.decode(encoding))
+        fo.write(new_data)  #.decode(encoding))
     os.chmod(path, int('755', 8))
 
 

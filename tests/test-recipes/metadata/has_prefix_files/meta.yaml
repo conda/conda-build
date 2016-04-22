@@ -5,3 +5,4 @@ package:
 build:
   has_prefix_files:
     - binary-has-prefix
+  detect_binary_files_with_prefix: true
