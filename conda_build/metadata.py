@@ -148,6 +148,9 @@ def parse(data, path=None):
     for field in FIELDS:
         if field not in res:
             continue
+        # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
+        if not res[field]:
+            res[field] = {}
         if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s in file %s." %
                                (field, res[field].__class__.__name__, path))
