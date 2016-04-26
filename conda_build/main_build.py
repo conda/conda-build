@@ -395,7 +395,7 @@ def execute(args, parser):
             if args.check:
                 continue
             if args.skip_existing:
-                if m.pkg_fn() in index or m.pkg_fn() in already_built:
+                if 'local::'+m.pkg_fn() in index or m.pkg_fn() in already_built:
                     print("%s is already built, skipping." % m.dist())
                     continue
             if m.skip():
