@@ -394,26 +394,29 @@ def execute(args, parser):
             m.check_fields()
             if args.check:
                 continue
-            if args.skip_existing:
-                if m.pkg_fn() in index or m.pkg_fn() in already_built:
-                    print("%s is already built, skipping." % m.dist())
-                    continue
             if m.skip():
                 print("Skipped: The %s recipe defines build/skip for this "
                       "configuration." % m.dist())
                 continue
+
+            # Parse again such that all variables needed for the build string
+            # are initialized.
+            try:
+                m.parse_again(permit_undefined_jinja=False)
+            except SystemExit:
+                # Something went wrong; possibly due to undefined GIT_ jinja variables.
+                # Maybe we need to actually download the source in order to resolve the build_id.
+                source.provide(m.path, m.get_section('source'))
+
+                # Parse our metadata again because we did not initialize the source
+                # information before.
+                m.parse_again(permit_undefined_jinja=False)
+
+            if args.skip_existing:
+                if m.pkg_fn() in index or m.pkg_fn() in already_built:
+                    print("%s is already built, skipping." % m.dist())
+                    continue
             if args.output:
-                try:
-                    m.parse_again(permit_undefined_jinja=False)
-                except SystemExit:
-                    # Something went wrong; possibly due to undefined GIT_ jinja variables.
-                    # Maybe we need to actually download the source in order to resolve the build_id.
-                    source.provide(m.path, m.get_section('source'))
-
-                    # Parse our metadata again because we did not initialize the source
-                    # information before.
-                    m.parse_again(permit_undefined_jinja=False)
-
                 print(build.bldpkg_path(m))
                 continue
             elif args.test:
