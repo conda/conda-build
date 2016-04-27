@@ -16,7 +16,7 @@ def find_executable(executable):
                      join(config.build_prefix, 'Library\\bin'),
                      join(cc.root_dir, 'Scripts'),
                      join(cc.root_dir, 'Library\\bin'),
-                     'C:\\cygwin\\bin']
+                    ]
     else:
         dir_paths = [join(config.build_prefix, 'bin'),
                      join(cc.root_dir, 'bin'),]
