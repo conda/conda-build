@@ -111,17 +111,15 @@ def msvc_env_cmd(bits, override=None):
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
-    msvc_env_lines.append('set VS_VERSION="{}"'.format(version))
-    msvc_env_lines.append('set VS_MAJOR="{}"'.format(version.split('.')[0]))
-    msvc_env_lines.append('set VS_YEAR="{}"'.format(VS_VERSION_STRING[version][-4:]))
-    msvc_env_lines.append('set CMAKE_GENERATOR="{}"'.format(VS_VERSION_STRING[version] +
+    msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
+    msvc_env_lines.append('set "VS_MAJOR={}"'.format(version.split('.')[0]))
+    msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
+    msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
                                                             {64: ' Win64', 32: ''}[bits]))
     if version == '10.0':
-        # Unfortunately, the Windows SDK takes a different command format for
-        # the arch selector - debug is default so explicitly set 'Release'
-        win_sdk_arch = '/x86 /Release' if bits == 32 else '/x64 /Release'
+        win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
         win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
-        
+
         # Always call the Windows SDK first - if VS 2010 exists but was
         # installed using the broken installer then it will try and call the 
         # vcvars script, which will fail but NOT EXIT 1. To work around this,
@@ -134,7 +132,6 @@ def msvc_env_cmd(bits, override=None):
 
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
         msvc_env_lines.append(build_vcvarsall_cmd(VS_TOOLS_PY_LOCAL_PATH))
-        
         msvc_env_lines.append(error1.format(
             build_vcvarsall_cmd(VS_TOOLS_PY_COMMON_PATH)))
         # The Visual Studio 2008 Express edition does not properly contain
