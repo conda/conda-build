@@ -21,9 +21,8 @@ else:
     PROGRAM_FILES_PATH = os.environ['ProgramFiles']
 
 # Note that we explicitly want "Program Files" and not "Program Files (x86)"
-WIN_SDK_BAT_PATH = os.path.join(os.path.abspath(os.sep),
-                                'Program Files', 'Microsoft SDKs',
-                                'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
+WIN_SDK_BAT_PATH = os.path.join(PROGRAM_FILES_PATH.replace(" (x86)", ""),
+                                'Microsoft SDKs', 'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
 VS_TOOLS_PY_LOCAL_PATH = os.path.join(
     os.getenv('localappdata', os.path.abspath(os.sep)),
     'Programs', 'Common', 'Microsoft', 'Visual C++ for Python', '9.0',
