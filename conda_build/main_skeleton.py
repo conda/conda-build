@@ -19,7 +19,7 @@ class PyPIPackagesCompleter(Completer):
     def _get_items(self):
         from conda_build.pypi import get_xmlrpc_client
         args = self.parsed_args
-        client = get_xmlrpc_client(getattr(args, 'pypi_url', 'https://pypi.python.org/pypi'))
+        client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
 
 class CRANPackagesCompleter(Completer):
@@ -105,7 +105,7 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
     pypi.add_argument(
         "--pypi-url",
         action="store",
-        default='https://pypi.python.org/pypi',
+        default='https://pypi.io/pypi',
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
