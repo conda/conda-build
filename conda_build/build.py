@@ -591,8 +591,9 @@ def test(m, move_broken=True):
     get_build_metadata(m)
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
-    # add packages listed in test/requires
+    # add packages listed in the run environment and test/requires
     specs.extend(ms.spec for ms in m.ms_depends('run'))
+    specs += m.get_value('test/requires', [])
 
     if py_files:
         # as the tests are run by python, ensure that python is installed.
