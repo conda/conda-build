@@ -592,7 +592,7 @@ def test(m, move_broken=True):
     specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
 
     # add packages listed in test/requires
-    specs += m.get_value('test/requires', [])
+    specs.extend(ms.spec for ms in m.ms_depends('run'))
 
     if py_files:
         # as the tests are run by python, ensure that python is installed.
