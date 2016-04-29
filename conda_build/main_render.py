@@ -13,7 +13,8 @@ from locale import getpreferredencoding
 import os
 from os.path import exists, isdir, isfile, join, abspath
 
-# import conda.config as config
+import yaml
+
 from conda_build.config import config
 from conda.compat import PY3
 from conda.cli.common import add_parser_channels
@@ -203,15 +204,52 @@ def render_recipe(recipe_path, download_source=False):
     return m
 
 
+# Next bit of stuff is to support YAML output in the order we expect.
+# http://stackoverflow.com/a/17310199/1170370
+class MetaYaml(dict):
+    fields = ["package", "source", "build", "requirements", "test", "extra"]
+    def to_omap(self):
+        return [(field, self[field]) for field in MetaYaml.fields]
+
+
+def represent_omap(dumper, data):
+   return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+
+def unicode_representer(dumper, uni):
+    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
+    return node
+
+
+class IndentDumper(yaml.Dumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super(IndentDumper, self).increase_indent(flow, False)
+
+
+yaml.add_representer(MetaYaml, represent_omap)
+if PY3:
+    yaml.add_representer(str, unicode_representer)
+else:
+    yaml.add_representer(unicode, unicode_representer)
+
+
 def main():
     import pprint
     p = get_render_parser()
+    p.add_argument(
+        '-y', '--yaml',
+        action="store_true",
+        help="print YAML, as opposed to printing the metadata as a dictionary"
+    )
 
     args = p.parse_args()
     set_language_env_vars(args)
 
     metadata = render_recipe(find_recipe(args.recipe), download_source=args.source)
-    pprint.pprint(metadata.meta)
+    if args.yaml:
+        print(yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
+                        default_flow_style=False, indent=4))
+    else:
+        pprint.pprint(metadata.meta)
 
 
 if __name__ == '__main__':
