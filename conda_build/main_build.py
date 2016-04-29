@@ -20,65 +20,25 @@ import conda.config as config
 from conda.compat import PY3
 from conda.cli.common import add_parser_channels, Completer
 from conda.cli.conda_argparse import ArgumentParser
+from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
-from conda.install import delete_trash
+from conda_build.main_render import get_render_parser
+from conda_build.completers import (all_versions, RecipeCompleter, PythonVersionCompleter,
+                                  RVersionsCompleter, LuaVersionsCompleter, NumPyVersionCompleter)
 on_win = (sys.platform == 'win32')
 
-all_versions = {
-    'python': [26, 27, 33, 34, 35],
-    'numpy': [16, 17, 18, 19, 110],
-    'perl': None,
-    'R': None,
-    'lua': ["2.0", "5.1", "5.2", "5.3"]
-}
-
-class RecipeCompleter(Completer):
-    def _get_items(self):
-        completions = []
-        for path in listdir('.'):
-            if isdir(path) and isfile(join(path, 'meta.yaml')):
-                completions.append(path)
-        if isfile('meta.yaml'):
-            completions.append('.')
-        return completions
-
-# These don't represent all supported versions. It's just for tab completion.
-
-class PythonVersionCompleter(Completer):
-    def _get_items(self):
-        return ['all'] + [str(i/10) for i in all_versions['python']]
-
-class NumPyVersionCompleter(Completer):
-    def _get_items(self):
-        versions = [str(i) for i in all_versions['numpy']]
-        return ['all'] + ['%s.%s' % (ver[0], ver[1:]) for ver in versions]
-
-class RVersionsCompleter(Completer):
-    def _get_items(self):
-        return ['3.1.2', '3.1.3', '3.2.0', '3.2.1', '3.2.2']
-
-class LuaVersionsCompleter(Completer):
-    def _get_items(self):
-        return ['all'] + [i for i in all_versions['lua']]
 
 def main():
-    p = ArgumentParser(
-        description="""
+    p=get_render_parser()
+    p.description="""
 Tool for building conda packages. A conda package is a binary tarball
 containing system-level libraries, Python modules, executable programs, or
 other components. conda keeps track of dependencies between packages and
 platform specifics, making it simple to create working environments from
 different sets of packages."""
-    )
-    p.add_argument(
-        '-V', '--version',
-        action='version',
-        help='Show the conda-build version number and exit.',
-        version = 'conda-build %s' % __version__,
-    )
     p.add_argument(
         "--check",
         action="store_true",
@@ -122,14 +82,6 @@ different sets of packages."""
         help="Test package (assumes package is already build).",
     )
     p.add_argument(
-        'recipe',
-        action="store",
-        metavar='RECIPE_PATH',
-        nargs='+',
-        choices=RecipeCompleter(),
-        help="Path to recipe directory.",
-    )
-    p.add_argument(
         '--no-test',
         action='store_true',
         dest='notest',
@@ -156,49 +108,6 @@ different sets of packages."""
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
-    )
-    p.add_argument(
-        '--python',
-        action="append",
-        help="""Set the Python version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    PythonVersionCompleter() if '.' in i],
-        metavar="PYTHON_VER",
-        choices=PythonVersionCompleter(),
-    )
-    p.add_argument(
-        '--perl',
-        action="append",
-        help="""Set the Perl version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
-        metavar="PERL_VER",
-    )
-    p.add_argument(
-        '--numpy',
-        action="append",
-        help="""Set the NumPy version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    NumPyVersionCompleter() if '.' in i],
-        metavar="NUMPY_VER",
-        choices=NumPyVersionCompleter(),
-    )
-    p.add_argument(
-        '--R',
-        action="append",
-        help="""Set the R version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
-        metavar="R_VER",
-        choices=RVersionsCompleter(),
-    )
-    p.add_argument(
-        '--lua',
-        action="append",
-        help="""Set the Lua version used by conda build. Can be passed
-        multiple times to build against multiple versions (%r).""" % [i for i in LuaVersionsCompleter()],
-        metavar="LUA_VER",
-        choices=LuaVersionsCompleter(),
     )
 
     add_parser_channels(p)
