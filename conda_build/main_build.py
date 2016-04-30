@@ -29,6 +29,7 @@ from conda_build.main_render import get_render_parser
 from conda_build.completers import (all_versions, conda_version, RecipeCompleter, PythonVersionCompleter,
                                   RVersionsCompleter, LuaVersionsCompleter, NumPyVersionCompleter)
 from conda_build.utils import find_recipe
+from conda_build.main_render import render_recipe, get_package_build_string, set_language_env_vars
 on_win = (sys.platform == 'win32')
 
 
@@ -65,12 +66,6 @@ different sets of packages."""
         help="Don't include the recipe inside the built package.",
         dest='include_recipe',
         default=True,
-    )
-    p.add_argument(
-        "--output",
-        action="store_true",
-        help="Output the conda package filename which would have been "
-               "created and exit.",
     )
     p.add_argument(
         '-s', "--source",
@@ -221,41 +216,7 @@ def execute(args, parser):
                           "imported that is hard-linked by files in the trash. "
                           "Will try again on next run.")
 
-    for lang in ['python', 'numpy', 'perl', 'R', 'lua']:
-        versions = getattr(args, lang)
-        if not versions:
-            continue
-        if versions == ['all']:
-            if all_versions[lang]:
-                versions = all_versions[lang]
-            else:
-                parser.error("'all' is not supported for --%s" % lang)
-        if len(versions) > 1:
-            for ver in versions[:]:
-                setattr(args, lang, [str(ver)])
-                execute(args, parser)
-                # This is necessary to make all combinations build.
-                setattr(args, lang, versions)
-            return
-        else:
-            version = versions[0]
-            if lang in ('python', 'numpy'):
-                version = int(version.replace('.', ''))
-            setattr(config, conda_version[lang], version)
-        if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
-            if all_versions[lang]:
-                raise RuntimeError("%s must be major.minor, like %s, not %s" %
-                    (conda_version[lang], all_versions[lang][-1]/10, version))
-            else:
-                raise RuntimeError("%s must be major.minor, not %s" %
-                    (conda_version[lang], version))
-
-    # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
-    # Auto-set those env variables
-    for var in conda_version.values():
-        if hasattr(config, var):
-            # Set the env variable.
-            os_environ[var] = str(getattr(config, var))
+    set_language_env_vars(args)
 
     if args.skip_existing:
         for d in config.bldpkgs_dirs:
@@ -315,18 +276,7 @@ def execute(args, parser):
                       "configuration." % m.dist())
                 continue
             if args.output:
-                try:
-                    m.parse_again(permit_undefined_jinja=False)
-                except SystemExit:
-                    # Something went wrong; possibly due to undefined GIT_ jinja variables.
-                    # Maybe we need to actually download the source in order to resolve the build_id.
-                    source.provide(m.path, m.get_section('source'))
-
-                    # Parse our metadata again because we did not initialize the source
-                    # information before.
-                    m.parse_again(permit_undefined_jinja=False)
-
-                print(build.bldpkg_path(m))
+                print(get_package_build_string(m))
                 continue
             elif args.test:
                 build.test(m, move_broken=False)

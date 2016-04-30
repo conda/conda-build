@@ -52,6 +52,12 @@ platform specifics, making it simple to create working environments from
         help="Obtain the source and fill in related template variables.",
     )
     p.add_argument(
+        "--output",
+        action="store_true",
+        help="Output the conda package filename which would have been "
+               "created",
+    )
+    p.add_argument(
         '--python',
         action="append",
         help="""Set the Python version used by conda build. Can be passed
@@ -197,6 +203,21 @@ def render_recipe(recipe_path, download_source=False):
     return m
 
 
+def get_package_build_string(metadata):
+    import conda_build.build as build
+    try:
+        metadata.parse_again(permit_undefined_jinja=False)
+    except SystemExit:
+        # Something went wrong; possibly due to undefined GIT_ jinja variables.
+        # Maybe we need to actually download the source in order to resolve the build_id.
+        source.provide(metadata.path, metadata.get_section('source'))
+
+        # Parse our metadata again because we did not initialize the source
+        # information before.
+        metadata.parse_again(permit_undefined_jinja=False)
+    return build.bldpkg_path(metadata)
+
+
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
 class MetaYaml(dict):
@@ -246,11 +267,14 @@ def main():
     set_language_env_vars(args)
 
     metadata = render_recipe(find_recipe(args.recipe), download_source=args.source)
-    if args.yaml:
-        print(yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
-                        default_flow_style=False, indent=4))
+    if args.output:
+        print(get_package_build_string(metadata))
     else:
-        pprint.pprint(metadata.meta)
+        if args.yaml:
+            print(yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
+                            default_flow_style=False, indent=4))
+        else:
+            pprint.pprint(metadata.meta)
 
 
 if __name__ == '__main__':
