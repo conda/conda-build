@@ -7,29 +7,24 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import os
 import sys
 from collections import deque
 from glob import glob
 from locale import getpreferredencoding
-from os import listdir
-from os import environ as os_environ
-from os.path import exists, isdir, isfile, join
 import warnings
 
 import conda.config as config
 from conda.compat import PY3
-from conda.cli.common import add_parser_channels, Completer
-from conda.cli.conda_argparse import ArgumentParser
+from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
-from conda_build import __version__, exceptions
+from conda_build import exceptions
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
-from conda_build.completers import (all_versions, conda_version, RecipeCompleter, PythonVersionCompleter,
-                                  RVersionsCompleter, LuaVersionsCompleter, NumPyVersionCompleter)
 from conda_build.utils import find_recipe
-from conda_build.main_render import render_recipe, get_package_build_string, set_language_env_vars
+from conda_build.main_render import get_package_build_string, set_language_env_vars, RecipeCompleter
 on_win = (sys.platform == 'win32')
 
 
@@ -216,7 +211,7 @@ def execute(args, parser):
                           "imported that is hard-linked by files in the trash. "
                           "Will try again on next run.")
 
-    set_language_env_vars(args)
+    set_language_env_vars(args, parser, execute=execute)
 
     if args.skip_existing:
         for d in config.bldpkgs_dirs:
@@ -315,7 +310,7 @@ def execute(args, parser):
                         if pkg in skip_names:
                             continue
                         recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
-                        if exists(pkg):
+                        if os.path.exists(pkg):
                             recipe_glob.append(pkg)
                         if recipe_glob:
                             try_again = True

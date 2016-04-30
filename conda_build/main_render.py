@@ -7,11 +7,9 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-from collections import deque
-from glob import glob
 from locale import getpreferredencoding
 import os
-from os.path import exists, isdir, isfile, join, abspath
+from os.path import isdir, isfile, abspath
 
 import yaml
 
@@ -104,7 +102,7 @@ platform specifics, making it simple to create working environments from
     return p
 
 
-def set_language_env_vars(args):
+def set_language_env_vars(args, parser, execute=None):
     """Given args passed into conda command, set language env vars"""
     for lang in all_versions:
         versions = getattr(args, lang)
@@ -118,7 +116,8 @@ def set_language_env_vars(args):
         if len(versions) > 1:
             for ver in versions[:]:
                 setattr(args, lang, [str(ver)])
-                execute(args, parser)
+                if execute:
+                    execute(args, parser)
                 # This is necessary to make all combinations build.
                 setattr(args, lang, versions)
             return
@@ -152,7 +151,6 @@ def render_recipe(recipe_path, download_source=False):
 
     with Locked(config.croot):
         arg = recipe_path
-        try_again = False
         # Don't use byte literals for paths in Python 2
         if not PY3:
             arg = arg.decode(getpreferredencoding() or 'utf-8')
@@ -183,19 +181,7 @@ def render_recipe(recipe_path, download_source=False):
             source.provide(m.path, m.get_section('source'), patch=False)
             print('Source tree in:', source.get_dir())
 
-        try:
-            m.parse_again(permit_undefined_jinja=False)
-        except SystemExit:
-            # Something went wrong; possibly due to undefined GIT_ jinja variables.
-            # Maybe we need to actually download the source in order to resolve the build_id.
-            source.provide(m.path, m.get_section('source'))
-
-            # Parse our metadata again because we did not initialize the source
-            # information before.
-            m.parse_again(permit_undefined_jinja=False)
-
-            print(build.bldpkg_path(m))
-            raise
+        m.parse_again(permit_undefined_jinja=False)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
@@ -264,7 +250,7 @@ def main():
     )
 
     args = p.parse_args()
-    set_language_env_vars(args)
+    set_language_env_vars(args, p)
 
     metadata = render_recipe(find_recipe(args.recipe), download_source=args.source)
     if args.output:
