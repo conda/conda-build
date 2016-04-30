@@ -228,6 +228,7 @@ class IndentDumper(yaml.Dumper):
 yaml.add_representer(MetaYaml, represent_omap)
 if PY3:
     yaml.add_representer(str, unicode_representer)
+    unicode = None  # silence pyflakes about unicode not existing in py3
 else:
     yaml.add_representer(unicode, unicode_representer)
 
