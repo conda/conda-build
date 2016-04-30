@@ -52,13 +52,6 @@ platform specifics, making it simple to create working environments from
         help="Obtain the source and fill in related template variables.",
     )
     p.add_argument(
-        'recipe',
-        action="store",
-        metavar='RECIPE_PATH',
-        choices=RecipeCompleter(),
-        help="Path to recipe directory.",
-    )
-    p.add_argument(
         '--python',
         action="append",
         help="""Set the Python version used by conda build. Can be passed
@@ -239,6 +232,14 @@ def main():
         '-y', '--yaml',
         action="store_true",
         help="print YAML, as opposed to printing the metadata as a dictionary"
+    )
+    # we do this one separately because we only allow one entry to conda render
+    p.add_argument(
+        'recipe',
+        action="store",
+        metavar='RECIPE_PATH',
+        choices=RecipeCompleter(),
+        help="Path to recipe directory.",
     )
 
     args = p.parse_args()

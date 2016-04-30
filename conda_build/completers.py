@@ -1,4 +1,5 @@
-from os.path import isdir, isfile
+import os
+from os.path import isdir, isfile, join
 from conda.cli.common import Completer
 
 
@@ -21,7 +22,7 @@ conda_version = {
 class RecipeCompleter(Completer):
     def _get_items(self):
         completions = []
-        for path in listdir('.'):
+        for path in os.listdir('.'):
             if isdir(path) and isfile(join(path, 'meta.yaml')):
                 completions.append(path)
         if isfile('meta.yaml'):

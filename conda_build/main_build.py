@@ -26,8 +26,9 @@ from conda.resolve import NoPackagesFound, Unsatisfiable
 from conda_build import __version__, exceptions
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
-from conda_build.completers import (all_versions, RecipeCompleter, PythonVersionCompleter,
+from conda_build.completers import (all_versions, conda_version, RecipeCompleter, PythonVersionCompleter,
                                   RVersionsCompleter, LuaVersionsCompleter, NumPyVersionCompleter)
+from conda_build.utils import find_recipe
 on_win = (sys.platform == 'win32')
 
 
@@ -97,6 +98,14 @@ different sets of packages."""
         '-p', '--post',
         action="store_true",
         help="Run the post-build logic. Implies --no-test and --no-anaconda-upload.",
+    )
+    p.add_argument(
+        'recipe',
+        action="store",
+        metavar='RECIPE_PATH',
+        nargs='+',
+        choices=RecipeCompleter(),
+        help="Path to recipe directory.",
     )
     p.add_argument(
         '--skip-existing',
@@ -212,14 +221,6 @@ def execute(args, parser):
                           "imported that is hard-linked by files in the trash. "
                           "Will try again on next run.")
 
-    conda_version = {
-        'python': 'CONDA_PY',
-        'numpy': 'CONDA_NPY',
-        'perl': 'CONDA_PERL',
-        'R': 'CONDA_R',
-        'lua': 'CONDA_LUA',
-        }
-
     for lang in ['python', 'numpy', 'perl', 'R', 'lua']:
         versions = getattr(args, lang)
         if not versions:
@@ -252,7 +253,7 @@ def execute(args, parser):
     # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
     # Auto-set those env variables
     for var in conda_version.values():
-        if getattr(config, var):
+        if hasattr(config, var):
             # Set the env variable.
             os_environ[var] = str(getattr(config, var))
 
@@ -287,6 +288,8 @@ def execute(args, parser):
                 recipe_dir = abspath(arg)
                 need_cleanup = False
 
+            # recurse looking for meta.yaml that is potentially not in immediate folder
+            recipe_dir = find_recipe(recipe_dir)
             if not isdir(recipe_dir):
                 sys.exit("Error: no such directory: %s" % recipe_dir)
 
