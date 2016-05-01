@@ -35,9 +35,10 @@ init:
 
 install:
   # - utils/win_build_env.cmd
+  - set PATH=C:\Miniconda-x64;C:\Miniconda-x64\Scripts;C:\Miniconda-x64\Library\bin;%PATH%
+  - conda config --set always_yes yes
   - conda update conda
   - conda info
-  - conda config --set always_yes yes
   # - conda info python
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
