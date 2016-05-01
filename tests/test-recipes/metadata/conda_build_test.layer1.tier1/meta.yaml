@@ -1,0 +1,12 @@
+package:
+  name: conda_build_test.layer1.tier1
+  version: 1.0
+
+source:
+  git_url: ../../../../
+
+requirements:
+  build:
+    - python
+  run:
+    - python

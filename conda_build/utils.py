@@ -8,8 +8,9 @@ import zipfile
 import subprocess
 import operator
 import fnmatch
-from os.path import dirname, getmtime, getsize, isdir, join
+from os.path import dirname, getmtime, getsize, isdir, join, isfile
 from collections import defaultdict
+import distutils.dir_util
 
 from conda.utils import md5_file
 from conda.compat import PY3, iteritems
@@ -32,7 +33,14 @@ def copy_into(src, dst):
         dstname = os.path.join(dst, afile)
 
         if os.path.isdir(srcname):
-            shutil.copytree(srcname, dstname)
+            # make sure we will not replace files while we merge folders
+            files_to_be_copied = distutils.dir_util.copy_tree(srcname, dstname, dry_run=1)
+            existing_files = [path for path in files_to_be_copied if isfile(path)]
+            if existing_files:
+                raise Exception('The following files already exist:\n' +
+                                '\n'.join(existing_files))
+            else:
+                distutils.dir_util.copy_tree(srcname, dstname)
         else:
             shutil.copy2(srcname, dstname)
 
