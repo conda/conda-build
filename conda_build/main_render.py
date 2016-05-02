@@ -239,7 +239,6 @@ else:
 
 
 def main():
-    import pprint
     p = get_render_parser()
     p.add_argument(
         '-f', '--file',
