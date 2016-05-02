@@ -45,9 +45,10 @@ platform specifics, making it simple to create working environments from
         version = 'conda-build %s' % __version__,
     )
     p.add_argument(
-        '-s', "--source",
+        '-n', "--no_source",
         action="store_true",
-        help="Obtain the source and fill in related template variables.",
+        help="When templating can't be completed, do not obtain the \
+source to try fill in related template variables.",
     )
     p.add_argument(
         "--output",
@@ -142,7 +143,24 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def render_recipe(recipe_path, download_source=False):
+def parse_or_try_download(metadata, no_download_source):
+    try:
+        metadata.parse_again(permit_undefined_jinja=False)
+    except SystemExit:
+        if not no_download_source:
+            # Something went wrong; possibly due to undefined GIT_ jinja variables.
+            # Maybe we need to actually download the source in order to resolve the build_id.
+            source.provide(metadata.path, metadata.get_section('source'))
+
+            # Parse our metadata again because we did not initialize the source
+            # information before.
+            metadata.parse_again(permit_undefined_jinja=False)
+        else:
+            raise
+    return metadata
+
+
+def render_recipe(recipe_path, no_download_source=True):
     import shutil
     import tarfile
     import tempfile
@@ -172,16 +190,12 @@ def render_recipe(recipe_path, download_source=False):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         try:
-            m = MetaData(recipe_dir)
+            m = MetaData(recipe_dir, permit_undefined_jinja=False)
         except exceptions.YamlParsingError as e:
             sys.stderr.write(e.error_msg())
             sys.exit(1)
 
-        if download_source:
-            source.provide(m.path, m.get_section('source'), patch=False)
-            print('Source tree in:', source.get_dir())
-
-        m.parse_again(permit_undefined_jinja=False)
+        m = parse_or_try_download(m, no_download_source=no_download_source)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
@@ -191,16 +205,7 @@ def render_recipe(recipe_path, download_source=False):
 
 def get_package_build_string(metadata):
     import conda_build.build as build
-    try:
-        metadata.parse_again(permit_undefined_jinja=False)
-    except SystemExit:
-        # Something went wrong; possibly due to undefined GIT_ jinja variables.
-        # Maybe we need to actually download the source in order to resolve the build_id.
-        source.provide(metadata.path, metadata.get_section('source'))
-
-        # Parse our metadata again because we did not initialize the source
-        # information before.
-        metadata.parse_again(permit_undefined_jinja=False)
+    metadata = parse_or_try_download(metadata)
     return build.bldpkg_path(metadata)
 
 
@@ -237,9 +242,10 @@ def main():
     import pprint
     p = get_render_parser()
     p.add_argument(
-        '-y', '--yaml',
-        action="store_true",
-        help="print YAML, as opposed to printing the metadata as a dictionary"
+        '-f', '--file',
+        action="store",
+        help="write YAML to file, given as argument here.\
+              Overwrites existing files."
     )
     # we do this one separately because we only allow one entry to conda render
     p.add_argument(
@@ -253,15 +259,17 @@ def main():
     args = p.parse_args()
     set_language_env_vars(args, p)
 
-    metadata = render_recipe(find_recipe(args.recipe), download_source=args.source)
+    metadata = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source)
     if args.output:
         print(get_package_build_string(metadata))
     else:
-        if args.yaml:
-            print(yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
-                            default_flow_style=False, indent=4))
+        output = yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
+                            default_flow_style=False, indent=4)
+        if args.file:
+            with open(args.file, "w") as f:
+                f.write(output)
         else:
-            pprint.pprint(metadata.meta)
+            print(output)
 
 
 if __name__ == '__main__':

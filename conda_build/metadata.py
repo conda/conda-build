@@ -312,7 +312,7 @@ def handle_config_version(ms, ver):
 
 class MetaData(object):
 
-    def __init__(self, path):
+    def __init__(self, path, permit_undefined_jinja=True):
         assert isdir(path)
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
@@ -331,7 +331,7 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
-        self.parse_again(permit_undefined_jinja=True)
+        self.parse_again(permit_undefined_jinja=permit_undefined_jinja)
 
     def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
