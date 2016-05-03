@@ -190,7 +190,7 @@ def render_recipe(recipe_path, no_download_source=True):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         try:
-            m = MetaData(recipe_dir, permit_undefined_jinja=False)
+            m = MetaData(recipe_dir)
         except exceptions.YamlParsingError as e:
             sys.stderr.write(e.error_msg())
             sys.exit(1)
@@ -214,7 +214,7 @@ def get_package_build_string(metadata):
 class MetaYaml(dict):
     fields = ["package", "source", "build", "requirements", "test", "extra"]
     def to_omap(self):
-        return [(field, self[field]) for field in MetaYaml.fields]
+        return [(field, self[field]) for field in MetaYaml.fields if field in self]
 
 
 def represent_omap(dumper, data):
