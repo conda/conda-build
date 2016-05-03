@@ -212,7 +212,7 @@ def get_package_build_string(metadata):
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
 class MetaYaml(dict):
-    fields = ["package", "source", "build", "requirements", "test", "extra"]
+    fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
     def to_omap(self):
         return [(field, self[field]) for field in MetaYaml.fields if field in self]
 
