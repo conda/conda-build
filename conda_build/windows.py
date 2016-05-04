@@ -142,12 +142,10 @@ def msvc_env_cmd(bits, override=None):
         # rather than using the vcvarsall.bat which would try and call the
         # missing bat file.
         if arch_selector == 'amd64':
-            if exists(VCVARS64_VS9_BAT_PATH):
-                msvc_env_lines.append(error1.format(
-                    build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
-            else:
-                msvc_env_lines.append(error1.format(
-                    build_vcvarsall_cmd(vcvarsall_vs_path)))
+            msvc_env_lines.append(error1.format(
+                build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
+            msvc_env_lines.append(error1.format(
+                build_vcvarsall_cmd(vcvarsall_vs_path)))
         else:
             msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(vcvarsall_vs_path)))
