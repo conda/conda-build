@@ -119,6 +119,10 @@ def msvc_env_cmd(bits, override=None):
         win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
         win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
 
+        # win sdk activation adds stuff to CL that breaks builds (/AI)
+        #   See https://github.com/conda-forge/icu-feedstock/pull/5
+        msvc_env_lines.append('set "CONDA_CL_BACKUP=%CL%"')
+
         # Always call the Windows SDK first - if VS 2010 exists but was
         # installed using the broken installer then it will try and call the 
         # vcvars script, which will fail but NOT EXIT 1. To work around this,
@@ -126,6 +130,11 @@ def msvc_env_cmd(bits, override=None):
         # will overwrite any environemnt variables it needs, if necessary.
         msvc_env_lines.append(win_sdk_cmd)
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
+
+        # restore any user setting of CL prior to SDK activation
+        msvc_env_lines.append('set "CL=%CONDA_CL_BACKUP%"')
+        msvc_env_lines.append('set "CONDA_CL_BACKUP="')
+
     elif version == '9.0':
         error1 = 'if errorlevel 1 {}'
 
@@ -145,6 +154,7 @@ def msvc_env_cmd(bits, override=None):
         else:
             msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(vcvarsall_vs_path)))
+
     else:
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
