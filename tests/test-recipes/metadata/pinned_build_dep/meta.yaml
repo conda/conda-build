@@ -1,0 +1,12 @@
+package:
+  name: conda-build-test-pinned-specs
+  version: 1.0
+
+requirements:
+  build:
+    - python 3.5.*
+    - numpy 1.10.1*
+  run:
+    - python
+  pin_from_build:
+    - numpy x.x.*

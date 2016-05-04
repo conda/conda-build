@@ -31,7 +31,7 @@ from conda.config import get_proxy_servers
 from conda.cli.common import spec_from_line
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
-from conda_build.build import create_env
+from conda_build.build import create_env, get_build_index
 from conda_build.config import config
 
 from requests.packages.urllib3.util.url import parse_url
@@ -761,7 +761,7 @@ def run_setuppy(src_dir, temp_dir, python_version):
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
     create_env(config.build_prefix, ['python %s*' % python_version, 'pyyaml',
-        'setuptools', 'numpy'], clear_cache=False)
+        'setuptools', 'numpy'], index=get_build_index(clear_cache=False))
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

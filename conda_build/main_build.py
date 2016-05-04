@@ -23,7 +23,6 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
 from conda_build import __version__, exceptions
-from conda_build.index import update_index
 from conda.install import delete_trash
 on_win = (sys.platform == 'win32')
 
@@ -273,7 +272,6 @@ def execute(args, parser):
     import shutil
     import tarfile
     import tempfile
-    from os import makedirs
     from os.path import abspath, isdir, isfile
 
     from conda.lock import Locked
@@ -347,13 +345,6 @@ def execute(args, parser):
             # Set the env variable.
             os_environ[var] = str(getattr(config, var))
 
-    if args.skip_existing:
-        for d in config.bldpkgs_dirs:
-            if not isdir(d):
-                makedirs(d)
-            update_index(d)
-        index = build.get_build_index(clear_cache=True)
-
     already_built = []
     to_build_recursive = []
     with Locked(config.croot):
@@ -394,17 +385,24 @@ def execute(args, parser):
             m.check_fields()
             if args.check:
                 continue
+
+            # From this point on, we need to know about the meta's,
+            # dependencies, so we need an index.
+            m._index = build.get_build_index(clear_cache=False)
+
             if args.skip_existing:
-                if m.pkg_fn() in index or m.pkg_fn() in already_built:
+                if m.pkg_fn() in m._index or m.pkg_fn() in already_built:
                     print("%s is already built, skipping." % m.dist())
                     continue
+
             if m.skip():
                 print("Skipped: The %s recipe defines build/skip for this "
                       "configuration." % m.dist())
                 continue
+
             if args.output:
                 try:
-                    m.parse_again(permit_undefined_jinja=False)
+                    m.parse_again(second_pass=True)
                 except SystemExit:
                     # Something went wrong; possibly due to undefined GIT_ jinja variables.
                     # Maybe we need to actually download the source in order to resolve the build_id.
@@ -412,7 +410,7 @@ def execute(args, parser):
 
                     # Parse our metadata again because we did not initialize the source
                     # information before.
-                    m.parse_again(permit_undefined_jinja=False)
+                    m.parse_again(second_pass=True)
 
                 print(build.bldpkg_path(m))
                 continue
