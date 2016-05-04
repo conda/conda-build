@@ -318,7 +318,12 @@ def system_vars(env_dict, prefix):
     d = dict()
     compiler_vars = defaultdict(text_type)
 
-    d['CPU_COUNT'] = get_cpu_count()
+    # cap using the config limit
+    cpu_count = int(get_cpu_count())
+    if cc.max_cpu_count > 0:
+        cpu_count = min(cc.max_cpu_count, cpu_count)
+    d['CPU_COUNT'] = str(cpu_count)
+
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
     d['PATH'] = os.environ['PATH']
