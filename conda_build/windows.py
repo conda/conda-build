@@ -130,20 +130,26 @@ def msvc_env_cmd(bits, override=None):
         msvc_env_lines.append(win_sdk_cmd)
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
     elif version == '9.0':
+        error1 = 'if errorlevel 1 {}'
+
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
         msvc_env_lines.append(build_vcvarsall_cmd(VS_TOOLS_PY_LOCAL_PATH))
         
-        msvc_env_lines.append('if errorlevel 1 {}'.format(
+        msvc_env_lines.append(error1.format(
             build_vcvarsall_cmd(VS_TOOLS_PY_COMMON_PATH)))
         # The Visual Studio 2008 Express edition does not properly contain
         # the amd64 build files, so we call the vcvars64.bat manually,
         # rather than using the vcvarsall.bat which would try and call the
         # missing bat file.
         if arch_selector == 'amd64':
-            msvc_env_lines.append('if errorlevel 1 {}'.format(
-                build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
+            if exists(VCVARS64_VS9_BAT_PATH):
+                msvc_env_lines.append(error1.format(
+                    build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
+            else:
+                msvc_env_lines.appent(error1.format(
+                    build_vcvarsall_cmd(vcvarsall_vs_path)))
         else:
-            msvc_env_lines.append('if errorlevel 1 {}'.format(
+            msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(vcvarsall_vs_path)))
     else:
         # Visual Studio 14 or otherwise
