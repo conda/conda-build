@@ -115,6 +115,9 @@ def msvc_env_cmd(bits, override=None):
     msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
     msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
                                                             {64: ' Win64', 32: ''}[bits]))
+    # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
+    #   See https://github.com/conda-forge/icu-feedstock/pull/5
+    msvc_env_lines.append('set MSYS2_ARG_CONV_EXCL="/AI;/AL;/OUT;%MSYS2_ARG_CONV_EXCL%"')
     if version == '10.0':
         win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
         win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
@@ -150,10 +153,6 @@ def msvc_env_cmd(bits, override=None):
     else:
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
-
-    # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
-    #   See https://github.com/conda-forge/icu-feedstock/pull/5
-    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;%MSYS2_ARG_CONV_EXCL%"')
 
     return '\n'.join(msvc_env_lines)
 
