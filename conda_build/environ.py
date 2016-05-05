@@ -318,6 +318,9 @@ def system_vars(env_dict, prefix):
     d = dict()
     compiler_vars = defaultdict(text_type)
 
+    if 'MAKEFLAGS' in os.environ:
+        d['MAKEFLAGS'] = os.environ['MAKEFLAGS']
+
     d['CPU_COUNT'] = get_cpu_count()
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
