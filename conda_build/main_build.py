@@ -104,6 +104,12 @@ different sets of packages."""
         (locally or in the channels). """
         )
     p.add_argument(
+        '--keep-old-work',
+        action='store_true',
+        help="""Keep any existing, old work directory. Useful if debugging across
+        callstacks involving multiple packages/recipes. """
+    )
+    p.add_argument(
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
@@ -292,7 +298,8 @@ def execute(args, parser):
                     post = None
                 try:
                     build.build(m, post=post,
-                                include_recipe=args.include_recipe)
+                                include_recipe=args.include_recipe,
+                                keep_old_work=args.keep_old_work)
                 except (NoPackagesFound, Unsatisfiable) as e:
                     error_str = str(e)
                     # Typically if a conflict is with one of these
