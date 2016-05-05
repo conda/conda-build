@@ -162,7 +162,7 @@ def parse(data):
 trues = {'y', 'on', 'true', 'yes'}
 falses = {'n', 'no', 'false', 'off'}
 
-default_stucts = {
+default_structs = {
     'source/patches': list,
     'build/entry_points': list,
     'build/script_env': list,
@@ -376,8 +376,8 @@ class MetaData(object):
         section, key = field.split('/')
 
         # get correct default
-        if autotype and default is None and field in default_stucts:
-            default = default_stucts[field]()
+        if autotype and default is None and field in default_structs:
+            default = default_structs[field]()
 
         value = self.get_section(section).get(key, default)
 
