@@ -153,7 +153,7 @@ def msvc_env_cmd(bits, override=None):
 
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
-    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=“/AI;/AL;/OUT;%MSYS2_ARG_CONV_EXCL%"')
+    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;%MSYS2_ARG_CONV_EXCL%"')
 
     return '\n'.join(msvc_env_lines)
 
