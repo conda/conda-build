@@ -20,6 +20,7 @@ from os import makedirs, listdir
 from os.path import join, exists, isfile, basename, isdir
 from itertools import chain
 import subprocess
+from difflib import get_close_matches
 
 from conda.install import rm_rf
 from conda import compat
@@ -77,6 +78,7 @@ about:
   {home_comment}home:{homeurl}
   license: {license}
   {summary_comment}summary:{summary}
+  license_family: {license_family}
 
 # The original CRAN metadata for this package was:
 
@@ -294,7 +296,8 @@ def get_package_metadata(cran_url, package, session):
     return d
 
 def get_latest_git_tag():
-    p = subprocess.Popen(['git', 'tag'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+    p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
@@ -351,7 +354,7 @@ def main(args, parser):
     if args.update_outdated:
         args.packages = get_outdated(output_dir, cran_metadata, args.packages)
         for pkg in args.packages:
-            rm_rf(join(args.output_dir, 'r-' + pkg))
+            rm_rf(join(args.output_dir[0], 'r-' + pkg))
 
 
     while args.packages:
@@ -385,7 +388,8 @@ def main(args, parser):
                 elif isfile(sub_description_name):
                     DESCRIPTION = sub_description_name
                 else:
-                    sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file)" % package)
+                    sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file in %s, %s)"
+                                 % (package, sub_description_pkg, sub_description_name))
 
             with open(DESCRIPTION) as f:
                 description_text = clear_trailing_whitespace(f.read())
@@ -471,6 +475,12 @@ def main(args, parser):
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
+
+        # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
+        if 'GPL (>=2)' in d['license'] or d['license'] == 'GPL':
+            d['license_family'] = 'GPL3'
+        else:
+            d['license_family'] = get_close_matches(d['license'], metadata.allowed_license_families, 1, 0.0)[0]
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
         if cran_package.get('License_restricts_use', None) == 'yes':

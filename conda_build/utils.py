@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import fnmatch
 import os
 import sys
 import shutil
@@ -7,7 +8,6 @@ import tarfile
 import zipfile
 import subprocess
 import operator
-import fnmatch
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
 
@@ -19,6 +19,18 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 rm_rf
+
+def find_recipe(path):
+    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
+
+    Returns folder containing meta.yaml, to be built."""
+    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
+    if len(results) > 1:
+        raise IOError("More than one meta.yaml files found in %s" % path)
+    elif not results:
+        raise IOError("No meta.yaml files found in %s" % path)
+    return os.path.dirname(results[0])
+
 
 def copy_into(src, dst):
     "Copy all the files and directories in src to the directory dst"
