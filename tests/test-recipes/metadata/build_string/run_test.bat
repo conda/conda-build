@@ -6,7 +6,7 @@ echo "%condalist%"
 if not "%condalist%"=="conda-build-test-build-string-1.0-abc" exit 1
 cat "%PREFIX%\conda-meta\conda-build-test-build-string-1.0-abc.json"
 if errorlevel 1 exit 1
-cat "%PREFIX%\conda-meta\conda-build-test-build-string-1.0-abc.json" | grep '"build_number": 0'
+cat "%PREFIX%\conda-meta\conda-build-test-build-string-1.0-abc.json" | FINDSTR /r /C:"\"build_number\": 0"
 if errorlevel 1 exit 1
-cat "%PREFIX%\conda-meta\conda-build-test-build-string-1.0-abc.json" | grep '"build": "abc"'
+cat "%PREFIX%\conda-meta\conda-build-test-build-string-1.0-abc.json" | FINDSTR /r /C:"\"build\": \"abc\""
 if errorlevel 1 exit 1
