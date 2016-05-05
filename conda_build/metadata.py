@@ -148,6 +148,8 @@ def parse(data):
     for field in FIELDS:
         if field not in res:
             continue
+        if not res[field]:
+            res[field] = {}
         if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s" %
                                (field, res[field].__class__.__name__))
