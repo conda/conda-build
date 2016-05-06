@@ -30,7 +30,7 @@ def find_recipe(path):
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
-            return base_recipe
+            return os.path.dirname(base_recipe)
         else:
             raise IOError("More than one meta.yaml files found in %s" % path)
     elif not results:
