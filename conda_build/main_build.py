@@ -20,7 +20,6 @@ from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
-from conda_build import exceptions
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
@@ -195,7 +194,6 @@ def execute(args, parser):
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
-    from conda_build.metadata import MetaData
 
     check_external()
 
