@@ -168,9 +168,10 @@ Error: cannot locate anaconda command (required for upload)
 # $ conda install anaconda-client
 ''')
     print("Uploading to anaconda.org")
-    args = [binstar, 'upload']
+    args = [binstar,]
     if hasattr(args, "token"):
         args.extend(['--token', args.token])
+    args.append('upload')
     if hasattr(args, "user"):
         args.extend(['--user', args.user])
     args.append(path)
