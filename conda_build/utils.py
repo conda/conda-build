@@ -23,10 +23,16 @@ rm_rf
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
 
-    Returns folder containing meta.yaml, to be built."""
+    Returns folder containing meta.yaml, to be built.
+
+    If we have a base level meta.yaml and other supplemental ones, use that first"""
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
     if len(results) > 1:
-        raise IOError("More than one meta.yaml files found in %s" % path)
+        base_recipe = os.path.join(path, "meta.yaml")
+        if base_recipe in results:
+            return base_recipe
+        else:
+            raise IOError("More than one meta.yaml files found in %s" % path)
     elif not results:
         raise IOError("No meta.yaml files found in %s" % path)
     return os.path.dirname(results[0])
