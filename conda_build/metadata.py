@@ -151,7 +151,6 @@ def parse(data):
         if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s" %
                                (field, res[field].__class__.__name__))
-                  'build/pyc_compilation',
 
 
 
@@ -261,7 +260,7 @@ FIELDS = {
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends', # pin_depends is experimental still
-              'skip-pyc-compilation'
+              'pyc-compilation'
              ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
