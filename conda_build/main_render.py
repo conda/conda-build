@@ -143,7 +143,7 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def parse_or_try_download(metadata, no_download_source):
+def parse_or_try_download(metadata, no_download_source=True):
     try:
         metadata.parse_again(permit_undefined_jinja=False)
     except SystemExit:
@@ -205,7 +205,7 @@ def render_recipe(recipe_path, no_download_source=True):
 
 def get_package_build_string(metadata):
     import conda_build.build as build
-    metadata = parse_or_try_download(metadata)
+    metadata = parse_or_try_download(metadata, no_download_source=True)
     return build.bldpkg_path(metadata)
 
 
