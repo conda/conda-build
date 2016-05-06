@@ -1,6 +1,6 @@
 package:
   name: conda-build
-  version: 1.18.3
+  version: 1.10alpha.0
 
 source:
   git_url: ../
