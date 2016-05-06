@@ -21,9 +21,8 @@ else:
     PROGRAM_FILES_PATH = os.environ['ProgramFiles']
 
 # Note that we explicitly want "Program Files" and not "Program Files (x86)"
-WIN_SDK_BAT_PATH = os.path.join(os.path.abspath(os.sep),
-                                'Program Files', 'Microsoft SDKs',
-                                'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
+WIN_SDK_BAT_PATH = os.path.join(PROGRAM_FILES_PATH.replace(" (x86)", ""),
+                                'Microsoft SDKs', 'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
 VS_TOOLS_PY_LOCAL_PATH = os.path.join(
     os.getenv('localappdata', os.path.abspath(os.sep)),
     'Programs', 'Common', 'Microsoft', 'Visual C++ for Python', '9.0',
@@ -111,17 +110,19 @@ def msvc_env_cmd(bits, override=None):
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
-    msvc_env_lines.append('set VS_VERSION="{}"'.format(version))
-    msvc_env_lines.append('set VS_MAJOR="{}"'.format(version.split('.')[0]))
-    msvc_env_lines.append('set VS_YEAR="{}"'.format(VS_VERSION_STRING[version][-4:]))
-    msvc_env_lines.append('set CMAKE_GENERATOR="{}"'.format(VS_VERSION_STRING[version] +
+    msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
+    msvc_env_lines.append('set "VS_MAJOR={}"'.format(version.split('.')[0]))
+    msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
+    msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
                                                             {64: ' Win64', 32: ''}[bits]))
+    # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
+    #   See https://github.com/conda-forge/icu-feedstock/pull/5
+    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out;%MSYS2_ARG_CONV_EXCL%"')
+    msvc_env_lines.append('set "MSYS2_ENV_CONV_EXCL=CL"')
     if version == '10.0':
-        # Unfortunately, the Windows SDK takes a different command format for
-        # the arch selector - debug is default so explicitly set 'Release'
-        win_sdk_arch = '/x86 /Release' if bits == 32 else '/x64 /Release'
+        win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
         win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
-        
+
         # Always call the Windows SDK first - if VS 2010 exists but was
         # installed using the broken installer then it will try and call the 
         # vcvars script, which will fail but NOT EXIT 1. To work around this,
@@ -129,12 +130,12 @@ def msvc_env_cmd(bits, override=None):
         # will overwrite any environemnt variables it needs, if necessary.
         msvc_env_lines.append(win_sdk_cmd)
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
+
     elif version == '9.0':
         error1 = 'if errorlevel 1 {}'
 
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
         msvc_env_lines.append(build_vcvarsall_cmd(VS_TOOLS_PY_LOCAL_PATH))
-        
         msvc_env_lines.append(error1.format(
             build_vcvarsall_cmd(VS_TOOLS_PY_COMMON_PATH)))
         # The Visual Studio 2008 Express edition does not properly contain
@@ -149,6 +150,7 @@ def msvc_env_cmd(bits, override=None):
         else:
             msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(vcvarsall_vs_path)))
+
     else:
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))

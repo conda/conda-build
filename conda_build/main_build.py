@@ -223,7 +223,6 @@ def execute(args, parser):
             if not isdir(d):
                 makedirs(d)
             update_index(d)
-        index = build.get_build_index(clear_cache=True)
 
     already_built = []
     to_build_recursive = []
@@ -258,6 +257,7 @@ def execute(args, parser):
             m = render_recipe(recipe_dir, no_download_source=False)
             if m.get_value('build/noarch_python'):
                 config.noarch = True
+
             if args.check and len(args.recipe) > 1:
                 print(m.path)
             m.check_fields()

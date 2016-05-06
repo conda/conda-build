@@ -96,10 +96,10 @@ def test_activation(bits, compiler):
     #     this is effectively the test condition for all below tests.
     with open('tmp_call.bat', "w") as f:
         f.write(msvc_env_cmd(bits, compiler_version))
-        f.write('\nif not %VS_VERSION% == "{}" exit /b 1'.format(compiler_version))
-        f.write('\nif not %VS_MAJOR% == "{}" exit /b 1'.format(compiler_version.split('.')[0]))
-        f.write('\nif not %VS_YEAR% == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version][-4:]))
-        f.write('\nif not %CMAKE_GENERATOR% == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version] +
+        f.write('\nif not "%VS_VERSION%" == "{}" exit /b 1'.format(compiler_version))
+        f.write('\nif not "%VS_MAJOR%" == "{}" exit /b 1'.format(compiler_version.split('.')[0]))
+        f.write('\nif not "%VS_YEAR%" == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version][-4:]))
+        f.write('\nif not "%CMAKE_GENERATOR%" == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version] +
                                                                       {64: ' Win64', 32: ''}[bits]))
     try:
         subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
