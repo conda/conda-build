@@ -24,7 +24,8 @@ from conda_build import exceptions
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import get_package_build_string, set_language_env_vars, RecipeCompleter
+from conda_build.main_render import (get_package_build_string, set_language_env_vars,
+                                     RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
 
@@ -255,14 +256,10 @@ def execute(args, parser):
             if not isdir(recipe_dir):
                 sys.exit("Error: no such directory: %s" % recipe_dir)
 
-            try:
-                m = MetaData(recipe_dir)
-                if m.get_value('build/noarch_python'):
-                    config.noarch = True
-            except exceptions.YamlParsingError as e:
-                sys.stderr.write(e.error_msg())
-                sys.exit(1)
-            binstar_upload = False
+            # this fully renders any jinja templating, throwing an error if any data is missing
+            m = render_recipe(recipe_dir, no_download_source=False)
+            if m.get_value('build/noarch_python'):
+                config.noarch = True
             if args.check and len(args.recipe) > 1:
                 print(m.path)
             m.check_fields()

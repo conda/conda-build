@@ -446,11 +446,6 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
             finally:
                 os.environ['PATH'] = _old_path
 
-        # Parse our metadata again because we did not initialize the source
-        # information before.
-        # By now, all jinja variables should be defined, so don't permit undefined vars.
-        m.parse_again(permit_undefined_jinja=False)
-
         print("Package:", m.dist())
 
         assert isdir(source.WORK_DIR)
