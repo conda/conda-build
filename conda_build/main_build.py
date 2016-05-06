@@ -114,6 +114,16 @@ different sets of packages."""
         action="store_true",
         help="do not display progress bar",
     )
+    p.add_argument(
+        '--token',
+        action="store",
+        help="Token to pass through to anaconda upload"
+    )
+    p.add_argument(
+        '--user',
+        action='store',
+        help="User/organization to upload packages to on anaconda.org"
+    )
 
     add_parser_channels(p)
     p.set_defaults(func=execute)
@@ -158,7 +168,13 @@ Error: cannot locate anaconda command (required for upload)
 # $ conda install anaconda-client
 ''')
     print("Uploading to anaconda.org")
-    args = [binstar, 'upload', path]
+    args = [binstar, 'upload']
+    if hasattr(args, "token"):
+        args.extend(['--token', args.token])
+    if hasattr(args, "user"):
+        args.extend(['--user', args.user])
+    args.append(path)
+    print(args)
     try:
         subprocess.call(args)
     except:
