@@ -309,8 +309,8 @@ def osx_vars(compiler_vars):
 def linux_vars(compiler_vars, prefix):
     compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
     if cc.bits == 32:
-        compiler_vars['CFLAGS'] += ' -m 32'
-        compiler_vars['CXXFLAGS'] += ' -m 32'
+        compiler_vars['CFLAGS'] += ' -m32'
+        compiler_vars['CXXFLAGS'] += ' -m32'
     return {}
 
 
