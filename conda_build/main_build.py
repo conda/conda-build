@@ -268,10 +268,6 @@ def execute(args, parser):
             m.check_fields()
             if args.check:
                 continue
-            if args.skip_existing:
-                if m.pkg_fn() in index or m.pkg_fn() in already_built:
-                    print("%s is already built, skipping." % m.dist())
-                    continue
             if m.skip():
                 print("Skipped: The %s recipe defines build/skip for this "
                       "configuration." % m.dist())

@@ -143,7 +143,7 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def parse_or_try_download(metadata, no_download_source):
+def parse_or_try_download(metadata, no_download_source=True):
     try:
         metadata.parse_again(permit_undefined_jinja=False)
     except SystemExit:

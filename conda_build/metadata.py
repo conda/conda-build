@@ -139,7 +139,7 @@ def ensure_valid_fields(meta):
     if pin_depends not in ('', 'record', 'strict'):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
-def parse(data):
+def parse(data, path=None):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
     # ensure the result is a dict
@@ -148,11 +148,12 @@ def parse(data):
     for field in FIELDS:
         if field not in res:
             continue
+        # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
         if not res[field]:
             res[field] = {}
         if not isinstance(res[field], dict):
-            raise RuntimeError("The %s field should be a dict, not %s" %
-                               (field, res[field].__class__.__name__))
+            raise RuntimeError("The %s field should be a dict, not %s in file %s." %
+                               (field, res[field].__class__.__name__, path))
 
 
 
@@ -327,7 +328,7 @@ class MetaData(object):
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
         self.meta = parse("package:\n"
-                          "  name: uninitialized")
+                          "  name: uninitialized", path=self.meta_path)
 
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
@@ -344,7 +345,7 @@ class MetaData(object):
         """
         if not self.meta_path:
             return
-        self.meta = parse(self._get_contents(permit_undefined_jinja))
+        self.meta = parse(self._get_contents(permit_undefined_jinja), path=self.meta_path)
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
