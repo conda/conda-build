@@ -274,7 +274,7 @@ def execute(args, parser):
                       "configuration." % m.dist())
                 continue
             if args.output:
-                print(get_package_build_string(m))
+                print(get_package_build_string(m, no_download_source=False))
                 continue
             elif args.test:
                 build.test(m, move_broken=False)
@@ -338,12 +338,10 @@ def execute(args, parser):
                 if not args.notest:
                     build.test(m)
 
-                binstar_upload = True
-
             if need_cleanup:
                 shutil.rmtree(recipe_dir)
 
-            if binstar_upload:
+            if args.binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
 
             already_built.append(m.pkg_fn())

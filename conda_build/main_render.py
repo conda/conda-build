@@ -203,9 +203,9 @@ def render_recipe(recipe_path, no_download_source=True):
     return m
 
 
-def get_package_build_string(metadata):
+def get_package_build_string(metadata, no_download_source):
     import conda_build.build as build
-    metadata = parse_or_try_download(metadata)
+    metadata = parse_or_try_download(metadata, no_download_source=no_download_source)
     return build.bldpkg_path(metadata)
 
 
@@ -260,7 +260,7 @@ def main():
 
     metadata = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source)
     if args.output:
-        print(get_package_build_string(metadata))
+        print(get_package_build_string(metadata, args.no_source))
     else:
         output = yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
                             default_flow_style=False, indent=4)
