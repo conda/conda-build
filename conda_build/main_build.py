@@ -23,7 +23,7 @@ from conda.resolve import NoPackagesFound, Unsatisfiable
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import (get_package_build_string, set_language_env_vars,
+from conda_build.main_render import (get_package_build_path, set_language_env_vars,
                                      RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
@@ -223,8 +223,9 @@ def execute(args, parser):
             if not isdir(d):
                 makedirs(d)
             update_index(d)
+        index = build.get_build_index(clear_cache=True)
 
-    already_built = []
+    already_built = {}
     to_build_recursive = []
     with Locked(config.croot):
         recipes = deque(args.recipe)
@@ -267,8 +268,12 @@ def execute(args, parser):
                 print("Skipped: The %s recipe defines build/skip for this "
                       "configuration." % m.dist())
                 continue
+            if args.skip_existing:
+                if m.pkg_fn() in index or m.pkg_fn() in already_built:
+                    print(m.dist(), "is already built, skipping.")
+                    continue
             if args.output:
-                print(get_package_build_string(m, no_download_source=False))
+                print(get_package_build_path(m, no_download_source=False))
                 continue
             elif args.test:
                 build.test(m, move_broken=False)
@@ -338,7 +343,7 @@ def execute(args, parser):
             if args.binstar_upload:
                 handle_binstar_upload(build.bldpkg_path(m), args)
 
-            already_built.append(m.pkg_fn())
+            already_built.add(m.pkg_fn())
 
 
 def args_func(args, p):
