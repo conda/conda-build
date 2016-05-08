@@ -130,3 +130,13 @@ def test_jinja_typo():
     error = error.decode('utf-8')
     assert "'GIT_DSECRIBE_TAG' is undefined" in error
 
+def test_skip_existing():
+    # build the recipe first
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "jinja_vars"))
+    subprocess.check_call(cmd.split())
+    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir, "jinja_vars"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, _ = process.communicate()
+    output = output.decode('utf-8')
+    assert "is already built, skipping." in output

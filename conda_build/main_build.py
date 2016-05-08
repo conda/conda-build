@@ -23,7 +23,7 @@ from conda.resolve import NoPackagesFound, Unsatisfiable
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import (get_package_build_string, set_language_env_vars,
+from conda_build.main_render import (get_package_build_path, set_language_env_vars,
                                      RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
@@ -190,7 +190,6 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
-    from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
@@ -223,8 +222,9 @@ def execute(args, parser):
             if not isdir(d):
                 makedirs(d)
             update_index(d)
+        index = build.get_build_index(clear_cache=True)
 
-    already_built = []
+    already_built = {}
     to_build_recursive = []
     recipes = deque(args.recipe)
     while recipes:
@@ -266,12 +266,15 @@ def execute(args, parser):
             print("Skipped: The %s recipe defines build/skip for this "
                     "configuration." % m.dist())
             continue
+        if args.skip_existing:
+            if m.pkg_fn() in index or m.pkg_fn() in already_built:
+                print(m.dist(), "is already built, skipping.")
+                continue
         if args.output:
             print(get_package_build_string(m, no_download_source=False))
             continue
         elif args.test:
-            with Locked(config.croot):
-                build.test(m, move_broken=False)
+            build.test(m, move_broken=False)
         elif args.source:
             source.provide(m.path, m.get_section('source'))
             print('Source tree in:', source.get_dir())
@@ -288,10 +291,9 @@ def execute(args, parser):
             else:
                 post = None
             try:
-                with Locked(config.croot):
-                    build.build(m, post=post,
-                                include_recipe=args.include_recipe,
-                                keep_old_work=args.keep_old_work)
+                build.build(m, post=post,
+                            include_recipe=args.include_recipe,
+                            keep_old_work=args.keep_old_work)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these
@@ -340,7 +342,6 @@ def execute(args, parser):
             handle_binstar_upload(build.bldpkg_path(m), args)
 
         already_built.append(m.pkg_fn())
-
 
 def args_func(args, p):
     try:
