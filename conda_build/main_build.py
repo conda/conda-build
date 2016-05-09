@@ -225,7 +225,7 @@ def execute(args, parser):
             update_index(d)
         index = build.get_build_index(clear_cache=True)
 
-    already_built = {}
+    already_built = set()
     to_build_recursive = []
     with Locked(config.croot):
         recipes = deque(args.recipe)
