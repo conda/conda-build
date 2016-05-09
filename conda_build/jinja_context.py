@@ -63,10 +63,12 @@ def context_processor(initial_metadata, recipe_dir):
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
     ctx = get_environ(m=initial_metadata)
-    environ = dict(os.environ)
-    environ.update(get_environ(m=initial_metadata))
+    environ = ctx.copy()
+    environ.update(os.environ)
 
     ctx.update(load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
                load_npm=load_npm,
                environ=environ)
+    import pprint
+    pprint.pprint(ctx)
     return ctx

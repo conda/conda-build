@@ -232,6 +232,7 @@ def meta_vars(meta):
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
     if external.find_executable('git') and os.path.exists(git_dir):
+        print("trying to get git data")
         git_url = meta.get_value('source/git_url')
 
         if os.path.exists(git_url):

@@ -2,7 +2,7 @@
 # including use cases involving expressions such as FOO[:7] or FOO.replace(...)
 package:
   name: conda-build-test-source-git-jinja2
-  version: {{ GIT_DESCRIBE_TAG.replace('v', '') }}
+  version: {{ environ.get(GIT_DESCRIBE_TAG).replace('v', '') }}
 
 source:
   git_url: https://github.com/conda/conda-build
@@ -10,8 +10,8 @@ source:
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER|int }}
-  string: py{{ CONDA_PY }}_{{ GIT_DESCRIBE_NUMBER|int }}_g{{ GIT_FULL_HASH[:7] }}
+  string: py{{ environ.get(CONDA_PY) }}_{{ environ.get(GIT_DESCRIBE_NUMBER)|int }}_g{{ environ.get(GIT_FULL_HASH)[:7] }}
 
 requirements:
   build:
-    - python {{ PY_VER }}*
+    - python {{ environ.get(PY_VER) }}*
