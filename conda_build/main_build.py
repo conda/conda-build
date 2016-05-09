@@ -226,119 +226,120 @@ def execute(args, parser):
 
     already_built = []
     to_build_recursive = []
-    with Locked(config.croot):
-        recipes = deque(args.recipe)
-        while recipes:
-            arg = recipes.popleft()
-            try_again = False
-            # Don't use byte literals for paths in Python 2
-            if not PY3:
-                arg = arg.decode(getpreferredencoding() or 'utf-8')
-            if isfile(arg):
-                if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                    recipe_dir = tempfile.mkdtemp()
-                    t = tarfile.open(arg, 'r:*')
-                    t.extractall(path=recipe_dir)
-                    t.close()
-                    need_cleanup = True
-                else:
-                    print("Ignoring non-recipe: %s" % arg)
-                    continue
+    recipes = deque(args.recipe)
+    while recipes:
+        arg = recipes.popleft()
+        try_again = False
+        # Don't use byte literals for paths in Python 2
+        if not PY3:
+            arg = arg.decode(getpreferredencoding() or 'utf-8')
+        if isfile(arg):
+            if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+                recipe_dir = tempfile.mkdtemp()
+                t = tarfile.open(arg, 'r:*')
+                t.extractall(path=recipe_dir)
+                t.close()
+                need_cleanup = True
             else:
-                recipe_dir = abspath(arg)
-                need_cleanup = False
-
-            # recurse looking for meta.yaml that is potentially not in immediate folder
-            recipe_dir = find_recipe(recipe_dir)
-            if not isdir(recipe_dir):
-                sys.exit("Error: no such directory: %s" % recipe_dir)
-
-            # this fully renders any jinja templating, throwing an error if any data is missing
-            m = render_recipe(recipe_dir, no_download_source=False)
-            if m.get_value('build/noarch_python'):
-                config.noarch = True
-
-            if args.check and len(args.recipe) > 1:
-                print(m.path)
-            m.check_fields()
-            if args.check:
+                print("Ignoring non-recipe: %s" % arg)
                 continue
-            if m.skip():
-                print("Skipped: The %s recipe defines build/skip for this "
-                      "configuration." % m.dist())
-                continue
-            if args.output:
-                print(get_package_build_string(m, no_download_source=False))
-                continue
-            elif args.test:
+        else:
+            recipe_dir = abspath(arg)
+            need_cleanup = False
+
+        # recurse looking for meta.yaml that is potentially not in immediate folder
+        recipe_dir = find_recipe(recipe_dir)
+        if not isdir(recipe_dir):
+            sys.exit("Error: no such directory: %s" % recipe_dir)
+
+        # this fully renders any jinja templating, throwing an error if any data is missing
+        m = render_recipe(recipe_dir, no_download_source=False)
+        if m.get_value('build/noarch_python'):
+            config.noarch = True
+
+        if args.check and len(args.recipe) > 1:
+            print(m.path)
+        m.check_fields()
+        if args.check:
+            continue
+        if m.skip():
+            print("Skipped: The %s recipe defines build/skip for this "
+                    "configuration." % m.dist())
+            continue
+        if args.output:
+            print(get_package_build_string(m, no_download_source=False))
+            continue
+        elif args.test:
+            with Locked(config.croot):
                 build.test(m, move_broken=False)
-            elif args.source:
-                source.provide(m.path, m.get_section('source'))
-                print('Source tree in:', source.get_dir())
+        elif args.source:
+            source.provide(m.path, m.get_section('source'))
+            print('Source tree in:', source.get_dir())
+        else:
+            # This loop recursively builds dependencies if recipes exist
+            if args.build_only:
+                post = False
+                args.notest = True
+                args.binstar_upload = False
+            elif args.post:
+                post = True
+                args.notest = True
+                args.binstar_upload = False
             else:
-                # This loop recursively builds dependencies if recipes exist
-                if args.build_only:
-                    post = False
-                    args.notest = True
-                    args.binstar_upload = False
-                elif args.post:
-                    post = True
-                    args.notest = True
-                    args.binstar_upload = False
-                else:
-                    post = None
-                try:
+                post = None
+            try:
+                with Locked(config.croot):
                     build.build(m, post=post,
                                 include_recipe=args.include_recipe,
                                 keep_old_work=args.keep_old_work)
-                except (NoPackagesFound, Unsatisfiable) as e:
-                    error_str = str(e)
-                    # Typically if a conflict is with one of these
-                    # packages, the other package needs to be rebuilt
-                    # (e.g., a conflict with 'python 3.5*' and 'x' means
-                    # 'x' isn't build for Python 3.5 and needs to be
-                    # rebuilt).
-                    skip_names = ['python', 'r']
-                    add_recipes = []
-                    for line in error_str.splitlines():
-                        if not line.startswith('  - '):
-                            continue
-                        pkg = line.lstrip('  - ').split(' -> ')[-1]
-                        pkg = pkg.strip().split(' ')[0]
-                        if pkg in skip_names:
-                            continue
-                        recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
-                        if os.path.exists(pkg):
-                            recipe_glob.append(pkg)
-                        if recipe_glob:
-                            try_again = True
-                            for recipe_dir in recipe_glob:
-                                if pkg in to_build_recursive:
-                                    sys.exit(str(e))
-                                print(error_str)
-                                print(("Missing dependency {0}, but found" +
-                                       " recipe directory, so building " +
-                                       "{0} first").format(pkg))
-                                add_recipes.append(recipe_dir)
-                                to_build_recursive.append(pkg)
-                        else:
-                            raise
-                    recipes.appendleft(arg)
-                    recipes.extendleft(reversed(add_recipes))
+            except (NoPackagesFound, Unsatisfiable) as e:
+                error_str = str(e)
+                # Typically if a conflict is with one of these
+                # packages, the other package needs to be rebuilt
+                # (e.g., a conflict with 'python 3.5*' and 'x' means
+                # 'x' isn't build for Python 3.5 and needs to be
+                # rebuilt).
+                skip_names = ['python', 'r']
+                add_recipes = []
+                for line in error_str.splitlines():
+                    if not line.startswith('  - '):
+                        continue
+                    pkg = line.lstrip('  - ').split(' -> ')[-1]
+                    pkg = pkg.strip().split(' ')[0]
+                    if pkg in skip_names:
+                        continue
+                    recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                    if os.path.exists(pkg):
+                        recipe_glob.append(pkg)
+                    if recipe_glob:
+                        try_again = True
+                        for recipe_dir in recipe_glob:
+                            if pkg in to_build_recursive:
+                                sys.exit(str(e))
+                            print(error_str)
+                            print(("Missing dependency {0}, but found" +
+                                    " recipe directory, so building " +
+                                    "{0} first").format(pkg))
+                            add_recipes.append(recipe_dir)
+                            to_build_recursive.append(pkg)
+                    else:
+                        raise
+                recipes.appendleft(arg)
+                recipes.extendleft(reversed(add_recipes))
 
-                if try_again:
-                    continue
+            if try_again:
+                continue
 
-                if not args.notest:
-                    build.test(m)
+            if not args.notest:
+                build.test(m)
 
-            if need_cleanup:
-                shutil.rmtree(recipe_dir)
+        if need_cleanup:
+            shutil.rmtree(recipe_dir)
 
-            if args.binstar_upload:
-                handle_binstar_upload(build.bldpkg_path(m), args)
+        if args.binstar_upload:
+            handle_binstar_upload(build.bldpkg_path(m), args)
 
-            already_built.append(m.pkg_fn())
+        already_built.append(m.pkg_fn())
 
 
 def args_func(args, p):
