@@ -512,7 +512,9 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
         assert not exists(config.info_dir)
         files2 = prefix_files()
 
-        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+        post_process(sorted(files2 - files1), 
+            preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')), 
+            pyc_compilation=bool(m.get_value('build/pyc_compilation', True)))
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files()
