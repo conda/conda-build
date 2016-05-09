@@ -70,10 +70,13 @@ def fix_shebang(f, osx_is_app=False):
     py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
                config.build_prefix + '/bin/' + basename(config.build_python))
-    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
+    lib = "{0}_LIBRARY_PATH={1}/lib".format('DYLD' if sys.platform == 'darwin' else 'LD',
+                                            config.build_prefix)
+    new_shebang = '#!/usr/bin/env {0} {1}'.format(lib, py_exec).encode(encoding)
+    new_data = SHEBANG_PAT.sub(new_shebang, data, count=1)
     if new_data == data:
         return
-    print("updating shebang:", f)
+    print("updating shebang of {0} with {1}".format(f, new_data.split('\n')[0]))
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
         fo.write(new_data.decode(encoding))
     os.chmod(path, int('755', 8))
