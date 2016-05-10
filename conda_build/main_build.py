@@ -338,8 +338,8 @@ def execute(args, parser):
         if need_cleanup:
             shutil.rmtree(recipe_dir)
 
-        if args.binstar_upload:
-            handle_binstar_upload(build.bldpkg_path(m), args)
+        # outputs message, or does upload, depending on value of args.binstar_upload
+        handle_binstar_upload(build.bldpkg_path(m), args)
 
         already_built.add(m.pkg_fn())
 
