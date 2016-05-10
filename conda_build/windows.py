@@ -192,21 +192,22 @@ def build(m, bld_bat):
             os.makedirs(path)
 
     src_dir = source.get_dir()
-    with open(bld_bat) as fi:
-        data = fi.read()
-    with open(join(src_dir, 'bld.bat'), 'w') as fo:
-        fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
-        fo.write('\n')
-        # more debuggable with echo on
-        fo.write('@echo on\n')
-        for key, value in env.items():
-            fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-        fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
-        fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
-        fo.write("REM ===== end generated header =====\n")
-        fo.write(data)
+    if os.path.isfile(bld_bat):
+        with open(bld_bat) as fi:
+            data = fi.read()
+        with open(join(src_dir, 'bld.bat'), 'w') as fo:
+            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
+            fo.write('\n')
+            # more debuggable with echo on
+            fo.write('@echo on\n')
+            for key, value in env.items():
+                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
+            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
+            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+            fo.write("REM ===== end generated header =====\n")
+            fo.write(data)
 
-    cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
-    _check_call(cmd, cwd=src_dir)
-    kill_processes()
-    fix_staged_scripts()
+        cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
+        _check_call(cmd, cwd=src_dir)
+        kill_processes()
+        fix_staged_scripts()
