@@ -44,8 +44,8 @@ install:
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda install -q python=%PYTHON_VERSION%
-  - conda install -q -c conda pytest requests mock pycrypto pyflakes pycosat conda-build
-  - conda install -q git git
+  - conda install -q -c conda pytest requests mock pycrypto pyflakes pycosat
+  - conda install -q git git anaconda-client clyent python-dateutil six
   - pip install auxlib flake8 pytest-cov
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
