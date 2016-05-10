@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import shutil
-from os.path import dirname, isdir, isfile, join, exists
+from os.path import dirname, isdir, isfile, join
 
 import conda.config as cc
 
