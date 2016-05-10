@@ -146,7 +146,6 @@ def test_token_upload():
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
     # the folder with the test recipe to upload
-    package_name =  "build_number"
     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "build_number"))
     subprocess.check_call(cmd.split())
     # clean up - we don't actually want this package to exist
