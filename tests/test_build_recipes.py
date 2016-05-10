@@ -78,6 +78,20 @@ exit -1
         shutil.rmtree(tmpdir)
 
 
+platforms = ["64" if sys.maxsize > 2**32 else "32"]
+if sys.platform=="win32":
+    platforms = set(["32",] + platforms)
+    compilers = ["2.7", "3.4", "3.5"]
+else:
+    compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
+
+@pytest.mark.parametrize("platform", platforms)
+@pytest.mark.parametrize("target_compiler", compilers)
+def test_cmake_generator(platform, target_compiler):
+    # TODO: need a better way to specify compiler more directly on win
+    cmd = 'conda build --no-anaconda-upload {}/_cmake_generator --python={}'.format(metadata_dir, target_compiler)
+    subprocess.check_call(cmd.split())
+
 
 @pytest.mark.skipif(sys.platform=="win32",
                     reason="No windows symlinks")
@@ -88,6 +102,7 @@ def test_symlink_fail():
     output, error = process.communicate()
     error = error.decode('utf-8')
     assert error.count("Error") == 6
+
 
 @pytest.mark.skipif(sys.platform=="win32",
                     reason="Windows doesn't show this error")
@@ -115,3 +130,13 @@ def test_jinja_typo():
     error = error.decode('utf-8')
     assert "'GIT_DSECRIBE_TAG' is undefined" in error
 
+def test_skip_existing():
+    # build the recipe first
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "build_number"))
+    subprocess.check_call(cmd.split())
+    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir, "build_number"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, _ = process.communicate()
+    output = output.decode('utf-8')
+    assert "is already built, skipping." in output

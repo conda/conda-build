@@ -1,3 +1,20 @@
+2016-04-21   1.20.1:
+--------------------
+  * fix source/path and GIT_* issues, #801
+  * fix invalid assertion, #855
+  * environ.py refactor/clenup, #856
+  * Better messaging for yaml parsing errors, #862
+  * fix typo, #863
+  * make CONDA_PY and CONDA_NPY available in build.sh, #837
+  * execute source fetchers (e.g., git, hg) in the _build environment, #843
+  * use memory map rather than read() to reduce memory usage, #866
+  * fix svn url on Windows in checkout tool test, #867
+  * fix empty files bug, #869
+  * improve Visual Studio logic, #861
+  * add files in order of increasing size to improve access times to tar, #870
+  * VS_YEAR, VS_VERSION, VS_MAJOR and CMAKE_GENERATOR environment variables, #872
+
+
 2016-03-25   1.20.0:
 --------------------
   * support for Lua as a built-in language (Alex Wiltschko), #719

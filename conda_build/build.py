@@ -13,6 +13,7 @@ import sys
 import time
 import tarfile
 import fnmatch
+import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
@@ -22,6 +23,7 @@ from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, move_to_trash
+from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
@@ -361,7 +363,7 @@ def bldpkg_path(m):
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
-def build(m, get_src=True, post=None, include_recipe=True):
+def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
     '''
     Build the package with the specified metadata.
 
@@ -371,6 +373,7 @@ def build(m, get_src=True, post=None, include_recipe=True):
     :type get_src: bool
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
+    :type keep_old_work: bool: Keep any previous work directory.
     '''
 
     if (m.get_value('build/detect_binary_files_with_prefix')
@@ -387,155 +390,186 @@ def build(m, get_src=True, post=None, include_recipe=True):
               "configuration." % m.dist())
         return
 
-    if post in [False, None]:
-        print("Removing old build environment")
-        if on_win:
-            if isdir(config.short_build_prefix):
-                move_to_trash(config.short_build_prefix, '')
-            if isdir(config.long_build_prefix):
-                move_to_trash(config.long_build_prefix, '')
-        else:
-            rm_rf(config.short_build_prefix)
-            rm_rf(config.long_build_prefix)
-        print("Removing old work directory")
-        if on_win:
-            if isdir(source.WORK_DIR):
-                move_to_trash(source.WORK_DIR, '')
-        else:
-            rm_rf(source.WORK_DIR)
+    with Locked(cc.root_dir):
 
-        # Display the name only
-        # Version number could be missing due to dependency on source info.
-        print("BUILD START:", m.dist())
-        create_env(config.build_prefix,
-                   [ms.spec for ms in m.ms_depends('build')])
+        # If --keep-old-work, then move the contents of source.WORK_DIR to a
+        # temporary directory for the duration of the build.
+        # The source unpacking procedure is too varied and complex
+        # to allow this to be written cleanly (see source.get_dir() for example)
+        if keep_old_work:
+            old_WORK_DIR = tempfile.mkdtemp()
+            old_sub_dirs = [name for name in os.listdir(source.WORK_DIR)
+                            if os.path.isdir(os.path.join(source.WORK_DIR, name))]
+            if len(old_sub_dirs):
+                print("Keeping old work directory backup: %s => %s"
+                    % (old_sub_dirs, old_WORK_DIR))
+                for old_sub in old_sub_dirs:
+                    shutil.move(os.path.join(source.WORK_DIR, old_sub), old_WORK_DIR)
 
-        if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
-            print("%s is installed as a build dependency. Removing." %
-                m.name())
-            index = get_build_index(clear_cache=False)
-            actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
-            assert not plan.nothing_to_do(actions), actions
-            plan.display_actions(actions, index)
-            plan.execute_actions(actions, index)
+        if post in [False, None]:
+            print("Removing old build environment")
+            if on_win:
+                if isdir(config.short_build_prefix):
+                    move_to_trash(config.short_build_prefix, '')
+                if isdir(config.long_build_prefix):
+                    move_to_trash(config.long_build_prefix, '')
+            else:
+                rm_rf(config.short_build_prefix)
+                rm_rf(config.long_build_prefix)
+            print("Removing old work directory")
+            if on_win:
+                if isdir(source.WORK_DIR):
+                    move_to_trash(source.WORK_DIR, '')
+            else:
+                rm_rf(source.WORK_DIR)
 
-        if get_src:
-            # Execute any commands fetching the source (e.g., git) in the _build environment.
-            # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
-            # dependencies.
-            _old_path = os.environ['PATH']
-            try:
-                os.environ['PATH'] = prepend_bin_path({'PATH' : _old_path}, config.build_prefix)['PATH']
-                source.provide(m.path, m.get_section('source'))
-            finally:
-                os.environ['PATH'] = _old_path
+            # Display the name only
+            # Version number could be missing due to dependency on source info.
+            print("BUILD START:", m.dist())
+            create_env(config.build_prefix,
+                    [ms.spec for ms in m.ms_depends('build')])
 
-        # Parse our metadata again because we did not initialize the source
-        # information before.
-        # By now, all jinja variables should be defined, so don't permit undefined vars.
-        m.parse_again(permit_undefined_jinja=False)
+            if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
+                print("%s is installed as a build dependency. Removing." %
+                    m.name())
+                index = get_build_index(clear_cache=False)
+                actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
+                assert not plan.nothing_to_do(actions), actions
+                plan.display_actions(actions, index)
+                plan.execute_actions(actions, index)
 
-        print("Package:", m.dist())
+            if get_src:
+                # Execute any commands fetching the source (e.g., git) in the _build environment.
+                # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+                # dependencies.
+                _old_path = os.environ['PATH']
+                try:
+                    os.environ['PATH'] = prepend_bin_path({'PATH' : _old_path}, config.build_prefix)['PATH']
+                    source.provide(m.path, m.get_section('source'))
+                finally:
+                    os.environ['PATH'] = _old_path
 
-        assert isdir(source.WORK_DIR)
-        src_dir = source.get_dir()
-        contents = os.listdir(src_dir)
-        if contents:
-            print("source tree in:", src_dir)
-        else:
-            print("no source")
+            print("Package:", m.dist())
 
-        rm_rf(config.info_dir)
-        files1 = prefix_files()
-        for pat in m.always_include_files():
-            has_matches = False
-            for f in set(files1):
-                if fnmatch.fnmatch(f, pat):
-                    print("Including in package existing file", f)
-                    files1.discard(f)
-                    has_matches = True
-            if not has_matches:
-                sys.exit("Error: Glob %s from always_include_files does not match any files" % pat)
-        # Save this for later
-        with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
-            f.write(u'\n'.join(sorted(list(files1))))
-            f.write(u'\n')
+            assert isdir(source.WORK_DIR)
+            src_dir = source.get_dir()
+            contents = os.listdir(src_dir)
+            if contents:
+                print("source tree in:", src_dir)
+            else:
+                print("no source")
 
-        # Use script from recipe?
-        script = m.get_value('build/script', None)
-        if script:
-            if isinstance(script, list):
-                script = '\n'.join(script)
+            rm_rf(config.info_dir)
+            files1 = prefix_files()
+            for pat in m.always_include_files():
+                has_matches = False
+                for f in set(files1):
+                    if fnmatch.fnmatch(f, pat):
+                        print("Including in package existing file", f)
+                        files1.discard(f)
+                        has_matches = True
+                if not has_matches:
+                    sys.exit("Error: Glob %s from always_include_files does not match any files" % pat)
+            # Save this for later
+            with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
+                f.write(u'\n'.join(sorted(list(files1))))
+                f.write(u'\n')
 
-        if sys.platform == 'win32':
-            build_file = join(m.path, 'bld.bat')
+            # Use script from recipe?
+            script = m.get_value('build/script', None)
             if script:
-                build_file = join(source.get_dir(), 'bld.bat')
-                with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
-                    bf.write(script)
-            import conda_build.windows as windows
-            windows.build(m, build_file)
+                if isinstance(script, list):
+                    script = '\n'.join(script)
+
+            if sys.platform == 'win32':
+                build_file = join(m.path, 'bld.bat')
+                if script:
+                    build_file = join(source.get_dir(), 'bld.bat')
+                    with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
+                        bf.write(script)
+                import conda_build.windows as windows
+                windows.build(m, build_file)
+            else:
+                env = environ.get_dict(m)
+                build_file = join(m.path, 'build.sh')
+
+                if script:
+                    build_file = join(source.get_dir(), 'conda_build.sh')
+                    with open(build_file, 'w') as bf:
+                        bf.write(script)
+                    os.chmod(build_file, 0o766)
+
+                if isfile(build_file):
+                    cmd = [shell_path, '-x', '-e', build_file]
+
+                    _check_call(cmd, env=env, cwd=src_dir)
+
+        if post in [True, None]:
+            if post == True:
+                with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
+                    files1 = set(f.read().splitlines())
+
+            get_build_metadata(m)
+            create_post_scripts(m)
+            create_entry_points(m.get_value('build/entry_points'))
+            assert not exists(config.info_dir)
+            files2 = prefix_files()
+
+            post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+
+            # The post processing may have deleted some files (like easy-install.pth)
+            files2 = prefix_files()
+            if any(config.meta_dir in join(config.build_prefix, f) for f in
+                files2 - files1):
+                sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
+    usually comes from using conda in the build script.  Avoid doing this, as it
+    can lead to packages that include their dependencies.""" %
+                    (tuple(f for f in files2 - files1 if config.meta_dir in
+                        join(config.build_prefix, f)),)))
+            post_build(m, sorted(files2 - files1))
+            create_info_files(m, sorted(files2 - files1),
+                            include_recipe=bool(m.path) and include_recipe)
+            if m.get_value('build/noarch_python'):
+                import conda_build.noarch_python as noarch_python
+                noarch_python.transform(m, sorted(files2 - files1))
+
+            files3 = prefix_files()
+            fix_permissions(files3 - files1)
+
+            path = bldpkg_path(m)
+            t = tarfile.open(path, 'w:bz2')
+
+            def order(f):
+                # we don't care about empty files so send them back via 100000
+                fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
+                # info/* records will be False == 0, others will be 1.
+                info_order = int(os.path.dirname(f) != 'info')
+                return info_order, fsize
+
+            # add files in order of a) in info directory, b) increasing size so
+            # we can access small manifest or json files without decompressing
+            # possible large binary or data files
+            for f in sorted(files3 - files1, key=order):
+                t.add(join(config.build_prefix, f), f)
+            t.close()
+
+            print("BUILD END:", m.dist())
+
+            # we're done building, perform some checks
+            tarcheck.check_all(path)
+            update_index(config.bldpkgs_dir)
         else:
-            env = environ.get_dict(m)
-            build_file = join(m.path, 'build.sh')
+            print("STOPPING BUILD BEFORE POST:", m.dist())
 
-            if script:
-                build_file = join(source.get_dir(), 'conda_build.sh')
-                with open(build_file, 'w') as bf:
-                    bf.write(script)
-                os.chmod(build_file, 0o766)
-
-            if isfile(build_file):
-                cmd = [shell_path, '-x', '-e', build_file]
-
-                _check_call(cmd, env=env, cwd=src_dir)
-
-    if post in [True, None]:
-        if post == True:
-            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                files1 = set(f.read().splitlines())
-
-        get_build_metadata(m)
-        create_post_scripts(m)
-        create_entry_points(m.get_value('build/entry_points'))
-        assert not exists(config.info_dir)
-        files2 = prefix_files()
-
-        post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
-
-        # The post processing may have deleted some files (like easy-install.pth)
-        files2 = prefix_files()
-        if any(config.meta_dir in join(config.build_prefix, f) for f in
-            files2 - files1):
-            sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
-usually comes from using conda in the build script.  Avoid doing this, as it
-can lead to packages that include their dependencies.""" %
-                (tuple(f for f in files2 - files1 if config.meta_dir in
-                    join(config.build_prefix, f)),)))
-        post_build(m, sorted(files2 - files1))
-        create_info_files(m, sorted(files2 - files1),
-                          include_recipe=bool(m.path) and include_recipe)
-        if m.get_value('build/noarch_python'):
-            import conda_build.noarch_python as noarch_python
-            noarch_python.transform(m, sorted(files2 - files1))
-
-        files3 = prefix_files()
-        fix_permissions(files3 - files1)
-
-        path = bldpkg_path(m)
-        t = tarfile.open(path, 'w:bz2')
-        for f in sorted(files3 - files1):
-            t.add(join(config.build_prefix, f), f)
-        t.close()
-
-        print("BUILD END:", m.dist())
-
-        # we're done building, perform some checks
-        tarcheck.check_all(path)
-        update_index(config.bldpkgs_dir)
-    else:
-        print("STOPPING BUILD BEFORE POST:", m.dist())
-
+        if keep_old_work and len(old_sub_dirs):
+            print("Restoring old work directory backup: %s :: %s => %s"
+                % (old_WORK_DIR, old_sub_dirs, source.WORK_DIR))
+            for old_sub in old_sub_dirs:
+                if os.path.exists(os.path.join(source.WORK_DIR, old_sub)):
+                    print("Not restoring old source directory %s over new build's version" % (old_sub))
+                else:
+                    shutil.move(os.path.join(old_WORK_DIR, old_sub), source.WORK_DIR)
+            shutil.rmtree(old_WORK_DIR, ignore_errors=True)
 
 def test(m, move_broken=True):
     '''
@@ -544,113 +578,117 @@ def test(m, move_broken=True):
     :param m: Package's metadata.
     :type m: Metadata
     '''
-    # remove from package cache
-    rm_pkgs_cache(m.dist())
 
-    tmp_dir = join(config.croot, 'test-tmp_dir')
-    rm_rf(tmp_dir)
-    if on_win:
-        time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
-    os.makedirs(tmp_dir)
-    create_files(tmp_dir, m)
-    # Make Perl or Python-specific test files
-    if m.name().startswith('perl-'):
-        pl_files = create_pl_files(tmp_dir, m)
-        py_files = False
-        lua_files = False
-    else:
-        py_files = create_py_files(tmp_dir, m)
-        pl_files = False
-        lua_files = False
-    shell_files = create_shell_files(tmp_dir, m)
-    if not (py_files or shell_files or pl_files or lua_files):
-        print("Nothing to test for:", m.dist())
-        return
+    with Locked(cc.root_dir):
 
-    print("TEST START:", m.dist())
-    if on_win:
-        if isdir(config.build_prefix):
-            move_to_trash(config.build_prefix, '')
-        if isdir(config.test_prefix):
-            move_to_trash(config.test_prefix, '')
-    else:
-        rm_rf(config.build_prefix)
-        rm_rf(config.test_prefix)
+        # remove from package cache
+        rm_pkgs_cache(m.dist())
 
-    get_build_metadata(m)
-    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
-
-    # add packages listed in test/requires
-    specs += m.get_value('test/requires', [])
-
-    if py_files:
-        # as the tests are run by python, ensure that python is installed.
-        # (If they already provided python as a run or test requirement, this won't hurt anything.)
-        specs += ['python %s*' % environ.get_py_ver()]
-    if pl_files:
-        # as the tests are run by perl, we need to specify it
-        specs += ['perl %s*' % environ.get_perl_ver()]
-    if lua_files:
-        # not sure how this shakes out
-        specs += ['lua %s*' % environ.get_lua_ver()]
-
-    create_env(config.test_prefix, specs)
-
-    env = dict(os.environ)
-    env.update(environ.get_dict(m, prefix=config.test_prefix))
-
-    # prepend bin (or Scripts) directory
-    env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
-
-    if sys.platform == 'win32':
-        env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
-    for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
-        env[varname] = str(getattr(config, varname) or '')
-    env['PREFIX'] = config.test_prefix
-
-    # Python 2 Windows requires that envs variables be string, not unicode
-    env = {str(key): str(value) for key, value in env.items()}
-    if py_files:
-        try:
-            subprocess.check_call([config.test_python, '-s',
-                                   join(tmp_dir, 'run_test.py')],
-                                  env=env, cwd=tmp_dir)
-        except subprocess.CalledProcessError:
-            tests_failed(m, move_broken=move_broken)
-
-    if pl_files:
-        try:
-            subprocess.check_call([config.test_perl,
-                                   join(tmp_dir, 'run_test.pl')],
-                                  env=env, cwd=tmp_dir)
-        except subprocess.CalledProcessError:
-            tests_failed(m, move_broken=move_broken)
-
-    if lua_files:
-        try:
-            subprocess.check_call([config.test_lua,
-                                   join(tmp_dir, 'run_test.lua')],
-                                  env=env, cwd=tmp_dir)
-        except subprocess.CalledProcessError:
-            tests_failed(m)
-
-
-    if shell_files:
-        if sys.platform == 'win32':
-            test_file = join(tmp_dir, 'run_test.bat')
-            cmd = [os.environ['COMSPEC'], '/c', 'call', test_file]
-            try:
-                subprocess.check_call(cmd, env=env, cwd=tmp_dir)
-            except subprocess.CalledProcessError:
-                tests_failed(m, move_broken=move_broken)
+        tmp_dir = join(config.croot, 'test-tmp_dir')
+        rm_rf(tmp_dir)
+        if on_win:
+            time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
+        os.makedirs(tmp_dir)
+        create_files(tmp_dir, m)
+        # Make Perl or Python-specific test files
+        if m.name().startswith('perl-'):
+            pl_files = create_pl_files(tmp_dir, m)
+            py_files = False
+            lua_files = False
         else:
-            test_file = join(tmp_dir, 'run_test.sh')
-            # TODO: Run the test/commands here instead of in run_test.py
-            cmd = [shell_path, '-x', '-e', test_file]
+            py_files = create_py_files(tmp_dir, m)
+            pl_files = False
+            lua_files = False
+        shell_files = create_shell_files(tmp_dir, m)
+        if not (py_files or shell_files or pl_files or lua_files):
+            print("Nothing to test for:", m.dist())
+            return
+
+        print("TEST START:", m.dist())
+        if on_win:
+            if isdir(config.build_prefix):
+                move_to_trash(config.build_prefix, '')
+            if isdir(config.test_prefix):
+                move_to_trash(config.test_prefix, '')
+        else:
+            rm_rf(config.build_prefix)
+            rm_rf(config.test_prefix)
+
+        get_build_metadata(m)
+        specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+
+        # add packages listed in the run environment and test/requires
+        specs.extend(ms.spec for ms in m.ms_depends('run'))
+        specs += m.get_value('test/requires', [])
+
+        if py_files:
+            # as the tests are run by python, ensure that python is installed.
+            # (If they already provided python as a run or test requirement, this won't hurt anything.)
+            specs += ['python %s*' % environ.get_py_ver()]
+        if pl_files:
+            # as the tests are run by perl, we need to specify it
+            specs += ['perl %s*' % environ.get_perl_ver()]
+        if lua_files:
+            # not sure how this shakes out
+            specs += ['lua %s*' % environ.get_lua_ver()]
+
+        create_env(config.test_prefix, specs)
+
+        env = dict(os.environ)
+        env.update(environ.get_dict(m, prefix=config.test_prefix))
+
+        # prepend bin (or Scripts) directory
+        env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
+
+        if sys.platform == 'win32':
+            env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
+        for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
+            env[varname] = str(getattr(config, varname) or '')
+        env['PREFIX'] = config.test_prefix
+
+        # Python 2 Windows requires that envs variables be string, not unicode
+        env = {str(key): str(value) for key, value in env.items()}
+        if py_files:
             try:
-                subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+                subprocess.check_call([config.test_python, '-s',
+                                    join(tmp_dir, 'run_test.py')],
+                                    env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
                 tests_failed(m, move_broken=move_broken)
+
+        if pl_files:
+            try:
+                subprocess.check_call([config.test_perl,
+                                    join(tmp_dir, 'run_test.pl')],
+                                    env=env, cwd=tmp_dir)
+            except subprocess.CalledProcessError:
+                tests_failed(m, move_broken=move_broken)
+
+        if lua_files:
+            try:
+                subprocess.check_call([config.test_lua,
+                                    join(tmp_dir, 'run_test.lua')],
+                                    env=env, cwd=tmp_dir)
+            except subprocess.CalledProcessError:
+                tests_failed(m)
+
+
+        if shell_files:
+            if sys.platform == 'win32':
+                test_file = join(tmp_dir, 'run_test.bat')
+                cmd = [os.environ['COMSPEC'], '/c', 'call', test_file]
+                try:
+                    subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+                except subprocess.CalledProcessError:
+                    tests_failed(m, move_broken=move_broken)
+            else:
+                test_file = join(tmp_dir, 'run_test.sh')
+                # TODO: Run the test/commands here instead of in run_test.py
+                cmd = [shell_path, '-x', '-e', test_file]
+                try:
+                    subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+                except subprocess.CalledProcessError:
+                    tests_failed(m, move_broken=move_broken)
 
     print("TEST END:", m.dist())
 

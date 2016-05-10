@@ -6,24 +6,20 @@ import sys
 
 import pytest
 
-vcvars_backup_files={}
+vcvars_backup_files = {}
 if sys.platform == "win32":
-    if 'ProgramFiles(x86)' in os.environ:
-        program_files = os.environ['ProgramFiles(x86)']
-    else:
-        program_files = os.environ['ProgramFiles']
+    from conda_build.windows import (build_vcvarsall_vs_path,
+                                     VCVARS64_VS9_BAT_PATH,
+                                     VS_TOOLS_PY_LOCAL_PATH,
+                                     VS_TOOLS_PY_COMMON_PATH)
 
-    vcvars_backup_files = {"vs{}".format(version): [os.path.join(program_files,
-                                  'Microsoft Visual Studio {version}'.format(version=version),
-                                  'VC', 'vcvarsall.bat')] for version in ["9.0", "10.0", "14.0"]}
-    vcvars_backup_files['vs9.0'].append(os.path.dirname(vcvars_backup_files['vs9.0'][0])+"\\bin\\vcvars64.bat")
+    vcvars_backup_files = {"vs{}".format(version): [build_vcvarsall_vs_path(version)]
+                           for version in ["9.0", "10.0", "14.0"]}
+    vcvars_backup_files['vs9.0'].append(VCVARS64_VS9_BAT_PATH)
     # VC9 compiler for python - local user install
-    localappdata = os.environ.get("localappdata")
-    vcvars_backup_files["python_local"] = [os.path.join(localappdata, 'Programs', 'Common',
-                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")]
+    vcvars_backup_files["python_local"] = [VS_TOOLS_PY_LOCAL_PATH]
     # VC9 compiler for python - common files
-    vcvars_backup_files["python_system"] = [os.path.join(program_files, 'Common Files',
-                    'Microsoft', 'Visual C++ for Python', "9.0", "vcvarsall.bat")]
+    vcvars_backup_files["python_system"] = [VS_TOOLS_PY_COMMON_PATH]
 
     vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
     vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0']}
@@ -93,14 +89,18 @@ def test_activation_logic(bits, compiler):
 @pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
 def test_activation(bits, compiler):
     write_bat_files([compiler])
-    from conda_build.windows import msvc_env_cmd
+    from conda_build.windows import msvc_env_cmd, VS_VERSION_STRING
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
     # this will throw an exception if the subprocess return code is not 0
     #     this is effectively the test condition for all below tests.
     with open('tmp_call.bat', "w") as f:
         f.write(msvc_env_cmd(bits, compiler_version))
-
+        f.write('\nif not "%VS_VERSION%" == "{}" exit /b 1'.format(compiler_version))
+        f.write('\nif not "%VS_MAJOR%" == "{}" exit /b 1'.format(compiler_version.split('.')[0]))
+        f.write('\nif not "%VS_YEAR%" == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version][-4:]))
+        f.write('\nif not "%CMAKE_GENERATOR%" == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version] +
+                                                                      {64: ' Win64', 32: ''}[bits]))
     try:
         subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
     except subprocess.CalledProcessError:

@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import shutil
-from os.path import dirname, isdir, isfile, join, exists
+from os.path import dirname, isdir, isfile, join
 
 import conda.config as cc
 
@@ -13,6 +13,46 @@ from conda_build import source
 from conda_build.utils import _check_call
 
 assert sys.platform == 'win32'
+
+# Set up a load of paths that can be imported from the tests
+if 'ProgramFiles(x86)' in os.environ:
+    PROGRAM_FILES_PATH = os.environ['ProgramFiles(x86)']
+else:
+    PROGRAM_FILES_PATH = os.environ['ProgramFiles']
+
+# Note that we explicitly want "Program Files" and not "Program Files (x86)"
+WIN_SDK_BAT_PATH = os.path.join(PROGRAM_FILES_PATH.replace(" (x86)", ""),
+                                'Microsoft SDKs', 'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
+VS_TOOLS_PY_LOCAL_PATH = os.path.join(
+    os.getenv('localappdata', os.path.abspath(os.sep)),
+    'Programs', 'Common', 'Microsoft', 'Visual C++ for Python', '9.0',
+    'vcvarsall.bat')
+VS_TOOLS_PY_COMMON_PATH = os.path.join(PROGRAM_FILES_PATH, 'Common Files',
+                                       'Microsoft', 'Visual C++ for Python',
+                                       '9.0', 'vcvarsall.bat')
+VCVARS64_VS9_BAT_PATH = os.path.join(PROGRAM_FILES_PATH,
+                                     'Microsoft Visual Studio 9.0', 'VC', 'bin',
+                                     'vcvars64.bat')
+VS_VERSION_STRING = {
+    '8.0': 'Visual Studio 8 2005',
+    '9.0': 'Visual Studio 9 2008',
+    '10.0': 'Visual Studio 10 2010',
+    '11.0': 'Visual Studio 11 2012',
+    '12.0': 'Visual Studio 12 2013',
+    '14.0': 'Visual Studio 14 2015'
+}
+
+
+def build_vcvarsall_vs_path(version):
+    """
+    Given the Visual Studio version, returns the default path to the
+    Microsoft Visual Studio vcvarsall.bat file.
+
+    Expected versions are of the form {9, 10, 12, 14}
+    """
+    return os.path.join(PROGRAM_FILES_PATH,
+                        'Microsoft Visual Studio {}'.format(version), 'VC',
+                        'vcvarsall.bat')
 
 
 def fix_staged_scripts():
@@ -47,10 +87,6 @@ def fix_staged_scripts():
 
 
 def msvc_env_cmd(bits, override=None):
-    if 'ProgramFiles(x86)' in os.environ:
-        program_files = os.environ['ProgramFiles(x86)']
-    else:
-        program_files = os.environ['ProgramFiles']
     arch_selector = 'x86' if bits == 32 else 'amd64'
 
     msvc_env_lines = []
@@ -69,64 +105,55 @@ def msvc_env_cmd(bits, override=None):
         else:
             version = '9.0'
 
-    vcvarsall_vs_path = os.path.join(
-        program_files, 'Microsoft Visual Studio {}'.format(version), 'VC', 
-        'vcvarsall.bat')
+    vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
+    msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
+    msvc_env_lines.append('set "VS_MAJOR={}"'.format(version.split('.')[0]))
+    msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
+    msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
+                                                            {64: ' Win64', 32: ''}[bits]))
+    # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
+    #   See https://github.com/conda-forge/icu-feedstock/pull/5
+    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out;%MSYS2_ARG_CONV_EXCL%"')
+    msvc_env_lines.append('set "MSYS2_ENV_CONV_EXCL=CL"')
     if version == '10.0':
-        vcvarsall = vcvarsall_vs_path
-        vcvars_cmd = build_vcvarsall_cmd(vcvarsall)
-        
-        # Note that we explicitly want "Program Files" and not 
-        # "Program Files (x86)"
-        win_sdk_bat_path = os.path.join(os.path.abspath(os.sep),
-                                        'Program Files', 'Microsoft SDKs',
-                                        'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
-        # Unfortunately, the Windows SDK takes a different command format for
-        # the arch selector - debug is default so explicitly set 'Release'
-        win_sdk_arch = '/x86 /Release' if bits == 32 else '/x64 /Release'
-        win_sdk_cmd = build_vcvarsall_cmd(win_sdk_bat_path, arch=win_sdk_arch)
-        
+        win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
+        win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
+
         # Always call the Windows SDK first - if VS 2010 exists but was
         # installed using the broken installer then it will try and call the 
         # vcvars script, which will fail but NOT EXIT 1. To work around this,
         # we always call the Windows SDK, and then try calling VS 2010 which
         # will overwrite any environemnt variables it needs, if necessary.
         msvc_env_lines.append(win_sdk_cmd)
-        msvc_env_lines.append(vcvars_cmd)
+        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
+
     elif version == '9.0':
+        error1 = 'if errorlevel 1 {}'
+
         # First, check for Microsoft Visual C++ Compiler for Python 2.7
-        localappdata = os.getenv('localappdata', os.path.abspath(os.sep))
-        vs_tools_py_local_path = os.path.join(
-            localappdata, 'Programs', 'Common', 'Microsoft', 
-            'Visual C++ for Python', '9.0', 'vcvarsall.bat')
-        msvc_env_lines.append(build_vcvarsall_cmd(vs_tools_py_local_path))
-        
-        vs_tools_py_common_path = os.path.join(
-            program_files, 'Common Files', 'Microsoft', 'Visual C++ for Python', 
-            '9.0', 'vcvarsall.bat')
-        msvc_env_lines.append('if errorlevel 1 {}'.format(
-            build_vcvarsall_cmd(vs_tools_py_common_path)))
+        msvc_env_lines.append(build_vcvarsall_cmd(VS_TOOLS_PY_LOCAL_PATH))
+        msvc_env_lines.append(error1.format(
+            build_vcvarsall_cmd(VS_TOOLS_PY_COMMON_PATH)))
         # The Visual Studio 2008 Express edition does not properly contain
         # the amd64 build files, so we call the vcvars64.bat manually,
         # rather than using the vcvarsall.bat which would try and call the
         # missing bat file.
         if arch_selector == 'amd64':
-            vcvars9x64_bat_path = os.path.join(program_files, 
-                                               'Microsoft Visual Studio 9.0', 
-                                               'VC', 'bin', 'vcvars64.bat')
-            msvc_env_lines.append('if errorlevel 1 {}'.format(
-                build_vcvarsall_cmd(vcvars9x64_bat_path)))
-        else:
-            msvc_env_lines.append('if errorlevel 1 {}'.format(
+            msvc_env_lines.append(error1.format(
+                build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
+            msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(vcvarsall_vs_path)))
+        else:
+            msvc_env_lines.append(error1.format(
+                build_vcvarsall_cmd(vcvarsall_vs_path)))
+
     else:
         # Visual Studio 14 or otherwise
-        vcvarsall = vcvarsall_vs_path
-        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall))
+        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
 
     return '\n'.join(msvc_env_lines)
 
@@ -165,7 +192,7 @@ def build(m, bld_bat):
             os.makedirs(path)
 
     src_dir = source.get_dir()
-    if exists(bld_bat):
+    if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
@@ -173,12 +200,14 @@ def build(m, bld_bat):
             fo.write('\n')
             # more debuggable with echo on
             fo.write('@echo on\n')
+            for key, value in env.items():
+                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
             fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
-        _check_call(cmd, cwd=src_dir, env={str(k): str(v) for k, v in env.items()})
+        _check_call(cmd, cwd=src_dir)
         kill_processes()
         fix_staged_scripts()

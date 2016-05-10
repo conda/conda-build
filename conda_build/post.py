@@ -65,15 +65,17 @@ def fix_shebang(f, osx_is_app=False):
 
         data = mm[:]
 
+    encoding = sys.stdout.encoding or 'utf8'
+
     py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
                config.build_prefix + '/bin/' + basename(config.build_python))
-    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode('ascii'), data, count=1)
+    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
     if new_data == data:
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        fo.write(new_data)
+        fo.write(new_data.decode(encoding))
     os.chmod(path, int('755', 8))
 
 

@@ -39,7 +39,9 @@ def rewrite_script(fn):
         fn = fn[:-10]
 
     # Check that it does have a #! python string, and skip it
-    m = SHEBANG_PAT.match(data.encode('ascii'))
+    encoding = sys.stdout.encoding or 'utf8'
+
+    m = SHEBANG_PAT.match(data.encode(encoding))
     if m and b'python' in m.group():
         new_data = data[data.find('\n') + 1:]
     elif ISWIN:

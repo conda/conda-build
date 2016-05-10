@@ -140,19 +140,21 @@ def ensure_valid_fields(meta):
     if pin_depends not in ('', 'record', 'strict'):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
-def parse(data):
+def parse(data, path=None):
     data = select_lines(data, ns_cfg())
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:
         res = {}
-    #for field in FIELDS:
-    #    if field not in res:
-    #        continue
-    #    if not isinstance(res[field], dict):
-    #        raise RuntimeError("The %s field should be a dict, not %s" %
-    #                           (field, res[field].__class__.__name__))
-
+    for field in FIELDS:
+        if field not in res:
+            continue
+        # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
+        if not res[field]:
+            res[field] = {}
+        if not isinstance(res[field], dict):
+            raise RuntimeError("The %s field should be a dict, not %s in file %s." %
+                               (field, res[field].__class__.__name__, path))
 
 
     ensure_valid_fields(res)
@@ -364,7 +366,7 @@ class MetaData(object):
         """
         if not self.meta_path:
             return
-        self.meta = parse(self._get_contents(permit_undefined_jinja))
+        self.meta = parse(self._get_contents(permit_undefined_jinja), path=self.meta_path)
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
@@ -634,6 +636,19 @@ class MetaData(object):
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
+        class FilteredLoader(jinja2.BaseLoader):
+            """
+            A pass-through for the given loader, except that the loaded source is
+            filtered according to any metadata selectors in the source text.
+            """
+            def __init__(self, unfiltered_loader):
+                self._unfiltered_loader = unfiltered_loader
+                self.list_templates = unfiltered_loader.list_templates
+
+            def get_source(self, environment, template):
+                contents, filename, uptodate = self._unfiltered_loader.get_source(environment, template)
+                return select_lines(contents, ns_cfg()), filename, uptodate
+
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
             class UndefinedNeverFail(jinja2.Undefined):
@@ -668,7 +683,8 @@ class MetaData(object):
 
             undefined_type = UndefinedNeverFail
 
-        env = jinja2.Environment(loader=jinja2.ChoiceLoader(loaders), undefined=undefined_type)
+        loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
+        env = jinja2.Environment(loader=loader, undefined=undefined_type)
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
 

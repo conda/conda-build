@@ -1,0 +1,7 @@
+{% import 'variables.jinja' as variables %}
+package:
+  name: selectors-in-imported-templates
+  version: 1.0
+
+build:
+  number: {{ variables.build_num }}

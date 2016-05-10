@@ -287,6 +287,7 @@ def unix_vars(prefix):
     return {
         'HOME': os.getenv('HOME', 'UNKNOWN'),
         'PKG_CONFIG_PATH': join(prefix, 'lib', 'pkgconfig'),
+        'CMAKE_GENERATOR': 'Unix Makefiles',
         'R': join(prefix, 'bin', 'R'),
     }
 
@@ -308,14 +309,17 @@ def osx_vars(compiler_vars):
 def linux_vars(compiler_vars, prefix):
     compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
     if cc.bits == 32:
-        compiler_vars['CFLAGS'] += ' -m 32'
-        compiler_vars['CXXFLAGS'] += ' -m 32'
+        compiler_vars['CFLAGS'] += ' -m32'
+        compiler_vars['CXXFLAGS'] += ' -m32'
     return {}
 
 
 def system_vars(env_dict, prefix):
     d = dict()
     compiler_vars = defaultdict(text_type)
+
+    if 'MAKEFLAGS' in os.environ:
+        d['MAKEFLAGS'] = os.environ['MAKEFLAGS']
 
     d['CPU_COUNT'] = get_cpu_count()
     if "LANG" in os.environ:

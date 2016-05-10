@@ -7,78 +7,35 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import os
 import sys
 from collections import deque
 from glob import glob
 from locale import getpreferredencoding
-from os import listdir
-from os import environ as os_environ
-from os.path import exists, isdir, isfile, join
 import warnings
 
 import conda.config as config
 from conda.compat import PY3
-from conda.cli.common import add_parser_channels, Completer
-from conda.cli.conda_argparse import ArgumentParser
+from conda.cli.common import add_parser_channels
+from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
-from conda_build import __version__, exceptions
 from conda_build.index import update_index
-from conda.install import delete_trash
+from conda_build.main_render import get_render_parser
+from conda_build.utils import find_recipe
+from conda_build.main_render import (get_package_build_path, set_language_env_vars,
+                                     RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
-all_versions = {
-    'python': [26, 27, 33, 34, 35],
-    'numpy': [16, 17, 18, 19, 110],
-    'perl': None,
-    'R': None,
-    'lua': ["2.0", "5.1", "5.2", "5.3"]
-}
-
-class RecipeCompleter(Completer):
-    def _get_items(self):
-        completions = []
-        for path in listdir('.'):
-            if isdir(path) and isfile(join(path, 'meta.yaml')):
-                completions.append(path)
-        if isfile('meta.yaml'):
-            completions.append('.')
-        return completions
-
-# These don't represent all supported versions. It's just for tab completion.
-
-class PythonVersionCompleter(Completer):
-    def _get_items(self):
-        return ['all'] + [str(i/10) for i in all_versions['python']]
-
-class NumPyVersionCompleter(Completer):
-    def _get_items(self):
-        versions = [str(i) for i in all_versions['numpy']]
-        return ['all'] + ['%s.%s' % (ver[0], ver[1:]) for ver in versions]
-
-class RVersionsCompleter(Completer):
-    def _get_items(self):
-        return ['3.1.2', '3.1.3', '3.2.0', '3.2.1', '3.2.2']
-
-class LuaVersionsCompleter(Completer):
-    def _get_items(self):
-        return ['all'] + [i for i in all_versions['lua']]
 
 def main():
-    p = ArgumentParser(
-        description="""
+    p=get_render_parser()
+    p.description="""
 Tool for building conda packages. A conda package is a binary tarball
 containing system-level libraries, Python modules, executable programs, or
 other components. conda keeps track of dependencies between packages and
 platform specifics, making it simple to create working environments from
 different sets of packages."""
-    )
-    p.add_argument(
-        '-V', '--version',
-        action='version',
-        help='Show the conda-build version number and exit.',
-        version = 'conda-build %s' % __version__,
-    )
     p.add_argument(
         "--check",
         action="store_true",
@@ -106,12 +63,6 @@ different sets of packages."""
         default=True,
     )
     p.add_argument(
-        "--output",
-        action="store_true",
-        help="Output the conda package filename which would have been "
-               "created and exit.",
-    )
-    p.add_argument(
         '-s', "--source",
         action="store_true",
         help="Only obtain the source (but don't build).",
@@ -120,14 +71,6 @@ different sets of packages."""
         '-t', "--test",
         action="store_true",
         help="Test package (assumes package is already build).",
-    )
-    p.add_argument(
-        'recipe',
-        action="store",
-        metavar='RECIPE_PATH',
-        nargs='+',
-        choices=RecipeCompleter(),
-        help="Path to recipe directory.",
     )
     p.add_argument(
         '--no-test',
@@ -147,58 +90,29 @@ different sets of packages."""
         help="Run the post-build logic. Implies --no-test and --no-anaconda-upload.",
     )
     p.add_argument(
+        'recipe',
+        action="store",
+        metavar='RECIPE_PATH',
+        nargs='+',
+        choices=RecipeCompleter(),
+        help="Path to recipe directory.",
+    )
+    p.add_argument(
         '--skip-existing',
         action='store_true',
         help="""Skip recipes for which there already exists an existing build
         (locally or in the channels). """
         )
     p.add_argument(
+        '--keep-old-work',
+        action='store_true',
+        help="""Keep any existing, old work directory. Useful if debugging across
+        callstacks involving multiple packages/recipes. """
+    )
+    p.add_argument(
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
-    )
-    p.add_argument(
-        '--python',
-        action="append",
-        help="""Set the Python version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    PythonVersionCompleter() if '.' in i],
-        metavar="PYTHON_VER",
-        choices=PythonVersionCompleter(),
-    )
-    p.add_argument(
-        '--perl',
-        action="append",
-        help="""Set the Perl version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
-        metavar="PERL_VER",
-    )
-    p.add_argument(
-        '--numpy',
-        action="append",
-        help="""Set the NumPy version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    NumPyVersionCompleter() if '.' in i],
-        metavar="NUMPY_VER",
-        choices=NumPyVersionCompleter(),
-    )
-    p.add_argument(
-        '--R',
-        action="append",
-        help="""Set the R version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
-        metavar="R_VER",
-        choices=RVersionsCompleter(),
-    )
-    p.add_argument(
-        '--lua',
-        action="append",
-        help="""Set the Lua version used by conda build. Can be passed
-        multiple times to build against multiple versions (%r).""" % [i for i in LuaVersionsCompleter()],
-        metavar="LUA_VER",
-        choices=LuaVersionsCompleter(),
     )
 
     add_parser_channels(p)
@@ -276,11 +190,11 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
-    from conda.lock import Locked
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
     from conda_build.metadata import MetaData, check_fields
+
 
     check_external()
 
@@ -303,49 +217,7 @@ def execute(args, parser):
                           "imported that is hard-linked by files in the trash. "
                           "Will try again on next run.")
 
-    conda_version = {
-        'python': 'CONDA_PY',
-        'numpy': 'CONDA_NPY',
-        'perl': 'CONDA_PERL',
-        'R': 'CONDA_R',
-        'lua': 'CONDA_LUA',
-        }
-
-    for lang in ['python', 'numpy', 'perl', 'R', 'lua']:
-        versions = getattr(args, lang)
-        if not versions:
-            continue
-        if versions == ['all']:
-            if all_versions[lang]:
-                versions = all_versions[lang]
-            else:
-                parser.error("'all' is not supported for --%s" % lang)
-        if len(versions) > 1:
-            for ver in versions[:]:
-                setattr(args, lang, [str(ver)])
-                execute(args, parser)
-                # This is necessary to make all combinations build.
-                setattr(args, lang, versions)
-            return
-        else:
-            version = versions[0]
-            if lang in ('python', 'numpy'):
-                version = int(version.replace('.', ''))
-            setattr(config, conda_version[lang], version)
-        if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
-            if all_versions[lang]:
-                raise RuntimeError("%s must be major.minor, like %s, not %s" %
-                    (conda_version[lang], all_versions[lang][-1]/10, version))
-            else:
-                raise RuntimeError("%s must be major.minor, not %s" %
-                    (conda_version[lang], version))
-
-    # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
-    # Auto-set those env variables
-    for var in conda_version.values():
-        if getattr(config, var):
-            # Set the env variable.
-            os_environ[var] = str(getattr(config, var))
+    set_language_env_vars(args, parser, execute=execute)
 
     if args.skip_existing:
         for d in config.bldpkgs_dirs:
@@ -354,139 +226,124 @@ def execute(args, parser):
             update_index(d)
         index = build.get_build_index(clear_cache=True)
 
-    already_built = []
+    already_built = set()
     to_build_recursive = []
-    with Locked(config.croot):
-        recipes = deque(args.recipe)
-        while recipes:
-            arg = recipes.popleft()
-            try_again = False
-            # Don't use byte literals for paths in Python 2
-            if not PY3:
-                arg = arg.decode(getpreferredencoding() or 'utf-8')
-            if isfile(arg):
-                if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                    recipe_dir = tempfile.mkdtemp()
-                    t = tarfile.open(arg, 'r:*')
-                    t.extractall(path=recipe_dir)
-                    t.close()
-                    need_cleanup = True
-                else:
-                    print("Ignoring non-recipe: %s" % arg)
-                    continue
+    recipes = deque(args.recipe)
+    while recipes:
+        arg = recipes.popleft()
+        try_again = False
+        # Don't use byte literals for paths in Python 2
+        if not PY3:
+            arg = arg.decode(getpreferredencoding() or 'utf-8')
+        if isfile(arg):
+            if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+                recipe_dir = tempfile.mkdtemp()
+                t = tarfile.open(arg, 'r:*')
+                t.extractall(path=recipe_dir)
+                t.close()
+                need_cleanup = True
             else:
-                recipe_dir = abspath(arg)
-                need_cleanup = False
+                print("Ignoring non-recipe: %s" % arg)
+                continue
+        else:
+            recipe_dir = abspath(arg)
+            need_cleanup = False
 
-            if not isdir(recipe_dir):
-                sys.exit("Error: no such directory: %s" % recipe_dir)
+        # recurse looking for meta.yaml that is potentially not in immediate folder
+        recipe_dir = find_recipe(recipe_dir)
+        if not isdir(recipe_dir):
+            sys.exit("Error: no such directory: %s" % recipe_dir)
 
+        # this fully renders any jinja templating, throwing an error if any data is missing
+        m = render_recipe(recipe_dir, no_download_source=False)
+        if m.get_value('build/noarch_python'):
+            config.noarch = True
+
+        if args.check and len(args.recipe) > 1:
+            print(m.path)
+        m.check_fields()
+        if args.check:
+            continue
+        if m.skip():
+            print("Skipped: The %s recipe defines build/skip for this "
+                    "configuration." % m.dist())
+            continue
+        if args.skip_existing:
+            if m.pkg_fn() in index or m.pkg_fn() in already_built:
+                print(m.dist(), "is already built, skipping.")
+                continue
+        if args.output:
+            print(get_package_build_string(m, no_download_source=False))
+            continue
+        elif args.test:
+            build.test(m, move_broken=False)
+        elif args.source:
+            source.provide(m.path, m.get_section('source'))
+            print('Source tree in:', source.get_dir())
+        else:
+            # This loop recursively builds dependencies if recipes exist
+            if args.build_only:
+                post = False
+                args.notest = True
+                args.binstar_upload = False
+            elif args.post:
+                post = True
+                args.notest = True
+                args.binstar_upload = False
+            else:
+                post = None
             try:
-                m = MetaData(recipe_dir)
-                if m.get_value('build/noarch_python'):
-                    config.noarch = True
-            except exceptions.YamlParsingError as e:
-                sys.stderr.write(e.error_msg())
-                sys.exit(1)
-            binstar_upload = False
-            if args.check and len(args.recipe) > 1:
-                print(m.path)
-            check_fields(m)
-            if args.check:
+                build.build(m, post=post,
+                            include_recipe=args.include_recipe,
+                            keep_old_work=args.keep_old_work)
+            except (NoPackagesFound, Unsatisfiable) as e:
+                error_str = str(e)
+                # Typically if a conflict is with one of these
+                # packages, the other package needs to be rebuilt
+                # (e.g., a conflict with 'python 3.5*' and 'x' means
+                # 'x' isn't build for Python 3.5 and needs to be
+                # rebuilt).
+                skip_names = ['python', 'r']
+                add_recipes = []
+                for line in error_str.splitlines():
+                    if not line.startswith('  - '):
+                        continue
+                    pkg = line.lstrip('  - ').split(' -> ')[-1]
+                    pkg = pkg.strip().split(' ')[0]
+                    if pkg in skip_names:
+                        continue
+                    recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                    if os.path.exists(pkg):
+                        recipe_glob.append(pkg)
+                    if recipe_glob:
+                        try_again = True
+                        for recipe_dir in recipe_glob:
+                            if pkg in to_build_recursive:
+                                sys.exit(str(e))
+                            print(error_str)
+                            print(("Missing dependency {0}, but found" +
+                                    " recipe directory, so building " +
+                                    "{0} first").format(pkg))
+                            add_recipes.append(recipe_dir)
+                            to_build_recursive.append(pkg)
+                    else:
+                        raise
+                recipes.appendleft(arg)
+                recipes.extendleft(reversed(add_recipes))
+
+            if try_again:
                 continue
-            if args.skip_existing:
-                if m.pkg_fn() in index or m.pkg_fn() in already_built:
-                    print("%s is already built, skipping." % m.dist())
-                    continue
-            if m.skip():
-                print("Skipped: The %s recipe defines build/skip for this "
-                      "configuration." % m.dist())
-                continue
-            if args.output:
-                try:
-                    m.parse_again(permit_undefined_jinja=False)
-                except SystemExit:
-                    # Something went wrong; possibly due to undefined GIT_ jinja variables.
-                    # Maybe we need to actually download the source in order to resolve the build_id.
-                    source.provide(m.path, m.get_section('source'))
 
-                    # Parse our metadata again because we did not initialize the source
-                    # information before.
-                    m.parse_again(permit_undefined_jinja=False)
+            if not args.notest:
+                build.test(m)
 
-                print(build.bldpkg_path(m))
-                continue
-            elif args.test:
-                build.test(m, move_broken=False)
-            elif args.source:
-                source.provide(m.path, m.get_section('source'))
-                print('Source tree in:', source.get_dir())
-            else:
-                # This loop recursively builds dependencies if recipes exist
-                if args.build_only:
-                    post = False
-                    args.notest = True
-                    args.binstar_upload = False
-                elif args.post:
-                    post = True
-                    args.notest = True
-                    args.binstar_upload = False
-                else:
-                    post = None
-                try:
-                    build.build(m, post=post,
-                                include_recipe=args.include_recipe)
-                except (NoPackagesFound, Unsatisfiable) as e:
-                    error_str = str(e)
-                    # Typically if a conflict is with one of these
-                    # packages, the other package needs to be rebuilt
-                    # (e.g., a conflict with 'python 3.5*' and 'x' means
-                    # 'x' isn't build for Python 3.5 and needs to be
-                    # rebuilt).
-                    skip_names = ['python', 'r']
-                    add_recipes = []
-                    for line in error_str.splitlines():
-                        if not line.startswith('  - '):
-                            continue
-                        pkg = line.lstrip('  - ').split(' -> ')[-1]
-                        pkg = pkg.strip().split(' ')[0]
-                        if pkg in skip_names:
-                            continue
-                        recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
-                        if exists(pkg):
-                            recipe_glob.append(pkg)
-                        if recipe_glob:
-                            try_again = True
-                            for recipe_dir in recipe_glob:
-                                if pkg in to_build_recursive:
-                                    sys.exit(str(e))
-                                print(error_str)
-                                print(("Missing dependency {0}, but found" +
-                                       " recipe directory, so building " +
-                                       "{0} first").format(pkg))
-                                add_recipes.append(recipe_dir)
-                                to_build_recursive.append(pkg)
-                        else:
-                            raise
-                    recipes.appendleft(arg)
-                    recipes.extendleft(reversed(add_recipes))
+        if need_cleanup:
+            shutil.rmtree(recipe_dir)
 
-                if try_again:
-                    continue
+        # outputs message, or does upload, depending on value of args.binstar_upload
+        handle_binstar_upload(build.bldpkg_path(m), args)
 
-                if not args.notest:
-                    build.test(m)
-
-                binstar_upload = True
-
-            if need_cleanup:
-                shutil.rmtree(recipe_dir)
-
-            if binstar_upload:
-                handle_binstar_upload(build.bldpkg_path(m), args)
-
-            already_built.append(m.pkg_fn())
-
+        already_built.add(m.pkg_fn())
 
 def args_func(args, p):
     try:
