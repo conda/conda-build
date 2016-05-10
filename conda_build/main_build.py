@@ -341,7 +341,7 @@ def execute(args, parser):
         if args.binstar_upload:
             handle_binstar_upload(build.bldpkg_path(m), args)
 
-        already_built.append(m.pkg_fn())
+        already_built.add(m.pkg_fn())
 
 def args_func(args, p):
     try:

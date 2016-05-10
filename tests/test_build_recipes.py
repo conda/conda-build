@@ -132,9 +132,9 @@ def test_jinja_typo():
 
 def test_skip_existing():
     # build the recipe first
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "jinja_vars"))
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "build_number"))
     subprocess.check_call(cmd.split())
-    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir, "jinja_vars"))
+    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir, "build_number"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, _ = process.communicate()
