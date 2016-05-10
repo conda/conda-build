@@ -16,7 +16,7 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  - conda update --all
+  - conda update --yes --all
   - conda config --set always_yes yes
   - conda install --force --no-deps conda requests
   - conda install pip pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION

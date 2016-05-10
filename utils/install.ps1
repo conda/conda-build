@@ -93,7 +93,7 @@ function InstallMinicondaPip ($python_home) {
 function main () {
     InstallMiniconda $env:PYTHON_VERSION $env:PYTHON_ARCH $env:PYTHON
     # InstallMinicondaPip $env:PYTHON
-    conda update --all
+    conda update --yes --all
 }
 
 main
