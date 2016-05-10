@@ -40,6 +40,7 @@ install:
   - conda info
   - conda config --set always_yes yes
   # - conda info python
+  - conda update --all
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
