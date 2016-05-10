@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 import shutil
-from os.path import dirname, isdir, isfile, join, exists
+from os.path import dirname, isdir, isfile, join
 
 import conda.config as cc
 
@@ -192,7 +192,7 @@ def build(m, bld_bat):
             os.makedirs(path)
 
     src_dir = source.get_dir()
-    if exists(bld_bat):
+    if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
@@ -200,12 +200,14 @@ def build(m, bld_bat):
             fo.write('\n')
             # more debuggable with echo on
             fo.write('@echo on\n')
+            for key, value in env.items():
+                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
             fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
-        _check_call(cmd, cwd=src_dir, env={str(k): str(v) for k, v in env.items()})
+        _check_call(cmd, cwd=src_dir)
         kill_processes()
         fix_staged_scripts()
