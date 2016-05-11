@@ -299,7 +299,7 @@ def osx_vars(compiler_vars):
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
-    #d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
+    # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     return {
         'OSX_ARCH': OSX_ARCH,
         'MACOSX_DEPLOYMENT_TARGET': '10.6',

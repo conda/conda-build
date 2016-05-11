@@ -18,7 +18,8 @@ INDENT = '\n    - '
 rockspec_parser = """
 local ok,cjson = pcall(require, "cjson")
 if not ok then
-   print("ERROR: lua-cjson not installed. Use conda to install luarocks, then run 'luarocks install lua-cjson'.")
+   print("ERROR: lua-cjson not installed. Use conda to install luarocks, "
+         "then run 'luarocks install lua-cjson'.")
    os.exit()
 end
 
@@ -165,7 +166,7 @@ def format_dep(dep):
     # Not "-", because that's used in e.g. lua-penlight
     special_char_test = [c in "<>=~" for c in dep]
     for i, v in enumerate(special_char_test):
-        if v == True:
+        if v:
             split_dep = [c for c in dep]
             split_dep.insert(i, " ")
             dep = "".join(split_dep)
@@ -248,7 +249,8 @@ def main(args, parser):
         d['rockspec_file'] = fs[0]
 
         # Parse the rockspec into a dictionary
-        p = subprocess.Popen(["lua", "-e", rockspec_parser % d['rockspec_file']], stdout=subprocess.PIPE)
+        p = subprocess.Popen(["lua", "-e", rockspec_parser % d['rockspec_file']],
+                             stdout=subprocess.PIPE)
         out, err = p.communicate()
         if "ERROR" in out:
             raise Exception(out.replace("ERROR: ", ""))
@@ -321,7 +323,7 @@ def main(args, parser):
                 if "modules" in spec['build']['platforms'][our_plat]:
                     modules = spec['build']['platforms'][our_plat]["modules"]
         if modules:
-            d['test_commands'] =  INDENT.join([''] +
+            d['test_commands'] = INDENT.join([''] +
                             ["""lua -e "require '%s'\"""" % r
                             for r in modules.keys()])
 
@@ -344,4 +346,3 @@ def main(args, parser):
             f.write(LUAROCKS_POSTLINK_SH)
         with open(os.path.join(output_dir, name, 'pre-unlink.sh'), 'w') as f:
             f.write(LUAROCKS_PREUNLINK_SH.format(**d))
-

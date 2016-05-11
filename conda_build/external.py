@@ -16,8 +16,7 @@ def find_executable(executable):
         dir_paths = [join(config.build_prefix, 'Scripts'),
                      join(config.build_prefix, 'Library\\bin'),
                      join(cc.root_dir, 'Scripts'),
-                     join(cc.root_dir, 'Library\\bin'),
-                    ]
+                     join(cc.root_dir, 'Library\\bin'), ]
     else:
         dir_paths = [join(config.build_prefix, 'bin'),
                      join(cc.root_dir, 'bin'), ]

@@ -52,4 +52,3 @@ class RVersionsCompleter(Completer):
 class LuaVersionsCompleter(Completer):
     def _get_items(self):
         return ['all'] + [i for i in all_versions['lua']]
-

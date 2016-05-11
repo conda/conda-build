@@ -21,8 +21,9 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda_build import __version__, exceptions
 from conda_build.metadata import MetaData
 import conda_build.source as source
-from conda_build.completers import (all_versions, conda_version, RecipeCompleter, PythonVersionCompleter,
-                                  RVersionsCompleter, LuaVersionsCompleter, NumPyVersionCompleter)
+from conda_build.completers import (all_versions, conda_version, RecipeCompleter,
+                                    PythonVersionCompleter, RVersionsCompleter,
+                                    LuaVersionsCompleter, NumPyVersionCompleter)
 from conda_build.utils import find_recipe
 
 on_win = (sys.platform == 'win32')
@@ -94,8 +95,9 @@ source to try fill in related template variables.",
     p.add_argument(
         '--lua',
         action="append",
-        help="""Set the Lua version used by conda build. Can be passed
-        multiple times to build against multiple versions (%r).""" % [i for i in LuaVersionsCompleter()],
+        help="Set the Lua version used by conda build. Can be passed"
+        "multiple times to build against multiple versions (%r)." %
+        [i for i in LuaVersionsCompleter()],
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )

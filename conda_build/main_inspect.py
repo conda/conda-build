@@ -316,18 +316,20 @@ def execute(args, parser):
             depmap['not found'] = []
             for binary in linkages:
                 for lib, path in linkages[binary]:
-                    path = replace_path(binary, path, prefix) if path not in {'', 'not found'} else path
+                    path = replace_path(binary, path, prefix) if path not in {'',
+                                                                              'not found'} else path
                     if path.startswith(prefix):
                         deps = list(which_package(path))
                         if len(deps) > 1:
-                            print("Warning: %s comes from multiple packages: %s" % (path, comma_join(deps)), file=sys.stderr)
+                            print("Warning: %s comes from multiple packages: %s" %
+                                  (path, comma_join(deps)), file=sys.stderr)
                         if not deps:
                             if exists(path):
-                                depmap['untracked'].append((lib, path.split(prefix
-                                    + '/', 1)[-1], binary))
+                                depmap['untracked'].append((lib, path.split(prefix +
+                                    '/', 1)[-1], binary))
                             else:
-                                depmap['not found'].append((lib, path.split(prefix
-                                    + '/', 1)[-1], binary))
+                                depmap['not found'].append((lib, path.split(prefix +
+                                    '/', 1)[-1], binary))
                         for d in deps:
                             depmap[d].append((lib, path.split(prefix + '/',
                                 1)[-1], binary))

@@ -71,8 +71,7 @@ files as FILE.sig.""")
     p.add_argument('files',
         help="Files to sign.",
         nargs='*',
-        metavar="FILE",
-        )
+        metavar="FILE",)
     p.add_argument('-k', '--keygen',
                  action="store",
                  help="Generate a public-private "

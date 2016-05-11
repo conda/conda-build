@@ -227,7 +227,7 @@ def remove_package_line_continuations(chunk):
      'Imports: MASS, R.methodsS3 (>= 1.5.2), R.oo (>= 1.15.8), R.utils (>= 1.27.1), matrixStats (>= 0.8.12), R.filesets (>= 2.3.0), sampleSelection, scatterplot3d, strucchange, systemfit, rgl,'
      'License: GPL (>= 2)',
      'NeedsCompilation: no']
-    """
+    """  # NOQA
     continuation = (' ', '\t')
     continued_ix = None
     continued_line = None
@@ -259,7 +259,7 @@ def remove_package_line_continuations(chunk):
 
     if had_continuation:
         # Remove the None(s).
-        chunk = [c for c in chunk if c ]
+        chunk = [c for c in chunk if c]
 
     chunk.append('')
 
@@ -343,7 +343,8 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
     r = session.get(cran_url + "src/contrib/PACKAGES")
     r.raise_for_status()
     PACKAGES = r.text
-    package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
+    package_list = [remove_package_line_continuations(i.splitlines())
+                    for i in PACKAGES.split('\n\n')]
     return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
         package_list)}
 
@@ -375,12 +376,14 @@ def main(args, parser):
             rm_rf(source.WORK_DIR)
             source.git_source({'git_url': package}, '.')
             git_tag = args.git_tag[0] if args.git_tag else get_latest_git_tag()
-            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, cwd=source.WORK_DIR)
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
             if p.returncode:
-                sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" % (git_tag, stderr.strip()))
+                sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" %
+                         (git_tag, stderr.strip()))
             if stdout:
                 print(stdout, file=sys.stdout)
             if stderr:
@@ -395,13 +398,15 @@ def main(args, parser):
                 elif isfile(sub_description_name):
                     DESCRIPTION = sub_description_name
                 else:
-                    sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file in %s, %s)"
+                    sys.exit("%s does not appear to be a valid R package "
+                             "(no DESCRIPTION file in %s, %s)"
                                  % (package, sub_description_pkg, sub_description_name))
 
             with open(DESCRIPTION) as f:
                 description_text = clear_trailing_whitespace(f.read())
 
-            d = dict_from_cran_lines(remove_package_line_continuations(description_text.splitlines()))
+            d = dict_from_cran_lines(remove_package_line_continuations(
+                description_text.splitlines()))
             d['orig_description'] = description_text
             package = d['Package'].lower()
             cran_metadata[package] = d
@@ -487,7 +492,8 @@ def main(args, parser):
         if 'GPL (>=2)' in d['license'] or d['license'] == 'GPL':
             d['license_family'] = 'GPL3'
         else:
-            d['license_family'] = get_close_matches(d['license'], metadata.allowed_license_families, 1, 0.0)[0]
+            d['license_family'] = get_close_matches(d['license'],
+                                                    metadata.allowed_license_families, 1, 0.0)[0]
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
         if cran_package.get('License_restricts_use', None) == 'yes':
@@ -588,7 +594,8 @@ def main(args, parser):
         name = d['packagename']
 
         # Normalize the metadata values
-        d = {k: unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore').decode() for k, v in compat.iteritems(d)}
+        d = {k: unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore')
+             .decode() for k, v in compat.iteritems(d)}
 
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())

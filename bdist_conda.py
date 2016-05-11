@@ -203,7 +203,8 @@ class bdist_conda(install):
                         c.readfp(StringIO(newstr))
                     except Exception as err:
                         # This seems to be the best error here
-                        raise DistutilsGetoptError("ERROR: entry-points not understood: " + str(err) + "\nThe string was" + newstr)
+                        raise DistutilsGetoptError("ERROR: entry-points not understood: " +
+                                                   str(err) + "\nThe string was" + newstr)
                     else:
                         for section in config.sections():
                             if section in ['console_scripts', 'gui_scripts']:
@@ -215,7 +216,8 @@ class bdist_conda(install):
                                 entry_points[section] = None
 
                 if not isinstance(entry_points, dict):
-                    raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" + entry_points)
+                    raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" +
+                                               entry_points)
                 else:
                     rs = entry_points.get('scripts', [])
                     cs = entry_points.get('console_scripts', [])
@@ -231,15 +233,16 @@ class bdist_conda(install):
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list
                         if metadata.conda_command_tests is True:
-                            d['test']['commands'] = list(map(unicode, pypi.make_entry_tests(entry_list)))
+                            d['test']['commands'] = list(map(unicode,
+                                                             pypi.make_entry_tests(entry_list)))
 
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
 
             if metadata.conda_import_tests:
                 if metadata.conda_import_tests is True:
-                    d['test']['imports'] = ((self.distribution.packages or [])
-                                            + (self.distribution.py_modules or []))
+                    d['test']['imports'] = ((self.distribution.packages or []) +
+                                            (self.distribution.py_modules or []))
                 else:
                     d['test']['imports'] = metadata.conda_import_tests
 
