@@ -25,7 +25,7 @@ install:
   - conda info -a
 
 script:
-  - flake8 conda_build tests bin/* bdist_conda.py setup.py example_packages
+  - flake8 .
   - py.test --cov conda_build --cov-report xml tests
   - conda build --help
 
