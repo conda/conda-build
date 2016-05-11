@@ -8,9 +8,11 @@ import yaml
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
+
 @pytest.fixture(scope="function")
 def tmpdir(request):
-    tmpdir=tempfile.mkdtemp()
+    tmpdir = tempfile.mkdtemp()
+
     def fin():
         shutil.rmtree(tmpdir)
     request.addfinalizer(fin)
@@ -23,7 +25,7 @@ def test_skeleton_by_name(tmpdir):
 
 
 def test_name_with_version_specified(tmpdir):
-    tmpdir=tempfile.mkdtemp()
+    tmpdir = tempfile.mkdtemp()
     cmd = "conda skeleton pypi --output-dir {} --version=0.7.5 sympy".format(tmpdir)
     subprocess.check_call(cmd.split())
     with open('{}/sympy-0.7.5/meta.yaml'.format(thisdir)) as f:

@@ -124,7 +124,7 @@ def msvc_env_cmd(bits, override=None):
         win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
 
         # Always call the Windows SDK first - if VS 2010 exists but was
-        # installed using the broken installer then it will try and call the 
+        # installed using the broken installer then it will try and call the
         # vcvars script, which will fail but NOT EXIT 1. To work around this,
         # we always call the Windows SDK, and then try calling VS 2010 which
         # will overwrite any environemnt variables it needs, if necessary.

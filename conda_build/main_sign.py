@@ -24,7 +24,6 @@ Error: could not import Crypto (required for "conda sign").
 from conda.signature import KEYS_DIR, hash_file, verify, SignatureError
 
 
-
 def keygen(name, size=2048):
     print("Generating public/private key pair (%d bits)..." % size)
     random_generator = Random.new().read
@@ -72,8 +71,7 @@ files as FILE.sig.""")
     p.add_argument('files',
         help="Files to sign.",
         nargs='*',
-        metavar="FILE",
-        )
+        metavar="FILE",)
     p.add_argument('-k', '--keygen',
                  action="store",
                  help="Generate a public-private "

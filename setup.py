@@ -2,13 +2,12 @@
 import sys
 from glob import glob
 
+import versioneer
+
 if 'develop' in sys.argv:
     from setuptools import setup
 else:
     from distutils.core import setup
-
-import versioneer
-
 
 if sys.version_info[:2] < (2, 7):
     sys.exit("conda-build is only meant for Python >=2.7"

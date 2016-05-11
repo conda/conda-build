@@ -12,7 +12,6 @@ import os.path
 import subprocess
 import yaml
 
-#from conda.cli import common
 import conda.config as cc
 from conda.cli.conda_argparse import ArgumentParser
 
@@ -333,7 +332,8 @@ def build_package(package, version=None, noarch_python=False):
 
 
 def execute(args, parser):
-    print("*** conda pipbuild is no longer supported.  It will be removmed in a future release of conda-build. ***")
+    print("*** conda pipbuild is no longer supported.  "
+          "It will be removmed in a future release of conda-build. ***")
     print("Please use conda build instead.")
 
     global binstar_upload
@@ -351,7 +351,8 @@ def execute(args, parser):
 
     search = client.search({'name': package})
     if search:
-        r_name = list(filter(lambda x: ('name' in x and package.lower() == x['name'].lower()), search))
+        r_name = list(filter(lambda x: ('name' in x and
+                                        package.lower() == x['name'].lower()), search))
         if r_name:
             print('Package search: %s' % r_name[0])
             package = r_name[0]['name']

@@ -1,5 +1,6 @@
 import os
 
+
 def main():
     prefix = os.environ['PREFIX']
     fn = os.path.join(prefix, 'binary-has-prefix')

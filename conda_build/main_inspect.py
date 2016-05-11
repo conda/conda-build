@@ -27,6 +27,7 @@ from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_o
 from conda_build.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join
 
+
 def main():
     p = ArgumentParser(
         description='Tools for inspecting conda packages.',
@@ -52,13 +53,13 @@ libraries that ought to be dependent conda packages.  """
         # inspect linkages -h
         help=linkages_help,
         description=linkages_help,
-        )
+    )
     linkages.add_argument(
         'packages',
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer=InstalledPackages
+    ).completer = InstalledPackages
     linkages.add_argument(
         '--untracked',
         action='store_true',
@@ -95,13 +96,13 @@ package.
         "objects",
         help=objects_help,
         description=objects_help,
-        )
+    )
     objects.add_argument(
         'packages',
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer=InstalledPackages
+    ).completer = InstalledPackages
     objects.add_argument(
         '--untracked',
         action='store_true',
@@ -130,13 +131,13 @@ Tools for investigating conda channels.
         "channels",
         help=channels_help,
         description=channels_help,
-        )
+    )
     channels.add_argument(
         '--verbose',
         action='store_true',
         help="""Show verbose output. Note that error output to stderr will
         always be shown regardless of this flag. """,
-        )
+    )
     channels.add_argument(
         '--test-installable', '-t',
         action='store_true',
@@ -148,11 +149,12 @@ Tools for investigating conda channels.
         nargs='?',
         default="defaults",
         help="The channel to test. The default is %(default)s."
-        )
+    )
 
     p.set_defaults(func=execute)
     args = p.parse_args()
     args_func(args, p)
+
 
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
@@ -167,6 +169,7 @@ def print_linkages(depmap, show_files=False):
             for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
                 print("    %s (%s)" % (lib, path))
         print()
+
 
 def replace_path(binary, path, prefix):
     if sys.platform.startswith('linux'):
@@ -192,6 +195,7 @@ def replace_path(binary, path, prefix):
             return abspath(path)
         return 'not found'
 
+
 def print_object_info(info, key):
     gb = groupby(key, info)
     for header in sorted(gb, key=str):
@@ -207,11 +211,13 @@ def print_object_info(info, key):
                 print()
         print()
 
+
 class _untracked_package:
     def __str__(self):
         return "<untracked>"
 
 untracked_package = _untracked_package()
+
 
 def test_installable(channel='defaults', verbose=True):
     if not verbose:
@@ -261,6 +267,7 @@ def test_installable(channel='defaults', verbose=True):
 
     return success
 
+
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
@@ -283,7 +290,6 @@ def execute(args, parser):
 
     if args.untracked:
         args.packages.append(untracked_package)
-
 
     if args.subcommand == 'linkages':
         pkgmap = {}
@@ -310,18 +316,20 @@ def execute(args, parser):
             depmap['not found'] = []
             for binary in linkages:
                 for lib, path in linkages[binary]:
-                    path = replace_path(binary, path, prefix) if path not in {'', 'not found'} else path
+                    path = replace_path(binary, path, prefix) if path not in {'',
+                                                                              'not found'} else path
                     if path.startswith(prefix):
                         deps = list(which_package(path))
                         if len(deps) > 1:
-                            print("Warning: %s comes from multiple packages: %s" % (path, comma_join(deps)), file=sys.stderr)
+                            print("Warning: %s comes from multiple packages: %s" %
+                                  (path, comma_join(deps)), file=sys.stderr)
                         if not deps:
                             if exists(path):
-                                depmap['untracked'].append((lib, path.split(prefix
-                                    + '/', 1)[-1], binary))
+                                depmap['untracked'].append((lib, path.split(prefix +
+                                    '/', 1)[-1], binary))
                             else:
-                                depmap['not found'].append((lib, path.split(prefix
-                                    + '/', 1)[-1], binary))
+                                depmap['not found'].append((lib, path.split(prefix +
+                                    '/', 1)[-1], binary))
                         for d in deps:
                             depmap[d].append((lib, path.split(prefix + '/',
                                 1)[-1], binary))
@@ -333,7 +341,7 @@ def execute(args, parser):
         if args.groupby == 'package':
             for pkg in args.packages:
                 print(pkg)
-                print('-'*len(str(pkg)))
+                print('-' * len(str(pkg)))
                 print()
 
                 print_linkages(pkgmap[pkg], show_files=args.show_files)
@@ -349,7 +357,7 @@ def execute(args, parser):
             k = sorted(set(inverted_map.keys()) - {'system', 'not found'})
             for dep in k + ['system', 'not found']:
                 print(dep)
-                print('-'*len(str(dep)))
+                print('-' * len(str(dep)))
                 print()
 
                 print_linkages(inverted_map[dep], show_files=args.show_files)
@@ -369,7 +377,7 @@ def execute(args, parser):
                     sys.exit("Package %s is not installed in %s" % (pkg, prefix))
 
             print(pkg)
-            print('-'*len(str(pkg)))
+            print('-' * len(str(pkg)))
             print()
 
             if not sys.platform.startswith('darwin'):

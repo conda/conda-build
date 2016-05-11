@@ -18,10 +18,12 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
-@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir) if is_valid_dir(metadata_dir, dirname)])
+@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
+                        if is_valid_dir(metadata_dir, dirname)])
 def recipe(request):
     cwd = os.getcwd()
     os.chdir(metadata_dir)
+
     def fin():
         os.chdir(cwd)
     request.addfinalizer(fin)
@@ -61,8 +63,8 @@ echo " ******* before running the source checkout tool                          
 echo
 exit -1
 """)
-    if sys.platform=="win32":
-        os.rename(dummyfile, dummyfile+".bat")
+    if sys.platform == "win32":
+        os.rename(dummyfile, dummyfile + ".bat")
     else:
         import stat
         st = os.stat(dummyfile)
@@ -79,21 +81,23 @@ exit -1
 
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
-if sys.platform=="win32":
-    platforms = set(["32",] + platforms)
+if sys.platform == "win32":
+    platforms = set(["32", ] + platforms)
     compilers = ["2.7", "3.4", "3.5"]
 else:
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
+
 
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler):
     # TODO: need a better way to specify compiler more directly on win
-    cmd = 'conda build --no-anaconda-upload {}/_cmake_generator --python={}'.format(metadata_dir, target_compiler)
+    cmd = 'conda build --no-anaconda-upload {}/_cmake_generator --python={}'.\
+          format(metadata_dir, target_compiler)
     subprocess.check_call(cmd.split())
 
 
-@pytest.mark.skipif(sys.platform=="win32",
+@pytest.mark.skipif(sys.platform == "win32",
                     reason="No windows symlinks")
 def test_symlink_fail():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "symlinks"))
@@ -104,7 +108,7 @@ def test_symlink_fail():
     assert error.count("Error") == 6
 
 
-@pytest.mark.skipif(sys.platform=="win32",
+@pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows doesn't show this error")
 def test_broken_conda_meta():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "conda-meta"))
@@ -114,6 +118,7 @@ def test_broken_conda_meta():
     error = error.decode('utf-8')
     assert "Error: Untracked file(s) ('conda-meta/nope',)" in error
 
+
 def test_recursive_fail():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "recursive-build"))
     process = subprocess.Popen(cmd.split(),
@@ -122,19 +127,23 @@ def test_recursive_fail():
     error = error.decode('utf-8')
     assert "recursive-build2" in error
 
+
 def test_jinja_typo():
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "source_git_jinja2_oops"))
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir,
+                                                                    "source_git_jinja2_oops"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     error = error.decode('utf-8')
     assert "'GIT_DSECRIBE_TAG' is undefined" in error
 
+
 def test_skip_existing():
     # build the recipe first
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "build_number"))
     subprocess.check_call(cmd.split())
-    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir, "build_number"))
+    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir,
+                                                                                    "build_number"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, _ = process.communicate()

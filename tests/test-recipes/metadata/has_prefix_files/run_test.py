@@ -2,6 +2,7 @@ import sys
 import os
 from os.path import join
 
+
 def main():
     prefix = os.environ['PREFIX']
 

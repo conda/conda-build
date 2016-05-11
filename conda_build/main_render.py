@@ -21,8 +21,9 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda_build import __version__, exceptions
 from conda_build.metadata import MetaData
 import conda_build.source as source
-from conda_build.completers import (all_versions, conda_version, RecipeCompleter, PythonVersionCompleter,
-                                  RVersionsCompleter, LuaVersionsCompleter, NumPyVersionCompleter)
+from conda_build.completers import (all_versions, conda_version, RecipeCompleter,
+                                    PythonVersionCompleter, RVersionsCompleter,
+                                    LuaVersionsCompleter, NumPyVersionCompleter)
 from conda_build.utils import find_recipe
 
 on_win = (sys.platform == 'win32')
@@ -42,7 +43,7 @@ platform specifics, making it simple to create working environments from
         '-V', '--version',
         action='version',
         help='Show the conda-build version number and exit.',
-        version = 'conda-build %s' % __version__,
+        version='conda-build %s' % __version__,
     )
     p.add_argument(
         '-n', "--no_source",
@@ -94,8 +95,9 @@ source to try fill in related template variables.",
     p.add_argument(
         '--lua',
         action="append",
-        help="""Set the Lua version used by conda build. Can be passed
-        multiple times to build against multiple versions (%r).""" % [i for i in LuaVersionsCompleter()],
+        help="Set the Lua version used by conda build. Can be passed"
+        "multiple times to build against multiple versions (%r)." %
+        [i for i in LuaVersionsCompleter()],
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )
@@ -130,7 +132,7 @@ def set_language_env_vars(args, parser, execute=None):
         if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
             if all_versions[lang]:
                 raise RuntimeError("%s must be major.minor, like %s, not %s" %
-                    (conda_version[lang], all_versions[lang][-1]/10, version))
+                    (conda_version[lang], all_versions[lang][-1] / 10, version))
             else:
                 raise RuntimeError("%s must be major.minor, not %s" %
                     (conda_version[lang], version))
@@ -213,12 +215,14 @@ def get_package_build_path(metadata, no_download_source):
 # http://stackoverflow.com/a/17310199/1170370
 class MetaYaml(dict):
     fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
+
     def to_omap(self):
         return [(field, self[field]) for field in MetaYaml.fields if field in self]
 
 
 def represent_omap(dumper, data):
-   return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+
 
 def unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
