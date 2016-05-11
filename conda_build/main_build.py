@@ -29,8 +29,8 @@ on_win = (sys.platform == 'win32')
 
 
 def main():
-    p=get_render_parser()
-    p.description="""
+    p = get_render_parser()
+    p.description = """
 Tool for building conda packages. A conda package is a binary tarball
 containing system-level libraries, Python modules, executable programs, or
 other components. conda keeps track of dependencies between packages and
@@ -102,7 +102,7 @@ different sets of packages."""
         action='store_true',
         help="""Skip recipes for which there already exists an existing build
         (locally or in the channels). """
-        )
+    )
     p.add_argument(
         '--keep-old-work',
         action='store_true',
@@ -360,6 +360,7 @@ def execute(args, parser):
 
         already_built.add(m.pkg_fn())
 
+
 def args_func(args, p):
     try:
         args.func(args, p)
@@ -371,6 +372,7 @@ def args_func(args, p):
     except Exception as e:
         print_issue_message(e)
         raise  # as if we did not catch it
+
 
 def print_issue_message(e):
     if e.__class__.__name__ not in ('ScannerError', 'ParserError'):

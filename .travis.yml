@@ -16,16 +16,17 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
-  - conda update --yes --all
   - conda config --set always_yes yes
-  - conda install --force --no-deps conda requests anaconda-client clyent python-dateutil six pytz
-  - conda install pip pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
+  - conda update -q --all
+  - conda install --force --no-deps conda 
+  - conda install -q pip pytest requests jinja2 patchelf flake8 anaconda-client
+  - conda install -q python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - pip install pytest-cov
   - python setup.py install
   - conda info -a
 
 script:
-  - pyflakes conda_build tests bin/* bdist_conda.py setup.py example_packages
+  - flake8 .
   - py.test --cov conda_build --cov-report xml tests
   - conda build --help
 

@@ -14,25 +14,27 @@ from .environ import get_dict as get_environ
 
 _setuptools_data = None
 
+
 def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
                     recipe_dir=None):
     global _setuptools_data
 
     if _setuptools_data is None:
         _setuptools_data = {}
+
         def setup(**kw):
             _setuptools_data.update(kw)
 
         import setuptools
         import distutils.core
-        #Add current directory to path
+        # Add current directory to path
         import sys
         sys.path.append('.')
 
         if from_recipe_dir and recipe_dir:
             setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
 
-        #Patch setuptools, distutils
+        # Patch setuptools, distutils
         setuptools_setup = setuptools.setup
         distutils_setup = distutils.core.setup
         setuptools.setup = distutils.core.setup = setup
@@ -49,11 +51,13 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
         del sys.path[-1]
     return _setuptools_data
 
+
 def load_npm():
     # json module expects bytes in Python 2 and str in Python 3.
     mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
     with open('package.json', **mode_dict) as pkg:
         return json.load(pkg)
+
 
 def context_processor(initial_metadata, recipe_dir):
     """

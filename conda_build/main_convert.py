@@ -59,7 +59,7 @@ def main():
         description="""
 Various tools to convert conda packages. Takes a pure Python package build for
 one platform and converts it to work on one or more other platforms, or
-all.""" ,
+all.""",
         epilog=epilog,
     )
 
@@ -126,7 +126,7 @@ all.""" ,
     args_func(args, p)
 
 
-path_mapping = [# (unix, windows)
+path_mapping = [  # (unix, windows)
                 ('lib/python{pyver}', 'Lib'),
                 ('bin', 'Scripts')]
 

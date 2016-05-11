@@ -144,7 +144,7 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     # Save as
     with open(path, 'wb') as fo:
         fo.write(data)
-    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
     return data
 
 
@@ -295,6 +295,7 @@ def create_info_files(m, files, include_recipe=True):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'))
 
+
 def get_build_index(clear_cache=True):
     if clear_cache:
         # remove the cache such that a refetch is made,
@@ -302,6 +303,7 @@ def get_build_index(clear_cache=True):
         fetch_index.cache = {}
     return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
                      prepend=not override_channels)
+
 
 def create_env(prefix, specs, clear_cache=True):
     '''
@@ -311,7 +313,7 @@ def create_env(prefix, specs, clear_cache=True):
         if not isdir(d):
             os.makedirs(d)
         update_index(d)
-    if specs: # Don't waste time if there is nothing to do
+    if specs:  # Don't waste time if there is nothing to do
         index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
@@ -324,6 +326,7 @@ def create_env(prefix, specs, clear_cache=True):
     if not isdir(prefix):
         os.makedirs(prefix)
 
+
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
     vers_inst = [dist.rsplit('-', 2)[1] for dist in root_linked
@@ -335,7 +338,8 @@ def warn_on_old_conda_build(index):
     try:
         pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
     except NoPackagesFound:
-        print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)
+        print("WARNING: Could not find any versions of conda-build in the channels",
+              file=sys.stderr)
         return
     if pkgs[-1].version != vers_inst[0]:
         print("""
@@ -357,11 +361,13 @@ def rm_pkgs_cache(dist):
               'RM_EXTRACTED %s' % dist]
     plan.execute_plan(rmplan)
 
+
 def bldpkg_path(m):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
+
 
 def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
     '''
@@ -376,8 +382,8 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
     :type keep_old_work: bool: Keep any previous work directory.
     '''
 
-    if (m.get_value('build/detect_binary_files_with_prefix')
-        or m.binary_has_prefix_files()):
+    if (m.get_value('build/detect_binary_files_with_prefix') or
+            m.binary_has_prefix_files()):
         # We must use a long prefix here as the package will only be
         # installable into prefixes shorter than this one.
         config.use_long_build_prefix = True
@@ -444,7 +450,8 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                 # dependencies.
                 _old_path = os.environ['PATH']
                 try:
-                    os.environ['PATH'] = prepend_bin_path({'PATH' : _old_path}, config.build_prefix)['PATH']
+                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
+                                                          config.build_prefix)['PATH']
                     source.provide(m.path, m.get_section('source'))
                 finally:
                     os.environ['PATH'] = _old_path
@@ -469,7 +476,8 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                         files1.discard(f)
                         has_matches = True
                 if not has_matches:
-                    sys.exit("Error: Glob %s from always_include_files does not match any files" % pat)
+                    sys.exit("Error: Glob %s from always_include_files does not match any files" %
+                             pat)
             # Save this for later
             with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
                 f.write(u'\n'.join(sorted(list(files1))))
@@ -505,7 +513,7 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                     _check_call(cmd, env=env, cwd=src_dir)
 
         if post in [True, None]:
-            if post == True:
+            if post:
                 with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
                     files1 = set(f.read().splitlines())
 
@@ -515,12 +523,13 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
             assert not exists(config.info_dir)
             files2 = prefix_files()
 
-            post_process(sorted(files2 - files1), preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+            post_process(sorted(files2 - files1),
+                         preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
             # The post processing may have deleted some files (like easy-install.pth)
             files2 = prefix_files()
             if any(config.meta_dir in join(config.build_prefix, f) for f in
-                files2 - files1):
+                    files2 - files1):
                 sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
     usually comes from using conda in the build script.  Avoid doing this, as it
     can lead to packages that include their dependencies.""" %
@@ -566,10 +575,12 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                 % (old_WORK_DIR, old_sub_dirs, source.WORK_DIR))
             for old_sub in old_sub_dirs:
                 if os.path.exists(os.path.join(source.WORK_DIR, old_sub)):
-                    print("Not restoring old source directory %s over new build's version" % (old_sub))
+                    print("Not restoring old source directory %s over new build's version" %
+                          (old_sub))
                 else:
                     shutil.move(os.path.join(old_WORK_DIR, old_sub), source.WORK_DIR)
             shutil.rmtree(old_WORK_DIR, ignore_errors=True)
+
 
 def test(m, move_broken=True):
     '''
@@ -623,7 +634,8 @@ def test(m, move_broken=True):
 
         if py_files:
             # as the tests are run by python, ensure that python is installed.
-            # (If they already provided python as a run or test requirement, this won't hurt anything.)
+            # (If they already provided python as a run or test requirement,
+            #  this won't hurt anything.)
             specs += ['python %s*' % environ.get_py_ver()]
         if pl_files:
             # as the tests are run by perl, we need to specify it
@@ -672,7 +684,6 @@ def test(m, move_broken=True):
             except subprocess.CalledProcessError:
                 tests_failed(m)
 
-
         if shell_files:
             if sys.platform == 'win32':
                 test_file = join(tmp_dir, 'run_test.bat')
@@ -691,6 +702,7 @@ def test(m, move_broken=True):
                     tests_failed(m, move_broken=move_broken)
 
     print("TEST END:", m.dist())
+
 
 def tests_failed(m, move_broken):
     '''

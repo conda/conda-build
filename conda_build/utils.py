@@ -20,6 +20,7 @@ from conda_build import external
 from conda.install import rm_rf
 rm_rf
 
+
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
 
@@ -123,6 +124,7 @@ def file_info(path):
 
 # Taken from toolz
 
+
 def groupby(key, seq):
     """ Group a collection by a key function
     >>> names = ['Alice', 'Bob', 'Charlie', 'Dan', 'Edith', 'Frank']
@@ -151,6 +153,7 @@ def groupby(key, seq):
         rv[k] = v.__self__
     return rv
 
+
 def getter(index):
     if isinstance(index, list):
         if len(index) == 1:
@@ -162,6 +165,7 @@ def getter(index):
             return lambda x: ()
     else:
         return operator.itemgetter(index)
+
 
 def comma_join(items):
     """

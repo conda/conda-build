@@ -11,6 +11,7 @@ from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
 from conda.cli.common import Completer
 
+
 class PyPIPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
         self.prefix = prefix
@@ -21,6 +22,7 @@ class PyPIPackagesCompleter(Completer):
         args = self.parsed_args
         client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
+
 
 class CRANPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
@@ -35,6 +37,7 @@ class CRANPackagesCompleter(Completer):
         cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
         return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
             in cran_metadata]
+
 
 def main():
     p = ArgumentParser(
@@ -132,14 +135,14 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         action='store_true',
         help="""Compare the package version of the recipe with the one available
         on PyPI."""
-        )
+    )
     pypi.add_argument(
         "--python-version",
         action='store',
         default=default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
         choices=['2.6', '2.7', '3.3', '3.4'],
-        )
+    )
 
     pypi.add_argument(
         "--manual-url",
@@ -147,14 +150,14 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         default=False,
         help="Manually choose source url when more than one urls are present." +
              "Default is the one with least source size."
-        )
+    )
 
     pypi.add_argument(
         "--noarch-python",
         action='store_true',
         default=False,
         help="Creates recipe as noarch python"
-        )
+    )
 
     cpan = repos.add_parser(
         "cpan",
@@ -189,7 +192,6 @@ Network (CPAN) (cpan.org).
         "--recursive",
         action='store_true',
         help='Create recipes for dependencies if they do not already exist.')
-
 
     cran = repos.add_parser(
         "cran",

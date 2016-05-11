@@ -13,6 +13,7 @@ import conda.config as cc
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
 
+
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__

@@ -17,6 +17,7 @@ from conda_build.metadata import MetaData
 from conda_build.build import build, bldpkg_path
 from conda_build.main_build import handle_binstar_upload
 
+
 def main():
     p = ArgumentParser(
         description='''
@@ -105,6 +106,7 @@ command line with the conda metapackage command.
 
     args = p.parse_args()
     args_func(args, p)
+
 
 def execute(args, parser):
     d = defaultdict(dict)

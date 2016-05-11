@@ -83,7 +83,7 @@ def is_rpath(lines):
 
 def _get_load_commands(lines):
     """yields each load command from the output of otool -l"""
-    a = 1 # first line is the filename.
+    a = 1  # first line is the filename.
     for ln, line in enumerate(lines):
         if line.startswith("Load command"):
             if a < ln:
@@ -176,7 +176,7 @@ def get_rpaths(path):
     return [rpath['path'] for rpath in rpaths]
 
 
-def add_rpath(path, rpath, verbose = False):
+def add_rpath(path, rpath, verbose=False):
     """Add an `rpath` to the Mach-O file at `path`"""
     args = ['install_name_tool', '-add_rpath', rpath, path]
     if verbose:
@@ -197,7 +197,7 @@ def add_rpath(path, rpath, verbose = False):
         % p.returncode)
 
 
-def delete_rpath(path, rpath, verbose = False):
+def delete_rpath(path, rpath, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
     args = ['install_name_tool', '-delete_rpath', rpath, path]
     if verbose:
@@ -218,7 +218,7 @@ def delete_rpath(path, rpath, verbose = False):
         % p.returncode)
 
 
-def install_name_change(path, cb_func, verbose = False):
+def install_name_change(path, cb_func, verbose=False):
     """Change dynamic shared library load name or id name of Mach-O Binary `path`.
 
     `cb_func` is called for each shared library load command. The dictionary of

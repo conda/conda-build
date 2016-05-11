@@ -45,7 +45,7 @@ def main():
         dest="remove",
         default=True,
         help="Don't remove entries for files that don't exist.",
-        )
+    )
 
     args = p.parse_args()
 

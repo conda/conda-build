@@ -34,6 +34,7 @@ libpy_pat = re.compile(
     r'(lib/python\d\.\d|Lib)'
     r'/(site-packages|lib-dynload)/(\S+?)(\.cpython-\d\dm)?\.(so|pyd)')
 
+
 def has_cext(t, show=False):
     matched = False
     for m in t.getmembers():
@@ -46,6 +47,7 @@ def has_cext(t, show=False):
             else:
                 return True
     return matched
+
 
 def has_nonpy_entry_points(t, unix_to_win=True, show=False, quiet=False):
     """
@@ -158,7 +160,7 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
     (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
-    ]
+]
 
 path_mapping_unix_windows = [
     (r'lib/python{pyver}/', r'Lib/'),
@@ -167,14 +169,15 @@ path_mapping_unix_windows = [
     # which seems unlikely
     (r'bin/(.*)(\.py)', r'Scripts/\1-script.py'),
     (r'bin/(.*)', r'Scripts/\1-script.py'),
-    ]
+]
 
 path_mapping_windows_unix = [
     (r'Lib/', r'lib/python{pyver}/'),
-    (r'Scripts/', r'bin/'), # Not supported right now anyway
-    ]
+    (r'Scripts/', r'bin/'),  # Not supported right now anyway
+]
 
 pyver_re = re.compile(r'python\s+(\d.\d)')
+
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))

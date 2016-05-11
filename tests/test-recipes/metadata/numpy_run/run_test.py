@@ -2,6 +2,7 @@ import os
 import json
 import glob
 
+
 def main():
     prefix = os.environ['PREFIX']
     info_files = glob.glob(os.path.join(prefix, 'conda-meta',
