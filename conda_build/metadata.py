@@ -260,7 +260,8 @@ FIELDS = {
                'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
-               'patches'],
+               'patches'
+               ],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch_python',
@@ -268,7 +269,7 @@ FIELDS = {
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends'  # pin_depends is experimental still
-             ],
+              ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
@@ -276,7 +277,7 @@ FIELDS = {
     'about': ['home', 'dev_url', 'doc_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
-             ],
+              ],
 }
 
 
@@ -515,7 +516,7 @@ class MetaData(object):
         d = {'type': 'app'}
         if self.get_value('app/icon'):
             d['icon'] = '%s.png' % md5_file(join(
-                    self.path, self.get_value('app/icon')))
+                self.path, self.get_value('app/icon')))
 
         for field, key in [('app/entry', 'app_entry'),
                            ('app/type', 'app_type'),
@@ -561,7 +562,8 @@ class MetaData(object):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
         if sys.platform == 'win32':
             if any('\\' in i for i in ret):
-                raise RuntimeError("build/has_prefix_files paths must use / as the path delimiter on Windows")
+                raise RuntimeError("build/has_prefix_files paths must use / "
+                                   "as the path delimiter on Windows")
         return ret
 
     def always_include_files(self):
@@ -573,7 +575,8 @@ class MetaData(object):
             raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
         if sys.platform == 'win32':
             if any('\\' in i for i in ret):
-                raise RuntimeError("build/binary_has_prefix_files paths must use / as the path delimiter on Windows")
+                raise RuntimeError("build/binary_has_prefix_files paths must use / "
+                                   "as the path delimiter on Windows")
         return ret
 
     def skip(self):
@@ -592,7 +595,8 @@ class MetaData(object):
             import jinja2
         except ImportError:
             print("There was an error importing jinja2.", file=sys.stderr)
-            print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)
+            print("Please run `conda install jinja2` to enable jinja template support",
+                  file=sys.stderr)
             with open(self.meta_path) as fd:
                 return fd.read()
 
@@ -624,7 +628,8 @@ class MetaData(object):
                 self.list_templates = unfiltered_loader.list_templates
 
             def get_source(self, environment, template):
-                contents, filename, uptodate = self._unfiltered_loader.get_source(environment, template)
+                contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
+                                                                                  template)
                 return select_lines(contents, ns_cfg()), filename, uptodate
 
         undefined_type = jinja2.StrictUndefined
@@ -633,9 +638,10 @@ class MetaData(object):
                 """
                 A class for Undefined jinja variables.
                 This is even less strict than the default jinja2.Undefined class,
-                because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and {{ MY_UNDEFINED_VAR|int }}.
-                This can mask lots of errors in jinja templates, so it should only be used for a first-pass
-                parse, when you plan on running a 'strict' second pass later.
+                because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and
+                {{ MY_UNDEFINED_VAR|int }}. This can mask lots of errors in jinja templates, so it
+                should only be used for a first-pass parse, when you plan on running a 'strict'
+                second pass later.
                 """
                 __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
                 __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
@@ -670,7 +676,8 @@ class MetaData(object):
             template = env.get_or_select_template(filename)
             return template.render(environment=env)
         except jinja2.TemplateError as ex:
-            sys.exit("Error: Failed to render jinja template in {}:\n{}".format(self.meta_path, ex.message))
+            sys.exit("Error: Failed to render jinja template in {}:\n{}"
+                     .format(self.meta_path, ex.message))
 
     def __unicode__(self):
         '''

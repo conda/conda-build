@@ -201,7 +201,10 @@ class RequestsTransport(Transport):
         url = self._build_url(host, handler)
 
         try:
-            resp = self.session.post(url, data=request_body, headers=headers, proxies=self.session.proxies)
+            resp = self.session.post(url,
+                                     data=request_body,
+                                     headers=headers,
+                                     proxies=self.session.proxies)
             resp.raise_for_status()
 
         except requests.exceptions.HTTPError as e:
@@ -525,10 +528,8 @@ def get_package_metadata(args, package, d, data):
             if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
                 setuptools_build = True
                 setuptools_run = True
-            entry_list = (
-                cs
-                # TODO: Use pythonw for these
-                + gs)
+            # TODO: Use pythonw for gui scripts
+            entry_list = (cs + gs)
             if len(cs + gs) != 0:
                 d['entry_points'] = INDENT.join([''] + entry_list)
                 d['entry_comment'] = ''
@@ -547,7 +548,7 @@ def get_package_metadata(args, package, d, data):
             # Every item may be a single requirement
             #  or a multiline requirements string...
             for dep in deptext:
-                #... and may also contain comments...
+                # ... and may also contain comments...
                 dep = dep.split('#')[0].strip()
                 if dep:  # ... and empty (or comment only) lines
                     spec = spec_from_line(dep)
@@ -659,8 +660,7 @@ def get_package_metadata(args, package, d, data):
 
 
 def valid(name):
-    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name)
-            and not keyword.iskeyword(name)):
+    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name) and not keyword.iskeyword(name)):
         return name
     else:
         return ''
@@ -777,7 +777,8 @@ def run_setuppy(src_dir, temp_dir, python_version):
 
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
-        copy2(join(stdlib_dir, 'distutils', 'core.py-copy'), join(stdlib_dir, 'distutils', 'core.py'))
+        copy2(join(stdlib_dir, 'distutils', 'core.py-copy'),
+              join(stdlib_dir, 'distutils', 'core.py'))
         # Avoid race conditions. Invalidate the cache.
         if PY3:
             rm_rf(join(stdlib_dir, 'distutils', '__pycache__',

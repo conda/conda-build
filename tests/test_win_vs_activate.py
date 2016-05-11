@@ -21,7 +21,7 @@ if sys.platform == "win32":
     # VC9 compiler for python - common files
     vcvars_backup_files["python_system"] = [VS_TOOLS_PY_COMMON_PATH]
 
-    vs9  = {key: vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
+    vs9 = {key: vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
     vs10 = {key: vcvars_backup_files[key] for key in ['vs10.0']}
     vs14 = {key: vcvars_backup_files[key] for key in ['vs14.0']}
 
@@ -31,12 +31,15 @@ if sys.platform == "win32":
 def write_bat_files(good_locations):
     for label, locations in vcvars_backup_files.items():
         for location in locations:
-            assert not os.path.exists(location)  # these should all have been moved!  bad to overwrite them!
+            # these should all have been moved!  bad to overwrite them!
+            assert not os.path.exists(location)
             if not os.path.isdir(os.path.dirname(location)):
-                os.makedirs(os.path.dirname(location))  # if any of these are made, they are not currently cleaned up.  Sorry.
+                # if any of these are made, they are not currently cleaned up.  Sorry.
+                os.makedirs(os.path.dirname(location))
             with open(location, "w") as f:
                 print("writing {} (exit /b {})".format(location, int(label not in good_locations)))
-                f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  check logic.\n")
+                f.write("::  NOTE: exit code of 1 here means incorrect VS version activated.  "
+                        "check logic.\n")
                 f.write("exit /b {}\n".format(int(label not in good_locations)))
 
 
@@ -98,9 +101,11 @@ def test_activation(bits, compiler):
         f.write(msvc_env_cmd(bits, compiler_version))
         f.write('\nif not "%VS_VERSION%" == "{}" exit /b 1'.format(compiler_version))
         f.write('\nif not "%VS_MAJOR%" == "{}" exit /b 1'.format(compiler_version.split('.')[0]))
-        f.write('\nif not "%VS_YEAR%" == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version][-4:]))
-        f.write('\nif not "%CMAKE_GENERATOR%" == "{}" exit /b 1'.format(VS_VERSION_STRING[compiler_version] +
-                                                                      {64: ' Win64', 32: ''}[bits]))
+        f.write('\nif not "%VS_YEAR%" == "{}" exit /b 1'
+                .format(VS_VERSION_STRING[compiler_version][-4:]))
+        f.write('\nif not "%CMAKE_GENERATOR%" == "{}" exit /b 1'
+                .format(VS_VERSION_STRING[compiler_version] +
+                        {64: ' Win64', 32: ''}[bits]))
     try:
         subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
     except subprocess.CalledProcessError:

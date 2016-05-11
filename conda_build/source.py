@@ -164,9 +164,9 @@ def git_info(fo=None):
     env['GIT_DIR'] = join(WORK_DIR, '.git')
     env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
-                ('git log -n1', True),
-                ('git describe --tags --dirty', False),
-                ('git status', True)]:
+            ('git log -n1', True),
+            ('git describe --tags --dirty', False),
+            ('git status', True)]:
         p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
         stdout, stderr = p.communicate()
         encoding = locale.getpreferredencoding()

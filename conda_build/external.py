@@ -26,7 +26,7 @@ def find_executable(executable):
 
     for dir_path in dir_paths:
         if sys.platform == 'win32':
-            for ext in  '.exe', '.bat', '':
+            for ext in '.exe', '.bat', '':
                 path = join(dir_path, executable + ext)
                 if isfile(path):
                     return path

@@ -18,7 +18,8 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
-@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir) if is_valid_dir(metadata_dir, dirname)])
+@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
+                        if is_valid_dir(metadata_dir, dirname)])
 def recipe(request):
     cwd = os.getcwd()
     os.chdir(metadata_dir)
@@ -91,7 +92,8 @@ else:
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler):
     # TODO: need a better way to specify compiler more directly on win
-    cmd = 'conda build --no-anaconda-upload {}/_cmake_generator --python={}'.format(metadata_dir, target_compiler)
+    cmd = 'conda build --no-anaconda-upload {}/_cmake_generator --python={}'.\
+          format(metadata_dir, target_compiler)
     subprocess.check_call(cmd.split())
 
 
@@ -127,7 +129,8 @@ def test_recursive_fail():
 
 
 def test_jinja_typo():
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "source_git_jinja2_oops"))
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir,
+                                                                    "source_git_jinja2_oops"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
@@ -139,7 +142,8 @@ def test_skip_existing():
     # build the recipe first
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "build_number"))
     subprocess.check_call(cmd.split())
-    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir, "build_number"))
+    cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir,
+                                                                                    "build_number"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, _ = process.communicate()
