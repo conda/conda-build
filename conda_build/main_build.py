@@ -261,7 +261,7 @@ def execute(args, parser):
 
         if args.check and len(args.recipe) > 1:
             print(m.path)
-        m.check_fields()
+        check_fields(m)
         if args.check:
             continue
         if m.skip():

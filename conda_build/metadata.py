@@ -12,8 +12,6 @@ import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
 
-from . import exceptions
-
 try:
     import yaml
 
@@ -28,6 +26,7 @@ except ImportError:
 
 from conda_build.config import config
 from conda_build.utils import comma_join
+from conda_build import exceptions
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
@@ -142,20 +141,7 @@ def ensure_valid_fields(meta):
 
 def parse(data, path=None):
     data = select_lines(data, ns_cfg())
-    res = yamlize(data)
-    # ensure the result is a dict
-    if res is None:
-        res = {}
-    for field in FIELDS:
-        if field not in res:
-            continue
-        # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
-        if not res[field]:
-            res[field] = {}
-        if not isinstance(res[field], dict):
-            raise RuntimeError("The %s field should be a dict, not %s in file %s." %
-                               (field, res[field].__class__.__name__, path))
-
+    res = yamlize(data) or {}
 
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
@@ -276,6 +262,14 @@ RECOGNIZED_FIELDS = {
 }
 
 def check_fields(meta, strictness=.9):
+    """
+    Check all fields in the meta.yaml file.  This method attempts to detect keys that might
+    be typos of recognized keys.
+
+    :param meta:
+    :param strictness:
+    :return:
+    """
     # Check that package/name and package/version exist
     _meta = meta.meta
     try:
@@ -366,7 +360,7 @@ class MetaData(object):
         """
         if not self.meta_path:
             return
-        self.meta = parse(self._get_contents(permit_undefined_jinja), path=self.meta_path)
+        self.meta = parse(self._get_contents(permit_undefined_jinja))
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
