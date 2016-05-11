@@ -31,6 +31,7 @@ test [abc] no
 
 """
 
+
 class HandleConfigVersionTests(unittest.TestCase):
 
     def test_python(self):

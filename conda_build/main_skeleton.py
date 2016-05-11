@@ -11,6 +11,7 @@ from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
 from conda.cli.common import Completer
 
+
 class PyPIPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
         self.prefix = prefix
@@ -21,6 +22,7 @@ class PyPIPackagesCompleter(Completer):
         args = self.parsed_args
         client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
+
 
 class CRANPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
@@ -35,6 +37,7 @@ class CRANPackagesCompleter(Completer):
         cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
         return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
             in cran_metadata]
+
 
 def main():
     p = ArgumentParser(

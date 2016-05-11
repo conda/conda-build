@@ -22,6 +22,7 @@ def is_valid_dir(parent_dir, dirname):
 def recipe(request):
     cwd = os.getcwd()
     os.chdir(metadata_dir)
+
     def fin():
         os.chdir(cwd)
     request.addfinalizer(fin)
@@ -85,6 +86,7 @@ if sys.platform=="win32":
 else:
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
 
+
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler):
@@ -114,6 +116,7 @@ def test_broken_conda_meta():
     error = error.decode('utf-8')
     assert "Error: Untracked file(s) ('conda-meta/nope',)" in error
 
+
 def test_recursive_fail():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "recursive-build"))
     process = subprocess.Popen(cmd.split(),
@@ -122,6 +125,7 @@ def test_recursive_fail():
     error = error.decode('utf-8')
     assert "recursive-build2" in error
 
+
 def test_jinja_typo():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "source_git_jinja2_oops"))
     process = subprocess.Popen(cmd.split(),
@@ -129,6 +133,7 @@ def test_jinja_typo():
     output, error = process.communicate()
     error = error.decode('utf-8')
     assert "'GIT_DSECRIBE_TAG' is undefined" in error
+
 
 def test_skip_existing():
     # build the recipe first

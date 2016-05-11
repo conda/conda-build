@@ -452,6 +452,7 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
 
     return build_deps, run_deps, packages_to_append
 
+
 @memoized
 def dist_for_module(cpan_url, module, perl_version):
     '''

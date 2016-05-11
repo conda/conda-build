@@ -33,6 +33,7 @@ elif sys.platform == 'darwin':
 
 SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
+
 def is_obj(path):
     assert sys.platform != 'win32'
     return bool((sys.platform.startswith('linux') and elf.is_elf(path)) or
@@ -267,7 +268,7 @@ def mk_relative_osx(path, build_prefix=None):
         rpath = join('@loader_path',
                      relpath(join(config.build_prefix, 'lib'),
                              dirname(path)), '').replace('/./', '/')
-        macho.add_rpath(path, rpath, verbose = True)
+        macho.add_rpath(path, rpath, verbose=True)
 
         # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
         # .. and remove config.build_prefix/lib which was added in-place of
@@ -278,6 +279,7 @@ def mk_relative_osx(path, build_prefix=None):
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
         assert_relative_osx(path)
+
 
 def mk_relative_linux(f, rpaths=('lib',)):
     path = join(config.build_prefix, f)
@@ -336,6 +338,7 @@ def post_build(m, files):
             mk_relative(m, f)
 
     check_symlinks(files)
+
 
 def check_symlinks(files):
     if readlink is False:

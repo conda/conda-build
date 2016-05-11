@@ -59,6 +59,7 @@ def rm_rf(path, max_retries=5):
         # Final time. pass exceptions to caller.
         shutil.rmtree(path)
 
+
 def download_file(url, md5):
     urlparts = requests.packages.urllib3.util.url.parse_url(url)
     local_filename = urlparts.path.split('/')[-1]
@@ -100,6 +101,7 @@ def hashsum_file(path, mode='md5'):
                 break
             h.update(chunk)
     return h.hexdigest()
+
 
 def install_miniconda(path):
     prefix = os.path.join(tempdir, 'conda-build-miniconda')

@@ -8,9 +8,11 @@ import yaml
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
+
 @pytest.fixture(scope="function")
 def tmpdir(request):
     tmpdir=tempfile.mkdtemp()
+
     def fin():
         shutil.rmtree(tmpdir)
     request.addfinalizer(fin)

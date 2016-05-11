@@ -130,11 +130,13 @@ LUAROCKS_PREUNLINK_SH = """\
 $PREFIX/bin/luarocks remove {rockname}
 """
 
+
 def getval(spec,k):
     if k not in spec:
         raise Exception("Required key %s not in spec" % k)
     else:
         return spec[k]
+
 
 def warn_against_branches(branch):
     print("")
@@ -147,6 +149,7 @@ def warn_against_branches(branch):
     print("Please replace with a tag, git commit, or tarball.")
     print("")
     print("=========================================")
+
 
 def format_dep(dep):
     name_without_ver = "".join([c for c in dep if c.isalpha()])
@@ -180,6 +183,7 @@ def ensure_base_deps(deps):
     if len(extra_deps):
         deps = extra_deps + deps
     return deps
+
 
 def main(args, parser):
 

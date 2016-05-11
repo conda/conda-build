@@ -251,6 +251,7 @@ def _ensure_unix_line_endings(path):
                 outputfile.write(line.replace("\r\n", "\n"))
     return out_path
 
+
 def apply_patch(src_dir, path):
     print('Applying patch: %r' % path)
     if not isfile(path):

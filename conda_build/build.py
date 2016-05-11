@@ -295,6 +295,7 @@ def create_info_files(m, files, include_recipe=True):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'))
 
+
 def get_build_index(clear_cache=True):
     if clear_cache:
         # remove the cache such that a refetch is made,
@@ -302,6 +303,7 @@ def get_build_index(clear_cache=True):
         fetch_index.cache = {}
     return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
                      prepend=not override_channels)
+
 
 def create_env(prefix, specs, clear_cache=True):
     '''
@@ -323,6 +325,7 @@ def create_env(prefix, specs, clear_cache=True):
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
+
 
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
@@ -357,11 +360,13 @@ def rm_pkgs_cache(dist):
               'RM_EXTRACTED %s' % dist]
     plan.execute_plan(rmplan)
 
+
 def bldpkg_path(m):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
+
 
 def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
     '''
@@ -571,6 +576,7 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                     shutil.move(os.path.join(old_WORK_DIR, old_sub), source.WORK_DIR)
             shutil.rmtree(old_WORK_DIR, ignore_errors=True)
 
+
 def test(m, move_broken=True):
     '''
     Execute any test scripts for the given package.
@@ -691,6 +697,7 @@ def test(m, move_broken=True):
                     tests_failed(m, move_broken=move_broken)
 
     print("TEST END:", m.dist())
+
 
 def tests_failed(m, move_broken):
     '''

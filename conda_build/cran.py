@@ -190,6 +190,7 @@ VERSION_DEPENDENCY_REGEX = re.compile(
     r'?(\s*\[(?P<archs>[\s!\w\-]+)\])?\s*$'
 )
 
+
 def dict_from_cran_lines(lines):
     d = {}
     for line in lines:
@@ -204,6 +205,7 @@ def dict_from_cran_lines(lines):
         #     print("Warning: Unknown key %s" % k)
     d['orig_lines'] = lines
     return d
+
 
 def remove_package_line_continuations(chunk):
     """
@@ -263,6 +265,7 @@ def remove_package_line_continuations(chunk):
 
     return chunk
 
+
 def yaml_quote_string(string):
     """
     Quote a string for use in YAML.
@@ -275,11 +278,13 @@ def yaml_quote_string(string):
     """
     return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ')
 
+
 def clear_trailing_whitespace(string):
     lines = []
     for line in string.splitlines():
         lines.append(line.rstrip())
     return '\n'.join(lines)
+
 
 def get_package_metadata(cran_url, package, session):
     url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
@@ -295,6 +300,7 @@ def get_package_metadata(cran_url, package, session):
     d['orig_description'] = DESCRIPTION
     return d
 
+
 def get_latest_git_tag():
     p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
@@ -309,6 +315,7 @@ def get_latest_git_tag():
 
     print("Using tag %s" % tags[-1])
     return tags[-1]
+
 
 def get_session(output_dir, verbose=True, cache=[]):
     if cache:
@@ -328,6 +335,7 @@ def get_session(output_dir, verbose=True, cache=[]):
     cache.append(session)
     return session
 
+
 def get_cran_metadata(cran_url, output_dir, verbose=True):
     session = get_session(output_dir, verbose=verbose)
     if verbose:
@@ -338,6 +346,7 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
     package_list =  [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
     return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
         package_list)}
+
 
 def main(args, parser):
     if len(args.packages) > 1 and args.version_compare:
@@ -594,6 +603,7 @@ def main(args, parser):
 
     print("Done")
 
+
 def version_compare(recipe_dir, newest_conda_version):
     m = metadata.MetaData(recipe_dir)
     local_version = m.version()
@@ -604,6 +614,7 @@ def version_compare(recipe_dir, newest_conda_version):
     print("The version on CRAN for %s is %s." % (package, newest_conda_version))
 
     return local_version == newest_conda_version
+
 
 def get_outdated(output_dir, cran_metadata, packages=()):
     to_update = []

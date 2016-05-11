@@ -34,6 +34,7 @@ libpy_pat = re.compile(
     r'(lib/python\d\.\d|Lib)'
     r'/(site-packages|lib-dynload)/(\S+?)(\.cpython-\d\dm)?\.(so|pyd)')
 
+
 def has_cext(t, show=False):
     matched = False
     for m in t.getmembers():
@@ -46,6 +47,7 @@ def has_cext(t, show=False):
             else:
                 return True
     return matched
+
 
 def has_nonpy_entry_points(t, unix_to_win=True, show=False, quiet=False):
     """
@@ -175,6 +177,7 @@ path_mapping_windows_unix = [
     ]
 
 pyver_re = re.compile(r'python\s+(\d.\d)')
+
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))

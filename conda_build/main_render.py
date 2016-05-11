@@ -42,7 +42,7 @@ platform specifics, making it simple to create working environments from
         '-V', '--version',
         action='version',
         help='Show the conda-build version number and exit.',
-        version = 'conda-build %s' % __version__,
+        version='conda-build %s' % __version__,
     )
     p.add_argument(
         '-n', "--no_source",
@@ -213,12 +213,14 @@ def get_package_build_path(metadata, no_download_source):
 # http://stackoverflow.com/a/17310199/1170370
 class MetaYaml(dict):
     fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
+
     def to_omap(self):
         return [(field, self[field]) for field in MetaYaml.fields if field in self]
 
 
 def represent_omap(dumper, data):
    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+
 
 def unicode_representer(dumper, uni):
     node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)

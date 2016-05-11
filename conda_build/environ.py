@@ -196,6 +196,7 @@ def python_vars():
         vars['CONDA_NPY'] = str(config.CONDA_NPY)
     return vars
 
+
 def perl_vars():
     return {
         'PERL_VER': get_perl_ver(),

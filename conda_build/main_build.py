@@ -343,6 +343,7 @@ def execute(args, parser):
 
         already_built.add(m.pkg_fn())
 
+
 def args_func(args, p):
     try:
         args.func(args, p)
@@ -354,6 +355,7 @@ def args_func(args, p):
     except Exception as e:
         print_issue_message(e)
         raise  # as if we did not catch it
+
 
 def print_issue_message(e):
     if e.__class__.__name__ not in ('ScannerError', 'ParserError'):

@@ -27,6 +27,7 @@ from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_o
 from conda_build.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join
 
+
 def main():
     p = ArgumentParser(
         description='Tools for inspecting conda packages.',
@@ -154,6 +155,7 @@ Tools for investigating conda channels.
     args = p.parse_args()
     args_func(args, p)
 
+
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
@@ -167,6 +169,7 @@ def print_linkages(depmap, show_files=False):
             for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
                 print("    %s (%s)" % (lib, path))
         print()
+
 
 def replace_path(binary, path, prefix):
     if sys.platform.startswith('linux'):
@@ -192,6 +195,7 @@ def replace_path(binary, path, prefix):
             return abspath(path)
         return 'not found'
 
+
 def print_object_info(info, key):
     gb = groupby(key, info)
     for header in sorted(gb, key=str):
@@ -207,11 +211,13 @@ def print_object_info(info, key):
                 print()
         print()
 
+
 class _untracked_package:
     def __str__(self):
         return "<untracked>"
 
 untracked_package = _untracked_package()
+
 
 def test_installable(channel='defaults', verbose=True):
     if not verbose:
@@ -260,6 +266,7 @@ def test_installable(channel='defaults', verbose=True):
                     platform, additional_packages, e), file=sys.stderr)
 
     return success
+
 
 def execute(args, parser):
     if not args.subcommand:

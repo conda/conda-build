@@ -28,6 +28,7 @@ except ImportError:
 from conda_build.config import config
 from conda_build.utils import comma_join
 
+
 def ns_cfg():
     # Remember to update the docs of any of this changes
     plat = cc.subdir
@@ -37,29 +38,29 @@ def ns_cfg():
     lua = config.CONDA_LUA
     assert isinstance(py, int), py
     d = dict(
-        linux = plat.startswith('linux-'),
-        linux32 = bool(plat == 'linux-32'),
-        linux64 = bool(plat == 'linux-64'),
-        arm = plat.startswith('linux-arm'),
-        osx = plat.startswith('osx-'),
-        unix = plat.startswith(('linux-', 'osx-')),
-        win = plat.startswith('win-'),
-        win32 = bool(plat == 'win-32'),
-        win64 = bool(plat == 'win-64'),
-        pl = pl,
-        py = py,
-        lua = lua,
-        luajit = bool(lua[0] == "2"),
-        py3k = bool(30 <= py < 40),
-        py2k = bool(20 <= py < 30),
-        py26 = bool(py == 26),
-        py27 = bool(py == 27),
-        py33 = bool(py == 33),
-        py34 = bool(py == 34),
-        py35 = bool(py == 35),
-        np = np,
-        os = os,
-        environ = os.environ,
+        linux=plat.startswith('linux-'),
+        linux32=bool(plat == 'linux-32'),
+        linux64=bool(plat == 'linux-64'),
+        arm=plat.startswith('linux-arm'),
+        osx=plat.startswith('osx-'),
+        unix=plat.startswith(('linux-', 'osx-')),
+        win=plat.startswith('win-'),
+        win32=bool(plat == 'win-32'),
+        win64=bool(plat == 'win-64'),
+        pl=pl,
+        py=py,
+        lua=lua,
+        luajit=bool(lua[0] == "2"),
+        py3k=bool(30 <= py < 40),
+        py2k=bool(20 <= py < 30),
+        py26=bool(py == 26),
+        py27=bool(py == 27),
+        py33=bool(py == 33),
+        py34=bool(py == 34),
+        py35=bool(py == 35),
+        np=np,
+        os=os,
+        environ=os.environ,
     )
     for machine in cc.non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
@@ -69,6 +70,8 @@ def ns_cfg():
 
 
 sel_pat = re.compile(r'(.+?)\s*(#.*)?\[(.+)\](?(2).*)$')
+
+
 def select_lines(data, namespace):
     lines = []
     for i, line in enumerate(data.splitlines()):
@@ -121,6 +124,7 @@ Proprietary
 Public-Domain
 """.split())
 
+
 def ensure_valid_license_family(meta):
     try:
         license_family = meta['about']['license_family']
@@ -131,6 +135,7 @@ def ensure_valid_license_family(meta):
             "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
 
+
 def ensure_valid_fields(meta):
     try:
         pin_depends = meta['build']['pin_depends']
@@ -138,6 +143,7 @@ def ensure_valid_fields(meta):
         pin_depends = ''
     if pin_depends not in ('', 'record', 'strict'):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
+
 
 def parse(data, path=None):
     data = select_lines(data, ns_cfg())
@@ -196,6 +202,7 @@ default_structs = {
     'build/skip': bool,
     'app/own_environment': bool
 }
+
 
 def sanitize(meta):
     """
@@ -524,14 +531,14 @@ class MetaData(object):
 
     def info_index(self):
         d = dict(
-            name = self.name(),
-            version = self.version(),
-            build = self.build_id(),
-            build_number = self.build_number(),
-            platform = cc.platform,
-            arch = cc.arch_name,
-            subdir = cc.subdir,
-            depends = sorted(' '.join(ms.spec.split())
+            name=self.name(),
+            version=self.version(),
+            build=self.build_id(),
+            build_number=self.build_number(),
+            platform=cc.platform,
+            arch=cc.arch_name,
+            subdir=cc.subdir,
+            depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
         )
         for key in ('license', 'license_family'):
@@ -613,6 +620,7 @@ class MetaData(object):
             A pass-through for the given loader, except that the loaded source is
             filtered according to any metadata selectors in the source text.
             """
+
             def __init__(self, unfiltered_loader):
                 self._unfiltered_loader = unfiltered_loader
                 self.list_templates = unfiltered_loader.list_templates

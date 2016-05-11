@@ -15,6 +15,7 @@ from conda_build.macho import otool
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
 LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
 
+
 def ldd(path):
     "thin wrapper around ldd"
     lines = subprocess.check_output(['ldd', path]).decode('utf-8').splitlines()
@@ -38,6 +39,7 @@ def ldd(path):
 
     return res
 
+
 @memoized
 def get_linkages(obj_files, prefix):
     res = {}
@@ -51,6 +53,7 @@ def get_linkages(obj_files, prefix):
             res[f] = [(basename(l), l) for l in links]
 
     return res
+
 
 @memoized
 def get_package_obj_files(dist, prefix):
@@ -66,6 +69,7 @@ def get_package_obj_files(dist, prefix):
             res.append(f)
 
     return res
+
 
 @memoized
 def get_untracked_obj_files(prefix):

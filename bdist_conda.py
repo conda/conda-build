@@ -22,6 +22,7 @@ from conda_build.main_build import handle_binstar_upload
 
 # TODO: Add support for all the options that conda build has
 
+
 class CondaDistribution(Distribution):
     """
     Distribution subclass that supports bdist_conda options
@@ -110,6 +111,7 @@ class CondaDistribution(Distribution):
 
         for attr in self.conda_attrs:
             setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
+
 
 class bdist_conda(install):
     description = "create a conda package"

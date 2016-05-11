@@ -171,6 +171,8 @@ diff core.py core.py
 INDENT = '\n    - '
 
 # https://gist.github.com/chrisguitarguy/2354951
+
+
 class RequestsTransport(Transport):
     """
     Drop in Transport for xmlrpclib that uses Requests instead of httplib
@@ -240,6 +242,7 @@ class RequestsTransport(Transport):
         scheme = 'https' if self.use_https else 'http'
         return '%s://%s/%s' % (scheme, host, handler)
 
+
 def get_xmlrpc_client(pypi_url):
     proxies = get_proxy_servers()
 
@@ -248,6 +251,7 @@ def get_xmlrpc_client(pypi_url):
     else:
         transport = None
     return ServerProxy(pypi_url, transport=transport)
+
 
 def main(args, parser):
     client = get_xmlrpc_client(args.pypi_url)
@@ -803,6 +807,7 @@ def run_setuppy(src_dir, temp_dir, python_version):
         sys.exit('Error: command failed: %s' % ' '.join(cmdargs))
     finally:
         chdir(cwd)
+
 
 def make_entry_tests(entry_list):
     tests = []
