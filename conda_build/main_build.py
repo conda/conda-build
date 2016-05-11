@@ -271,7 +271,7 @@ def execute(args, parser):
                 print(m.dist(), "is already built, skipping.")
                 continue
         if args.output:
-            print(get_package_build_string(m, no_download_source=False))
+            print(get_package_build_path(m, no_download_source=False))
             continue
         elif args.test:
             build.test(m, move_broken=False)
