@@ -150,6 +150,7 @@ def test_skip_existing():
     output = output.decode('utf-8')
     assert "is already built, skipping." in output
 
+
 def test_token_upload():
     # generated with conda_test_account user, command:
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
@@ -158,5 +159,6 @@ def test_token_upload():
     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "build_number"))
     subprocess.check_call(cmd.split())
     # clean up - we don't actually want this package to exist
-    cmd = 'anaconda --token {} remove --force conda_test_account/conda-build-test-build-number'.format(token)
+    cmd = 'anaconda --token {} remove --force '
+    'conda_test_account/conda-build-test-build-number'.format(token)
     subprocess.check_call(cmd.split())
