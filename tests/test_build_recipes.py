@@ -159,6 +159,6 @@ def test_token_upload():
     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "build_number"))
     subprocess.check_call(cmd.split())
     # clean up - we don't actually want this package to exist
-    cmd = 'anaconda --token {} remove --force '
-    'conda_test_account/conda-build-test-build-number'.format(token)
+    cmd = 'anaconda --token {} remove --force conda_test_account/conda-build-test-build-number'\
+    .format(token)
     subprocess.check_call(cmd.split())
