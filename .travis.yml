@@ -18,7 +18,7 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda update -q --all
-  - conda install --force --no-deps conda 
+  - conda install --force --no-deps conda
   - conda install -q pip pytest requests jinja2 patchelf flake8 anaconda-client
   - conda install -q python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - pip install pytest-cov
