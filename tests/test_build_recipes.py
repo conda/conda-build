@@ -62,8 +62,8 @@ echo " ******* before running the source checkout tool                          
 echo
 exit -1
 """)
-    if sys.platform=="win32":
-        os.rename(dummyfile, dummyfile+".bat")
+    if sys.platform == "win32":
+        os.rename(dummyfile, dummyfile + ".bat")
     else:
         import stat
         st = os.stat(dummyfile)
@@ -80,8 +80,8 @@ exit -1
 
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
-if sys.platform=="win32":
-    platforms = set(["32",] + platforms)
+if sys.platform == "win32":
+    platforms = set(["32", ] + platforms)
     compilers = ["2.7", "3.4", "3.5"]
 else:
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
@@ -95,7 +95,7 @@ def test_cmake_generator(platform, target_compiler):
     subprocess.check_call(cmd.split())
 
 
-@pytest.mark.skipif(sys.platform=="win32",
+@pytest.mark.skipif(sys.platform == "win32",
                     reason="No windows symlinks")
 def test_symlink_fail():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "symlinks"))
@@ -106,7 +106,7 @@ def test_symlink_fail():
     assert error.count("Error") == 6
 
 
-@pytest.mark.skipif(sys.platform=="win32",
+@pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows doesn't show this error")
 def test_broken_conda_meta():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(fail_dir, "conda-meta"))

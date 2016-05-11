@@ -24,7 +24,6 @@ Error: could not import Crypto (required for "conda sign").
 from conda.signature import KEYS_DIR, hash_file, verify, SignatureError
 
 
-
 def keygen(name, size=2048):
     print("Generating public/private key pair (%d bits)..." % size)
     random_generator = Random.new().read

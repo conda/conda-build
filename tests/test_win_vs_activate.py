@@ -21,9 +21,9 @@ if sys.platform == "win32":
     # VC9 compiler for python - common files
     vcvars_backup_files["python_system"] = [VS_TOOLS_PY_COMMON_PATH]
 
-    vs9  = {key:vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
-    vs10 = {key:vcvars_backup_files[key] for key in ['vs10.0']}
-    vs14 = {key:vcvars_backup_files[key] for key in ['vs14.0']}
+    vs9  = {key: vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
+    vs10 = {key: vcvars_backup_files[key] for key in ['vs10.0']}
+    vs14 = {key: vcvars_backup_files[key] for key in ['vs14.0']}
 
     vcs = {"9.0": vs9, "10.0": vs10, "14.0": vs14}
 
@@ -49,15 +49,15 @@ def setup_teardown(request):
                 if os.path.exists(location):
                     os.remove(location)
                 # restore the backups
-                if os.path.exists(location[:-1]+'k'):
-                    os.rename(location[:-1]+'k', location)
+                if os.path.exists(location[:-1] + 'k'):
+                    os.rename(location[:-1] + 'k', location)
     request.addfinalizer(fin)
 
     # backup known files
     for locations in vcvars_backup_files.values():
         for location in locations:
             if os.path.exists(location):
-                os.rename(location, location[:-1]+'k')
+                os.rename(location, location[:-1] + 'k')
 
     return request
 
@@ -72,7 +72,7 @@ def bits(request):
     return request.param
 
 
-@pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
+@pytest.mark.skipif(sys.platform != "win32", reason="windows-only test")
 @pytest.mark.xfail(reason="verification of test logic", strict=True)
 def test_activation_logic(bits, compiler):
     from conda_build.windows import msvc_env_cmd
@@ -86,7 +86,7 @@ def test_activation_logic(bits, compiler):
     subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
 
 
-@pytest.mark.skipif(sys.platform!="win32", reason="windows-only test")
+@pytest.mark.skipif(sys.platform != "win32", reason="windows-only test")
 def test_activation(bits, compiler):
     write_bat_files([compiler])
     from conda_build.windows import msvc_env_cmd, VS_VERSION_STRING

@@ -35,7 +35,7 @@ class RecipeCompleter(Completer):
 
 class PythonVersionCompleter(Completer):
     def _get_items(self):
-        return ['all'] + [str(i/10) for i in all_versions['python']]
+        return ['all'] + [str(i / 10) for i in all_versions['python']]
 
 
 class NumPyVersionCompleter(Completer):

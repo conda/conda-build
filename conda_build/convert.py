@@ -160,7 +160,7 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
     (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
-    ]
+]
 
 path_mapping_unix_windows = [
     (r'lib/python{pyver}/', r'Lib/'),
@@ -169,12 +169,12 @@ path_mapping_unix_windows = [
     # which seems unlikely
     (r'bin/(.*)(\.py)', r'Scripts/\1-script.py'),
     (r'bin/(.*)', r'Scripts/\1-script.py'),
-    ]
+]
 
 path_mapping_windows_unix = [
     (r'Lib/', r'lib/python{pyver}/'),
-    (r'Scripts/', r'bin/'), # Not supported right now anyway
-    ]
+    (r'Scripts/', r'bin/'),  # Not supported right now anyway
+]
 
 pyver_re = re.compile(r'python\s+(\d.\d)')
 

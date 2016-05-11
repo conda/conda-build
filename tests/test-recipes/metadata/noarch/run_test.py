@@ -2,6 +2,8 @@ import os
 import sys
 import subprocess
 
+import noarch_test_package
+
 pkgs_dir = os.path.abspath(os.path.join(sys.prefix, '..', '..', 'pkgs'))
 pkg_dir = os.path.join(pkgs_dir, 'noarch_test_package-1.0-py_0')
 
@@ -21,7 +23,6 @@ assert prelink_win.count('\n') == prelink_win.count('\r')
 
 # Check module
 
-import noarch_test_package
 assert noarch_test_package.answer == 142
 
 # Check entry point

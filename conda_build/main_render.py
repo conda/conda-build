@@ -130,7 +130,7 @@ def set_language_env_vars(args, parser, execute=None):
         if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
             if all_versions[lang]:
                 raise RuntimeError("%s must be major.minor, like %s, not %s" %
-                    (conda_version[lang], all_versions[lang][-1]/10, version))
+                    (conda_version[lang], all_versions[lang][-1] / 10, version))
             else:
                 raise RuntimeError("%s must be major.minor, not %s" %
                     (conda_version[lang], version))
@@ -219,7 +219,7 @@ class MetaYaml(dict):
 
 
 def represent_omap(dumper, data):
-   return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
 
 
 def unicode_representer(dumper, uni):

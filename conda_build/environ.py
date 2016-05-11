@@ -83,7 +83,6 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
             # On Windows, subprocess env can't handle unicode.
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-
         remote_details = check_output(["git", "--git-dir", cache_dir, "remote", "-v"], env=env,
                                                  stderr=STDOUT)
         remote_details = remote_details.decode('utf-8')
@@ -299,7 +298,7 @@ def osx_vars(compiler_vars):
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
-    #rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
+    # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
     #d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     return {
         'OSX_ARCH': OSX_ARCH,

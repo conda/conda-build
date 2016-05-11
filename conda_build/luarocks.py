@@ -131,7 +131,7 @@ $PREFIX/bin/luarocks remove {rockname}
 """
 
 
-def getval(spec,k):
+def getval(spec, k):
     if k not in spec:
         raise Exception("Required key %s not in spec" % k)
     else:
@@ -158,13 +158,13 @@ def format_dep(dep):
         # lower case, no white-space, and prepended "lua-"
         # (all languages other than Python prepend their language to package names)
         if dep[:4] != "lua-":
-            dep = "lua-"+dep
+            dep = "lua-" + dep
     dep = dep.replace(" ", "").lower()
 
     # Ensure a space between the first special-character that specifies version logic
     # Not "-", because that's used in e.g. lua-penlight
     special_char_test = [c in "<>=~" for c in dep]
-    for i,v in enumerate(special_char_test):
+    for i, v in enumerate(special_char_test):
         if v == True:
             split_dep = [c for c in dep]
             split_dep.insert(i, " ")
@@ -208,42 +208,41 @@ def main(args, parser):
         [output_dir] = args.output_dir
         package = args.packages.pop()
 
-
-        packagename = "lua-%s" % package.lower() if package[:4] !="lua-" else package.lower()
+        packagename = "lua-%s" % package.lower() if package[:4] != "lua-" else package.lower()
         d = package_dicts.setdefault(package,
             {
                 'packagename': packagename,
-                'version' : "0.0",
-                'filename' : "",
-                'url' : "",
-                'md5' : "",
-                'usemd5' : "# ",
-                'usefile' : "# ",
-                'usegit' : "# ",
-                'usegittag' : "# ",
-                'usegitrev' : "# ",
-                'gittag' : "",
-                'gitrev' : "",
-                'noarch_python_comment' : "# ",
-                'build_depends' : "",
-                'run_depends' : "",
-                'test_comment' : "",
-                'entry_comment' : "",
-                'test_commands' : "",
-                'home_comment' : "# ",
-                'homeurl' : "",
-                'license' : "Unknown",
-                'summary_comment' : "# ",
-                'summary' : "",
+                'version': "0.0",
+                'filename': "",
+                'url': "",
+                'md5': "",
+                'usemd5': "# ",
+                'usefile': "# ",
+                'usegit': "# ",
+                'usegittag': "# ",
+                'usegitrev': "# ",
+                'gittag': "",
+                'gitrev': "",
+                'noarch_python_comment': "# ",
+                'build_depends': "",
+                'run_depends': "",
+                'test_comment': "",
+                'entry_comment': "",
+                'test_commands': "",
+                'home_comment': "# ",
+                'homeurl': "",
+                'license': "Unknown",
+                'summary_comment': "# ",
+                'summary': "",
             })
 
         # Download rockspec
-        o = subprocess.call(["luarocks","download",package,"--rockspec"])
+        o = subprocess.call(["luarocks", "download", package, "--rockspec"])
         if o != 0:
             raise Exception("Could not download rockspec for {}".format(package))
 
         # Find the downloaded rockspec
-        fs = glob(package+"*.rockspec")
+        fs = glob(package + "*.rockspec")
         if len(fs) != 1:
             raise Exception("Failed to download rockspec")
         d['rockspec_file'] = fs[0]
@@ -264,7 +263,7 @@ def main(args, parser):
         # Figure out how to download the package, and from where
         d['url'] = getval(source, "url")
         ext = os.path.splitext(d['url'])[-1]
-        if ext in [".zip",".tar",".tar.bz2",".tar.xz",".tar.gz"]:
+        if ext in [".zip", ".tar", ".tar.bz2", ".tar.xz", ".tar.gz"]:
             d['usefile'] = ""
             d['filename'] = os.path.split(d['url'])[-1]
             if "md5" in source:
@@ -304,7 +303,7 @@ def main(args, parser):
             deps = getval(spec, "dependencies")
             if len(deps):
                 deps = ensure_base_deps([format_dep(dep) for dep in deps])
-                d['build_depends'] =  INDENT.join([''] + deps)
+                d['build_depends'] = INDENT.join([''] + deps)
                 d['run_depends'] = d['build_depends']
 
     # Build some entry-point tests.
@@ -322,8 +321,8 @@ def main(args, parser):
                 if "modules" in spec['build']['platforms'][our_plat]:
                     modules = spec['build']['platforms'][our_plat]["modules"]
         if modules:
-            d['test_commands'] =  INDENT.join([''] + \
-                            ["""lua -e "require '%s'\"""" % r \
+            d['test_commands'] =  INDENT.join([''] +
+                            ["""lua -e "require '%s'\"""" % r
                             for r in modules.keys()])
 
     # If we didn't find any modules to import, import the base name
@@ -336,7 +335,7 @@ def main(args, parser):
         d = package_dicts[package]
         name = d['packagename']
         os.makedirs(os.path.join(output_dir, name))
-        print("Writing recipe for %s to %s" % (package.lower(),os.path.join(output_dir,name)))
+        print("Writing recipe for %s to %s" % (package.lower(), os.path.join(output_dir, name)))
         with open(os.path.join(output_dir, name, 'meta.yaml'), 'w') as f:
             f.write(LUAROCKS_META.format(**d))
         with open(os.path.join(output_dir, name, 'build.sh'), 'w') as f:

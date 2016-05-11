@@ -245,7 +245,7 @@ def remove_package_line_continuations(chunk):
                 chunk[i] = None
             else:
                 accumulating_continuations = True
-                continued_ix = i-1
+                continued_ix = i - 1
                 continued_line = chunk[continued_ix] + line
                 had_continuation = True
                 chunk[i] = None
@@ -259,7 +259,7 @@ def remove_package_line_continuations(chunk):
 
     if had_continuation:
         # Remove the None(s).
-        chunk = [ c for c in chunk if c ]
+        chunk = [c for c in chunk if c ]
 
     chunk.append('')
 
@@ -343,7 +343,7 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
     r = session.get(cran_url + "src/contrib/PACKAGES")
     r.raise_for_status()
     PACKAGES = r.text
-    package_list =  [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
+    package_list = [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
     return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
         package_list)}
 
@@ -365,13 +365,11 @@ def main(args, parser):
         for pkg in args.packages:
             rm_rf(join(args.output_dir[0], 'r-' + pkg))
 
-
     while args.packages:
         package = args.packages.pop()
 
         is_github_url = 'github.com' in package
         url = package
-
 
         if is_github_url:
             rm_rf(source.WORK_DIR)
@@ -589,8 +587,8 @@ def main(args, parser):
         d = package_dicts[package]
         name = d['packagename']
 
-        #Normalize the metadata values
-        d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore').decode() for k, v in compat.iteritems(d)}
+        # Normalize the metadata values
+        d = {k: unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore').decode() for k, v in compat.iteritems(d)}
 
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())

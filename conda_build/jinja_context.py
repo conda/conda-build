@@ -27,14 +27,14 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
 
         import setuptools
         import distutils.core
-        #Add current directory to path
+        # Add current directory to path
         import sys
         sys.path.append('.')
 
         if from_recipe_dir and recipe_dir:
             setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
 
-        #Patch setuptools, distutils
+        # Patch setuptools, distutils
         setuptools_setup = setuptools.setup
         distutils_setup = distutils.core.setup
         setuptools.setup = distutils.core.setup = setup

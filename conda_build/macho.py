@@ -83,7 +83,7 @@ def is_rpath(lines):
 
 def _get_load_commands(lines):
     """yields each load command from the output of otool -l"""
-    a = 1 # first line is the filename.
+    a = 1  # first line is the filename.
     for ln, line in enumerate(lines):
         if line.startswith("Load command"):
             if a < ln:

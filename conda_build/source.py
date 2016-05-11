@@ -58,7 +58,7 @@ def download_to_cache(meta):
             else:
                 print("Success")
                 break
-        else: # no break
+        else:  # no break
             raise RuntimeError("Could not download %s" % fn)
 
     for tp in 'md5', 'sha1', 'sha256':
@@ -76,7 +76,7 @@ def unpack(meta):
     os.makedirs(WORK_DIR)
     print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
-        '.tar', 'tar.z')):
+            '.tar', 'tar.z')):
         tar_xf(src_path, WORK_DIR)
     elif src_path.lower().endswith('.zip'):
         unzip(src_path, WORK_DIR)
@@ -130,7 +130,7 @@ def git_source(meta, recipe_dir):
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
 
-        check_call(args + [git_url, cache_repo_arg],  cwd=recipe_dir)
+        check_call(args + [git_url, cache_repo_arg], cwd=recipe_dir)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -210,7 +210,6 @@ def hg_source(meta):
     return WORK_DIR
 
 
-
 def svn_source(meta):
     ''' Download a source from SVN repo. '''
     def parse_bool(s):
@@ -267,14 +266,13 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
     patch_args = ['-p0', '-i', path]
     if sys.platform == 'win32':
-        patch_args[-1] =  _ensure_unix_line_endings(path)
+        patch_args[-1] = _ensure_unix_line_endings(path)
     try:
         check_call([patch] + patch_args, cwd=src_dir)
     except CalledProcessError:
         sys.exit(1)
     if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
         os.remove(patch_args[-1])  # clean up .patch_unix file
-
 
 
 def provide(recipe_dir, meta, patch=True):
@@ -297,7 +295,7 @@ def provide(recipe_dir, meta, patch=True):
     elif 'path' in meta:
         print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
         copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
-    else: # no source
+    else:  # no source
         os.makedirs(WORK_DIR)
 
     if patch:

@@ -13,28 +13,33 @@ import subprocess
 import sys
 from collections import defaultdict
 from os import makedirs, listdir, getcwd, chdir
-from os.path import join, isdir, exists, isfile
+from os.path import join, isdir, exists, isfile, abspath
 from tempfile import mkdtemp
 from shutil import copy2
+
+from requests.packages.urllib3.util.url import parse_url
+import yaml
+
+from conda.cli.common import spec_from_line
+from conda.compat import input, configparser, StringIO, string_types, PY3
+from conda.config import get_proxy_servers
+from conda.connection import CondaSession
+from conda.fetch import (download, handle_proxy_407)
+from conda.install import rm_rf
+from conda.resolve import normalized_version
+from conda.utils import human_bytes, hashsum_file
+
+from conda_build.utils import tar_xf, unzip
+from conda_build.source import SRC_CACHE, apply_patch
+from conda_build.build import create_env
+from conda_build.config import config
+from conda_build.metadata import MetaData
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy, Transport, ProtocolError
 else:
     from xmlrpc.client import ServerProxy, Transport, ProtocolError
 
-from conda.fetch import (download, handle_proxy_407)
-from conda.connection import CondaSession
-from conda.utils import human_bytes, hashsum_file
-from conda.install import rm_rf
-from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import get_proxy_servers
-from conda.cli.common import spec_from_line
-from conda_build.utils import tar_xf, unzip
-from conda_build.source import SRC_CACHE, apply_patch
-from conda_build.build import create_env
-from conda_build.config import config
-
-from requests.packages.urllib3.util.url import parse_url
 
 PYPI_META = """\
 package:
@@ -200,7 +205,7 @@ class RequestsTransport(Transport):
             resp.raise_for_status()
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 407: # Proxy Authentication Required
+            if e.response.status_code == 407:  # Proxy Authentication Required
                 handle_proxy_407(url, self.session)
                 # Try again
                 return self.request(host, handler, request_body, verbose)
@@ -212,7 +217,7 @@ class RequestsTransport(Transport):
             # error and http gives the above error. Also, there is no status_code
             # attribute here. We have to just check if it looks like 407.  See
             # https://github.com/kennethreitz/requests/issues/2061.
-            if "407" in str(e): # Proxy Authentication Required
+            if "407" in str(e):  # Proxy Authentication Required
                 handle_proxy_407(url, self.session)
                 # Try again
                 return self.request(host, handler, request_body, verbose)
@@ -441,9 +446,6 @@ def version_compare(args, package, versions):
         # to a method in main() to take care of that.
         return
 
-    from os.path import abspath, isdir
-    from conda_build.metadata import MetaData
-    from conda.resolve import normalized_version
     nv = normalized_version
 
     norm_versions = [nv(ver) for ver in versions]
@@ -547,7 +549,7 @@ def get_package_metadata(args, package, d, data):
             for dep in deptext:
                 #... and may also contain comments...
                 dep = dep.split('#')[0].strip()
-                if dep: #... and empty (or comment only) lines
+                if dep:  # ... and empty (or comment only) lines
                     spec = spec_from_line(dep)
                     if spec is None:
                         sys.exit("Error: Could not parse: %s" % dep)
@@ -721,7 +723,6 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
     # and "fake" distribute/setuptools's setup() function to get this
     # information from setup.py. If this sounds evil, keep in mind that
     # distribute itself already works by monkeypatching distutils.
-    import yaml
     tempdir = mkdtemp('conda_skeleton_' + filename)
 
     if not isdir(SRC_CACHE):
@@ -772,7 +773,7 @@ def run_setuppy(src_dir, temp_dir, python_version):
 
     patch = join(temp_dir, 'pypi-distutils.patch')
     with open(patch, 'w') as f:
-        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\','\\\\')))
+        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\', '\\\\')))
 
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))

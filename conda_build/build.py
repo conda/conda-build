@@ -144,7 +144,7 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     # Save as
     with open(path, 'wb') as fo:
         fo.write(data)
-    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+    os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
     return data
 
 
@@ -313,7 +313,7 @@ def create_env(prefix, specs, clear_cache=True):
         if not isdir(d):
             os.makedirs(d)
         update_index(d)
-    if specs: # Don't waste time if there is nothing to do
+    if specs:  # Don't waste time if there is nothing to do
         index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
@@ -382,7 +382,7 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
     '''
 
     if (m.get_value('build/detect_binary_files_with_prefix')
-        or m.binary_has_prefix_files()):
+            or m.binary_has_prefix_files()):
         # We must use a long prefix here as the package will only be
         # installable into prefixes shorter than this one.
         config.use_long_build_prefix = True
@@ -449,7 +449,7 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                 # dependencies.
                 _old_path = os.environ['PATH']
                 try:
-                    os.environ['PATH'] = prepend_bin_path({'PATH' : _old_path}, config.build_prefix)['PATH']
+                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path}, config.build_prefix)['PATH']
                     source.provide(m.path, m.get_section('source'))
                 finally:
                     os.environ['PATH'] = _old_path
@@ -525,7 +525,7 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
             # The post processing may have deleted some files (like easy-install.pth)
             files2 = prefix_files()
             if any(config.meta_dir in join(config.build_prefix, f) for f in
-                files2 - files1):
+                    files2 - files1):
                 sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
     usually comes from using conda in the build script.  Avoid doing this, as it
     can lead to packages that include their dependencies.""" %
@@ -677,7 +677,6 @@ def test(m, move_broken=True):
                                     env=env, cwd=tmp_dir)
             except subprocess.CalledProcessError:
                 tests_failed(m)
-
 
         if shell_files:
             if sys.platform == 'win32':

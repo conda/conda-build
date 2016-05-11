@@ -126,7 +126,7 @@ all.""" ,
     args_func(args, p)
 
 
-path_mapping = [# (unix, windows)
+path_mapping = [  # (unix, windows)
                 ('lib/python{pyver}', 'Lib'),
                 ('bin', 'Scripts')]
 

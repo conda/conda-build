@@ -97,7 +97,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
-                in walk_prefix(egg_path, False, windows_forward_slashes=False)):
+                    in walk_prefix(egg_path, False, windows_forward_slashes=False)):
                 write_pth(egg_path)
                 continue
 
@@ -173,7 +173,7 @@ def find_lib(link, path=None):
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
-    if link.startswith('/'): # but doesn't start with the build prefix
+    if link.startswith('/'):  # but doesn't start with the build prefix
         return
     if link.startswith('@rpath/'):
         # Assume the rpath already points to lib, so there is no need to
@@ -316,7 +316,7 @@ def fix_permissions(files):
     for f in files:
         path = join(config.build_prefix, f)
         st = os.lstat(path)
-        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
 
 
 def post_build(m, files):

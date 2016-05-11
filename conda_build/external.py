@@ -20,7 +20,7 @@ def find_executable(executable):
                     ]
     else:
         dir_paths = [join(config.build_prefix, 'bin'),
-                     join(cc.root_dir, 'bin'),]
+                     join(cc.root_dir, 'bin'), ]
 
     dir_paths.extend(os.environ['PATH'].split(os.pathsep))
 

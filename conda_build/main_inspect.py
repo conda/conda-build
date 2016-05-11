@@ -53,13 +53,13 @@ libraries that ought to be dependent conda packages.  """
         # inspect linkages -h
         help=linkages_help,
         description=linkages_help,
-        )
+    )
     linkages.add_argument(
         'packages',
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer=InstalledPackages
+    ).completer = InstalledPackages
     linkages.add_argument(
         '--untracked',
         action='store_true',
@@ -96,13 +96,13 @@ package.
         "objects",
         help=objects_help,
         description=objects_help,
-        )
+    )
     objects.add_argument(
         'packages',
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer=InstalledPackages
+    ).completer = InstalledPackages
     objects.add_argument(
         '--untracked',
         action='store_true',
@@ -131,13 +131,13 @@ Tools for investigating conda channels.
         "channels",
         help=channels_help,
         description=channels_help,
-        )
+    )
     channels.add_argument(
         '--verbose',
         action='store_true',
         help="""Show verbose output. Note that error output to stderr will
         always be shown regardless of this flag. """,
-        )
+    )
     channels.add_argument(
         '--test-installable', '-t',
         action='store_true',
@@ -149,7 +149,7 @@ Tools for investigating conda channels.
         nargs='?',
         default="defaults",
         help="The channel to test. The default is %(default)s."
-        )
+    )
 
     p.set_defaults(func=execute)
     args = p.parse_args()
@@ -291,7 +291,6 @@ def execute(args, parser):
     if args.untracked:
         args.packages.append(untracked_package)
 
-
     if args.subcommand == 'linkages':
         pkgmap = {}
         for pkg in args.packages:
@@ -340,7 +339,7 @@ def execute(args, parser):
         if args.groupby == 'package':
             for pkg in args.packages:
                 print(pkg)
-                print('-'*len(str(pkg)))
+                print('-' * len(str(pkg)))
                 print()
 
                 print_linkages(pkgmap[pkg], show_files=args.show_files)
@@ -356,7 +355,7 @@ def execute(args, parser):
             k = sorted(set(inverted_map.keys()) - {'system', 'not found'})
             for dep in k + ['system', 'not found']:
                 print(dep)
-                print('-'*len(str(dep)))
+                print('-' * len(str(dep)))
                 print()
 
                 print_linkages(inverted_map[dep], show_files=args.show_files)
@@ -376,7 +375,7 @@ def execute(args, parser):
                     sys.exit("Package %s is not installed in %s" % (pkg, prefix))
 
             print(pkg)
-            print('-'*len(str(pkg)))
+            print('-' * len(str(pkg)))
             print()
 
             if not sys.platform.startswith('darwin'):

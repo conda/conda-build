@@ -58,7 +58,7 @@ def get_linkages(obj_files, prefix):
 @memoized
 def get_package_obj_files(dist, prefix):
     with open(join(prefix, 'conda-meta', dist +
-        '.json')) as f:
+            '.json')) as f:
         data = json.load(f)
 
     res = []

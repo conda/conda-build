@@ -92,7 +92,7 @@ class CondaDistribution(Distribution):
         'conda_preserve_egg_dir': None,
         'conda_features': None,
         'conda_track_features': None,
-        }
+    }
 
     def __init__(self, attrs=None):
         given_attrs = {}
@@ -244,8 +244,8 @@ class bdist_conda(install):
                     d['test']['imports'] = metadata.conda_import_tests
 
             if (metadata.conda_command_tests and not
-                isinstance(metadata.conda_command_tests,
-                bool)):
+                    isinstance(metadata.conda_command_tests,
+                    bool)):
                 d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
             d = dict(d)
@@ -285,6 +285,6 @@ bdist_conda.user_options.extend([
     setup() function. The command line flag overrides the option to
     setup().''')),
     (str('anaconda-upload'), None, ("""Upload the finished package to anaconda.org""")),
-    ])
+])
 
 bdist_conda.boolean_options.extend([str('anaconda-upload')])

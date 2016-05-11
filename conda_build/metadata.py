@@ -104,7 +104,7 @@ def yamlize(data):
         if '{{' in data:
             try:
                 import jinja2
-                jinja2 # Avoid pyflakes failure: 'jinja2' imported but unused
+                jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
             except ImportError:
                 raise exceptions.UnableToParseMissingJinja2(original=e)
         raise exceptions.UnableToParse(original=e)
@@ -160,8 +160,6 @@ def parse(data, path=None):
         if not isinstance(res[field], dict):
             raise RuntimeError("The %s field should be a dict, not %s in file %s." %
                                (field, res[field].__class__.__name__, path))
-
-
 
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
@@ -269,15 +267,15 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'script_env',
               'detect_binary_files_with_prefix', 'rpaths',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends' # pin_depends is experimental still
+              'pin_depends'  # pin_depends is experimental still
              ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports'],
-    'about': ['home', 'dev_url', 'doc_url', 'license_url', # these are URLs
-              'license', 'summary', 'description', 'license_family', # text
-              'license_file', 'readme', # paths in source tree
+    'about': ['home', 'dev_url', 'doc_url', 'license_url',  # these are URLs
+              'license', 'summary', 'description', 'license_family',  # text
+              'license_file', 'readme',  # paths in source tree
              ],
 }
 
@@ -305,7 +303,7 @@ def handle_config_version(ms, ver):
             if ver is None:
                 raise RuntimeError("'%s' requires external setting" % ms.spec)
             # (no return here - proceeds below)
-        else: # regular version
+        else:  # regular version
             return ms
 
     if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
@@ -601,7 +599,7 @@ class MetaData(object):
         from conda_build.jinja_context import context_processor
 
         path, filename = os.path.split(self.meta_path)
-        loaders = [# search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
+        loaders = [  # search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
                    jinja2.PackageLoader('conda_build'),
                    # search relative to RECIPE_DIR
                    jinja2.FileSystemLoader(path)
@@ -611,7 +609,7 @@ class MetaData(object):
         conda_env_path = os.environ.get('CONDA_DEFAULT_ENV')  # path to current conda environment
         if conda_env_path and os.path.isdir(conda_env_path):
             conda_env_path = os.path.abspath(conda_env_path)
-            conda_env_path = conda_env_path.replace('\\', '/') # need unix-style path
+            conda_env_path = conda_env_path.replace('\\', '/')  # need unix-style path
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 

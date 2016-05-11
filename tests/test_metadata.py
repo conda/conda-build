@@ -36,15 +36,15 @@ class HandleConfigVersionTests(unittest.TestCase):
 
     def test_python(self):
         for spec, ver, res_spec in [
-            ('python',       '3.4', 'python 3.4*'),
-            ('python 2.7.8', '2.7', 'python 2.7.8'),
-            ('python 2.7.8', '3.5', 'python 2.7.8'),
-            ('python 2.7.8', None,  'python 2.7.8'),
-            ('python',       None,  'python'),
-            ('python x.x',   '2.7', 'python 2.7*'),
-            ('python',       '27',  'python 2.7*'),
-            ('python',        27,   'python 2.7*'),
-            ]:
+                ('python', '3.4', 'python 3.4*'),
+                ('python 2.7.8', '2.7', 'python 2.7.8'),
+                ('python 2.7.8', '3.5', 'python 2.7.8'),
+                ('python 2.7.8', None, 'python 2.7.8'),
+                ('python', None, 'python'),
+                ('python x.x', '2.7', 'python 2.7*'),
+                ('python', '27', 'python 2.7*'),
+                ('python', 27, 'python 2.7*'),
+        ]:
             ms = MatchSpec(spec)
             self.assertEqual(handle_config_version(ms, ver),
                              MatchSpec(res_spec))
@@ -55,14 +55,14 @@ class HandleConfigVersionTests(unittest.TestCase):
 
     def test_numpy(self):
         for spec, ver, res_spec in [
-            ('numpy',        None,  'numpy'),
-            ('numpy',        18,    'numpy'),
-            ('numpy',        110,   'numpy'),
-            ('numpy x.x',    17,    'numpy 1.7*'),
-            ('numpy x.x',    110,   'numpy 1.10*'),
-            ('numpy 1.9.1',  18,    'numpy 1.9.1'),
-            ('numpy 1.9.0 py27_2', None,  'numpy 1.9.0 py27_2'),
-            ]:
+                ('numpy', None, 'numpy'),
+                ('numpy', 18, 'numpy'),
+                ('numpy', 110, 'numpy'),
+                ('numpy x.x', 17, 'numpy 1.7*'),
+                ('numpy x.x', 110, 'numpy 1.10*'),
+                ('numpy 1.9.1', 18, 'numpy 1.9.1'),
+                ('numpy 1.9.0 py27_2', None, 'numpy 1.9.0 py27_2'),
+        ]:
             ms = MatchSpec(spec)
             self.assertEqual(handle_config_version(ms, ver),
                              MatchSpec(res_spec))
