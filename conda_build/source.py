@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from os.path import join, isdir, isfile, abspath, expanduser
+from os.path import join, isdir, isfile, abspath, expanduser, basename
 from shutil import copytree, copy2
 from subprocess import check_call, Popen, PIPE, CalledProcessError
 import locale
@@ -39,9 +39,8 @@ def download_to_cache(meta):
     if not isdir(SRC_CACHE):
         os.makedirs(SRC_CACHE)
 
-    fn = meta['fn']
+    fn = meta['fn'] if 'fn' in meta else basename(meta['url'])
     path = join(SRC_CACHE, fn)
-
     if isfile(path):
         print('Found source in cache: %s' % fn)
     else:
@@ -284,7 +283,7 @@ def provide(recipe_dir, meta, patch=True):
     """
     print("Removing old work directory")
     rm_rf(WORK_DIR)
-    if 'fn' in meta:
+    if any(k in meta for k in ('fn', 'url')):
         unpack(meta)
     elif 'git_url' in meta:
         git_source(meta, recipe_dir)
