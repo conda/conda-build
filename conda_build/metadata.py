@@ -595,8 +595,7 @@ class MetaData(object):
             import jinja2
         except ImportError:
             print("There was an error importing jinja2.", file=sys.stderr)
-            print("Please run `conda install jinja2` to enable jinja template support",
-                  file=sys.stderr)
+            print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr) # noqa
             with open(self.meta_path) as fd:
                 return fd.read()
 
