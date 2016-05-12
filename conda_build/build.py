@@ -240,6 +240,15 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(config.info_dir, 'index.json'), 'w') as fo:
         json.dump(info_index, fo, indent=2, sort_keys=True)
 
+    with open(join(config.info_dir, 'about.json'), 'w') as fo:
+        d = {}
+        for key in ('home', 'dev_url', 'doc_url', 'license_url',
+                    'license', 'summary', 'description', 'license_family'):
+            value = m.get_value('about/%s' % key)
+            if value:
+                d[key] = value
+        json.dump(d, fo, indent=2, sort_keys=True)
+
     if include_recipe:
         with open(join(config.info_dir, 'recipe.json'), 'w') as fo:
             json.dump(m.meta, fo, indent=2, sort_keys=True)
