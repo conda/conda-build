@@ -267,7 +267,8 @@ def execute(args, parser):
                     "configuration." % m.dist())
             continue
         if args.skip_existing:
-            if m.pkg_fn() in index or m.pkg_fn() in already_built:
+            # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
+            if 'local::' + m.pkg_fn() in index or m.pkg_fn() in index or m.pkg_fn() in already_built:
                 print(m.dist(), "is already built, skipping.")
                 continue
         if args.output:
