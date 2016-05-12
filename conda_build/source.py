@@ -283,7 +283,12 @@ def provide(recipe_dir, meta, patch=True):
       - apply patches (if any)
     """
     print("Removing old work directory")
-    rm_rf(WORK_DIR)
+    if sys.platform == 'win32':
+        if isdir(WORK_DIR):
+            move_to_trash(WORK_DIR, '')
+    else:
+        rm_rf(WORK_DIR)
+
     if 'fn' in meta:
         unpack(meta)
     elif 'git_url' in meta:

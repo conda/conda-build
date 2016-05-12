@@ -420,18 +420,25 @@ def build(m, post=None, include_recipe=True, keep_old_work=False):
             else:
                 rm_rf(config.short_build_prefix)
                 rm_rf(config.long_build_prefix)
-            print("Removing old work directory")
-            if on_win:
-                if isdir(source.WORK_DIR):
-                    move_to_trash(source.WORK_DIR, '')
-            else:
-                rm_rf(source.WORK_DIR)
 
             # Display the name only
             # Version number could be missing due to dependency on source info.
             print("BUILD START:", m.dist())
             create_env(config.build_prefix,
                     [ms.spec for ms in m.ms_depends('build')])
+
+            # Execute any commands fetching the source (e.g., git) in the _build environment.
+            # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+            # dependencies.
+            _old_path = os.environ['PATH']
+            try:
+                os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
+                                                        config.build_prefix)['PATH']
+                print(os.environ['PATH'])
+                source.provide(m.path, m.get_section('source'))
+            finally:
+                os.environ['PATH'] = _old_path
+
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %

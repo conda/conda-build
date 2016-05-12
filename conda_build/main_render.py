@@ -10,6 +10,7 @@ import sys
 from locale import getpreferredencoding
 import os
 from os.path import isdir, isfile, abspath
+import subprocess
 
 import yaml
 
@@ -149,17 +150,13 @@ def set_language_env_vars(args, parser, execute=None):
 
 def parse_or_try_download(metadata, no_download_source):
     if not no_download_source:
-        # Execute any commands fetching the source (e.g., git) in the _build environment.
-        # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
-        # dependencies.
-        _old_path = os.environ['PATH']
+        # this try/catch is for when the tool to download source is actually in
+        #    meta.yaml, and not previously installed in builder env.
         try:
-            os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                    config.build_prefix)['PATH']
             source.provide(metadata.path, metadata.get_section('source'))
-        finally:
-            os.environ['PATH'] = _old_path
-
+        except subprocess.CalledProcessError:
+            print("Warning: failed to download source.  If building, will try "
+                  "again after downloading recipe dependencies.")
     metadata.parse_again(permit_undefined_jinja=False)
     return metadata
 
