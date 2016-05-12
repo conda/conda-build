@@ -274,6 +274,8 @@ def execute(args, parser):
             print(get_package_build_path(m, no_download_source=False))
             continue
         elif args.test:
+            # ensure that source code present matches the code in the recipe
+            source.provide(m.path, m.get_section('source'))
             build.test(m, move_broken=False)
         elif args.source:
             source.provide(m.path, m.get_section('source'))
