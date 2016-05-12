@@ -8,6 +8,7 @@ from subprocess import check_call, Popen, PIPE, CalledProcessError
 import locale
 
 from conda.fetch import download
+from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
 from conda_build import external
