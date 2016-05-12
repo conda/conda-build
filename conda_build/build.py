@@ -369,14 +369,12 @@ def bldpkg_path(m):
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
+def build(m, post=None, include_recipe=True, keep_old_work=False):
     '''
     Build the package with the specified metadata.
 
     :param m: Package metadata
     :type m: Metadata
-    :param get_src: Should we download the source?
-    :type get_src: bool
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     :type keep_old_work: bool: Keep any previous work directory.
@@ -443,18 +441,6 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                 assert not plan.nothing_to_do(actions), actions
                 plan.display_actions(actions, index)
                 plan.execute_actions(actions, index)
-
-            if get_src:
-                # Execute any commands fetching the source (e.g., git) in the _build environment.
-                # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
-                # dependencies.
-                _old_path = os.environ['PATH']
-                try:
-                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                          config.build_prefix)['PATH']
-                    source.provide(m.path, m.get_section('source'))
-                finally:
-                    os.environ['PATH'] = _old_path
 
             print("Package:", m.dist())
 

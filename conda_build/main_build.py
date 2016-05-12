@@ -20,11 +20,11 @@ from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
+from conda_build.build import bldpkg_path
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import (get_package_build_path, set_language_env_vars,
-                                     RecipeCompleter, render_recipe)
+from conda_build.main_render import (set_language_env_vars, RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
 
@@ -271,11 +271,9 @@ def execute(args, parser):
                 print(m.dist(), "is already built, skipping.")
                 continue
         if args.output:
-            print(get_package_build_path(m, no_download_source=False))
+            print(bldpkg_path(m))
             continue
         elif args.test:
-            # ensure that source code present matches the code in the recipe
-            source.provide(m.path, m.get_section('source'))
             build.test(m, move_broken=False)
         elif args.source:
             source.provide(m.path, m.get_section('source'))

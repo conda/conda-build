@@ -19,7 +19,9 @@ from conda.cli.common import add_parser_channels
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__, exceptions
+from conda_build.build import bldpkg_path
 from conda_build.metadata import MetaData
+from conda_build.scripts import prepend_bin_path
 import conda_build.source as source
 from conda_build.completers import (all_versions, conda_version, RecipeCompleter,
                                     PythonVersionCompleter, RVersionsCompleter,
@@ -145,24 +147,24 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def parse_or_try_download(metadata, no_download_source=True):
-    try:
-        metadata.parse_again(permit_undefined_jinja=False)
-    except SystemExit:
-        if not no_download_source:
-            # Something went wrong; possibly due to undefined GIT_ jinja variables.
-            # Maybe we need to actually download the source in order to resolve the build_id.
+def parse_or_try_download(metadata, no_download_source):
+    if not no_download_source:
+        # Execute any commands fetching the source (e.g., git) in the _build environment.
+        # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+        # dependencies.
+        _old_path = os.environ['PATH']
+        try:
+            os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
+                                                    config.build_prefix)['PATH']
             source.provide(metadata.path, metadata.get_section('source'))
+        finally:
+            os.environ['PATH'] = _old_path
 
-            # Parse our metadata again because we did not initialize the source
-            # information before.
-            metadata.parse_again(permit_undefined_jinja=False)
-        else:
-            raise
+    metadata.parse_again(permit_undefined_jinja=False)
     return metadata
 
 
-def render_recipe(recipe_path, no_download_source=True):
+def render_recipe(recipe_path, no_download_source):
     import shutil
     import tarfile
     import tempfile
@@ -203,12 +205,6 @@ def render_recipe(recipe_path, no_download_source=True):
             shutil.rmtree(recipe_dir)
 
     return m
-
-
-def get_package_build_path(metadata, no_download_source):
-    import conda_build.build as build
-    metadata = parse_or_try_download(metadata, no_download_source=no_download_source)
-    return build.bldpkg_path(metadata)
 
 
 # Next bit of stuff is to support YAML output in the order we expect.
@@ -264,7 +260,7 @@ def main():
 
     metadata = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source)
     if args.output:
-        print(get_package_build_path(metadata, args.no_source))
+        print(bldpkg_path(metadata))
     else:
         output = yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
                             default_flow_style=False, indent=4)
