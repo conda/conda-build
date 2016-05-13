@@ -270,7 +270,8 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # this fully renders any jinja templating, throwing an error if any data is missing
-        m, need_source_download = render_recipe(recipe_dir, no_download_source=False)
+        m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
+                                                hide_download_output=args.output)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 

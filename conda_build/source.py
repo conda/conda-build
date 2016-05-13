@@ -7,6 +7,7 @@ from shutil import copytree, copy2
 from subprocess import check_call, Popen, PIPE, CalledProcessError
 import locale
 
+from conda.compat import StringIO
 from conda.fetch import download
 from conda.install import move_to_trash
 from conda.utils import hashsum_file
@@ -69,12 +70,13 @@ def download_to_cache(meta):
     return path
 
 
-def unpack(meta):
+def unpack(meta, hide_output=False):
     ''' Uncompress a downloaded source. '''
     src_path = download_to_cache(meta)
 
     os.makedirs(WORK_DIR)
-    print("Extracting download")
+    if not hide_output:
+        print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
             '.tar', 'tar.z')):
         tar_xf(src_path, WORK_DIR)
@@ -82,12 +84,20 @@ def unpack(meta):
         unzip(src_path, WORK_DIR)
     else:
         # In this case, the build script will need to deal with unpacking the source
-        print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
+        if not hide_output:
+            print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
         copy2(src_path, WORK_DIR)
 
 
-def git_source(meta, recipe_dir):
+def git_source(meta, recipe_dir, hide_output=False):
     ''' Download a source from Git repo. '''
+    if hide_output:
+        stdout=StringIO()
+        stderr=StringIO()
+    else:
+        stdout=None
+        stderr=None
+
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
 
@@ -113,7 +123,7 @@ def git_source(meta, recipe_dir):
     # update (or create) the cache repo
     if isdir(cache_repo):
         if meta.get('git_rev', 'HEAD') != 'HEAD':
-            check_call([git, 'fetch'], cwd=cache_repo)
+            check_call([git, 'fetch'], cwd=cache_repo, stdout=stdout, stderr=stderr)
         else:
             # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
             # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -122,15 +132,15 @@ def git_source(meta, recipe_dir):
             # but the user is working with a branch other than 'master' without
             # explicitly providing git_rev.
             check_call([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
-                       cwd=cache_repo)
+                       cwd=cache_repo, stdout=stdout, stderr=stderr)
             check_call([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
-                       cwd=cache_repo)
+                       cwd=cache_repo, stdout=stdout, stderr=stderr)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
 
-        check_call(args + [git_url, cache_repo_arg], cwd=recipe_dir)
+        check_call(args + [git_url, cache_repo_arg], cwd=recipe_dir, stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -146,9 +156,9 @@ def git_source(meta, recipe_dir):
     if checkout:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR])
+    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR], stdout=stdout, stderr=stderr)
     if checkout:
-        check_call([git, 'checkout', checkout], cwd=WORK_DIR)
+        check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout, stderr=stderr)
 
     git_info()
     return WORK_DIR
@@ -185,8 +195,15 @@ def git_info(fo=None):
             safe_print_unicode(stdout + u'\n')
 
 
-def hg_source(meta):
+def hg_source(meta, hide_output=False):
     ''' Download a source from Mercurial repo. '''
+    if hide_output:
+        stdout=StringIO()
+        stderr=StringIO()
+    else:
+        stdout=None
+        stderr=None
+
     hg = external.find_executable('hg')
     if not hg:
         sys.exit('Error: hg not installed')
@@ -196,22 +213,29 @@ def hg_source(meta):
     hg_dn = hg_url.split(':')[-1].replace('/', '_')
     cache_repo = join(HG_CACHE, hg_dn)
     if isdir(cache_repo):
-        check_call([hg, 'pull'], cwd=cache_repo)
+        check_call([hg, 'pull'], cwd=cache_repo, stdout=stdout, stderr=stderr)
     else:
-        check_call([hg, 'clone', hg_url, cache_repo])
+        check_call([hg, 'clone', hg_url, cache_repo], stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now clone in to work directory
     update = meta.get('hg_tag') or 'tip'
     print('checkout: %r' % update)
 
-    check_call([hg, 'clone', cache_repo, WORK_DIR])
-    check_call([hg, 'update', '-C', update], cwd=WORK_DIR)
+    check_call([hg, 'clone', cache_repo, WORK_DIR], stdout=stdout, stderr=stderr)
+    check_call([hg, 'update', '-C', update], cwd=WORK_DIR, stdout=stdout, stderr=stderr)
     return WORK_DIR
 
 
-def svn_source(meta):
+def svn_source(meta, hide_output=False):
     ''' Download a source from SVN repo. '''
+    if hide_output:
+        stdout=StringIO()
+        stderr=StringIO()
+    else:
+        stdout=None
+        stderr=None
+
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
 
@@ -230,10 +254,11 @@ def svn_source(meta):
     else:
         extra_args = []
     if isdir(cache_repo):
-        check_call([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo)
+        check_call([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo,
+                   stdout=stdout, stderr=stderr)
     else:
-        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url,
-                                                                   cache_repo])
+        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo],
+                   stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now copy into work directory
@@ -275,14 +300,20 @@ Error:
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
-def provide(recipe_dir, meta, patch=True):
+def provide(recipe_dir, meta, hide_output=False, patch=True):
     """
     given a recipe_dir:
       - download (if necessary)
       - unpack
       - apply patches (if any)
     """
-    print("Removing old work directory")
+    # temporarily catch output to stdout and stderr
+    if hide_output:
+        stdout = sys.stdout
+        stderr = sys.stderr
+        sys.stdout = StringIO()
+        sys.stderr = StringIO()
+
     if sys.platform == 'win32':
         if isdir(WORK_DIR):
             move_to_trash(WORK_DIR, '')
@@ -292,13 +323,14 @@ def provide(recipe_dir, meta, patch=True):
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta)
     elif 'git_url' in meta:
-        git_source(meta, recipe_dir)
+        git_source(meta, recipe_dir, hide_output=hide_output)
     elif 'hg_url' in meta:
-        hg_source(meta)
+        hg_source(meta, hide_output=hide_output)
     elif 'svn_url' in meta:
-        svn_source(meta)
+        svn_source(meta, hide_output=hide_output)
     elif 'path' in meta:
-        print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
+        if not hide_output:
+            print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
         copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
     else:  # no source
         os.makedirs(WORK_DIR)
@@ -307,6 +339,11 @@ def provide(recipe_dir, meta, patch=True):
         src_dir = get_dir()
         for patch in meta.get('patches', []):
             apply_patch(src_dir, join(recipe_dir, patch))
+
+    # restore outputs
+    if hide_output:
+        sys.stdout = stdout
+        sys.stderr = stderr
 
 
 if __name__ == '__main__':

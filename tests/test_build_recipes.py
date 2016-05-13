@@ -6,6 +6,11 @@ import tempfile
 
 import pytest
 
+from conda.compat import PY3
+from conda.config import subdir
+from conda.fetch import download
+
+
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
@@ -16,6 +21,98 @@ def is_valid_dir(parent_dir, dirname):
     valid &= not dirname.startswith("_")
     valid &= ('osx_is_app' != dirname or sys.platform == "darwin")
     return valid
+
+
+# TODO: this does not currently take into account post-build versioning changes with __conda_? files
+def test_output_build_path():
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "python_run"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                                  "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+                                      sys.version_info.major, sys.version_info.minor))
+    if PY3:
+        output = output.decode("UTF-8")
+    assert output.rstrip() == test_path
+
+
+def _get_describe_tag():
+    process = subprocess.Popen(['git', 'describe', '--tag'],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    if PY3:
+        output = output.decode("UTF-8")
+    if error:
+        print(error)
+    return output.rstrip()
+
+
+# TODO: need much simpler repo with just a very simple git jinja recipe, and 2 or 3 tags.
+#    should be created on conda org, probably
+def test_output_build_path_local_git():
+    subprocess.check_call(['git', 'clone',  'https://github.com/numba/numba'])
+    os.chdir('numba')
+
+    try:
+        subprocess.check_call(['git', 'checkout', '0.24.0'])
+        cmd = 'conda build --output buildscripts/condarecipe.local --numpy=1.10'
+        process = subprocess.Popen(cmd.split(),
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+        tag = _get_describe_tag()
+        test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                                  "numba-{}-np110py{}{}_0.tar.bz2".format(
+                                      tag, sys.version_info.major, sys.version_info.minor))
+        # be carefuly here: output should only be path, NOT git output or anything else
+        assert output.rstrip() == test_path
+
+        subprocess.check_call(['git', 'checkout', '0.23.0'])
+        cmd = 'conda build --output buildscripts/condarecipe.local --numpy=1.10'
+        process = subprocess.Popen(cmd.split(),
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+        tag = _get_describe_tag()
+        test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                                  "numba-{}-np110py{}{}_0.tar.bz2".format(
+                                      tag, sys.version_info.major, sys.version_info.minor))
+        assert output.rstrip() == test_path
+
+        subprocess.check_call(['git', 'checkout', '0.24.0'])
+        cmd = 'conda build --output buildscripts/condarecipe.local --numpy=1.10'
+        process = subprocess.Popen(cmd.split(),
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+        tag = _get_describe_tag()
+        test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                                  "numba-{}-np110py{}{}_0.tar.bz2".format(
+                                      tag, sys.version_info.major, sys.version_info.minor))
+        assert output.rstrip() == test_path
+
+    finally:
+        os.chdir('..')
+        shutil.rmtree('numba')
+
+
+def test_local_source_mismatch_with_downloaded_package():
+    subprocess.check_call(['git', 'clone',  'https://github.com/numba/numba'])
+    os.chdir('numba')
+
+    filename = 'numba-0.24.0-np110py{}{}_0.tar.bz2'.format(sys.version_info.major,
+                                                           sys.version_info.minor)
+    downloaded_file = os.path.join(sys.prefix, 'conda-bld', subdir, filename)
+    download('https://repo.continuum.io/pkgs/free/{}/{}'.format(subdir, filename), downloaded_file)
+
+    cmd = 'conda build --output numba/buildscripts/condarecipe.local --numpy=1.10'
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    cmd = 'conda build --test {} --numpy=1.10'.format(downloaded_file)
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+
+
 
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)

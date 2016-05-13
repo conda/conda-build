@@ -18,6 +18,7 @@ import subprocess
 from conda.compat import PY3
 from conda.lock import Locked
 
+from conda_build.build import bldpkg_path
 from conda_build import exceptions
 from conda_build.config import config
 from conda_build.metadata import MetaData
@@ -65,7 +66,10 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def parse_or_try_download(metadata, no_download_source):
+def get_output_path(metadata):
+    return bldpkg_path(metadata)
+
+def parse_or_try_download(metadata, no_download_source, hide_output):
     if not no_download_source:
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
@@ -75,15 +79,15 @@ def parse_or_try_download(metadata, no_download_source):
             need_source_download = False
         except subprocess.CalledProcessError:
             print("Warning: failed to download source.  If building, will try "
-                  "again after downloading recipe dependencies.")
+                "again after downloading recipe dependencies.")
             need_source_download = True
-    else:
-        metadata.parse_again(permit_undefined_jinja=False)
-        need_source_download = no_download_source
+        else:
+            need_source_download = no_download_source
+    metadata.parse_again(permit_undefined_jinja=False)
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source):
+def render_recipe(recipe_path, no_download_source, hide_download_output):
     with Locked(config.croot):
         arg = recipe_path
         # Don't use byte literals for paths in Python 2
@@ -112,9 +116,48 @@ def render_recipe(recipe_path, no_download_source):
             sys.stderr.write(e.error_msg())
             sys.exit(1)
 
-        m = parse_or_try_download(m, no_download_source=no_download_source)
+        m = parse_or_try_download(m, no_download_source=no_download_source,
+                                  hide_output=hide_download_output)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
 
     return m
+
+
+# Next bit of stuff is to support YAML output in the order we expect.
+# http://stackoverflow.com/a/17310199/1170370
+class _MetaYaml(dict):
+    fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
+
+    def to_omap(self):
+        return [(field, self[field]) for field in MetaYaml.fields if field in self]
+
+def _represent_omap(dumper, data):
+    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+
+def _unicode_representer(dumper, uni):
+    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
+    return node
+
+class _IndentDumper(yaml.Dumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super(_IndentDumper, self).increase_indent(flow, False)
+
+yaml.add_representer(_MetaYaml, _represent_omap)
+if PY3:
+    yaml.add_representer(str, _unicode_representer)
+    unicode = None  # silence pyflakes about unicode not existing in py3
+else:
+    yaml.add_representer(unicode, _unicode_representer)
+
+
+def output_yaml(metdata, filename=None):
+    output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
+                       default_flow_style=False, indent=4)
+    if filename:
+        with open(filename, "w") as f:
+            f.write(output)
+        return("Wrote yaml to %s" % filename)
+    else:
+        return(output)

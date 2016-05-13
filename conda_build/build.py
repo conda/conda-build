@@ -183,6 +183,12 @@ def create_info_files(m, files, include_recipe=True):
                 shutil.copytree(src_path, dst_path)
             else:
                 shutil.copy(src_path, dst_path)
+        # move the potentially unrendered meta.yaml file
+        os.rename(join(recipe_dir, "meta.yaml"), join(recipe_dir, "meta.yaml.template"))
+        # store the rendered meta.yaml file, plus information about where it came from
+        #    and what version of conda-build created it
+        _render_recipe()
+
 
     license_file = m.get_value('about/license_file')
     if license_file:
@@ -368,7 +374,7 @@ def bldpkg_path(m):
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def build(m, post=None, include_recipe=True, keep_old_work=False, need_source_download=False):
+def build(m, post=None, include_recipe=True, keep_old_work=False, need_source_download=True):
     '''
     Build the package with the specified metadata.
 
@@ -436,7 +442,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False, need_source_do
                 try:
                     os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
                                                             config.build_prefix)['PATH']
-                    m, need_source_download = parse_or_try_download(m, no_download_source=False)
+                    m, need_source_download = parse_or_try_download(m, no_download_source=False,
+                                                                    hide_output=False)
                     assert not need_source_download, "Source download failed.  Please investigate."
                 finally:
                     os.environ['PATH'] = _old_path
