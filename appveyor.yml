@@ -44,7 +44,7 @@ install:
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda --debug install pytest requests pycrypto m2-base m2-git anaconda-client
-  - set "PATH=%CONDA_ROOT%\usr\bin;%PATH%"
+  - set "PATH=%CONDA_ROOT%\Library\usr\bin;%CONDA_ROOT%\Library\mingw-w64\bin;%PATH%"
   # this is to ensure dependencies
   - conda install -q conda-build
   - pip install auxlib pytest-cov
