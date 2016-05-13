@@ -38,11 +38,13 @@ install:
   - setx PATH "%USERPATH%"
   - conda info
   - conda config --set always_yes yes
+  - conda config --add channels msys2
   - conda update -q --all
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda --debug install pytest requests pycrypto git anaconda-client
+  - conda --debug install pytest requests pycrypto m2-base m2-git anaconda-client
+  - set "PATH=%CONDA_ROOT%\usr\bin;%PATH%"
   # this is to ensure dependencies
   - conda install -q conda-build
   - pip install auxlib pytest-cov
