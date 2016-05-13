@@ -20,11 +20,11 @@ from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
+from conda_build.build import bldpkg_path
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import (get_package_build_path, set_language_env_vars,
-                                     RecipeCompleter, render_recipe)
+from conda_build.main_render import (set_language_env_vars, RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
 
@@ -253,7 +253,7 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # this fully renders any jinja templating, throwing an error if any data is missing
-        m = render_recipe(recipe_dir, no_download_source=False)
+        m, need_source_download = render_recipe(recipe_dir, no_download_source=False)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 
@@ -271,7 +271,7 @@ def execute(args, parser):
                 print(m.dist(), "is already built, skipping.")
                 continue
         if args.output:
-            print(get_package_build_path(m, no_download_source=False))
+            print(bldpkg_path(m))
             continue
         elif args.test:
             build.test(m, move_broken=False)
@@ -293,7 +293,8 @@ def execute(args, parser):
             try:
                 build.build(m, post=post,
                             include_recipe=args.include_recipe,
-                            keep_old_work=args.keep_old_work)
+                            keep_old_work=args.keep_old_work,
+                            need_source_download=need_source_download)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these

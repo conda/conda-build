@@ -8,6 +8,7 @@ from subprocess import check_call, Popen, PIPE, CalledProcessError
 import locale
 
 from conda.fetch import download
+from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
 from conda_build import external
@@ -282,7 +283,12 @@ def provide(recipe_dir, meta, patch=True):
       - apply patches (if any)
     """
     print("Removing old work directory")
-    rm_rf(WORK_DIR)
+    if sys.platform == 'win32':
+        if isdir(WORK_DIR):
+            move_to_trash(WORK_DIR, '')
+    else:
+        rm_rf(WORK_DIR)
+
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta)
     elif 'git_url' in meta:

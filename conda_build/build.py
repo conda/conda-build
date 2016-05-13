@@ -29,6 +29,7 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
+from conda_build.render import parse_or_try_download
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -369,17 +370,17 @@ def bldpkg_path(m):
     return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
+def build(m, post=None, include_recipe=True, keep_old_work=False, need_source_download=False):
     '''
     Build the package with the specified metadata.
 
     :param m: Package metadata
     :type m: Metadata
-    :param get_src: Should we download the source?
-    :type get_src: bool
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
     :type keep_old_work: bool: Keep any previous work directory.
+    :type need_source_download: bool: if rendering failed to download source
+    (due to missing tools), retry here after build env is populated
     '''
 
     if (m.get_value('build/detect_binary_files_with_prefix') or
@@ -422,18 +423,25 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
             else:
                 rm_rf(config.short_build_prefix)
                 rm_rf(config.long_build_prefix)
-            print("Removing old work directory")
-            if on_win:
-                if isdir(source.WORK_DIR):
-                    move_to_trash(source.WORK_DIR, '')
-            else:
-                rm_rf(source.WORK_DIR)
 
             # Display the name only
             # Version number could be missing due to dependency on source info.
             print("BUILD START:", m.dist())
             create_env(config.build_prefix,
                     [ms.spec for ms in m.ms_depends('build')])
+
+            if need_source_download:
+                # Execute any commands fetching the source (e.g., git) in the _build environment.
+                # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+                # dependencies.
+                _old_path = os.environ['PATH']
+                try:
+                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
+                                                            config.build_prefix)['PATH']
+                    m, need_source_download = parse_or_try_download(m, no_download_source=False)
+                    assert not need_source_download, "Source download failed.  Please investigate."
+                finally:
+                    os.environ['PATH'] = _old_path
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %
@@ -443,18 +451,6 @@ def build(m, get_src=True, post=None, include_recipe=True, keep_old_work=False):
                 assert not plan.nothing_to_do(actions), actions
                 plan.display_actions(actions, index)
                 plan.execute_actions(actions, index)
-
-            if get_src:
-                # Execute any commands fetching the source (e.g., git) in the _build environment.
-                # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
-                # dependencies.
-                _old_path = os.environ['PATH']
-                try:
-                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                          config.build_prefix)['PATH']
-                    source.provide(m.path, m.get_section('source'))
-                finally:
-                    os.environ['PATH'] = _old_path
 
             print("Package:", m.dist())
 
