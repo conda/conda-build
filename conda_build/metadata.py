@@ -288,14 +288,14 @@ def check_fields(meta, strictness=.9):
                      "Perhaps you meant {}?".format(mk, ', '.join(close_matches)))
             
 
-
+bad_chars = re.compile(r'[=!@#$%^&*:;"\'\\|<>?/ -]')
 def check_bad_chrs(s, field):
-    bad_chrs = '=!@#$%^&*:;"\'\\|<>?/ '
-    if field in ('package/version', 'build/string'):
-        bad_chrs += '-'
-    for c in bad_chrs:
-        if c in s:
-            sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
+    m = bad_chars.search(s)
+    if m:
+        if m.group() == '-' and field not in {'package/version', 'build/string'}:
+            return
+
+        sys.exit("Error: Bad character '{}' in {}: {}".format(m.group(), field, s))
 
 
 def handle_config_version(ms, ver):
