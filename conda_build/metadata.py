@@ -276,7 +276,13 @@ def check_fields(meta, strictness=.9):
         _ = _meta['package']['name']
         _ = _meta['package']['version']
     except KeyError:
-        sys.exit("Invalid meta.yaml: Missing package/name or package/version.")
+        sys.exit('Invalid meta.yaml: Missing package/name or package/version.')
+
+    try:
+        _ = _meta['about']['home']
+        _ = _meta['about']['license_family']
+    except KeyError:
+        sys.exit('Missing about/home or about/license_family')
 
     for mk in meta.get_all_keys():
         close_matches = set(get_close_matches(mk, RECOGNIZED_FIELDS, cutoff=strictness))
