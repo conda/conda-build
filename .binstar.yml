@@ -31,24 +31,13 @@ env:
 #===============================================================================
 
 ## Run before the script
-# before_script:
-#   - echo "before_script!"
+before_script:
+  - python -c "from platform import system as s; import sys; sys.exit(int(s()!='Windows'))" || export SOURCE_DIR=$SOURCE_DIR
 ## Put your main computations here!
 script:
   # - echo 4.1.0.rc1 > conda/.version
   - python -c "from platform import system as s; import sys; sys.exit(int(s()!='Windows'))" || conda build conda.recipe --python $PYTHON_VERSION
   - python -c "from platform import system as s; import sys; sys.exit(int(s()=='Windows'))" || conda build conda.recipe --python %PYTHON_VERSION%
-
-## This will run after the script regardless of the result of script
-## BINSTAR_BUILD_RESULT=[succcess|failure]
-# after_script:
-#   - echo "The build was a $BINSTAR_BUILD_RESULT" | tee artifact1.txt
-## This will be run only after a successful build
-# after_success:
-#   - echo "after_success!"
-## This will be run only after a build failure
-# after_failure:
-#   - echo "after_failure!"
 
 #===============================================================================
 # Build Results

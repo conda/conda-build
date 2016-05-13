@@ -50,9 +50,14 @@ def build_vcvarsall_vs_path(version):
 
     Expected versions are of the form {9, 10, 12, 14}
     """
-    return os.path.join(PROGRAM_FILES_PATH,
-                        'Microsoft Visual Studio {}'.format(version), 'VC',
-                        'vcvarsall.bat')
+    vstools = "VS{0}0COMNTOOLS".format(version)
+    if vstools in os.environ:
+        return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
+    else:
+        # prefer looking at env var; fall back to program files defaults
+        return os.path.join(PROGRAM_FILES_PATH,
+                            'Microsoft Visual Studio {}'.format(version), 'VC',
+                            'vcvarsall.bat')
 
 
 def fix_staged_scripts():
@@ -196,14 +201,14 @@ def build(m, bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(join(src_dir, 'bld.bat'), 'w') as fo:
-            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
-            fo.write('\n')
             # more debuggable with echo on
             fo.write('@echo on\n')
             for key, value in env.items():
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
             fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
+            fo.write('\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
