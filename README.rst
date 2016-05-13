@@ -7,6 +7,9 @@ conda-build
 
 .. image:: https://ci.appveyor.com/api/projects/status/aj0d43e7qea5amja?svg=true
                :target: https://ci.appveyor.com/project/ironmancio54716/conda-build
+               
+.. image:: https://anaconda.org/conda-team/conda-build/badges/build.svg
+               :target: https://anaconda.org/conda-team/conda-build/
 
 
 Installation
