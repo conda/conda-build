@@ -197,8 +197,7 @@ def create_info_files(m, files, include_recipe=True):
         dst = join(config.info_dir, readme)
         shutil.copyfile(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
-            print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst",
-                  file=sys.stderr)
+            print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst", file=sys.stderr)  # noqa
 
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
@@ -339,8 +338,7 @@ def warn_on_old_conda_build(index):
     try:
         pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
     except NoPackagesFound:
-        print("WARNING: Could not find any versions of conda-build in the channels",
-              file=sys.stderr)
+        print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)  # noqa
         return
     if pkgs[-1].version != vers_inst[0]:
         print("""
