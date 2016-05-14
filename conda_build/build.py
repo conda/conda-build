@@ -436,7 +436,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
     if m.skip():
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
-        return
+        return False
 
     with Locked(cc.root_dir):
 
@@ -659,6 +659,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 else:
                     shutil.move(os.path.join(old_WORK_DIR, old_sub), source.WORK_DIR)
             shutil.rmtree(old_WORK_DIR, ignore_errors=True)
+    # returning true here says package is OK to test
+    return True
 
 
 def test(m, move_broken=True, activate=True):

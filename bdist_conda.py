@@ -16,7 +16,7 @@ from conda.lock import Locked
 import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import build, pypi, render
+from conda_build import api, build, pypi, render
 from conda_build.config import config
 from conda_build.main_build import handle_binstar_upload
 
@@ -255,14 +255,14 @@ class bdist_conda(install):
             m = MetaData.fromdict(d)
             # Shouldn't fail, but do you really trust the code above?
             m.check_fields()
-            build.build(m, post=False)
+            api.build(m, post=False)
             # Do the install
             if not PY3:
                 # Command is an old-style class in Python 2
                 install.run(self)
             else:
                 super().run()
-            build.build(m, post=True)
+            api.build(m, post=True)
             build.test(m)
             if self.binstar_upload:
                 class args:

@@ -7,13 +7,14 @@
 from __future__ import absolute_import, division, print_function
 
 from locale import getpreferredencoding
+import os
+from os.path import isdir, isfile, abspath
+import re
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
-import os
-from os.path import isdir, isfile, abspath
-import subprocess
 
 import yaml
 
@@ -25,6 +26,7 @@ from conda_build.config import config
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
+from conda_build.utils import find_recipe
 
 
 def set_language_env_vars(args, parser, execute=None):
@@ -97,14 +99,14 @@ def parse_or_try_download(metadata, no_download_source, verbose,
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
-        need_source_download = True
-    metadata.parse_again(permit_undefined_jinja=False)
+        need_source_download = not no_download_source
+        metadata.parse_again(permit_undefined_jinja=False)
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
+def render_recipe(recipe_path, no_download_source=False, verbose=False, dirty=False):
     with Locked(config.croot):
-        arg = recipe_path
+        arg = find_recipe(recipe_path)
         # Don't use byte literals for paths in Python 2
         if not PY3:
             arg = arg.decode(getpreferredencoding() or 'utf-8')
@@ -132,7 +134,7 @@ def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
             sys.exit(1)
 
         m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose, dirty=dirty)
+                                                 verbose=verbose, dirty=dirty)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)

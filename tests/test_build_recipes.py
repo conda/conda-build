@@ -1,12 +1,11 @@
+from locale import getpreferredencoding
 import os
 import subprocess
 import shutil
 import sys
 import tempfile
 
-import pytest
-
-from conda.compat import PY3, TemporaryDirectory
+from conda.compat import TemporaryDirectory, PY3
 from conda.config import subdir
 from conda.fetch import download
 from conda_build.source import _guess_patch_strip_level, apply_patch
@@ -15,12 +14,9 @@ thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
 fail_dir = os.path.join(thisdir, 'test-recipes', 'fail')
 
+import pytest
 
-def is_valid_dir(parent_dir, dirname):
-    valid = os.path.isdir(os.path.join(parent_dir, dirname))
-    valid &= not dirname.startswith("_")
-    valid &= ('osx_is_app' != dirname or sys.platform == "darwin")
-    return valid
+from .utils import metadata_dir, is_valid_dir, fail_dir
 
 
 # def test_CONDA_BLD_PATH():
@@ -275,10 +271,10 @@ def test_jinja_typo():
 
 def test_skip_existing():
     # build the recipe first
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "build_number"))
-    subprocess.check_call(cmd.split())
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "empty_sections"))
+    subprocess.check_output(cmd.split())
     cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir,
-                                                                                    "build_number"))
+                                                                                    "empty_sections"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, _ = process.communicate()

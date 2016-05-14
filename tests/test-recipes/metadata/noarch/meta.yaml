@@ -3,7 +3,7 @@ package:
   version: "1.0"
 
 source:
-  path: noarch_test_package
+  path: ./noarch_test_package
 
 build:
   script: python setup.py install

@@ -1,14 +1,16 @@
 from __future__ import absolute_import, division, print_function
 
 import fnmatch
+from locale import getpreferredencoding
 import os
 import sys
 import shutil
 import tarfile
+import tempfile
 import zipfile
 import subprocess
 import operator
-from os.path import dirname, getmtime, getsize, isdir, join
+from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
 from collections import defaultdict
 
 from conda.utils import md5_file, unix_path_to_win
@@ -20,6 +22,31 @@ from conda_build import external
 from conda.install import rm_rf
 rm_rf
 
+
+def get_recipe_abspath(recipe):
+    """resolve recipe dir as absolute path.  If recipe is a tarball rather than a folder,
+    extract it and return the extracted directory.
+
+    Returns the absolute path, and a boolean flag that is true if a tarball has been extracted
+    and needs cleanup.
+    """
+    # Don't use byte literals for paths in Python 2
+    if not PY3:
+        recipe = recipe.decode(getpreferredencoding() or 'utf-8')
+    if isfile(recipe):
+        if recipe.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+            recipe_dir = tempfile.mkdtemp()
+            t = tarfile.open(recipe, 'r:*')
+            t.extractall(path=recipe_dir)
+            t.close()
+            need_cleanup = True
+        else:
+            print("Ignoring non-recipe: %s" % arg)
+            return (None, None)
+    else:
+        recipe_dir = abspath(recipe)
+        need_cleanup = False
+    return recipe_dir, need_cleanup
 
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
