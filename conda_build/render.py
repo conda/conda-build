@@ -7,14 +7,14 @@
 from __future__ import absolute_import, division, print_function
 
 from locale import getpreferredencoding
-import shutil
-import sys
-import tarfile
-import tempfile
 import os
 from os.path import isdir, isfile, abspath
 import re
+import shutil
 import subprocess
+import sys
+import tarfile
+import tempfile
 
 import yaml
 
@@ -26,6 +26,7 @@ from conda_build.config import config
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
+from conda_build.utils import find_recipe
 
 
 def set_language_env_vars(args, parser, execute=None):
@@ -88,7 +89,7 @@ def has_vcs_metadata(metadata):
 def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
 
-    if (force_download or (not no_download_source and has_vcs_metadata(metadata))):
+    if force_download or (not no_download_source and has_vcs_metadata(metadata)):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
@@ -106,14 +107,14 @@ def parse_or_try_download(metadata, no_download_source, verbose,
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
-        need_source_download = True
-    metadata.parse_again(permit_undefined_jinja=False)
+        need_source_download = not no_download_source
+        metadata.parse_again(permit_undefined_jinja=False)
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
+def render_recipe(recipe_path, no_download_source=False, verbose=False, dirty=False):
     with Locked(config.croot):
-        arg = recipe_path
+        arg = find_recipe(recipe_path)
         # Don't use byte literals for paths in Python 2
         if not PY3:
             arg = arg.decode(getpreferredencoding() or 'utf-8')
@@ -140,13 +141,13 @@ def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
             sys.stderr.write(e.error_msg())
             sys.exit(1)
 
-        m = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose, dirty=dirty)
+        m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
+                                                 verbose=verbose, dirty=dirty)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
 
-    return m
+    return m, need_download
 
 
 # Next bit of stuff is to support YAML output in the order we expect.

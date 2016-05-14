@@ -421,14 +421,16 @@ class MetaData(object):
 
     def check_fields(self):
         for section, submeta in iteritems(self.meta):
+            # anything goes in the extra section
             if section == 'extra':
                 continue
             if section not in FIELDS:
-                sys.exit("Error: unknown section: %s" % section)
+                raise ValueError("unknown section: %s" % section)
             for key in submeta:
                 if key not in FIELDS[section]:
-                    sys.exit("Error: in section %r: unknown key %r" %
+                    raise ValueError("in section %r: unknown key %r" %
                              (section, key))
+        return True
 
     def name(self):
         res = self.get_value('package/name')
