@@ -139,6 +139,7 @@ def msvc_env_cmd(bits, override=None):
         # DelayedExpansion is required for the SetEnv.cmd
         msvc_env_lines.append('Setlocal EnableDelayedExpansion')
         msvc_env_lines.append(win_sdk_cmd)
+        msvc_env_lines.append('setenv {}'.format(win_sdk_arch))
         msvc_env_lines.append('EndLocal')
         # If the WindowsSDKDir environment variable has not been successfully
         # set then try activating VS2010
