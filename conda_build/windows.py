@@ -5,6 +5,11 @@ import sys
 import shutil
 from os.path import dirname, isdir, isfile, join
 
+# Leverage the hard work done by setuptools/distutils to find vcvarsall using
+# either the registry or the VS**COMNTOOLS environment variable
+from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
+from distutils.msvc9compiler import Reg, WINSDK_BASE
+
 import conda.config as cc
 
 from conda_build.config import config
@@ -12,27 +17,17 @@ from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
 
+
 assert sys.platform == 'win32'
 
-# Set up a load of paths that can be imported from the tests
-if 'ProgramFiles(x86)' in os.environ:
-    PROGRAM_FILES_PATH = os.environ['ProgramFiles(x86)']
-else:
-    PROGRAM_FILES_PATH = os.environ['ProgramFiles']
-
-# Note that we explicitly want "Program Files" and not "Program Files (x86)"
-WIN_SDK_BAT_PATH = os.path.join(PROGRAM_FILES_PATH.replace(" (x86)", ""),
-                                'Microsoft SDKs', 'Windows', 'v7.1', 'Bin', 'SetEnv.cmd')
-VS_TOOLS_PY_LOCAL_PATH = os.path.join(
-    os.getenv('localappdata', os.path.abspath(os.sep)),
-    'Programs', 'Common', 'Microsoft', 'Visual C++ for Python', '9.0',
-    'vcvarsall.bat')
-VS_TOOLS_PY_COMMON_PATH = os.path.join(PROGRAM_FILES_PATH, 'Common Files',
-                                       'Microsoft', 'Visual C++ for Python',
-                                       '9.0', 'vcvarsall.bat')
-VCVARS64_VS9_BAT_PATH = os.path.join(PROGRAM_FILES_PATH,
-                                     'Microsoft Visual Studio 9.0', 'VC', 'bin',
-                                     'vcvars64.bat')
+WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
+                                'installationfolder')
+WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
+# Get the Visual Studio 2008 path (not the Visual C++ for Python path)
+# and get the 'vcvars64.bat' from inside the bin (in the directory above
+# that returned by distutils_find_vcvarsall)
+VCVARS64_VS9_BAT_PATH = os.path.join(os.path.dirname(distutils_find_vcvarsall(9)),
+                                     'bin', 'vcvars64.bat')
 VS_VERSION_STRING = {
     '8.0': 'Visual Studio 8 2005',
     '9.0': 'Visual Studio 9 2008',
@@ -50,14 +45,9 @@ def build_vcvarsall_vs_path(version):
 
     Expected versions are of the form {9, 10, 12, 14}
     """
-    vstools = "VS{0}0COMNTOOLS".format(version)
-    if vstools in os.environ:
-        return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
-    else:
-        # prefer looking at env var; fall back to program files defaults
-        return os.path.join(PROGRAM_FILES_PATH,
-                            'Microsoft Visual Studio {}'.format(version), 'VC',
-                            'vcvarsall.bat')
+    from setuptools.msvc9_support import find_vcvarsall
+    # Ensure that the version is a floating point number
+    return find_vcvarsall(float(version))
 
 
 def fix_staged_scripts():
@@ -99,7 +89,14 @@ def msvc_env_cmd(bits, override=None):
     version = None
     if override is not None:
         version = override
+        # The DISTUTILS_USE_SDK variable tells distutils to not try and validate
+        # the MSVC compiler. For < 3.5 this still forcibly looks for 'cl.exe'.
+        # For > 3.5 it literally just skips the validation logic.
+        # See distutils _msvccompiler.py and msvc9compiler.py / msvccompiler.py
+        # for more information.
         msvc_env_lines.append('set DISTUTILS_USE_SDK=1')
+        # This is also required to hit the 'don't validate' logic on < 3.5.
+        # For > 3.5 this is ignored.
         msvc_env_lines.append('set MSSdk=1')
 
     if not version:
@@ -113,6 +110,7 @@ def msvc_env_cmd(bits, override=None):
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
+        # Default argument `arch_selector` is defined above
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
     msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
@@ -126,23 +124,32 @@ def msvc_env_cmd(bits, override=None):
     msvc_env_lines.append('set "MSYS2_ENV_CONV_EXCL=CL"')
     if version == '10.0':
         win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
-        win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_BAT_PATH, arch=win_sdk_arch)
+        win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_71_BAT_PATH, arch=win_sdk_arch)
 
-        # Always call the Windows SDK first - if VS 2010 exists but was
-        # installed using the broken installer then it will try and call the
-        # vcvars script, which will fail but NOT EXIT 1. To work around this,
-        # we always call the Windows SDK, and then try calling VS 2010 which
-        # will overwrite any environemnt variables it needs, if necessary.
+        # There are two methods of building Python 3.3 and 3.4 extensions (both
+        # of which required Visual Studio 2010 - as explained in the Python wiki
+        # https://wiki.python.org/moin/WindowsCompilers)
+        # 1) Use the Windows SDK 7.1
+        # 2) Use Visual Studio 2010 (any edition)
+        # However, VS2010 never shipped with a 64-bit compiler, so in this case
+        # **only** option (1) applies. For this reason, we always try and
+        # activate the Windows SDK first. Unfortunately, unsuccessfully setting
+        # up the environment does **not EXIT 1** and therefore we must fall
+        # back to attempting to set up VS2010.
+        # DelayedExpansion is required for the SetEnv.cmd
+        msvc_env_lines.append('Setlocal EnableDelayedExpansion')
         msvc_env_lines.append(win_sdk_cmd)
-        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
-
+        msvc_env_lines.append('EndLocal')
+        # If the WindowsSDKDir environment variable has not been successfully
+        # set then try activating VS2010
+        msvc_env_lines.append('if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
+            WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)))
     elif version == '9.0':
         error1 = 'if errorlevel 1 {}'
 
-        # First, check for Microsoft Visual C++ Compiler for Python 2.7
-        msvc_env_lines.append(build_vcvarsall_cmd(VS_TOOLS_PY_LOCAL_PATH))
-        msvc_env_lines.append(error1.format(
-            build_vcvarsall_cmd(VS_TOOLS_PY_COMMON_PATH)))
+        # Setuptools captures the logic of preferring the Microsoft Visual C++
+        # Compiler for Python 2.7 - falls back to VS2008 if necessary
+        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
         # The Visual Studio 2008 Express edition does not properly contain
         # the amd64 build files, so we call the vcvars64.bat manually,
         # rather than using the vcvarsall.bat which would try and call the
@@ -150,12 +157,6 @@ def msvc_env_cmd(bits, override=None):
         if arch_selector == 'amd64':
             msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
-            msvc_env_lines.append(error1.format(
-                build_vcvarsall_cmd(vcvarsall_vs_path)))
-        else:
-            msvc_env_lines.append(error1.format(
-                build_vcvarsall_cmd(vcvarsall_vs_path)))
-
     else:
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
