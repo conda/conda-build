@@ -69,7 +69,15 @@ def ns_cfg():
     return d
 
 
-sel_pat = re.compile(r'(.+?)\s*(#.*)?\[(.+)\](?(2).*)$')
+# Selectors must be either:
+# - at end of the line
+# - embedded (anywhere) within a comment
+#
+# Notes:
+# - [([^\[\]]+)\] means "find a pair of brackets containing any
+#                 NON-bracket chars, and capture the contents"
+# - (?(2).*)$ means "allow trailing characters iff group 2 (#.*) was found."
+sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 
 def select_lines(data, namespace):
