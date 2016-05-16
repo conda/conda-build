@@ -9,26 +9,40 @@ def test_select_lines():
     lines = """
 test
 test [abc] no
+test [abc] # no
 
 test [abc]
 test # [abc]
 test # [abc] yes
 test # stuff [abc] yes
+test {{ JINJA_VAR[:2] }}
+test {{ JINJA_VAR[:2] }} # stuff [abc] yes
+test {{ JINJA_VAR[:2] }} # stuff yes [abc]
+test {{ JINJA_VAR[:2] }} # [abc] stuff yes
+{{ environ["test"] }}  # [abc]
 """
 
     assert select_lines(lines, {'abc': True}) == """
 test
 test [abc] no
+test [abc] # no
 
 test
 test
 test
 test
+test {{ JINJA_VAR[:2] }}
+test {{ JINJA_VAR[:2] }}
+test {{ JINJA_VAR[:2] }}
+test {{ JINJA_VAR[:2] }}
+{{ environ["test"] }}
 """
     assert select_lines(lines, {'abc': False}) == """
 test
 test [abc] no
+test [abc] # no
 
+test {{ JINJA_VAR[:2] }}
 """
 
 
