@@ -9,19 +9,13 @@ import pytest
 vcvars_backup_files = {}
 if sys.platform == "win32":
     from conda_build.windows import (build_vcvarsall_vs_path,
-                                     VCVARS64_VS9_BAT_PATH,
-                                     VS_TOOLS_PY_LOCAL_PATH,
-                                     VS_TOOLS_PY_COMMON_PATH)
+                                     VCVARS64_VS9_BAT_PATH)
 
     vcvars_backup_files = {"vs{}".format(version): [build_vcvarsall_vs_path(version)]
                            for version in ["9.0", "10.0", "14.0"]}
     vcvars_backup_files['vs9.0'].append(VCVARS64_VS9_BAT_PATH)
-    # VC9 compiler for python - local user install
-    vcvars_backup_files["python_local"] = [VS_TOOLS_PY_LOCAL_PATH]
-    # VC9 compiler for python - common files
-    vcvars_backup_files["python_system"] = [VS_TOOLS_PY_COMMON_PATH]
 
-    vs9 = {key: vcvars_backup_files[key] for key in ['vs9.0', 'python_local', 'python_system']}
+    vs9 = {key: vcvars_backup_files[key] for key in ['vs9.0']}
     vs10 = {key: vcvars_backup_files[key] for key in ['vs10.0']}
     vs14 = {key: vcvars_backup_files[key] for key in ['vs14.0']}
 
