@@ -1,0 +1,6 @@
+@echo ON
+
+IF %DISTUTILS_USE_SDK% NEQ 1 ( EXIT 1 )
+IF %MSSdk% NEQ 1 ( EXIT 1 )
+IF NOT "%VS_VERSION%" == "%CONDATEST_MSVC_VER%" ( EXIT 1 )
+IF NOT "%PY_VER%" == "2.7" ( EXIT 1 )
