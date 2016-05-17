@@ -9,11 +9,13 @@ import pytest
 vcvars_backup_files = {}
 if sys.platform == "win32":
     from conda_build.windows import (build_vcvarsall_vs_path,
-                                     VCVARS64_VS9_BAT_PATH)
+                                     VCVARS64_VS9_BAT_PATH,
+                                     WIN_SDK_71_BAT_PATH)
 
     vcvars_backup_files = {"vs{}".format(version): [build_vcvarsall_vs_path(version)]
                            for version in ["9.0", "10.0", "14.0"]}
     vcvars_backup_files['vs9.0'].append(VCVARS64_VS9_BAT_PATH)
+    vcvars_backup_files['vs10.0'].append(WIN_SDK_71_BAT_PATH)
 
     vs9 = {key: vcvars_backup_files[key] for key in ['vs9.0']}
     vs10 = {key: vcvars_backup_files[key] for key in ['vs10.0']}
