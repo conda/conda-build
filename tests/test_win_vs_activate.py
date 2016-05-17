@@ -5,6 +5,8 @@ import subprocess
 import sys
 
 import pytest
+import mock
+
 
 vcvars_backup_files = {}
 if sys.platform == "win32":
@@ -71,6 +73,11 @@ def bits(request):
     return request.param
 
 
+@pytest.fixture(params=['9.0', '10.0', '14.0'])
+def default_vs(request):
+    return request.param
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="windows-only test")
 @pytest.mark.xfail(reason="verification of test logic", strict=True)
 def test_activation_logic(bits, compiler):
@@ -81,7 +88,7 @@ def test_activation_logic(bits, compiler):
     # look up which VS version we're forcing here
     compiler_version = [key for key in vcs if compiler in vcs[key]][0]
     with open('tmp_call.bat', "w") as f:
-        f.write(msvc_env_cmd(bits, compiler_version))
+        f.write(msvc_env_cmd(bits, override=compiler_version))
     subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
 
 
@@ -94,7 +101,7 @@ def test_activation(bits, compiler):
     # this will throw an exception if the subprocess return code is not 0
     #     this is effectively the test condition for all below tests.
     with open('tmp_call.bat', "w") as f:
-        f.write(msvc_env_cmd(bits, compiler_version))
+        f.write(msvc_env_cmd(bits, override=compiler_version))
         f.write('\nif not "%VS_VERSION%" == "{}" exit /b 1'.format(compiler_version))
         f.write('\nif not "%VS_MAJOR%" == "{}" exit /b 1'.format(compiler_version.split('.')[0]))
         f.write('\nif not "%VS_YEAR%" == "{}" exit /b 1'
@@ -109,3 +116,25 @@ def test_activation(bits, compiler):
         raise
     finally:
         os.remove('tmp_call.bat')
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="windows-only test")
+def test_no_override(bits, default_vs):
+    with mock.patch('conda_build.windows.config') as mock_config:
+        from conda_build.windows import msvc_env_cmd
+
+        mock_config.PY3K = default_vs != '9.0'
+        mock_config.use_MSVC2015 = default_vs == '14.0'
+
+        # this will throw an exception if the subprocess return code is not 0
+        #     this is effectively the test condition for all below tests.
+        with open('tmp_call.bat', "w") as f:
+            f.write(msvc_env_cmd(bits))
+            f.write('\nif not "%VS_VERSION%" == "{}" exit /b 1'.format(default_vs))
+        try:
+            subprocess.check_call(['cmd.exe', '/C', 'tmp_call.bat'], shell=True)
+        except subprocess.CalledProcessError:
+            print("failed activation: {}, {}".format(bits, compiler))
+            raise
+        finally:
+            os.remove('tmp_call.bat')
