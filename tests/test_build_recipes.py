@@ -10,7 +10,6 @@ from conda.compat import PY3
 from conda.config import subdir
 from conda.fetch import download
 
-
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
@@ -37,82 +36,39 @@ def test_output_build_path():
     assert output.rstrip() == test_path
 
 
-def _get_describe_tag():
-    process = subprocess.Popen(['git', 'describe', '--tag'],
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, error = process.communicate()
-    if PY3:
-        output = output.decode("UTF-8")
-    if error:
-        print(error)
-    return output.rstrip()
-
-
-# TODO: need much simpler repo with just a very simple git jinja recipe, and 2 or 3 tags.
-#    should be created on conda org, probably
-def test_output_build_path_local_git():
-    subprocess.check_call(['git', 'clone',  'https://github.com/numba/numba'])
-    os.chdir('numba')
-
+def test_cached_source_not_interfere_with_versioning():
+    """Test that work dir does not cache and cause inaccurate test target"""
+    subprocess.check_call(['git', 'clone', 'https://github.com/conda/conda_build_test_recipe'])
     try:
-        subprocess.check_call(['git', 'checkout', '0.24.0'])
-        cmd = 'conda build --output buildscripts/condarecipe.local --numpy=1.10'
-        process = subprocess.Popen(cmd.split(),
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
-        tag = _get_describe_tag()
-        test_path = os.path.join(sys.prefix, "conda-bld", subdir,
-                                  "numba-{}-np110py{}{}_0.tar.bz2".format(
-                                      tag, sys.version_info.major, sys.version_info.minor))
-        # be carefuly here: output should only be path, NOT git output or anything else
-        assert output.rstrip() == test_path
+        # build to make sure we have a work directory with source in it.  We want to make sure that
+        #    whatever version that is does not interfere with the test we run next.
+        subprocess.check_call(['conda', 'build', '--no-test',
+                               '--no-anaconda-upload',
+                               'conda_build_test_recipe'])
 
-        subprocess.check_call(['git', 'checkout', '0.23.0'])
-        cmd = 'conda build --output buildscripts/condarecipe.local --numpy=1.10'
-        process = subprocess.Popen(cmd.split(),
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
-        tag = _get_describe_tag()
-        test_path = os.path.join(sys.prefix, "conda-bld", subdir,
-                                  "numba-{}-np110py{}{}_0.tar.bz2".format(
-                                      tag, sys.version_info.major, sys.version_info.minor))
-        assert output.rstrip() == test_path
-
-        subprocess.check_call(['git', 'checkout', '0.24.0'])
-        cmd = 'conda build --output buildscripts/condarecipe.local --numpy=1.10'
-        process = subprocess.Popen(cmd.split(),
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
-        tag = _get_describe_tag()
-        test_path = os.path.join(sys.prefix, "conda-bld", subdir,
-                                  "numba-{}-np110py{}{}_0.tar.bz2".format(
-                                      tag, sys.version_info.major, sys.version_info.minor))
-        assert output.rstrip() == test_path
-
-    finally:
+        os.chdir('conda_build_test_recipe')
+        subprocess.check_call(['git', 'checkout', '1.20.0'])
         os.chdir('..')
-        shutil.rmtree('numba')
+
+        # this should fail, because we have not built v1.0, so there should be nothing to test.
+        # if it succeeds, it means that it used the cached master checkout for determining which
+        # version to test.
+        cmd = 'conda build --output conda_build_test_recipe'
+        output = subprocess.check_output(cmd.split())
+        if PY3:
+            output = output.decode("UTF-8")
+        assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
+    finally:
+        shutil.rmtree('conda_build_test_recipe')
 
 
-def test_local_source_mismatch_with_downloaded_package():
-    subprocess.check_call(['git', 'clone',  'https://github.com/numba/numba'])
-    os.chdir('numba')
-
-    filename = 'numba-0.24.0-np110py{}{}_0.tar.bz2'.format(sys.version_info.major,
-                                                           sys.version_info.minor)
+def test_package_test():
+    """Test calling conda build -t <package file> - rather than <recipe dir>"""
+    filename = "jinja2-2.8-py{}{}_0.tar.bz2".format(sys.version_info.major, sys.version_info.minor)
     downloaded_file = os.path.join(sys.prefix, 'conda-bld', subdir, filename)
-    download('https://repo.continuum.io/pkgs/free/{}/{}'.format(subdir, filename), downloaded_file)
-
-    cmd = 'conda build --output numba/buildscripts/condarecipe.local --numpy=1.10'
-    process = subprocess.Popen(cmd.split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, error = process.communicate()
-    cmd = 'conda build --test {} --numpy=1.10'.format(downloaded_file)
-    process = subprocess.Popen(cmd.split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, error = process.communicate()
-
-
+    download('https://anaconda.org/conda-forge/jinja2/2.8/download/{}/{}'.format(subdir, filename),
+             downloaded_file)
+    subprocess.check_call(["conda", "build", "--test", downloaded_file])
 
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)

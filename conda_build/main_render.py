@@ -8,15 +8,11 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
-import yaml
-
-from conda.compat import PY3
 from conda.cli.common import add_parser_channels
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__
-from conda_build.build import bldpkg_path
-from conda_build.render import render_recipe, set_language_env_vars
+from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path, output_yaml
 from conda_build.utils import find_recipe
 from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
                                     LuaVersionsCompleter, NumPyVersionCompleter)
@@ -116,16 +112,21 @@ def main():
         choices=RecipeCompleter(),
         help="Path to recipe directory.",
     )
-
+    # this is here because we have a different default than build
+    p.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose output from download tools and progress updates',
+    )
     args = p.parse_args()
     set_language_env_vars(args, p)
 
-    metadata, _ = _render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
-                                 hide_download_output=args.output)
+    metadata, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
+                                 verbose=args.verbose)
     if args.output:
-        print(_get_output_path(metadata))
+        print(bldpkg_path(metadata))
     else:
-        print(_output_yaml(metadata, args.file)
+        print(output_yaml(metadata, args.file))
 
 if __name__ == '__main__':
     main()

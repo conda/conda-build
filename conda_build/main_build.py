@@ -70,7 +70,9 @@ different sets of packages."""
     p.add_argument(
         '-t', "--test",
         action="store_true",
-        help="Test package (assumes package is already build).",
+        help="Test package (assumes package is already built).  RECIPE_DIR argument can be either "
+        "recipe directory, in which case source download may be necessary to resolve package"
+        "version, or path to built package .tar.bz2 file, in which case no source is necessary.",
     )
     p.add_argument(
         '--no-test',
@@ -271,7 +273,7 @@ def execute(args, parser):
 
         # this fully renders any jinja templating, throwing an error if any data is missing
         m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                hide_download_output=args.output)
+                                                verbose=build.verbose)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 

@@ -1,11 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
 from shutil import copytree, copy2
-from subprocess import check_call, Popen, PIPE, CalledProcessError
+from subprocess import check_call, Popen, PIPE, CalledProcessError, check_output
 import locale
+import time
 
 from conda.compat import StringIO
 from conda.fetch import download
@@ -70,12 +72,12 @@ def download_to_cache(meta):
     return path
 
 
-def unpack(meta, hide_output=False):
+def unpack(meta, verbose=False):
     ''' Uncompress a downloaded source. '''
     src_path = download_to_cache(meta)
 
     os.makedirs(WORK_DIR)
-    if not hide_output:
+    if verbose:
         print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
             '.tar', 'tar.z')):
@@ -84,19 +86,18 @@ def unpack(meta, hide_output=False):
         unzip(src_path, WORK_DIR)
     else:
         # In this case, the build script will need to deal with unpacking the source
-        if not hide_output:
-            print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
+        print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
         copy2(src_path, WORK_DIR)
 
 
-def git_source(meta, recipe_dir, hide_output=False):
+def git_source(meta, recipe_dir, verbose=False):
     ''' Download a source from Git repo. '''
-    if hide_output:
-        stdout=StringIO()
-        stderr=StringIO()
+    if verbose:
+        stdout = None
+        stderr = None
     else:
-        stdout=None
-        stderr=None
+        stdout = StringIO()
+        stderr = StringIO()
 
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
@@ -156,7 +157,8 @@ def git_source(meta, recipe_dir, hide_output=False):
     if checkout:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR], stdout=stdout, stderr=stderr)
+    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR],
+               stdout=stdout, stderr=stderr)
     if checkout:
         check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout, stderr=stderr)
 
@@ -195,14 +197,14 @@ def git_info(fo=None):
             safe_print_unicode(stdout + u'\n')
 
 
-def hg_source(meta, hide_output=False):
+def hg_source(meta, verbose=False):
     ''' Download a source from Mercurial repo. '''
-    if hide_output:
-        stdout=StringIO()
-        stderr=StringIO()
+    if verbose:
+        stdout = None
+        stderr = None
     else:
-        stdout=None
-        stderr=None
+        stdout = StringIO()
+        stderr = StringIO()
 
     hg = external.find_executable('hg')
     if not hg:
@@ -227,14 +229,14 @@ def hg_source(meta, hide_output=False):
     return WORK_DIR
 
 
-def svn_source(meta, hide_output=False):
+def svn_source(meta, verbose=False):
     ''' Download a source from SVN repo. '''
-    if hide_output:
-        stdout=StringIO()
-        stderr=StringIO()
+    if verbose:
+        stdout = None
+        stderr = None
     else:
-        stdout=None
-        stderr=None
+        stdout = StringIO()
+        stderr = StringIO()
 
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
@@ -264,6 +266,28 @@ def svn_source(meta, hide_output=False):
     # now copy into work directory
     copytree(cache_repo, WORK_DIR, symlinks=True)
     return WORK_DIR
+
+
+def get_repository_info(recipe_path):
+    """This tries to get information about where a recipe came from.  This is different
+    from the source - you can have a recipe in svn that gets source via git."""
+    if isdir(join(recipe_path, ".git")):
+        origin = check_output(["git", "config", "--get", "remote.origin.url"])
+        rev = check_output(["git", "rev-parse", "HEAD"])
+        return "Origin {}, commit {}".format(origin, rev)
+    elif isdir(join(recipe_path, ".hg")):
+        origin = check_output(["hg", "paths", "default"])
+        rev = check_output(["hg", "id"]).split()[0]
+        return "Origin {}, commit {}".format(origin, rev)
+    elif isdir(join(recipe_path, ".svn")):
+        info = check_output(["svn", "info"])
+        server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
+        revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
+        return "{}, Revision {}".format(server, revision)
+    else:
+        return "{}, last modified {}".format(recipe_path,
+                                             time.ctime(os.path.getmtime(
+                                                 join(recipe_path, "meta.yaml"))))
 
 
 def _ensure_unix_line_endings(path):
@@ -300,7 +324,7 @@ Error:
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
-def provide(recipe_dir, meta, hide_output=False, patch=True):
+def provide(recipe_dir, meta, verbose=False, patch=True):
     """
     given a recipe_dir:
       - download (if necessary)
@@ -308,7 +332,7 @@ def provide(recipe_dir, meta, hide_output=False, patch=True):
       - apply patches (if any)
     """
     # temporarily catch output to stdout and stderr
-    if hide_output:
+    if not verbose:
         stdout = sys.stdout
         stderr = sys.stderr
         sys.stdout = StringIO()
@@ -323,13 +347,17 @@ def provide(recipe_dir, meta, hide_output=False, patch=True):
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta)
     elif 'git_url' in meta:
-        git_source(meta, recipe_dir, hide_output=hide_output)
+        git_source(meta, recipe_dir, verbose=verbose)
+    # build to make sure we have a work directory with source in it.  We want to make sure that
+    # build to make sure we have a work directory with source in it.  We want to make sure that
+    #    whatever version that is does not interfere with the test we run next.
+    #    whatever version that is does not interfere with the test we run next.
     elif 'hg_url' in meta:
-        hg_source(meta, hide_output=hide_output)
+        hg_source(meta, verbose=verbose)
     elif 'svn_url' in meta:
-        svn_source(meta, hide_output=hide_output)
+        svn_source(meta, verbose=verbose)
     elif 'path' in meta:
-        if not hide_output:
+        if verbose:
             print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
         copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
     else:  # no source
@@ -341,7 +369,7 @@ def provide(recipe_dir, meta, hide_output=False, patch=True):
             apply_patch(src_dir, join(recipe_dir, patch))
 
     # restore outputs
-    if hide_output:
+    if not verbose:
         sys.stdout = stdout
         sys.stderr = stderr
 
