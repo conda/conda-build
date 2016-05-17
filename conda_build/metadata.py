@@ -65,6 +65,15 @@ def ns_cfg():
     for machine in cc.non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
+    sel_pat = re.compile('SELECTOR_(\w+)')
+    for key, value in iteritems(os.environ):
+        m = sel_pat.match(key)
+        if m:
+            if value not in ('0', '1'):
+                sys.exit("Error: did not expect environment variable '%s' "
+                         "being set to '%s' (not '0' or '1')" % (key, value))
+            d[m.group(1)] = bool(int(value))
+
     d.update(os.environ)
     return d
 
