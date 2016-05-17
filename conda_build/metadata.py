@@ -304,10 +304,10 @@ def handle_config_version(ms, ver):
     configuration, e.g. for ms.name == 'python', ver = 26 or None,
     return a (sometimes new) MatchSpec object
     """
-    if ms.strictness == 3:
+    if ms.is_exact():
         return ms
 
-    if ms.strictness == 2:
+    if not ms.is_simple() and not ms.is_exact():
         if ms.spec.split()[1] == 'x.x':
             if ver is None:
                 raise RuntimeError("'%s' requires external setting" % ms.spec)
@@ -315,7 +315,7 @@ def handle_config_version(ms, ver):
         else:  # regular version
             return ms
 
-    if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
+    if ver is None or (ms.is_simple() and ms.name == 'numpy'):
         return MatchSpec(ms.name)
 
     ver = text_type(ver)
