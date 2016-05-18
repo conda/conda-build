@@ -23,13 +23,13 @@ def is_valid_dir(parent_dir, dirname):
 
 
 # TODO: this does not currently take into account post-build versioning changes with __conda_? files
-def test_output_build_path():
-    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "python_run"))
+def test_output_build_path_git_source():
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     test_path = os.path.join(sys.prefix, "conda-bld", subdir,
-                                  "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+                        "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     if PY3:
         output = output.decode("UTF-8")
