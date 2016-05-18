@@ -193,6 +193,7 @@ if sys.platform == "win32":
     compilers = ["2.7", "3.4", "3.5"]
     msvc_vers = ['9.0', '10.0', '14.0']
 else:
+    msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
 
 
