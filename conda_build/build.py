@@ -133,6 +133,9 @@ def have_prefix_files(files):
         if (sys.platform == 'win32') and mm.find(alt_prefix_bytes) != -1:
             # some windows libraries use unix-style path separators
             yield (alt_prefix, mode, f)
+        elif (sys.platform == 'win32') and mm.find(prefix_bytes.replace("\\", "\\\\")) != -1:
+            # some windows libraries have double backslashes as escaping
+            yield (prefix.replace("\\", "\\\\"), mode, f)
         if mm.find(prefix_placeholder_bytes) != -1:
             yield (prefix_placeholder, mode, f)
         mm.close() and fi.close()
