@@ -15,6 +15,8 @@ from os.path import isdir, isfile, abspath
 from locale import getpreferredencoding
 import subprocess
 
+import yaml
+
 from conda.compat import PY3
 from conda.lock import Locked
 
@@ -65,25 +67,38 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def parse_or_try_download(metadata, no_download_source):
-    if not no_download_source:
+def bldpkg_path(m):
+    '''
+    Returns path to built package's tarball given its ``Metadata``.
+    '''
+    return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
+
+
+def parse_or_try_download(metadata, no_download_source, verbose, force_download=False):
+    if (("version" not in metadata.meta["package"] or
+         not metadata.meta["package"]["version"]) and
+         not no_download_source) or force_download:
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            source.provide(metadata.path, metadata.get_section('source'))
+            source.provide(metadata.path, metadata.get_section('source'), verbose=verbose)
             metadata.parse_again(permit_undefined_jinja=False)
             need_source_download = False
         except subprocess.CalledProcessError:
             print("Warning: failed to download source.  If building, will try "
-                  "again after downloading recipe dependencies.")
+                "again after downloading recipe dependencies.")
             need_source_download = True
+        else:
+            need_source_download = no_download_source
     else:
-        metadata.parse_again(permit_undefined_jinja=False)
-        need_source_download = no_download_source
+        # we have not downloaded source in the render phase.  Download it in
+        #     the build phase
+        need_source_download = True
+    metadata.parse_again(permit_undefined_jinja=False)
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source):
+def render_recipe(recipe_path, no_download_source, verbose):
     with Locked(config.croot):
         arg = recipe_path
         # Don't use byte literals for paths in Python 2
@@ -112,9 +127,51 @@ def render_recipe(recipe_path, no_download_source):
             sys.stderr.write(e.error_msg())
             sys.exit(1)
 
-        m = parse_or_try_download(m, no_download_source=no_download_source)
+        m = parse_or_try_download(m, no_download_source=no_download_source,
+                                  verbose=verbose)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
 
     return m
+
+
+# Next bit of stuff is to support YAML output in the order we expect.
+# http://stackoverflow.com/a/17310199/1170370
+class _MetaYaml(dict):
+    fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
+
+    def to_omap(self):
+        return [(field, self[field]) for field in _MetaYaml.fields if field in self]
+
+
+def _represent_omap(dumper, data):
+    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+
+
+def _unicode_representer(dumper, uni):
+    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
+    return node
+
+
+class _IndentDumper(yaml.Dumper):
+    def increase_indent(self, flow=False, indentless=False):
+        return super(_IndentDumper, self).increase_indent(flow, False)
+
+yaml.add_representer(_MetaYaml, _represent_omap)
+if PY3:
+    yaml.add_representer(str, _unicode_representer)
+    unicode = None  # silence pyflakes about unicode not existing in py3
+else:
+    yaml.add_representer(unicode, _unicode_representer)
+
+
+def output_yaml(metadata, filename=None):
+    output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
+                       default_flow_style=False, indent=4)
+    if filename:
+        with open(filename, "w") as f:
+            f.write(output)
+        return("Wrote yaml to %s" % filename)
+    else:
+        return(output)
