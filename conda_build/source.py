@@ -9,7 +9,6 @@ from subprocess import check_call, Popen, PIPE, CalledProcessError, check_output
 import locale
 import time
 
-from conda.compat import StringIO
 from conda.fetch import download
 from conda.install import move_to_trash
 from conda.utils import hashsum_file
@@ -96,8 +95,9 @@ def git_source(meta, recipe_dir, verbose=False):
         stdout = None
         stderr = None
     else:
-        stdout = StringIO()
-        stderr = StringIO()
+        FNULL = open(os.devnull, 'w')
+        stdout = FNULL
+        stderr = FNULL
 
     if not isdir(GIT_CACHE):
         os.makedirs(GIT_CACHE)
@@ -154,7 +154,7 @@ def git_source(meta, recipe_dir, verbose=False):
                                cwd=git_url)
         output = process.communicate()[0].strip()
         checkout = output.decode('utf-8')
-    if checkout:
+    if checkout and verbose:
         print('checkout: %r' % checkout)
 
     check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR],
@@ -162,11 +162,15 @@ def git_source(meta, recipe_dir, verbose=False):
     if checkout:
         check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout, stderr=stderr)
 
-    git_info()
+    git_info(verbose=verbose)
+
+    if not verbose:
+        FNULL.close()
+
     return WORK_DIR
 
 
-def git_info(fo=None):
+def git_info(fo=None, verbose=False):
     ''' Print info about a Git repo. '''
     assert isdir(WORK_DIR)
 
@@ -191,10 +195,12 @@ def git_info(fo=None):
             raise Exception("git error: %s" % stderr)
         if fo:
             fo.write(u'==> %s <==\n' % cmd)
-            fo.write(stdout + u'\n')
+            if verbose:
+                fo.write(stdout + u'\n')
         else:
-            print(u'==> %s <==\n' % cmd)
-            safe_print_unicode(stdout + u'\n')
+            if verbose:
+                print(u'==> %s <==\n' % cmd)
+                safe_print_unicode(stdout + u'\n')
 
 
 def hg_source(meta, verbose=False):
@@ -203,8 +209,9 @@ def hg_source(meta, verbose=False):
         stdout = None
         stderr = None
     else:
-        stdout = StringIO()
-        stderr = StringIO()
+        FNULL = open(os.devnull, 'w')
+        stdout = FNULL
+        stderr = FNULL
 
     hg = external.find_executable('hg')
     if not hg:
@@ -222,10 +229,15 @@ def hg_source(meta, verbose=False):
 
     # now clone in to work directory
     update = meta.get('hg_tag') or 'tip'
-    print('checkout: %r' % update)
+    if verbose:
+        print('checkout: %r' % update)
 
     check_call([hg, 'clone', cache_repo, WORK_DIR], stdout=stdout, stderr=stderr)
     check_call([hg, 'update', '-C', update], cwd=WORK_DIR, stdout=stdout, stderr=stderr)
+
+    if not verbose:
+        FNULL.close()
+
     return WORK_DIR
 
 
@@ -235,8 +247,9 @@ def svn_source(meta, verbose=False):
         stdout = None
         stderr = None
     else:
-        stdout = StringIO()
-        stderr = StringIO()
+        FNULL = open(os.devnull, 'w')
+        stdout = FNULL
+        stderr = FNULL
 
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
@@ -265,6 +278,10 @@ def svn_source(meta, verbose=False):
 
     # now copy into work directory
     copytree(cache_repo, WORK_DIR, symlinks=True)
+
+    if not verbose:
+        FNULL.close()
+
     return WORK_DIR
 
 
@@ -331,12 +348,6 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
       - unpack
       - apply patches (if any)
     """
-    # temporarily catch output to stdout and stderr
-    if not verbose:
-        stdout = sys.stdout
-        stderr = sys.stderr
-        sys.stdout = StringIO()
-        sys.stderr = StringIO()
 
     if sys.platform == 'win32':
         if isdir(WORK_DIR):
@@ -345,7 +356,7 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
         rm_rf(WORK_DIR)
 
     if any(k in meta for k in ('fn', 'url')):
-        unpack(meta)
+        unpack(meta, verbose=verbose)
     elif 'git_url' in meta:
         git_source(meta, recipe_dir, verbose=verbose)
     # build to make sure we have a work directory with source in it.  We want to make sure that
@@ -367,11 +378,6 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
         src_dir = get_dir()
         for patch in meta.get('patches', []):
             apply_patch(src_dir, join(recipe_dir, patch))
-
-    # restore outputs
-    if not verbose:
-        sys.stdout = stdout
-        sys.stderr = stderr
 
 
 if __name__ == '__main__':
