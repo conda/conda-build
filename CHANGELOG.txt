@@ -1,9 +1,15 @@
 2016-05-13 1.20.3:
- * fix output of package paths (extra output was breaking tools).  Add tests.
- * change default of no_download_source in build.py (for compatibility with conda-build-all)
+------------------
+Features:
+ * use posix metapackage for cran skeleton packaging (#956)
+
+Bug fixes:
+ * fix output of package paths (extra output was breaking tools).  Add tests. (#950)
+ * change default of no_download_source in build.py (for compatibility with conda-build-all) (#950)
+ * fix regression in [] being confused for selectors (#957)
 
 2016-05-13 1.20.2:
-
+------------------
 Features:
  * added --token and --user flags to pass corresponding information to anaconda upload (#921)
  * added conda render command that outputs a fully-rendered meta.yaml to either stdout, or to file (with --file) (#908)
