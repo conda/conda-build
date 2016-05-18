@@ -97,7 +97,7 @@ def test_build_msvc_compiler(msvc_ver):
 
     env['CONDATEST_MSVC_VER'] = msvc_ver
 
-    # Always build Python 2.7 - but set MSVC version manually via Jinja
+    # Always build Python 2.7 - but set MSVC version manually via Jinja template
     cmd = 'conda build {} --python=2.7 --no-anaconda-upload'.format(
         os.path.join(metadata_dir, '_build_msvc_compiler'))
     subprocess.check_call(cmd.split(), env=env)
