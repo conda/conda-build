@@ -16,7 +16,7 @@ from conda.lock import Locked
 import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import build, pypi
+from conda_build import build, pypi, render
 from conda_build.config import config
 from conda_build.main_build import handle_binstar_upload
 
@@ -267,13 +267,13 @@ class bdist_conda(install):
             if self.binstar_upload:
                 class args:
                     binstar_upload = self.binstar_upload
-                handle_binstar_upload(build.bldpkg_path(m), args)
+                handle_binstar_upload(render.bldpkg_path(m), args)
             else:
                 no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
 # $ anaconda upload %s
-""" % build.bldpkg_path(m)
+""" % render.bldpkg_path(m)
                 print(no_upload_message)
 
 

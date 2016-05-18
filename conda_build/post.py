@@ -376,26 +376,26 @@ def check_symlinks(files):
 def get_build_metadata(m):
     src_dir = source.get_dir()
     if exists(join(src_dir, '__conda_version__.txt')):
-        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 2.0."
+        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 2.0."  # noqa
               "Try Jinja templates instead: "
-              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_version__.txt')) as f:
             version = f.read().strip()
             print("Setting version from __conda_version__.txt: %s" % version)
             m.meta['package']['version'] = version
     if exists(join(src_dir, '__conda_buildnum__.txt')):
-        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 2.0."
+        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 2.0."  # noqa
               "Try Jinja templates instead: "
-              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_buildnum__.txt')) as f:
             build_number = f.read().strip()
             print("Setting build number from __conda_buildnum__.txt: %s" %
                   build_number)
             m.meta['build']['number'] = build_number
     if exists(join(src_dir, '__conda_buildstr__.txt')):
-        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 2.0."
+        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 2.0."  # noqa
               "Try Jinja templates instead: "
-              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_buildstr__.txt')) as f:
             buildstr = f.read().strip()
             print("Setting version from __conda_buildstr__.txt: %s" % buildstr)
