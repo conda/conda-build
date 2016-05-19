@@ -348,6 +348,7 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
+        self.undefined_jinja_vars = []
         self.parse_again(permit_undefined_jinja=True)
 
     def parse_again(self, permit_undefined_jinja=False):
@@ -629,6 +630,9 @@ class MetaData(object):
 
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
+            # The UndefinedNeverFail class keeps a global list of all undefined names
+            # Clear any leftover names from the last parse.
+            UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
@@ -638,7 +642,14 @@ class MetaData(object):
 
         try:
             template = env.get_or_select_template(filename)
-            return template.render(environment=env)
+            rendered = template.render(environment=env)
+
+            if permit_undefined_jinja:
+                self.undefined_jinja_vars = UndefinedNeverFail.all_undefined_names
+            else:
+                self.undefined_jinja_vars = []
+
+            return rendered
         except jinja2.TemplateError as ex:
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))

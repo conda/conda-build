@@ -27,6 +27,13 @@ class UndefinedNeverFail(jinja2.Undefined):
     should only be used for a first-pass parse, when you plan on running a 'strict'
     second pass later.
     """
+    all_undefined_names = []
+
+    def __init__(self, hint=None, obj=jinja2.runtime.missing, name=None,
+                 exc=jinja2.exceptions.UndefinedError):
+        UndefinedNeverFail.all_undefined_names.append(name)
+        jinja2.Undefined.__init__(self, hint, obj, name, exc)
+
     __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
     __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
     __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
