@@ -14,6 +14,7 @@ from conda.compat import text_type
 from conda_build import external
 from conda_build import source
 from conda_build.config import config
+from conda_build.metadata import get_features
 from conda_build.scripts import prepend_bin_path
 
 
@@ -160,6 +161,10 @@ def get_dict(m=None, prefix=None):
 
     # system
     d.update(system_vars(d, prefix))
+
+    # features
+    d.update({ket.upper(): str(int(value)) for key, value in
+              iteritems(get_features)})
 
     return d
 
