@@ -9,7 +9,7 @@ from os.path import join, normpath
 from subprocess import STDOUT, check_output, CalledProcessError, Popen, PIPE
 
 import conda.config as cc
-from conda.compat import text_type
+from conda.compat import iteritems, text_type
 
 from conda_build import external
 from conda_build import source
@@ -163,8 +163,8 @@ def get_dict(m=None, prefix=None):
     d.update(system_vars(d, prefix))
 
     # features
-    d.update({ket.upper(): str(int(value)) for key, value in
-              iteritems(get_features)})
+    d.update({key.upper(): str(int(value)) for key, value in
+              iteritems(get_features())})
 
     return d
 
