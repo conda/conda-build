@@ -30,7 +30,7 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
-from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
+from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, _scan_metadata
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -628,26 +628,25 @@ def test(m, move_broken=True):
             rm_rf(config.build_prefix)
             rm_rf(config.test_prefix)
 
-        get_build_metadata(m)
-        specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+        create_env(config.test_prefix, specs)
+        test_env_pkgs = _scan_metadata(os.path.join(config.test_prefix, 'conda-meta'))
 
-        # add packages listed in the run environment and test/requires
-        specs.extend(ms.spec for ms in m.ms_depends('run'))
-        specs += m.get_value('test/requires', [])
-
-        if py_files:
-            # as the tests are run by python, ensure that python is installed.
-            # (If they already provided python as a run or test requirement,
-            #  this won't hurt anything.)
+        need_reinstall = False
+        if py_files and 'python' not in test_env_pkgs:
+            # Since the tests are run by python, ensure that python is installed.
             specs += ['python %s*' % environ.get_py_ver()]
-        if pl_files:
+            need_reinstall = True
+        if pl_files and 'python' not in test_env_pkgs:
             # as the tests are run by perl, we need to specify it
             specs += ['perl %s*' % environ.get_perl_ver()]
-        if lua_files:
+            need_reinstall = True
+        if lua_files and 'python' not in test_env_pkgs:
             # not sure how this shakes out
             specs += ['lua %s*' % environ.get_lua_ver()]
+            need_reinstall = True
 
-        create_env(config.test_prefix, specs)
+        if need_reinstall:
+            create_env(config.test_prefix, specs)
 
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))

@@ -74,6 +74,65 @@ def bldpkg_path(m):
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
+# This really belongs in conda, and it is int conda.cli.common, but we don't presently have an API there.
+def _get_env_path(env_name):
+    if os.path.isdir(env_name):
+        return env_name
+    for envs_dir in cc.envs_dirs + [os.getcwd()]:
+        path = os.path.join(envs_dir, env_name)
+        if os.path.isdir(path):
+            return path
+    return None
+
+
+def _scan_metadata(path):
+    '''
+    Scan all json files in 'path' and return a dictionary with their contents.
+    Files are assumed to be in 'index.json' format.
+    '''
+    import glob, json, os
+    installed = dict()
+    for filename in glob.glob(os.path.join(path, '*.json')):
+        with open(filename) as file:
+            data = json.load(file)
+            installed[data['name']] = data
+    return installed
+
+
+def add_build_config(metadata, build_config_or_bootstrap):
+    path = _get_env_path(build_config_or_bootstrap)
+    # concatenate build requirements from the build config file to the build
+    # requirements from the recipe
+    if os.path.isfile(build_config_or_bootstrap):
+        try:
+            with open(build_config_or_bootstrap) as configfile:
+                build_config = parse(configfile.read())
+            metadata.meta['requirements']['build'] += build_config['requirements']['build']
+        except Exception as e:
+            print("Unable to read config file '%s':" % args.build_config)
+            print(e)
+            sys.exit(1)
+    elif path:
+        # construct build requirements that replicate the given bootstrap environment
+        # and concatenate them to the build requirements from the recipe
+        bootstrap_metadir = join(path, 'conda-meta')
+        if not isdir(bootstrap_metadir):
+            print("Bootstrap environment '%s' not found" % build_config_or_bootstrap)
+            sys.exit(1)
+        bootstrap_metadata = _scan_metadata(bootstrap_metadir)
+        bootstrap_requirements = []
+        for package, data in bootstrap_metadata.items():
+            bootstrap_requirements.append("%s %s %s" % (package, data['version'], data['build']))
+        m.meta['requirements']['build'] += bootstrap_requirements
+    return metadata
+
+
+def _jinja_config(jinja_env):
+    # make all metadata from build_prefix/conda-meta/*.json available to
+    # jinja in a dictionary 'installed'
+    jinja_env.globals['installed'] = _scan_metadata(os.path.join(config.build_prefix, 'conda-meta'))
+
+
 def parse_or_try_download(metadata, no_download_source, verbose, force_download=False):
     if (("version" not in metadata.meta["package"] or
          not metadata.meta["package"]["version"]) and
@@ -82,7 +141,7 @@ def parse_or_try_download(metadata, no_download_source, verbose, force_download=
         #    meta.yaml, and not previously installed in builder env.
         try:
             source.provide(metadata.path, metadata.get_section('source'), verbose=verbose)
-            metadata.parse_again(permit_undefined_jinja=False)
+            metadata.parse_again(permit_undefined_jinja=False, jinja_config=_jinja_config)
             need_source_download = False
         except subprocess.CalledProcessError:
             print("Warning: failed to download source.  If building, will try "
@@ -98,7 +157,7 @@ def parse_or_try_download(metadata, no_download_source, verbose, force_download=
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source, verbose):
+def render_recipe(recipe_path, no_download_source, verbose, build_config_or_bootstrap=None):
     with Locked(config.croot):
         arg = recipe_path
         # Don't use byte literals for paths in Python 2
@@ -129,6 +188,7 @@ def render_recipe(recipe_path, no_download_source, verbose):
 
         m = parse_or_try_download(m, no_download_source=no_download_source,
                                   verbose=verbose)
+        m = add_build_config(m, build_config_or_bootstrap)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)

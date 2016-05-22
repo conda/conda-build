@@ -92,6 +92,16 @@ source to try fill in related template variables.",
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )
+    p.add_argument(
+        '-b', '--build-config',
+        help="""Provide initial configuration in addition to recipe.
+        Can be:
+          - a yaml-config file whose 'requirements/build' section is
+            concatenated to the build requirements from the recipe.
+          - a path to or name of an environment, which will be emulated
+            in the package.""",
+        action="store"
+    )
     add_parser_channels(p)
     return p
 
