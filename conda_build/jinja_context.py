@@ -9,10 +9,68 @@ import json
 import os
 from functools import partial
 
+import jinja2
+
 from conda.compat import PY3
 from .environ import get_dict as get_environ
+from .metadata import select_lines, ns_cfg
 
 _setuptools_data = None
+
+
+class UndefinedNeverFail(jinja2.Undefined):
+    """
+    A class for Undefined jinja variables.
+    This is even less strict than the default jinja2.Undefined class,
+    because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and
+    {{ MY_UNDEFINED_VAR|int }}. This can mask lots of errors in jinja templates, so it
+    should only be used for a first-pass parse, when you plan on running a 'strict'
+    second pass later.
+    """
+    all_undefined_names = []
+
+    def __init__(self, hint=None, obj=jinja2.runtime.missing, name=None,
+                 exc=jinja2.exceptions.UndefinedError):
+        UndefinedNeverFail.all_undefined_names.append(name)
+        jinja2.Undefined.__init__(self, hint, obj, name, exc)
+
+    __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
+    __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
+    __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
+    __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
+    __complex__ = __pow__ = __rpow__ = \
+        lambda *args, **kwargs: UndefinedNeverFail()
+
+    __str__ = __repr__ = \
+        lambda *args, **kwargs: u''
+
+    __int__ = lambda _: 0
+    __float__ = lambda _: 0.0
+
+    def __getattr__(self, k):
+        try:
+            return object.__getattr__(self, k)
+        except AttributeError:
+            return UndefinedNeverFail()
+
+    def __setattr__(self, k, v):
+        pass
+
+
+class FilteredLoader(jinja2.BaseLoader):
+    """
+    A pass-through for the given loader, except that the loaded source is
+    filtered according to any metadata selectors in the source text.
+    """
+
+    def __init__(self, unfiltered_loader):
+        self._unfiltered_loader = unfiltered_loader
+        self.list_templates = unfiltered_loader.list_templates
+
+    def get_source(self, environment, template):
+        contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
+                                                                          template)
+        return select_lines(contents, ns_cfg()), filename, uptodate
 
 
 def load_setuptools(setup_file='setup.py', from_recipe_dir=False,

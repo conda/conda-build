@@ -348,6 +348,7 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
+        self.undefined_jinja_vars = []
         self.parse_again(permit_undefined_jinja=True)
 
     def parse_again(self, permit_undefined_jinja=False):
@@ -610,7 +611,7 @@ class MetaData(object):
             with open(self.meta_path) as fd:
                 return fd.read()
 
-        from conda_build.jinja_context import context_processor
+        from conda_build.jinja_context import context_processor, UndefinedNeverFail, FilteredLoader
 
         path, filename = os.path.split(self.meta_path)
         loaders = [  # search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
@@ -627,54 +628,11 @@ class MetaData(object):
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
-        class FilteredLoader(jinja2.BaseLoader):
-            """
-            A pass-through for the given loader, except that the loaded source is
-            filtered according to any metadata selectors in the source text.
-            """
-
-            def __init__(self, unfiltered_loader):
-                self._unfiltered_loader = unfiltered_loader
-                self.list_templates = unfiltered_loader.list_templates
-
-            def get_source(self, environment, template):
-                contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
-                                                                                  template)
-                return select_lines(contents, ns_cfg()), filename, uptodate
-
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
-            class UndefinedNeverFail(jinja2.Undefined):
-                """
-                A class for Undefined jinja variables.
-                This is even less strict than the default jinja2.Undefined class,
-                because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and
-                {{ MY_UNDEFINED_VAR|int }}. This can mask lots of errors in jinja templates, so it
-                should only be used for a first-pass parse, when you plan on running a 'strict'
-                second pass later.
-                """
-                __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
-                __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
-                __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
-                __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
-                __complex__ = __pow__ = __rpow__ = \
-                    lambda *args, **kwargs: UndefinedNeverFail()
-
-                __str__ = __repr__ = \
-                    lambda *args, **kwargs: u''
-
-                __int__ = lambda _: 0
-                __float__ = lambda _: 0.0
-
-                def __getattr__(self, k):
-                    try:
-                        return object.__getattr__(self, k)
-                    except AttributeError:
-                        return UndefinedNeverFail()
-
-                def __setattr__(self, k, v):
-                    pass
-
+            # The UndefinedNeverFail class keeps a global list of all undefined names
+            # Clear any leftover names from the last parse.
+            UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
@@ -684,7 +642,14 @@ class MetaData(object):
 
         try:
             template = env.get_or_select_template(filename)
-            return template.render(environment=env)
+            rendered = template.render(environment=env)
+
+            if permit_undefined_jinja:
+                self.undefined_jinja_vars = UndefinedNeverFail.all_undefined_names
+            else:
+                self.undefined_jinja_vars = []
+
+            return rendered
         except jinja2.TemplateError as ex:
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))
