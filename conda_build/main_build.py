@@ -211,8 +211,6 @@ def execute(args, parser):
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
-    from conda_build.metadata import MetaData
-    import conda.config as cc
 
     check_external()
 
@@ -273,8 +271,10 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # this fully renders any jinja templating, throwing an error if any data is missing
-        m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                verbose=False, build_config_or_bootstrap=args.build_config)
+        m, need_source_download = render_recipe(recipe_dir,
+                                                no_download_source=False,
+                                                verbose=False,
+                                                build_config_or_bootstrap=args.build_config)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 

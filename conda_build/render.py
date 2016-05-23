@@ -6,25 +6,28 @@
 
 from __future__ import absolute_import, division, print_function
 
+import glob
+import json
+from locale import getpreferredencoding
+import os
+from os.path import isdir, isfile, abspath
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
-import os
-from os.path import isdir, isfile, abspath
-from locale import getpreferredencoding
-import subprocess
 
 import yaml
 
 from conda.compat import PY3
+import conda.config as cc
 from conda.lock import Locked
 
 from conda_build import exceptions
-from conda_build.config import config
-from conda_build.metadata import MetaData
-import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
+from conda_build.config import config
+from conda_build.metadata import MetaData, parse
+import conda_build.source as source
 
 
 def set_language_env_vars(args, parser, execute=None):
@@ -74,7 +77,8 @@ def bldpkg_path(m):
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-# This really belongs in conda, and it is int conda.cli.common, but we don't presently have an API there.
+# This really belongs in conda, and it is int conda.cli.common,
+#   but we don't presently have an API there.
 def _get_env_path(env_name):
     if os.path.isdir(env_name):
         return env_name
@@ -90,7 +94,6 @@ def _scan_metadata(path):
     Scan all json files in 'path' and return a dictionary with their contents.
     Files are assumed to be in 'index.json' format.
     '''
-    import glob, json, os
     installed = dict()
     for filename in glob.glob(os.path.join(path, '*.json')):
         with open(filename) as file:
@@ -111,13 +114,13 @@ def add_build_config(metadata, build_config_or_bootstrap):
                 build_config = parse(configfile.read())
             metadata.meta['requirements']['build'] += build_config['requirements']['build']
         except Exception as e:
-            print("Unable to read config file '%s':" % args.build_config)
+            print("Unable to read config file '%s':" % build_config_or_bootstrap)
             print(e)
             sys.exit(1)
     elif path:
         # construct build requirements that replicate the given bootstrap environment
         # and concatenate them to the build requirements from the recipe
-        bootstrap_metadir = join(path, 'conda-meta')
+        bootstrap_metadir = os.path.join(path, 'conda-meta')
         if not isdir(bootstrap_metadir):
             print("Bootstrap environment '%s' not found" % build_config_or_bootstrap)
             sys.exit(1)
@@ -125,7 +128,7 @@ def add_build_config(metadata, build_config_or_bootstrap):
         bootstrap_requirements = []
         for package, data in bootstrap_metadata.items():
             bootstrap_requirements.append("%s %s %s" % (package, data['version'], data['build']))
-        m.meta['requirements']['build'] += bootstrap_requirements
+        metadata.meta['requirements']['build'] += bootstrap_requirements
     return metadata
 
 
