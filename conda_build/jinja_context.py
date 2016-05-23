@@ -39,7 +39,10 @@ class UndefinedNeverFail(jinja2.Undefined):
     __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
     __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
     __complex__ = __pow__ = __rpow__ = \
-        lambda *args, **kwargs: UndefinedNeverFail()
+        lambda self, *args, **kwargs: UndefinedNeverFail(hint=self._undefined_hint,
+                                                         obj=self._undefined_obj,
+                                                         name=self._undefined_name,
+                                                         exc=self._undefined_exception)
 
     __str__ = __repr__ = \
         lambda *args, **kwargs: u''
@@ -51,10 +54,10 @@ class UndefinedNeverFail(jinja2.Undefined):
         try:
             return object.__getattr__(self, k)
         except AttributeError:
-            return UndefinedNeverFail()
-
-    def __setattr__(self, k, v):
-        pass
+            return UndefinedNeverFail(hint=self._undefined_hint,
+                                      obj=self._undefined_obj,
+                                      name=self._undefined_name + '.' + k,
+                                      exc=self._undefined_exception)
 
 
 class FilteredLoader(jinja2.BaseLoader):
