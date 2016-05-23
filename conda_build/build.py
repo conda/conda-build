@@ -644,11 +644,11 @@ def test(m, move_broken=True):
             # Since the tests are run by python, ensure that python is installed.
             specs += ['python %s*' % environ.get_py_ver()]
             need_reinstall = True
-        if pl_files and 'python' not in test_env_pkgs:
+        if pl_files and 'perl' not in test_env_pkgs:
             # as the tests are run by perl, we need to specify it
             specs += ['perl %s*' % environ.get_perl_ver()]
             need_reinstall = True
-        if lua_files and 'python' not in test_env_pkgs:
+        if lua_files and 'lua' not in test_env_pkgs:
             # not sure how this shakes out
             specs += ['lua %s*' % environ.get_lua_ver()]
             need_reinstall = True
