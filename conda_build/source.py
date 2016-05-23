@@ -336,7 +336,12 @@ Error:
     try:
         check_call([patch] + patch_args, cwd=src_dir)
     except CalledProcessError:
-        sys.exit(1)
+        # fallback to -p1, the git default
+        patch_args[0] = '-p1'
+        try:
+            check_call([patch] + patch_args, cwd=src_dir)
+        except CalledProcessError:
+            sys.exit(1)
     if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
