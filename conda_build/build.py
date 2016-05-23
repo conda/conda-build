@@ -506,7 +506,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
                         bf.write(script)
                 import conda_build.windows as windows
-                windows.build(m, build_file)
+                windows.build(m, build_file, dirty=dirty)
             else:
                 env = environ.get_dict(m, dirty=dirty)
                 build_file = join(m.path, 'build.sh')
