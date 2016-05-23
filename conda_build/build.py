@@ -628,7 +628,15 @@ def test(m, move_broken=True):
             rm_rf(config.build_prefix)
             rm_rf(config.test_prefix)
 
+        get_build_metadata(m)
+        specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+
+        # add packages listed in the run environment and test/requires
+        specs.extend(ms.spec for ms in m.ms_depends('run'))
+        specs += m.get_value('test/requires', [])
+
         create_env(config.test_prefix, specs)
+
         test_env_pkgs = _scan_metadata(os.path.join(config.test_prefix, 'conda-meta'))
 
         need_reinstall = False

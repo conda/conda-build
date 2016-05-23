@@ -100,6 +100,8 @@ def _scan_metadata(path):
 
 
 def add_build_config(metadata, build_config_or_bootstrap):
+    if not build_config_or_bootstrap:
+        return metadata
     path = _get_env_path(build_config_or_bootstrap)
     # concatenate build requirements from the build config file to the build
     # requirements from the recipe
