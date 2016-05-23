@@ -31,7 +31,6 @@ from conda_build.config import config
 from conda_build.utils import comma_join
 
 
-
 def ns_cfg():
     # Remember to update the docs of any of this changes
     plat = cc.subdir

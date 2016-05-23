@@ -6,7 +6,7 @@ import tempfile
 
 import pytest
 
-from conda.compat import PY3
+from conda.compat import PY3, TemporaryDirectory
 from conda.config import subdir
 from conda.fetch import download
 
@@ -36,38 +36,46 @@ def test_output_build_path_git_source():
     assert output.rstrip() == test_path
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows permission errors w/ git when removing repo files on cleanup.")
 def test_cached_source_not_interfere_with_versioning():
     """Test that work dir does not cache and cause inaccurate test target"""
-    subprocess.check_call(['git', 'clone', 'https://github.com/conda/conda_build_test_recipe'])
+    basedir = os.getcwd()
     try:
-        # build to make sure we have a work directory with source in it.  We want to make sure that
-        #    whatever version that is does not interfere with the test we run next.
-        subprocess.check_call(['conda', 'build', '--no-test',
-                               '--no-anaconda-upload',
-                               'conda_build_test_recipe'])
+        with TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            subprocess.check_call(['git', 'clone',
+                                   'https://github.com/conda/conda_build_test_recipe'])
+            # build to make sure we have a work directory with source in it.
+            #    We want to make sure that whatever version that is does not
+            #    interfere with the test we run next.
+            subprocess.check_call(['conda', 'build', '--no-test',
+                                '--no-anaconda-upload',
+                                'conda_build_test_recipe'])
 
-        os.chdir('conda_build_test_recipe')
-        subprocess.check_call(['git', 'checkout', '1.20.0'])
-        os.chdir('..')
+            os.chdir('conda_build_test_recipe')
+            subprocess.check_call(['git', 'checkout', '1.20.0'])
+            os.chdir('..')
 
-        # this should fail, because we have not built v1.0, so there should be nothing to test.
-        # if it succeeds, it means that it used the cached master checkout for determining which
-        # version to test.
-        cmd = 'conda build --output conda_build_test_recipe'
-        output = subprocess.check_output(cmd.split())
-        if PY3:
-            output = output.decode("UTF-8")
-        assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
+            # this should fail, because we have not built v1.0, so there should
+            # be nothing to test.  If it succeeds, it means that it used the
+            # cached master checkout for determining which version to test.
+            cmd = 'conda build --output conda_build_test_recipe'
+            output = subprocess.check_output(cmd.split())
+            if PY3:
+                output = output.decode("UTF-8")
+            assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
     finally:
-        shutil.rmtree('conda_build_test_recipe')
+        os.chdir(basedir)
 
 
 def test_package_test():
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     filename = "jinja2-2.8-py{}{}_0.tar.bz2".format(sys.version_info.major, sys.version_info.minor)
     downloaded_file = os.path.join(sys.prefix, 'conda-bld', subdir, filename)
-    download('https://anaconda.org/conda-forge/jinja2/2.8/download/{}/{}'.format(subdir, filename),
-             downloaded_file)
+    if not os.path.isfile(downloaded_file):
+        download('https://anaconda.org/conda-forge/jinja2/2.8/download/{}/{}'.format(subdir, filename),  # noqa
+                 downloaded_file)
     subprocess.check_call(["conda", "build", "--test", downloaded_file])
 
 
