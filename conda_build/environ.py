@@ -94,7 +94,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
 
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
-        if remote_url != git_url:
+        if remote_url.lower() != git_url.lower():
             return False
     except CalledProcessError:
         return False

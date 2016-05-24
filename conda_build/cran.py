@@ -492,7 +492,7 @@ def main(args, parser):
         d['license'] = cran_package.get("License", "None")
 
         # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
-        if 'GPL (>=2)' in d['license'] or d['license'] == 'GPL':
+        if 'GPL (>= 2)' in d['license'] or d['license'] == 'GPL':
             d['license_family'] = 'GPL3'
         else:
             d['license_family'] = get_close_matches(d['license'],
@@ -578,8 +578,7 @@ def main(args, parser):
 
             if cran_package.get("NeedsCompilation", 'no') == 'yes':
                 if dep_type == 'build':
-                    deps.append('{indent}{{{{posix}}}}base       # [win]'.format(indent=INDENT))
-                    deps.append('{indent}{{{{posix}}}}zip        # [win]'.format(indent=INDENT))
+                    deps.append('{indent}posix               # [win]'.format(indent=INDENT))
                     deps.append('{indent}{{{{native}}}}toolchain # [win]'.format(indent=INDENT))
                     deps.append('{indent}gcc                 # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)

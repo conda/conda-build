@@ -27,9 +27,10 @@ from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
+from conda_build import __version__
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
-from conda_build.render import parse_or_try_download
+from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -184,6 +185,17 @@ def create_info_files(m, files, include_recipe=True):
                 shutil.copytree(src_path, dst_path)
             else:
                 shutil.copy(src_path, dst_path)
+        os.rename(join(recipe_dir, "meta.yaml"), join(recipe_dir, "meta.yaml.template"))
+
+    # store the rendered meta.yaml file, plus information about where it came from
+    #    and what version of conda-build created it
+    metayaml = output_yaml(m)
+    with open(join(config.info_dir, "meta.yaml"), 'w') as f:
+        f.write("# This file created by conda-build {}\n".format(__version__))
+        f.write("# meta.yaml template originally from:\n")
+        f.write("# " + source.get_repository_info(m.path) + "\n")
+        f.write("# ------------------------------------------------\n\n")
+        f.write(metayaml)
 
     license_file = m.get_value('about/license_file')
     if license_file:
@@ -230,7 +242,7 @@ def create_info_files(m, files, include_recipe=True):
 
     if sys.platform == 'win32':
         # make sure we use '/' path separators in metadata
-        files = [f.replace('\\', '/') for f in files]
+        files = [_f.replace('\\', '/') for _f in files]
 
     with open(join(config.info_dir, 'files'), 'w') as fo:
         if m.get_value('build/noarch_python'):
@@ -367,14 +379,8 @@ def rm_pkgs_cache(dist):
     plan.execute_plan(rmplan)
 
 
-def bldpkg_path(m):
-    '''
-    Returns path to built package's tarball given its ``Metadata``.
-    '''
-    return join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
-
-
-def build(m, post=None, include_recipe=True, keep_old_work=False, need_source_download=False):
+def build(m, post=None, include_recipe=True, keep_old_work=False,
+          need_source_download=True, verbose=True):
     '''
     Build the package with the specified metadata.
 
@@ -442,7 +448,10 @@ def build(m, post=None, include_recipe=True, keep_old_work=False, need_source_do
                 try:
                     os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
                                                             config.build_prefix)['PATH']
-                    m, need_source_download = parse_or_try_download(m, no_download_source=False)
+                    m, need_source_download = parse_or_try_download(m,
+                                                                    no_download_source=False,
+                                                                    force_download=True,
+                                                                    verbose=verbose)
                     assert not need_source_download, "Source download failed.  Please investigate."
                 finally:
                     os.environ['PATH'] = _old_path

@@ -8,15 +8,11 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
-import yaml
-
-from conda.compat import PY3
 from conda.cli.common import add_parser_channels
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__
-from conda_build.build import bldpkg_path
-from conda_build.render import render_recipe, set_language_env_vars
+from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path, output_yaml
 from conda_build.utils import find_recipe
 from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
                                     LuaVersionsCompleter, NumPyVersionCompleter)
@@ -41,7 +37,7 @@ platform specifics, making it simple to create working environments from
         version='conda-build %s' % __version__,
     )
     p.add_argument(
-        '-n', "--no_source",
+        '-n', "--no-source",
         action="store_true",
         help="When templating can't be completed, do not obtain the \
 source to try fill in related template variables.",
@@ -100,37 +96,6 @@ source to try fill in related template variables.",
     return p
 
 
-# Next bit of stuff is to support YAML output in the order we expect.
-# http://stackoverflow.com/a/17310199/1170370
-class MetaYaml(dict):
-    fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
-
-    def to_omap(self):
-        return [(field, self[field]) for field in MetaYaml.fields if field in self]
-
-
-def represent_omap(dumper, data):
-    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
-
-
-def unicode_representer(dumper, uni):
-    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
-    return node
-
-
-class IndentDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super(IndentDumper, self).increase_indent(flow, False)
-
-
-yaml.add_representer(MetaYaml, represent_omap)
-if PY3:
-    yaml.add_representer(str, unicode_representer)
-    unicode = None  # silence pyflakes about unicode not existing in py3
-else:
-    yaml.add_representer(unicode, unicode_representer)
-
-
 def main():
     p = get_render_parser()
     p.add_argument(
@@ -147,22 +112,21 @@ def main():
         choices=RecipeCompleter(),
         help="Path to recipe directory.",
     )
-
+    # this is here because we have a different default than build
+    p.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose output from download tools and progress updates',
+    )
     args = p.parse_args()
     set_language_env_vars(args, p)
 
-    metadata = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source)
+    metadata, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
+                                 verbose=args.verbose)
     if args.output:
         print(bldpkg_path(metadata))
     else:
-        output = yaml.dump(MetaYaml(metadata.meta), Dumper=IndentDumper,
-                            default_flow_style=False, indent=4)
-        if args.file:
-            with open(args.file, "w") as f:
-                f.write(output)
-        else:
-            print(output)
-
+        print(output_yaml(metadata, args.file))
 
 if __name__ == '__main__':
     main()
