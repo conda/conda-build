@@ -163,7 +163,7 @@ def get_dict(m=None, prefix=None):
     d.update(system_vars(d, prefix))
 
     # features
-    d.update({key.upper(): str(int(value)) for key, value in
+    d.update({'FEATURE_%s' % key.upper(): str(int(value)) for key, value in
               iteritems(get_features())})
 
     return d
