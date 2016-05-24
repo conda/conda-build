@@ -74,13 +74,15 @@ def bldpkg_path(m):
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def parse_or_try_download(metadata, no_download_source, verbose, force_download=False):
+def parse_or_try_download(metadata, no_download_source, verbose,
+                          force_download=False, dirty=False):
     if (force_download or (not no_download_source and
                            any(var.startswith('GIT_') for var in metadata.undefined_jinja_vars))):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            source.provide(metadata.path, metadata.get_section('source'), verbose=verbose)
+            source.provide(metadata.path, metadata.get_section('source'),
+                           verbose=verbose, dirty=dirty)
             metadata.parse_again(permit_undefined_jinja=False)
             need_source_download = False
         except subprocess.CalledProcessError:

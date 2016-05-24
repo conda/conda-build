@@ -374,7 +374,7 @@ def rm_pkgs_cache(dist):
 
 
 def build(m, post=None, include_recipe=True, keep_old_work=False,
-          need_source_download=True, verbose=True):
+          need_source_download=True, verbose=True, dirty=False):
     '''
     Build the package with the specified metadata.
 
@@ -419,14 +419,15 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
         if post in [False, None]:
             print("Removing old build environment")
-            if on_win:
-                if isdir(config.short_build_prefix):
-                    move_to_trash(config.short_build_prefix, '')
-                if isdir(config.long_build_prefix):
-                    move_to_trash(config.long_build_prefix, '')
-            else:
-                rm_rf(config.short_build_prefix)
-                rm_rf(config.long_build_prefix)
+            if not dirty:
+                if on_win:
+                    if isdir(config.short_build_prefix):
+                        move_to_trash(config.short_build_prefix, '')
+                    if isdir(config.long_build_prefix):
+                        move_to_trash(config.long_build_prefix, '')
+                else:
+                    rm_rf(config.short_build_prefix)
+                    rm_rf(config.long_build_prefix)
 
             # Display the name only
             # Version number could be missing due to dependency on source info.
@@ -445,7 +446,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     m, need_source_download = parse_or_try_download(m,
                                                                     no_download_source=False,
                                                                     force_download=True,
-                                                                    verbose=verbose)
+                                                                    verbose=verbose,
+                                                                    dirty=dirty)
                     assert not need_source_download, "Source download failed.  Please investigate."
                 finally:
                     os.environ['PATH'] = _old_path
