@@ -12,6 +12,8 @@ from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
 
 from conda_build import exceptions
+from conda_build.features import feature_list
+
 
 try:
     import yaml
@@ -28,25 +30,6 @@ except ImportError:
 from conda_build.config import config
 from conda_build.utils import comma_join
 
-
-
-@memoized
-def get_features():
-    """
-    Returns a dict mapping feature names to booleans, corresponding to
-    environment variables starting with 'FEATURE_'.  For example having
-    FEATURE_A=1 and FEATURE_B=0 will return {'a': True, 'b': False}
-    """
-    sel_pat = re.compile('FEATURE_(\w+)')
-    res = {}
-    for key, value in iteritems(os.environ):
-        m = sel_pat.match(key)
-        if m:
-            if value not in ('0', '1'):
-                sys.exit("Error: did not expect environment variable '%s' "
-                         "being set to '%s' (not '0' or '1')" % (key, value))
-            res[m.group(1).lower()] = bool(int(value))
-    return res
 
 
 def ns_cfg():
@@ -85,7 +68,8 @@ def ns_cfg():
     for machine in cc.non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
-    d.update(get_features())
+    for feature, value in feature_list:
+        d[feature] = value
     d.update(os.environ)
     return d
 
