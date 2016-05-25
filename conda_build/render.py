@@ -99,7 +99,7 @@ def parse_or_try_download(metadata, no_download_source, verbose,
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source, verbose):
+def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
     with Locked(config.croot):
         arg = recipe_path
         # Don't use byte literals for paths in Python 2
@@ -129,7 +129,7 @@ def render_recipe(recipe_path, no_download_source, verbose):
             sys.exit(1)
 
         m = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose)
+                                  verbose=verbose, dirty=dirty)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
