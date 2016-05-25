@@ -99,6 +99,15 @@ def test_recipe_builds(recipe):
     subprocess.check_call(cmd.split(), env=env)
 
 
+def test_dirty_variable_available_in_build_scripts():
+    cmd = 'conda build --no-anaconda-upload --dirty {}'.format(os.path.join(metadata_dir,
+                                                                    "_dirty_skip_section"))
+    subprocess.check_call(cmd.split())
+    with pytest.raises(subprocess.CalledProcessError):
+        cmd=cmd.replace(" --dirty", "")
+        subprocess.check_call(cmd.split())
+
+
 def test_checkout_tool_as_dependency():
     # "hide" svn by putting a known bad one on PATH
     tmpdir = tempfile.mkdtemp()
