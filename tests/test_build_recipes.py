@@ -104,7 +104,7 @@ def test_dirty_variable_available_in_build_scripts():
                                                                     "_dirty_skip_section"))
     subprocess.check_call(cmd.split())
     with pytest.raises(subprocess.CalledProcessError):
-        cmd=cmd.replace(" --dirty", "")
+        cmd = cmd.replace(" --dirty", "")
         subprocess.check_call(cmd.split())
 
 
