@@ -420,20 +420,19 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
-            if not dirty:
-                if on_win:
-                    if isdir(config.short_build_prefix):
-                        move_to_trash(config.short_build_prefix, '')
-                    if isdir(config.long_build_prefix):
-                        move_to_trash(config.long_build_prefix, '')
-                else:
-                    rm_rf(config.short_build_prefix)
-                    rm_rf(config.long_build_prefix)
+            if on_win:
+                if isdir(config.short_build_prefix):
+                    move_to_trash(config.short_build_prefix, '')
+                if isdir(config.long_build_prefix):
+                    move_to_trash(config.long_build_prefix, '')
+            else:
+                rm_rf(config.short_build_prefix)
+                rm_rf(config.long_build_prefix)
 
-                # Display the name only
-                # Version number could be missing due to dependency on source info.
-                create_env(config.build_prefix,
-                        [ms.spec for ms in m.ms_depends('build')])
+            # Display the name only
+            # Version number could be missing due to dependency on source info.
+            create_env(config.build_prefix,
+                    [ms.spec for ms in m.ms_depends('build')])
 
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
