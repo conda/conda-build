@@ -324,8 +324,7 @@ def execute(args, parser):
                             include_recipe=args.include_recipe,
                             keep_old_work=args.keep_old_work,
                             need_source_download=need_source_download,
-                            dirty=args.dirty
-                )
+                            dirty=args.dirty)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these
