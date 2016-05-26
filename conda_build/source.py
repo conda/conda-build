@@ -367,8 +367,6 @@ def provide(recipe_dir, meta, verbose=False, patch=True, dirty=False):
         elif 'git_url' in meta:
             git_source(meta, recipe_dir, verbose=verbose)
         # build to make sure we have a work directory with source in it.  We want to make sure that
-        # build to make sure we have a work directory with source in it.  We want to make sure that
-        #    whatever version that is does not interfere with the test we run next.
         #    whatever version that is does not interfere with the test we run next.
         elif 'hg_url' in meta:
             hg_source(meta, verbose=verbose)
