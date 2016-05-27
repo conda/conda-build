@@ -62,7 +62,7 @@ def set_language_env_vars(args, parser, execute=None):
     # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
     # Auto-set those env variables
     for var in conda_version.values():
-        if hasattr(config, var):
+        if hasattr(config, var) and getattr(config, var):
             # Set the env variable.
             os.environ[var] = str(getattr(config, var))
 
