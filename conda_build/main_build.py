@@ -112,6 +112,12 @@ different sets of packages."""
         callstacks involving multiple packages/recipes. """
     )
     p.add_argument(
+        '--dirty',
+        action='store_true',
+        help='Do not remove work directory or _build environment, '
+        'to speed up debugging.  Does not apply patches or download source.'
+    )
+    p.add_argument(
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
@@ -317,7 +323,8 @@ def execute(args, parser):
                 build.build(m, post=post,
                             include_recipe=args.include_recipe,
                             keep_old_work=args.keep_old_work,
-                            need_source_download=need_source_download)
+                            need_source_download=need_source_download,
+                            dirty=args.dirty)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these

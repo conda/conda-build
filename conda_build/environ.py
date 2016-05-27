@@ -143,12 +143,12 @@ def get_git_info(repo):
     return d
 
 
-def get_dict(m=None, prefix=None):
+def get_dict(m=None, prefix=None, dirty=False):
     if not prefix:
         prefix = config.build_prefix
 
     # conda-build specific vars
-    d = conda_build_vars(prefix)
+    d = conda_build_vars(prefix, dirty)
 
     # languages
     d.update(python_vars())
@@ -164,7 +164,7 @@ def get_dict(m=None, prefix=None):
     return d
 
 
-def conda_build_vars(prefix):
+def conda_build_vars(prefix, dirty):
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
@@ -176,6 +176,7 @@ def conda_build_vars(prefix):
         'SRC_DIR': source.get_dir(),
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
+        'DIRTY': '1' if dirty else '',
     }
 
 

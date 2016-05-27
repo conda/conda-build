@@ -374,7 +374,7 @@ def rm_pkgs_cache(dist):
 
 
 def build(m, post=None, include_recipe=True, keep_old_work=False,
-          need_source_download=True, verbose=True):
+          need_source_download=True, verbose=True, dirty=False):
     '''
     Build the package with the specified metadata.
 
@@ -419,6 +419,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
         if post in [False, None]:
             print("Removing old build environment")
+            print("BUILD START:", m.dist())
             if on_win:
                 if isdir(config.short_build_prefix):
                     move_to_trash(config.short_build_prefix, '')
@@ -430,7 +431,6 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
             # Display the name only
             # Version number could be missing due to dependency on source info.
-            print("BUILD START:", m.dist())
             create_env(config.build_prefix,
                     [ms.spec for ms in m.ms_depends('build')])
 
@@ -445,7 +445,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     m, need_source_download = parse_or_try_download(m,
                                                                     no_download_source=False,
                                                                     force_download=True,
-                                                                    verbose=verbose)
+                                                                    verbose=verbose,
+                                                                    dirty=dirty)
                     assert not need_source_download, "Source download failed.  Please investigate."
                 finally:
                     os.environ['PATH'] = _old_path
@@ -501,7 +502,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 import conda_build.windows as windows
                 windows.build(m, build_file)
             else:
-                env = environ.get_dict(m)
+                env = environ.get_dict(m, dirty=dirty)
                 build_file = join(m.path, 'build.sh')
 
                 if script:
