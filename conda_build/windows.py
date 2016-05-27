@@ -160,6 +160,9 @@ def msvc_env_cmd(bits, override=None):
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
 
+    # reset errorlevel to 0 so that bld.bat starts with success for sake of error checks
+    msvc_env_lines.append("ver > nul")
+
     return '\n'.join(msvc_env_lines)
 
 
