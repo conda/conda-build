@@ -11,7 +11,9 @@ import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
 
-from . import exceptions
+from conda_build import exceptions
+from conda_build.features import feature_list
+
 
 try:
     import yaml
@@ -27,6 +29,7 @@ except ImportError:
 
 from conda_build.config import config
 from conda_build.utils import comma_join
+
 
 
 def ns_cfg():
@@ -65,6 +68,8 @@ def ns_cfg():
     for machine in cc.non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
+    for feature, value in feature_list:
+        d[feature] = value
     d.update(os.environ)
     return d
 
@@ -671,11 +676,3 @@ class MetaData(object):
         String representation of the MetaData.
         '''
         return self.__str__()
-
-
-if __name__ == '__main__':
-    from pprint import pprint
-    from os.path import expanduser
-
-    m = MetaData(expanduser('~/conda-recipes/pycosat'))
-    pprint(m.info_index())
