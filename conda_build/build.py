@@ -394,7 +394,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
     '''
 
     if (m.get_value('build/detect_binary_files_with_prefix') or
-            m.binary_has_prefix_files()):
+            m.binary_has_prefix_files()) and not on_win:
         # We must use a long prefix here as the package will only be
         # installable into prefixes shorter than this one.
         config.use_long_build_prefix = True
