@@ -50,6 +50,8 @@ def ns_cfg():
         win=plat.startswith('win-'),
         win32=bool(plat == 'win-32'),
         win64=bool(plat == 'win-64'),
+        x86=plat.endswith(('-32', '-64')),
+        x86_64=plat.endswith('-64'),
         pl=pl,
         py=py,
         lua=lua,
