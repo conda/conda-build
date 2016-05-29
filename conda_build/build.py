@@ -244,7 +244,7 @@ def create_info_files(m, files, include_recipe=True):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    with open(join(config.info_dir, 'files'), 'w') as fo:
+    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
         if m.get_value('build/noarch_python'):
             fo.write('\n')
         else:
