@@ -98,9 +98,13 @@ def have_prefix_files(files):
     '''
     prefix = config.build_prefix
     prefix_bytes = prefix.encode('utf-8')
-    alt_prefix = prefix.replace('\\', '/')
-    alt_prefix_bytes = alt_prefix.encode('utf-8')
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
+    if on_win:
+        forward_slash_prefix = prefix.replace('\\', '/')
+        forward_slash_prefix_bytes = forward_slash_prefix.encode('utf-8')
+        double_backslash_prefix = prefix.replace('\\', '\\\\')
+        double_backslash_prefix_bytes = double_backslash_prefix.encode('utf-8')
+
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
             continue
@@ -131,9 +135,12 @@ def have_prefix_files(files):
                 mm = mmap.mmap(fi.fileno(), 0)
         if mm.find(prefix_bytes) != -1:
             yield (prefix, mode, f)
-        if (sys.platform == 'win32') and mm.find(alt_prefix_bytes) != -1:
+        if on_win and mm.find(forward_slash_prefix_bytes) != -1:
             # some windows libraries use unix-style path separators
-            yield (alt_prefix, mode, f)
+            yield (forward_slash_prefix, mode, f)
+        elif on_win and mm.find(double_backslash_prefix_bytes) != -1:
+            # some windows libraries have double backslashes as escaping
+            yield (double_backslash_prefix, mode, f)
         if mm.find(prefix_placeholder_bytes) != -1:
             yield (prefix_placeholder, mode, f)
         mm.close() and fi.close()
