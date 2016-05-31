@@ -1,3 +1,7 @@
+"""
+This file tests prefix finding for Windows and *nix.
+"""
+
 import os
 import sys
 
@@ -17,6 +21,10 @@ def _write_prefix(filename, prefix, replacement):
 
 
 def test_find_prefix_files():
+    """
+    Write test output that has the prefix to be found, then verify that the prefix finding
+    identified the correct number of files.
+    """
     # create a temporary folder
     prefix = os.path.join(sys.prefix, "envs", "_build")
     if not os.path.isdir(prefix):
