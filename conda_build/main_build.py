@@ -279,7 +279,7 @@ def execute(args, parser):
 
         # this fully renders any jinja templating, throwing an error if any data is missing
         m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                verbose=False)
+                                                verbose=False, dirty=args.dirty)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 
@@ -305,7 +305,7 @@ def execute(args, parser):
         elif args.test:
             build.test(m, move_broken=False)
         elif args.source:
-            source.provide(m.path, m.get_section('source'), verbose=build.verbose)
+            source.provide(m.path, m.get_section('source'), verbose=build.verbose, dirty=args.dirty)
             print('Source tree in:', source.get_dir())
         else:
             # This loop recursively builds dependencies if recipes exist

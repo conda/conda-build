@@ -22,6 +22,16 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
+def test_CONDA_BLD_PATH():
+    env = dict(os.environ)
+    cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
+    with TemporaryDirectory() as tmp:
+        env["CONDA_BLD_PATH"] = tmp
+        subprocess.check_call(cmd.split(), env=env)
+        # trick is actually a second pass, to make sure that deletion/trash moving is working OK.
+        subprocess.check_call(cmd.split(), env=env)
+
+
 # TODO: this does not currently take into account post-build versioning changes with __conda_? files
 def test_output_build_path_git_source():
     cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
