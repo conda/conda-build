@@ -92,6 +92,16 @@ source to try fill in related template variables.",
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )
+    p.add_argument(
+        '-b', '--build-config',
+        help="""Provide initial configuration in addition to recipe.
+        Can be:
+          - a yaml-config file whose 'requirements/build' section is
+            concatenated to the build requirements from the recipe.
+          - a path to or name of an environment, which will be emulated
+            in the package.""",
+        action="store"
+    )
     add_parser_channels(p)
     return p
 
@@ -122,7 +132,7 @@ def main():
     set_language_env_vars(args, p)
 
     metadata, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
-                                 verbose=args.verbose)
+                                 verbose=args.verbose, build_config_or_bootstrap=args.build_config)
     if args.output:
         print(bldpkg_path(metadata))
     else:

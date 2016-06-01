@@ -132,7 +132,6 @@ different sets of packages."""
         action='store',
         help="User/organization to upload packages to on anaconda.org"
     )
-
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -278,8 +277,10 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # this fully renders any jinja templating, throwing an error if any data is missing
-        m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                verbose=False)
+        m, need_source_download = render_recipe(recipe_dir,
+                                                no_download_source=False,
+                                                verbose=False,
+                                                build_config_or_bootstrap=args.build_config)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 
