@@ -186,9 +186,9 @@ def kill_processes(process_names=["msbuild.exe"]):
             continue
 
 
-def build(m, bld_bat):
+def build(m, bld_bat, dirty=False):
     env = dict(os.environ)
-    env.update(environ.get_dict(m))
+    env.update(environ.get_dict(m, dirty=dirty))
     env = environ.prepend_bin_path(env, config.build_prefix, True)
 
     for name in 'BIN', 'INC', 'LIB':

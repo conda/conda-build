@@ -1,0 +1,6 @@
+package:
+  name: conda-build-test-dirty-skip-section
+  version: 1.0
+
+about:
+  summary: ensure that the DIRTY environment variable is available to bld.bat and build.sh

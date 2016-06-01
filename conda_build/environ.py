@@ -14,6 +14,7 @@ from conda.compat import text_type
 from conda_build import external
 from conda_build import source
 from conda_build.config import config
+from conda_build.features import feature_list
 from conda_build.scripts import prepend_bin_path
 
 
@@ -143,12 +144,12 @@ def get_git_info(repo):
     return d
 
 
-def get_dict(m=None, prefix=None):
+def get_dict(m=None, prefix=None, dirty=False):
     if not prefix:
         prefix = config.build_prefix
 
     # conda-build specific vars
-    d = conda_build_vars(prefix)
+    d = conda_build_vars(prefix, dirty)
 
     # languages
     d.update(python_vars())
@@ -161,10 +162,14 @@ def get_dict(m=None, prefix=None):
     # system
     d.update(system_vars(d, prefix))
 
+    # features
+    d.update({feat.upper(): str(int(value)) for feat, value in
+              feature_list})
+
     return d
 
 
-def conda_build_vars(prefix):
+def conda_build_vars(prefix, dirty):
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
@@ -173,9 +178,11 @@ def conda_build_vars(prefix):
         'PREFIX': prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
+        'SUBDIR': cc.subdir,
         'SRC_DIR': source.get_dir(),
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
+        'DIRTY': '1' if dirty else '',
     }
 
 
