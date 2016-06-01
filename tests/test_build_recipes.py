@@ -79,6 +79,22 @@ def test_cached_source_not_interfere_with_versioning():
         os.chdir(basedir)
 
 
+def test_relative_path_git_versioning():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_source_git_jinja2_relative_path"))
+    output = subprocess.check_output(cmd.split())
+    assert tag in output
+
+
+def test_relative_git_url_git_versioning():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_source_git_jinja2_relative_git_url"))
+    output = subprocess.check_output(cmd.split())
+    assert tag in output
+
+
 def test_package_test():
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     filename = "jinja2-2.8-py{}{}_0.tar.bz2".format(sys.version_info.major, sys.version_info.minor)
