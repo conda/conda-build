@@ -69,7 +69,10 @@ def prepend_bin_path(env, prefix, prepend_prefix=False):
     # bin_dirname takes care of bin on *nix, Scripts on win
     env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
     if sys.platform == "win32":
-        env['PATH'] = join(prefix, "Library", "bin") + os.pathsep + env['PATH']
+        env['PATH'] = join(prefix, "Library", "mingw-w64", "bin") + os.pathsep + \
+                      join(prefix, "Library", "usr", "bin") + os.pathsep + os.pathsep + \
+                      join(prefix, "Library", "bin") + os.pathsep + \
+                      env['PATH']
         prepend_prefix = True  # windows has Python in the prefix.  Use it.
     if prepend_prefix:
         env['PATH'] = prefix + os.pathsep + env['PATH']

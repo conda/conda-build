@@ -65,7 +65,7 @@ def set_language_env_vars(args, parser, execute=None):
     # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
     # Auto-set those env variables
     for var in conda_version.values():
-        if hasattr(config, var):
+        if hasattr(config, var) and getattr(config, var):
             # Set the env variable.
             os.environ[var] = str(getattr(config, var))
 
@@ -138,14 +138,13 @@ def _jinja_config(jinja_env):
     jinja_env.globals['installed'] = _scan_metadata(os.path.join(config.build_prefix, 'conda-meta'))
 
 
-def parse_or_try_download(metadata, no_download_source, verbose, force_download=False):
-    if (("version" not in metadata.meta["package"] or
-         not metadata.meta["package"]["version"]) and
-         not no_download_source) or force_download:
-        # this try/catch is for when the tool to download source is actually in
-        #    meta.yaml, and not previously installed in builder env.
+def parse_or_try_download(metadata, no_download_source, verbose,
+                          force_download=False, dirty=False):
+    if (force_download or (not no_download_source and
+                           any(var.startswith('GIT_') for var in metadata.undefined_jinja_vars))):
         try:
-            source.provide(metadata.path, metadata.get_section('source'), verbose=verbose)
+            source.provide(metadata.path, metadata.get_section('source'),
+                           verbose=verbose, dirty=dirty)
             metadata.parse_again(permit_undefined_jinja=False, jinja_config=_jinja_config)
             need_source_download = False
         except subprocess.CalledProcessError:
@@ -162,7 +161,7 @@ def parse_or_try_download(metadata, no_download_source, verbose, force_download=
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source, verbose, build_config_or_bootstrap=None):
+def render_recipe(recipe_path, no_download_source, verbose, dirty=False, build_config_or_bootstrap=None):
     with Locked(config.croot):
         arg = recipe_path
         # Don't use byte literals for paths in Python 2
@@ -192,7 +191,7 @@ def render_recipe(recipe_path, no_download_source, verbose, build_config_or_boot
             sys.exit(1)
 
         m = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose)
+                                  verbose=verbose, dirty=dirty)
         m = add_build_config(m, build_config_or_bootstrap)
 
         if need_cleanup:

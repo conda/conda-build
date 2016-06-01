@@ -39,6 +39,7 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
+from conda_build.features import feature_list
 
 
 on_win = (sys.platform == 'win32')
@@ -97,9 +98,13 @@ def have_prefix_files(files):
     '''
     prefix = config.build_prefix
     prefix_bytes = prefix.encode('utf-8')
-    alt_prefix = prefix.replace('\\', '/')
-    alt_prefix_bytes = alt_prefix.encode('utf-8')
     prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
+    if on_win:
+        forward_slash_prefix = prefix.replace('\\', '/')
+        forward_slash_prefix_bytes = forward_slash_prefix.encode('utf-8')
+        double_backslash_prefix = prefix.replace('\\', '\\\\')
+        double_backslash_prefix_bytes = double_backslash_prefix.encode('utf-8')
+
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
             continue
@@ -130,9 +135,12 @@ def have_prefix_files(files):
                 mm = mmap.mmap(fi.fileno(), 0)
         if mm.find(prefix_bytes) != -1:
             yield (prefix, mode, f)
-        if (sys.platform == 'win32') and mm.find(alt_prefix_bytes) != -1:
+        if on_win and mm.find(forward_slash_prefix_bytes) != -1:
             # some windows libraries use unix-style path separators
-            yield (alt_prefix, mode, f)
+            yield (forward_slash_prefix, mode, f)
+        elif on_win and mm.find(double_backslash_prefix_bytes) != -1:
+            # some windows libraries have double backslashes as escaping
+            yield (double_backslash_prefix, mode, f)
         if mm.find(prefix_placeholder_bytes) != -1:
             yield (prefix_placeholder, mode, f)
         mm.close() and fi.close()
@@ -243,7 +251,7 @@ def create_info_files(m, files, include_recipe=True):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    with open(join(config.info_dir, 'files'), 'w') as fo:
+    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
         if m.get_value('build/noarch_python'):
             fo.write('\n')
         else:
@@ -321,6 +329,11 @@ def create_env(prefix, specs, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
+    specs = list(specs)
+    for feature, value in feature_list:
+        if value:
+            specs.append('%s@' % feature)
+
     for d in config.bldpkgs_dirs:
         if not isdir(d):
             os.makedirs(d)
@@ -374,7 +387,7 @@ def rm_pkgs_cache(dist):
 
 
 def build(m, post=None, include_recipe=True, keep_old_work=False,
-          need_source_download=True, verbose=True):
+          need_source_download=True, verbose=True, dirty=False):
     '''
     Build the package with the specified metadata.
 
@@ -388,7 +401,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
     '''
 
     if (m.get_value('build/detect_binary_files_with_prefix') or
-            m.binary_has_prefix_files()):
+            m.binary_has_prefix_files()) and not on_win:
         # We must use a long prefix here as the package will only be
         # installable into prefixes shorter than this one.
         config.use_long_build_prefix = True
@@ -419,6 +432,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
         if post in [False, None]:
             print("Removing old build environment")
+            print("BUILD START:", m.dist())
             if on_win:
                 if isdir(config.short_build_prefix):
                     move_to_trash(config.short_build_prefix, '')
@@ -430,7 +444,6 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
             # Display the name only
             # Version number could be missing due to dependency on source info.
-            print("BUILD START:", m.dist())
             create_env(config.build_prefix,
                     [ms.spec for ms in m.ms_depends('build')])
 
@@ -445,7 +458,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     m, need_source_download = parse_or_try_download(m,
                                                                     no_download_source=False,
                                                                     force_download=True,
-                                                                    verbose=verbose)
+                                                                    verbose=verbose,
+                                                                    dirty=dirty)
                     assert not need_source_download, "Source download failed.  Please investigate."
                 finally:
                     os.environ['PATH'] = _old_path
@@ -499,9 +513,9 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
                         bf.write(script)
                 import conda_build.windows as windows
-                windows.build(m, build_file)
+                windows.build(m, build_file, dirty=dirty)
             else:
-                env = environ.get_dict(m)
+                env = environ.get_dict(m, dirty=dirty)
                 build_file = join(m.path, 'build.sh')
 
                 if script:
