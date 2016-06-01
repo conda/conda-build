@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import copy
 import glob
 import json
 from locale import getpreferredencoding
@@ -105,6 +106,8 @@ def _scan_metadata(path):
 def add_build_config(metadata, build_config_or_bootstrap):
     if not build_config_or_bootstrap:
         return metadata
+    # don't modify it in place.
+    metadata = copy.deepcopy(metadata)
     path = _get_env_path(build_config_or_bootstrap)
     # concatenate build requirements from the build config file to the build
     # requirements from the recipe
@@ -139,7 +142,7 @@ def _jinja_config(jinja_env):
 
 
 def parse_or_try_download(metadata, no_download_source, verbose,
-                          force_download=False, dirty=False):
+                          force_download=False, dirty=False, permit_undefined_jinja=False):
     if (force_download or (not no_download_source and
                            any(var.startswith('GIT_') for var in metadata.undefined_jinja_vars))):
         try:
@@ -157,11 +160,12 @@ def parse_or_try_download(metadata, no_download_source, verbose,
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
         need_source_download = True
-    metadata.parse_again(permit_undefined_jinja=False)
+    metadata.parse_again(permit_undefined_jinja=permit_undefined_jinja)
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source, verbose, dirty=False, build_config_or_bootstrap=None):
+def render_recipe(recipe_path, no_download_source, verbose, dirty=False,
+                  build_config_or_bootstrap=None, permit_undefined_jinja=False):
     with Locked(config.croot):
         arg = recipe_path
         # Don't use byte literals for paths in Python 2
@@ -190,14 +194,15 @@ def render_recipe(recipe_path, no_download_source, verbose, dirty=False, build_c
             sys.stderr.write(e.error_msg())
             sys.exit(1)
 
-        m = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose, dirty=dirty)
+        m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
+                                                 verbose=verbose, dirty=dirty,
+                                                 permit_undefined_jinja=permit_undefined_jinja)
         m = add_build_config(m, build_config_or_bootstrap)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
 
-    return m
+    return m, need_download
 
 
 # Next bit of stuff is to support YAML output in the order we expect.
