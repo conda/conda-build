@@ -22,7 +22,6 @@ import yaml
 
 from conda.cli.common import spec_from_line
 from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import get_proxy_servers
 from conda.connection import CondaSession
 from conda.fetch import (download, handle_proxy_407)
 from conda.install import rm_rf
@@ -252,13 +251,7 @@ class RequestsTransport(Transport):
 
 
 def get_xmlrpc_client(pypi_url):
-    proxies = get_proxy_servers()
-
-    if proxies:
-        transport = RequestsTransport()
-    else:
-        transport = None
-    return ServerProxy(pypi_url, transport=transport)
+    return ServerProxy(pypi_url, transport=RequestsTransport())
 
 
 def main(args, parser):
