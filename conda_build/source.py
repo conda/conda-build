@@ -75,7 +75,8 @@ def unpack(meta, verbose=False):
     ''' Uncompress a downloaded source. '''
     src_path = download_to_cache(meta)
 
-    os.makedirs(WORK_DIR)
+    if not isdir(WORK_DIR):
+        os.makedirs(WORK_DIR)
     if verbose:
         print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
@@ -141,7 +142,7 @@ def git_source(meta, recipe_dir, verbose=False):
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
 
-        check_call(args + [git_url, cache_repo_arg], cwd=recipe_dir, stdout=stdout, stderr=stderr)
+        check_call(args + [git_url, cache_repo_arg], stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -289,15 +290,15 @@ def get_repository_info(recipe_path):
     """This tries to get information about where a recipe came from.  This is different
     from the source - you can have a recipe in svn that gets source via git."""
     if isdir(join(recipe_path, ".git")):
-        origin = check_output(["git", "config", "--get", "remote.origin.url"])
-        rev = check_output(["git", "rev-parse", "HEAD"])
+        origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
+        rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
         return "Origin {}, commit {}".format(origin, rev)
     elif isdir(join(recipe_path, ".hg")):
-        origin = check_output(["hg", "paths", "default"])
-        rev = check_output(["hg", "id"]).split()[0]
+        origin = check_output(["hg", "paths", "default"], cwd=recipe_path)
+        rev = check_output(["hg", "id"], cwd=recipe_path).split()[0]
         return "Origin {}, commit {}".format(origin, rev)
     elif isdir(join(recipe_path, ".svn")):
-        info = check_output(["svn", "info"])
+        info = check_output(["svn", "info"], cwd=recipe_path)
         server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
         revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
         return "{}, Revision {}".format(server, revision)
@@ -361,7 +362,7 @@ def provide(recipe_dir, meta, verbose=False, patch=True, dirty=False):
         else:
             rm_rf(WORK_DIR)
 
-    if not os.path.exists(WORK_DIR):
+    if not dirty or not os.path.isdir(WORK_DIR):
         if any(k in meta for k in ('fn', 'url')):
             unpack(meta, verbose=verbose)
         elif 'git_url' in meta:
@@ -377,7 +378,8 @@ def provide(recipe_dir, meta, verbose=False, patch=True, dirty=False):
                 print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
             copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
         else:  # no source
-            os.makedirs(WORK_DIR)
+            if not isdir(WORK_DIR):
+                os.makedirs(WORK_DIR)
 
         if patch:
             src_dir = get_dir()
