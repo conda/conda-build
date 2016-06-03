@@ -21,6 +21,9 @@ requirements:
     - patchelf      [linux]
 
 test:
+  requires:
+    - pytest
+    - pytest-cov
   commands:
     - conda-build -h
   imports:

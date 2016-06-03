@@ -3,7 +3,7 @@ package:
   version: 1.0
 
 source:
-  git_url: ../../../../
+  path: ../../../../
 
 build:
   entry_points:

@@ -266,7 +266,8 @@ def main(args, parser):
     package_dicts = {}
     [output_dir] = args.output_dir
 
-    all_packages = client.list_packages()
+    # searching is faster than listing all packages
+    all_packages = [match["name"] for match in client.search({"name": args.packages}, "or")]
     all_packages_lower = [i.lower() for i in all_packages]
 
     args.created_recipes = []

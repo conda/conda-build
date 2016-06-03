@@ -11,7 +11,8 @@ import conda.config as cc
 from conda.resolve import MatchSpec
 from conda.cli.common import specs_from_url
 
-from . import exceptions
+from conda_build import exceptions
+from conda_build.features import feature_list
 
 try:
     import yaml
@@ -47,6 +48,8 @@ def ns_cfg():
         win=plat.startswith('win-'),
         win32=bool(plat == 'win-32'),
         win64=bool(plat == 'win-64'),
+        x86=plat.endswith(('-32', '-64')),
+        x86_64=plat.endswith('-64'),
         pl=pl,
         py=py,
         lua=lua,
@@ -65,11 +68,21 @@ def ns_cfg():
     for machine in cc.non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
+    for feature, value in feature_list:
+        d[feature] = value
     d.update(os.environ)
     return d
 
 
-sel_pat = re.compile(r'(.+?)\s*(#.*)?\[(.+)\](?(2).*)$')
+# Selectors must be either:
+# - at end of the line
+# - embedded (anywhere) within a comment
+#
+# Notes:
+# - [([^\[\]]+)\] means "find a pair of brackets containing any
+#                 NON-bracket chars, and capture the contents"
+# - (?(2).*)$ means "allow trailing characters iff group 2 (#.*) was found."
+sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 
 def select_lines(data, namespace):
@@ -290,7 +303,7 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def handle_config_version(ms, ver):
+def handle_config_version(ms, ver, dep_type='run'):
     """
     'ms' is an instance of MatchSpec, and 'ver' is the version from the
     configuration, e.g. for ms.name == 'python', ver = 26 or None,
@@ -307,7 +320,13 @@ def handle_config_version(ms, ver):
         else:  # regular version
             return ms
 
-    if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
+    # If we don't have a configured version, or we are dealing with a simple
+    # numpy runtime dependency; just use "numpy"/the name of the package as
+    # the specification. In practice this means that a recipe which just
+    # defines numpy as a runtime dependency will match any version of numpy
+    # at install time.
+    if ver is None or (dep_type == 'run' and ms.strictness == 1 and
+                       ms.name == 'numpy'):
         return MatchSpec(ms.name)
 
     ver = text_type(ver)
@@ -340,6 +359,7 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
+        self.undefined_jinja_vars = []
         self.parse_again(permit_undefined_jinja=True)
 
     def parse_again(self, permit_undefined_jinja=False):
@@ -437,7 +457,9 @@ class MetaData(object):
             ('numpy', config.CONDA_NPY),
             ('perl', config.CONDA_PERL),
             ('lua', config.CONDA_LUA),
+            # r is kept for legacy installations, r-base deprecates it.
             ('r', config.CONDA_R),
+            ('r-base', config.CONDA_R),
         ]
         for spec in self.get_value('requirements/' + typ, []):
             try:
@@ -450,7 +472,7 @@ class MetaData(object):
                 if ms.name == name:
                     if self.get_value('build/noarch_python'):
                         continue
-                    ms = handle_config_version(ms, ver)
+                    ms = handle_config_version(ms, ver, typ)
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
@@ -476,7 +498,8 @@ class MetaData(object):
         res = []
         version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
         for name, s in (('numpy', 'np'), ('python', 'py'),
-                        ('perl', 'pl'), ('lua', 'lua'), ('r', 'r')):
+                        ('perl', 'pl'), ('lua', 'lua'),
+                        ('r', 'r'), ('r-base', 'r')):
             for ms in self.ms_depends():
                 if ms.name == name:
                     try:
@@ -487,7 +510,7 @@ class MetaData(object):
                         break
                     if any(i in v for i in ',|>!<'):
                         break
-                    if name not in ['perl', 'r', 'lua']:
+                    if name not in ['perl', 'lua', 'r', 'r-base']:
                         match = version_pat.match(v)
                         if match:
                             res.append(s + match.group(1) + match.group(2))
@@ -595,12 +618,11 @@ class MetaData(object):
             import jinja2
         except ImportError:
             print("There was an error importing jinja2.", file=sys.stderr)
-            print("Please run `conda install jinja2` to enable jinja template support",
-                  file=sys.stderr)
+            print("Please run `conda install jinja2` to enable jinja template support", file=sys.stderr)  # noqa
             with open(self.meta_path) as fd:
                 return fd.read()
 
-        from conda_build.jinja_context import context_processor
+        from conda_build.jinja_context import context_processor, UndefinedNeverFail, FilteredLoader
 
         path, filename = os.path.split(self.meta_path)
         loaders = [  # search relative to '<conda_root>/Lib/site-packages/conda_build/templates'
@@ -617,64 +639,29 @@ class MetaData(object):
             env_loader = jinja2.FileSystemLoader(conda_env_path)
             loaders.append(jinja2.PrefixLoader({'$CONDA_DEFAULT_ENV': env_loader}))
 
-        class FilteredLoader(jinja2.BaseLoader):
-            """
-            A pass-through for the given loader, except that the loaded source is
-            filtered according to any metadata selectors in the source text.
-            """
-
-            def __init__(self, unfiltered_loader):
-                self._unfiltered_loader = unfiltered_loader
-                self.list_templates = unfiltered_loader.list_templates
-
-            def get_source(self, environment, template):
-                contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
-                                                                                  template)
-                return select_lines(contents, ns_cfg()), filename, uptodate
-
         undefined_type = jinja2.StrictUndefined
         if permit_undefined_jinja:
-            class UndefinedNeverFail(jinja2.Undefined):
-                """
-                A class for Undefined jinja variables.
-                This is even less strict than the default jinja2.Undefined class,
-                because it permits things like {{ MY_UNDEFINED_VAR[:2] }} and
-                {{ MY_UNDEFINED_VAR|int }}. This can mask lots of errors in jinja templates, so it
-                should only be used for a first-pass parse, when you plan on running a 'strict'
-                second pass later.
-                """
-                __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
-                __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
-                __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
-                __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
-                __complex__ = __pow__ = __rpow__ = \
-                    lambda *args, **kwargs: UndefinedNeverFail()
-
-                __str__ = __repr__ = \
-                    lambda *args, **kwargs: u''
-
-                __int__ = lambda _: 0
-                __float__ = lambda _: 0.0
-
-                def __getattr__(self, k):
-                    try:
-                        return object.__getattr__(self, k)
-                    except AttributeError:
-                        return UndefinedNeverFail()
-
-                def __setattr__(self, k, v):
-                    pass
-
+            # The UndefinedNeverFail class keeps a global list of all undefined names
+            # Clear any leftover names from the last parse.
+            UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
+
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
 
         try:
             template = env.get_or_select_template(filename)
-            return template.render(environment=env)
+            rendered = template.render(environment=env)
+
+            if permit_undefined_jinja:
+                self.undefined_jinja_vars = UndefinedNeverFail.all_undefined_names
+            else:
+                self.undefined_jinja_vars = []
+
+            return rendered
         except jinja2.TemplateError as ex:
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))
@@ -696,11 +683,3 @@ class MetaData(object):
         String representation of the MetaData.
         '''
         return self.__str__()
-
-
-if __name__ == '__main__':
-    from pprint import pprint
-    from os.path import expanduser
-
-    m = MetaData(expanduser('~/conda-recipes/pycosat'))
-    pprint(m.info_index())

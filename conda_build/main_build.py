@@ -20,11 +20,11 @@ from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
+from conda_build.build import bldpkg_path
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import (get_package_build_path, set_language_env_vars,
-                                     RecipeCompleter, render_recipe)
+from conda_build.main_render import (set_language_env_vars, RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
 
@@ -70,7 +70,9 @@ different sets of packages."""
     p.add_argument(
         '-t', "--test",
         action="store_true",
-        help="Test package (assumes package is already build).",
+        help="Test package (assumes package is already built).  RECIPE_DIR argument can be either "
+        "recipe directory, in which case source download may be necessary to resolve package"
+        "version, or path to built package .tar.bz2 file, in which case no source is necessary.",
     )
     p.add_argument(
         '--no-test',
@@ -110,9 +112,25 @@ different sets of packages."""
         callstacks involving multiple packages/recipes. """
     )
     p.add_argument(
+        '--dirty',
+        action='store_true',
+        help='Do not remove work directory or _build environment, '
+        'to speed up debugging.  Does not apply patches or download source.'
+    )
+    p.add_argument(
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
+    )
+    p.add_argument(
+        '--token',
+        action="store",
+        help="Token to pass through to anaconda upload"
+    )
+    p.add_argument(
+        '--user',
+        action='store',
+        help="User/organization to upload packages to on anaconda.org"
     )
 
     add_parser_channels(p)
@@ -158,9 +176,16 @@ Error: cannot locate anaconda command (required for upload)
 # $ conda install anaconda-client
 ''')
     print("Uploading to anaconda.org")
-    args = [binstar, 'upload', path]
+    cmd = [binstar, ]
+
+    if hasattr(args, "token") and args.token:
+        cmd.extend(['--token', args.token])
+    cmd.append('upload')
+    if hasattr(args, "user") and args.user:
+        cmd.extend(['--user', args.user])
+    cmd.append(path)
     try:
-        subprocess.call(args)
+        subprocess.call(cmd)
     except:
         print(no_upload_message)
         raise
@@ -253,7 +278,8 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # this fully renders any jinja templating, throwing an error if any data is missing
-        m = render_recipe(recipe_dir, no_download_source=False)
+        m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
+                                                verbose=False, dirty=args.dirty)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 
@@ -267,16 +293,19 @@ def execute(args, parser):
                     "configuration." % m.dist())
             continue
         if args.skip_existing:
-            if m.pkg_fn() in index or m.pkg_fn() in already_built:
+            # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
+            if ('local::' + m.pkg_fn() in index or
+                    m.pkg_fn() in index or
+                    m.pkg_fn() in already_built):
                 print(m.dist(), "is already built, skipping.")
                 continue
         if args.output:
-            print(get_package_build_path(m, no_download_source=False))
+            print(bldpkg_path(m))
             continue
         elif args.test:
             build.test(m, move_broken=False)
         elif args.source:
-            source.provide(m.path, m.get_section('source'))
+            source.provide(m.path, m.get_section('source'), verbose=build.verbose, dirty=args.dirty)
             print('Source tree in:', source.get_dir())
         else:
             # This loop recursively builds dependencies if recipes exist
@@ -293,7 +322,9 @@ def execute(args, parser):
             try:
                 build.build(m, post=post,
                             include_recipe=args.include_recipe,
-                            keep_old_work=args.keep_old_work)
+                            keep_old_work=args.keep_old_work,
+                            need_source_download=need_source_download,
+                            dirty=args.dirty)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these

@@ -5,8 +5,11 @@ conda-build
 .. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
                :target: https://travis-ci.org/conda/conda-build
 
-.. image:: https://ci.appveyor.com/api/projects/status/aj0d43e7qea5amja?svg=true
-               :target: https://ci.appveyor.com/project/ironmancio54716/conda-build
+.. image:: https://ci.appveyor.com/api/projects/status/wdis0rkcfdoeql3x?svg=true
+               :target: https://ci.appveyor.com/project/ContinuumAnalytics/conda-build
+               
+.. image:: https://anaconda.org/conda-team/conda-build/badges/build.svg
+               :target: https://anaconda.org/conda-team/conda-build/
 
 
 Installation

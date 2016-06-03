@@ -6,6 +6,10 @@ import tempfile
 
 import pytest
 
+from conda.compat import PY3, TemporaryDirectory
+from conda.config import subdir
+from conda.fetch import download
+
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
@@ -16,6 +20,89 @@ def is_valid_dir(parent_dir, dirname):
     valid &= not dirname.startswith("_")
     valid &= ('osx_is_app' != dirname or sys.platform == "darwin")
     return valid
+
+
+def test_CONDA_BLD_PATH():
+    env = dict(os.environ)
+    cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
+    with TemporaryDirectory() as tmp:
+        env["CONDA_BLD_PATH"] = tmp
+        subprocess.check_call(cmd.split(), env=env)
+        # trick is actually a second pass, to make sure that deletion/trash moving is working OK.
+        subprocess.check_call(cmd.split(), env=env)
+
+
+# TODO: this does not currently take into account post-build versioning changes with __conda_? files
+def test_output_build_path_git_source():
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                        "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
+                                      sys.version_info.major, sys.version_info.minor))
+    if PY3:
+        output = output.decode("UTF-8")
+    assert output.rstrip() == test_path
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows permission errors w/ git when removing repo files on cleanup.")
+def test_cached_source_not_interfere_with_versioning():
+    """Test that work dir does not cache and cause inaccurate test target"""
+    basedir = os.getcwd()
+    try:
+        with TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            subprocess.check_call(['git', 'clone',
+                                   'https://github.com/conda/conda_build_test_recipe'])
+            # build to make sure we have a work directory with source in it.
+            #    We want to make sure that whatever version that is does not
+            #    interfere with the test we run next.
+            subprocess.check_call(['conda', 'build', '--no-test',
+                                '--no-anaconda-upload',
+                                'conda_build_test_recipe'])
+
+            os.chdir('conda_build_test_recipe')
+            subprocess.check_call(['git', 'checkout', '1.20.0'])
+            os.chdir('..')
+
+            # this should fail, because we have not built v1.0, so there should
+            # be nothing to test.  If it succeeds, it means that it used the
+            # cached master checkout for determining which version to test.
+            cmd = 'conda build --output conda_build_test_recipe'
+            output = subprocess.check_output(cmd.split())
+            if PY3:
+                output = output.decode("UTF-8")
+            assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
+    finally:
+        os.chdir(basedir)
+
+
+def test_relative_path_git_versioning():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_source_git_jinja2_relative_path"))
+    output = subprocess.check_output(cmd.split())
+    assert tag in output
+
+
+def test_relative_git_url_git_versioning():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_source_git_jinja2_relative_git_url"))
+    output = subprocess.check_output(cmd.split())
+    assert tag in output
+
+
+def test_package_test():
+    """Test calling conda build -t <package file> - rather than <recipe dir>"""
+    filename = "jinja2-2.8-py{}{}_0.tar.bz2".format(sys.version_info.major, sys.version_info.minor)
+    downloaded_file = os.path.join(sys.prefix, 'conda-bld', subdir, filename)
+    if not os.path.isfile(downloaded_file):
+        download('https://anaconda.org/conda-forge/jinja2/2.8/download/{}/{}'.format(subdir, filename),  # noqa
+                 downloaded_file)
+    subprocess.check_call(["conda", "build", "--test", downloaded_file])
 
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
@@ -44,6 +131,15 @@ def test_recipe_builds(recipe):
     if os.access(driver, os.X_OK):
         cmd = "{} {}".format(driver, cmd)
     subprocess.check_call(cmd.split(), env=env)
+
+
+def test_dirty_variable_available_in_build_scripts():
+    cmd = 'conda build --no-anaconda-upload --dirty {}'.format(os.path.join(metadata_dir,
+                                                                    "_dirty_skip_section"))
+    subprocess.check_call(cmd.split())
+    with pytest.raises(subprocess.CalledProcessError):
+        cmd = cmd.replace(" --dirty", "")
+        subprocess.check_call(cmd.split())
 
 
 def test_checkout_tool_as_dependency():
@@ -149,3 +245,16 @@ def test_skip_existing():
     output, _ = process.communicate()
     output = output.decode('utf-8')
     assert "is already built, skipping." in output
+
+
+def test_token_upload():
+    # generated with conda_test_account user, command:
+    #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
+    token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
+    # the folder with the test recipe to upload
+    cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "empty_sections"))
+    subprocess.check_call(cmd.split())
+    # clean up - we don't actually want this package to exist
+    cmd = 'anaconda --token {} remove --force conda_test_account/conda-build-test-empty_sections'\
+    .format(token)
+    subprocess.check_call(cmd.split())
