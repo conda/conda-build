@@ -22,6 +22,29 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
+@pytest.mark.skipif(sys.platform != "win32",
+                    reason="Problem only observed on Windows with win7 sdk")
+def test_header_finding():
+    """
+    Windows sometimes very strangely cannot find headers in %LIBRARY_INC%.  This has so far
+    only been a problem with the recipes that use the Win 7 SDK (python 3.4 builds)
+    """
+    cmd = 'conda build --no-anaconda-upload {}/_pyyaml_find_header'.format(metadata_dir)
+    output = subprocess.check_output(cmd.split())
+    print(output)
+    assert "forcing --without-libyaml" not in output
+
+
+def test_CONDA_BLD_PATH():
+    env = dict(os.environ)
+    cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
+    with TemporaryDirectory() as tmp:
+        env["CONDA_BLD_PATH"] = tmp
+        subprocess.check_call(cmd.split(), env=env)
+        # trick is actually a second pass, to make sure that deletion/trash moving is working OK.
+        subprocess.check_call(cmd.split(), env=env)
+
+
 # TODO: this does not currently take into account post-build versioning changes with __conda_? files
 def test_output_build_path_git_source():
     cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
