@@ -246,6 +246,7 @@ def meta_vars(meta):
             git_url = normpath(join(meta.path, git_url))
 
         _x = False
+
         if git_url:
             _x = verify_git_repo(git_dir,
                                  git_url,
