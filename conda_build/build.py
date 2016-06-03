@@ -20,6 +20,7 @@ import mmap
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index
+from conda.compat import PY3
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, move_to_trash
 from conda.lock import Locked
@@ -237,7 +238,9 @@ def create_info_files(m, files, include_recipe=True):
             info_index['depends'] = [' '.join(dist.rsplit('-', 2))
                                      for dist in dists]
 
-    with open(join(config.info_dir, 'index.json'), 'w') as fo:
+    # Deal with Python 2 and 3's different json module type reqs
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(info_index, fo, indent=2, sort_keys=True)
 
     with open(join(config.info_dir, 'about.json'), 'w') as fo:
@@ -250,7 +253,7 @@ def create_info_files(m, files, include_recipe=True):
         json.dump(d, fo, indent=2, sort_keys=True)
 
     if include_recipe:
-        with open(join(config.info_dir, 'recipe.json'), 'w') as fo:
+        with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
             json.dump(m.meta, fo, indent=2, sort_keys=True)
 
     if sys.platform == 'win32':
