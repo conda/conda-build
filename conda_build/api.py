@@ -19,6 +19,7 @@ from conda_build.build import bldpkg_path as _bldpkg_path
 from conda_build.config import config as _config
 from conda_build.index import update_index as _update_index
 import conda_build.build as _build
+import conda_build.sign as _sign
 
 
 def render(recipe_path, no_download_source=False, verbose=False, **kwargs):
@@ -81,3 +82,24 @@ def test(package_path, move_broken=True, verbose=False, **kwargs):
     # metadata out of build.  This is read from an existing package input here.
     metadata, _ = _render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
     return _test(metadata, move_broken=move_broken, **kwargs)
+
+def keygen(name="conda_build_signing", size=2048):
+    """Create a private/public key pair for package verification purposes
+
+    name: string name of key to be generated.
+    size: length of the RSA key, in bits.  Should be power of 2.
+    """
+    return _sign.keygen(name, size)
+
+def import_sign_key(private_key_path, new_name=None):
+    """
+    private_key_path: specify a private key to be imported.  The public key is generated automatically.
+          Specify ```new_name``` also to rename the private key in the copied location.
+    """
+    return _sign.import_key(private_key_path, new_name=new_name)
+
+def sign(file_path, key_name_or_path=None):
+    return _sign.sign_and_write(file_path, key_name_or_path)
+
+def verify(file_path):
+    return _sign.verify(file_path)
