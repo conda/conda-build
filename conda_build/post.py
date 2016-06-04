@@ -375,6 +375,8 @@ def check_symlinks(files):
 
 def get_build_metadata(m):
     src_dir = source.get_dir()
+    if "build" not in m.meta:
+        m.meta["build"] = {}
     if exists(join(src_dir, '__conda_version__.txt')):
         print("Deprecation warning: support for __conda_version__ will be removed in Conda build 2.0."  # noqa
               "Try Jinja templates instead: "
