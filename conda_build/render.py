@@ -92,8 +92,9 @@ def parse_or_try_download(metadata, no_download_source, verbose,
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            source.provide(metadata.path, metadata.get_section('source'),
-                           verbose=verbose, dirty=dirty)
+            if not dirty:
+                source.provide(metadata.path, metadata.get_section('source'),
+                               verbose=verbose)
             metadata.parse_again(permit_undefined_jinja=False)
             need_source_download = False
         except subprocess.CalledProcessError:
