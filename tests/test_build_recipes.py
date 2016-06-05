@@ -30,8 +30,14 @@ def test_header_finding():
     only been a problem with the recipes that use the Win 7 SDK (python 3.4 builds)
     """
     cmd = 'conda build --no-anaconda-upload {}/_pyyaml_find_header'.format(metadata_dir)
-    output = subprocess.check_output(cmd.split())
-    print(output)
+    try:
+        output = subprocess.check_output(cmd.split())
+    except subprocess.CalledProcessError as error:
+        print(error.output)
+        print(os.listdir(os.path.join(sys.prefix, "envs", "_build", "Library", "include")))
+        raise
+    if PY3:
+        output = output.decode("UTF-8")
     assert "forcing --without-libyaml" not in output
 
 
