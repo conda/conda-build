@@ -305,7 +305,7 @@ def execute(args, parser):
         elif args.test:
             build.test(m, move_broken=False)
         elif args.source:
-            source.provide(m.path, m.get_section('source'), verbose=build.verbose, dirty=args.dirty)
+            source.provide(m.path, m.get_section('source'), verbose=build.verbose)
             print('Source tree in:', source.get_dir())
         else:
             # This loop recursively builds dependencies if recipes exist

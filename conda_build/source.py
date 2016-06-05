@@ -347,7 +347,7 @@ Error:
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
-def provide(recipe_dir, meta, verbose=False, patch=True, dirty=False):
+def provide(recipe_dir, meta, verbose=False, patch=True):
     """
     given a recipe_dir:
       - download (if necessary)
@@ -355,36 +355,34 @@ def provide(recipe_dir, meta, verbose=False, patch=True, dirty=False):
       - apply patches (if any)
     """
 
-    if not dirty:
-        if sys.platform == 'win32':
-            if isdir(WORK_DIR):
-                move_to_trash(WORK_DIR, '')
-        else:
-            rm_rf(WORK_DIR)
+    if sys.platform == 'win32':
+        if isdir(WORK_DIR):
+            move_to_trash(WORK_DIR, '')
+    else:
+        rm_rf(WORK_DIR)
 
-    if not dirty or not os.path.isdir(WORK_DIR):
-        if any(k in meta for k in ('fn', 'url')):
-            unpack(meta, verbose=verbose)
-        elif 'git_url' in meta:
-            git_source(meta, recipe_dir, verbose=verbose)
-        # build to make sure we have a work directory with source in it.  We want to make sure that
-        #    whatever version that is does not interfere with the test we run next.
-        elif 'hg_url' in meta:
-            hg_source(meta, verbose=verbose)
-        elif 'svn_url' in meta:
-            svn_source(meta, verbose=verbose)
-        elif 'path' in meta:
-            if verbose:
-                print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
-            copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
-        else:  # no source
-            if not isdir(WORK_DIR):
-                os.makedirs(WORK_DIR)
+    if any(k in meta for k in ('fn', 'url')):
+        unpack(meta, verbose=verbose)
+    elif 'git_url' in meta:
+        git_source(meta, recipe_dir, verbose=verbose)
+    # build to make sure we have a work directory with source in it.  We want to make sure that
+    #    whatever version that is does not interfere with the test we run next.
+    elif 'hg_url' in meta:
+        hg_source(meta, verbose=verbose)
+    elif 'svn_url' in meta:
+        svn_source(meta, verbose=verbose)
+    elif 'path' in meta:
+        if verbose:
+            print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
+        copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
+    else:  # no source
+        if not isdir(WORK_DIR):
+            os.makedirs(WORK_DIR)
 
-        if patch:
-            src_dir = get_dir()
-            for patch in meta.get('patches', []):
-                apply_patch(src_dir, join(recipe_dir, patch))
+    if patch:
+        src_dir = get_dir()
+        for patch in meta.get('patches', []):
+            apply_patch(src_dir, join(recipe_dir, patch))
 
 
 if __name__ == '__main__':
