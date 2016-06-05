@@ -16,7 +16,7 @@ source:
 build:
   number: 0
   script:
-    - python setup.py --with-libyaml build_ext --include-dirs="%LIBRARY_INC% --library-dirs=%LIBRARY_LIB%         # [win]
+    - python setup.py --with-libyaml build_ext --include-dirs=%LIBRARY_INC% --library-dirs=%LIBRARY_LIB%  # [win]
     - if errorlevel 1 exit 1   # [win]
 
 requirements:

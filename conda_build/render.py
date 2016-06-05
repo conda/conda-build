@@ -97,9 +97,11 @@ def parse_or_try_download(metadata, no_download_source, verbose,
                                verbose=verbose)
             metadata.parse_again(permit_undefined_jinja=False)
             need_source_download = False
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
+            print("Error was: ")
+            print(error)
             need_source_download = True
     else:
         # we have not downloaded source in the render phase.  Download it in

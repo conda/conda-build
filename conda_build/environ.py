@@ -104,7 +104,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         if remote_url.lower() != git_url.lower():
             logging.debug("\nremote does not match git_url\n")
             logging.debug("Remote: " + remote_url.lower() + "\n")
-            logging.debug("git_url: " + git_url.lower()+ "\n")
+            logging.debug("git_url: " + git_url.lower() + "\n")
             return False
     except CalledProcessError as error:
         logging.warn("Error obtaining git information.  Error was: ")
