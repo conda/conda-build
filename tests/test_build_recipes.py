@@ -22,6 +22,25 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
+@pytest.mark.skipif(sys.platform != "win32",
+                    reason="Problem only observed on Windows with win7 sdk")
+def test_header_finding():
+    """
+    Windows sometimes very strangely cannot find headers in %LIBRARY_INC%.  This has so far
+    only been a problem with the recipes that use the Win 7 SDK (python 3.4 builds)
+    """
+    cmd = 'conda build --no-anaconda-upload {}/_pyyaml_find_header'.format(metadata_dir)
+    try:
+        output = subprocess.check_output(cmd.split())
+    except subprocess.CalledProcessError as error:
+        print(error.output)
+        print(os.listdir(os.path.join(sys.prefix, "envs", "_build", "Library", "include")))
+        raise
+    if PY3:
+        output = output.decode("UTF-8")
+    assert "forcing --without-libyaml" not in output
+
+
 def test_CONDA_BLD_PATH():
     env = dict(os.environ)
     cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
