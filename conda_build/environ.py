@@ -366,18 +366,40 @@ def system_vars(env_dict, prefix):
     return d
 
 
+# http://code.activestate.com/recipes/576644-diff-two-dictionaries/#c9
+def _dict_diff(d1, d2):
+    """Shows entries that have changed or been added in d2 relative to d1"""
+    both = set(d1.keys()) & set(d2.keys())
+    diff = {k: d2[k] for k in both if d1[k] != d2[k]}
+    diff.update({k: d2[k] for k in set(d2.keys()) - both})
+    return diff
+
+
 def _set_environ_from_subprocess_values(vars):
     """
     Vars is an unprocessed string of envrionment variable output, such as from ```set```
     on Windows, or ```env``` elsewhere
     """
+    start_environ = os.environ
     vars = vars.split("\n")
-    vars = {var.split("=")[0].strip(): var.split("=")[1].strip() for var in vars if "=" in var}
-    for key, value in vars.items():
+    modified_environ = {var.split("=")[0].strip(): var.split("=")[1].strip()
+                        for var in vars if "=" in var}
+
+    # the diff is the only part we'll set for the actual build environment - mind you,
+    #   the current process is not the actual build environment.  That is always a native
+    #   shell subprocess.
+    diff = _dict_diff(start_environ, modified_environ)
+
+    # modify the current process with the activated/deactivated values
+    for key, value in modified_environ.items():
         os.environ[key] = value
+
+    return diff
 
 
 def activate_env(env_name_or_path):
+    """Strategy is to open a subprocess, run activate, record the variables,
+    then apply them in our process"""
     if sys.platform == "win32":
         vars = check_output(["{}\\Scripts\\activate.bat".format(sys.prefix), env_name_or_path,
                              "&&", "set"], env=os.environ).replace("\r\n", "\n")

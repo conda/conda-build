@@ -368,6 +368,7 @@ def create_env(prefix, specs, clear_cache=True):
         os.makedirs(prefix)
     symlink_conda(prefix, sys.prefix)
 
+
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
     vers_inst = [dist.rsplit('-', 2)[1] for dist in root_linked
@@ -465,24 +466,21 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
             # modify os.environ to have our new environment be active
             #    This is important for setting variables from activate.d and deactivate.d
-            environ.activate_env(config.build_prefix)
+            # this modifies os.environ in place, and provides a diff of variables to actually
+            #    include in the build environment later
+            # Keeping all environment variables would defeat some isolation that we want.
+            env_diff = activate_env(config.build_prefix)
 
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
                 # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
                 # dependencies.
-                _old_path = os.environ['PATH']
-                try:
-                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                            config.build_prefix)['PATH']
-                    m, need_source_download = parse_or_try_download(m,
-                                                                    no_download_source=False,
-                                                                    force_download=True,
-                                                                    verbose=verbose,
-                                                                    dirty=dirty)
-                    assert not need_source_download, "Source download failed.  Please investigate."
-                finally:
-                    os.environ['PATH'] = _old_path
+                m, need_source_download = parse_or_try_download(m,
+                                                                no_download_source=False,
+                                                                force_download=True,
+                                                                verbose=verbose,
+                                                                dirty=dirty)
+                assert not need_source_download, "Source download failed.  Please investigate."
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %
@@ -533,10 +531,11 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
                         bf.write(script)
                 import conda_build.windows as windows
-                windows.build(m, build_file, dirty=dirty)
+                windows.build(m, build_file, dirty=dirty, env_diff=env_diff)
             else:
                 env = environ.get_dict(m, dirty=dirty)
-                env.update(os.environ)
+                env.update(env_diff)
+
                 build_file = join(m.path, 'build.sh')
 
                 if script:
