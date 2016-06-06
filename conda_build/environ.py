@@ -366,6 +366,37 @@ def system_vars(env_dict, prefix):
     return d
 
 
+def _set_environ_from_subprocess_values(vars):
+    """
+    Vars is an unprocessed string of envrionment variable output, such as from ```set```
+    on Windows, or ```env``` elsewhere
+    """
+    vars = vars.split("\n")
+    vars = {var.split("=")[0].strip(): var.split("=")[1].strip() for var in vars if "=" in var}
+    for key, value in vars.items():
+        os.environ[key] = value
+
+
+def activate_env(env_name_or_path):
+    if sys.platform == "win32":
+        vars = check_output(["{}\\Scripts\\activate.bat".format(sys.prefix), env_name_or_path,
+                             "&&", "set"], env=os.environ).replace("\r\n", "\n")
+    else:
+        cmd = "source {}/bin/activate {} && env".format(sys.prefix, env_name_or_path)
+        vars = check_output(["bash", "-c", cmd], env=os.environ)
+    return _set_environ_from_subprocess_values(vars)
+
+
+def deactivate_env():
+    if sys.platform == "win32":
+        vars = check_output(["{}\\Scripts\\deactivate.bat".format(sys.prefix),
+                             "&&", "set"]).replace("\r\n", "\n")
+    else:
+        cmd = "source {}/bin/deactivate && env".format(sys.prefix)
+        vars = check_output(["bash", "-c", cmd], env=os.environ)
+    return _set_environ_from_subprocess_values(vars)
+
+
 if __name__ == '__main__':
     e = get_dict()
     for k in sorted(e):

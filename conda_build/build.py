@@ -22,7 +22,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked, move_to_trash
+from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
 from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
@@ -30,6 +30,7 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
+from conda_build.environ import activate_env, deactivate_env
 from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
@@ -365,7 +366,7 @@ def create_env(prefix, specs, clear_cache=True):
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
-
+    symlink_conda(prefix, sys.prefix)
 
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
@@ -462,6 +463,10 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             create_env(config.build_prefix,
                     [ms.spec for ms in m.ms_depends('build')])
 
+            # modify os.environ to have our new environment be active
+            #    This is important for setting variables from activate.d and deactivate.d
+            environ.activate_env(config.build_prefix)
+
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
                 # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
@@ -531,6 +536,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 windows.build(m, build_file, dirty=dirty)
             else:
                 env = environ.get_dict(m, dirty=dirty)
+                env.update(os.environ)
                 build_file = join(m.path, 'build.sh')
 
                 if script:
@@ -543,6 +549,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     cmd = [shell_path, '-x', '-e', build_file]
 
                     _check_call(cmd, env=env, cwd=src_dir)
+
+            deactivate_env()
 
         if post in [True, None]:
             if post:
