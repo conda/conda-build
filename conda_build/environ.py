@@ -10,7 +10,7 @@ from os.path import join, normpath
 from subprocess import STDOUT, check_output, CalledProcessError, Popen, PIPE
 
 import conda.config as cc
-from conda.compat import text_type
+from conda.compat import text_type, PY3
 
 from conda_build import external
 from conda_build import source
@@ -406,6 +406,8 @@ def activate_env(env_name_or_path):
     else:
         cmd = "source {}/bin/activate {} && env".format(sys.prefix, env_name_or_path)
         vars = check_output(["bash", "-c", cmd], env=os.environ)
+    if PY3:
+        vars = vars.decode("UTF-8")
     return _set_environ_from_subprocess_values(vars)
 
 
@@ -416,6 +418,8 @@ def deactivate_env():
     else:
         cmd = "source {}/bin/deactivate && env".format(sys.prefix)
         vars = check_output(["bash", "-c", cmd], env=os.environ)
+    if PY3:
+        vars = vars.decode("UTF-8")
     return _set_environ_from_subprocess_values(vars)
 
 
