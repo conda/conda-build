@@ -9,6 +9,7 @@ import pytest
 from conda.compat import PY3, TemporaryDirectory
 from conda.config import subdir
 from conda.fetch import download
+from conda_build.source import _guess_patch_strip_level, apply_patch
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
@@ -277,3 +278,63 @@ def test_token_upload():
     cmd = 'anaconda --token {} remove --force conda_test_account/conda-build-test-empty_sections'\
     .format(token)
     subprocess.check_call(cmd.split())
+
+
+def test_patch_strip_level():
+    patchfiles = set(('some/common/prefix/one.txt',
+                      'some/common/prefix/two.txt',
+                      'some/common/prefix/three.txt'))
+    folders = ('some', 'common', 'prefix')
+    files = ('one.txt', 'two.txt', 'three.txt')
+    basedir = os.getcwd()
+    with TemporaryDirectory() as tmp:
+        os.chdir(tmp)
+        os.makedirs(os.path.join(tmp, *folders))
+        for file in files:
+            with open(os.path.join(os.path.join(tmp, *folders), file), 'w') as f:
+                f.write('hello\n')
+        assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 0
+        os.chdir(folders[0])
+        assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 1
+        os.chdir(folders[1])
+        assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 2
+        os.chdir(folders[2])
+        assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 3
+        os.chdir(basedir)
+
+
+def test_patch():
+    basedir = os.getcwd()
+    with TemporaryDirectory() as tmp:
+        os.chdir(tmp)
+        with open(os.path.join(tmp, 'file-deletion.txt'), 'w') as f:
+            f.write('hello\n')
+        with open(os.path.join(tmp, 'file-modification.txt'), 'w') as f:
+            f.write('hello\n')
+        patchfile = os.path.join(tmp, 'patch')
+        with open(patchfile, 'w') as f:
+            f.write('diff file-deletion.txt file-deletion.txt\n')
+            f.write('--- file-deletion.txt	2016-06-07 21:55:59.549798700 +0100\n')
+            f.write('+++ file-deletion.txt	1970-01-01 01:00:00.000000000 +0100\n')
+            f.write('@@ -1 +0,0 @@\n')
+            f.write('-hello\n')
+            f.write('diff file-creation.txt file-creation.txt\n')
+            f.write('--- file-creation.txt	1970-01-01 01:00:00.000000000 +0100\n')
+            f.write('+++ file-creation.txt	2016-06-07 21:55:59.549798700 +0100\n')
+            f.write('@@ -0,0 +1 @@\n')
+            f.write('+hello\n')
+            f.write('diff file-modification.txt file-modification.txt.new\n')
+            f.write('--- file-modification.txt	2016-06-08 18:23:08.384136600 +0100\n')
+            f.write('+++ file-modification.txt.new	2016-06-08 18:23:37.565136200 +0100\n')
+            f.write('@@ -1 +1 @@\n')
+            f.write('-hello\n')
+            f.write('+43770\n')
+            f.close()
+            apply_patch(tmp, patchfile)
+            assert not os.path.exists(os.path.join(tmp, 'file-deletion.txt'))
+            assert os.path.exists(os.path.join(tmp, 'file-creation.txt'))
+            assert os.path.exists(os.path.join(tmp, 'file-modification.txt'))
+            with open('file-modification.txt', 'r') as modified:
+                lines = modified.readlines()
+                assert lines[0] == '43770\n'
+        os.chdir(basedir)
