@@ -3,15 +3,12 @@ package:
   version: 1.0
 
 build:
-  #has_prefix_files:
-  #  - Scripts\\test.bat  # [win]
-  #  - test.sh  # [unix]
   ignore_prefix_files:
-    - Scripts\\test2.bat  # [win]
+    - test2.bat  # [win]
     - test2.sh  # [unix]
   script:
-    - echo %PREFIX%\\test.txt > %SCRIPTS%\\test.bat  # [win]
-    - echo %PREFIX%\\test2.txt > %SCRIPTS%\\test2.bat  # [win]
+    - echo %PREFIX%\\test.txt > %PREFIX%\\test.bat  # [win]
+    - echo %PREFIX%\\test2.txt > %PREFIX%\\test2.bat  # [win]
     - echo ${PREFIX}/bin/test.txt > ${PREFIX}/test.sh  # [unix]
     - echo ${PREFIX}/bin/test2.txt > ${PREFIX}/test2.sh  # [unix]
 
