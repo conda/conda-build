@@ -130,8 +130,10 @@ DISTUTILS_PATCH = '''\
 diff core.py core.py
 --- core.py
 +++ core.py
-@@ -166,5 +167,40 @@ def setup (**attrs):
- \n
+@@ -166,6 +166,41 @@
+ 
+ # setup ()
+ 
 +# ====== BEGIN CONDA SKELETON PYPI PATCH ======
 +
 +import distutils.core
@@ -167,7 +169,7 @@ diff core.py core.py
 +
 +
 +# ======= END CONDA SKELETON PYPI PATCH ======
- \n
+ 
  def run_setup (script_name, script_args=None, stop_after="run"):
      """Run a setup script in a somewhat controlled environment, and
 '''
