@@ -7,31 +7,17 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import os
+from os.path import isdir
+import shutil
 import sys
-from collections import deque
-from glob import glob
-from locale import getpreferredencoding
 import warnings
 
-import sys
-import shutil
-import tarfile
-import tempfile
-from os import makedirs
-from os.path import abspath, isdir, isfile
-
 import conda.config as cc
-from conda.compat import PY3
 from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
-from conda.resolve import NoPackagesFound, Unsatisfiable
 
 import conda_build.api as api
 import conda_build.build as build
-from conda_build.build import bldpkg_path
-from conda_build.config import config
-from conda_build.index import update_index
 from conda_build.main_render import (set_language_env_vars, RecipeCompleter,
                                      render_recipe, get_render_parser, bldpkg_path)
 import conda_build.source as source
@@ -57,14 +43,14 @@ different sets of packages."""
         "--no-anaconda-upload",
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
-        dest='binstar_upload',
+        dest='anaconda_upload',
         default=cc.binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
-        dest='binstar_upload',
+        dest='anaconda_upload',
         default=cc.binstar_upload,
     )
     p.add_argument(
@@ -152,147 +138,6 @@ different sets of packages."""
     args_func(args, p)
 
 
-def handle_binstar_upload(path, binstar_upload=None, token=None, user=None):
-    import subprocess
-    from conda_build.external import find_executable
-
-    upload = False
-    # this is the default, for no explicit argument.
-    # remember that args.binstar_upload takes defaults from condarc
-    if args.binstar_upload is None:
-        args.yes = False
-        args.dry_run = False
-    # rc file has uploading explicitly turned off
-    elif args.binstar_upload is False:
-        print("# Automatic uploading is disabled")
-    else:
-        upload = True
-
-    no_upload_message = """\
-# If you want to upload this package to anaconda.org later, type:
-#
-# $ anaconda upload %s
-#
-# To have conda build upload to anaconda.org automatically, use
-# $ conda config --set anaconda_upload yes
-""" % path
-    if not upload:
-        print(no_upload_message)
-        return
-
-    binstar = find_executable('anaconda')
-    if binstar is None:
-        print(no_upload_message)
-        sys.exit('''
-Error: cannot locate anaconda command (required for upload)
-# Try:
-# $ conda install anaconda-client
-''')
-    print("Uploading to anaconda.org")
-    cmd = [binstar, ]
-
-    if token:
-        cmd.extend(['--token', token])
-    cmd.append('upload')
-    if user:
-        cmd.extend(['--user', user])
-    cmd.append(path)
-    try:
-        subprocess.call(cmd)
-    except:
-        print(no_upload_message)
-        raise
-
-
-def check_external():
-    import os
-    import conda_build.external as external
-
-    if sys.platform.startswith('linux'):
-        patchelf = external.find_executable('patchelf')
-        if patchelf is None:
-            sys.exit("""\
-Error:
-    Did not find 'patchelf' in: %s
-    'patchelf' is necessary for building conda packages on Linux with
-    relocatable ELF libraries.  You can install patchelf using conda install
-    patchelf.
-""" % (os.pathsep.join(external.dir_paths)))
-
-
-def build_tree(recipe_list, check=False, build_only=False, post=False, notest=False,
-               binstar_upload=True, skip_existing=False, keep_old_work=False,
-               include_recipe=True, need_source_download=True, already_built=None,
-               token=None, user=None, dirty=False):
-    to_build_recursive = []
-    recipes = deque(recipe_list)
-    if not already_built:
-        already_built = set()
-    while recipes:
-        # This loop recursively builds dependencies if recipes exist
-        if build_only:
-            post = False
-            notest = True
-            binstar_upload = False
-        elif post:
-            post = True
-            notest = True
-            binstar_upload = False
-        else:
-            post = None
-
-        try:
-            recipe = recipes.popleft()
-            ok_to_test = api.build(recipe, post=post,
-                                   include_recipe=include_recipe,
-                                   keep_old_work=keep_old_work,
-                                   need_source_download=need_source_download,
-                                   dirty=dirty, skip_existing=skip_existing,
-                                   already_built=already_built)
-            if not notest and ok_to_test:
-                api.test(recipe)
-        except (NoPackagesFound, Unsatisfiable) as e:
-            error_str = str(e)
-            # Typically if a conflict is with one of these
-            # packages, the other package needs to be rebuilt
-            # (e.g., a conflict with 'python 3.5*' and 'x' means
-            # 'x' isn't build for Python 3.5 and needs to be
-            # rebuilt).
-            skip_names = ['python', 'r']
-            # add the failed one back in
-            add_recipes = [recipe]
-            for line in error_str.splitlines():
-                if not line.startswith('  - '):
-                    continue
-                pkg = line.lstrip('  - ').split(' -> ')[-1]
-                pkg = pkg.strip().split(' ')[0]
-                if pkg in skip_names:
-                    continue
-                recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
-                if os.path.exists(pkg):
-                    recipe_glob.append(pkg)
-                if recipe_glob:
-                    for recipe_dir in recipe_glob:
-                        if pkg in to_build_recursive:
-                            sys.exit(str(e))
-                        print(error_str)
-                        print(("Missing dependency {0}, but found" +
-                                " recipe directory, so building " +
-                                "{0} first").format(pkg))
-                        add_recipes.append(recipe_dir)
-                        to_build_recursive.append(pkg)
-                else:
-                    raise
-            recipes.extendleft(reversed(add_recipes))
-
-        # outputs message, or does upload, depending on value of args.binstar_upload
-        output_file = api.get_output_file_path(recipe)
-        handle_binstar_upload(output_file, binstar_upload=binstar_upload,
-                              token=token, user=user)
-
-        already_built.add(output_file)
-
-
 def output_action(metadata):
     print(bldpkg_path(metadata))
 
@@ -306,8 +151,12 @@ def test_action(metadata):
     return api.test(metadata.path, move_broken=False)
 
 
+def check_action(metadata):
+    return api.check(metadata.path)
+
+
 def execute(args, parser):
-    check_external()
+    build.check_external()
 
     # change globals in build module, see comment there as well
     build.channel_urls = args.channel or ()
@@ -357,8 +206,8 @@ def execute(args, parser):
             if need_cleanup:
                 shutil.rmtree(recipe_dir)
     else:
-        build_tree(args.recipe, build_only=args.build_only, post=args.post,
-                   notest=args.notest, binstar_upload=args.binstar_upload,
+        api.build(args.recipe, build_only=args.build_only, post=args.post,
+                   notest=args.notest, anaconda_upload=args.anaconda_upload,
                    skip_existing=args.skip_existing, keep_old_work=args.keep_old_work,
                    include_recipe=args.include_recipe, already_built=None,
                    token=args.token, user=args.user, dirty=args.dirty)

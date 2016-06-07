@@ -1,7 +1,4 @@
-# import setuptools
 from distutils.core import setup
-
-#setuptools  # fool pyflakes
 
 name = 'noarch_test_package'
 

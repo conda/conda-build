@@ -2,6 +2,7 @@ import base64
 import os
 from os.path import isdir, join
 import shutil
+import sys
 
 try:
     from Crypto import Random
@@ -15,7 +16,7 @@ Error: could not import Crypto (required for "conda sign").
     $ conda install -n root pycrypto
 """)
 
-from conda.signature import KEYS_DIR, hash_file, verify, SignatureError
+from conda.signature import KEYS_DIR, hash_file
 
 
 def keygen(name, size=2048):
@@ -48,8 +49,8 @@ def import_key(private_key_path, new_name=None):
     if not new_name:
         new_name = os.path.basename(private_key_path)
     shutil.copy(private_key_path, os.path.join(KEYS_DIR, new_name))
-    with open(os.path.join(KEYS_DIR, new_name+".pub")) as f:
-        key = RSA.importKey(open(key_name_or_path).read())
+    with open(os.path.join(KEYS_DIR, new_name + ".pub")) as f:
+        key = RSA.importKey(open(private_key_path).read())
         f.write(key.publickey().exportKey())
 
 
@@ -76,8 +77,9 @@ def sign(path, key_name_or_path=None):
     sig = signer.sign(hash_file(path))
     return base64.b64encode(sig).decode('utf-8')
 
+
 def sign_and_write(path, key_name_or_path):
     with open('%s.sig' % path, 'w') as fo:
         fo.write('%s ' % key_name_or_path)
-        fo.write(api.sign(path, key_name_or_path))
+        fo.write(sign(path, key_name_or_path))
         fo.write('\n')

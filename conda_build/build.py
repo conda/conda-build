@@ -3,7 +3,9 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
 
+from collections import deque
 import io
+from glob import glob
 import json
 import os
 import shutil
@@ -25,12 +27,12 @@ from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
 from conda.lock import Locked
 from conda.utils import url_path
-from conda.resolve import Resolve, MatchSpec, NoPackagesFound
+from conda.resolve import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
-from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
+from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, render_recipe
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -764,3 +766,143 @@ def tests_failed(m, move_broken):
     if move_broken:
         shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
+
+
+def check_external():
+    import os
+    import conda_build.external as external
+
+    if sys.platform.startswith('linux'):
+        patchelf = external.find_executable('patchelf')
+        if patchelf is None:
+            sys.exit("""\
+Error:
+    Did not find 'patchelf' in: %s
+    'patchelf' is necessary for building conda packages on Linux with
+    relocatable ELF libraries.  You can install patchelf using conda install
+    patchelf.
+""" % (os.pathsep.join(external.dir_paths)))
+
+
+def build_tree(recipe_list, check=False, build_only=False, post=False, notest=False,
+               anaconda_upload=True, skip_existing=False, keep_old_work=False,
+               include_recipe=True, need_source_download=True, already_built=None,
+               token=None, user=None, dirty=False, verbose=True):
+    to_build_recursive = []
+    recipes = deque(recipe_list)
+    if not already_built:
+        already_built = set()
+    while recipes:
+        # This loop recursively builds dependencies if recipes exist
+        if build_only:
+            post = False
+            notest = True
+            anaconda_upload = False
+        elif post:
+            post = True
+            notest = True
+            anaconda_upload = False
+        else:
+            post = None
+
+        try:
+            recipe = recipes.popleft()
+            metadata, need_source_download = render_recipe(recipe, verbose=verbose, dirty=dirty)
+            ok_to_test = build(metadata, post=post,
+                               include_recipe=include_recipe,
+                               keep_old_work=keep_old_work,
+                               need_source_download=need_source_download,
+                               dirty=dirty, verbose=verbose)
+            if not notest and ok_to_test:
+                test(metadata)
+        except (NoPackagesFound, Unsatisfiable) as e:
+            error_str = str(e)
+            # Typically if a conflict is with one of these
+            # packages, the other package needs to be rebuilt
+            # (e.g., a conflict with 'python 3.5*' and 'x' means
+            # 'x' isn't build for Python 3.5 and needs to be
+            # rebuilt).
+            skip_names = ['python', 'r']
+            # add the failed one back in
+            add_recipes = [recipe]
+            for line in error_str.splitlines():
+                if not line.startswith('  - '):
+                    continue
+                pkg = line.lstrip('  - ').split(' -> ')[-1]
+                pkg = pkg.strip().split(' ')[0]
+                if pkg in skip_names:
+                    continue
+                recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                if os.path.exists(pkg):
+                    recipe_glob.append(pkg)
+                if recipe_glob:
+                    for recipe_dir in recipe_glob:
+                        if pkg in to_build_recursive:
+                            sys.exit(str(e))
+                        print(error_str)
+                        print(("Missing dependency {0}, but found" +
+                                " recipe directory, so building " +
+                                "{0} first").format(pkg))
+                        add_recipes.append(recipe_dir)
+                        to_build_recursive.append(pkg)
+                else:
+                    raise
+            recipes.extendleft(reversed(add_recipes))
+
+        # outputs message, or does upload, depending on value of args.anaconda_upload
+        output_file = bldpkg_path(metadata)
+        handle_anaconda_upload(output_file, anaconda_upload=anaconda_upload,
+                              token=token, user=user)
+
+        already_built.add(output_file)
+
+
+def handle_anaconda_upload(path, anaconda_upload=None, token=None, user=None):
+    import subprocess
+    from conda_build.external import find_executable
+
+    upload = False
+    # this is the default, for no explicit argument.
+    # remember that anaconda_upload takes defaults from condarc
+    if anaconda_upload is None:
+        pass
+    # rc file has uploading explicitly turned off
+    elif anaconda_upload is False:
+        print("# Automatic uploading is disabled")
+    else:
+        upload = True
+
+    no_upload_message = """\
+# If you want to upload this package to anaconda.org later, type:
+#
+# $ anaconda upload %s
+#
+# To have conda build upload to anaconda.org automatically, use
+# $ conda config --set anaconda_upload yes
+""" % path
+    if not upload:
+        print(no_upload_message)
+        return
+
+    anaconda = find_executable('anaconda')
+    if anaconda is None:
+        print(no_upload_message)
+        sys.exit('''
+Error: cannot locate anaconda command (required for upload)
+# Try:
+# $ conda install anaconda-client
+''')
+    print("Uploading to anaconda.org")
+    cmd = [anaconda, ]
+
+    if token:
+        cmd.extend(['--token', token])
+    cmd.append('upload')
+    if user:
+        cmd.extend(['--user', user])
+    cmd.append(path)
+    try:
+        subprocess.call(cmd)
+    except:
+        print(no_upload_message)
+        raise

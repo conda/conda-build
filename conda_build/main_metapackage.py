@@ -15,7 +15,7 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda_build.main_build import args_func
 from conda_build.metadata import MetaData
 from conda_build.build import build, bldpkg_path
-from conda_build.main_build import handle_binstar_upload
+from conda_build.main_build import handle_anaconda_upload
 
 
 def main():
@@ -35,15 +35,15 @@ command line with the conda metapackage command.
         "--no-anaconda-upload",
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
-        dest='binstar_upload',
-        default=conda.config.binstar_upload,
+        dest='anaconda_upload',
+        default=conda.config.anaconda_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
-        dest='binstar_upload',
-        default=conda.config.binstar_upload,
+        dest='anaconda_upload',
+        default=conda.config.anaconda_upload,
     )
     p.add_argument(
         "name",
@@ -124,7 +124,7 @@ def execute(args, parser):
     m = MetaData.fromdict(d)
 
     build(m)
-    handle_binstar_upload(bldpkg_path(m), args)
+    handle_anaconda_upload(bldpkg_path(m), args)
 
 if __name__ == '__main__':
     main()
