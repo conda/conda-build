@@ -40,14 +40,14 @@ Tool for building conda packages using pip install.
         "--no-anaconda-upload",
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
-        dest='binstar_upload',
+        dest='anaconda_upload',
         default=cc.binstar_upload,
     )
     p.add_argument(
         "--anaconda-upload",
         action="store_true",
         help="Upload the package to anaconda.org.",
-        dest='binstar_upload',
+        dest='anaconda_upload',
         default=cc.binstar_upload,
     )
     p.add_argument(
@@ -81,17 +81,17 @@ Tool for building conda packages using pip install.
     args_func(args, p)
 
 
-def handle_binstar_upload(path):
+def handle_anaconda_upload(path):
     from conda_build.external import find_executable
-    binstar = find_executable('anaconda')
-    if binstar is None:
+    anaconda = find_executable('anaconda')
+    if anaconda is None:
         sys.exit('''
 Error: cannot locate anaconda command (required for upload)
 # Try:
 # $ conda install anaconda-client
 ''')
     print("Uploading to anaconda.org")
-    args = [binstar, 'upload', path]
+    args = [anaconda, 'upload', path]
     subprocess.call(args)
 
 # Run conda skeleton pypi {0} --no-download --no-prompt
@@ -323,9 +323,9 @@ def build_package(package, version=None, noarch_python=False):
         args = build_template.format(directory).split()
         print("Building conda package for {0}".format(package.lower()))
         result = subprocess.Popen(args).wait()
-        if result == 0 and binstar_upload:
+        if result == 0 and anaconda_upload:
             m = MetaData(directory)
-            handle_binstar_upload(build.bldpkg_path(m))
+            handle_anaconda_upload(build.bldpkg_path(m))
     finally:
         rm_rf(directory)
     return result
@@ -336,9 +336,9 @@ def execute(args, parser):
           "It will be removmed in a future release of conda-build. ***")
     print("Please use conda build instead.")
 
-    global binstar_upload
+    global anaconda_upload
     global client
-    binstar_upload = args.binstar_upload
+    anaconda_upload = args.anaconda_upload
 
     client = ServerProxy(args.pypi_url)
     package = args.pypi_name[0]

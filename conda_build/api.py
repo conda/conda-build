@@ -43,11 +43,11 @@ def check(recipe_path, no_download_source=False, verbose=False, **kwargs):
 
 def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
           need_source_download=True, verbose=False, check=False, skip_existing=False,
-          dirty=False, already_built=None,
-          **kwargs):
-    metadata, need_source_download = _render_recipe(recipe_path,
-                                                    no_download_source=(not need_source_download),
-                                                    verbose=verbose, dirty=dirty, **kwargs)
+          dirty=False, already_built=None, build_only=False, notest=False, anaconda_upload=True,
+          token=None, user=None, **kwargs):
+    metadata, _ = _render_recipe(recipe_path,
+                                 no_download_source=(not need_source_download),
+                                 verbose=verbose, dirty=dirty, **kwargs)
 
     if not already_built:
         already_built = set()
@@ -71,9 +71,11 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
             print(metadata.dist(), "is already built, skipping.")
             return False
 
-    return _build.build(metadata, post=post, include_recipe=include_recipe, dirty=dirty,
-                        keep_old_work=keep_old_work, need_source_download=need_source_download,
-                        **kwargs)
+    return _build.build_tree([recipe_path], build_only=build_only, post=post, notest=notest,
+                             anaconda_upload=anaconda_upload, skip_existing=skip_existing,
+                             keep_old_work=keep_old_work, include_recipe=include_recipe,
+                             need_source_download=True, already_built=already_built,
+                             token=token, user=user, dirty=dirty)
 
 
 def test(package_path, move_broken=True, verbose=False, **kwargs):
@@ -83,6 +85,7 @@ def test(package_path, move_broken=True, verbose=False, **kwargs):
     metadata, _ = _render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
     return _test(metadata, move_broken=move_broken, **kwargs)
 
+
 def keygen(name="conda_build_signing", size=2048):
     """Create a private/public key pair for package verification purposes
 
@@ -91,15 +94,19 @@ def keygen(name="conda_build_signing", size=2048):
     """
     return _sign.keygen(name, size)
 
+
 def import_sign_key(private_key_path, new_name=None):
     """
-    private_key_path: specify a private key to be imported.  The public key is generated automatically.
-          Specify ```new_name``` also to rename the private key in the copied location.
+    private_key_path: specify a private key to be imported.  The public key is
+          generated automatically.  Specify ```new_name``` also to rename the
+          private key in the copied location.
     """
     return _sign.import_key(private_key_path, new_name=new_name)
 
+
 def sign(file_path, key_name_or_path=None):
     return _sign.sign_and_write(file_path, key_name_or_path)
+
 
 def verify(file_path):
     return _sign.verify(file_path)

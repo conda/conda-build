@@ -41,12 +41,13 @@ def get_recipe_abspath(recipe):
             t.close()
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % arg)
+            print("Ignoring non-recipe: %s" % recipe)
             return (None, None)
     else:
         recipe_dir = abspath(recipe)
         need_cleanup = False
     return recipe_dir, need_cleanup
+
 
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.

@@ -1,4 +1,3 @@
-from locale import getpreferredencoding
 import os
 import subprocess
 import shutil
@@ -274,7 +273,7 @@ def test_skip_existing():
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "empty_sections"))
     subprocess.check_output(cmd.split())
     cmd = 'conda build --no-anaconda-upload --skip-existing {}'.format(os.path.join(metadata_dir,
-                                                                                    "empty_sections"))
+                                                                            "empty_sections"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, _ = process.communicate()

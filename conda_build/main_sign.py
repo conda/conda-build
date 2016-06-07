@@ -5,11 +5,14 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
 import sys
-from os.path import isdir, join
+
+from conda_build import api
+
+from conda.cli.conda_argparse import ArgumentParser
+from conda.signature import SignatureError
 
 
 def main():
-    from conda.cli.conda_argparse import ArgumentParser
 
     p = ArgumentParser(
         description="""\
@@ -31,8 +34,12 @@ files as FILE.sig.""")
                       "(defaults to 2048).",
                  metavar="BITS")
     p.add_argument('-v', '--verify',
-                 action="store_true",
-                 help="Verify FILE(s).")
+                   action="store_true",
+                   help="Verify FILE(s)."),
+    p.add_argument('-i', '--input-key',
+                   action="store",
+                   default="",
+                   help="Name of or path to private key to use for signing")
 
     args = p.parse_args()
 
@@ -58,13 +65,9 @@ files as FILE.sig.""")
             print('%-40s %s' % (path, disp))
         return
 
-    key_name = get_default_keyname()
-    if key_name is None:
-        sys.exit("Error: no private key found in %s" % KEYS_DIR)
-    print("Using private key '%s' for signing." % key_name)
     for path in args.files:
         print('signing: %s' % path)
-        return api.sign(path, key_name)
+        return api.sign(path, args.input_key)
 
 
 if __name__ == '__main__':
