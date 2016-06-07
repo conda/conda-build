@@ -278,8 +278,8 @@ FIELDS = {
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch_python',
-              'has_prefix_files', 'binary_has_prefix_files', 'script_env',
-              'detect_binary_files_with_prefix', 'rpaths',
+              'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
+              'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends'  # pin_depends is experimental still
               ],
@@ -586,6 +586,16 @@ class MetaData(object):
         if sys.platform == 'win32':
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / "
+                                   "as the path delimiter on Windows")
+        return ret
+
+    def ignore_prefix_files(self):
+        ret = self.get_value('build/ignore_prefix_files', False)
+        if type(ret) not in (list, bool):
+            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths')
+        if sys.platform == 'win32':
+            if any('\\' in i for i in ret):
+                raise RuntimeError("build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
         return ret
 
