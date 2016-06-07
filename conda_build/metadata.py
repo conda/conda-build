@@ -593,7 +593,7 @@ class MetaData(object):
         ret = self.get_value('build/ignore_prefix_files', False)
         if type(ret) not in (list, bool):
             raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths')
-        if sys.platform == 'win32':
+        if sys.platform == 'win32' and type(ret) is list:
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
