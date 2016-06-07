@@ -192,17 +192,16 @@ def create_info_files(m, files, include_recipe=True):
                 shutil.copytree(src_path, dst_path)
             else:
                 shutil.copy(src_path, dst_path)
-        os.rename(join(recipe_dir, "meta.yaml"), join(recipe_dir, "meta.yaml.template"))
 
-    # store the rendered meta.yaml file, plus information about where it came from
-    #    and what version of conda-build created it
-    metayaml = output_yaml(m)
-    with open(join(config.info_dir, "meta.yaml"), 'w') as f:
-        f.write("# This file created by conda-build {}\n".format(__version__))
-        f.write("# meta.yaml template originally from:\n")
-        f.write("# " + source.get_repository_info(m.path) + "\n")
-        f.write("# ------------------------------------------------\n\n")
-        f.write(metayaml)
+        # store the rendered meta.yaml file, plus information about where it came from
+        #    and what version of conda-build created it
+        metayaml = output_yaml(m)
+        with open(join(recipe_dir, "meta.yaml.rendered"), 'w') as f:
+            f.write("# This file created by conda-build {}\n".format(__version__))
+            f.write("# meta.yaml template originally from:\n")
+            f.write("# " + source.get_repository_info(m.path) + "\n")
+            f.write("# ------------------------------------------------\n\n")
+            f.write(metayaml)
 
     license_file = m.get_value('about/license_file')
     if license_file:
