@@ -5,7 +5,7 @@ import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
 from shutil import copytree, copy2
-from subprocess import check_call, Popen, PIPE, CalledProcessError, check_output
+from subprocess import check_call, Popen, PIPE, check_output
 import locale
 import time
 
@@ -15,6 +15,7 @@ from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
+from conda_build import patch
 from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
 
 
@@ -314,33 +315,75 @@ def _ensure_unix_line_endings(path):
     return out_path
 
 
+def _commonpath(paths):
+    """Python 2 doesn't have os.path.commonpath(), so roll our own"""
+    folders = [path.split(b'/') for path in paths]
+    minfolders = min(folders)
+    maxfolders = max(folders)
+    common = []
+    for minf, maxf in zip(minfolders, maxfolders[:len(minfolders)]):
+        if minf != maxf:
+            break
+        common.append(minf)
+    if len(common):
+        return b'/'.join(common)+b'/'
+    return b''
+
+
+def _guess_patch_strip_level(patchset, src_dir):
+    """ Determine the patch strip level automatically.
+
+    All existing source files partake in the guess.  If the
+    level is ambiguous then return the best matching level.
+    I might try to move this function to the upstream patch.py  """
+
+    maxlevel = None
+    files = set()
+    try:
+        src_dir = src_dir.encode()
+    except:
+        pass
+
+    for patchit in patchset.items:
+        # File creation cannot partake in automatic patch level
+        # determination .. if a patch consists of nothing but
+        # that, then a default level of 0 will be used.
+        file = patchit.source
+        if file == b'/dev/null':
+            continue
+        numslash = file.count(b'/')
+        maxlevel = numslash if not maxlevel else min(maxlevel, numslash)
+        files.add(file)
+    if maxlevel == 0:
+        patchlevel = 0
+    else:
+        histo = dict()
+        histo = {i: 0 for i in range(maxlevel+1)}
+        if len(files) == 1:
+            (common,) = files
+        else:
+            common = _commonpath(files)
+        maxlevel = common.count(b'/')
+        for file in files:
+            parts = file.split(b'/')
+            for level in range(maxlevel+1):
+                if os.path.exists(join(src_dir, *parts[-len(parts)+level:])):
+                    histo[level] += 1
+        order = sorted(histo, key=histo.get, reverse=True)
+        if histo[order[0]] == histo[order[1]]:
+            print("Patch level ambiguous, selecting least-deep")
+        patchlevel = min([key for key, value
+                          in histo.items() if value == histo[order[0]]])
+    return patchlevel
+
+
 def apply_patch(src_dir, path):
     print('Applying patch: %r' % path)
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
-
-    patch = external.find_executable('patch')
-    if patch is None:
-        sys.exit("""\
-Error:
-    Did not find 'patch' in: %s
-    You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
-    or conda, cygwin (Windows),
-""" % (os.pathsep.join(external.dir_paths)))
-    patch_args = ['-p0', '-i', path]
-    if sys.platform == 'win32':
-        patch_args[-1] = _ensure_unix_line_endings(path)
-    try:
-        check_call([patch] + patch_args, cwd=src_dir)
-    except CalledProcessError:
-        # fallback to -p1, the git default
-        patch_args[0] = '-p1'
-        try:
-            check_call([patch] + patch_args, cwd=src_dir)
-        except CalledProcessError:
-            sys.exit(1)
-    if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
-        os.remove(patch_args[-1])  # clean up .patch_unix file
+    patchset = patch.fromfile(path)
+    patch_strip_level = _guess_patch_strip_level(patchset, src_dir)
+    patchset.apply(patch_strip_level, root=src_dir)
 
 
 def provide(recipe_dir, meta, verbose=False, patch=True):
