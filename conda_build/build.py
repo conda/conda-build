@@ -269,6 +269,17 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
+
+    ignore_files = m.ignore_prefix_files()
+    if ignore_files:
+        # do we have a list of files, or just ignore everything?
+        if hasattr(ignore_files, "__iter__"):
+            files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
+            binary_has_prefix_files = [f for f in binary_has_prefix_files if f[2] not in ignore_files]  # noqa
+            text_has_prefix_files = [f for f in text_has_prefix_files if f[2] not in ignore_files]
+        else:
+            files_with_prefix = []
+
     if files_with_prefix and not m.get_value('build/noarch_python'):
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':
