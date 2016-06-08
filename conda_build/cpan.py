@@ -136,25 +136,34 @@ class InvalidReleaseError(RuntimeError):
     pass
 
 
-def main(args, parser):
+def package_exists(package_name):
+    try:
+        subprocess.check_call(['cpan', '-D', package_name])
+        in_repo = True
+    except subprocess.CalledProcessError:
+        in_repo = False
+    return in_repo
+
+
+def skeletonize(packages, output_dir=".", version=None,
+         meta_cpan_url="http://api.metacpan.org",
+         recursive=False):
     '''
-    Creates a bunch of CPAN conda recipes.
+    Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
     perl_version = config.CONDA_PERL
     package_dicts = {}
-    [output_dir] = args.output_dir
     indent = '\n    - '
-    args.packages = list(reversed(args.packages))
     processed_packages = set()
-    orig_version = args.version
-    while args.packages:
-        package = args.packages.pop()
+    orig_version = version
+    while packages:
+        package = packages.pop()
         # If we're passed version in the same format as `PACKAGE=VERSION`
         # update version
         if '=' in package:
-            package, __, args.version = package.partition('=')
+            package, __, version = package.partition('=')
         else:
-            args.version = orig_version
+            version = orig_version
 
         # Skip duplicates
         if package in processed_packages:
@@ -163,49 +172,49 @@ def main(args, parser):
 
         # Convert modules into distributions
         orig_package = package
-        package = dist_for_module(args.meta_cpan_url, package, perl_version)
+        package = dist_for_module(meta_cpan_url, package, perl_version)
         if package == 'perl':
             print(("WARNING: {0} is a Perl core module that is not developed " +
-                   "outside of Perl, so we are skipping creating a recipe " +
-                   "for it.").format(orig_package))
+                    "outside of Perl, so we are skipping creating a recipe " +
+                    "for it.").format(orig_package))
             continue
         elif package not in {orig_package, orig_package.replace('::', '-')}:
             print(("WARNING: {0} was part of the {1} distribution, so we are " +
-                   "making a recipe for {1} instead.").format(orig_package,
-                                                              package))
+                    "making a recipe for {1} instead.").format(orig_package,
+                                                                package))
 
-        latest_release_data = get_release_info(args.meta_cpan_url, package,
-                                               None, perl_version)
+        latest_release_data = get_release_info(meta_cpan_url, package,
+                                                None, perl_version)
         packagename = perl_to_conda(package)
 
         # Skip duplicates
-        if ((args.version is not None and ((packagename + '-' + args.version) in
-                                           processed_packages)) or
+        if ((version is not None and ((packagename + '-' + version) in
+                                            processed_packages)) or
                 ((packagename + '-' + latest_release_data['version']) in
-                 processed_packages)):
+                    processed_packages)):
             continue
 
         d = package_dicts.setdefault(package, {'packagename': packagename,
-                                               'run_depends': '',
-                                               'build_depends': '',
-                                               'build_comment': '# ',
-                                               'test_commands': '',
-                                               'usemd5': '',
-                                               'useurl': '',
-                                               'source_comment': '',
-                                               'summary': "''",
-                                               'import_tests': ''})
+                                                'run_depends': '',
+                                                'build_depends': '',
+                                                'build_comment': '# ',
+                                                'test_commands': '',
+                                                'usemd5': '',
+                                                'useurl': '',
+                                                'source_comment': '',
+                                                'summary': "''",
+                                                'import_tests': ''})
 
         # Fetch all metadata from CPAN
         core_version = core_module_version(package, perl_version)
-        release_data = get_release_info(args.meta_cpan_url, package,
-                                        (LooseVersion(args.version) if
-                                         args.version is not None else
-                                         core_version),
+        release_data = get_release_info(meta_cpan_url, package,
+                                        (LooseVersion(version) if
+                                            version is not None else
+                                            core_version),
                                         perl_version)
         # Check if versioned recipe directory already exists
         dir_path = join(output_dir, '-'.join((packagename,
-                                              release_data['version'])))
+                                                release_data['version'])))
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
 
@@ -238,9 +247,9 @@ def main(args, parser):
 
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
-        if core_version is not None and ((args.version is None) or
-                                         (core_version >=
-                                          LooseVersion(args.version))):
+        if core_version is not None and ((version is None) or
+                                            (core_version >=
+                                            LooseVersion(version))):
             d['useurl'] = '#'
             d['usemd5'] = '#'
             d['source_comment'] = '#'
@@ -248,12 +257,12 @@ def main(args, parser):
         # Add dependencies to d if not in core, or newer than what's in core
         else:
             build_deps, run_deps, packages_to_append = deps_for_package(
-                package, release_data, perl_version, args, output_dir,
-                processed_packages)
+                package, release_data=release_data, perl_version=perl_version, output_dir=output_dir,
+                processed_packages=processed_packages, meta_cpan_url=meta_cpan_url, recursive=recursive)
             d['build_depends'] += indent.join([''] + list(build_deps |
-                                                          run_deps))
+                                                            run_deps))
             d['run_depends'] += indent.join([''] + list(run_deps))
-            args.packages.extend(packages_to_append)
+            packages.extend(packages_to_append)
             empty_recipe = False
 
         # Create import tests
@@ -284,8 +293,6 @@ def main(args, parser):
                 f.write('echo "Nothing to do."\n')
             else:
                 f.write(CPAN_BLD_BAT.format(**d))
-
-    print("Done")
 
 
 @memoized
@@ -354,7 +361,7 @@ def core_module_version(module, version):
 
 
 def deps_for_package(package, release_data, perl_version, args, output_dir,
-                     processed_packages):
+                     processed_packages, meta_cpan_url, recursive):
     '''
     Build the sets of dependencies and packages we need recipes for. This should
     only be called for non-core modules/distributions, as dependencies are
@@ -367,8 +374,6 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
     :param perl_version: The target version of Perl we're building this for.
                          This only really matters for core modules.
     :type perl_version: str
-    :param args: The command-line arguments passed to the skeleton command.
-    :type args: Namespace
     :param output_dir: The output directory to write recipes to
     :type output_dir: str
     :param processed_packages: The set of packages we have built recipes for
@@ -392,7 +397,7 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
             print('.', end='')
             sys.stdout.flush()
             # Format dependency string (with Perl trailing dist comment)
-            orig_dist = dist_for_module(args.meta_cpan_url, dep_dict['module'],
+            orig_dist = dist_for_module(meta_cpan_url, dep_dict['module'],
                                         perl_version)
             dep_entry = perl_to_conda(orig_dist)
             # Skip perl as a dependency, since it's already in list
@@ -406,7 +411,7 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
 
             # Make sure specified version is valid
             try:
-                get_release_info(args.meta_cpan_url, dep_dict['module'],
+                get_release_info(meta_cpan_url, dep_dict['module'],
                                  dep_version, perl_version, dependency=True)
             except InvalidReleaseError:
                 print(('WARNING: The version of %s listed as a ' +
@@ -431,7 +436,7 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
                     dep_entry += ' ' + dep_dict['version']
 
             # If recursive, check if we have a recipe for this dependency
-            if args.recursive:
+            if recursive:
                 # If dependency entry is versioned, make sure this is too
                 if ' ' in dep_entry:
                     if not exists(join(output_dir, dep_entry.replace('::',
@@ -447,8 +452,6 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
             # Handle build deps
             elif dep_dict['phase'] != 'develop':
                 build_deps.add(dep_entry)
-    print('done')
-    sys.stdout.flush()
 
     return build_deps, run_deps, packages_to_append
 

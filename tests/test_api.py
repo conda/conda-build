@@ -2,8 +2,9 @@ import os
 import sys
 
 import pytest
-
 import conda.config as cc
+from conda.compat import TemporaryDirectory
+
 from conda_build.config import croot
 from conda_build import api
 from conda_build.utils import rm_rf
@@ -65,3 +66,9 @@ def test_recipe_builds(recipe):
     os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
 
     api.build(recipe, verbose=True)
+
+
+def test_skeletonize_auto():
+    with TemporaryDirectory() as tmp:
+        api.skeletonize("sympy", output_dir=tmp)
+        assert os.path.isdir(os.path.join(tmp, "sympy"))

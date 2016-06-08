@@ -28,7 +28,7 @@ def add_parser(repos):
     cran.add_argument(
         "packages",
         action="store",
-        nargs='*',
+        nargs='+',
         help="""CRAN packages to create recipe skeletons for.""",
     ).completer = CRANPackagesCompleter
     cran.add_argument(

@@ -10,7 +10,13 @@ or Changing arguments to anything in here should also mean changing the major
 version number.
 """
 
+import importlib as _importlib
+import logging as _logging
 import os as _os
+import pkgutil as _pkgutil
+import re as _re
+
+from conda.compat import string_types as _string_types
 
 # imports done this way to hide other functions as private
 from conda_build.render import render_recipe as _render_recipe
@@ -110,3 +116,43 @@ def sign(file_path, key_name_or_path=None):
 
 def verify(file_path):
     return _sign.verify(file_path)
+
+
+def list_skeletons():
+    return [name for _, name, _ in _pkgutil.iter_modules(['conda_build/skeletons'])]
+
+
+def _is_url(name_or_url):
+    return re.findall(r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$",
+                      name_or_url) != []
+
+
+def skeletonize(packages, output_dir=".", version=None, recursive=False, origin="auto", **kw):
+    if isinstance(packages, _string_types):
+        packages = [packages]
+
+    if origin == "auto":
+        # can we uniquely resolve names?
+        origins = {}
+        for package in packages:
+            for skeleton in list_skeletons():
+                module = _importlib.import_module("conda_build." + skeleton)
+                try:
+                    if module.package_exists(package):
+                        origins[package] = origins.get(package, [])
+                        origins[package].append(skeleton)
+                except:
+                    print("Skeleton {} failed to verify package existence".format(skeleton))
+            if package in origins and len(origins[package]) != 1:
+                del origins[package]
+        for package in origins:
+            module = _importlib.import_module("conda_build." + origins[package][0])
+            module.skeletonize(packages, output_dir=output_dir, version=version,
+                               recursive=recursive, **kw)
+        unresolved = [package for package in packages if package not in origins]
+        if unresolved:
+            _logging.warn("Some packages could not be uniquely resolved: {}".format(unresolved))
+
+    else:
+        module = _importlib.import_module("conda_build." + skeleton)
+        module.skeletonize(packages, **kw)
