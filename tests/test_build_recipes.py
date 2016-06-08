@@ -22,6 +22,35 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
+@pytest.mark.skipif(sys.platform != "win32",
+                    reason="Problem only observed on Windows with win7 sdk")
+def test_header_finding():
+    """
+    Windows sometimes very strangely cannot find headers in %LIBRARY_INC%.  This has so far
+    only been a problem with the recipes that use the Win 7 SDK (python 3.4 builds)
+    """
+    cmd = 'conda build --no-anaconda-upload {}/_pyyaml_find_header'.format(metadata_dir)
+    try:
+        output = subprocess.check_output(cmd.split())
+    except subprocess.CalledProcessError as error:
+        print(error.output)
+        print(os.listdir(os.path.join(sys.prefix, "envs", "_build", "Library", "include")))
+        raise
+    if PY3:
+        output = output.decode("UTF-8")
+    assert "forcing --without-libyaml" not in output
+
+
+def test_CONDA_BLD_PATH():
+    env = dict(os.environ)
+    cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
+    with TemporaryDirectory() as tmp:
+        env["CONDA_BLD_PATH"] = tmp
+        subprocess.check_call(cmd.split(), env=env)
+        # trick is actually a second pass, to make sure that deletion/trash moving is working OK.
+        subprocess.check_call(cmd.split(), env=env)
+
+
 # TODO: this does not currently take into account post-build versioning changes with __conda_? files
 def test_output_build_path_git_source():
     cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
@@ -67,6 +96,22 @@ def test_cached_source_not_interfere_with_versioning():
             assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
     finally:
         os.chdir(basedir)
+
+
+def test_relative_path_git_versioning():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_source_git_jinja2_relative_path"))
+    output = subprocess.check_output(cmd.split())
+    assert tag in output
+
+
+def test_relative_git_url_git_versioning():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_source_git_jinja2_relative_git_url"))
+    output = subprocess.check_output(cmd.split())
+    assert tag in output
 
 
 def test_package_test():

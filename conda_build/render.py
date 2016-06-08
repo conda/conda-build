@@ -6,13 +6,14 @@
 
 from __future__ import absolute_import, division, print_function
 
+from locale import getpreferredencoding
 import shutil
 import sys
 import tarfile
 import tempfile
 import os
 from os.path import isdir, isfile, abspath
-from locale import getpreferredencoding
+import re
 import subprocess
 
 import yaml
@@ -74,23 +75,34 @@ def bldpkg_path(m):
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
+def has_vcs_metadata(metadata):
+    """returns true if recie contains metadata associated with version control systems.
+    If this metadata is present, a download/copy will be forced in parse_or_try_download.
+    """
+    with open(metadata.meta_path) as f:
+        matches = re.findall(r"GIT_[^\.\s\'\"]+", f.read())
+        # TODO: extend with other VCS systems (SVN, hg, anything else?)
+    return len(matches) > 0
+
+
 def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
-    if (force_download or (not no_download_source and
-                           any(var.startswith('GIT_') for var in metadata.undefined_jinja_vars))):
+
+    if (force_download or (not no_download_source and has_vcs_metadata(metadata))):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            source.provide(metadata.path, metadata.get_section('source'),
-                           verbose=verbose, dirty=dirty)
+            if not dirty:
+                source.provide(metadata.path, metadata.get_section('source'),
+                               verbose=verbose)
             metadata.parse_again(permit_undefined_jinja=False)
             need_source_download = False
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
+            print("Error was: ")
+            print(error)
             need_source_download = True
-        else:
-            need_source_download = no_download_source
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase

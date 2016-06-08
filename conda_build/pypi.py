@@ -22,7 +22,6 @@ import yaml
 
 from conda.cli.common import spec_from_line
 from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import get_proxy_servers
 from conda.connection import CondaSession
 from conda.fetch import (download, handle_proxy_407)
 from conda.install import rm_rf
@@ -252,13 +251,7 @@ class RequestsTransport(Transport):
 
 
 def get_xmlrpc_client(pypi_url):
-    proxies = get_proxy_servers()
-
-    if proxies:
-        transport = RequestsTransport()
-    else:
-        transport = None
-    return ServerProxy(pypi_url, transport=transport)
+    return ServerProxy(pypi_url, transport=RequestsTransport())
 
 
 def main(args, parser):
@@ -266,7 +259,8 @@ def main(args, parser):
     package_dicts = {}
     [output_dir] = args.output_dir
 
-    all_packages = client.list_packages()
+    # searching is faster than listing all packages
+    all_packages = [match["name"] for match in client.search({"name": args.packages}, "or")]
     all_packages_lower = [i.lower() for i in all_packages]
 
     args.created_recipes = []

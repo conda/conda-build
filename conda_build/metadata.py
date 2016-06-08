@@ -14,7 +14,6 @@ from conda.cli.common import specs_from_url
 from conda_build import exceptions
 from conda_build.features import feature_list
 
-
 try:
     import yaml
 
@@ -279,8 +278,8 @@ FIELDS = {
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch_python',
-              'has_prefix_files', 'binary_has_prefix_files', 'script_env',
-              'detect_binary_files_with_prefix', 'rpaths',
+              'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
+              'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends'  # pin_depends is experimental still
               ],
@@ -304,7 +303,7 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def handle_config_version(ms, ver):
+def handle_config_version(ms, ver, dep_type='run'):
     """
     'ms' is an instance of MatchSpec, and 'ver' is the version from the
     configuration, e.g. for ms.name == 'python', ver = 26 or None,
@@ -321,7 +320,13 @@ def handle_config_version(ms, ver):
         else:  # regular version
             return ms
 
-    if ver is None or (ms.strictness == 1 and ms.name == 'numpy'):
+    # If we don't have a configured version, or we are dealing with a simple
+    # numpy runtime dependency; just use "numpy"/the name of the package as
+    # the specification. In practice this means that a recipe which just
+    # defines numpy as a runtime dependency will match any version of numpy
+    # at install time.
+    if ver is None or (dep_type == 'run' and ms.strictness == 1 and
+                       ms.name == 'numpy'):
         return MatchSpec(ms.name)
 
     ver = text_type(ver)
@@ -467,7 +472,7 @@ class MetaData(object):
                 if ms.name == name:
                     if self.get_value('build/noarch_python'):
                         continue
-                    ms = handle_config_version(ms, ver)
+                    ms = handle_config_version(ms, ver, typ)
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
@@ -584,6 +589,16 @@ class MetaData(object):
                                    "as the path delimiter on Windows")
         return ret
 
+    def ignore_prefix_files(self):
+        ret = self.get_value('build/ignore_prefix_files', False)
+        if type(ret) not in (list, bool):
+            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths')
+        if sys.platform == 'win32':
+            if type(ret) is list and any('\\' in i for i in ret):
+                raise RuntimeError("build/ignore_prefix_files paths must use / "
+                                   "as the path delimiter on Windows")
+        return ret
+
     def always_include_files(self):
         return self.get_value('build/always_include_files', [])
 
@@ -643,6 +658,7 @@ class MetaData(object):
 
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
+
         env.globals.update(ns_cfg())
         env.globals.update(context_processor(self, path))
 

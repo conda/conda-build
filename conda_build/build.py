@@ -192,17 +192,16 @@ def create_info_files(m, files, include_recipe=True):
                 shutil.copytree(src_path, dst_path)
             else:
                 shutil.copy(src_path, dst_path)
-        os.rename(join(recipe_dir, "meta.yaml"), join(recipe_dir, "meta.yaml.template"))
 
-    # store the rendered meta.yaml file, plus information about where it came from
-    #    and what version of conda-build created it
-    metayaml = output_yaml(m)
-    with open(join(config.info_dir, "meta.yaml"), 'w') as f:
-        f.write("# This file created by conda-build {}\n".format(__version__))
-        f.write("# meta.yaml template originally from:\n")
-        f.write("# " + source.get_repository_info(m.path) + "\n")
-        f.write("# ------------------------------------------------\n\n")
-        f.write(metayaml)
+        # store the rendered meta.yaml file, plus information about where it came from
+        #    and what version of conda-build created it
+        metayaml = output_yaml(m)
+        with open(join(recipe_dir, "meta.yaml.rendered"), 'w') as f:
+            f.write("# This file created by conda-build {}\n".format(__version__))
+            f.write("# meta.yaml template originally from:\n")
+            f.write("# " + source.get_repository_info(m.path) + "\n")
+            f.write("# ------------------------------------------------\n\n")
+            f.write(metayaml)
 
     license_file = m.get_value('about/license_file')
     if license_file:
@@ -243,6 +242,15 @@ def create_info_files(m, files, include_recipe=True):
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(info_index, fo, indent=2, sort_keys=True)
 
+    with open(join(config.info_dir, 'about.json'), 'w') as fo:
+        d = {}
+        for key in ('home', 'dev_url', 'doc_url', 'license_url',
+                    'license', 'summary', 'description', 'license_family'):
+            value = m.get_value('about/%s' % key)
+            if value:
+                d[key] = value
+        json.dump(d, fo, indent=2, sort_keys=True)
+
     if include_recipe:
         with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
             json.dump(m.meta, fo, indent=2, sort_keys=True)
@@ -261,6 +269,17 @@ def create_info_files(m, files, include_recipe=True):
     files_with_prefix = sorted(have_prefix_files(files))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
+
+    ignore_files = m.ignore_prefix_files()
+    if ignore_files:
+        # do we have a list of files, or just ignore everything?
+        if hasattr(ignore_files, "__iter__"):
+            files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
+            binary_has_prefix_files = [f for f in binary_has_prefix_files if f[2] not in ignore_files]  # noqa
+            text_has_prefix_files = [f for f in text_has_prefix_files if f[2] not in ignore_files]
+        else:
+            files_with_prefix = []
+
     if files_with_prefix and not m.get_value('build/noarch_python'):
         auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if sys.platform == 'win32':

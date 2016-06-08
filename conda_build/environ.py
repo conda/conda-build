@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import multiprocessing
 import os
 import sys
@@ -88,6 +89,12 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
                                                  stderr=STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
+
+        # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
+        # know how to normalize it.  Need to convert it to a windows path.
+        if sys.platform == 'win32' and remote_url.startswith('/'):
+            remote_url = check_output(["cygpath", '-w', remote_url]).rstrip().rstrip("\\")
+
         if os.path.exists(remote_url):
             # Local filepaths are allowed, but make sure we normalize them
             remote_url = normpath(remote_url)
@@ -95,8 +102,13 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if remote_url.lower() != git_url.lower():
+            logging.debug("\nremote does not match git_url\n")
+            logging.debug("Remote: " + remote_url.lower() + "\n")
+            logging.debug("git_url: " + git_url.lower() + "\n")
             return False
-    except CalledProcessError:
+    except CalledProcessError as error:
+        logging.warn("Error obtaining git information.  Error was: ")
+        logging.warn(error)
         return False
     return True
 
@@ -246,6 +258,7 @@ def meta_vars(meta):
             git_url = normpath(join(meta.path, git_url))
 
         _x = False
+
         if git_url:
             _x = verify_git_repo(git_dir,
                                  git_url,

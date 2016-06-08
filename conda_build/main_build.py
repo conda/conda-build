@@ -279,7 +279,7 @@ def execute(args, parser):
 
         # this fully renders any jinja templating, throwing an error if any data is missing
         m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                verbose=False)
+                                                verbose=False, dirty=args.dirty)
         if m.get_value('build/noarch_python'):
             config.noarch = True
 
