@@ -22,6 +22,7 @@ import yaml
 
 from conda.cli.common import spec_from_line
 from conda.compat import input, configparser, StringIO, string_types, PY3
+from conda.config import default_python
 from conda.connection import CondaSession
 from conda.fetch import (download, handle_proxy_407)
 from conda.install import rm_rf
@@ -254,27 +255,35 @@ def get_xmlrpc_client(pypi_url):
     return ServerProxy(pypi_url, transport=RequestsTransport())
 
 
-def main(args, parser):
-    client = get_xmlrpc_client(args.pypi_url)
+def package_exists(package_name, pypi_url=None):
+    if not pypi_url:
+        pypi_url = 'https://pypi.python.org/pypi'
+    # request code will be 404 if the package does not exist.  Requires exact match.
+    r = requests.get(pypi_url + '/' + package_name)
+    return r.status_code != 404
+
+
+def skeletonize(packages, output_dir=".", version=None, recursive=False,
+                all_urls=False, pypi_url='https://pypi.io/pypi', no_prompt=False,
+                version_compare=False, python_version=default_python, manual_url=False,
+                noarch_python=False):
+    client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
-    [output_dir] = args.output_dir
 
     # searching is faster than listing all packages
-    all_packages = [match["name"] for match in client.search({"name": args.packages}, "or")]
+    all_packages = [match["name"] for match in client.search({"name": packages}, "or")]
     all_packages_lower = [i.lower() for i in all_packages]
 
-    args.created_recipes = []
-    while args.packages:
-        [output_dir] = args.output_dir
-
-        package = args.packages.pop()
-        args.created_recipes.append(package)
+    created_recipes = []
+    while packages:
+        package = packages.pop()
+        created_recipes.append(package)
 
         is_url = ':' in package
 
         if not is_url:
             dir_path = join(output_dir, package.lower())
-            if exists(dir_path) and not args.version_compare:
+            if exists(dir_path) and not version_compare:
                 raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package,
             {
@@ -301,7 +310,7 @@ def main(args, parser):
             d['version'] = 'UNKNOWN'
         else:
             versions = client.package_releases(package, True)
-            if args.version_compare:
+            if version_compare:
                 version_compare(args, package, versions)
             if args.version:
                 [version] = args.version
@@ -376,10 +385,10 @@ def main(args, parser):
     print("Done")
 
 
-def get_download_data(args, client, package, version, is_url):
+def get_download_data(client, package, version, is_url, all_urls, noprompt, manual_url):
     data = client.release_data(package, version) if not is_url else None
     urls = client.release_urls(package, version) if not is_url else [package]
-    if not is_url and not args.all_urls:
+    if not is_url and not all_urls:
         # Try to find source urls
         urls = [url for url in urls if url['python_version'] == 'source']
     if not urls:
@@ -401,10 +410,10 @@ def get_download_data(args, client, package, version, is_url):
                 md5 = ''
         else:
             sys.exit("Error: No source urls found for %s" % package)
-    if len(urls) > 1 and not args.noprompt:
+    if len(urls) > 1 and not noprompt:
         print("More than one source version is available for %s:" %
                 package)
-        if args.manual_url:
+        if manual_url:
             for i, url in enumerate(urls):
                 print("%d: %s (%s) %s" % (i, url['url'],
                         human_bytes(url['size']), url['comment_text']))
@@ -468,17 +477,16 @@ def version_compare(args, package, versions):
         sys.exit()
 
 
-def get_package_metadata(args, package, d, data):
+def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
+                         recursive, created_recipes, noarch_python, noprompt, packages):
 
     print("Downloading %s" % package)
-
-    [output_dir] = args.output_dir
 
     pkginfo = get_pkginfo(package,
                           filename=d['filename'],
                           pypiurl=d['pypiurl'],
                           md5=d['md5'],
-                          python_version=args.python_version)
+                          python_version=python_version)
 
     setuptools_build = pkginfo['setuptools']
     setuptools_run = False
@@ -530,7 +538,7 @@ def get_package_metadata(args, package, d, data):
                 d['build_comment'] = ''
                 d['test_commands'] = INDENT.join([''] + make_entry_tests(entry_list))
 
-    requires = get_requirements(package, pkginfo, all_extras=args.all_extras)
+    requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
     if requires or setuptools_build or setuptools_run:
         deps = []
@@ -562,14 +570,14 @@ def get_package_metadata(args, package, d, data):
                                         ['setuptools'] * setuptools_run +
                                         deps)
 
-        if args.recursive:
+        if recursive:
             for dep in deps:
                 dep = dep.split()[0]
                 if not exists(join(output_dir, dep)):
-                    if dep not in args.created_recipes:
-                        args.packages.append(dep)
+                    if dep not in created_recipes:
+                        packages.append(dep)
 
-    if args.noarch_python:
+    if noarch_python:
         d['build_comment'] = ''
         d['noarch_python_comment'] = ''
 
@@ -630,7 +638,7 @@ def get_package_metadata(args, package, d, data):
         else:
             license = None
         if license:
-            if args.noprompt:
+            if noprompt:
                 pass
             elif '\n' not in license:
                 print('Using "%s" for the license' % license)
@@ -642,7 +650,7 @@ def get_package_metadata(args, package, d, data):
                 print()
                 license = input("What license string should I use? ")
         else:
-            if args.noprompt:
+            if noprompt:
                 license = "UNKNOWN"
             else:
                 license = input(("No license could be found for %s on " +

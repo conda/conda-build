@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 from conda.cli.conda_argparse import ArgumentParser
 from conda.lock import Locked
 
+import conda_build.api as api
 from conda_build.config import config
 from conda_build.main_build import args_func
 
@@ -47,8 +48,11 @@ def execute(args, parser):
 
     if not args.repo:
         parser.print_help()
-    try:
-        module = importlib.import_module("conda_build." + args.repo)
+        sys.exit()
+
+    for package in packages:
+        api.skeletonize(args.packages, args.repo, **args)
+
     except ImportError:
         sys.exit("No support for module: " + args.repo)
     with Locked(config.croot):
