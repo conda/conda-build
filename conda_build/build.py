@@ -34,9 +34,10 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, external
 from conda_build.config import config
 from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, render_recipe
-from conda_build.scripts import create_entry_points, prepend_bin_path
+import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
+from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.utils import rm_rf, _check_call
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
@@ -801,9 +802,6 @@ def tests_failed(m, move_broken):
 
 
 def check_external():
-    import os
-    import conda_build.external as external
-
     if sys.platform.startswith('linux'):
         patchelf = external.find_executable('patchelf')
         if patchelf is None:
