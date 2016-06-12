@@ -549,7 +549,6 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
                     _check_call(cmd, env=env, cwd=src_dir)
 
-
         # this is necessary to return our current os.environ to normal.
         #    We are discarding the list of changed values.
         deactivate_env()
@@ -572,8 +571,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             files2 = prefix_files()
             if any(config.meta_dir in join(config.build_prefix, f) for f in
                     files2 - files1):
-                sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
-    usually comes from using conda in the build script.  Avoid doing this, as it
+                sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
+    This error usually comes from using conda in the build script.  Avoid doing this, as it
     can lead to packages that include their dependencies.""" %
                     (tuple(f for f in files2 - files1 if config.meta_dir in
                         join(config.build_prefix, f)),)))
