@@ -2,6 +2,10 @@ package:
   name: conda-build-test-extra-metadata
   version: 0.1
 
+test:
+  requires:
+    - pyyaml
+
 extra:
   custom: metadata
   however: {we: want}
