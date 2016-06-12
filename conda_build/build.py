@@ -251,10 +251,6 @@ def create_info_files(m, files, include_recipe=True):
                 d[key] = value
         json.dump(d, fo, indent=2, sort_keys=True)
 
-    if include_recipe:
-        with open(join(config.info_dir, 'recipe.json'), **mode_dict) as fo:
-            json.dump(m.meta, fo, indent=2, sort_keys=True)
-
     if sys.platform == 'win32':
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
