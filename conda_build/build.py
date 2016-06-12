@@ -549,7 +549,10 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
                     _check_call(cmd, env=env, cwd=src_dir)
 
-            deactivate_env()
+
+        # this is necessary to return our current os.environ to normal.
+        #    We are discarding the list of changed values.
+        deactivate_env()
 
         if post in [True, None]:
             if post:
@@ -684,9 +687,11 @@ def test(m, move_broken=True):
             specs += ['lua %s*' % environ.get_lua_ver()]
 
         create_env(config.test_prefix, specs)
+        env_diff = activate_env(config.test_prefix)
 
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))
+        env.update(env_diff)
 
         # prepend bin (or Scripts) directory
         env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
@@ -739,6 +744,10 @@ def test(m, move_broken=True):
                     subprocess.check_call(cmd, env=env, cwd=tmp_dir)
                 except subprocess.CalledProcessError:
                     tests_failed(m, move_broken=move_broken)
+
+        # this is necessary to return our current os.environ to normal.
+        #    We are discarding the list of changed values.
+        deactivate_env()
 
     print("TEST END:", m.dist())
 
