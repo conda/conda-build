@@ -13,8 +13,9 @@ try:
 except ImportError:
     readlink = False
 import io
-from subprocess import call, Popen, PIPE
+from subprocess import call
 from collections import defaultdict
+import mmap
 
 from conda_build.config import config
 from conda_build import external
@@ -30,7 +31,7 @@ if sys.platform.startswith('linux'):
 elif sys.platform == 'darwin':
     from conda_build import macho
 
-SHEBANG_PAT = re.compile(r'^#!.+$', re.M)
+SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
 
 def is_obj(path):
@@ -45,24 +46,37 @@ def fix_shebang(f, osx_is_app=False):
         return
     elif os.path.islink(path):
         return
-    with io.open(path, encoding=locale.getpreferredencoding()) as fi:
-        try:
-            data = fi.read()
-        except UnicodeDecodeError: # file is binary
-            return
-    m = SHEBANG_PAT.match(data)
-    if not (m and 'python' in m.group()):
+
+    if os.stat(path).st_size == 0:
         return
+
+    with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
+        try:
+            data = fi.read(100)
+        except UnicodeDecodeError:  # file is binary
+            return
+
+        # regexp on the memory mapped file so we only read it into
+        # memory if the regexp matches.
+        mm = mmap.mmap(fi.fileno(), 0)
+        m = SHEBANG_PAT.match(mm)
+
+        if not (m and b'python' in m.group()):
+            return
+
+        data = mm[:]
+
+    encoding = sys.stdout.encoding or 'utf8'
 
     py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
                config.build_prefix + '/bin/' + basename(config.build_python))
-    new_data = SHEBANG_PAT.sub('#!' + py_exec, data, count=1)
+    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
     if new_data == data:
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        fo.write(new_data)
+        fo.write(new_data.decode(encoding))
     os.chmod(path, int('755', 8))
 
 
@@ -83,7 +97,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
-                in walk_prefix(egg_path, False, windows_forward_slashes=False)):
+                    in walk_prefix(egg_path, False, windows_forward_slashes=False)):
                 write_pth(egg_path)
                 continue
 
@@ -108,7 +122,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
 
         elif isfile(egg_path):
-            if not egg_path in absfiles:
+            if egg_path not in absfiles:
                 continue
             print('found egg:', egg_path)
             write_pth(egg_path)
@@ -159,7 +173,7 @@ def find_lib(link, path=None):
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
-    if link.startswith('/'): # but doesn't start with the build prefix
+    if link.startswith('/'):  # but doesn't start with the build prefix
         return
     if link.startswith('@rpath/'):
         # Assume the rpath already points to lib, so there is no need to
@@ -190,7 +204,9 @@ def find_lib(link, path=None):
         return file_names[link][0]
     print("Don't know how to find %s, skipping" % link)
 
-def osx_ch_link(path, link):
+
+def osx_ch_link(path, link_dict):
+    link = link_dict['name']
     print("Fixing linking of %s in %s" % (link, path))
     link_loc = find_lib(link, path)
     if not link_loc:
@@ -216,7 +232,7 @@ def osx_ch_link(path, link):
     # @loader_path/path_to_lib/lib_to_link/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
-    ret =  '@rpath/%s/%s' % (lib_to_link, basename(link))
+    ret = '@rpath/%s/%s' % (lib_to_link, basename(link))
 
     # XXX: IF the above fails for whatever reason, the below can be used
     # TODO: This might contain redundant ..'s if link and path are both in
@@ -224,7 +240,9 @@ def osx_ch_link(path, link):
     # ret = '@loader_path/%s/%s/%s' % (path_to_lib, lib_to_link, basename(link))
 
     ret = ret.replace('/./', '/')
+
     return ret
+
 
 def mk_relative_osx(path, build_prefix=None):
     '''
@@ -245,62 +263,23 @@ def mk_relative_osx(path, build_prefix=None):
 
     names = macho.otool(path)
     if names:
-        # Strictly speaking, not all object files have install names (e.g.,
-        # bundles and executables do not). In that case, the first name here
-        # will not be the install name (i.e., the id), but it isn't a problem,
-        # because in that case it will be a no-op (with the exception of stub
-        # files, which give an error, which is handled below).
-        args = [
-            'install_name_tool',
-            '-id',
-            join('@rpath', relpath(dirname(path),
-                                   join(config.build_prefix, 'lib')),
-                 basename(names[0])),
-            path,
-        ]
-        print(' '.join(args))
-        p = Popen(args, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        stderr = stderr.decode('utf-8')
-        if "Mach-O dynamic shared library stub file" in stderr:
-            print("Skipping Mach-O dynamic shared library stub file %s" % path)
-            return
-        else:
-            print(stderr, file=sys.stderr)
-            if p.returncode:
-                raise RuntimeError("install_name_tool failed with exit status %d"
-            % p.returncode)
-
         # Add an rpath to every executable to increase the chances of it
         # being found.
-        args = [
-            'install_name_tool',
-            '-add_rpath',
-            join('@loader_path',
-                 relpath(join(config.build_prefix, 'lib'),
-                         dirname(path)), '').replace('/./', '/'),
-            path,
-            ]
-        print(' '.join(args))
-        p = Popen(args, stderr=PIPE)
-        stdout, stderr = p.communicate()
-        stderr = stderr.decode('utf-8')
-        if "Mach-O dynamic shared library stub file" in stderr:
-            print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
-            return
-        elif "would duplicate path, file already has LC_RPATH for:" in stderr:
-            print("Skipping -add_rpath, file already has LC_RPATH set")
-            return
-        else:
-            print(stderr, file=sys.stderr)
-            if p.returncode:
-                raise RuntimeError("install_name_tool failed with exit status %d"
-            % p.returncode)
+        rpath = join('@loader_path',
+                     relpath(join(config.build_prefix, 'lib'),
+                             dirname(path)), '').replace('/./', '/')
+        macho.add_rpath(path, rpath, verbose=True)
+
+        # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
+        # .. and remove config.build_prefix/lib which was added in-place of
+        # DYLD_FALLBACK_LIBRARY_PATH since El Capitan's SIP.
+        # macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
         assert_relative_osx(path)
+
 
 def mk_relative_linux(f, rpaths=('lib',)):
     path = join(config.build_prefix, f)
@@ -310,9 +289,11 @@ def mk_relative_linux(f, rpaths=('lib',)):
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 
+
 def assert_relative_osx(path):
-    for name in macho.otool(path):
+    for name in macho.get_dylibs(path):
         assert not name.startswith(config.build_prefix), path
+
 
 def mk_relative(m, f):
     assert sys.platform != 'win32'
@@ -335,7 +316,7 @@ def fix_permissions(files):
     for f in files:
         path = join(config.build_prefix, f)
         st = os.lstat(path)
-        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
 
 
 def post_build(m, files):
@@ -391,20 +372,32 @@ def check_symlinks(files):
             print("Error: %s" % msg, file=sys.stderr)
         sys.exit(1)
 
+
 def get_build_metadata(m):
     src_dir = source.get_dir()
+    if "build" not in m.meta:
+        m.meta["build"] = {}
     if exists(join(src_dir, '__conda_version__.txt')):
+        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 2.0."  # noqa
+              "Try Jinja templates instead: "
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_version__.txt')) as f:
             version = f.read().strip()
             print("Setting version from __conda_version__.txt: %s" % version)
             m.meta['package']['version'] = version
     if exists(join(src_dir, '__conda_buildnum__.txt')):
+        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 2.0."  # noqa
+              "Try Jinja templates instead: "
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_buildnum__.txt')) as f:
             build_number = f.read().strip()
             print("Setting build number from __conda_buildnum__.txt: %s" %
                   build_number)
             m.meta['build']['number'] = build_number
     if exists(join(src_dir, '__conda_buildstr__.txt')):
+        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 2.0."  # noqa
+              "Try Jinja templates instead: "
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_buildstr__.txt')) as f:
             buildstr = f.read().strip()
             print("Setting version from __conda_buildstr__.txt: %s" % buildstr)

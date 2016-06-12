@@ -1,8 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
 import sys
-import subprocess
+from subprocess import Popen, check_output, PIPE
 from os.path import islink, isfile
+from itertools import islice
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
@@ -43,8 +44,9 @@ def is_macho(path):
 def is_dylib(path):
     return human_filetype(path) == 'DYLIB'
 
+
 def human_filetype(path):
-    lines = subprocess.check_output(['otool', '-h', path]).decode('utf-8').splitlines()
+    lines = check_output(['otool', '-h', path]).decode('utf-8').splitlines()
     assert lines[0].startswith(path), path
 
     for line in lines:
@@ -53,51 +55,196 @@ def human_filetype(path):
             filetype = int(header[4])
             return FILETYPE[filetype][3:]
 
-def otool(path):
-    "thin wrapper around otool -L"
-    lines = subprocess.check_output(['otool', '-L', path]).decode('utf-8').splitlines()
-    assert lines[0].startswith(path), path
-    res = []
-    for line in lines[1:]:
-        assert line[0] == '\t', path
-        res.append(line.split()[0])
-    return res
+
+def is_dylib_info(lines):
+    dylib_info = ('LC_ID_DYLIB', 'LC_LOAD_DYLIB')
+    if len(lines) > 1 and lines[1].split()[1] in dylib_info:
+        return True
+    return False
+
+
+def is_id_dylib(lines):
+    if len(lines) > 1 and lines[1].split()[1] == 'LC_ID_DYLIB':
+        return True
+    return False
+
+
+def is_load_dylib(lines):
+    if len(lines) > 1 and lines[1].split()[1] == 'LC_LOAD_DYLIB':
+        return True
+    return False
+
+
+def is_rpath(lines):
+    if len(lines) > 1 and lines[1].split()[1] == 'LC_RPATH':
+        return True
+    return False
+
+
+def _get_load_commands(lines):
+    """yields each load command from the output of otool -l"""
+    a = 1  # first line is the filename.
+    for ln, line in enumerate(lines):
+        if line.startswith("Load command"):
+            if a < ln:
+                yield lines[a:ln]
+            a = ln
+    yield lines[a:]
+
+
+def _get_matching_load_commands(lines, cb_filter):
+    """Workhorse function for otool
+
+    Does the work of filtering load commands and making a list
+    of dicts. The logic for splitting the free-form lines into
+    keys and values in entirely encoded here. Values that can
+    be converted to ints are converted to ints.
+    """
+    result = []
+    for lcmds in _get_load_commands(lines):
+        if cb_filter(lcmds):
+            lcdict = {}
+            for line in islice(lcmds, 1, len(lcmds)):
+                listy = line.split()
+                # This could be prettier, but what we need it to handle
+                # is fairly simple so let's just hardcode it for speed.
+                if len(listy) == 2:
+                    key, value = listy
+                elif listy[0] == 'name' or listy[0] == 'path':
+                    # Create an entry for 'name offset' if there is one
+                    # as that can be useful if we need to know if there
+                    # is space to patch it for relocation purposes.
+                    if listy[2] == '(offset':
+                        key = listy[0] + ' offset'
+                        value = int(listy[3][:-1])
+                        lcdict[key] = value
+                    key, value = listy[0:2]
+                elif listy[0] == 'time':
+                    key = ' '.join(listy[0:3])
+                    value = ' '.join(listy[3:])
+                elif listy[0] in ('current', 'compatibility'):
+                    key = ' '.join(listy[0:2])
+                    value = listy[2]
+                try:
+                    value = int(value)
+                except:
+                    pass
+                lcdict[key] = value
+            result.append(lcdict)
+    return result
+
+
+def otool(path, cb_filter=is_dylib_info):
+    """A wrapper around otool -l
+
+    Parse the output of the otool -l 'load commands', filtered by
+    cb_filter, returning a list of dictionairies for the records.
+
+    cb_filter receives the whole load command record, including the
+    first line, the 'Load Command N' one. All the records have been
+    pre-stripped of white space.
+
+    The output of otool -l is entirely freeform; delineation between
+    key and value doesn't formally exist, so that is hard coded. I
+    didn't want to use regexes to parse it for speed purposes.
+
+    Any key values that can be converted to integers are converted
+    to integers, the rest are strings.
+    """
+    lines = check_output(['otool', '-l', path]).decode('utf-8').splitlines()
+    return _get_matching_load_commands(lines, cb_filter)
+
+
+def get_dylibs(path):
+    """Return a list of the loaded dylib pathnames"""
+    dylib_loads = otool(path, is_load_dylib)
+    return [dylib_load['name'] for dylib_load in dylib_loads]
+
+
+def get_id(path):
+    """Returns the id name of the Mach-O file `path` or an empty string"""
+    dylib_loads = otool(path, is_id_dylib)
+    try:
+        return [dylib_load['name'] for dylib_load in dylib_loads][0]
+    except:
+        return ''
+
 
 def get_rpaths(path):
-    lines = subprocess.check_output(['otool', '-l',
-        path]).decode('utf-8').splitlines()
-    check_for_rpath = False
-    rpaths = []
-    for line in lines:
-        if 'cmd LC_RPATH' in line:
-            check_for_rpath = True
-        if check_for_rpath and 'path' in line:
-            _, rpath, _ = line.split(None, 2)
-            rpaths.append(rpath)
-    return rpaths
+    """Return a list of the dylib rpaths"""
+    rpaths = otool(path, is_rpath)
+    return [rpath['path'] for rpath in rpaths]
 
-def install_name_change(path, cb_func):
-    """
-    change dynamic shared library install names of Mach-O binary `path`.
 
-    `cb_func` is a callback function which called for each shared library name.
-    It is called with `path` and the current shared library install name,
-    and return the new name (or None if the name should be unchanged).
+def add_rpath(path, rpath, verbose=False):
+    """Add an `rpath` to the Mach-O file at `path`"""
+    args = ['install_name_tool', '-add_rpath', rpath, path]
+    if verbose:
+        print(' '.join(args))
+    p = Popen(args, stderr=PIPE)
+    stdout, stderr = p.communicate()
+    stderr = stderr.decode('utf-8')
+    if "Mach-O dynamic shared library stub file" in stderr:
+        print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+        return
+    elif "would duplicate path, file already has LC_RPATH for:" in stderr:
+        print("Skipping -add_rpath, file already has LC_RPATH set")
+        return
+    else:
+        print(stderr, file=sys.stderr)
+        if p.returncode:
+            raise RuntimeError("install_name_tool failed with exit status %d"
+        % p.returncode)
+
+
+def delete_rpath(path, rpath, verbose=False):
+    """Delete an `rpath` from the Mach-O file at `path`"""
+    args = ['install_name_tool', '-delete_rpath', rpath, path]
+    if verbose:
+        print(' '.join(args))
+    p = Popen(args, stderr=PIPE)
+    stdout, stderr = p.communicate()
+    stderr = stderr.decode('utf-8')
+    if "Mach-O dynamic shared library stub file" in stderr:
+        print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
+        return
+    elif "no LC_RPATH load command with path:" in stderr:
+        print("Skipping -delete_rpath, file doesn't contain that LC_RPATH")
+        return
+    else:
+        print(stderr, file=sys.stderr)
+        if p.returncode:
+            raise RuntimeError("install_name_tool failed with exit status %d"
+        % p.returncode)
+
+
+def install_name_change(path, cb_func, verbose=False):
+    """Change dynamic shared library load name or id name of Mach-O Binary `path`.
+
+    `cb_func` is called for each shared library load command. The dictionary of
+    the load command is passed in and the callback returns the new name or None
+    if the name should be unchanged.
+
+    When dealing with id load commands, `install_name_tool -id` is used.
+    When dealing with dylib load commands `install_name_tool -change` is used.
     """
+    dylibs = otool(path)
     changes = []
-    for link in otool(path):
-        # The first link may be the install name of the library itself, but
-        # this isn't a big deal because install_name_tool -change is a no-op
-        # if given a dependent install name that doesn't exist.
-        new_link = cb_func(path, link)
-        if new_link:
-            changes.append((link, new_link))
+    for index, dylib in enumerate(dylibs):
+        new_name = cb_func(path, dylib)
+        if new_name:
+            changes.append((index, new_name))
 
     ret = True
-    for old, new in changes:
-        args = ['install_name_tool', '-change', old, new, path]
-        print(' '.join(args))
-        p = subprocess.Popen(args, stderr=subprocess.PIPE)
+    for index, new_name in changes:
+        args = ['install_name_tool']
+        if dylibs[index]['cmd'] == 'LC_ID_DYLIB':
+            args.extend(('-id', new_name, path))
+        else:
+            args.extend(('-change', dylibs[index]['name'], new_name, path))
+        if verbose:
+            print(' '.join(args))
+        p = Popen(args, stderr=PIPE)
         stdout, stderr = p.communicate()
         stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
@@ -110,6 +257,7 @@ def install_name_change(path, cb_func):
             raise RuntimeError("install_name_tool failed with exit status %d"
                 % p.returncode)
     return ret
+
 
 if __name__ == '__main__':
     if sys.platform == 'darwin':

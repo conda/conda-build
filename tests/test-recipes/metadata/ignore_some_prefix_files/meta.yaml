@@ -1,0 +1,16 @@
+package:
+  name: conda-build-test-ignore-some-prefix-files
+  version: 1.0
+
+build:
+  ignore_prefix_files:
+    - test2.bat  # [win]
+    - test2.sh  # [unix]
+  script:
+    - echo %PREFIX%\\test.txt > %PREFIX%\\test.bat  # [win]
+    - echo %PREFIX%\\test2.txt > %PREFIX%\\test2.bat  # [win]
+    - echo ${PREFIX}/bin/test.txt > ${PREFIX}/test.sh  # [unix]
+    - echo ${PREFIX}/bin/test2.txt > ${PREFIX}/test2.sh  # [unix]
+
+about:
+  summary: test that ignore_prefix_files with list setting ignores specified files

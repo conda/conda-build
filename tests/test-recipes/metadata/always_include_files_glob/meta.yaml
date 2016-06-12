@@ -11,4 +11,4 @@ build:
 
 requirements:
     build:
-        - libpng
+        - libpng 1.6.17

@@ -27,7 +27,7 @@ package:
   name: {packagename}
   version: "{version}"
 
-source:
+{source_comment}source:
   {useurl}fn: {filename}
   {useurl}url: {cpanurl}
   {usemd5}md5: {md5}
@@ -47,7 +47,7 @@ requirements:
   run:
     - perl{run_depends}
 
-test:
+{import_comment}test:
   # Perl 'use' tests
   {import_comment}imports:{import_tests}
 
@@ -192,6 +192,7 @@ def main(args, parser):
                                                'test_commands': '',
                                                'usemd5': '',
                                                'useurl': '',
+                                               'source_comment': '',
                                                'summary': "''",
                                                'import_tests': ''})
 
@@ -217,6 +218,7 @@ def main(args, parser):
         else:
             d['useurl'] = '#'
             d['usemd5'] = '#'
+            d['source_comment'] = '#'
             d['cpanurl'] = ''
             d['filename'] = ''
             d['md5'] = ''
@@ -241,6 +243,7 @@ def main(args, parser):
                                           LooseVersion(args.version))):
             d['useurl'] = '#'
             d['usemd5'] = '#'
+            d['source_comment'] = '#'
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
         else:
@@ -448,6 +451,7 @@ def deps_for_package(package, release_data, perl_version, args, output_dir,
     sys.stdout.flush()
 
     return build_deps, run_deps, packages_to_append
+
 
 @memoized
 def dist_for_module(cpan_url, module, perl_version):

@@ -6,3 +6,6 @@ dist/
 docs/build
 tags
 .idea/
+MANIFEST
+ve
+venv

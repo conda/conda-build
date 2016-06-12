@@ -5,6 +5,19 @@ conda-build
 .. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
                :target: https://travis-ci.org/conda/conda-build
 
+.. image:: https://ci.appveyor.com/api/projects/status/wdis0rkcfdoeql3x?svg=true
+               :target: https://ci.appveyor.com/project/ContinuumAnalytics/conda-build
+               
+.. image:: https://anaconda.org/conda-team/conda-build/badges/build.svg
+               :target: https://anaconda.org/conda-team/conda-build/
+               
+.. image:: https://www.quantifiedcode.com/api/v1/project/1960a96404aa431bab5d834edff1cf85/badge.svg
+  :target: https://www.quantifiedcode.com/app/project/1960a96404aa431bab5d834edff1cf85
+  :alt: Code issues
+  
+.. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/conda/conda-build
+
 
 Installation
 --------------

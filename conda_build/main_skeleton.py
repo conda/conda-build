@@ -11,6 +11,7 @@ from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
 from conda.cli.common import Completer
 
+
 class PyPIPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
         self.prefix = prefix
@@ -19,8 +20,9 @@ class PyPIPackagesCompleter(Completer):
     def _get_items(self):
         from conda_build.pypi import get_xmlrpc_client
         args = self.parsed_args
-        client = get_xmlrpc_client(getattr(args, 'pypi_url', 'https://pypi.python.org/pypi'))
+        client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
+
 
 class CRANPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
@@ -35,6 +37,7 @@ class CRANPackagesCompleter(Completer):
         cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
         return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
             in cran_metadata]
+
 
 def main():
     p = ArgumentParser(
@@ -105,7 +108,7 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
     pypi.add_argument(
         "--pypi-url",
         action="store",
-        default='https://pypi.python.org/pypi',
+        default='https://pypi.io/pypi',
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
@@ -132,14 +135,14 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         action='store_true',
         help="""Compare the package version of the recipe with the one available
         on PyPI."""
-        )
+    )
     pypi.add_argument(
         "--python-version",
         action='store',
         default=default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
         choices=['2.6', '2.7', '3.3', '3.4'],
-        )
+    )
 
     pypi.add_argument(
         "--manual-url",
@@ -147,14 +150,14 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
         default=False,
         help="Manually choose source url when more than one urls are present." +
              "Default is the one with least source size."
-        )
+    )
 
     pypi.add_argument(
         "--noarch-python",
         action='store_true',
         default=False,
         help="Creates recipe as noarch python"
-        )
+    )
 
     cpan = repos.add_parser(
         "cpan",
@@ -189,7 +192,6 @@ Network (CPAN) (cpan.org).
         "--recursive",
         action='store_true',
         help='Create recipes for dependencies if they do not already exist.')
-
 
     cran = repos.add_parser(
         "cran",
@@ -266,6 +268,32 @@ Network (CRAN) (cran.r-project.org).
         --output-dir).  If packages are given, they are updated; otherwise, all
         recipes in the output directory are updated.""",
     )
+    luarocks = repos.add_parser(
+        "luarocks",
+        help="""
+Create recipe skeleton for luarocks, hosted at luarocks.org
+        """,
+    )
+    luarocks.add_argument(
+        "packages",
+        action="store",
+        nargs='+',
+        help="luarocks packages to create recipe skeletons for.",
+    )
+    luarocks.add_argument(
+        "--output-dir",
+        help="Directory to write recipes to (default: %(default)s).",
+        default=".",
+    )
+    luarocks.add_argument(
+        "--version",
+        help="Version to use. Applies to all packages.",
+    )
+    luarocks.add_argument(
+        "--recursive",
+        action='store_true',
+        help='Create recipes for dependencies if they do not already exist.')
+
     p.set_defaults(func=execute)
 
     args = p.parse_args()
@@ -276,6 +304,7 @@ def execute(args, parser):
     import conda_build.pypi as pypi
     import conda_build.cpan as cpan
     import conda_build.cran as cran
+    import conda_build.luarocks as luarocks
     from conda.lock import Locked
     from conda_build.config import config
 
@@ -288,6 +317,8 @@ def execute(args, parser):
             cpan.main(args, parser)
         elif args.repo == 'cran':
             cran.main(args, parser)
+        elif args.repo == 'luarocks':
+            luarocks.main(args, parser)
 
 if __name__ == '__main__':
     main()

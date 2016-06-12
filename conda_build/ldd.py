@@ -3,17 +3,18 @@ from __future__ import absolute_import, division, print_function
 import sys
 import re
 import subprocess
-import json
 from os.path import join, basename
 
 from conda.utils import memoized
 from conda.misc import untracked
+from conda.install import linked_data
 
 from conda_build import post
 from conda_build.macho import otool
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
 LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
+
 
 def ldd(path):
     "thin wrapper around ldd"
@@ -38,6 +39,7 @@ def ldd(path):
 
     return res
 
+
 @memoized
 def get_linkages(obj_files, prefix):
     res = {}
@@ -48,24 +50,24 @@ def get_linkages(obj_files, prefix):
             res[f] = ldd(path)
         elif sys.platform.startswith('darwin'):
             links = otool(path)
-            res[f] = [(basename(l), l) for l in links]
+            res[f] = [(basename(l['name']), l['name']) for l in links]
 
     return res
+
 
 @memoized
 def get_package_obj_files(dist, prefix):
-    with open(join(prefix, 'conda-meta', dist +
-        '.json')) as f:
-        data = json.load(f)
+    data = linked_data(prefix).get(dist)
 
     res = []
-    files = data['files']
-    for f in files:
-        path = join(prefix, f)
-        if post.is_obj(path):
-            res.append(f)
+    if data:
+        for f in data.get('files', []):
+            path = join(prefix, f)
+            if post.is_obj(path):
+                res.append(f)
 
     return res
+
 
 @memoized
 def get_untracked_obj_files(prefix):

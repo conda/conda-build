@@ -1,0 +1,9 @@
+# this is a utility package for recursive-build-two-layer
+
+package:
+  name: _recursive-build-a
+  version: 1.0
+
+requirements:
+  build:
+    - _recursive-build-b

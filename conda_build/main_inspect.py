@@ -14,18 +14,20 @@ from collections import defaultdict
 from operator import itemgetter
 
 from conda.misc import which_package
+from conda.compat import iteritems
 from conda.cli.common import add_parser_prefix, get_prefix, InstalledPackages
 from conda.cli.conda_argparse import ArgumentParser
 import conda.install as ci
 
 from conda.api import get_index
 from conda.cli.install import check_install
-from conda.config import get_default_urls, normalize_urls
+from conda.config import get_default_urls
 
 from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join
+
 
 def main():
     p = ArgumentParser(
@@ -52,13 +54,13 @@ libraries that ought to be dependent conda packages.  """
         # inspect linkages -h
         help=linkages_help,
         description=linkages_help,
-        )
+    )
     linkages.add_argument(
         'packages',
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer=InstalledPackages
+    ).completer = InstalledPackages
     linkages.add_argument(
         '--untracked',
         action='store_true',
@@ -95,13 +97,13 @@ package.
         "objects",
         help=objects_help,
         description=objects_help,
-        )
+    )
     objects.add_argument(
         'packages',
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer=InstalledPackages
+    ).completer = InstalledPackages
     objects.add_argument(
         '--untracked',
         action='store_true',
@@ -130,13 +132,13 @@ Tools for investigating conda channels.
         "channels",
         help=channels_help,
         description=channels_help,
-        )
+    )
     channels.add_argument(
         '--verbose',
         action='store_true',
         help="""Show verbose output. Note that error output to stderr will
         always be shown regardless of this flag. """,
-        )
+    )
     channels.add_argument(
         '--test-installable', '-t',
         action='store_true',
@@ -148,11 +150,12 @@ Tools for investigating conda channels.
         nargs='?',
         default="defaults",
         help="The channel to test. The default is %(default)s."
-        )
+    )
 
     p.set_defaults(func=execute)
     args = p.parse_args()
     args_func(args, p)
+
 
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
@@ -167,6 +170,7 @@ def print_linkages(depmap, show_files=False):
             for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
                 print("    %s (%s)" % (lib, path))
         print()
+
 
 def replace_path(binary, path, prefix):
     if sys.platform.startswith('linux'):
@@ -192,6 +196,7 @@ def replace_path(binary, path, prefix):
             return abspath(path)
         return 'not found'
 
+
 def print_object_info(info, key):
     gb = groupby(key, info)
     for header in sorted(gb, key=str):
@@ -207,11 +212,13 @@ def print_object_info(info, key):
                 print()
         print()
 
+
 class _untracked_package:
     def __str__(self):
         return "<untracked>"
 
 untracked_package = _untracked_package()
+
 
 def test_installable(channel='defaults', verbose=True):
     if not verbose:
@@ -223,19 +230,19 @@ def test_installable(channel='defaults', verbose=True):
         print("######## Testing platform %s ########" % platform)
         channels = [channel] + get_default_urls()
         index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for package in sorted(index):
-            if channel != 'defaults':
-                # If we give channels at the command line, only look at
-                # packages from those channels (not defaults).
-                if index[package]['channel'] not in normalize_urls([channel], platform=platform):
-                    continue
-            name, version, build = package.rsplit('.tar.bz2', 1)[0].rsplit('-', 2)
+        for package, rec in iteritems(index):
+            # If we give channels at the command line, only look at
+            # packages from those channels (not defaults).
+            if channel != 'defaults' and rec.get('schannel', 'defaults') == 'defaults':
+                continue
+            name = rec['name']
             if name in {'conda', 'conda-build'}:
                 # conda can only be installed in the root environment
                 continue
             # Don't fail just because the package is a different version of Python
             # than the default.  We should probably check depends rather than the
             # build string.
+            build = rec['build']
             match = has_py.search(build)
             assert match if 'py' in build else True, build
             if match:
@@ -243,6 +250,7 @@ def test_installable(channel='defaults', verbose=True):
             else:
                 additional_packages = []
 
+            version = rec['version']
             print('Testing %s=%s' % (name, version))
             # if additional_packages:
             #     print("Including %s" % additional_packages[0])
@@ -261,6 +269,7 @@ def test_installable(channel='defaults', verbose=True):
 
     return success
 
+
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
@@ -273,29 +282,27 @@ def execute(args, parser):
             sys.exit(not test_installable(channel=args.channel, verbose=args.verbose))
 
     prefix = get_prefix(args)
-    installed = ci.linked(prefix)
+    installed = ci.linked_data(prefix)
+    installed = {rec['name']: dist for dist, rec in iteritems(installed)}
 
     if not args.packages and not args.untracked and not args.all:
         parser.error("At least one package or --untracked or --all must be provided")
 
     if args.all:
-        args.packages = sorted([i.rsplit('-', 2)[0] for i in installed])
+        args.packages = sorted(installed.keys())
 
     if args.untracked:
         args.packages.append(untracked_package)
-
 
     if args.subcommand == 'linkages':
         pkgmap = {}
         for pkg in args.packages:
             if pkg == untracked_package:
                 dist = untracked_package
+            elif pkg not in installed:
+                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
             else:
-                for dist in installed:
-                    if pkg == dist.rsplit('-', 2)[0]:
-                        break
-                else:
-                    sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+                dist = installed[pkg]
 
             if not sys.platform.startswith(('linux', 'darwin')):
                 sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
@@ -310,18 +317,20 @@ def execute(args, parser):
             depmap['not found'] = []
             for binary in linkages:
                 for lib, path in linkages[binary]:
-                    path = replace_path(binary, path, prefix) if path not in {'', 'not found'} else path
+                    path = replace_path(binary, path, prefix) if path not in {'',
+                                                                              'not found'} else path
                     if path.startswith(prefix):
                         deps = list(which_package(path))
                         if len(deps) > 1:
-                            print("Warning: %s comes from multiple packages: %s" % (path, comma_join(deps)), file=sys.stderr)
+                            print("Warning: %s comes from multiple packages: %s" %
+                                  (path, comma_join(deps)), file=sys.stderr)
                         if not deps:
                             if exists(path):
-                                depmap['untracked'].append((lib, path.split(prefix
-                                    + '/', 1)[-1], binary))
+                                depmap['untracked'].append((lib, path.split(prefix +
+                                    '/', 1)[-1], binary))
                             else:
-                                depmap['not found'].append((lib, path.split(prefix
-                                    + '/', 1)[-1], binary))
+                                depmap['not found'].append((lib, path.split(prefix +
+                                    '/', 1)[-1], binary))
                         for d in deps:
                             depmap[d].append((lib, path.split(prefix + '/',
                                 1)[-1], binary))
@@ -333,7 +342,7 @@ def execute(args, parser):
         if args.groupby == 'package':
             for pkg in args.packages:
                 print(pkg)
-                print('-'*len(str(pkg)))
+                print('-' * len(str(pkg)))
                 print()
 
                 print_linkages(pkgmap[pkg], show_files=args.show_files)
@@ -349,7 +358,7 @@ def execute(args, parser):
             k = sorted(set(inverted_map.keys()) - {'system', 'not found'})
             for dep in k + ['system', 'not found']:
                 print(dep)
-                print('-'*len(str(dep)))
+                print('-' * len(str(dep)))
                 print()
 
                 print_linkages(inverted_map[dep], show_files=args.show_files)
@@ -361,15 +370,13 @@ def execute(args, parser):
         for pkg in args.packages:
             if pkg == untracked_package:
                 dist = untracked_package
+            elif pkg not in installed:
+                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
             else:
-                for dist in installed:
-                    if pkg == dist.rsplit('-', 2)[0]:
-                        break
-                else:
-                    sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+                dist = installed[pkg]
 
             print(pkg)
-            print('-'*len(str(pkg)))
+            print('-' * len(str(pkg)))
             print()
 
             if not sys.platform.startswith('darwin'):

@@ -1,4 +1,88 @@
-2016-XX-XX   1.19.1:
+2016-05-13 1.20.3:
+------------------
+Features:
+ * use posix metapackage for cran skeleton packaging (#956)
+
+Bug fixes:
+ * fix output of package paths (extra output was breaking tools).  Add tests. (#950)
+ * change default of no_download_source in build.py (for compatibility with conda-build-all) (#950)
+ * fix regression in [] being confused for selectors (#957)
+
+2016-05-13 1.20.2:
+------------------
+Features:
+ * added --token and --user flags to pass corresponding information to anaconda upload (#921)
+ * added conda render command that outputs a fully-rendered meta.yaml to either stdout, or to file (with --file) (#908)
+ * support source checkout tools specified in meta.yaml. If source checkout fails at the rendering phase, source checkout and rendering are re-done after the build environment is created. (#843, #946)
+ * fn is now optional when a URL specifies a filename. (#942)
+ * CRAN skeleton generator now uses MSYS2 for Windows support (#942)
+ * conda build & conda render both recursively look for meta.yaml (support conda-forge feedstock submodules) (#908)
+ * Whitelist MAKEFLAGS environment variable. Setting this outside conda build should take effect in your build. Parallelize on *nix by adding -j here, instead of -j${CPU_COUNT} in your build.sh. This helps on CI's, where CPU_COUNT is not always well-behaved. (#917)
+ * Run python_d executable on windows when debug feature is active (#724)
+ * add conda build flag --keep-old-work that temporarily moves your last build, then moves it back after completion. For debugging, when more than one package is involved. (#833)
+ * Allow selectors in imported jinja templates (#739)
+
+Bug fixes:
+ * fixed several instances wherein --skip-existing did not work (#897, #945)
+ * Fully render recipe before outputting build string  * fixes empty spots where GIT_* info should have been (#923)
+ * Add MSYS2 path conversion filters to avoid issues with Win 7.1 SDK (#900)
+ * Address PyPI's change of URL format (#922,
+ * Fix invalid gcc "-m 32" flag (#916)
+ * Fix empty section (due to selectors) handling regression (#919)
+ * Fix regression in handling of VS2008 Pro (not Express + VC for Python 2.7). It is important to at least try to run vcvarsall.bat. (#913)
+ * Fix CPAN skeleton generator (handle missing sections better) (#912)
+ * Make test/requires versions match build/requires without additional pinning (#907)
+ * Remove hard-coded CYGWIN path from conda-build's custom PATH (#903)
+ * Source is downloaded before testing, fixing an issue where if build machine and some other test machine had different source, strange things happened. (#946)
+ * Fix regression with Python 3.x fixing shebangs (#892)
+ * Fix conda inspect crashes by using conda-meta info rather than filenames or dist names for package info (#947)
+
+Miscellany:
+ * restore AppVeyor testing for Windows builds (#864)
+ * Build py3.5 on Appveyor (#938)
+ * PEP8 cleanup; use flake8 rather than pyflakes (#938)
+ * limited scope of project locking to avoid lock conflicts between build and rendering (#923)
+ * set up anaconda.org build infrastructure (#924)
+ * on Windows, environment variables are written to the temporary bld.bat in the source work folder. (#933)
+
+
+2016-04-21   1.20.1:
+--------------------
+  * fix source/path and GIT_* issues, #801
+  * fix invalid assertion, #855
+  * environ.py refactor/clenup, #856
+  * Better messaging for yaml parsing errors, #862
+  * fix typo, #863
+  * make CONDA_PY and CONDA_NPY available in build.sh, #837
+  * execute source fetchers (e.g., git, hg) in the _build environment, #843
+  * use memory map rather than read() to reduce memory usage, #866
+  * fix svn url on Windows in checkout tool test, #867
+  * fix empty files bug, #869
+  * improve Visual Studio logic, #861
+  * add files in order of increasing size to improve access times to tar, #870
+  * VS_YEAR, VS_VERSION, VS_MAJOR and CMAKE_GENERATOR environment variables, #872
+
+
+2016-03-25   1.20.0:
+--------------------
+  * support for Lua as a built-in language (Alex Wiltschko), #719
+  * allow additional keys in "about" section, #831
+  * fix Examples directory in noarch_python, #838
+  * revert OS X SIP fix, part of #808, #844
+  * fixed race condition between removal and creation of tmp_dir on win, #847
+
+
+2016-03-10   1.19.2:
+--------------------
+  * silence some errors when subprocessing git #790
+  * fixes conda skeleton cran under python3 #817
+  * fixes some bugs introduced with the #808 otools refactor, #821, #825
+  * fixes #818 conda-build 1.19.1 breaks C compilation, #825
+  * actually fix #807 recurisive builds after conda 4.0 release, #826
+  * fixes #820 crash when building from a git repo on Windows, #824
+
+
+2016-03-09   1.19.1:
 --------------------
   * Environment variables defined in the 'script_env' build section of
     the meta.yaml file were previously assigned the value '<UNDEFINED>'
@@ -6,6 +90,10 @@
     warning is raised instead, #763.
   * fix printing of NumPy 1.10 in help message, #776
   * add -m32 to CFLAGS and CXXFLAGS for multilib gcc, #775
+  * fixes CYGWIN_PREFIX for drive letters other than C:, #788
+  * fixes for noarch package building on Windows, #799
+  * work-arounds for System Integrity Protection on OS X El Capitan, #808
+  * fix recurisive builds after conda 4.0 release, #813
 
 
 2016-01-29   1.19.0:

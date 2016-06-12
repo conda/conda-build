@@ -16,11 +16,12 @@ from conda.lock import Locked
 import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import build, pypi
+from conda_build import build, pypi, render
 from conda_build.config import config
 from conda_build.main_build import handle_binstar_upload
 
 # TODO: Add support for all the options that conda build has
+
 
 class CondaDistribution(Distribution):
     """
@@ -91,7 +92,7 @@ class CondaDistribution(Distribution):
         'conda_preserve_egg_dir': None,
         'conda_features': None,
         'conda_track_features': None,
-        }
+    }
 
     def __init__(self, attrs=None):
         given_attrs = {}
@@ -110,6 +111,7 @@ class CondaDistribution(Distribution):
 
         for attr in self.conda_attrs:
             setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
+
 
 class bdist_conda(install):
     description = "create a conda package"
@@ -201,7 +203,8 @@ class bdist_conda(install):
                         c.readfp(StringIO(newstr))
                     except Exception as err:
                         # This seems to be the best error here
-                        raise DistutilsGetoptError("ERROR: entry-points not understood: " + str(err) + "\nThe string was" + newstr)
+                        raise DistutilsGetoptError("ERROR: entry-points not understood: " +
+                                                   str(err) + "\nThe string was" + newstr)
                     else:
                         for section in config.sections():
                             if section in ['console_scripts', 'gui_scripts']:
@@ -213,7 +216,8 @@ class bdist_conda(install):
                                 entry_points[section] = None
 
                 if not isinstance(entry_points, dict):
-                    raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" + entry_points)
+                    raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" +
+                                               entry_points)
                 else:
                     rs = entry_points.get('scripts', [])
                     cs = entry_points.get('console_scripts', [])
@@ -229,21 +233,22 @@ class bdist_conda(install):
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list
                         if metadata.conda_command_tests is True:
-                            d['test']['commands'] = list(map(unicode, pypi.make_entry_tests(entry_list)))
+                            d['test']['commands'] = list(map(unicode,
+                                                             pypi.make_entry_tests(entry_list)))
 
             if 'setuptools' in d['requirements']['run']:
                 d['build']['preserve_egg_dir'] = True
 
             if metadata.conda_import_tests:
                 if metadata.conda_import_tests is True:
-                    d['test']['imports'] = ((self.distribution.packages or [])
-                                            + (self.distribution.py_modules or []))
+                    d['test']['imports'] = ((self.distribution.packages or []) +
+                                            (self.distribution.py_modules or []))
                 else:
                     d['test']['imports'] = metadata.conda_import_tests
 
             if (metadata.conda_command_tests and not
-                isinstance(metadata.conda_command_tests,
-                bool)):
+                    isinstance(metadata.conda_command_tests,
+                    bool)):
                 d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
             d = dict(d)
@@ -262,13 +267,13 @@ class bdist_conda(install):
             if self.binstar_upload:
                 class args:
                     binstar_upload = self.binstar_upload
-                handle_binstar_upload(build.bldpkg_path(m), args)
+                handle_binstar_upload(render.bldpkg_path(m), args)
             else:
                 no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
 # $ anaconda upload %s
-""" % build.bldpkg_path(m)
+""" % render.bldpkg_path(m)
                 print(no_upload_message)
 
 
@@ -283,6 +288,6 @@ bdist_conda.user_options.extend([
     setup() function. The command line flag overrides the option to
     setup().''')),
     (str('anaconda-upload'), None, ("""Upload the finished package to anaconda.org""")),
-    ])
+])
 
 bdist_conda.boolean_options.extend([str('anaconda-upload')])

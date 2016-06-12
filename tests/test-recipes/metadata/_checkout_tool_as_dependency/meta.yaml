@@ -1,0 +1,14 @@
+{% set recipe_dir = RECIPE_DIR if unix else "/" ~ RECIPE_DIR.replace("\\", "/") %}
+
+package:
+  name: test-checkout-tool-as-dependency
+  version: 1.0
+
+source:
+  svn_url: file://{{ recipe_dir }}/_svn_repo/dummy
+  svn_rev: 1
+
+requirements:
+  build:
+    # To test the conda_build version
+    - svn

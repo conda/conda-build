@@ -13,12 +13,14 @@ import conda.config as cc
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
 
+
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
     __doc__ = __doc__
 
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
+    CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
     CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
         '')).replace('.', ''))
     CONDA_NPY = os.getenv("CONDA_NPY")
@@ -56,7 +58,7 @@ class Config(object):
         croot = abspath(expanduser('~/conda-bld'))
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = max(short_build_prefix, (short_build_prefix + 8 * '_placehold')[:80])
+    long_build_prefix = max(short_build_prefix, (short_build_prefix + 25 * '_placehold')[:255])
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False
@@ -64,7 +66,13 @@ class Config(object):
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
-            res = join(prefix, 'python.exe')
+            import conda.install
+            packages = conda.install.linked(prefix)
+            packages_names = (pkg.split('-')[0] for pkg in packages)
+            if 'debug' in packages_names:
+                res = join(prefix, 'python_d.exe')
+            else:
+                res = join(prefix, 'python.exe')
         else:
             res = join(prefix, 'bin/python')
         return res
@@ -74,6 +82,14 @@ class Config(object):
             res = join(prefix, 'perl.exe')
         else:
             res = join(prefix, 'bin/perl')
+        return res
+
+    def _get_lua(self, prefix):
+        binary_name = "luajit" if "2" == self.CONDA_LUA[0] else "lua"
+        if sys.platform == 'win32':
+            res = join(prefix, '{}.exe'.format(binary_name))
+        else:
+            res = join(prefix, 'bin/{}'.format(binary_name))
         return res
 
     @property
@@ -101,6 +117,14 @@ class Config(object):
         return self._get_perl(self.test_prefix)
 
     @property
+    def build_lua(self):
+        return self._get_lua(self.build_prefix)
+
+    @property
+    def test_lua(self):
+        return self._get_lua(self.test_prefix)
+
+    @property
     def info_dir(self):
         return join(self.build_prefix, 'info')
 
@@ -114,10 +138,16 @@ class Config(object):
 
     @property
     def bldpkgs_dir(self):
+        """ Dir where the package is saved. """
         if self.noarch:
             return join(self.croot, "noarch")
         else:
             return join(self.croot, cc.subdir)
+
+    @property
+    def bldpkgs_dirs(self):
+        """ Dirs where previous build packages might be. """
+        return join(self.croot, cc.subdir), join(self.croot, "noarch")
 
 config = Config()
 

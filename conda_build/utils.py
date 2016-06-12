@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import fnmatch
 import os
 import sys
 import shutil
@@ -18,6 +19,25 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 rm_rf
+
+
+def find_recipe(path):
+    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
+
+    Returns folder containing meta.yaml, to be built.
+
+    If we have a base level meta.yaml and other supplemental ones, use that first"""
+    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
+    if len(results) > 1:
+        base_recipe = os.path.join(path, "meta.yaml")
+        if base_recipe in results:
+            return os.path.dirname(base_recipe)
+        else:
+            raise IOError("More than one meta.yaml files found in %s" % path)
+    elif not results:
+        raise IOError("No meta.yaml files found in %s" % path)
+    return os.path.dirname(results[0])
+
 
 def copy_into(src, dst):
     "Copy all the files and directories in src to the directory dst"
@@ -104,6 +124,7 @@ def file_info(path):
 
 # Taken from toolz
 
+
 def groupby(key, seq):
     """ Group a collection by a key function
     >>> names = ['Alice', 'Bob', 'Charlie', 'Dan', 'Edith', 'Frank']
@@ -132,6 +153,7 @@ def groupby(key, seq):
         rv[k] = v.__self__
     return rv
 
+
 def getter(index):
     if isinstance(index, list):
         if len(index) == 1:
@@ -143,6 +165,7 @@ def getter(index):
             return lambda x: ()
     else:
         return operator.itemgetter(index)
+
 
 def comma_join(items):
     """
@@ -180,3 +203,14 @@ def safe_print_unicode(*args, **kwargs):
     line = sep.join(args) + end
     encoding = sys.stdout.encoding or 'utf8'
     func(line.encode(encoding, errors))
+
+
+def rec_glob(path, patterns):
+    result = []
+    for d_f in os.walk(path):
+        m = []
+        for pattern in patterns:
+            m.extend(fnmatch.filter(d_f[2], pattern))
+        if m:
+            result.extend([os.path.join(d_f[0], f) for f in m])
+    return result

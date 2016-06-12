@@ -2,7 +2,6 @@ language: python
 python:
   # We don't actually use the system Python but this keeps it organized.
   - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
 env:
@@ -10,26 +9,25 @@ env:
 install:
   # TODO: Use a "latest" url
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda-3.5.2-Linux-x86_64.sh -O miniconda.sh;
-    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.0.0-Linux-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
     else
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.5.2-Linux-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
-  - conda install --force --no-deps conda requests
-  - conda install pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
+  - conda update -q --all
+  - conda install -q --force --no-deps conda requests
+  - conda install -q pip pytest requests jinja2 patchelf flake8 python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
+  - conda install -q anaconda-client conda-build
+  - pip install pytest-cov
   - python setup.py install
   - conda info -a
 
 script:
-  - pyflakes conda_build tests bin/* bdist_conda.py setup.py example_packages
-  - py.test tests
-  - tests/test-recipes/build_recipes.sh
-  - tests/test-skeleton/test-skeleton.sh
+  - flake8 .
+  - py.test --cov conda_build --cov-report xml tests
   - conda build --help
 
 notifications:
@@ -39,3 +37,7 @@ git:
   depth: 10000
 
 sudo: false
+
+after_success:
+  - pip install codecov
+  - codecov --env TRAVIS_PYTHON_VERSION
