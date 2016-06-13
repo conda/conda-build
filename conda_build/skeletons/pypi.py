@@ -287,9 +287,9 @@ def package_exists(package_name, pypi_url=None):
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                all_urls=False, pypi_url='https://pypi.io/pypi', no_prompt=False,
+                all_urls=False, pypi_url='https://pypi.io/pypi', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
-                noarch_python=False):
+                all_extras=False, noarch_python=False, **kw):
     client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
 
@@ -334,9 +334,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         else:
             versions = client.package_releases(package, True)
             if version_compare:
-                version_compare(args, package, versions)
-            if args.version:
-                [version] = args.version
+                version_compare(versions)
+            if version:
+                [version] = version
                 if version not in versions:
                     sys.exit("Error: Version %s of %s is not available on PyPI."
                              % (version, package))
@@ -350,7 +350,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                         cased_package = all_packages[all_packages_lower.index(package.lower())]
                         if cased_package != package:
                             print("%s not found, trying %s" % (package, cased_package))
-                            args.packages.append(cased_package)
+                            packages.append(cased_package)
                             del package_dicts[package]
                             continue
                     sys.exit("Error: Could not find any versions of package %s" % package)
@@ -363,11 +363,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                     print("Use --version to specify a different version.")
                 d['version'] = versions[0]
 
-        data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(args,
-                                                                        client,
+        data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(client,
                                                                         package,
                                                                         d['version'],
-                                                                        is_url)
+                                                                        is_url, all_urls,
+                                                                        noprompt, manual_url)
 
         if d['md5'] == '':
             d['usemd5'] = '# '
@@ -376,7 +376,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         d['import_tests'] = ''
 
-        get_package_metadata(args, package, d, data)
+        get_package_metadata(package, d, data, output_dir, python_version,
+                             all_extras, recursive, created_recipes, noarch_python,
+                             noprompt, packages)
 
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -568,7 +570,7 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
     return (data, pypiurl, filename, md5)
 
 
-def version_compare(args, package, versions):
+def version_compare(versions):
     if not versions:
         # PyPI is case sensitive, this will pass control
         # to a method in main() to take care of that.

@@ -127,11 +127,11 @@ def _is_url(name_or_url):
                       name_or_url) != []
 
 
-def skeletonize(packages, output_dir=".", version=None, recursive=False, origin="auto", **kw):
+def skeletonize(packages, output_dir=".", version=None, recursive=False, repo="auto", **kw):
     if isinstance(packages, _string_types):
         packages = [packages]
 
-    if origin == "auto":
+    if repo == "auto":
         # can we uniquely resolve names?
         origins = {}
         for package in packages:
@@ -154,5 +154,5 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False, origin=
             _logging.warn("Some packages could not be uniquely resolved: {}".format(unresolved))
 
     else:
-        module = _importlib.import_module("conda_build." + skeleton)
+        module = _importlib.import_module("conda_build.skeletons." + repo)
         module.skeletonize(packages, **kw)
