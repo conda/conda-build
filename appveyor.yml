@@ -64,7 +64,10 @@ install:
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov git anaconda-client
+  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client
+  # test with master of conda
+  - git clone https://github.com/conda/conda
+  - cd conda && python setup.py install && cd ..
   # this is to ensure dependencies
   - conda install -q conda-build
   - python --version
