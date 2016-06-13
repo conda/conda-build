@@ -159,6 +159,13 @@ def add_parser(repos):
         action='store_true',
         help='Create recipes for dependencies if they do not already exist.')
 
+
+def package_exists(package_name):
+    return True
+    # TODO: no current Lua packages work for me.  Need to verify this method.
+    # subprocess.check_call(['luarocks', 'search', package_name])
+
+
 def getval(spec, k):
     if k not in spec:
         raise Exception("Required key %s not in spec" % k)
@@ -213,7 +220,7 @@ def ensure_base_deps(deps):
     return deps
 
 
-def main(args, parser):
+def main(packages, output_dir=".", version=None, recursive=False):
 
     # Check that we have Lua installed (any version)
 
@@ -232,9 +239,9 @@ def main(args, parser):
     # Step into it
     os.chdir(temp_dir)
 
-    while args.packages:
-        [output_dir] = args.output_dir
-        package = args.packages.pop()
+    while packages:
+        [output_dir] = output_dir
+        package = packages.pop()
 
         packagename = "lua-%s" % package.lower() if package[:4] != "lua-" else package.lower()
         d = package_dicts.setdefault(package,
