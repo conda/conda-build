@@ -141,7 +141,6 @@ def add_parser(repos):
     )
     luarocks.add_argument(
         "packages",
-        action="store",
         nargs='+',
         help="luarocks packages to create recipe skeletons for.",
     )
@@ -220,7 +219,7 @@ def ensure_base_deps(deps):
     return deps
 
 
-def main(packages, output_dir=".", version=None, recursive=False):
+def skeletonize(packages, output_dir=".", version=None, recursive=False):
 
     # Check that we have Lua installed (any version)
 
@@ -240,7 +239,6 @@ def main(packages, output_dir=".", version=None, recursive=False):
     os.chdir(temp_dir)
 
     while packages:
-        [output_dir] = output_dir
         package = packages.pop()
 
         packagename = "lua-%s" % package.lower() if package[:4] != "lua-" else package.lower()

@@ -51,33 +51,42 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
           need_source_download=True, verbose=False, check=False, skip_existing=False,
           dirty=False, already_built=None, build_only=False, notest=False, anaconda_upload=True,
           token=None, user=None, **kwargs):
-    metadata, _ = _render_recipe(recipe_path,
-                                 no_download_source=(not need_source_download),
-                                 verbose=verbose, dirty=dirty, **kwargs)
 
-    if not already_built:
-        already_built = set()
+    if not hasattr(recipe_path, "__iter__"):
+        recipe_path = [recipe_path]
 
-    if metadata.skip():
-        print("Skipped: The %s recipe defines build/skip for this "
-                "configuration." % metadata.dist())
-        return False
+    build_recipes = []
+    for recipe in recipe_path:
+        metadata, _ = _render_recipe(recipe,
+                                    no_download_source=(not need_source_download),
+                                    verbose=verbose, dirty=dirty, **kwargs)
 
-    if skip_existing:
-        for d in _config.bldpkgs_dirs:
-            if not _os.path.isdir(d):
-                _os.makedirs(d)
-            _update_index(d)
-        index = _build.get_build_index(clear_cache=True)
+        if not already_built:
+            already_built = set()
 
-        # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
-        if ('local::' + metadata.pkg_fn() in index or
-                metadata.pkg_fn() in index or
-                metadata.pkg_fn() in already_built):
-            print(metadata.dist(), "is already built, skipping.")
-            return False
+        if metadata.skip():
+            print("Skipped: The %s recipe defines build/skip for this "
+                    "configuration." % metadata.dist())
+            continue
 
-    return _build.build_tree([recipe_path], build_only=build_only, post=post, notest=notest,
+        if skip_existing:
+            for d in _config.bldpkgs_dirs:
+                if not _os.path.isdir(d):
+                    _os.makedirs(d)
+                _update_index(d)
+            index = _build.get_build_index(clear_cache=True)
+
+            # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
+            if ('local::' + metadata.pkg_fn() in index or
+                    metadata.pkg_fn() in index or
+                    metadata.pkg_fn() in already_built):
+                print(metadata.dist(), "is already built, skipping.")
+                continue
+
+        build_recipes.append(recipe)
+
+
+    return _build.build_tree(build_recipes, build_only=build_only, post=post, notest=notest,
                              anaconda_upload=anaconda_upload, skip_existing=skip_existing,
                              keep_old_work=keep_old_work, include_recipe=include_recipe,
                              need_source_download=True, already_built=already_built,
@@ -119,7 +128,12 @@ def verify(file_path):
 
 
 def list_skeletons():
-    return [name for _, name, _ in _pkgutil.iter_modules(['conda_build/skeletons'])]
+    modules = _pkgutil.iter_modules(['conda_build/skeletons'])
+    files = []
+    for _, name, _ in modules:
+        if not name.startswith("_"):
+            files.append(name)
+    return files
 
 
 def _is_url(name_or_url):
@@ -127,32 +141,35 @@ def _is_url(name_or_url):
                       name_or_url) != []
 
 
-def skeletonize(packages, output_dir=".", version=None, recursive=False, repo="auto", **kw):
+def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kw):
     if isinstance(packages, _string_types):
         packages = [packages]
 
-    if repo == "auto":
-        # can we uniquely resolve names?
-        origins = {}
-        for package in packages:
-            for skeleton in list_skeletons():
-                module = _importlib.import_module("conda_build." + skeleton)
-                try:
-                    if module.package_exists(package):
-                        origins[package] = origins.get(package, [])
-                        origins[package].append(skeleton)
-                except:
-                    print("Skeleton {} failed to verify package existence".format(skeleton))
-            if package in origins and len(origins[package]) != 1:
-                del origins[package]
-        for package in origins:
-            module = _importlib.import_module("conda_build." + origins[package][0])
-            module.skeletonize(packages, output_dir=output_dir, version=version,
-                               recursive=recursive, **kw)
-        unresolved = [package for package in packages if package not in origins]
-        if unresolved:
-            _logging.warn("Some packages could not be uniquely resolved: {}".format(unresolved))
+    skeleton_return = []
+    # if repo == "auto":
+    #     # can we uniquely resolve names?
+    #     origins = {}
+    #     for package in packages:
+    #         for skeleton in list_skeletons():
+    #             module = _importlib.import_module("conda_build." + skeleton)
+    #             try:
+    #                 if module.package_exists(package):
+    #                     origins[package] = origins.get(package, [])
+    #                     origins[package].append(skeleton)
+    #             except:
+    #                 print("Skeleton {} failed to verify package existence".format(skeleton))
+    #         if package in origins and len(origins[package]) != 1:
+    #             del origins[package]
+    #     for package in origins:
+    #         module = _importlib.import_module("conda_build." + origins[package][0])
+    #         skeleton_return.extend(module.skeletonize(packages, output_dir=output_dir, version=version,
+    #                                                   recursive=recursive, **kw))
+    #     unresolved = [package for package in packages if package not in origins]
+    #     if unresolved:
+    #         _logging.warn("Some packages could not be uniquely resolved: {}".format(unresolved))
 
-    else:
-        module = _importlib.import_module("conda_build.skeletons." + repo)
-        module.skeletonize(packages, **kw)
+    # else:
+    module = _importlib.import_module("conda_build.skeletons." + repo)
+    skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
+                                            recursive=recursive, **kw)
+    return skeleton_return

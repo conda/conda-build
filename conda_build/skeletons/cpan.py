@@ -211,9 +211,8 @@ def skeletonize(packages, output_dir=".", version=None,
                                             version is not None else
                                             core_version),
                                         perl_version)
-        # Check if versioned recipe directory already exists
-        dir_path = join(output_dir, '-'.join((packagename,
-                                                release_data['version'])))
+        # Check if recipe directory already exists
+        dir_path = join(output_dir, packagename)
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
 
@@ -277,7 +276,7 @@ def skeletonize(packages, output_dir=".", version=None,
         else:
             d['import_comment'] = '# '
 
-        # Write recipe files to a versioned directory
+        # Write recipe files to a directory
         makedirs(dir_path)
         print("Writing recipe for %s-%s" % (packagename, d['version']))
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
@@ -303,7 +302,6 @@ def add_parser(repos):
         """,)
     cpan.add_argument(
         "packages",
-        action="store",
         nargs='+',
         help="CPAN packages to create recipe skeletons for.",)
     cpan.add_argument(
@@ -315,8 +313,6 @@ def add_parser(repos):
         help="Version to use. Applies to all packages.",)
     cpan.add_argument(
         "--meta-cpan-url",
-        action="store",
-        nargs=1,
         default='http://api.metacpan.org',
         help="URL to use for MetaCPAN API.",)
     cpan.add_argument(
@@ -390,7 +386,7 @@ def core_module_version(module, version):
     return mod_version
 
 
-def deps_for_package(package, release_data, perl_version, args, output_dir,
+def deps_for_package(package, release_data, perl_version, output_dir,
                      processed_packages, meta_cpan_url, recursive):
     '''
     Build the sets of dependencies and packages we need recipes for. This should
