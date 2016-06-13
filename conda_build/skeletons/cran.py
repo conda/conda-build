@@ -208,6 +208,15 @@ class CRANPackagesCompleter(Completer):
             in cran_metadata]
 
 
+def package_exists(package_name):
+    # TODO: how can we get cran to spit out package presence?
+    # available.packages() is probably the right start, but no channels are working on mac right now?
+    return True
+    #install_output = subprocess.check_output([join(sys.prefix, "r"), "-e",
+    #                            # ind=2 arbitrarily chooses some CRAN mirror to try.
+    #                            "chooseCRANmirror(ind=2);install.packages('{}')".format(package_name)])
+
+
 def add_parser(repos):
     cran = repos.add_parser(
         "cran",
@@ -443,25 +452,27 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
         package_list)}
 
 
-def main(args, parser):
-    if len(args.packages) > 1 and args.version_compare:
+def skeletonize(packages, output_dir=".", git_tag=None, all_urls=False,
+                cran_url="http://cran.r-project.org", recursive=False, archive=True,
+                version_compare=False, update_outdated=False):
+    if len(packages) > 1 and version_compare:
         parser.error("--version-compare only works with one package at a time")
-    if not args.update_outdated and not args.packages:
+    if not update_outdated and not packages:
         parser.error("At least one package must be supplied")
 
     package_dicts = {}
 
-    [output_dir] = args.output_dir
+    [output_dir] = output_dir
 
-    cran_metadata = get_cran_metadata(args.cran_url, output_dir)
+    cran_metadata = get_cran_metadata(cran_url, output_dir)
 
-    if args.update_outdated:
-        args.packages = get_outdated(output_dir, cran_metadata, args.packages)
-        for pkg in args.packages:
-            rm_rf(join(args.output_dir[0], 'r-' + pkg))
+    if update_outdated:
+        packages = get_outdated(output_dir, cran_metadata, packages)
+        for pkg in packages:
+            rm_rf(join(output_dir[0], 'r-' + pkg))
 
-    while args.packages:
-        package = args.packages.pop()
+    while packages:
+        package = packages.pop()
 
         is_github_url = 'github.com' in package
         url = package
@@ -469,7 +480,7 @@ def main(args, parser):
         if is_github_url:
             rm_rf(source.WORK_DIR)
             source.git_source({'git_url': package}, '.')
-            git_tag = args.git_tag[0] if args.git_tag else get_latest_git_tag()
+            git_tag = git_tag[0] if git_tag else get_latest_git_tag()
             p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, cwd=source.WORK_DIR)
             stdout, stderr = p.communicate()
@@ -517,11 +528,11 @@ def main(args, parser):
 
         if not is_github_url:
             session = get_session(output_dir)
-            cran_metadata[package.lower()].update(get_package_metadata(args.cran_url,
+            cran_metadata[package.lower()].update(get_package_metadata(cran_url,
             package, session))
 
         dir_path = join(output_dir, 'r-' + package.lower())
-        if exists(dir_path) and not args.version_compare:
+        if exists(dir_path) and not version_compare:
             raise RuntimeError("directory already exists: %s" % dir_path)
 
         cran_package = cran_metadata[package.lower()]
@@ -556,25 +567,25 @@ def main(args, parser):
             d['git_url'] = ''
             d['git_tag'] = ''
 
-        if args.version:
+        if version:
             raise NotImplementedError("Package versions from CRAN are not yet implemented")
-            [version] = args.version
+            [version] = version
             d['version'] = version
 
         d['cran_version'] = cran_package['Version']
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .
         d['conda_version'] = d['cran_version'].replace('-', '_')
-        if args.version_compare:
+        if version_compare:
             sys.exit(not version_compare(dir_path, d['conda_version']))
 
         if not is_github_url:
             d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
-            if args.archive:
-                d['cranurl'] = (INDENT + args.cran_url + 'src/contrib/' +
-                    d['filename'] + INDENT + args.cran_url + 'src/contrib/' +
+            if archive:
+                d['cranurl'] = (INDENT + cran_url + 'src/contrib/' +
+                    d['filename'] + INDENT + cran_url + 'src/contrib/' +
                     'Archive/' + d['cran_packagename'] + '/' + d['filename'])
             else:
-                d['cranurl'] = ' ' + args.cran_url + 'src/contrib/' + d['filename']
+                d['cranurl'] = ' ' + cran_url + 'src/contrib/' + d['filename']
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
@@ -663,9 +674,9 @@ def main(args, parser):
                     else:
                         deps.append('{indent}{name}'.format(name=conda_name,
                             indent=INDENT))
-                    if args.recursive:
+                    if recursive:
                         if not exists(join(output_dir, conda_name)):
-                            args.packages.append(name)
+                            packages.append(name)
 
             if cran_package.get("NeedsCompilation", 'no') == 'yes':
                 if dep_type == 'build':
