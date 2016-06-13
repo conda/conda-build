@@ -447,7 +447,7 @@ def add_parser(repos):
     pypi.add_argument(
         "--pypi-url",
         action="store",
-        default='https://pypi.io/pypi',
+        default='https://pypi.python.org/pypi',
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
@@ -798,7 +798,7 @@ def unpack(src_path, tempdir):
     elif src_path.endswith('.zip'):
         unzip(src_path, tempdir)
     else:
-        raise Exception("not a valid source")
+        raise Exception("not a valid source: %s" % src_path)
 
 
 def get_dir(tempdir):
