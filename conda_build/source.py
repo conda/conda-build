@@ -314,21 +314,6 @@ def _ensure_unix_line_endings(path):
     return out_path
 
 
-def _commonpath(paths):
-    """Python 2 doesn't have os.path.commonpath(), so roll our own"""
-    folders = [path.split(b'/') for path in paths]
-    minfolders = min(folders)
-    maxfolders = max(folders)
-    common = []
-    for minf, maxf in zip(minfolders, maxfolders[:len(minfolders)]):
-        if minf != maxf:
-            break
-        common.append(minf)
-    if len(common):
-        return b'/'.join(common) + b'/'
-    return b''
-
-
 def _guess_patch_strip_level(filesstr, src_dir):
     """ Determine the patch strip level automatically. """
     maxlevel = None
@@ -342,11 +327,6 @@ def _guess_patch_strip_level(filesstr, src_dir):
     else:
         histo = dict()
         histo = {i: 0 for i in range(maxlevel + 1)}
-        if len(files) == 1:
-            (common,) = files
-        else:
-            common = _commonpath(files)
-        maxlevel = common.count(b'/')
         for file in files:
             parts = file.split(b'/')
             for level in range(maxlevel + 1):
@@ -361,11 +341,11 @@ def _guess_patch_strip_level(filesstr, src_dir):
 
 
 def _source_files_from_patch_file(path):
-    re_source_files = re.compile('^--- ([^\n\t]+)')
+    re_files = re.compile('^(?:---|\+\+\+) ([^\n\t]+)')
     files = set()
     with open(path) as f:
         files = {m.group(1) for l in f.readlines()
-                 for m in [re_source_files.search(l)]
+                 for m in [re_files.search(l)]
                  if m and m.group(1) != '/dev/null'}
     return files
 
