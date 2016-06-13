@@ -294,7 +294,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     package_dicts = {}
 
     # searching is faster than listing all packages
-    all_packages = [match["name"] for match in client.search({"name": packages}, "or")]
+    print(packages)
+    all_packages = []
+    for package in packages:
+        if not ':' in package:
+            all_packages.extend([match["name"] for match in client.search({"name": [package]})])
     all_packages_lower = [i.lower() for i in all_packages]
 
     created_recipes = []
@@ -336,7 +340,6 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if version_compare:
                 version_compare(versions)
             if version:
-                [version] = version
                 if version not in versions:
                     sys.exit("Error: Version %s of %s is not available on PyPI."
                              % (version, package))
@@ -420,22 +423,17 @@ def add_parser(repos):
     )
     pypi.add_argument(
         "packages",
-        action="store",
         nargs='+',
         help="""PyPi packages to create recipe skeletons for.
                 You can also specify package[extra,...] features.""",
     ).completer = PyPIPackagesCompleter
     pypi.add_argument(
         "--output-dir",
-        action="store",
-        nargs=1,
         help="Directory to write recipes to (default: %(default)s).",
         default=".",
     )
     pypi.add_argument(
         "--version",
-        action="store",
-        nargs=1,
         help="Version to use. Applies to all packages.",
     )
     pypi.add_argument(
@@ -446,7 +444,6 @@ def add_parser(repos):
     )
     pypi.add_argument(
         "--pypi-url",
-        action="store",
         default='https://pypi.python.org/pypi',
         help="URL to use for PyPI (default: %(default)s).",
     )

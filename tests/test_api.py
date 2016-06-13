@@ -68,7 +68,32 @@ def test_recipe_builds(recipe):
     api.build(recipe, verbose=True)
 
 
-def test_skeletonize_auto():
+repo_packages = [('', 'pypi', 'pip'),
+                 ('r', 'cran', 'nmf'),
+                 ('perl', 'cpan', 'Struct-Path'),
+                 # ('lua', luarocks', 'LuaSocket'),
+                ]
+
+@pytest.mark.parametrize("prefix,repo,package", repo_packages)
+def test_skeletonize_specific_repo(prefix, repo, package):
     with TemporaryDirectory() as tmp:
-        api.skeletonize("sympy", output_dir=tmp)
-        assert os.path.isdir(os.path.join(tmp, "sympy"))
+        api.skeletonize(package, repo=repo, output_dir=tmp)
+        try:
+            package_name = "-".join([prefix, package]) if prefix else package
+            assert os.path.isdir(os.path.join(tmp, package_name.lower()))
+        except:
+            print(os.listdir(tmp))
+            raise
+
+
+# MCS 20160613 - disabling this for now.  Might be cute one day.
+# @pytest.mark.parametrize("prefix,repo,package", repo_packages)
+# def test_skeletonize_auto(prefix, repo, package):
+#     with TemporaryDirectory() as tmp:
+#         api.skeletonize(package, repo="auto", output_dir=tmp)
+#         try:
+#             package_name = "-".join([prefix, package]) if prefix else package
+#             assert os.path.isdir(os.path.join(tmp, package_name.lower()))
+#         except:
+#             print(os.listdir(tmp))
+#             raise

@@ -227,27 +227,20 @@ def add_parser(repos):
     )
     cran.add_argument(
         "packages",
-        action="store",
         nargs='+',
         help="""CRAN packages to create recipe skeletons for.""",
     ).completer = CRANPackagesCompleter
     cran.add_argument(
         "--output-dir",
-        action="store",
-        nargs=1,
         help="Directory to write recipes to (default: %(default)s).",
         default=".",
     )
     cran.add_argument(
         "--version",
-        action="store",
-        nargs=1,
         help="Version to use. Applies to all packages.",
     )
     cran.add_argument(
         "--git-tag",
-        action="store",
-        nargs=1,
         help="Git tag to use for GitHub recipes.",
     )
     cran.add_argument(
@@ -258,7 +251,6 @@ def add_parser(repos):
     )
     cran.add_argument(
         "--cran-url",
-        action="store",
         default='http://cran.r-project.org/',
         help="URL to use for CRAN (default: %(default)s).",
     )
@@ -452,17 +444,15 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
         package_list)}
 
 
-def skeletonize(packages, output_dir=".", git_tag=None, all_urls=False,
-                cran_url="http://cran.r-project.org", recursive=False, archive=True,
-                version_compare=False, update_outdated=False):
+def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=False,
+                cran_url="http://cran.r-project.org/", recursive=False, archive=True,
+                version_compare=False, update_outdated=False, **kwargs):
     if len(packages) > 1 and version_compare:
         parser.error("--version-compare only works with one package at a time")
     if not update_outdated and not packages:
         parser.error("At least one package must be supplied")
 
     package_dicts = {}
-
-    [output_dir] = output_dir
 
     cran_metadata = get_cran_metadata(cran_url, output_dir)
 
@@ -569,7 +559,6 @@ def skeletonize(packages, output_dir=".", git_tag=None, all_urls=False,
 
         if version:
             raise NotImplementedError("Package versions from CRAN are not yet implemented")
-            [version] = version
             d['version'] = version
 
         d['cran_version'] = cran_package['Version']
