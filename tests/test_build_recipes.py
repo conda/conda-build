@@ -63,7 +63,8 @@ def test_output_build_path_git_source():
                                       sys.version_info.major, sys.version_info.minor))
     if PY3:
         output = output.decode("UTF-8")
-    assert output.rstrip() == test_path
+        error = error.decode("UTF-8")
+    assert output.rstrip() == test_path, error
 
 
 @pytest.mark.skipif(sys.platform == "win32",
@@ -102,6 +103,8 @@ def test_cached_source_not_interfere_with_versioning():
             if PY3:
                 output = output.decode("UTF-8")
             assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
+    except:
+        raise
     finally:
         os.chdir(basedir)
 

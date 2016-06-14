@@ -367,9 +367,9 @@ def create_env(prefix, specs, clear_cache=True):
     if not isdir(prefix):
         os.makedirs(prefix)
     if on_win:
-        shell="cmd.exe"
+        shell = "cmd.exe"
     else:
-        shell="bash"
+        shell = "bash"
     symlink_conda(prefix, sys.prefix, shell)
 
 
