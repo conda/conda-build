@@ -155,9 +155,12 @@ def git_source(meta, recipe_dir, verbose=False):
     if checkout and verbose:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR], stdout=stdout)
+    check_call([git, 'clone', cache_repo_arg, WORK_DIR], stdout=stdout)
     if checkout:
         check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout)
+
+    # Submodules must be updated after checkout.
+    check_call([git, 'submodule', 'update', '--init', '--recursive'], cwd=WORK_DIR, stdout=stdout)
 
     git_info(verbose=verbose)
 
