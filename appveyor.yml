@@ -57,6 +57,7 @@ install:
   - conda update -q conda
   - git clone https://github.com/conda/conda
   - cd conda
+  - git checkout 4.1.0
   - python setup.py install
   - cd ../
   - conda info

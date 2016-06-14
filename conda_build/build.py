@@ -366,7 +366,11 @@ def create_env(prefix, specs, clear_cache=True):
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
-    symlink_conda(prefix, sys.prefix)
+    if on_win:
+        shell="cmd.exe"
+    else:
+        shell="bash"
+    symlink_conda(prefix, sys.prefix, shell)
 
 
 def warn_on_old_conda_build(index):

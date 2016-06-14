@@ -67,6 +67,13 @@ def test_output_build_path_git_source():
 
 
 @pytest.mark.skipif(sys.platform == "win32",
+                    reason="no binary prefix manipulation done on windows.")
+def test_binary_has_prefix_files():
+    cmd = 'conda build --no-anaconda-upload {}/_binary_has_prefix_files'.format(metadata_dir)
+    subprocess.check_call(cmd.split())
+
+
+@pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows permission errors w/ git when removing repo files on cleanup.")
 def test_cached_source_not_interfere_with_versioning():
     """Test that work dir does not cache and cause inaccurate test target"""
