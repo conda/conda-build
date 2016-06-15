@@ -423,8 +423,7 @@ def activate_or_deactivate_env(action, env_name_or_path=""):
             # this method simplifies dealing with str vs bytestring on Py3.
             vars = subprocess.getoutput(cmd).replace("\r\n", "\n")
         else:
-            vars = subprocess.check_output(cmd.split(),
-                                           env=os.environ).replace("\r\n", "\n")
+            vars = subprocess.check_output(cmd).replace("\r\n", "\n")
     else:
         cmd = "source {0}/bin/{1} {2} && env".format(sys.prefix, action, env_name_or_path)
         vars = subprocess.check_output(["bash", "-c", cmd], env=os.environ)

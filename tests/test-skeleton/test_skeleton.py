@@ -20,7 +20,7 @@ def tmpdir(request):
 
 
 def test_skeleton_by_name(tmpdir):
-    cmd = "conda skeleton pypi --output-dir {} conda".format(tmpdir)
+    cmd = "conda skeleton pypi --output-dir {} pip".format(tmpdir)
     subprocess.check_call(cmd.split())
 
 
