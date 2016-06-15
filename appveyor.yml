@@ -47,7 +47,7 @@ install:
   - python -c "import sys; print(sys.prefix)"
   - conda install -q pytest pytest-cov requests pycrypto git anaconda-client
   # this is to ensure dependencies
-  - conda install -q conda-build
+  - conda install -q conda-build=1.20.3
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
   - python setup.py install
