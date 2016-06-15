@@ -7,10 +7,10 @@ import sys
 import warnings
 from collections import defaultdict
 from os.path import join, normpath
-from subprocess import STDOUT, check_output, CalledProcessError, Popen, PIPE
+import subprocess
 
 import conda.config as cc
-from conda.compat import text_type
+from conda.compat import text_type, PY3
 
 from conda_build import external
 from conda_build import source
@@ -63,12 +63,12 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
-        current_commit = check_output(["git", "log", "-n1", "--format=%H"],
-                                      env=env, stderr=STDOUT)
+        current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"],
+                                      env=env, stderr=subprocess.STDOUT)
         current_commit = current_commit.decode('utf-8')
-        expected_tag_commit = check_output(["git", "log", "-n1", "--format=%H",
+        expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H",
                                             expected_rev],
-                                           env=env, stderr=STDOUT)
+                                           env=env, stderr=subprocess.STDOUT)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
         if current_commit != expected_tag_commit:
@@ -76,8 +76,8 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
 
         # Verify correct remote url. Need to find the git cache directory,
         # and check the remote from there.
-        cache_details = check_output(["git", "remote", "-v"], env=env,
-                                     stderr=STDOUT)
+        cache_details = subprocess.check_output(["git", "remote", "-v"], env=env,
+                                     stderr=subprocess.STDOUT)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
 
@@ -85,15 +85,19 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
             # On Windows, subprocess env can't handle unicode.
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-        remote_details = check_output(["git", "--git-dir", cache_dir, "remote", "-v"], env=env,
-                                                 stderr=STDOUT)
+        remote_details = subprocess.check_output(["git", "--git-dir", cache_dir, "remote", "-v"],
+                                                 env=env, stderr=subprocess.STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
 
         # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
         # know how to normalize it.  Need to convert it to a windows path.
         if sys.platform == 'win32' and remote_url.startswith('/'):
-            remote_url = check_output(["cygpath", '-w', remote_url]).rstrip().rstrip("\\")
+            cmd = "cygpath -w {0}".format(remote_url)
+            if PY3:
+                remote_url = subprocess.getoutput(cmd)
+            else:
+                remote_url = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
 
         if os.path.exists(remote_url):
             # Local filepaths are allowed, but make sure we normalize them
@@ -106,7 +110,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
             logging.debug("Remote: " + remote_url.lower() + "\n")
             logging.debug("git_url: " + git_url.lower() + "\n")
             return False
-    except CalledProcessError as error:
+    except subprocess.CalledProcessError as error:
         logging.warn("Error obtaining git information.  Error was: ")
         logging.warn(error)
         return False
@@ -131,8 +135,8 @@ def get_git_info(repo):
     env['GIT_DIR'] = repo
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
-    process = Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                    stdout=PIPE, stderr=PIPE,
+    process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
@@ -142,8 +146,8 @@ def get_git_info(repo):
         d.update(dict(zip(keys, parts)))
 
     # get the _full_ hash of the current HEAD
-    process = Popen(["git", "rev-parse", "HEAD"],
-                    stdout=PIPE, stderr=PIPE, env=env)
+    process = subprocess.Popen(["git", "rev-parse", "HEAD"],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
 
@@ -256,6 +260,12 @@ def meta_vars(meta):
         if os.path.exists(git_url):
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
+            if sys.platform == 'win32':
+                cmd = "cygpath -w {0}".format(git_url)
+                if PY3:
+                    git_url = subprocess.getoutput(cmd)
+                else:
+                    git_url = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
 
         _x = False
 
@@ -279,8 +289,8 @@ def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
-        out, err = Popen('sysctl -n hw.logicalcpu', shell=True,
-                         stdout=PIPE).communicate()
+        out, err = subprocess.Popen('sysctl -n hw.logicalcpu', shell=True,
+                         stdout=subprocess.PIPE).communicate()
         return out.decode('utf-8').strip()
     else:
         try:
@@ -364,6 +374,70 @@ def system_vars(env_dict, prefix):
     d.update(compiler_vars)
 
     return d
+
+
+# http://code.activestate.com/recipes/576644-diff-two-dictionaries/#c9
+def _dict_diff(d1, d2):
+    """Shows entries that have changed or been added in d2 relative to d1"""
+    both = set(d1.keys()) & set(d2.keys())
+    diff = {k: d2[k] for k in both if d1[k] != d2[k]}
+    diff.update({k: d2[k] for k in set(d2.keys()) - both})
+    return diff
+
+
+def _set_environ_from_subprocess_values(vars):
+    """
+    Vars is an unprocessed string of envrionment variable output, such as from ```set```
+    on Windows, or ```env``` elsewhere
+    """
+    start_environ = os.environ
+    vars = vars.split("\n")
+    modified_environ = {var.split("=")[0].strip(): var.split("=")[1].strip()
+                        for var in vars if "=" in var}
+
+    # the diff is the only part we'll set for the actual build environment - mind you,
+    #   the current process is not the actual build environment.  That is always a native
+    #   shell subprocess.
+    diff = _dict_diff(start_environ, modified_environ)
+
+    # modify the current process with the activated/deactivated values
+    for key, value in modified_environ.items():
+        os.environ[key] = value
+
+    return diff
+
+
+def activate_or_deactivate_env(action, env_name_or_path=""):
+    """
+    Strategy is to open a subprocess, run activate, record the variables,
+    then apply them in our process
+
+    action should be "activate" or "deactivate"
+    env_name_or_path should only be provided for activation.
+    """
+    if sys.platform == "win32":
+        cmd = '"{0}\\Scripts\\{1}.bat" "{2}" && set'.format(sys.prefix,
+                                                            action,
+                                                            env_name_or_path)
+        if PY3:
+            # this method simplifies dealing with str vs bytestring on Py3.
+            vars = subprocess.getoutput(cmd).replace("\r\n", "\n")
+        else:
+            vars = subprocess.check_output(cmd).replace("\r\n", "\n")
+    else:
+        cmd = "source {0}/bin/{1} {2} && env".format(sys.prefix, action, env_name_or_path)
+        vars = subprocess.check_output(["bash", "-c", cmd], env=os.environ)
+    if PY3 and hasattr(vars, "decode"):
+        vars = vars.decode("UTF-8")
+    return _set_environ_from_subprocess_values(vars)
+
+
+def activate_env(env_name_or_path):
+    return activate_or_deactivate_env("activate", env_name_or_path)
+
+
+def deactivate_env():
+    return activate_or_deactivate_env("deactivate")
 
 
 if __name__ == '__main__':

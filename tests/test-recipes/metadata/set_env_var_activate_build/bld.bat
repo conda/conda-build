@@ -1,0 +1,1 @@
+if "%TEST_VAR%" == "" exit 1

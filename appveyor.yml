@@ -53,10 +53,11 @@ install:
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - conda config --set always_yes yes
+  # test with master of conda
   - conda update -q conda
   - git clone https://github.com/conda/conda
   - cd conda
-  - git checkout 4.0.8
+  - git checkout 4.1.0
   - python setup.py install
   - cd ../
   - conda info
@@ -64,7 +65,7 @@ install:
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov git anaconda-client
+  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client
   # this is to ensure dependencies
   - conda install -q conda-build
   - python --version

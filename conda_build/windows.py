@@ -186,10 +186,12 @@ def kill_processes(process_names=["msbuild.exe"]):
             continue
 
 
-def build(m, bld_bat, dirty=False):
-    env = dict(os.environ)
-    env.update(environ.get_dict(m, dirty=dirty))
-    env = environ.prepend_bin_path(env, config.build_prefix, True)
+def build(m, bld_bat, dirty=False, env_diff=None):
+    if not env_diff:
+        env_diff = {}
+    env = environ.get_dict(m, dirty=dirty)
+    # env_diff contains activation info, among any other env variables set by activation scripts
+    env.update(env_diff)
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
