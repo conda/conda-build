@@ -172,6 +172,7 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
     finally:
         conda.install.rm_rf(prefix)
 
+
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
