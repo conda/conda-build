@@ -1,3 +1,56 @@
+2016-06-15 1.21.0:
+------------------
+
+New stuff:
+----------
+ * Add FEATURE_ environment variables for MKL, opt and debugging #978
+ * add info/about.json file that contains the "about" section of meta.yaml #941
+ * allow ```--dirty``` flag to be passed to ```conda build``` command. Skips
+   download, and provides DIRTY environment variable in build scripts. #973
+ * Add msys2 paths to build and test environments #979
+ * add new x86 and x86_64 selectors for Intel platforms #986
+ * keep original meta.yaml in recipe folder of package; create meta.yaml.rendered in recipe folder.  Neither exist when recipe not included.  #1004
+ * add ignore_prefix_files key to build in meta.yaml. Can ignore list of files,
+   or True to ignore all prefix files. #1008 #1009
+ * Automatically determine patch strip level #1011
+
+Bug fixes/Improvements:
+-----------------------
+ * Lightened requirement that x.x be defined in both build and runtime sections.  #650
+ * Remove info/recipe.json from build conda packages.  Superseded by info/recipe/meta.yaml.rendered.  #781
+ * Search for single and double backslashes when finding files that need prefix replacement #962
+ * Track undefined jinja variables and use them to decide whether to download source #964
+ * handle patches with p0 or p1 #969, #1011, #1020
+ * only set os.environ for non-None variables #981
+ * Don't use long prefixes on windows #985
+ * Fix missing encoding argument #987
+ * Respect proxy variables more appropriately #989
+ * Search packages on PyPI, rather than listing them all.  Should avoid some timeout errors there. #991
+ * Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
+ * improve logic handling "dirty" downloading.  Always download when not dirty.  #995
+ * Fix post-build variables when no build section existed in original meta.yaml #999
+ * Activate _build and _test environments approriately, rather than manipulating PATH directly #1002
+ * Don't clone git submodules until after first checkout #1025
+ * Move check_install over from conda.install #1027
+
+Deprecations:
+-------------
+ * __conda_version__.txt and other post-build methods of altering the build
+   string are marked as deprecated. Prefer Jinja2 templates where possible.
+   Create issues if this breaks your work.
+
+Contributors:
+-------------
+ * @filmor
+ * @ilanschnell
+ * @jschueller
+ * @mingwandroid
+ * @msarahan
+ * @pelson
+ * @stuarteberg
+ * @whitequark
+
+
 2016-05-13 1.20.3:
 ------------------
 Features:
