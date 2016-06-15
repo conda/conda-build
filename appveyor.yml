@@ -34,20 +34,20 @@ install:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - conda config --set always_yes yes
   # test with master of conda
-  - conda update -q conda
-  - conda info
-  - conda update -q --all
-  - python -c "import sys; print(sys.version)"
-  - python -c "import sys; print(sys.executable)"
-  - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client python=3.4
+  - %CONDA_ROOT%\conda update -q conda
+  - %CONDA_ROOT%\conda info
+  - %CONDA_ROOT%\conda update -q --all
+  - %CONDA_ROOT%\python -c "import sys; print(sys.version)"
+  - %CONDA_ROOT%\python -c "import sys; print(sys.executable)"
+  - %CONDA_ROOT%\python -c "import sys; print(sys.prefix)"
+  - %CONDA_ROOT%\conda install -q pytest pytest-cov requests pycrypto git anaconda-client python=3.4
   # this is to ensure dependencies
-  - conda install -q conda-build=1.20.3
-  - python --version
-  - python -c "import struct; print(struct.calcsize('P') * 8)"
-  - python setup.py install
+  - %CONDA_ROOT%\conda install -q conda-build=1.20.3
+  - %CONDA_ROOT%\python --version
+  - %CONDA_ROOT%\python -c "import struct; print(struct.calcsize('P') * 8)"
+  - %CONDA_ROOT%\python setup.py install
   - set PATH
-  - conda build --version
+  - %CONDA_ROOT%\Scripts\conda build --version
   - call appveyor\setup_x64.bat
   - copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
 
