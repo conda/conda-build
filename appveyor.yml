@@ -40,7 +40,7 @@ install:
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client
+  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client python=3.4
   # this is to ensure dependencies
   - conda install -q conda-build=1.20.3
   - python --version
