@@ -1,0 +1,11 @@
+package:
+  name: conda-build-test-environment-vars-in-build-env
+  version: 1.0
+
+requirements:
+  build:
+    # having this as a build requirement should use the activate scripts that it contains
+    - _conda-build-test-environment-vars-in-build-env
+
+about:
+  summary: test that scripts with activate.d and deactivate.d provide environment variables appropriately

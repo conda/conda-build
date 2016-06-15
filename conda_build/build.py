@@ -22,7 +22,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked, move_to_trash
+from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
 from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
@@ -30,6 +30,7 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
 from conda_build.config import config
+from conda_build.environ import activate_env, deactivate_env
 from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
@@ -365,6 +366,11 @@ def create_env(prefix, specs, clear_cache=True):
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
+    if on_win:
+        shell = "cmd.exe"
+    else:
+        shell = "bash"
+    symlink_conda(prefix, sys.prefix, shell)
 
 
 def warn_on_old_conda_build(index):
@@ -462,22 +468,23 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             create_env(config.build_prefix,
                     [ms.spec for ms in m.ms_depends('build')])
 
+            # modify os.environ to have our new environment be active
+            #    This is important for setting variables from activate.d and deactivate.d
+            # this modifies os.environ in place, and provides a diff of variables to actually
+            #    include in the build environment later
+            # Keeping all environment variables would defeat some isolation that we want.
+            env_diff = activate_env(config.build_prefix)
+
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
                 # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
                 # dependencies.
-                _old_path = os.environ['PATH']
-                try:
-                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                            config.build_prefix)['PATH']
-                    m, need_source_download = parse_or_try_download(m,
-                                                                    no_download_source=False,
-                                                                    force_download=True,
-                                                                    verbose=verbose,
-                                                                    dirty=dirty)
-                    assert not need_source_download, "Source download failed.  Please investigate."
-                finally:
-                    os.environ['PATH'] = _old_path
+                m, need_source_download = parse_or_try_download(m,
+                                                                no_download_source=False,
+                                                                force_download=True,
+                                                                verbose=verbose,
+                                                                dirty=dirty)
+                assert not need_source_download, "Source download failed.  Please investigate."
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %
@@ -528,9 +535,11 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
                         bf.write(script)
                 import conda_build.windows as windows
-                windows.build(m, build_file, dirty=dirty)
+                windows.build(m, build_file, dirty=dirty, env_diff=env_diff)
             else:
                 env = environ.get_dict(m, dirty=dirty)
+                env.update(env_diff)
+
                 build_file = join(m.path, 'build.sh')
 
                 if script:
@@ -543,6 +552,10 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     cmd = [shell_path, '-x', '-e', build_file]
 
                     _check_call(cmd, env=env, cwd=src_dir)
+
+        # this is necessary to return our current os.environ to normal.
+        #    We are discarding the list of changed values.
+        deactivate_env()
 
         if post in [True, None]:
             if post:
@@ -562,8 +575,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             files2 = prefix_files()
             if any(config.meta_dir in join(config.build_prefix, f) for f in
                     files2 - files1):
-                sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.  This error
-    usually comes from using conda in the build script.  Avoid doing this, as it
+                sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
+    This error usually comes from using conda in the build script.  Avoid doing this, as it
     can lead to packages that include their dependencies.""" %
                     (tuple(f for f in files2 - files1 if config.meta_dir in
                         join(config.build_prefix, f)),)))
@@ -677,9 +690,11 @@ def test(m, move_broken=True):
             specs += ['lua %s*' % environ.get_lua_ver()]
 
         create_env(config.test_prefix, specs)
+        env_diff = activate_env(config.test_prefix)
 
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))
+        env.update(env_diff)
 
         # prepend bin (or Scripts) directory
         env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
@@ -732,6 +747,10 @@ def test(m, move_broken=True):
                     subprocess.check_call(cmd, env=env, cwd=tmp_dir)
                 except subprocess.CalledProcessError:
                     tests_failed(m, move_broken=move_broken)
+
+        # this is necessary to return our current os.environ to normal.
+        #    We are discarding the list of changed values.
+        deactivate_env()
 
     print("TEST END:", m.dist())
 

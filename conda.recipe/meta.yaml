@@ -17,7 +17,7 @@ requirements:
   run:
     - python
     - psutil
-    - conda
+    - conda  >= 4.1
     - jinja2
     - patchelf      [linux]
 
