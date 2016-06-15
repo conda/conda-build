@@ -42,14 +42,14 @@ def test_header_finding():
     assert "forcing --without-libyaml" not in output
 
 
-def test_CONDA_BLD_PATH():
-    env = dict(os.environ)
-    cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
-    with TemporaryDirectory() as tmp:
-        env["CONDA_BLD_PATH"] = tmp
-        subprocess.check_call(cmd.split(), env=env)
-        # trick is actually a second pass, to make sure that deletion/trash moving is working OK.
-        subprocess.check_call(cmd.split(), env=env)
+# def test_CONDA_BLD_PATH():
+#     env = dict(os.environ)
+#     cmd = 'conda build --no-anaconda-upload {}/source_git_jinja2'.format(metadata_dir)
+#     with TemporaryDirectory() as tmp:
+#         env["CONDA_BLD_PATH"] = tmp
+#         subprocess.check_call(cmd.split(), env=env)
+#         # trick is actually a second pass, to make sure that deletion/trash moving is working OK.
+#         subprocess.check_call(cmd.split(), env=env)
 
 
 # TODO: this does not currently take into account post-build versioning changes with __conda_? files

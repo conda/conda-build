@@ -155,9 +155,12 @@ def git_source(meta, recipe_dir, verbose=False):
     if checkout and verbose:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', '--recursive', cache_repo_arg, WORK_DIR], stdout=stdout)
+    check_call([git, 'clone', cache_repo_arg, WORK_DIR], stdout=stdout)
     if checkout:
         check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout)
+
+    # Submodules must be updated after checkout.
+    check_call([git, 'submodule', 'update', '--init', '--recursive'], cwd=WORK_DIR, stdout=stdout)
 
     git_info(verbose=verbose)
 
@@ -314,21 +317,6 @@ def _ensure_unix_line_endings(path):
     return out_path
 
 
-def _commonpath(paths):
-    """Python 2 doesn't have os.path.commonpath(), so roll our own"""
-    folders = [path.split(b'/') for path in paths]
-    minfolders = min(folders)
-    maxfolders = max(folders)
-    common = []
-    for minf, maxf in zip(minfolders, maxfolders[:len(minfolders)]):
-        if minf != maxf:
-            break
-        common.append(minf)
-    if len(common):
-        return b'/'.join(common) + b'/'
-    return b''
-
-
 def _guess_patch_strip_level(filesstr, src_dir):
     """ Determine the patch strip level automatically. """
     maxlevel = None
@@ -342,11 +330,6 @@ def _guess_patch_strip_level(filesstr, src_dir):
     else:
         histo = dict()
         histo = {i: 0 for i in range(maxlevel + 1)}
-        if len(files) == 1:
-            (common,) = files
-        else:
-            common = _commonpath(files)
-        maxlevel = common.count(b'/')
         for file in files:
             parts = file.split(b'/')
             for level in range(maxlevel + 1):
@@ -361,11 +344,11 @@ def _guess_patch_strip_level(filesstr, src_dir):
 
 
 def _source_files_from_patch_file(path):
-    re_source_files = re.compile('^--- ([^\n\t]+)')
+    re_files = re.compile('^(?:---|\+\+\+) ([^\n\t]+)')
     files = set()
     with open(path) as f:
         files = {m.group(1) for l in f.readlines()
-                 for m in [re_source_files.search(l)]
+                 for m in [re_files.search(l)]
                  if m and m.group(1) != '/dev/null'}
     return files
 

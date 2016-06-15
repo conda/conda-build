@@ -12,15 +12,16 @@ import os
 from os.path import abspath, join, dirname, exists, basename
 from collections import defaultdict
 from operator import itemgetter
+import tempfile
 
 from conda.misc import which_package
 from conda.compat import iteritems
-from conda.cli.common import add_parser_prefix, get_prefix, InstalledPackages
+from conda.cli.common import add_parser_prefix, get_prefix, InstalledPackages, specs_from_args
 from conda.cli.conda_argparse import ArgumentParser
-import conda.install as ci
+import conda.install
+from conda import plan
 
 from conda.api import get_index
-from conda.cli.install import check_install
 from conda.config import get_default_urls
 
 from conda_build.main_build import args_func
@@ -157,6 +158,21 @@ Tools for investigating conda channels.
     args_func(args, p)
 
 
+def check_install(packages, platform=None, channel_urls=(), prepend=True,
+                  minimal_hint=False):
+    prefix = tempfile.mkdtemp('conda')
+    try:
+        specs = specs_from_args(packages)
+        index = get_index(channel_urls=channel_urls, prepend=prepend,
+                          platform=platform, prefix=prefix)
+        actions = plan.install_actions(prefix, index, specs, pinned=False,
+                                       minimal_hint=minimal_hint)
+        plan.display_actions(actions, index)
+        return actions
+    finally:
+        conda.install.rm_rf(prefix)
+
+
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
@@ -282,7 +298,7 @@ def execute(args, parser):
             sys.exit(not test_installable(channel=args.channel, verbose=args.verbose))
 
     prefix = get_prefix(args)
-    installed = ci.linked_data(prefix)
+    installed = conda.install.linked_data(prefix)
     installed = {rec['name']: dist for dist, rec in iteritems(installed)}
 
     if not args.packages and not args.untracked and not args.all:
