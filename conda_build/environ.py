@@ -93,7 +93,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
         # know how to normalize it.  Need to convert it to a windows path.
         if sys.platform == 'win32' and remote_url.startswith('/'):
-            cmd = "cygpath -w remote_url"
+            cmd = "cygpath -w {0}".format(remote_url)
             if PY3:
                 remote_url = subprocess.getoutput(cmd)
             else:
@@ -261,7 +261,7 @@ def meta_vars(meta):
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
             if sys.platform == 'win32':
-                cmd = "cygpath -w remote_url"
+                cmd = "cygpath -w {0}".format(git_url)
                 if PY3:
                     git_url = subprocess.getoutput(cmd)
                 else:
