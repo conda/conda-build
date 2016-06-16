@@ -12,7 +12,7 @@ import shutil
 
 from conda.cli.common import add_parser_prefix, get_prefix
 from conda.cli.conda_argparse import ArgumentParser
-from conda_build.main_build import args_func
+from conda_build.cli.main_build import args_func
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
 

@@ -343,7 +343,7 @@ def get_build_index(clear_cache=True):
                      prepend=not override_channels)
 
 
-def create_env(prefix, specs, clear_cache=True):
+def create_env(prefix, specs, clear_cache=True, verbose=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -469,7 +469,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             # Display the name only
             # Version number could be missing due to dependency on source info.
             create_env(config.build_prefix,
-                    [ms.spec for ms in m.ms_depends('build')])
+                       [ms.spec for ms in m.ms_depends('build')],
+                       verbose=verbose)
 
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
@@ -633,7 +634,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
     return True
 
 
-def test(m, move_broken=True, activate=True):
+def test(m, move_broken=True, activate=True, verbose=False):
     '''
     Execute any test scripts for the given package.
 
@@ -695,7 +696,7 @@ def test(m, move_broken=True, activate=True):
             # not sure how this shakes out
             specs += ['lua %s*' % environ.get_lua_ver()]
 
-        create_env(config.test_prefix, specs)
+        create_env(config.test_prefix, specs, verbose=verbose)
 
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))

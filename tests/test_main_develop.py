@@ -5,7 +5,7 @@ import os
 import shutil
 from os.path import dirname, join, exists
 
-from conda_build.main_develop import uninstall, write_to_conda_pth
+from conda_build.cli.main_develop import uninstall, write_to_conda_pth
 
 import pytest
 

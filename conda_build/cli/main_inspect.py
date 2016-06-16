@@ -23,9 +23,9 @@ from conda.api import get_index
 from conda.cli.install import check_install
 from conda.config import get_default_urls
 
-from conda_build.main_build import args_func
-from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
-from conda_build.macho import get_rpaths, human_filetype
+from conda_build.cli.main_build import args_func
+from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
+from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join
 
 

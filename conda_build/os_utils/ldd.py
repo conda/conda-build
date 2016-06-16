@@ -10,7 +10,7 @@ from conda.misc import untracked
 from conda.install import linked_data
 
 from conda_build import post
-from conda_build.macho import otool
+from conda_build.os_utils.macho import otool
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
 LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')

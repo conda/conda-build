@@ -13,7 +13,7 @@ from conda.fetch import download
 from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
-from conda_build import external
+from conda_build.os_utils import external
 from conda_build.config import config
 from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
 

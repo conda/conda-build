@@ -13,7 +13,7 @@ import conda.config as cc
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from conda.compat import text_type, PY3  # noqa
 
-from conda_build import external
+from conda_build.os_utils import external
 from conda_build import source
 from conda_build import utils
 from conda_build.config import config
