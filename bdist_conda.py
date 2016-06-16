@@ -18,7 +18,7 @@ from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import api, build, pypi, render
 from conda_build.config import config
-from conda_build.main_build import handle_anaconda_upload
+from conda_build.cli.main_build import handle_anaconda_upload
 
 # TODO: Add support for all the options that conda build has
 

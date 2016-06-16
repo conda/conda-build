@@ -18,8 +18,8 @@ from conda.install import delete_trash
 
 import conda_build.api as api
 import conda_build.build as build
-from conda_build.main_render import (set_language_env_vars, RecipeCompleter,
-                                     render_recipe, get_render_parser, bldpkg_path)
+from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
+                                         render_recipe, get_render_parser, bldpkg_path)
 import conda_build.source as source
 from conda_build.utils import find_recipe, get_recipe_abspath
 

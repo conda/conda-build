@@ -15,7 +15,7 @@ from conda.lock import Locked
 
 import conda_build.api as api
 from conda_build.config import config
-from conda_build.main_build import args_func
+from conda_build.cli.main_build import args_func
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 

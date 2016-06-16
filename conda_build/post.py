@@ -18,7 +18,7 @@ from collections import defaultdict
 import mmap
 
 from conda_build.config import config
-from conda_build import external
+from conda_build.os_utils import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
@@ -27,9 +27,9 @@ from conda.misc import walk_prefix
 from conda.utils import md5_file
 
 if sys.platform.startswith('linux'):
-    from conda_build import elf
+    from conda_build.os_utils import elf
 elif sys.platform == 'darwin':
-    from conda_build import macho
+    from conda_build.os_utils import macho
 
 SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
