@@ -360,7 +360,7 @@ def create_env(prefix, specs, clear_cache=True):
         warn_on_old_conda_build(index)
 
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        actions = plan.install_actions(prefix, index, specs)
+        actions = plan.install_actions(prefix, index, specs, force=True)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
     # ensure prefix exists, even if empty, i.e. when specs are empty
