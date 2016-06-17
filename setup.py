@@ -24,7 +24,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     author="Continuum Analytics, Inc.",
-    author_email="ilan@continuum.io",
+    author_email="conda@continuum.io",
     url="https://github.com/conda/conda-build",
     license="BSD",
     classifiers=[
