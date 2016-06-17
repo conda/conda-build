@@ -691,7 +691,6 @@ def test(m, move_broken=True, activate=True):
             specs += ['lua %s*' % environ.get_lua_ver()]
 
         create_env(config.test_prefix, specs)
-
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))
 

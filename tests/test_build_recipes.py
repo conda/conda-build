@@ -48,6 +48,30 @@ def test_output_build_path_git_source():
     assert output.rstrip() == test_path, error
 
 
+def test_build_in_activated_env_restores_activated_env():
+    with TemporaryDirectory() as tmp:
+        env = os.path.join(tmp, "env")
+        subprocess.check_call('conda create -p {} python=2.7'.format(env).split())
+        source = "source " if not sys.platform == 'win32' else ""
+        echo_env = "echo $CONDA_DEFAULT_ENV" if not sys.platform == 'win32' else "set CONDA_DEFAULT_ENV"
+        cmd = """\
+        {source}activate {envdir} && \
+        conda build --no-anaconda-upload {recipe} && \
+        {echo}
+        """.format(source=source,
+                   envdir=env,
+                   recipe=os.path.join(metadata_dir, "source_git_jinja2"),
+                   echo=echo_env)
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE, shell=True)
+        output, error = process.communicate()
+        if PY3:
+            output = output.decode("UTF-8")
+            error = error.decode("UTF-8")
+        sys.stderr.write(output)
+        sys.stderr.write(error)
+        assert output.rstrip().endswith(env), error
+
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="no binary prefix manipulation done on windows.")
 def test_binary_has_prefix_files():
