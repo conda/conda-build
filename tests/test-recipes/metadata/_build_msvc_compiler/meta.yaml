@@ -7,3 +7,6 @@ source:
 
 build:
   msvc_compiler: {{ environ.get('CONDATEST_MSVC_VER') }}
+  script_env:
+    - CONDATEST_MSVC_VER
+    - CL_EXE_VERSION

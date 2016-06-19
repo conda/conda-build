@@ -53,17 +53,17 @@ def test_build_in_activated_env_restores_activated_env():
         env = os.path.join(tmp, "env")
         subprocess.check_call('conda create -p {} python=2.7'.format(env).split())
         source = "source " if not sys.platform == 'win32' else ""
-        echo_env = "echo $CONDA_DEFAULT_ENV" if not sys.platform == 'win32' else "set CONDA_DEFAULT_ENV"
-        cmd = """\
-        {source}activate {envdir} && \
-        conda build --no-anaconda-upload {recipe} && \
-        {echo}
-        """.format(source=source,
-                   envdir=env,
-                   recipe=os.path.join(metadata_dir, "source_git_jinja2"),
-                   echo=echo_env)
-        process = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                   stderr=subprocess.PIPE, shell=True)
+        echo_env = ("echo $CONDA_DEFAULT_ENV" if not sys.platform == 'win32' else
+                    "set CONDA_DEFAULT_ENV")
+        cmd = ("{source}activate {envdir} && "
+               "conda build --no-anaconda-upload {recipe} && "
+               "{echo}").format(source=source, envdir=env,
+                                recipe=os.path.join(metadata_dir, "source_git_jinja2"),
+                                echo=echo_env)
+        shell = ["cmd.exe", "/d", "/c"] if sys.platform == 'win32' else ['bash', '-l', '-c']
+        shell.append(cmd)
+        process = subprocess.Popen(shell, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
         output, error = process.communicate()
         if PY3:
             output = output.decode("UTF-8")
@@ -71,6 +71,13 @@ def test_build_in_activated_env_restores_activated_env():
         sys.stderr.write(output)
         sys.stderr.write(error)
         assert output.rstrip().endswith(env), error
+
+
+def test_build_with_no_activate_does_not_activate():
+    cmd = ('conda build --no-anaconda-upload --no-activate '
+           '{}/_set_env_var_no_activate_build').format(metadata_dir)
+    subprocess.check_call(cmd.split(), cwd=metadata_dir)
+
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="no binary prefix manipulation done on windows.")
@@ -225,8 +232,15 @@ else:
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver):
     env = dict(os.environ)
+    # verify that the correct compiler is available
+    cl_versions = {"9.0": 15,
+                   "10.0": 16,
+                   "11.0": 17,
+                   "12.0": 18,
+                   "14.0": 19}
 
     env['CONDATEST_MSVC_VER'] = msvc_ver
+    env['CL_EXE_VERSION'] = str(cl_versions[msvc_ver])
 
     # Always build Python 2.7 - but set MSVC version manually via Jinja template
     cmd = 'conda build {} --python=2.7 --no-anaconda-upload'.format(
