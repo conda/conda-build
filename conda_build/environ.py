@@ -14,6 +14,7 @@ from conda.compat import text_type, PY3
 
 from conda_build import external
 from conda_build import source
+from conda_build import utils
 from conda_build.config import config
 from conda_build.features import feature_list
 from conda_build.scripts import prepend_bin_path
@@ -93,11 +94,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
         # know how to normalize it.  Need to convert it to a windows path.
         if sys.platform == 'win32' and remote_url.startswith('/'):
-            cmd = "cygpath -w {0}".format(remote_url)
-            if PY3:
-                remote_url = subprocess.getoutput(cmd)
-            else:
-                remote_url = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
+            remote_url = utils.convert_unix_path_to_win(git_url)
 
         if os.path.exists(remote_url):
             # Local filepaths are allowed, but make sure we normalize them
@@ -261,11 +258,7 @@ def meta_vars(meta):
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
             if sys.platform == 'win32':
-                cmd = "cygpath -w {0}".format(git_url)
-                if PY3:
-                    git_url = subprocess.getoutput(cmd)
-                else:
-                    git_url = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
+                remote_url = utils.convert_unix_path_to_win(git_url)
 
         _x = False
 
