@@ -215,6 +215,7 @@ def rec_glob(path, patterns):
             result.extend([os.path.join(d_f[0], f) for f in m])
     return result
 
+
 def convert_unix_path_to_win(path):
     if external.find_executable('cygpath'):
         cmd = "cygpath -w {0}".format(path)

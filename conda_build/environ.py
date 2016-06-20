@@ -255,10 +255,10 @@ def meta_vars(meta):
         git_url = meta.get_value('source/git_url')
 
         if os.path.exists(git_url):
+            if sys.platform == 'win32':
+                git_url = utils.convert_unix_path_to_win(git_url)
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
-            if sys.platform == 'win32':
-                remote_url = utils.convert_unix_path_to_win(git_url)
 
         _x = False
 
