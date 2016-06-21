@@ -144,16 +144,17 @@ def handle_binstar_upload(path, args):
     import subprocess
     from conda_build.external import find_executable
 
+    upload=False
+    # this is the default, for no explicit argument.
+    # remember that args.binstar_upload takes defaults from condarc
     if args.binstar_upload is None:
         args.yes = False
         args.dry_run = False
-#        upload = common.confirm_yn(
-#            args,
-#            message="Do you want to upload this "
-#            "package to binstar", default='yes', exit_no=False)
-        upload = False
+    # rc file has uploading explicitly turned off
+    elif args.binstar_upload is False:
+        print("# Automatic uploading is disabled")
     else:
-        upload = args.binstar_upload
+        upload=True
 
     no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:

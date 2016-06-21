@@ -270,6 +270,25 @@ def test_token_upload():
     .format(token)
     subprocess.check_call(cmd.split())
 
+@pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
+def test_no_anaconda_upload_condarc(service_name):
+    with TemporaryDirectory() as tmp:
+        rcfile = os.path.join(tmp, ".condarc")
+        with open(rcfile, 'w') as f:
+            f.write("{}_upload: False\n".format(service_name))
+        env = os.environ.copy()
+        env["CONDARC"] = rcfile
+        cmd = "conda build {}/empty_sections".format(metadata_dir)
+        process = subprocess.Popen(cmd.split(),
+                                   stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE,
+                                   env=env)
+        output, error = process.communicate()
+        output = output.decode('utf-8')
+        error = error.decode('utf-8')
+        sys.stderr.write(output)
+        assert "Automatic uploading is disabled" in output, error
+
 
 def test_patch_strip_level():
     patchfiles = set(('some/common/prefix/one.txt',
