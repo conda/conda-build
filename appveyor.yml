@@ -55,11 +55,6 @@ install:
   - conda config --set always_yes yes
   # test with master of conda
   - conda update -q conda
-  - git clone https://github.com/conda/conda
-  - cd conda
-  - git checkout 4.1.0
-  - python setup.py install
-  - cd ../
   - conda info
   - conda update -q --all
   - python -c "import sys; print(sys.version)"
