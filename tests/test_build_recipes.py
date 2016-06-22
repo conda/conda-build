@@ -270,6 +270,7 @@ def test_token_upload():
     .format(token)
     subprocess.check_call(cmd.split())
 
+
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
 def test_no_anaconda_upload_condarc(service_name):
     with TemporaryDirectory() as tmp:
