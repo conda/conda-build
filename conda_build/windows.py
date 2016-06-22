@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import re
+import logging
 import sys
 import shutil
 import subprocess
@@ -9,7 +9,7 @@ from os.path import dirname, isdir, isfile, join
 
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
-from distutils.msvc9compiler import query_vcvarsall
+from distutils.msvc9compiler import query_vcvarsall, removeDuplicates, Reg, WINSDK_BASE
 
 import conda.config as cc
 
@@ -17,6 +17,8 @@ from conda_build.config import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
+
+log = logging.getLogger(__file__)
 
 
 assert sys.platform == 'win32'
@@ -62,6 +64,48 @@ def fix_staged_scripts():
         os.remove(join(scripts_dir, fn))
 
 
+def get_vs_vars(version, arch):
+    """This is mostly a copy of distutils' query_vcvarsall.  It is adapted to support
+    the win 7 SDK vs 2010 compiler."""
+    if version != "10.0":
+        result = query_vcvarsall(float(version), arch)
+    else:
+        WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
+                                        'installationfolder')
+        WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
+        vcvarsall = WIN_SDK_71_BAT_PATH
+        arch = '/Release /x86' if arch == 'x86' else '/Release /x64'
+        interesting = set(("include", "lib", "libpath", "path"))
+        result = {}
+
+        log.debug("Calling 'vcvarsall.bat %s' (version=%s)", arch, version)
+        popen = subprocess.Popen('"%s" %s & set' % (vcvarsall, arch),
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
+        try:
+            stdout, stderr = popen.communicate()
+            stdout = stdout.decode("mbcs")
+            for line in stdout.split("\n"):
+                line = Reg.convert_mbcs(line)
+                if '=' not in line:
+                    continue
+                line = line.strip()
+                key, value = line.split('=', 1)
+                key = key.lower()
+                if key in interesting:
+                    if value.endswith(os.pathsep):
+                        value = value[:-1]
+                    result[key] = removeDuplicates(value)
+
+        finally:
+            popen.stdout.close()
+            popen.stderr.close()
+
+        if len(result) != len(interesting):
+            raise ValueError(str(list(result.keys())))
+    return result
+
+
 def msvc_env_cmd(bits, override=None):
     arch_selector = 'x86' if bits == 32 else 'amd64'
 
@@ -99,7 +143,7 @@ def msvc_env_cmd(bits, override=None):
         "MSYS2_ENV_CONV_EXCL": "CL;%MSYS2_ENV_CONV_EXCL%",
         })
 
-    captured_vars = query_vcvarsall(float(version), arch_selector)
+    captured_vars = get_vs_vars(version, arch_selector)
     compiler_vars.update(captured_vars)
     return compiler_vars
 
@@ -126,6 +170,7 @@ def kill_processes(process_names=["msbuild.exe"]):
         except:
             continue
 
+
 def _merge_dicts(d1, d2):
     """Merges d2's contents into d1.  Unlike update, this keeps all entries of both, by performing
     unions of values."""
@@ -138,6 +183,7 @@ def _merge_dicts(d1, d2):
             del d2[key]
     d1.update(d2)
     return d1
+
 
 def build(m, bld_bat, dirty=False, activate=True):
     env = environ.get_dict(m, dirty=dirty)
@@ -155,12 +201,14 @@ def build(m, bld_bat, dirty=False, activate=True):
             # more debuggable with echo on
             fo.write('@echo on\n')
 
-            compiler_vars = msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None))
+            compiler_vars = msvc_env_cmd(bits=cc.bits,
+                                         override=m.get_value('build/msvc_compiler', None))
             # ensure that all values are uppercase, for sake of merge.
             env = {key.upper(): value for key, value in env.items()}
             compiler_vars = {key.upper(): value for key, value in compiler_vars.items()}
 
-            # this is a union of all values from env and from compiler vars.  env should take priority.
+            # this is a union of all values from env and from compiler vars.
+            #    env should take priority.
             env = _merge_dicts(env, compiler_vars)
 
             for key, value in env.items():
@@ -170,7 +218,6 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write('\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
-
 
         cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
