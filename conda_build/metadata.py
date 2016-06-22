@@ -371,6 +371,7 @@ class MetaData(object):
         """
         if not self.meta_path:
             return
+
         self.meta = parse(self._get_contents(permit_undefined_jinja), path=self.meta_path)
 
         if (isfile(self.requirements_path) and
@@ -693,3 +694,28 @@ class MetaData(object):
         String representation of the MetaData.
         '''
         return self.__str__()
+
+    def uses_vcs(self):
+        """returns true if recipe contains metadata associated with version control systems.
+        If this metadata is present, a download/copy will be forced in parse_or_try_download.
+        """
+        vcs_types = ["git", "svn", "hg"]
+        if "source" in self.meta:
+            for vcs in vcs_types:
+                if vcs + "_url" in self.meta["source"]:
+                    # translate command name to package name.
+                    # If more than hg, need a dict for this.
+                    if vcs == "hg":
+                        vcs = "mercurial"
+                    return vcs
+
+        # We would get here if we use Jinja2 templating, but specify source with path.
+        with open(self.meta_path) as f:
+            metayaml = f.read()
+            for vcs in vcs_types:
+                matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
+                if len(matches) > 0:
+                    if vcs == "hg":
+                        vcs = "mercurial"
+                    return vcs
+        return None
