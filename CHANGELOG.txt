@@ -1,3 +1,21 @@
+2016-06-22 1.21.1:
+------------------
+
+Bug fixes / Improvements:
+-------------------------
+
+ * Simplify MSVC activation, using distutil's existing logic #1036
+ * Correctly interpret paths returned from git on windows, trying cygpath, falling back to conda regex #1037
+ * Fix ability to disable anaconda upload in condarc #1043
+ * Change environment activation to call activation in scripts, rather than having Python store variables #1044
+
+Contributors:
+-------------
+ * @msarahan
+ * @mwcraig
+ * @patricksnape
+
+
 2016-06-15 1.21.0:
 ------------------
 
