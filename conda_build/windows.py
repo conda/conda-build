@@ -160,7 +160,7 @@ def msvc_env_cmd(bits, override=None):
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
 
-    return '\n'.join(msvc_env_lines)
+    return '\n'.join(msvc_env_lines) + '\n'
 
 
 def kill_processes(process_names=["msbuild.exe"]):
