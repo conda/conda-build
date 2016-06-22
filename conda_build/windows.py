@@ -31,29 +31,6 @@ VS_VERSION_STRING = {
 }
 
 
-def shorten_path(path):
-    """
-    Given a PATH from windows, this tries to shorten greedy programs, so
-    that activation will succeed.
-
-    returns a dictionary of newly defined or changed variables
-    """
-    replacements = {}
-    # Intel redistributables occupy about 500 characters more than they need to.
-    if ":\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\" in path:
-        path = path.replace(":\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\",
-                        "%%IR%%")
-        replacements["IR"] = ":\\Program Files (x86)\\Common Files\\Intel\\Shared Libraries\\redist\\"
-
-    path = path.replace("Program Files", "%%PF%%")
-    replacements["PF"] = "Program Files"
-
-    path = path.replace("WINDOWS\\System32", "%%S32%%")
-    replacements["S32"] = "WINDOWS\\System32"
-
-    return path, replacements
-
-
 def fix_staged_scripts():
     """
     Fixes scripts which have been installed unix-style to have a .bat
@@ -152,7 +129,6 @@ def kill_processes(process_names=["msbuild.exe"]):
 def _merge_dicts(d1, d2):
     """Merges d2's contents into d1.  Unlike update, this keeps all entries of both, by performing
     unions of values."""
-    # this is a union of all values from env and from compiler vars.  env should take priority.
     for key, value in d1.items():
         if key in d2:
             combined = set(value.split(';'))

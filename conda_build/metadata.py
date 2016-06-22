@@ -696,13 +696,17 @@ class MetaData(object):
         return self.__str__()
 
     def uses_vcs(self):
-        """returns true if recie contains metadata associated with version control systems.
+        """returns true if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
         vcs_types = ["git", "svn", "hg"]
         if "source" in self.meta:
             for vcs in vcs_types:
                 if vcs + "_url" in self.meta["source"]:
+                    # translate command name to package name.
+                    # If more than hg, need a dict for this.
+                    if vcs == "hg":
+                        vcs = "mercurial"
                     return vcs
 
         # We would get here if we use Jinja2 templating, but specify source with path.
@@ -711,5 +715,7 @@ class MetaData(object):
             for vcs in vcs_types:
                 matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
                 if len(matches) > 0:
+                    if vcs == "hg":
+                        vcs = "mercurial"
                     return vcs
         return None
