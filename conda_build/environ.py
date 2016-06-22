@@ -10,7 +10,8 @@ from os.path import join, normpath
 import subprocess
 
 import conda.config as cc
-from conda.compat import text_type, PY3
+# noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
+from conda.compat import text_type, PY3  # noqa
 
 from conda_build import external
 from conda_build import source
@@ -367,70 +368,6 @@ def system_vars(env_dict, prefix):
     d.update(compiler_vars)
 
     return d
-
-
-# http://code.activestate.com/recipes/576644-diff-two-dictionaries/#c9
-def _dict_diff(d1, d2):
-    """Shows entries that have changed or been added in d2 relative to d1"""
-    both = set(d1.keys()) & set(d2.keys())
-    diff = {k: d2[k] for k in both if d1[k] != d2[k]}
-    diff.update({k: d2[k] for k in set(d2.keys()) - both})
-    return diff
-
-
-def _set_environ_from_subprocess_values(vars):
-    """
-    Vars is an unprocessed string of envrionment variable output, such as from ```set```
-    on Windows, or ```env``` elsewhere
-    """
-    start_environ = os.environ
-    vars = vars.split("\n")
-    modified_environ = {var.split("=")[0].strip(): var.split("=")[1].strip()
-                        for var in vars if "=" in var}
-
-    # the diff is the only part we'll set for the actual build environment - mind you,
-    #   the current process is not the actual build environment.  That is always a native
-    #   shell subprocess.
-    diff = _dict_diff(start_environ, modified_environ)
-
-    # modify the current process with the activated/deactivated values
-    for key, value in modified_environ.items():
-        os.environ[key] = value
-
-    return diff
-
-
-def activate_or_deactivate_env(action, env_name_or_path=""):
-    """
-    Strategy is to open a subprocess, run activate, record the variables,
-    then apply them in our process
-
-    action should be "activate" or "deactivate"
-    env_name_or_path should only be provided for activation.
-    """
-    if sys.platform == "win32":
-        cmd = '"{0}\\Scripts\\{1}.bat" "{2}" && set'.format(sys.prefix,
-                                                            action,
-                                                            env_name_or_path)
-        if PY3:
-            # this method simplifies dealing with str vs bytestring on Py3.
-            vars = subprocess.getoutput(cmd).replace("\r\n", "\n")
-        else:
-            vars = subprocess.check_output(cmd).replace("\r\n", "\n")
-    else:
-        cmd = "source {0}/bin/{1} {2} && env".format(sys.prefix, action, env_name_or_path)
-        vars = subprocess.check_output(["bash", "-c", cmd], env=os.environ)
-    if PY3 and hasattr(vars, "decode"):
-        vars = vars.decode("UTF-8")
-    return _set_environ_from_subprocess_values(vars)
-
-
-def activate_env(env_name_or_path):
-    return activate_or_deactivate_env("activate", env_name_or_path)
-
-
-def deactivate_env():
-    return activate_or_deactivate_env("deactivate")
 
 
 if __name__ == '__main__':
