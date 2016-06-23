@@ -9,3 +9,5 @@ tags
 MANIFEST
 ve
 venv
+junit.xml
+.cache
