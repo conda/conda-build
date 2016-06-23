@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 import os
 from os.path import isdir, isfile, abspath
-import re
 import subprocess
 
 import yaml
