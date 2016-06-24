@@ -32,8 +32,13 @@ WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
 # Get the Visual Studio 2008 path (not the Visual C++ for Python path)
 # and get the 'vcvars64.bat' from inside the bin (in the directory above
 # that returned by distutils_find_vcvarsall)
-VCVARS64_VS9_BAT_PATH = os.path.join(os.path.dirname(distutils_find_vcvarsall(9)),
-                                     'bin', 'vcvars64.bat')
+try:
+    VCVARS64_VS9_BAT_PATH = os.path.join(os.path.dirname(distutils_find_vcvarsall(9)),
+                                         'bin', 'vcvars64.bat')
+# there's an exception if VS or the VC compiler for python are not actually installed.
+except KeyError:
+    VCVARS64_VS9_BAT_PATH = None
+
 VS_VERSION_STRING = {
     '8.0': 'Visual Studio 8 2005',
     '9.0': 'Visual Studio 9 2008',
@@ -163,7 +168,7 @@ def msvc_env_cmd(bits, override=None):
         # the amd64 build files, so we call the vcvars64.bat manually,
         # rather than using the vcvarsall.bat which would try and call the
         # missing bat file.
-        if arch_selector == 'amd64':
+        if arch_selector == 'amd64' and VCVARS64_VS9_BAT_PATH:
             msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
     else:
