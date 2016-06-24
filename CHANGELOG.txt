@@ -1,3 +1,25 @@
+2016-06-24 1.21.2:
+------------------
+
+Bug fixes / Improvements:
+-------------------------
+
+ * revert some MSVC activation logic to still call vcvarsall directly in build script
+ * fix Windows testing for binary prefix replacement (not done on win)
+ * Add a warning message when conda-build can't create an environment due to unsatisfiable dependencies
+ * Improve notion of whether a recipe uses a VCS in its metadata, or in its build
+
+Known issues:
+-------------
+
+ * Environment activation on Windows will not work until Conda 4.1.4 is released.  The activate.bat script does not look in the right place for the activate.d folder.
+ * The test suite on Linux and Mac fails the python-build, python-run, and python-build-run tests, because an errant __conda-version__.txt file is somehow present.  It is not clear where it comes from, and each of these tests pass when run individually.  If you have mysterious issues, and you use __conda-version__.txt or files like it, please file an issue.
+
+Contributors:
+-------------
+ * @msarahan
+ * @patricksnape
+
 2016-06-22 1.21.1:
 ------------------
 
