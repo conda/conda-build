@@ -93,6 +93,8 @@ def parse_or_try_download(metadata, no_download_source, verbose,
             print("Error was: ")
             print(error)
             need_source_download = True
+    elif not metadata.get_section('source'):
+        need_source_download = False
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
