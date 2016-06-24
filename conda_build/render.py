@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 import os
 from os.path import isdir, isfile, abspath
-import re
 import subprocess
 
 import yaml
@@ -78,7 +77,7 @@ def bldpkg_path(m):
 def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
 
-    if (force_download or (not no_download_source and metadata.uses_vcs())):
+    if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
@@ -93,6 +92,8 @@ def parse_or_try_download(metadata, no_download_source, verbose,
             print("Error was: ")
             print(error)
             need_source_download = True
+    elif not metadata.get_section('source'):
+        need_source_download = False
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase

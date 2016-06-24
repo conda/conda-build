@@ -29,6 +29,8 @@ except ImportError:
 from conda_build.config import config
 from conda_build.utils import comma_join
 
+on_win = (sys.platform == 'win32')
+
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
@@ -695,7 +697,7 @@ class MetaData(object):
         '''
         return self.__str__()
 
-    def uses_vcs(self):
+    def uses_vcs_in_meta(self):
         """returns true if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
@@ -718,4 +720,19 @@ class MetaData(object):
                     if vcs == "hg":
                         vcs = "mercurial"
                     return vcs
+        return None
+
+    def uses_vcs_in_build(self):
+        build_script = "bld.bat" if on_win else "build.sh"
+        build_script = os.path.join(os.path.dirname(self.meta_path), build_script)
+        if os.path.isfile(build_script):
+            vcs_types = ["git", "svn", "hg"]
+            with open(self.meta_path) as f:
+                build_script = f.read()
+                for vcs in vcs_types:
+                    matches = re.findall(r"{}(?:\.exe)?".format(vcs), build_script)
+                    if len(matches) > 0:
+                        if vcs == "hg":
+                            vcs = "mercurial"
+                        return vcs
         return None

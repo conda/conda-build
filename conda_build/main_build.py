@@ -345,6 +345,10 @@ def execute(args, parser):
                     pkg = line.lstrip('  - ').split(' -> ')[-1]
                     pkg = pkg.strip().split(' ')[0]
                     if pkg in skip_names:
+                        sys.stderr.write("Warning: package conflict - you may have unresolved "
+                                         "dependencies. Try to conda install each of your "
+                                         "dependencies to figure out which has unresolved "
+                                         "dependencies.")
                         continue
                     recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
                     if os.path.exists(pkg):

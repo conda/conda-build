@@ -20,6 +20,12 @@ from conda_build.utils import _check_call
 
 assert sys.platform == 'win32'
 
+# Set up a load of paths that can be imported from the tests
+if 'ProgramFiles(x86)' in os.environ:
+    PROGRAM_FILES_PATH = os.environ['ProgramFiles(x86)']
+else:
+    PROGRAM_FILES_PATH = os.environ['ProgramFiles']
+
 WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
                                 'installationfolder')
 WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
@@ -67,6 +73,22 @@ def fix_staged_scripts():
 
         # remove the original script
         os.remove(join(scripts_dir, fn))
+
+
+def build_vcvarsall_vs_path(version):
+    """
+    Given the Visual Studio version, returns the default path to the
+    Microsoft Visual Studio vcvarsall.bat file.
+    Expected versions are of the form {9, 10, 12, 14}
+    """
+    vstools = "VS{0}0COMNTOOLS".format(version)
+    if vstools in os.environ:
+        return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
+    else:
+        # prefer looking at env var; fall back to program files defaults
+        return os.path.join(PROGRAM_FILES_PATH,
+                            'Microsoft Visual Studio {}'.format(version), 'VC',
+                            'vcvarsall.bat')
 
 
 def msvc_env_cmd(bits, override=None):
@@ -196,11 +218,10 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if activate:
                 fo.write("call activate _build\n")
-            fo.write('\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
+        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
         kill_processes()
         fix_staged_scripts()
