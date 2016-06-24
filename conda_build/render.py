@@ -77,7 +77,7 @@ def bldpkg_path(m):
 def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
 
-    if (force_download or (not no_download_source and metadata.uses_vcs())):
+    if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:

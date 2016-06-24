@@ -218,11 +218,10 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if activate:
                 fo.write("call activate _build\n")
-            fo.write('\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'call', 'bld.bat']
+        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
         kill_processes()
         fix_staged_scripts()
