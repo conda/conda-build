@@ -78,7 +78,7 @@ build: false
 test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
-  - py.test --cov conda_build --cov-report xml tests
+  - py.test -v --cov conda_build --cov-report xml tests
 
 on_success:
   - pip install codecov
