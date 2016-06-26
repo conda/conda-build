@@ -29,7 +29,7 @@ def add_parser(repos):
         help="""
     Create recipe skeleton for packages hosted on my-repo.org
         """,)
-    cpan.add_argument(
+    my_repo.add_argument(
         "packages",
         nargs='+',
         help="my-repo packages to create recipe skeletons for.",)

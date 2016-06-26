@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 import importlib
 import os
 import pkgutil
+import sys
 
 from conda.cli.conda_argparse import ArgumentParser
 from conda.lock import Locked
@@ -18,6 +19,7 @@ from conda_build.config import config
 from conda_build.cli.main_build import args_func
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
+
 
 def main():
     p = ArgumentParser(
@@ -35,7 +37,8 @@ options available.
         dest="repo"
     )
 
-    skeletons = [name for _, name, _ in pkgutil.iter_modules([os.path.join(thisdir, '../skeletons')])]
+    skeletons = [name for _, name, _ in
+                 pkgutil.iter_modules([os.path.join(thisdir, '../skeletons')])]
     for skeleton in skeletons:
         if skeleton.startswith("_"):
             continue

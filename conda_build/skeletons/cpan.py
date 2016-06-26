@@ -255,8 +255,9 @@ def skeletonize(packages, output_dir=".", version=None,
         # Add dependencies to d if not in core, or newer than what's in core
         else:
             build_deps, run_deps, packages_to_append = deps_for_package(
-                package, release_data=release_data, perl_version=perl_version, output_dir=output_dir,
-                processed_packages=processed_packages, meta_cpan_url=meta_cpan_url, recursive=recursive)
+                package, release_data=release_data, perl_version=perl_version,
+                output_dir=output_dir, processed_packages=processed_packages,
+                meta_cpan_url=meta_cpan_url, recursive=recursive)
             d['build_depends'] += indent.join([''] + list(build_deps |
                                                             run_deps))
             d['run_depends'] += indent.join([''] + list(run_deps))

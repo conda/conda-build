@@ -297,7 +297,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     print(packages)
     all_packages = []
     for package in packages:
-        if not ':' in package:
+        if ':' not in package:
             all_packages.extend([match["name"] for match in client.search({"name": [package]})])
     all_packages_lower = [i.lower() for i in all_packages]
 
@@ -484,8 +484,8 @@ def add_parser(repos):
         "--manual-url",
         action='store_true',
         default=False,
-        help="Manually choose source url when more than one urls are present." +
-                "Default is the one with least source size."
+        help=("Manually choose source url when more than one urls are present."
+              "Default is the one with least source size.")
     )
 
     pypi.add_argument(
@@ -567,7 +567,7 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
     return (data, pypiurl, filename, md5)
 
 
-def version_compare(versions):
+def version_compare(package, versions):
     if not versions:
         # PyPI is case sensitive, this will pass control
         # to a method in main() to take care of that.

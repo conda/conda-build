@@ -10,8 +10,9 @@ or Changing arguments to anything in here should also mean changing the major
 version number.
 """
 
+# imports are done this way to keep the api clean and limited to conda-build's functionality.
+
 import importlib as _importlib
-import logging as _logging
 import os as _os
 import pkgutil as _pkgutil
 import re as _re
@@ -85,7 +86,6 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
 
         build_recipes.append(recipe)
 
-
     return _build.build_tree(build_recipes, build_only=build_only, post=post, notest=notest,
                              anaconda_upload=anaconda_upload, skip_existing=skip_existing,
                              keep_old_work=keep_old_work, include_recipe=include_recipe,
@@ -137,38 +137,14 @@ def list_skeletons():
 
 
 def _is_url(name_or_url):
-    return re.findall(r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$",
-                      name_or_url) != []
+    return _re.findall(r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$",
+                       name_or_url) != []
 
 
 def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kw):
     if isinstance(packages, _string_types):
         packages = [packages]
 
-    skeleton_return = []
-    # if repo == "auto":
-    #     # can we uniquely resolve names?
-    #     origins = {}
-    #     for package in packages:
-    #         for skeleton in list_skeletons():
-    #             module = _importlib.import_module("conda_build." + skeleton)
-    #             try:
-    #                 if module.package_exists(package):
-    #                     origins[package] = origins.get(package, [])
-    #                     origins[package].append(skeleton)
-    #             except:
-    #                 print("Skeleton {} failed to verify package existence".format(skeleton))
-    #         if package in origins and len(origins[package]) != 1:
-    #             del origins[package]
-    #     for package in origins:
-    #         module = _importlib.import_module("conda_build." + origins[package][0])
-    #         skeleton_return.extend(module.skeletonize(packages, output_dir=output_dir, version=version,
-    #                                                   recursive=recursive, **kw))
-    #     unresolved = [package for package in packages if package not in origins]
-    #     if unresolved:
-    #         _logging.warn("Some packages could not be uniquely resolved: {}".format(unresolved))
-
-    # else:
     module = _importlib.import_module("conda_build.skeletons." + repo)
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
                                             recursive=recursive, **kw)
