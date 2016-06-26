@@ -791,6 +791,7 @@ def build_tree(recipe_list, check=False, build_only=False, post=False, notest=Fa
     recipes = deque(recipe_list)
     if not already_built:
         already_built = set()
+    cwd = os.getcwd()
     while recipes:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -804,9 +805,14 @@ def build_tree(recipe_list, check=False, build_only=False, post=False, notest=Fa
         else:
             post = None
 
+        recipe = recipes.popleft()
+        recipe_abspath = os.path.realpath(recipe)
+        recipe_parent_dir = os.path.dirname(recipe_abspath)
         try:
-            recipe = recipes.popleft()
-            metadata, need_source_download = render_recipe(recipe, verbose=verbose, dirty=dirty)
+            os.chdir(recipe_parent_dir)
+
+            metadata, need_source_download = render_recipe(recipe_abspath,
+                                                           verbose=verbose, dirty=dirty)
             ok_to_test = build(metadata, post=post,
                                include_recipe=include_recipe,
                                keep_old_work=keep_old_work,
@@ -842,11 +848,14 @@ def build_tree(recipe_list, check=False, build_only=False, post=False, notest=Fa
                         print(("Missing dependency {0}, but found" +
                                 " recipe directory, so building " +
                                 "{0} first").format(pkg))
-                        add_recipes.append(recipe_dir)
+                        add_recipes.append(os.path.join(recipe_parent_dir, recipe_dir))
                         to_build_recursive.append(pkg)
                 else:
                     raise
-            recipes.extendleft(reversed(add_recipes))
+            recipes.extendleft(add_recipes)
+        finally:
+            if cwd:
+                os.chdir(cwd)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         output_file = bldpkg_path(metadata)

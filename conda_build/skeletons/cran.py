@@ -194,6 +194,7 @@ VERSION_DEPENDENCY_REGEX = re.compile(
     r'?(\s*\[(?P<archs>[\s!\w\-]+)\])?\s*$'
 )
 
+
 class CRANPackagesCompleter(Completer):
     def __init__(self, prefix, parsed_args, **kwargs):
         self.prefix = prefix
@@ -210,11 +211,11 @@ class CRANPackagesCompleter(Completer):
 
 def package_exists(package_name):
     # TODO: how can we get cran to spit out package presence?
-    # available.packages() is probably the right start, but no channels are working on mac right now?
+    # available.packages() is probably a start, but no channels are working on mac right now?
     return True
-    #install_output = subprocess.check_output([join(sys.prefix, "r"), "-e",
-    #                            # ind=2 arbitrarily chooses some CRAN mirror to try.
-    #                            "chooseCRANmirror(ind=2);install.packages('{}')".format(package_name)])
+    # install_output = subprocess.check_output([join(sys.prefix, "r"), "-e",
+    #                     # ind=2 arbitrarily chooses some CRAN mirror to try.
+    #                     "chooseCRANmirror(ind=2);install.packages('{}')".format(package_name)])
 
 
 def add_parser(repos):
@@ -285,6 +286,7 @@ def add_parser(repos):
         --output-dir).  If packages are given, they are updated; otherwise, all
         recipes in the output directory are updated.""",
     )
+
 
 def dict_from_cran_lines(lines):
     d = {}
@@ -448,9 +450,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
                 cran_url="http://cran.r-project.org/", recursive=False, archive=True,
                 version_compare=False, update_outdated=False, **kwargs):
     if len(packages) > 1 and version_compare:
-        parser.error("--version-compare only works with one package at a time")
+        raise ValueError("--version-compare only works with one package at a time")
     if not update_outdated and not packages:
-        parser.error("At least one package must be supplied")
+        raise ValueError("At least one package must be supplied")
 
     package_dicts = {}
 
