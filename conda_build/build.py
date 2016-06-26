@@ -867,7 +867,7 @@ def build_tree(recipe_list, check=False, build_only=False, post=False, notest=Fa
 
 def handle_anaconda_upload(path, anaconda_upload=None, token=None, user=None):
     import subprocess
-    from conda_build.external import find_executable
+    from conda_build.os_utils.external import find_executable
 
     upload = False
     # this is the default, for no explicit argument.
