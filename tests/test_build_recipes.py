@@ -5,6 +5,7 @@ import sys
 import tempfile
 
 from conda.compat import TemporaryDirectory, PY3
+from conda.fetch import download
 from conda.config import subdir
 from conda.fetch import download
 from conda_build.source import _guess_patch_strip_level, apply_patch
@@ -14,6 +15,8 @@ metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
 fail_dir = os.path.join(thisdir, 'test-recipes', 'fail')
 
 import pytest
+
+from conda_build.source import _guess_patch_strip_level, apply_patch
 
 from .utils import metadata_dir, is_valid_dir, fail_dir
 
