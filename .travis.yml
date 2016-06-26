@@ -22,7 +22,7 @@ install:
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - conda install -q anaconda-client conda-build
   - pip install pytest-cov
-  - python setup.py install
+  - python setup.py develop
   - conda info -a
 
 script:
