@@ -1,2 +1,2 @@
-cd $SRC_DIR
-py.test --cov conda_build --cov-report xml tests
+git clone $SRC_DIR cb
+py.test --cov conda_build --cov-report xml cb/tests -s
