@@ -22,7 +22,7 @@ import mmap
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index
-from conda.compat import PY3, TemporaryDirectory
+from conda.compat import PY3
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
 from conda.lock import Locked
@@ -647,106 +647,110 @@ def test(m, move_broken=True, activate=True, verbose=False):
         # remove from package cache
         rm_pkgs_cache(m.dist())
 
-        with TemporaryDirectory(prefix='test-tmp', dir=config.croot) as tmp_dir:
-            create_files(tmp_dir, m)
-            # Make Perl or Python-specific test files
-            if m.name().startswith('perl-'):
-                pl_files = create_pl_files(tmp_dir, m)
-                py_files = False
-                lua_files = False
-            else:
-                py_files = create_py_files(tmp_dir, m)
-                pl_files = False
-                lua_files = False
-            shell_files = create_shell_files(tmp_dir, m)
-            if not (py_files or shell_files or pl_files or lua_files):
-                print("Nothing to test for:", m.dist())
-                return
+        tmp_dir = join(config.croot, 'test-tmp_dir')
+        rm_rf(tmp_dir)
+        if on_win:
+            time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
+        os.makedirs(tmp_dir)
+        create_files(tmp_dir, m)
+        # Make Perl or Python-specific test files
+        if m.name().startswith('perl-'):
+            pl_files = create_pl_files(tmp_dir, m)
+            py_files = False
+            lua_files = False
+        else:
+            py_files = create_py_files(tmp_dir, m)
+            pl_files = False
+            lua_files = False
+        shell_files = create_shell_files(tmp_dir, m)
+        if not (py_files or shell_files or pl_files or lua_files):
+            print("Nothing to test for:", m.dist())
+            return
 
-            print("TEST START:", m.dist())
+        print("TEST START:", m.dist())
+        if on_win:
+            if isdir(config.build_prefix):
+                move_to_trash(config.build_prefix, '')
+            if isdir(config.test_prefix):
+                move_to_trash(config.test_prefix, '')
+        else:
+            rm_rf(config.build_prefix)
+            rm_rf(config.test_prefix)
+
+        get_build_metadata(m)
+        specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+
+        # add packages listed in the run environment and test/requires
+        specs.extend(ms.spec for ms in m.ms_depends('run'))
+        specs += m.get_value('test/requires', [])
+
+        if py_files:
+            # as the tests are run by python, ensure that python is installed.
+            # (If they already provided python as a run or test requirement,
+            #  this won't hurt anything.)
+            specs += ['python %s*' % environ.get_py_ver()]
+        if pl_files:
+            # as the tests are run by perl, we need to specify it
+            specs += ['perl %s*' % environ.get_perl_ver()]
+        if lua_files:
+            # not sure how this shakes out
+            specs += ['lua %s*' % environ.get_lua_ver()]
+
+        create_env(config.test_prefix, specs, verbose=verbose)
+
+        env = dict(os.environ)
+        env.update(environ.get_dict(m, prefix=config.test_prefix))
+
+        if not activate:
+            # prepend bin (or Scripts) directory
+            env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
+
             if on_win:
-                if isdir(config.build_prefix):
-                    move_to_trash(config.build_prefix, '')
-                if isdir(config.test_prefix):
-                    move_to_trash(config.test_prefix, '')
-            else:
-                rm_rf(config.build_prefix)
-                rm_rf(config.test_prefix)
+                env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
 
-            get_build_metadata(m)
-            specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+        for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
+            env[varname] = str(getattr(config, varname) or '')
+        env['PREFIX'] = config.test_prefix
 
-            # add packages listed in the run environment and test/requires
-            specs.extend(ms.spec for ms in m.ms_depends('run'))
-            specs += m.get_value('test/requires', [])
+        # Python 2 Windows requires that envs variables be string, not unicode
+        env = {str(key): str(value) for key, value in env.items()}
+        suffix = "bat" if on_win else "sh"
+        test_script = join(tmp_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
+        with open(test_script, 'w') as tf:
+            if activate:
+                tf.write("{source}activate _test\n".format(source="" if on_win else "source "))
             if py_files:
-                # as the tests are run by python, ensure that python is installed.
-                # (If they already provided python as a run or test requirement,
-                #  this won't hurt anything.)
-                specs += ['python %s*' % environ.get_py_ver()]
+                tf.write("{python} -s {test_file}\n".format(
+                    python=config.test_python,
+                    test_file=join(tmp_dir, 'run_test.py')))
+
             if pl_files:
-                # as the tests are run by perl, we need to specify it
-                specs += ['perl %s*' % environ.get_perl_ver()]
+                tf.write("{perl} {test_file}\n".format(
+                    python=config.test_perl,
+                    test_file=join(tmp_dir, 'run_test.pl')))
+
             if lua_files:
-                # not sure how this shakes out
-                specs += ['lua %s*' % environ.get_lua_ver()]
+                tf.write("{lua} {test_file}\n".format(
+                    python=config.test_perl,
+                    test_file=join(tmp_dir, 'run_test.lua')))
 
-            create_env(config.test_prefix, specs, verbose=verbose)
-
-            env = dict(os.environ)
-            env.update(environ.get_dict(m, prefix=config.test_prefix))
-
-            if not activate:
-                # prepend bin (or Scripts) directory
-                env = prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
-
+            if shell_files:
+                test_file = join(tmp_dir, 'run_test.' + suffix)
                 if on_win:
-                    env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
-
-            for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
-                env[varname] = str(getattr(config, varname) or '')
-            env['PREFIX'] = config.test_prefix
-
-            # Python 2 Windows requires that envs variables be string, not unicode
-            env = {str(key): str(value) for key, value in env.items()}
-            suffix = "bat" if on_win else "sh"
-            test_script = join(tmp_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
-
-            with open(test_script, 'w') as tf:
-                if activate:
-                    tf.write("{source}activate _test\n".format(source="" if on_win else "source "))
-                if py_files:
-                    tf.write("{python} -s {test_file}\n".format(
-                        python=config.test_python,
-                        test_file=join(tmp_dir, 'run_test.py')))
-
-                if pl_files:
-                    tf.write("{perl} {test_file}\n".format(
-                        python=config.test_perl,
-                        test_file=join(tmp_dir, 'run_test.pl')))
-
-                if lua_files:
-                    tf.write("{lua} {test_file}\n".format(
-                        python=config.test_perl,
-                        test_file=join(tmp_dir, 'run_test.lua')))
-
-                if shell_files:
-                    test_file = join(tmp_dir, 'run_test.' + suffix)
-                    if on_win:
-                        tf.write("call {test_file}\n".format(test_file=test_file))
-                    else:
-                        # TODO: Run the test/commands here instead of in run_test.py
-                        tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
-                                                                        test_file=test_file))
-            if on_win:
-                cmd = [env["COMSPEC"], "/d", "/c", test_script]
-            else:
-                cmd = [shell_path, '-x', '-e', test_script]
-            try:
-                subprocess.check_call(cmd, env=env, cwd=tmp_dir)
-            except subprocess.CalledProcessError:
-                tests_failed(m, move_broken=move_broken)
+                    tf.write("call {test_file}\n".format(test_file=test_file))
+                else:
+                    # TODO: Run the test/commands here instead of in run_test.py
+                    tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
+                                                                       test_file=test_file))
+        if on_win:
+            cmd = [env["COMSPEC"], "/d", "/c", test_script]
+        else:
+            cmd = [shell_path, '-x', '-e', test_script]
+        try:
+            subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+        except subprocess.CalledProcessError:
+            tests_failed(m, move_broken=move_broken)
 
     print("TEST END:", m.dist())
 
