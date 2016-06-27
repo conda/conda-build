@@ -158,7 +158,7 @@ def msvc_env_cmd(bits, override=None):
             VCVARS64_VS9_BAT_PATH = os.path.join(os.path.dirname(distutils_find_vcvarsall(9)),
                                                 'bin', 'vcvars64.bat')
         # there's an exception if VS or the VC compiler for python are not actually installed.
-        except KeyError:
+        except (KeyError, TypeError):
             VCVARS64_VS9_BAT_PATH = None
 
         error1 = 'if errorlevel 1 {}'
