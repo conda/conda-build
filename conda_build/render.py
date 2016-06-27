@@ -13,7 +13,6 @@ import tarfile
 import tempfile
 import os
 from os.path import isdir, isfile, abspath
-import re
 import subprocess
 
 import yaml
@@ -75,20 +74,10 @@ def bldpkg_path(m):
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def has_vcs_metadata(metadata):
-    """returns true if recie contains metadata associated with version control systems.
-    If this metadata is present, a download/copy will be forced in parse_or_try_download.
-    """
-    with open(metadata.meta_path) as f:
-        matches = re.findall(r"GIT_[^\.\s\'\"]+", f.read())
-        # TODO: extend with other VCS systems (SVN, hg, anything else?)
-    return len(matches) > 0
-
-
 def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
 
-    if (force_download or (not no_download_source and has_vcs_metadata(metadata))):
+    if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
@@ -103,6 +92,8 @@ def parse_or_try_download(metadata, no_download_source, verbose,
             print("Error was: ")
             print(error)
             need_source_download = True
+    elif not metadata.get_section('source'):
+        need_source_download = False
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
@@ -140,13 +131,13 @@ def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
             sys.stderr.write(e.error_msg())
             sys.exit(1)
 
-        m = parse_or_try_download(m, no_download_source=no_download_source,
+        m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
                                   verbose=verbose, dirty=dirty)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)
 
-    return m
+    return m, need_download
 
 
 # Next bit of stuff is to support YAML output in the order we expect.

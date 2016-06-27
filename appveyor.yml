@@ -60,7 +60,7 @@ install:
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client
+  - conda install -q pytest pytest-cov mock requests pycrypto git anaconda-client
   # this is to ensure dependencies
   - conda install -q conda-build
   - python --version
@@ -78,7 +78,7 @@ build: false
 test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
-  - py.test --cov conda_build --cov-report xml tests
+  - py.test -v --cov conda_build --cov-report xml tests
 
 on_success:
   - pip install codecov
