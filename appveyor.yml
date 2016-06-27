@@ -65,12 +65,10 @@ install:
   - conda install -q conda-build
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
-  - python setup.py develop
-  - set PATH
-  - conda build --version
   - call appveyor\setup_x64.bat
   - copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
-
+  # builds a conda package and runs test suite
+  - conda build conda.recipe
 
 # Not a .NET project, we build package in the install step instead
 build: false

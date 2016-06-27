@@ -10,6 +10,17 @@ build:
   {% if GIT_DESCRIBE_NUMBER|int > 0 %}
   string: py{{ PY_VER }}_git_{{ GIT_BUILD_STR }}
   {% endif %}
+  entry_points:
+    - conda-build = conda_build.cli.main_build:main
+    - conda-convert = conda_build.cli.main_convert:main
+    - conda-develop = conda_build.cli.main_develop:main
+    - conda-index = conda_build.cli.main_index:main
+    - conda-inspect = conda_build.cli.main_index:main
+    - conda-metapackage = conda_build.cli.main_metapackage:main
+    - conda-pipbuild = conda_build.cli.main_pipbuild:main
+    - conda-render = conda_build.cli.main_render:main
+    - conda-sign = conda_build.cli.main_sign:main
+    - conda-skeleton = conda_build.cli.main_skeleton:main
 
 requirements:
   build:
@@ -22,6 +33,7 @@ requirements:
     - patchelf      [linux]
 
 test:
+  # more tests in run_test.py (runs the tests folder)
   requires:
     - pytest
     - pytest-cov
@@ -33,4 +45,4 @@ test:
 
 about:
   home: https://github.com/conda/conda-build
-  license: BSD
+  license: BSD 3-clause
