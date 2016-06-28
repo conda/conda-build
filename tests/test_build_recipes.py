@@ -4,7 +4,7 @@ import shutil
 import sys
 import tempfile
 
-from conda.compat import TemporaryDirectory, PY3
+from conda.compat import PY3
 from conda.fetch import download
 from conda.config import subdir
 from conda.fetch import download
@@ -18,7 +18,8 @@ import pytest
 
 from conda_build.source import _guess_patch_strip_level, apply_patch
 
-from .utils import metadata_dir, is_valid_dir, fail_dir, testing_workdir
+# noqa is because flake8 does not understand how testing_workdir works as a fixture
+from .utils import metadata_dir, is_valid_dir, fail_dir, testing_workdir  # noqa
 
 
 # def test_CONDA_BLD_PATH():

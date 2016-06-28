@@ -19,24 +19,23 @@ install:
   - conda config --set always_yes yes
   - conda update -q --all
   - conda install -q --force --no-deps conda requests
-<<<<<<< HEAD
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
-=======
-  - conda install -q pip pytest requests jinja2 patchelf flake8 python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   # need conda build to build conda build as a conda package
->>>>>>> make conda.recipe run tests; make CIs use that
   - conda install -q anaconda-client conda-build
   - pip install pytest-cov
+  - python setup.py install --single-version-externally-managed --record=record.txt
   - conda info -a
-  # builds a conda package and runs test suite
-  - conda build conda.recipe
 
 script:
   - flake8 .
 <<<<<<< HEAD
+<<<<<<< HEAD
   - py.test -v --cov conda_build --cov-report xml tests
 =======
 >>>>>>> make conda.recipe run tests; make CIs use that
+=======
+  - py.test -v --cov conda_build --cov-report xml tests
+>>>>>>> revert to python setup.py install; flake8
   - conda build --help
 
 notifications:
