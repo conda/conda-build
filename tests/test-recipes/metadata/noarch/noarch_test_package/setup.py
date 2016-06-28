@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 name = 'noarch_test_package'
 

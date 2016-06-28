@@ -53,7 +53,7 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
           dirty=False, already_built=None, build_only=False, notest=False, anaconda_upload=True,
           token=None, user=None, **kwargs):
 
-    if not hasattr(recipe_path, "__iter__"):
+    if isinstance(recipe_path, _string_types):
         recipe_path = [recipe_path]
 
     build_recipes = []

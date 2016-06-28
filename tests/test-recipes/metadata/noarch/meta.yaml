@@ -6,10 +6,8 @@ source:
   path: ./noarch_test_package
 
 build:
-  script: python setup.py install
+  script: python setup.py install --single-version-externally-managed --record=record.txt
   noarch_python: True
-  entry_points:
-    - noarch_test_package_script = noarch_test_package:main
 
 requirements:
   build:
