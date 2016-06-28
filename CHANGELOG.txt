@@ -1,3 +1,14 @@
+2016-06-27 1.21.3:
+------------------
+
+Bug fixes:
+----------
+
+ * Fix a regression in Windows, where a compiler was a hard requirement, and was not always showing up, anyway.  #1049
+
+Contributors:
+ * @msarahan
+
 2016-06-24 1.21.2:
 ------------------
 
