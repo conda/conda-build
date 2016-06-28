@@ -53,25 +53,31 @@ install:
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - conda config --set always_yes yes
-  # test with master of conda
   - conda update -q conda
   - conda info
   - conda update -q --all
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov requests pycrypto git anaconda-client
-  # need conda build to build conda build as a conda package
+  - conda install -q pytest pytest-cov mock requests pycrypto git anaconda-client
+  # this is to ensure dependencies
   - conda install -q conda-build
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
+  - python setup.py install --single-version-externally-managed --record=record.txt
+  - set PATH
+  - conda build --version
   - call appveyor\setup_x64.bat
   - copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
-  # builds a conda package and runs test suite
-  - conda build conda.recipe
+
 
 # Not a .NET project, we build package in the install step instead
 build: false
+
+test_script:
+  - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
+  - set PATH
+  - py.test -v --cov conda_build --cov-report xml tests
 
 on_success:
   - pip install codecov

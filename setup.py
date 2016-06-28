@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-from glob import glob
 
 import versioneer
 
@@ -48,7 +47,7 @@ setup(
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-sign = conda_build.cli.main_sign:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
-                             ]},
+                            ]},
     install_requires=['conda'],
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
 )
