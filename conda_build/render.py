@@ -9,7 +9,6 @@ from __future__ import absolute_import, division, print_function
 from locale import getpreferredencoding
 import os
 from os.path import isdir, isfile, abspath
-import re
 import shutil
 import subprocess
 import sys
