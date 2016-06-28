@@ -65,7 +65,7 @@ def test_recipe_builds(recipe):
     # so they can be checked within build scripts
     os.environ["CONDA_TEST_VAR"] = "conda_test"
     os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
-    ok_to_test = api.build(recipe, verbose=True)
+    ok_to_test = api.build(recipe, verbose=True, anaconda_upload=False)
     if ok_to_test:
         api.test(recipe, verbose=True)
 
