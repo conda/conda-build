@@ -19,4 +19,5 @@ def test_output_build_path():
                                       sys.version_info.major, sys.version_info.minor))
     if PY3:
         output = output.decode("UTF-8")
+        error = error.decode("UTF-8")
     assert output.rstrip() == test_path, error

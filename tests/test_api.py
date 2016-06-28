@@ -5,7 +5,7 @@ import pytest
 import conda.config as cc
 from conda.compat import TemporaryDirectory
 
-from conda_build.config import croot
+from conda_build.config import croot, config
 from conda_build import api
 from conda_build.utils import rm_rf
 from .utils import metadata_dir, is_valid_dir
@@ -48,9 +48,10 @@ def test_get_output_file_path_jinja2():
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                           no_download_source=False)
     assert build_path == os.path.join(sys.prefix,
-                            "conda-bld",
-                            cc.subdir,
-                            "conda-build-test-source-git-jinja2-1.8.1-py27_0_gf3d51ae.tar.bz2")
+                                      "conda-bld",
+                                      cc.subdir,
+                                      "conda-build-test-source-git-jinja2-1.8.1-"
+                                      "py{0}_0_gf3d51ae.tar.bz2".format(config.CONDA_PY))
 
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
