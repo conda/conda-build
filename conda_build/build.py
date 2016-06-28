@@ -31,7 +31,7 @@ from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 
 from conda_build import __version__
-from conda_build import environ, source, tarcheck, external
+from conda_build import environ, source, tarcheck
 from conda_build.config import config
 from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, render_recipe
 import conda_build.os_utils.external as external

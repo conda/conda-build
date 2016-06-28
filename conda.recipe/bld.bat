@@ -1,4 +1,4 @@
-%PYTHON% setup.py install --single-version-externally-managed --record=record.txt
+pip install --no-deps .
 if errorlevel 1 exit 1
 
 del %SCRIPTS%\conda-init

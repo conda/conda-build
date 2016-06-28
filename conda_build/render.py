@@ -100,7 +100,7 @@ def parse_or_try_download(metadata, no_download_source, verbose,
         #     the build phase
         need_source_download = not no_download_source
         metadata.parse_again(permit_undefined_jinja=False)
-        if has_vcs_metadata(metadata) or metadata.undefined_jinja_vars:
+        if metadata.undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(metadata.undefined_jinja_vars))
     return metadata, need_source_download

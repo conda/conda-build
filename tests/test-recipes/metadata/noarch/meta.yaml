@@ -6,7 +6,7 @@ source:
   path: ./noarch_test_package
 
 build:
-  script: python setup.py install --single-version-externally-managed --record=record.txt
+  script: pip install --no-deps .
   noarch_python: True
 
 requirements:

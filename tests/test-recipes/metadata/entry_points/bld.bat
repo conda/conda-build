@@ -1,3 +1,3 @@
 cd %RECIPE_DIR%..\..\test-package
-python setup.py install
+pip install --no-deps .
 if errorlevel 1 exit 1
