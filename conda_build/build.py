@@ -4,6 +4,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import absolute_import, division, print_function
 
 import io
+from glob import glob
 import json
 import logging
 import os
@@ -23,7 +24,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
+from conda.install import prefix_placeholder, linked, symlink_conda
 from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
@@ -440,31 +441,9 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
     with Locked(cc.root_dir):
 
-        # If --keep-old-work, then move the contents of source.WORK_DIR to a
-        # temporary directory for the duration of the build.
-        # The source unpacking procedure is too varied and complex
-        # to allow this to be written cleanly (see source.get_dir() for example)
-        if keep_old_work:
-            old_WORK_DIR = tempfile.mkdtemp()
-            old_sub_dirs = [name for name in os.listdir(source.WORK_DIR)
-                            if os.path.isdir(os.path.join(source.WORK_DIR, name))]
-            if len(old_sub_dirs):
-                print("Keeping old work directory backup: %s => %s"
-                    % (old_sub_dirs, old_WORK_DIR))
-                for old_sub in old_sub_dirs:
-                    shutil.move(os.path.join(source.WORK_DIR, old_sub), old_WORK_DIR)
-
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
-            if on_win:
-                if isdir(config.short_build_prefix):
-                    move_to_trash(config.short_build_prefix, '')
-                if isdir(config.long_build_prefix):
-                    move_to_trash(config.long_build_prefix, '')
-            else:
-                rm_rf(config.short_build_prefix)
-                rm_rf(config.long_build_prefix)
 
             specs = [ms.spec for ms in m.ms_depends('build')]
             if activate:
@@ -523,7 +502,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
             print("Package:", m.dist())
 
-            assert isdir(source.WORK_DIR)
+            assert isdir(config.work_dir)
             src_dir = source.get_dir()
             contents = os.listdir(src_dir)
             if contents:
@@ -649,17 +628,6 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
         else:
             print("STOPPING BUILD BEFORE POST:", m.dist())
 
-        if keep_old_work and len(old_sub_dirs):
-            print("Restoring old work directory backup: %s :: %s => %s"
-                % (old_WORK_DIR, old_sub_dirs, source.WORK_DIR))
-            for old_sub in old_sub_dirs:
-                if os.path.exists(os.path.join(source.WORK_DIR, old_sub)):
-                    print("Not restoring old source directory %s over new build's version" %
-                          (old_sub))
-                else:
-                    shutil.move(os.path.join(old_WORK_DIR, old_sub), source.WORK_DIR)
-            shutil.rmtree(old_WORK_DIR, ignore_errors=True)
-
 
 def test(m, move_broken=True, activate=True):
     '''
@@ -674,10 +642,7 @@ def test(m, move_broken=True, activate=True):
         # remove from package cache
         rm_pkgs_cache(m.dist())
 
-        tmp_dir = join(config.croot, 'test-tmp_dir')
-        rm_rf(tmp_dir)
-        if on_win:
-            time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
+        tmp_dir = config.test_dir
         os.makedirs(tmp_dir)
         create_files(tmp_dir, m)
         # Make Perl or Python-specific test files
@@ -695,14 +660,6 @@ def test(m, move_broken=True, activate=True):
             return
 
         print("TEST START:", m.dist())
-        if on_win:
-            if isdir(config.build_prefix):
-                move_to_trash(config.build_prefix, '')
-            if isdir(config.test_prefix):
-                move_to_trash(config.test_prefix, '')
-        else:
-            rm_rf(config.build_prefix)
-            rm_rf(config.test_prefix)
 
         get_build_metadata(m)
         specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
@@ -745,7 +702,9 @@ def test(m, move_broken=True, activate=True):
 
         with open(test_script, 'w') as tf:
             if activate:
-                tf.write("{source}activate _test\n".format(source="" if on_win else "source "))
+                source = "" if on_win else "source "
+                tf.write("{source}activate {prefix}\n".format(source=source,
+                                                              prefix=config.test_prefix))
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
@@ -794,3 +753,12 @@ def tests_failed(m, move_broken):
     if move_broken:
         shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
+
+
+def print_build_intermediate_warning():
+    print("\n\n")
+    print('#' * 80)
+    print("Source and build intermediates have been left in " + config.croot + ".")
+    work_folders = glob(os.path.join(config.croot, "work_*"))
+    print("There are currently {num_builds} accumulated.".format(num_builds=len(work_folders)))
+    print("To remove them, you can run the ```conda clean --build``` command")

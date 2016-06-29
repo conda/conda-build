@@ -10,40 +10,34 @@ import locale
 import time
 
 from conda.fetch import download
-from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
-
-
-SRC_CACHE = join(config.croot, 'src_cache')
-GIT_CACHE = join(config.croot, 'git_cache')
-HG_CACHE = join(config.croot, 'hg_cache')
-SVN_CACHE = join(config.croot, 'svn_cache')
-WORK_DIR = join(config.croot, 'work')
+from conda_build.utils import tar_xf, unzip, safe_print_unicode
 
 
 def get_dir():
-    if not isdir(WORK_DIR):
-        os.makedirs(WORK_DIR)
-    lst = [fn for fn in os.listdir(WORK_DIR) if not fn.startswith('.')]
+    work_dir = config.work_dir
+    if not isdir(work_dir):
+        os.makedirs(work_dir)
+    # This looks for source folders, when the extracted source has its own folder
+    lst = [fn for fn in os.listdir(work_dir) if not fn.startswith('.')]
     if len(lst) == 1:
-        dir_path = join(WORK_DIR, lst[0])
+        dir_path = join(work_dir, lst[0])
         if isdir(dir_path):
             return dir_path
-    return WORK_DIR
+    return work_dir
 
 
 def download_to_cache(meta):
     ''' Download a source to the local cache. '''
-    print('Source cache directory is: %s' % SRC_CACHE)
-    if not isdir(SRC_CACHE):
-        os.makedirs(SRC_CACHE)
+    print('Source cache directory is: %s' % config.src_cache)
+    if not isdir(config.src_cache):
+        os.makedirs(config.src_cache)
 
     fn = meta['fn'] if 'fn' in meta else basename(meta['url'])
-    path = join(SRC_CACHE, fn)
+    path = join(config.src_cache, fn)
     if isfile(path):
         print('Found source in cache: %s' % fn)
     else:
@@ -75,19 +69,19 @@ def unpack(meta, verbose=False):
     ''' Uncompress a downloaded source. '''
     src_path = download_to_cache(meta)
 
-    if not isdir(WORK_DIR):
-        os.makedirs(WORK_DIR)
+    if not isdir(config.work_dir):
+        os.makedirs(config.work_dir)
     if verbose:
         print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
             '.tar', 'tar.z')):
-        tar_xf(src_path, WORK_DIR)
+        tar_xf(src_path, config.work_dir)
     elif src_path.lower().endswith('.zip'):
-        unzip(src_path, WORK_DIR)
+        unzip(src_path, config.work_dir)
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-        copy2(src_path, WORK_DIR)
+        copy2(src_path, config.work_dir)
 
 
 def git_source(meta, recipe_dir, verbose=False):
@@ -98,8 +92,8 @@ def git_source(meta, recipe_dir, verbose=False):
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
 
-    if not isdir(GIT_CACHE):
-        os.makedirs(GIT_CACHE)
+    if not isdir(config.git_cache):
+        os.makedirs(config.git_cache)
 
     git = external.find_executable('git')
     if not git:
@@ -113,7 +107,7 @@ def git_source(meta, recipe_dir, verbose=False):
         git_dn = "_".join(git_dn.split(os.path.sep)[1:])
     else:
         git_dn = git_url.split(':')[-1].replace('/', '_')
-    cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
+    cache_repo = cache_repo_arg = join(config.git_cache, git_dn)
     if sys.platform == 'win32':
         is_cygwin = 'cygwin' in git.lower()
         cache_repo_arg = cache_repo_arg.replace('\\', '/')
@@ -155,35 +149,36 @@ def git_source(meta, recipe_dir, verbose=False):
     if checkout and verbose:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', cache_repo_arg, WORK_DIR], stdout=stdout)
+    check_call([git, 'clone', cache_repo_arg, config.work_dir], stdout=stdout)
     if checkout:
-        check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout)
+        check_call([git, 'checkout', checkout], cwd=config.work_dir, stdout=stdout)
 
     # Submodules must be updated after checkout.
-    check_call([git, 'submodule', 'update', '--init', '--recursive'], cwd=WORK_DIR, stdout=stdout)
+    check_call([git, 'submodule', 'update', '--init', '--recursive'],
+               cwd=config.work_dir, stdout=stdout)
 
     git_info(verbose=verbose)
 
     if not verbose:
         FNULL.close()
 
-    return WORK_DIR
+    return config.work_dir
 
 
 def git_info(fo=None, verbose=False):
     ''' Print info about a Git repo. '''
-    assert isdir(WORK_DIR)
+    assert isdir(config.work_dir)
 
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
     # properly execute without it.
     env = os.environ.copy()
-    env['GIT_DIR'] = join(WORK_DIR, '.git')
+    env['GIT_DIR'] = join(config.work_dir, '.git')
     env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
             ('git log -n1', True),
             ('git describe --tags --dirty', False),
             ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=WORK_DIR, env=env)
+        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=config.work_dir, env=env)
         stdout, stderr = p.communicate()
         encoding = locale.getpreferredencoding()
         if not fo:
@@ -217,10 +212,10 @@ def hg_source(meta, verbose=False):
     if not hg:
         sys.exit('Error: hg not installed')
     hg_url = meta['hg_url']
-    if not isdir(HG_CACHE):
-        os.makedirs(HG_CACHE)
+    if not isdir(config.hg_cache):
+        os.makedirs(config.hg_cache)
     hg_dn = hg_url.split(':')[-1].replace('/', '_')
-    cache_repo = join(HG_CACHE, hg_dn)
+    cache_repo = join(config.hg_cache, hg_dn)
     if isdir(cache_repo):
         check_call([hg, 'pull'], cwd=cache_repo, stdout=stdout, stderr=stderr)
     else:
@@ -232,13 +227,13 @@ def hg_source(meta, verbose=False):
     if verbose:
         print('checkout: %r' % update)
 
-    check_call([hg, 'clone', cache_repo, WORK_DIR], stdout=stdout, stderr=stderr)
-    check_call([hg, 'update', '-C', update], cwd=WORK_DIR, stdout=stdout, stderr=stderr)
+    check_call([hg, 'clone', cache_repo, config.work_dir], stdout=stdout, stderr=stderr)
+    check_call([hg, 'update', '-C', update], cwd=config.work_dir, stdout=stdout, stderr=stderr)
 
     if not verbose:
         FNULL.close()
 
-    return WORK_DIR
+    return config.work_dir
 
 
 def svn_source(meta, verbose=False):
@@ -260,10 +255,10 @@ def svn_source(meta, verbose=False):
     svn_url = meta['svn_url']
     svn_revision = meta.get('svn_rev') or 'head'
     svn_ignore_externals = parse_bool(meta.get('svn_ignore_externals') or 'no')
-    if not isdir(SVN_CACHE):
-        os.makedirs(SVN_CACHE)
+    if not isdir(config.svn_cache):
+        os.makedirs(config.svn_cache)
     svn_dn = svn_url.split(':', 1)[-1].replace('/', '_').replace(':', '_')
-    cache_repo = join(SVN_CACHE, svn_dn)
+    cache_repo = join(config.svn_cache, svn_dn)
     if svn_ignore_externals:
         extra_args = ['--ignore-externals']
     else:
@@ -277,12 +272,12 @@ def svn_source(meta, verbose=False):
         assert isdir(cache_repo)
 
     # now copy into work directory
-    copytree(cache_repo, WORK_DIR, symlinks=True)
+    copytree(cache_repo, config.work_dir, symlinks=True)
 
     if not verbose:
         FNULL.close()
 
-    return WORK_DIR
+    return config.work_dir
 
 
 def get_repository_info(recipe_path):
@@ -376,19 +371,13 @@ Error:
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
-def provide(recipe_dir, meta, verbose=False, patch=True):
+def provide(recipe_dir, meta, verbose=False, patch=True, build_id=None):
     """
     given a recipe_dir:
       - download (if necessary)
       - unpack
       - apply patches (if any)
     """
-
-    if sys.platform == 'win32':
-        if isdir(WORK_DIR):
-            move_to_trash(WORK_DIR, '')
-    else:
-        rm_rf(WORK_DIR)
 
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta, verbose=verbose)
@@ -402,16 +391,17 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
         svn_source(meta, verbose=verbose)
     elif 'path' in meta:
         if verbose:
-            print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), WORK_DIR))
-        copytree(abspath(join(recipe_dir, meta.get('path'))), WORK_DIR)
+            print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), config.work_dir))
+        copytree(abspath(join(recipe_dir, meta.get('path'))), config.work_dir)
     else:  # no source
-        if not isdir(WORK_DIR):
-            os.makedirs(WORK_DIR)
+        if not isdir(config.work_dir):
+            os.makedirs(config.work_dir)
 
     if patch:
         src_dir = get_dir()
         for patch in meta.get('patches', []):
             apply_patch(src_dir, join(recipe_dir, patch))
+    return config.work_dir
 
 
 if __name__ == '__main__':

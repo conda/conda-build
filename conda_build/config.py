@@ -3,6 +3,7 @@ Module to store conda build settings.
 '''
 from __future__ import absolute_import, division, print_function
 
+import math
 import os
 import sys
 from os.path import abspath, expanduser, join
@@ -19,16 +20,51 @@ class Config(object):
     __package__ = __package__
     __doc__ = __doc__
 
-    CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
-    CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
-    CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
-        '')).replace('.', ''))
-    CONDA_NPY = os.getenv("CONDA_NPY")
-    if not CONDA_NPY:
-        CONDA_NPY = None
-    else:
-        CONDA_NPY = int(CONDA_NPY.replace('.', '')) or None
-    CONDA_R = os.getenv("CONDA_R", "3.2.2")
+    def __init__(self, *args, **kw):
+        super(Config, self).__init__(*args, **kw)
+
+        self.noarch = False
+
+        self.CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
+        self.CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
+        self.CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
+            '')).replace('.', ''))
+        self.CONDA_NPY = os.getenv("CONDA_NPY")
+        if not self.CONDA_NPY:
+            self.CONDA_NPY = None
+        else:
+            self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
+        self.CONDA_R = os.getenv("CONDA_R", "3.2.2")
+
+        self._build_id = ""
+        self._prefix_length = 80
+        # set default value (not actually None)
+        self._croot = None
+
+        # Default to short prefixes
+        self.use_long_build_prefix = False
+
+    @property
+    def croot(self):
+        """This is where source caches and work folders live"""
+        if not self._croot:
+            _bld_root_env = os.getenv('CONDA_BLD_PATH')
+            _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+            if _bld_root_env:
+                self._croot = abspath(expanduser(_bld_root_env))
+            elif _bld_root_rc:
+                self._croot = abspath(expanduser(_bld_root_rc))
+            elif cc.root_writable:
+                self._croot = join(cc.root_dir, 'conda-bld')
+            else:
+                self._croot = abspath(expanduser('~/conda-bld'))
+        return self._croot
+
+    @croot.setter
+    def croot(self, croot):
+        """Set croot - if None is passed, then the default value will be used"""
+        self._croot = croot
+
 
     @property
     def PY3K(self):
@@ -41,28 +77,8 @@ class Config(object):
         (3.5 is compiler switch to MSVC 2015)"""
         return bool(self.CONDA_PY >= 35)
 
-    noarch = False
-
     def get_conda_py(self):
         return self.CONDA_PY
-
-    _bld_root_env = os.getenv('CONDA_BLD_PATH')
-    _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
-    if _bld_root_env:
-        croot = abspath(expanduser(_bld_root_env))
-    elif _bld_root_rc:
-        croot = abspath(expanduser(_bld_root_rc))
-    elif cc.root_writable:
-        croot = join(cc.root_dir, 'conda-bld')
-    else:
-        croot = abspath(expanduser('~/conda-bld'))
-
-    short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = max(short_build_prefix, (short_build_prefix + 8 * '_placehold')[:80])
-    # XXX: Make this None to be more rigorous about requiring the build_prefix
-    # to be known before it is used.
-    use_long_build_prefix = False
-    test_prefix = join(cc.envs_dirs[0], '_test')
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
@@ -93,12 +109,49 @@ class Config(object):
         return res
 
     @property
+    def build_id(self):
+        """This is a per-build (almost) unique id, consisting of the package being built, and the
+        time since the epoch, in ms.  It is appended to build and test prefixes, and used to create
+        unique work folders for build and test."""
+        return self._build_id
+
+    @build_id.setter
+    def build_id(self, _build_id):
+        self._build_id = _build_id
+
+    @property
+    def _build_id_suffix(self):
+        return '_' + self.build_id if self.build_id else ""
+
+    @property
+    def prefix_length(self):
+        return self._prefix_length
+
+    @prefix_length.setter
+    def prefix_length(self, length):
+        self._prefix_length = length
+
+    @property
+    def _short_build_prefix(self):
+        return join(self.croot, '_build' + self._build_id_suffix)
+
+    @property
+    def _long_build_prefix(self):
+        placeholder_length = self.prefix_length
+        if self._build_id_suffix:
+            placeholder_length -= (len(self._build_id_suffix) + 1)  # + 1 is for '_'
+        placeholder = '_placehold'
+        repeats = int(math.ceil(self.prefix_length / len(placeholder)) + 1)
+        placeholder = (self.short_build_prefix + repeats * placeholder)[:placeholder_length]
+        return max(self.short_build_prefix, placeholder) + self._build_id_suffix
+
+    @property
     def build_prefix(self):
-        if self.use_long_build_prefix is None:
-            raise Exception("I don't know which build prefix to use yet")
-        if self.use_long_build_prefix:
-            return self.long_build_prefix
-        return self.short_build_prefix
+        return self._long_build_prefix if self.use_long_build_prefix else self._short_build_prefix
+
+    @property
+    def test_prefix(self):
+        return join(self.croot, '_test' + self._build_id_suffix)
 
     @property
     def build_python(self):
@@ -148,6 +201,31 @@ class Config(object):
     def bldpkgs_dirs(self):
         """ Dirs where previous build packages might be. """
         return join(self.croot, cc.subdir), join(self.croot, "noarch")
+
+    @property
+    def src_cache(self):
+        return join(config.croot, 'src_cache')
+
+    @property
+    def git_cache(self):
+        return join(config.croot, 'git_cache')
+
+    @property
+    def hg_cache(self):
+        return join(config.croot, 'hg_cache')
+
+    @property
+    def svn_cache(self):
+        join(config.croot, 'svn_cache')
+
+    @property
+    def work_dir(self):
+        return join(self.croot, 'work' + self._build_id_suffix)
+
+    @property
+    def test_dir(self):
+        return join(self.croot, 'test' + self._build_id_suffix)
+
 
 config = Config()
 
