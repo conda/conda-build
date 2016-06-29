@@ -92,15 +92,16 @@ def msvc_env_cmd(bits, override=None):
     version = None
     if override is not None:
         version = override
-        # The DISTUTILS_USE_SDK variable tells distutils to not try and validate
-        # the MSVC compiler. For < 3.5 this still forcibly looks for 'cl.exe'.
-        # For > 3.5 it literally just skips the validation logic.
-        # See distutils _msvccompiler.py and msvc9compiler.py / msvccompiler.py
-        # for more information.
-        msvc_env_lines.append('set DISTUTILS_USE_SDK=1')
-        # This is also required to hit the 'don't validate' logic on < 3.5.
-        # For > 3.5 this is ignored.
-        msvc_env_lines.append('set MSSdk=1')
+
+    # The DISTUTILS_USE_SDK variable tells distutils to not try and validate
+    # the MSVC compiler. For < 3.5 this still forcibly looks for 'cl.exe'.
+    # For > 3.5 it literally just skips the validation logic.
+    # See distutils _msvccompiler.py and msvc9compiler.py / msvccompiler.py
+    # for more information.
+    msvc_env_lines.append('set DISTUTILS_USE_SDK=1')
+    # This is also required to hit the 'don't validate' logic on < 3.5.
+    # For > 3.5 this is ignored.
+    msvc_env_lines.append('set MSSdk=1')
 
     if not version:
         if config.PY3K and config.use_MSVC2015:
@@ -126,30 +127,34 @@ def msvc_env_cmd(bits, override=None):
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out;%MSYS2_ARG_CONV_EXCL%"')
     msvc_env_lines.append('set "MSYS2_ENV_CONV_EXCL=CL"')
     if version == '10.0':
-        WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
-                                        'installationfolder')
-        WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
+        try:
+            WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
+                                            'installationfolder')
+            WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
 
-        win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
-        win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_71_BAT_PATH, arch=win_sdk_arch)
+            win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
+            win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_71_BAT_PATH, arch=win_sdk_arch)
 
-        # There are two methods of building Python 3.3 and 3.4 extensions (both
-        # of which required Visual Studio 2010 - as explained in the Python wiki
-        # https://wiki.python.org/moin/WindowsCompilers)
-        # 1) Use the Windows SDK 7.1
-        # 2) Use Visual Studio 2010 (any edition)
-        # However, VS2010 never shipped with a 64-bit compiler, so in this case
-        # **only** option (1) applies. For this reason, we always try and
-        # activate the Windows SDK first. Unfortunately, unsuccessfully setting
-        # up the environment does **not EXIT 1** and therefore we must fall
-        # back to attempting to set up VS2010.
-        # DelayedExpansion is required for the SetEnv.cmd
-        msvc_env_lines.append('Setlocal EnableDelayedExpansion')
-        msvc_env_lines.append(win_sdk_cmd)
-        # If the WindowsSDKDir environment variable has not been successfully
-        # set then try activating VS2010
-        msvc_env_lines.append('if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
-            WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)))
+            # There are two methods of building Python 3.3 and 3.4 extensions (both
+            # of which required Visual Studio 2010 - as explained in the Python wiki
+            # https://wiki.python.org/moin/WindowsCompilers)
+            # 1) Use the Windows SDK 7.1
+            # 2) Use Visual Studio 2010 (any edition)
+            # However, VS2010 never shipped with a 64-bit compiler, so in this case
+            # **only** option (1) applies. For this reason, we always try and
+            # activate the Windows SDK first. Unfortunately, unsuccessfully setting
+            # up the environment does **not EXIT 1** and therefore we must fall
+            # back to attempting to set up VS2010.
+            # DelayedExpansion is required for the SetEnv.cmd
+            msvc_env_lines.append('Setlocal EnableDelayedExpansion')
+            msvc_env_lines.append(win_sdk_cmd)
+            # If the WindowsSDKDir environment variable has not been successfully
+            # set then try activating VS2010
+            msvc_env_lines.append('if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
+                WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)))
+        # sdk is not installed.  Fall back to only trying VS 2010
+        except KeyError:
+            msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
     elif version == '9.0':
         # Get the Visual Studio 2008 path (not the Visual C++ for Python path)
         # and get the 'vcvars64.bat' from inside the bin (in the directory above
