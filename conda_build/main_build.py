@@ -98,7 +98,8 @@ different sets of packages."""
         metavar='RECIPE_PATH',
         nargs='+',
         choices=RecipeCompleter(),
-        help="Path to recipe directory.",
+        help="Path to recipe directory.  Pass 'purge' here to clean the "
+        "work and test intermediates.",
     )
     p.add_argument(
         '--skip-existing',
@@ -224,6 +225,10 @@ def execute(args, parser):
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
+
+    if 'purge' in args.recipe:
+        build.clean_build()
+        return
 
     check_external()
 

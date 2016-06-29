@@ -151,6 +151,7 @@ class Config(object):
 
     @property
     def test_prefix(self):
+        """The temporary folder where the test environment is created"""
         return join(self.croot, '_test' + self._build_id_suffix)
 
     @property
@@ -224,6 +225,7 @@ class Config(object):
 
     @property
     def test_dir(self):
+        """The temporary folder where test files are copied to, and where tests start execution"""
         return join(self.croot, 'test' + self._build_id_suffix)
 
 

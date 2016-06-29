@@ -761,4 +761,16 @@ def print_build_intermediate_warning():
     print("Source and build intermediates have been left in " + config.croot + ".")
     work_folders = glob(os.path.join(config.croot, "work_*"))
     print("There are currently {num_builds} accumulated.".format(num_builds=len(work_folders)))
-    print("To remove them, you can run the ```conda clean --build``` command")
+    print("To remove them, you can run the ```conda build purge``` command")
+
+
+def clean_build(folders=None):
+    if not folders:
+        folders = ['source', 'test', 'build_env', 'test_env']
+    content = {'source': glob(os.path.join(config.croot, "work_*")),
+               'test': glob(os.path.join(config.croot, "test_*")),
+               'build_env': glob(os.path.join(config.croot, "_build_*")),
+               'test_env': glob(os.path.join(config.croot, "_test_*")),}
+    for folder in folders:
+        for f in content[folder]:
+            shutil.rmtree(f)
