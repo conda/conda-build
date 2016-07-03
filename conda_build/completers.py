@@ -5,7 +5,7 @@ from conda.cli.common import Completer
 
 all_versions = {
     'python': [26, 27, 33, 34, 35],
-    'numpy': [16, 17, 18, 19, 110],
+    'numpy': [16, 17, 18, 19, 110, 111],
     'perl': None,
     'R': None,
     'lua': ["2.0", "5.1", "5.2", "5.3"]
