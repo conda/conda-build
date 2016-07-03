@@ -451,7 +451,9 @@ class MetaData(object):
         return res
 
     def build_number(self):
-        return int(self.get_value('build/number', 0))
+        number = self.get_value('build/number', 0)
+        # build number can come back as None if no setting (or jinja intermediate)
+        return int(number) if number else 0
 
     def ms_depends(self, typ='run'):
         res = []
