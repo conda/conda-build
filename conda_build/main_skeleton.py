@@ -310,7 +310,7 @@ def execute(args, parser):
 
     if not args.repo:
         parser.print_help()
-    with Locked(config.croot):
+    with Locked(os.getcwd()):
         if args.repo == "pypi":
             pypi.main(args, parser)
         elif args.repo == "cpan":

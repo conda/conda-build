@@ -3,6 +3,7 @@ import subprocess
 import shutil
 import sys
 import tempfile
+import time
 
 import pytest
 
@@ -10,6 +11,7 @@ from conda.compat import PY3, TemporaryDirectory
 from conda.config import subdir
 from conda.fetch import download
 from conda_build.source import _guess_patch_strip_level, apply_patch
+from conda_build.build import get_build_folders
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
@@ -42,10 +44,11 @@ def test_output_build_path_git_source():
     test_path = os.path.join(sys.prefix, "conda-bld", subdir,
                         "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
+    output = output.rstrip()
     if PY3:
         output = output.decode("UTF-8")
         error = error.decode("UTF-8")
-    assert output.rstrip() == test_path, error
+    assert output == test_path, "{} != {}".format(output, test_path)
 
 
 def test_build_with_no_activate_does_not_activate():
@@ -251,7 +254,7 @@ def test_broken_conda_meta():
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     error = error.decode('utf-8')
-    assert "Error: Untracked file(s) ('conda-meta/nope',)" in error
+    assert u"Error: Untracked file(s) (u'conda-meta/nope',)" in error
 
 
 def test_recursive_fail():
@@ -390,3 +393,43 @@ def test_git_describe_info_on_branch():
     output = output.decode('utf-8').rstrip()
     error = error.decode('utf-8')
     assert test_path == output, error
+
+
+def test_concurrent_build():
+    cmd = 'conda build purge'
+    subprocess.check_call(cmd.split())
+
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
+    running_procs = []
+    num_procs = 4
+    for run in range(num_procs):
+        # for each process, set a separate build root, so that output files don't overlap
+        CONDA_BLD_PATH =
+        running_procs.append(subprocess.Popen(cmd.split(),
+                                              stdout=subprocess.PIPE,
+                                              stderr=subprocess.PIPE))
+        time.sleep(0.2)
+
+    while running_procs:
+        for proc in running_procs:
+            retcode = proc.poll()
+            if retcode is not None: # Process finished.
+                running_procs.remove(proc)
+                # Here, `proc` has finished with return code `retcode`
+                if retcode != 0:
+                    """Error handling."""
+                    out, error = proc.communicate()
+                    raise RuntimeError(error)
+
+                break
+            else: # No process is done, wait a bit and check again.
+                time.sleep(.1)
+                continue
+
+    assert len(get_build_folders()) == num_procs
+
+def test_concurrent_build_overlap_warns():
+    """Concurrency is hard.  Let's say two users are building the same package
+    at the same time, but with different recipes.  We need to make sure that these
+    users understand what they are going to get, and that it is not a race condition."""
+    pass

@@ -60,11 +60,15 @@ class Config(object):
                 self._croot = abspath(expanduser('~/conda-bld'))
         return self._croot
 
+    @property
+    def build_folder(self):
+        """This is the core folder for a given build.  It has the environments and work directories."""
+        return os.path.join(self.croot, self._build_id_suffix)
+
     @croot.setter
     def croot(self, croot):
         """Set croot - if None is passed, then the default value will be used"""
         self._croot = croot
-
 
     @property
     def PY3K(self):
@@ -133,7 +137,7 @@ class Config(object):
 
     @property
     def _short_build_prefix(self):
-        return join(self.croot, '_build' + self._build_id_suffix)
+        return join(self.build_folder, '_build_env')
 
     @property
     def _long_build_prefix(self):
@@ -142,8 +146,8 @@ class Config(object):
             placeholder_length -= (len(self._build_id_suffix) + 1)  # + 1 is for '_'
         placeholder = '_placehold'
         repeats = int(math.ceil(self.prefix_length / len(placeholder)) + 1)
-        placeholder = (self.short_build_prefix + repeats * placeholder)[:placeholder_length]
-        return max(self.short_build_prefix, placeholder) + self._build_id_suffix
+        placeholder = (self._short_build_prefix + repeats * placeholder)[:placeholder_length]
+        return max(self._short_build_prefix, placeholder) + self._build_id_suffix
 
     @property
     def build_prefix(self):
@@ -152,7 +156,7 @@ class Config(object):
     @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        return join(self.croot, '_test' + self._build_id_suffix)
+        return join(self.build_folder, '_test_env')
 
     @property
     def build_python(self):
@@ -217,16 +221,16 @@ class Config(object):
 
     @property
     def svn_cache(self):
-        join(config.croot, 'svn_cache')
+        return join(config.croot, 'svn_cache')
 
     @property
     def work_dir(self):
-        return join(self.croot, 'work' + self._build_id_suffix)
+        return join(self.build_folder, 'work')
 
     @property
     def test_dir(self):
         """The temporary folder where test files are copied to, and where tests start execution"""
-        return join(self.croot, 'test' + self._build_id_suffix)
+        return join(self.build_folder, 'test_tmp')
 
 
 config = Config()

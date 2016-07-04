@@ -4,7 +4,8 @@ import os
 import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
-from shutil import copytree, copy2
+from shutil import copy2
+from distutils.dir_util import copy_tree
 from subprocess import check_call, Popen, PIPE, check_output
 import locale
 import time
@@ -272,7 +273,7 @@ def svn_source(meta, verbose=False):
         assert isdir(cache_repo)
 
     # now copy into work directory
-    copytree(cache_repo, config.work_dir, symlinks=True)
+    copy_tree(cache_repo, config.work_dir, preserve_symlinks=1)
 
     if not verbose:
         FNULL.close()
@@ -392,7 +393,7 @@ def provide(recipe_dir, meta, verbose=False, patch=True, build_id=None):
     elif 'path' in meta:
         if verbose:
             print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), config.work_dir))
-        copytree(abspath(join(recipe_dir, meta.get('path'))), config.work_dir)
+        copy_tree(abspath(join(recipe_dir, meta.get('path'))), config.work_dir)
     else:  # no source
         if not isdir(config.work_dir):
             os.makedirs(config.work_dir)

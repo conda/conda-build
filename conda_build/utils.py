@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+from distutils.dir_util import copy_tree
 import fnmatch
 import os
 import sys
@@ -51,7 +52,7 @@ def copy_into(src, dst):
         dstname = os.path.join(dst, afile)
 
         if os.path.isdir(srcname):
-            shutil.copytree(srcname, dstname)
+            copy_tree(srcname, dstname)
         else:
             shutil.copy2(srcname, dstname)
 

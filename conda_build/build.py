@@ -3,6 +3,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
 
+from distutils.dir_util import copy_tree
 import io
 from glob import glob
 import json
@@ -193,7 +194,7 @@ def create_info_files(m, files, include_recipe=True):
             src_path = join(m.path, fn)
             dst_path = join(recipe_dir, fn)
             if isdir(src_path):
-                shutil.copytree(src_path, dst_path)
+                copy_tree(src_path, dst_path)
             else:
                 shutil.copy(src_path, dst_path)
 
@@ -439,7 +440,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
               "configuration." % m.dist())
         return
 
-    with Locked(cc.root_dir):
+    with Locked(config.build_folder):
 
         if post in [False, None]:
             print("Removing old build environment")
@@ -588,11 +589,11 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             files2 = prefix_files()
             if any(config.meta_dir in join(config.build_prefix, f) for f in
                     files2 - files1):
+                meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
+                        join(config.build_prefix, f)),)
                 sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
     This error usually comes from using conda in the build script.  Avoid doing this, as it
-    can lead to packages that include their dependencies.""" %
-                    (tuple(f for f in files2 - files1 if config.meta_dir in
-                        join(config.build_prefix, f)),)))
+    can lead to packages that include their dependencies.""" % meta_files))
             post_build(m, sorted(files2 - files1))
             create_info_files(m, sorted(files2 - files1),
                             include_recipe=bool(m.path) and include_recipe)
@@ -637,7 +638,7 @@ def test(m, move_broken=True, activate=True):
     :type m: Metadata
     '''
 
-    with Locked(cc.root_dir):
+    with Locked(config.build_folder):
 
         # remove from package cache
         rm_pkgs_cache(m.dist())
@@ -755,22 +756,22 @@ def tests_failed(m, move_broken):
     sys.exit("TESTS FAILED: " + m.dist())
 
 
+def get_build_folders():
+    # remember, glob is not a regex.
+    return glob(os.path.join(config.croot, "*" + "[0-9]" * 6 + "*"))
+
+
 def print_build_intermediate_warning():
     print("\n\n")
     print('#' * 80)
     print("Source and build intermediates have been left in " + config.croot + ".")
-    work_folders = glob(os.path.join(config.croot, "work_*"))
-    print("There are currently {num_builds} accumulated.".format(num_builds=len(work_folders)))
+    build_folders = get_build_folders()
+    print("There are currently {num_builds} accumulated.".format(num_builds=len(build_folders)))
     print("To remove them, you can run the ```conda build purge``` command")
 
 
 def clean_build(folders=None):
     if not folders:
-        folders = ['source', 'test', 'build_env', 'test_env']
-    content = {'source': glob(os.path.join(config.croot, "work_*")),
-               'test': glob(os.path.join(config.croot, "test_*")),
-               'build_env': glob(os.path.join(config.croot, "_build_*")),
-               'test_env': glob(os.path.join(config.croot, "_test_*")),}
+        folders = get_build_folders()
     for folder in folders:
-        for f in content[folder]:
-            shutil.rmtree(f)
+        shutil.rmtree(folder)

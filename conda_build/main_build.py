@@ -289,7 +289,8 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # here we uniquely name folders, so that more than one build can happen concurrently
-        build_id = os.path.basename(recipe_dir) + "_" + str(int(time.time() * 1000))
+        #    keep 6 decimal places so that prefix < 80 chars
+        build_id = os.path.basename(recipe_dir) + "_" + str(int(time.time() * 1000))[-6:]
         # important: this is recomputing prefixes and determines where work folders are.
         config.build_id = build_id
 
@@ -396,7 +397,7 @@ def execute(args, parser):
 
         already_built.add(m.pkg_fn())
 
-    build.print_build_intermediate_warning()
+        build.print_build_intermediate_warning()
 
 
 def args_func(args, p):
