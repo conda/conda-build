@@ -1,6 +1,51 @@
 import unittest
+import tempfile
+import shutil
+import os
 
 import conda_build.utils as utils
+
+
+class TestCopyInto(unittest.TestCase):
+
+    def setUp(self):
+        self.src = tempfile.mkdtemp()
+        self.dst = tempfile.mkdtemp()
+
+        self.namespace = os.path.join(self.src, 'namespace')
+        self.package = os.path.join(self.namespace, 'package')
+        self.module = os.path.join(self.package, 'module.py')
+
+        os.makedirs(self.namespace)
+        os.makedirs(self.package)
+        self.makefile(self.module)
+
+    def makefile(self, name, contents=''):
+
+        name = os.path.abspath(name)
+        path = os.path.dirname(name)
+
+        if not os.path.exists(path):
+            os.makedirs(path)
+
+        with open(name, 'w') as f:
+            f.write(contents)
+
+    def test_copy_source_tree(self):
+        utils.copy_into(self.src, self.dst)
+        self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package', 'module.py')))
+
+    def test_merge_namespace_trees(self):
+        dep = os.path.join(self.dst, 'namespace', 'package', 'dependency.py')
+        self.makefile(dep)
+
+        utils.copy_into(self.src, self.dst)
+        self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package', 'module.py')))
+        self.assertTrue(os.path.isfile(dep))
+
+    def tearDown(self):
+        shutil.rmtree(self.dst)
+        shutil.rmtree(self.src)
 
 
 class TestUtils(unittest.TestCase):
