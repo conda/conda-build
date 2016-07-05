@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from conda_build.config import Config
@@ -10,10 +12,9 @@ def config():
 
 
 def test_set_build_id(config):
-    build_prefix = config.build_prefix
     build_id = "test123"
     config.build_id = build_id
-    assert config.build_prefix == build_prefix + '_' + build_id
+    assert config.build_prefix == os.path.join(config.croot, build_id, "_build_env")
 
 
 def test_long_build_prefix_length(config):
@@ -28,4 +29,4 @@ def test_build_id_at_end_of_long_build_prefix(config):
     config.use_long_build_prefix = True
     build_id = 'test123'
     config.build_id = build_id
-    assert config.build_prefix.endswith('_' + build_id)
+    assert build_id in config.build_prefix

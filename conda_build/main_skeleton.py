@@ -6,6 +6,8 @@
 
 from __future__ import absolute_import, division, print_function
 
+import os
+
 from conda.config import default_python
 from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser

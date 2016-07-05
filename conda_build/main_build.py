@@ -289,11 +289,17 @@ def execute(args, parser):
         if not isdir(recipe_dir):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
-        # here we uniquely name folders, so that more than one build can happen concurrently
-        #    keep 6 decimal places so that prefix < 80 chars
-        build_id = os.path.basename(recipe_dir) + "_" + str(int(time.time() * 1000))[-6:]
-        # important: this is recomputing prefixes and determines where work folders are.
-        config.build_id = build_id
+        build_folders = sorted([build_folder for build_folder in build.get_build_folders()
+                         if recipe_dir in build_folder])
+        if args.dirty and build_folders:
+            # Use the most recent build
+            config.build_id = sorted(build_folders)[-1]
+        else:
+            # here we uniquely name folders, so that more than one build can happen concurrently
+            #    keep 6 decimal places so that prefix < 80 chars
+            build_id = os.path.basename(recipe_dir) + "_" + str(int(time.time() * 1000))
+            # important: this is recomputing prefixes and determines where work folders are.
+            config.build_id = build_id
 
         # this fully renders any jinja templating, throwing an error if any data is missing
         m, need_source_download = render_recipe(recipe_dir, no_download_source=False,

@@ -63,7 +63,7 @@ class Config(object):
     @property
     def build_folder(self):
         """This is the core folder for a given build.  It has the environments and work directories."""
-        return os.path.join(self.croot, self._build_id_suffix)
+        return os.path.join(self.croot, self.build_id)
 
     @croot.setter
     def croot(self, croot):
@@ -124,10 +124,6 @@ class Config(object):
         self._build_id = _build_id
 
     @property
-    def _build_id_suffix(self):
-        return '_' + self.build_id if self.build_id else ""
-
-    @property
     def prefix_length(self):
         return self._prefix_length
 
@@ -141,13 +137,11 @@ class Config(object):
 
     @property
     def _long_build_prefix(self):
-        placeholder_length = self.prefix_length
-        if self._build_id_suffix:
-            placeholder_length -= (len(self._build_id_suffix) + 1)  # + 1 is for '_'
+        placeholder_length = self.prefix_length - len(self._short_build_prefix)
         placeholder = '_placehold'
-        repeats = int(math.ceil(self.prefix_length / len(placeholder)) + 1)
-        placeholder = (self._short_build_prefix + repeats * placeholder)[:placeholder_length]
-        return max(self._short_build_prefix, placeholder) + self._build_id_suffix
+        repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
+        placeholder = (self._short_build_prefix + repeats * placeholder)[:self.prefix_length]
+        return max(self._short_build_prefix, placeholder)
 
     @property
     def build_prefix(self):
