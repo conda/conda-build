@@ -377,3 +377,15 @@ def test_patch():
                 lines = modified.readlines()
                 assert lines[0] == '43770\n'
         os.chdir(basedir)
+
+
+def test_git_describe_info_on_branch():
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "_git_describe_number_branch"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                        "git_describe_number_branch-1.20.2-1_g82c6ba6.tar.bz2")
+    output = output.decode('utf-8').rstrip()
+    error = error.decode('utf-8')
+    assert test_path == output, error
