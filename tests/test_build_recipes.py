@@ -380,7 +380,8 @@ def test_patch():
 
 
 def test_git_describe_info_on_branch():
-    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "_git_describe_number_branch"))
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_git_describe_number_branch"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()

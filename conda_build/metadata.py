@@ -456,8 +456,7 @@ class MetaData(object):
         try:
             build_int = int(number)
         except (ValueError, TypeError):
-            # todo specialize
-            raise Exception('Build number was invalid value "{}". Must be an integer.'.format(number))
+            build_int = ""
         return build_int
 
     def ms_depends(self, typ='run'):
@@ -533,7 +532,7 @@ class MetaData(object):
             res.append('_')
         if features:
             res.extend(('_'.join(features), '_'))
-        res.append('%d' % self.build_number())
+        res.append('{0}'.format(self.build_number()))
         return ''.join(res)
 
     def dist(self):
