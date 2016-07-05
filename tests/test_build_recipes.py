@@ -395,6 +395,8 @@ def test_git_describe_info_on_branch():
     assert test_path == output, error
 
 
+# concurrency code derived from
+# http://stackoverflow.com/a/636601/1170370
 def test_concurrent_build():
 
     cmd = 'conda build --no-anaconda-upload {}'

@@ -372,7 +372,7 @@ Error:
         os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
-def provide(recipe_dir, meta, verbose=False, patch=True, build_id=None):
+def provide(recipe_dir, meta, verbose=False, patch=True):
     """
     given a recipe_dir:
       - download (if necessary)
