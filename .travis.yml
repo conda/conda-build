@@ -19,9 +19,8 @@ install:
   - conda config --set always_yes yes
   - conda update -q --all
   - conda install -q --force --no-deps conda requests
-  - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
-  # need conda build to build conda build as a conda package
-  - conda install -q anaconda-client conda-build
+  - conda install -q pip pytest requests jinja2 mock patchelf flake8 pyflakes=1.1
+  - conda install -q anaconda-client
   - conda install -c conda-forge -q perl
   - pip install pytest-cov
   - python setup.py install --single-version-externally-managed --record=record.txt

@@ -453,7 +453,15 @@ class MetaData(object):
         return res
 
     def build_number(self):
-        return int(self.get_value('build/number', 0))
+        number = self.get_value('build/number', 0)
+
+        # build number can come back as None if no setting (or jinja intermediate)
+        try:
+            build_int = int(number)
+        except (ValueError, TypeError):
+            # todo specialize
+            raise Exception('Build number was invalid value "{}". Must be an integer.'.format(number))
+        return build_int
 
     def ms_depends(self, typ='run'):
         res = []
