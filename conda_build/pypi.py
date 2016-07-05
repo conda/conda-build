@@ -237,7 +237,7 @@ class RequestsTransport(Transport):
         Parse the xmlrpc response.
         """
         p, u = self.getparser()
-        p.feed(resp.text)
+        p.feed(resp.text.encode("utf-8"))
         p.close()
         return u.close()
 
@@ -327,9 +327,9 @@ def main(args, parser):
                           package)
                     for ver in versions:
                         print(ver)
-                    print("Using %s" % versions[0])
+                    print("Using %s" % versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = versions[0]
+                d['version'] = versions[-1]
 
         data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(args,
                                                                         client,
