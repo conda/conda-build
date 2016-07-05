@@ -23,7 +23,7 @@ import mmap
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index
-from conda.compat import PY3
+from conda.compat import PY3, TemporaryDirectory
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, symlink_conda
 from conda.lock import Locked
@@ -605,27 +605,36 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             fix_permissions(files3 - files1)
 
             path = bldpkg_path(m)
-            t = tarfile.open(path, 'w:bz2')
 
-            def order(f):
-                # we don't care about empty files so send them back via 100000
-                fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
-                # info/* records will be False == 0, others will be 1.
-                info_order = int(os.path.dirname(f) != 'info')
-                return info_order, fsize
+            # lock the output directory while we build this file
+            # create the tarball in a temporary directory to minimize lock time
+            with TemporaryDirectory() as tmp:
+                tmp_path = os.path.join(tmp, os.path.basename(path))
+                t = tarfile.open(tmp_path, 'w:bz2')
 
-            # add files in order of a) in info directory, b) increasing size so
-            # we can access small manifest or json files without decompressing
-            # possible large binary or data files
-            for f in sorted(files3 - files1, key=order):
-                t.add(join(config.build_prefix, f), f)
-            t.close()
+                def order(f):
+                    # we don't care about empty files so send them back via 100000
+                    fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
+                    # info/* records will be False == 0, others will be 1.
+                    info_order = int(os.path.dirname(f) != 'info')
+                    return info_order, fsize
 
-            print("BUILD END:", m.dist())
+                # add files in order of a) in info directory, b) increasing size so
+                # we can access small manifest or json files without decompressing
+                # possible large binary or data files
+                for f in sorted(files3 - files1, key=order):
+                    t.add(join(config.build_prefix, f), f)
+                t.close()
 
-            # we're done building, perform some checks
-            tarcheck.check_all(path)
-            update_index(config.bldpkgs_dir)
+                # we're done building, perform some checks
+                tarcheck.check_all(tmp_path)
+
+                # lock the packages folder while performing this operation, so that package and index are each safe
+                with Locked(os.path.dirname(path)):
+                    shutil.copy2(tmp_path, path)
+                    update_index(config.bldpkgs_dir)
+
+                print("BUILD END:", m.dist())
         else:
             print("STOPPING BUILD BEFORE POST:", m.dist())
 
@@ -756,9 +765,9 @@ def tests_failed(m, move_broken):
     sys.exit("TESTS FAILED: " + m.dist())
 
 
-def get_build_folders():
+def get_build_folders(croot=config.croot):
     # remember, glob is not a regex.
-    return glob(os.path.join(config.croot, "*" + "[0-9]" * 6 + "*"))
+    return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
 
 
 def print_build_intermediate_warning():

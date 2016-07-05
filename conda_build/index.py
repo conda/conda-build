@@ -11,38 +11,41 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info
 from conda.compat import PY3
+from conda.lock import Locked
 from conda.utils import md5_file
 
+from conda_build.utils import file_info
 
 def read_index_tar(tar_path):
     """ Returns the index.json dict inside the given package tarball. """
-    try:
-        with tarfile.open(tar_path) as t:
-            try:
-                return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
-            except EOFError:
-                raise RuntimeError("Could not extract %s. File probably corrupt."
-                    % tar_path)
-            except OSError as e:
-                raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
-    except tarfile.ReadError:
-        raise RuntimeError("Could not extract metadata from %s. File probably corrupt." % tar_path)
+    with Locked(os.path.dirname(tar_path)):
+        try:
+            with tarfile.open(tar_path) as t:
+                try:
+                    return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+                except EOFError:
+                    raise RuntimeError("Could not extract %s. File probably corrupt."
+                        % tar_path)
+                except OSError as e:
+                    raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
+        except tarfile.ReadError:
+            raise RuntimeError("Could not extract metadata from %s. File probably corrupt." % tar_path)
 
 
 def write_repodata(repodata, dir_path):
     """ Write updated repodata.json and repodata.json.bz2 """
-    data = json.dumps(repodata, indent=2, sort_keys=True)
-    # strip trailing whitespace
-    data = '\n'.join(line.rstrip() for line in data.splitlines())
-    # make sure we have newline at the end
-    if not data.endswith('\n'):
-        data += '\n'
-    with open(join(dir_path, 'repodata.json'), 'w') as fo:
-        fo.write(data)
-    with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
-        fo.write(bz2.compress(data.encode('utf-8')))
+    with Locked(dir_path):
+        data = json.dumps(repodata, indent=2, sort_keys=True)
+        # strip trailing whitespace
+        data = '\n'.join(line.rstrip() for line in data.splitlines())
+        # make sure we have newline at the end
+        if not data.endswith('\n'):
+            data += '\n'
+        with open(join(dir_path, 'repodata.json'), 'w') as fo:
+            fo.write(data)
+        with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
+            fo.write(bz2.compress(data.encode('utf-8')))
 
 
 def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=True):

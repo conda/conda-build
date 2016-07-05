@@ -78,20 +78,23 @@ def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
 
     if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
-        # this try/catch is for when the tool to download source is actually in
-        #    meta.yaml, and not previously installed in builder env.
-        try:
-            if not dirty:
-                source.provide(metadata.path, metadata.get_section('source'),
-                               verbose=verbose)
-            metadata.parse_again(permit_undefined_jinja=False)
-            need_source_download = False
-        except subprocess.CalledProcessError as error:
-            print("Warning: failed to download source.  If building, will try "
-                "again after downloading recipe dependencies.")
-            print("Error was: ")
-            print(error)
-            need_source_download = True
+        # lock this while downloading or moving source.  This does not affect other recipes/builds
+        # - they each have their own build_folder.
+        with Locked(config.build_folder):
+            # this try/catch is for when the tool to download source is actually in
+            #    meta.yaml, and not previously installed in builder env.
+            try:
+                if not dirty:
+                    source.provide(metadata.path, metadata.get_section('source'),
+                                verbose=verbose)
+                metadata.parse_again(permit_undefined_jinja=False)
+                need_source_download = False
+            except subprocess.CalledProcessError as error:
+                print("Warning: failed to download source.  If building, will try "
+                    "again after downloading recipe dependencies.")
+                print("Error was: ")
+                print(error)
+                need_source_download = True
     elif not metadata.get_section('source'):
         need_source_download = False
     else:

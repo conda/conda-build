@@ -396,37 +396,40 @@ def test_git_describe_info_on_branch():
 
 
 def test_concurrent_build():
-    cmd = 'conda build purge'
-    subprocess.check_call(cmd.split())
 
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
+    cmd = 'conda build --no-anaconda-upload {}'
     running_procs = []
-    num_procs = 4
-    for run in range(num_procs):
-        # for each process, set a separate build root, so that output files don't overlap
-        CONDA_BLD_PATH =
-        running_procs.append(subprocess.Popen(cmd.split(),
-                                              stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE))
-        time.sleep(0.2)
+    packages = ['source_git', 'source_git_jinja2', 'source_hg', 'source_svn']
 
-    while running_procs:
-        for proc in running_procs:
-            retcode = proc.poll()
-            if retcode is not None: # Process finished.
-                running_procs.remove(proc)
-                # Here, `proc` has finished with return code `retcode`
-                if retcode != 0:
-                    """Error handling."""
-                    out, error = proc.communicate()
-                    raise RuntimeError(error)
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
 
-                break
-            else: # No process is done, wait a bit and check again.
-                time.sleep(.1)
-                continue
+        for package in packages:
+            cmd = cmd.format(os.path.join(metadata_dir, package))
+            running_procs.append(subprocess.Popen(cmd.split(), env=env,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE))
+            time.sleep(0.2)
 
-    assert len(get_build_folders()) == num_procs
+        while running_procs:
+            for proc in running_procs:
+                retcode = proc.poll()
+                if retcode is not None: # Process finished.
+                    running_procs.remove(proc)
+                    # Here, `proc` has finished with return code `retcode`
+                    if retcode != 0:
+                        """Error handling."""
+                        out, error = proc.communicate()
+                        raise RuntimeError(error)
+
+                    break
+                else: # No process is done, wait a bit and check again.
+                    time.sleep(.1)
+                    continue
+
+        assert len(get_build_folders(tmp)) == len(packages)
 
 def test_concurrent_build_overlap_warns():
     """Concurrency is hard.  Let's say two users are building the same package
