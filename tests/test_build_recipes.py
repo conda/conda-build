@@ -254,7 +254,9 @@ def test_broken_conda_meta():
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     error = error.decode('utf-8')
-    assert u"Error: Untracked file(s) (u'conda-meta/nope',)" in error
+    # u for unicode may or may not be in error, depending on python version
+    assert (u"Error: Untracked file(s) (u'conda-meta/nope',)" in error or
+            u"Error: Untracked file(s) ('conda-meta/nope',)" in error)
 
 
 def test_recursive_fail():
