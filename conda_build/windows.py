@@ -229,7 +229,7 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if activate:
-                fo.write("call activate _build\n")
+                fo.write("call activate {0}\n".format(config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 

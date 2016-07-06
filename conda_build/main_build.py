@@ -7,11 +7,12 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
-import os
-import sys
 from collections import deque
 from glob import glob
 from locale import getpreferredencoding
+import os
+import sys
+import time
 import warnings
 
 import conda.config as config
@@ -97,7 +98,8 @@ different sets of packages."""
         metavar='RECIPE_PATH',
         nargs='+',
         choices=RecipeCompleter(),
-        help="Path to recipe directory.",
+        help="Path to recipe directory.  Pass 'purge' here to clean the "
+        "work and test intermediates.",
     )
     p.add_argument(
         '--skip-existing',
@@ -224,6 +226,10 @@ def execute(args, parser):
     import conda_build.source as source
     from conda_build.config import config
 
+    if 'purge' in args.recipe:
+        build.clean_build()
+        return
+
     check_external()
 
     # change globals in build module, see comment there as well
@@ -282,6 +288,19 @@ def execute(args, parser):
         if not isdir(recipe_dir):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
+        build_folders = sorted([build_folder for build_folder in build.get_build_folders()
+                                if os.path.basename(recipe_dir) in build_folder])
+
+        if args.dirty and build_folders:
+            # Use the most recent build
+            config.build_id = build_folders[-1]
+        else:
+            # here we uniquely name folders, so that more than one build can happen concurrently
+            #    keep 6 decimal places so that prefix < 80 chars
+            build_id = os.path.basename(recipe_dir) + "_" + str(int(time.time() * 1000))
+            # important: this is recomputing prefixes and determines where work folders are.
+            config.build_id = build_id
+
         # this fully renders any jinja templating, throwing an error if any data is missing
         m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
                                                 verbose=False, dirty=args.dirty)
@@ -304,14 +323,16 @@ def execute(args, parser):
                     m.pkg_fn() in already_built):
                 print(m.dist(), "is already built, skipping.")
                 continue
+
         if args.output:
             print(bldpkg_path(m))
             continue
         elif args.test:
             build.test(m, move_broken=False)
         elif args.source and need_source_download:
-            source.provide(m.path, m.get_section('source'), verbose=build.verbose)
-            print('Source tree in:', source.get_dir())
+            work_dir = source.provide(m.path, m.get_section('source'),
+                                      verbose=build.verbose)
+            print('Source tree in:', work_dir)
         else:
             # This loop recursively builds dependencies if recipes exist
             if args.build_only:
@@ -382,6 +403,14 @@ def execute(args, parser):
         handle_binstar_upload(build.bldpkg_path(m), args)
 
         already_built.add(m.pkg_fn())
+
+        if not args.keep_old_work and not args.dirty:
+            sys.stderr.write("# --keep-old-work flag not specified.  "
+                             "Removing source and build files.\n")
+            shutil.rmtree(config.build_folder)
+
+        if len(build.get_build_folders()) > 0:
+            build.print_build_intermediate_warning()
 
 
 def args_func(args, p):
