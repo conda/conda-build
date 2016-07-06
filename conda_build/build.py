@@ -653,7 +653,8 @@ def test(m, move_broken=True, activate=True):
         rm_pkgs_cache(m.dist())
 
         tmp_dir = config.test_dir
-        os.makedirs(tmp_dir)
+        if not isdir(tmp_dir):
+            os.makedirs(tmp_dir)
         create_files(tmp_dir, m)
         # Make Perl or Python-specific test files
         if m.name().startswith('perl-'):

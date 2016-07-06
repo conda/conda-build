@@ -318,7 +318,6 @@ def test_no_anaconda_upload_condarc(service_name):
         output, error = process.communicate()
         output = output.decode('utf-8')
         error = error.decode('utf-8')
-        sys.stderr.write(output)
         assert "Automatic uploading is disabled" in output, error
 
 
@@ -438,3 +437,105 @@ def test_concurrent_build_overlap_warns():
     at the same time, but with different recipes.  We need to make sure that these
     users understand what they are going to get, and that it is not a race condition."""
     pass
+
+def test_cleanup():
+    cmd = 'conda build --no-anaconda-upload {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+
+        assert "# --keep-old-work flag not specified.  Removing source and build files." in error
+        assert len(get_build_folders(tmp)) == 0
+
+def test_cleanup_leaves_dir_with_keep_old_work():
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+
+        assert "# --keep-old-work flag not specified.  Removing source and build files." not in error
+        assert len(get_build_folders(tmp)) == 1
+
+def test_cleanup_leaves_old_work_but_warns():
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+
+        # this one should clean up after itself, but not touch the prior one
+        cmd = cmd.replace("--keep-old-work ", "")
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+        output = output.decode('utf-8')
+
+        assert "# --keep-old-work flag not specified.  Removing source and build files." in error
+        assert "There are currently 1 accumulated" in output
+        assert len(get_build_folders(tmp)) == 1
+
+def test_dirty_uses_old_source():
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        _, _ = proc.communicate()
+
+        folders = get_build_folders(tmp)
+        assert len(folders) == 1
+
+        build_folder = folders[0]
+        test_file = os.path.join(build_folder, "test_tmp", "run_test.py")
+        with open(test_file, 'w') as f:
+            f.write("print('dirty file ok')\n")
+
+        # this one should use the earlier build, which has the extra test
+        cmd = cmd.replace("--keep-old-work ", "--dirty ")
+
+        proc = subprocess.Popen(cmd, env=env,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                shell=True)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+        output = output.decode('utf-8')
+
+        # dirty should not clean up old work.  It's a development tool, and this behavior
+        #    would not be intuitive
+        assert "# --keep-old-work flag not specified.  Removing source and build files." not in error
+        assert "There are currently 1 accumulated" in output, error
+        assert len(get_build_folders(tmp)) == 1, error
+        # make sure that our extra file is still there to validate that this is our "dirty" folder
+        assert os.path.isfile(test_file)

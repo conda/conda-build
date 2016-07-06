@@ -290,10 +290,11 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         build_folders = sorted([build_folder for build_folder in build.get_build_folders()
-                         if recipe_dir in build_folder])
+                                if os.path.basename(recipe_dir) in build_folder])
+
         if args.dirty and build_folders:
             # Use the most recent build
-            config.build_id = sorted(build_folders)[-1]
+            config.build_id = build_folders[-1]
         else:
             # here we uniquely name folders, so that more than one build can happen concurrently
             #    keep 6 decimal places so that prefix < 80 chars
@@ -404,7 +405,12 @@ def execute(args, parser):
 
         already_built.add(m.pkg_fn())
 
-        build.print_build_intermediate_warning()
+        if not args.keep_old_work and not args.dirty:
+            sys.stderr.write("# --keep-old-work flag not specified.  Removing source and build files.\n")
+            shutil.rmtree(config.build_folder)
+
+        if len(build.get_build_folders()) > 0:
+            build.print_build_intermediate_warning()
 
 
 def args_func(args, p):
