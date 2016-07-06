@@ -220,6 +220,8 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
+    import conda.config as cc
+
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
@@ -299,10 +301,12 @@ def execute(args, parser):
             continue
         if args.skip_existing:
             # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
-            if ('local::' + m.pkg_fn() in index or
+            urls = cc.get_rc_urls() + cc.get_local_urls()
+            package_exists = [url for url in urls if url + '::' + m.pkg_fn() in index]
+            if (package_exists or
                     m.pkg_fn() in index or
                     m.pkg_fn() in already_built):
-                print(m.dist(), "is already built, skipping.")
+                print(m.dist(), "is already built (in {0}), skipping.".format(package_exists))
                 continue
         if args.output:
             print(bldpkg_path(m))
