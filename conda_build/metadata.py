@@ -29,6 +29,8 @@ except ImportError:
 from conda_build.config import config
 from conda_build.utils import comma_join
 
+on_win = (sys.platform == 'win32')
+
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
@@ -371,6 +373,7 @@ class MetaData(object):
         """
         if not self.meta_path:
             return
+
         self.meta = parse(self._get_contents(permit_undefined_jinja), path=self.meta_path)
 
         if (isfile(self.requirements_path) and
@@ -448,7 +451,13 @@ class MetaData(object):
         return res
 
     def build_number(self):
-        return int(self.get_value('build/number', 0))
+        number = self.get_value('build/number', 0)
+        # build number can come back as None if no setting (or jinja intermediate)
+        try:
+            build_int = int(number)
+        except (ValueError, TypeError):
+            build_int = ""
+        return build_int
 
     def ms_depends(self, typ='run'):
         res = []
@@ -523,7 +532,7 @@ class MetaData(object):
             res.append('_')
         if features:
             res.extend(('_'.join(features), '_'))
-        res.append('%d' % self.build_number())
+        res.append('{0}'.format(self.build_number()))
         return ''.join(res)
 
     def dist(self):
@@ -693,3 +702,43 @@ class MetaData(object):
         String representation of the MetaData.
         '''
         return self.__str__()
+
+    def uses_vcs_in_meta(self):
+        """returns true if recipe contains metadata associated with version control systems.
+        If this metadata is present, a download/copy will be forced in parse_or_try_download.
+        """
+        vcs_types = ["git", "svn", "hg"]
+        if "source" in self.meta:
+            for vcs in vcs_types:
+                if vcs + "_url" in self.meta["source"]:
+                    # translate command name to package name.
+                    # If more than hg, need a dict for this.
+                    if vcs == "hg":
+                        vcs = "mercurial"
+                    return vcs
+
+        # We would get here if we use Jinja2 templating, but specify source with path.
+        with open(self.meta_path) as f:
+            metayaml = f.read()
+            for vcs in vcs_types:
+                matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
+                if len(matches) > 0:
+                    if vcs == "hg":
+                        vcs = "mercurial"
+                    return vcs
+        return None
+
+    def uses_vcs_in_build(self):
+        build_script = "bld.bat" if on_win else "build.sh"
+        build_script = os.path.join(os.path.dirname(self.meta_path), build_script)
+        if os.path.isfile(build_script):
+            vcs_types = ["git", "svn", "hg"]
+            with open(self.meta_path) as f:
+                build_script = f.read()
+                for vcs in vcs_types:
+                    matches = re.findall(r"{}(?:\.exe)?".format(vcs), build_script)
+                    if len(matches) > 0:
+                        if vcs == "hg":
+                            vcs = "mercurial"
+                        return vcs
+        return None

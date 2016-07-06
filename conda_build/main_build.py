@@ -124,13 +124,17 @@ different sets of packages."""
     )
     p.add_argument(
         '--token',
-        action="store",
         help="Token to pass through to anaconda upload"
     )
     p.add_argument(
         '--user',
-        action='store',
         help="User/organization to upload packages to on anaconda.org"
+    )
+    p.add_argument(
+        "--no-activate",
+        action="store_false",
+        help="do not display progress bar",
+        dest='activate',
     )
 
     add_parser_channels(p)
@@ -305,7 +309,7 @@ def execute(args, parser):
             continue
         elif args.test:
             build.test(m, move_broken=False)
-        elif args.source:
+        elif args.source and need_source_download:
             source.provide(m.path, m.get_section('source'), verbose=build.verbose)
             print('Source tree in:', source.get_dir())
         else:
@@ -325,7 +329,7 @@ def execute(args, parser):
                             include_recipe=args.include_recipe,
                             keep_old_work=args.keep_old_work,
                             need_source_download=need_source_download,
-                            dirty=args.dirty)
+                            dirty=args.dirty, activate=args.activate)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these
@@ -341,6 +345,10 @@ def execute(args, parser):
                     pkg = line.lstrip('  - ').split(' -> ')[-1]
                     pkg = pkg.strip().split(' ')[0]
                     if pkg in skip_names:
+                        sys.stderr.write("Warning: package conflict - you may have unresolved "
+                                         "dependencies. Try to conda install each of your "
+                                         "dependencies to figure out which has unresolved "
+                                         "dependencies.")
                         continue
                     recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
                     if os.path.exists(pkg):
@@ -365,7 +373,7 @@ def execute(args, parser):
                 continue
 
             if not args.notest:
-                build.test(m)
+                build.test(m, activate=args.activate)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)

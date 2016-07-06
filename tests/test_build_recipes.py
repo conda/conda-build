@@ -12,8 +12,8 @@ from conda.fetch import download
 from conda_build.source import _guess_patch_strip_level, apply_patch
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
-metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
-fail_dir = os.path.join(thisdir, "test-recipes/fail")
+metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
+fail_dir = os.path.join(thisdir, 'test-recipes', 'fail')
 
 
 def is_valid_dir(parent_dir, dirname):
@@ -46,6 +46,12 @@ def test_output_build_path_git_source():
         output = output.decode("UTF-8")
         error = error.decode("UTF-8")
     assert output.rstrip() == test_path, error
+
+
+def test_build_with_no_activate_does_not_activate():
+    cmd = ('conda build --no-anaconda-upload --no-activate '
+           '{}/_set_env_var_no_activate_build').format(metadata_dir)
+    subprocess.check_call(cmd.split(), cwd=metadata_dir)
 
 
 @pytest.mark.skipif(sys.platform == "win32",
@@ -191,8 +197,30 @@ platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = set(["32", ] + platforms)
     compilers = ["2.7", "3.4", "3.5"]
+    msvc_vers = ['9.0', '10.0', '14.0']
 else:
+    msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="MSVC only on windows")
+@pytest.mark.parametrize("msvc_ver", msvc_vers)
+def test_build_msvc_compiler(msvc_ver):
+    env = dict(os.environ)
+    # verify that the correct compiler is available
+    cl_versions = {"9.0": 15,
+                   "10.0": 16,
+                   "11.0": 17,
+                   "12.0": 18,
+                   "14.0": 19}
+
+    env['CONDATEST_MSVC_VER'] = msvc_ver
+    env['CL_EXE_VERSION'] = str(cl_versions[msvc_ver])
+
+    # Always build Python 2.7 - but set MSVC version manually via Jinja template
+    cmd = 'conda build {} --python=2.7 --no-anaconda-upload'.format(
+        os.path.join(metadata_dir, '_build_msvc_compiler'))
+    subprocess.check_call(cmd.split(), env=env)
 
 
 @pytest.mark.parametrize("platform", platforms)
@@ -349,3 +377,29 @@ def test_patch():
                 lines = modified.readlines()
                 assert lines[0] == '43770\n'
         os.chdir(basedir)
+
+
+def test_git_describe_info_on_branch():
+    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
+                                                        "_git_describe_number_branch"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+                        "git_describe_number_branch-1.20.2-1_g82c6ba6.tar.bz2")
+    output = output.decode('utf-8').rstrip()
+    error = error.decode('utf-8')
+    assert test_path == output, error
+
+
+def test_early_abort():
+    """There have been some problems with conda-build dropping out early.
+    Make sure we aren't causing them"""
+    cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                               "_test_early_abort"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "Hello World" in output, error
