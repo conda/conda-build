@@ -444,3 +444,16 @@ def test_no_include_recipe_meta_yaml():
            '{}/_no_include_recipe').format(metadata_dir)
     subprocess.check_call(cmd.split(), cwd=metadata_dir)
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
+
+
+def test_early_abort():
+    """There have been some problems with conda-build dropping out early.
+    Make sure we aren't causing them"""
+    cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                               "_test_early_abort"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "Hello World" in output, error
