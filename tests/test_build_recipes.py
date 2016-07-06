@@ -2,6 +2,7 @@ import os
 import subprocess
 import shutil
 import sys
+import tarfile
 import tempfile
 
 import pytest
@@ -21,6 +22,21 @@ def is_valid_dir(parent_dir, dirname):
     valid &= not dirname.startswith("_")
     valid &= ('osx_is_app' != dirname or sys.platform == "darwin")
     return valid
+
+
+def package_has_file(package_path, file_path):
+    try:
+        with tarfile.open(package_path) as t:
+            try:
+                t.getmember(file_path)
+                return True
+            except KeyError:
+                return False
+            except OSError as e:
+                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
+    except tarfile.ReadError:
+        raise RuntimeError("Could not extract metadata from %s. "
+                           "File probably corrupt." % package_path)
 
 
 # def test_CONDA_BLD_PATH():
@@ -390,3 +406,41 @@ def test_git_describe_info_on_branch():
     output = output.decode('utf-8').rstrip()
     error = error.decode('utf-8')
     assert test_path == output, error
+
+
+def test_no_include_recipe_cmd_line_arg():
+    """Two ways to not include recipe: build/include_recipe: False in meta.yaml; or this.
+    Former is tested with specific recipe."""
+    output_file = os.path.join(sys.prefix, "conda-bld", subdir,
+                               "empty_sections-0.0-0.tar.bz2")
+
+    # first, make sure that the recipe is there by default
+    cmd = ('conda build --no-anaconda-upload '
+           '{}/empty_sections').format(metadata_dir)
+    subprocess.check_call(cmd.split(), cwd=metadata_dir)
+    assert package_has_file(output_file, "info/recipe/meta.yaml")
+
+    # make sure that it is not there when the command line flag is passed
+    cmd = ('conda build --no-anaconda-upload --no-include-recipe '
+           '{}/empty_sections').format(metadata_dir)
+    subprocess.check_call(cmd.split(), cwd=metadata_dir)
+    assert not package_has_file(output_file, "info/recipe/meta.yaml")
+
+
+def test_no_include_recipe_meta_yaml():
+    # first, make sure that the recipe is there by default.  This test copied from above, but copied
+    # as a sanity check here.
+    output_file = os.path.join(sys.prefix, "conda-bld", subdir,
+                               "empty_sections-0.0-0.tar.bz2")
+
+    cmd = ('conda build --no-anaconda-upload '
+           '{}/empty_sections').format(metadata_dir)
+    subprocess.check_call(cmd.split(), cwd=metadata_dir)
+    assert package_has_file(output_file, "info/recipe/meta.yaml")
+
+    output_file = os.path.join(sys.prefix, "conda-bld", subdir,
+                               "no_include_recipe-0.0-0.tar.bz2")
+    cmd = ('conda build --no-anaconda-upload '
+           '{}/_no_include_recipe').format(metadata_dir)
+    subprocess.check_call(cmd.split(), cwd=metadata_dir)
+    assert not package_has_file(output_file, "info/recipe/meta.yaml")
