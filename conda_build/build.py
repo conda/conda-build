@@ -182,7 +182,7 @@ def create_info_files(m, files, include_recipe=True):
     if not isdir(config.info_dir):
         os.makedirs(config.info_dir)
 
-    if include_recipe:
+    if include_recipe and m.include_recipe():
         recipe_dir = join(config.info_dir, 'recipe')
         os.makedirs(recipe_dir)
 
