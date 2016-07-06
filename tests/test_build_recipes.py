@@ -398,7 +398,7 @@ def test_git_describe_info_on_branch():
 # http://stackoverflow.com/a/636601/1170370
 def test_concurrent_build():
 
-    cmd = 'conda build --no-anaconda-upload {}'
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}'
     running_procs = []
     packages = ['source_git', 'source_git_jinja2', 'source_hg', 'source_svn']
 
