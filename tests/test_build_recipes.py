@@ -390,3 +390,16 @@ def test_git_describe_info_on_branch():
     output = output.decode('utf-8').rstrip()
     error = error.decode('utf-8')
     assert test_path == output, error
+
+
+def test_early_abort():
+    """There have been some problems with conda-build dropping out early.
+    Make sure we aren't causing them"""
+    cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                               "_test_early_abort"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "Hello World" in output, error
