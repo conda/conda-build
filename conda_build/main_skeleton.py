@@ -308,7 +308,6 @@ def execute(args, parser):
     import conda_build.cran as cran
     import conda_build.luarocks as luarocks
     from conda.lock import Locked
-    from conda_build.config import config
 
     if not args.repo:
         parser.print_help()

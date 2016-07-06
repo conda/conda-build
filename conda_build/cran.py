@@ -25,7 +25,7 @@ from difflib import get_close_matches
 from conda.install import rm_rf
 from conda import compat
 
-from conda_build import metadata
+from conda_build import metadata, source
 from conda_build.config import config
 
 CRAN_META = """\

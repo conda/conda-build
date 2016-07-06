@@ -20,7 +20,6 @@ from conda.compat import PY3
 from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
-from conda.lock import Locked
 
 from conda_build.build import bldpkg_path
 from conda_build.index import update_index
@@ -406,7 +405,8 @@ def execute(args, parser):
         already_built.add(m.pkg_fn())
 
         if not args.keep_old_work and not args.dirty:
-            sys.stderr.write("# --keep-old-work flag not specified.  Removing source and build files.\n")
+            sys.stderr.write("# --keep-old-work flag not specified.  "
+                             "Removing source and build files.\n")
             shutil.rmtree(config.build_folder)
 
         if len(build.get_build_folders()) > 0:

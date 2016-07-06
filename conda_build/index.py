@@ -17,6 +17,7 @@ from conda.utils import md5_file
 
 from conda_build.utils import file_info
 
+
 def read_index_tar(tar_path):
     """ Returns the index.json dict inside the given package tarball. """
     with Locked(os.path.dirname(tar_path)):
@@ -30,7 +31,8 @@ def read_index_tar(tar_path):
                 except OSError as e:
                     raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
         except tarfile.ReadError:
-            raise RuntimeError("Could not extract metadata from %s. File probably corrupt." % tar_path)
+            raise RuntimeError("Could not extract metadata from %s. "
+                               "File probably corrupt." % tar_path)
 
 
 def write_repodata(repodata, dir_path):

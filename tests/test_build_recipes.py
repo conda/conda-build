@@ -417,7 +417,7 @@ def test_concurrent_build():
         while running_procs:
             for proc in running_procs:
                 retcode = proc.poll()
-                if retcode is not None: # Process finished.
+                if retcode is not None:  # Process finished.
                     running_procs.remove(proc)
                     # Here, `proc` has finished with return code `retcode`
                     if retcode != 0:
@@ -426,17 +426,19 @@ def test_concurrent_build():
                         raise RuntimeError(error)
 
                     break
-                else: # No process is done, wait a bit and check again.
+                else:  # No process is done, wait a bit and check again.
                     time.sleep(.1)
                     continue
 
         assert len(get_build_folders(tmp)) == len(packages)
+
 
 def test_concurrent_build_overlap_warns():
     """Concurrency is hard.  Let's say two users are building the same package
     at the same time, but with different recipes.  We need to make sure that these
     users understand what they are going to get, and that it is not a race condition."""
     pass
+
 
 def test_cleanup():
     cmd = 'conda build --no-anaconda-upload {}/empty_sections'.format(metadata_dir)
@@ -455,6 +457,7 @@ def test_cleanup():
         assert "# --keep-old-work flag not specified.  Removing source and build files." in error
         assert len(get_build_folders(tmp)) == 0
 
+
 def test_cleanup_leaves_dir_with_keep_old_work():
     cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
 
@@ -469,8 +472,10 @@ def test_cleanup_leaves_dir_with_keep_old_work():
         output, error = proc.communicate()
         error = error.decode('utf-8')
 
-        assert "# --keep-old-work flag not specified.  Removing source and build files." not in error
+        assert ("# --keep-old-work flag not specified.  "
+                "Removing source and build files.") not in error
         assert len(get_build_folders(tmp)) == 1
+
 
 def test_cleanup_leaves_old_work_but_warns():
     cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
@@ -499,6 +504,7 @@ def test_cleanup_leaves_old_work_but_warns():
         assert "# --keep-old-work flag not specified.  Removing source and build files." in error
         assert "There are currently 1 accumulated" in output
         assert len(get_build_folders(tmp)) == 1
+
 
 def test_dirty_uses_old_source():
     cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
@@ -534,7 +540,8 @@ def test_dirty_uses_old_source():
 
         # dirty should not clean up old work.  It's a development tool, and this behavior
         #    would not be intuitive
-        assert "# --keep-old-work flag not specified.  Removing source and build files." not in error
+        assert ("# --keep-old-work flag not specified.  "
+                "Removing source and build files.") not in error
         assert "There are currently 1 accumulated" in output, error
         assert len(get_build_folders(tmp)) == 1, error
         # make sure that our extra file is still there to validate that this is our "dirty" folder

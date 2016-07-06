@@ -392,7 +392,9 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
         svn_source(meta, verbose=verbose)
     elif 'path' in meta:
         if verbose:
-            print("Copying %s to %s" % (abspath(join(recipe_dir, meta.get('path'))), config.work_dir))
+            print("Copying %s to %s" % (abspath(join(recipe_dir,
+                                                     meta.get('path'))),
+                                        config.work_dir))
         copy_tree(abspath(join(recipe_dir, meta.get('path'))), config.work_dir)
     else:  # no source
         if not isdir(config.work_dir):

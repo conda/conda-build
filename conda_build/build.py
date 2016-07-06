@@ -13,10 +13,8 @@ import shutil
 import stat
 import subprocess
 import sys
-import time
 import tarfile
 import fnmatch
-import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
@@ -629,7 +627,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 # we're done building, perform some checks
                 tarcheck.check_all(tmp_path)
 
-                # lock the packages folder while performing this operation, so that package and index are each safe
+                # lock the packages folder while performing this operation,
+                #    so package and index are each safe
                 with Locked(os.path.dirname(path)):
                     shutil.copy2(tmp_path, path)
                     update_index(config.bldpkgs_dir)

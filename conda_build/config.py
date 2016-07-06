@@ -62,7 +62,8 @@ class Config(object):
 
     @property
     def build_folder(self):
-        """This is the core folder for a given build.  It has the environments and work directories."""
+        """This is the core folder for a given build.
+        It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
 
     @croot.setter
