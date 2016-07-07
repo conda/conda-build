@@ -35,9 +35,9 @@ from conda_build.config import config
 from conda_build.metadata import MetaData
 
 if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy, Transport, ProtocolError
+    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
 else:
-    from xmlrpc.client import ServerProxy, Transport, ProtocolError
+    from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
 
 
 PYPI_META = """\
@@ -236,10 +236,15 @@ class RequestsTransport(Transport):
         """
         Parse the xmlrpc response.
         """
-        p, u = self.getparser()
-        p.feed(resp.text)
-        p.close()
-        return u.close()
+        try:
+            p, u = self.getparser()
+            p.feed(resp.text.encode("utf-8"))
+            p.close()
+            ret = u.close()
+        except Fault:
+            raise RuntimeError("XMLRPC Fault while parsing PyPI response.  "
+                               "This is likely a transient error - please try again soon.")
+        return ret
 
     def _build_url(self, host, handler):
         """
@@ -327,9 +332,9 @@ def main(args, parser):
                           package)
                     for ver in versions:
                         print(ver)
-                    print("Using %s" % versions[0])
+                    print("Using %s" % versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = versions[0]
+                d['version'] = versions[-1]
 
         data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(args,
                                                                         client,

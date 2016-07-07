@@ -124,13 +124,17 @@ different sets of packages."""
     )
     p.add_argument(
         '--token',
-        action="store",
         help="Token to pass through to anaconda upload"
     )
     p.add_argument(
         '--user',
-        action='store',
         help="User/organization to upload packages to on anaconda.org"
+    )
+    p.add_argument(
+        "--no-activate",
+        action="store_false",
+        help="do not display progress bar",
+        dest='activate',
     )
 
     add_parser_channels(p)
@@ -145,9 +149,12 @@ def handle_binstar_upload(path, args):
     from conda_build.external import find_executable
 
     upload = False
+    if args.token or args.user:
+        args.yes = True
+        upload = True
     # this is the default, for no explicit argument.
     # remember that args.binstar_upload takes defaults from condarc
-    if args.binstar_upload is None:
+    elif args.binstar_upload is None:
         args.yes = False
         args.dry_run = False
     # rc file has uploading explicitly turned off
@@ -216,6 +223,8 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
+    import conda.config as cc
+
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
@@ -248,7 +257,11 @@ def execute(args, parser):
             if not isdir(d):
                 makedirs(d)
             update_index(d)
-        index = build.get_build_index(clear_cache=True)
+        arg_channels = ['local']
+        if args.channel:
+            arg_channels.extend(args.channel)
+        index = build.get_build_index(clear_cache=True,
+                                      arg_channels=arg_channels)
 
     already_built = set()
     to_build_recursive = []
@@ -294,18 +307,21 @@ def execute(args, parser):
                     "configuration." % m.dist())
             continue
         if args.skip_existing:
-            # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
-            if ('local::' + m.pkg_fn() in index or
-                    m.pkg_fn() in index or
-                    m.pkg_fn() in already_built):
-                print(m.dist(), "is already built, skipping.")
+            urls = cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
+            if args.channel:
+                urls.extend(args.channel)
+
+            # will be empty if none found, and evalute to False
+            package_exists = [url for url in urls if url + '::' + m.pkg_fn() in index]
+            if (package_exists or m.pkg_fn() in index or m.pkg_fn() in already_built):
+                print(m.dist(), "is already built in {0}, skipping.".format(package_exists))
                 continue
         if args.output:
             print(bldpkg_path(m))
             continue
         elif args.test:
             build.test(m, move_broken=False)
-        elif args.source:
+        elif args.source and need_source_download:
             source.provide(m.path, m.get_section('source'), verbose=build.verbose)
             print('Source tree in:', source.get_dir())
         else:
@@ -325,7 +341,7 @@ def execute(args, parser):
                             include_recipe=args.include_recipe,
                             keep_old_work=args.keep_old_work,
                             need_source_download=need_source_download,
-                            dirty=args.dirty)
+                            dirty=args.dirty, activate=args.activate)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these
@@ -341,6 +357,10 @@ def execute(args, parser):
                     pkg = line.lstrip('  - ').split(' -> ')[-1]
                     pkg = pkg.strip().split(' ')[0]
                     if pkg in skip_names:
+                        sys.stderr.write("Warning: package conflict - you may have unresolved "
+                                         "dependencies. Try to conda install each of your "
+                                         "dependencies to figure out which has unresolved "
+                                         "dependencies.")
                         continue
                     recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
                     if os.path.exists(pkg):
@@ -365,7 +385,7 @@ def execute(args, parser):
                 continue
 
             if not args.notest:
-                build.test(m)
+                build.test(m, activate=args.activate)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)

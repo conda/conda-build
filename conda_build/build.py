@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 
 import io
 import json
+import logging
 import os
 import shutil
 import stat
@@ -28,7 +29,7 @@ from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import __version__
-from conda_build import environ, source, tarcheck
+from conda_build import environ, source, tarcheck, external
 from conda_build.config import config
 from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
 from conda_build.scripts import create_entry_points, prepend_bin_path
@@ -52,6 +53,8 @@ else:
 channel_urls = ()
 override_channels = False
 verbose = True
+
+log = logging.getLogger(__file__)
 
 
 def prefix_files():
@@ -179,7 +182,7 @@ def create_info_files(m, files, include_recipe=True):
     if not isdir(config.info_dir):
         os.makedirs(config.info_dir)
 
-    if include_recipe:
+    if include_recipe and m.include_recipe():
         recipe_dir = join(config.info_dir, 'recipe')
         os.makedirs(recipe_dir)
 
@@ -331,12 +334,13 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def get_build_index(clear_cache=True):
+def get_build_index(clear_cache=True, arg_channels=None):
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
-    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+    arg_channels = [] if not arg_channels else arg_channels
+    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls) + arg_channels,
                      prepend=not override_channels)
 
 
@@ -463,21 +467,52 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 rm_rf(config.short_build_prefix)
                 rm_rf(config.long_build_prefix)
 
+            specs = [ms.spec for ms in m.ms_depends('build')]
+            if activate:
+                # If we activate the build envrionment, we need to be sure that we
+                #    have the appropriate VCS available in the environment.  People
+                #    are not used to explicitly listing it in recipes, though.
+                #    We add it for them here, but warn them about it.
+                vcs_source = m.uses_vcs_in_build()
+                if vcs_source and vcs_source not in specs:
+                    vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
+                    has_vcs_available = os.path.isfile(external.find_executable(vcs_executable) or
+                                                       "")
+                    if not has_vcs_available:
+                        if (vcs_source != "mercurial" or
+                                not any(spec.startswith('python') and "3." in spec
+                                        for spec in specs)):
+                            specs.append(vcs_source)
+
+                            log.warn("Your recipe depends on {} at build time (for templates), "
+                                    "but you have not listed it as a build dependency.  Doing "
+                                    "so for this build.")
+                        else:
+                            raise ValueError("Your recipe uses mercurial in build, but mercurial"
+                                            " does not yet support Python 3.  Please handle all of "
+                                            "your mercurial actions outside of your build script.")
             # Display the name only
             # Version number could be missing due to dependency on source info.
-            create_env(config.build_prefix,
-                    [ms.spec for ms in m.ms_depends('build')])
+            create_env(config.build_prefix, specs)
 
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
                 # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
                 # dependencies.
-                m, need_source_download = parse_or_try_download(m,
-                                                                no_download_source=False,
-                                                                force_download=True,
-                                                                verbose=verbose,
-                                                                dirty=dirty)
-                assert not need_source_download, "Source download failed.  Please investigate."
+                if not activate:
+                    _old_path = os.environ['PATH']
+                    os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
+                                                          config.build_prefix)['PATH']
+                try:
+                    m, need_source_download = parse_or_try_download(m,
+                                                                    no_download_source=False,
+                                                                    force_download=True,
+                                                                    verbose=verbose,
+                                                                    dirty=dirty)
+                    assert not need_source_download, "Source download failed.  Please investigate."
+                finally:
+                    if not activate:
+                        os.environ['PATH'] = _old_path
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %
@@ -508,8 +543,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                         files1.discard(f)
                         has_matches = True
                 if not has_matches:
-                    sys.exit("Error: Glob %s from always_include_files does not match any files" %
-                             pat)
+                    log.warn("Glob %s from always_include_files does not match any files" % pat)
             # Save this for later
             with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
                 f.write(u'\n'.join(sorted(list(files1))))
@@ -691,7 +725,6 @@ def test(m, move_broken=True, activate=True):
             specs += ['lua %s*' % environ.get_lua_ver()]
 
         create_env(config.test_prefix, specs)
-
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))
 
@@ -713,7 +746,8 @@ def test(m, move_broken=True, activate=True):
 
         with open(test_script, 'w') as tf:
             if activate:
-                tf.write("{source}activate _test\n".format(source="" if on_win else "source "))
+                tf.write("{source}activate _test\n".format(source="call " if on_win
+                                                           else "source "))
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,

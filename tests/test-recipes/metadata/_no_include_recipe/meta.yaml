@@ -1,0 +1,6 @@
+package:
+  name: no_include_recipe
+  version: 0.0
+
+build:
+  include-recipe: False

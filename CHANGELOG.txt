@@ -1,3 +1,156 @@
+2016-07-07 1.21.5:
+------------------
+
+Bug fixes:
+----------
+
+ * Make --skip-existing respect remote channels (s3, file, anaconda.org) #1102
+ * Reduce always_include_files glob fail exit to a warning #1101
+ * Fail more gracefully when finding a vcs executable fails #1100
+ * Add better error when PyPI fails with XMLRPC.  Add tests for published examples. #1098
+ * Fix lack of 'call' in windows test activate script that was terminating tests early #1097
+ * Take newest version from PyPI when creating skeleton #1092
+ * Fix unicode encoding error in conda skeleton pypi #1092
+ * Support PEP420 namespace packages (write into existing folders,
+   but raise error rather than overwrite existing files. #1090
+ * Fix an error where an intermediate None value broke jinja2 rendering #1088
+ * Add missing support for include_recipe in meta.yaml #1085
+
+Contributors:
+-------------
+ * @ikalev
+ * @msarahan
+
+
+2016-07-05 1.21.4:
+------------------
+
+Bug fixes:
+----------
+
+ * Choose newest Pypi skeleton version; fix unicode encoding in pypi metadata #1092
+ * Add Numpy 1.11 to all_versions dict for autocompletion #1078
+ * Fix MSVC 3.3/3.4 builds when Win7SDK not installed #1072
+ * Fix an error with build number, when build number is None or otherwise invalid #1088
+
+Known issues:
+-------------
+
+ * Environment activation requires conda >=4.1.6.  The activate.bat script does not look in the right place for the activate.d folder.
+ * The test suite on Linux and Mac fails the python-build, python-run, and python-build-run tests, because an errant __conda-version__.txt file is somehow present.  It is not clear where it comes from, and each of these tests pass when run individually.  If you have mysterious issues, and you use __conda-version__.txt or files like it, please file an issue.
+
+Contributors:
+-------------
+ * @adament
+ * @aleksey
+ * @ikalev
+ * @msarahan
+
+
+2016-06-27 1.21.3:
+------------------
+
+Bug fixes:
+----------
+
+ * Fix a regression in Windows, where a compiler was a hard requirement, and was not always showing up, anyway.  #1049
+
+Contributors:
+ * @msarahan
+
+2016-06-24 1.21.2:
+------------------
+
+Bug fixes / Improvements:
+-------------------------
+
+ * revert some MSVC activation logic to still call vcvarsall directly in build script
+ * fix Windows testing for binary prefix replacement (not done on win)
+ * Add a warning message when conda-build can't create an environment due to unsatisfiable dependencies
+ * Improve notion of whether a recipe uses a VCS in its metadata, or in its build
+
+Known issues:
+-------------
+
+ * Environment activation on Windows will not work until Conda 4.1.4 is released.  The activate.bat script does not look in the right place for the activate.d folder.
+ * The test suite on Linux and Mac fails the python-build, python-run, and python-build-run tests, because an errant __conda-version__.txt file is somehow present.  It is not clear where it comes from, and each of these tests pass when run individually.  If you have mysterious issues, and you use __conda-version__.txt or files like it, please file an issue.
+
+Contributors:
+-------------
+ * @msarahan
+ * @patricksnape
+
+2016-06-22 1.21.1:
+------------------
+
+Bug fixes / Improvements:
+-------------------------
+
+ * Simplify MSVC activation, using distutil's existing logic #1036
+ * Correctly interpret paths returned from git on windows, trying cygpath, falling back to conda regex #1037
+ * Fix ability to disable anaconda upload in condarc #1043
+ * Change environment activation to call activation in scripts, rather than having Python store variables #1044
+
+Contributors:
+-------------
+ * @msarahan
+ * @mwcraig
+ * @patricksnape
+
+
+2016-06-15 1.21.0:
+------------------
+
+New stuff:
+----------
+ * Add FEATURE_ environment variables for MKL, opt and debugging #978
+ * add info/about.json file that contains the "about" section of meta.yaml #941
+ * allow ```--dirty``` flag to be passed to ```conda build``` command. Skips
+   download, and provides DIRTY environment variable in build scripts. #973
+ * Add msys2 paths to build and test environments #979
+ * add new x86 and x86_64 selectors for Intel platforms #986
+ * keep original meta.yaml in recipe folder of package; create meta.yaml.rendered in recipe folder.  Neither exist when recipe not included.  #1004
+ * add ignore_prefix_files key to build in meta.yaml. Can ignore list of files,
+   or True to ignore all prefix files. #1008 #1009
+ * Automatically determine patch strip level #1011
+
+Bug fixes/Improvements:
+-----------------------
+ * Lightened requirement that x.x be defined in both build and runtime sections.  #650
+ * Remove info/recipe.json from build conda packages.  Superseded by info/recipe/meta.yaml.rendered.  #781
+ * Search for single and double backslashes when finding files that need prefix replacement #962
+ * Track undefined jinja variables and use them to decide whether to download source #964
+ * handle patches with p0 or p1 #969, #1011, #1020
+ * only set os.environ for non-None variables #981
+ * Don't use long prefixes on windows #985
+ * Fix missing encoding argument #987
+ * Respect proxy variables more appropriately #989
+ * Search packages on PyPI, rather than listing them all.  Should avoid some timeout errors there. #991
+ * Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
+ * improve logic handling "dirty" downloading.  Always download when not dirty.  #995
+ * Fix post-build variables when no build section existed in original meta.yaml #999
+ * Activate _build and _test environments approriately, rather than manipulating PATH directly #1002
+ * Don't clone git submodules until after first checkout #1025
+ * Move check_install over from conda.install #1027
+
+Deprecations:
+-------------
+ * __conda_version__.txt and other post-build methods of altering the build
+   string are marked as deprecated. Prefer Jinja2 templates where possible.
+   Create issues if this breaks your work.
+
+Contributors:
+-------------
+ * @filmor
+ * @ilanschnell
+ * @jschueller
+ * @mingwandroid
+ * @msarahan
+ * @pelson
+ * @stuarteberg
+ * @whitequark
+
+
 2016-05-13 1.20.3:
 ------------------
 Features:
