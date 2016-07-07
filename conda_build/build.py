@@ -334,12 +334,13 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def get_build_index(clear_cache=True):
+def get_build_index(clear_cache=True, arg_channels=None):
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
-    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+    arg_channels = [] if not arg_channels else arg_channels
+    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls) + arg_channels,
                      prepend=not override_channels)
 
 
