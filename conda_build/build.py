@@ -334,12 +334,13 @@ def create_info_files(m, files, include_recipe=True):
                         join(config.info_dir, 'icon.png'))
 
 
-def get_build_index(clear_cache=True):
+def get_build_index(clear_cache=True, arg_channels=None):
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
-    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls),
+    arg_channels = [] if not arg_channels else arg_channels
+    return get_index(channel_urls=[url_path(config.croot)] + list(channel_urls) + arg_channels,
                      prepend=not override_channels)
 
 
@@ -475,7 +476,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 vcs_source = m.uses_vcs_in_build()
                 if vcs_source and vcs_source not in specs:
                     vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
-                    has_vcs_available = os.path.isfile(external.find_executable(vcs_executable) or "")
+                    has_vcs_available = os.path.isfile(external.find_executable(vcs_executable) or
+                                                       "")
                     if not has_vcs_available:
                         if (vcs_source != "mercurial" or
                                 not any(spec.startswith('python') and "3." in spec
