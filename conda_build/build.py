@@ -541,8 +541,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                         files1.discard(f)
                         has_matches = True
                 if not has_matches:
-                    sys.exit("Error: Glob %s from always_include_files does not match any files" %
-                             pat)
+                    log.warn("Glob %s from always_include_files does not match any files" % pat)
             # Save this for later
             with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
                 f.write(u'\n'.join(sorted(list(files1))))
