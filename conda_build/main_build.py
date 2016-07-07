@@ -263,7 +263,6 @@ def execute(args, parser):
         index = build.get_build_index(clear_cache=True,
                                       arg_channels=arg_channels)
 
-
     already_built = set()
     to_build_recursive = []
     recipes = deque(args.recipe)

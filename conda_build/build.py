@@ -476,7 +476,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 vcs_source = m.uses_vcs_in_build()
                 if vcs_source and vcs_source not in specs:
                     vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
-                    has_vcs_available = os.path.isfile(external.find_executable(vcs_executable) or "")
+                    has_vcs_available = os.path.isfile(external.find_executable(vcs_executable) or
+                                                       "")
                     if not has_vcs_available:
                         if (vcs_source != "mercurial" or
                                 not any(spec.startswith('python') and "3." in spec

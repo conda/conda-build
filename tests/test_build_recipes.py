@@ -15,10 +15,11 @@ from conda_build.source import _guess_patch_strip_level, apply_patch
 import conda_build.config as config
 
 if PY3:
-    import urlib.parse as urlparse
-    import urlib.request as urllib
+    import urllib.parse as urlparse
+    import urllib.request as urllib
 else:
-    import urlparse, urllib
+    import urlparse
+    import urllib
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
@@ -28,8 +29,7 @@ fail_dir = os.path.join(thisdir, 'test-recipes', 'fail')
 # Used for translating local paths into url (file://) paths
 #   http://stackoverflow.com/a/14298190/1170370
 def path2url(path):
-    return urlparse.urljoin(
-      'file:', urllib.pathname2url(path))
+    return urlparse.urljoin('file:', urllib.pathname2url(path))
 
 
 def is_valid_dir(parent_dir, dirname):
@@ -325,12 +325,10 @@ def test_skip_existing_anaconda_org():
     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "empty_sections"))
     subprocess.check_call(cmd.split())
 
-    output_file = os.path.join(config.croot, subdir, "empty_sections-0.0-0.tar.bz2")
-
     try:
         # ensure that we skip with the package in the anaconda.org channel
         cmd = ('conda build --no-anaconda-upload --override-channels '
-               '-c conda_test_account --skip-existing {}'\
+               '-c conda_test_account --skip-existing {}'
                 .format(os.path.join(metadata_dir, "empty_sections")))
         process = subprocess.Popen(cmd.split(),
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -404,7 +402,6 @@ def test_token_upload():
     # verify cleanup:
     with pytest.raises(subprocess.CalledProcessError):
         subprocess.check_call(show_package.split())
-
 
 
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
