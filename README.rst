@@ -77,3 +77,4 @@ Contributing
 
 Contributions to conda-build are always welcome!  Please fork the conda/conda-build repository, and submit a PR.  If a PR is a work in progress, please put [WIP] in the title.  Contributions are expected to pass flake8 and test suites run on Travis CI (linux) and AppVeyor (windows).  Contributors also need to have signed our `Contributor License Agreement <https://www.clahub.com/agreements/conda/conda-build>`_
 
+teststuff
