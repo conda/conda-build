@@ -89,8 +89,14 @@ sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 def select_lines(data, namespace):
     lines = []
+
     for i, line in enumerate(data.splitlines()):
-        line = line.strip(' \'"')
+        line = line.rstrip()
+
+        trailing_quote = ""
+        if line and line[-1] in ("'", '"'):
+            trailing_quote = line[-1]
+
         if line.lstrip().startswith('#'):
             # Don't bother with comment only lines
             continue
@@ -99,7 +105,7 @@ def select_lines(data, namespace):
             cond = m.group(3)
             try:
                 if eval(cond, namespace, {}):
-                    lines.append(m.group(1))
+                    lines.append(m.group(1) + trailing_quote)
             except:
                 sys.exit('''\
 Error: Invalid selector in meta.yaml line %d:

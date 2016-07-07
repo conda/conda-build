@@ -8,12 +8,12 @@ from conda_build.metadata import select_lines, handle_config_version
 def test_select_lines():
     lines = """
 test
- ' test [abc] no '
- "test [abc] # no "
+test [abc] no
+test [abc] # no
 
 test [abc]
-test # [abc]
-test # [abc] yes
+ 'quoted # [abc] '
+ "quoted # [abc] yes "
 test # stuff [abc] yes
 test {{ JINJA_VAR[:2] }}
 test {{ JINJA_VAR[:2] }} # stuff [abc] yes
@@ -28,8 +28,8 @@ test [abc] no
 test [abc] # no
 
 test
-test
-test
+ 'quoted'
+ "quoted"
 test
 test {{ JINJA_VAR[:2] }}
 test {{ JINJA_VAR[:2] }}
