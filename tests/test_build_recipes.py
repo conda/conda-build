@@ -318,33 +318,36 @@ def test_skip_existing():
     assert "is already built" in output, error
 
 
-def test_skip_existing_anaconda_org():
-    # generated with conda_test_account user, command:
-    #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
-    token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
-    cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "empty_sections"))
-    subprocess.check_call(cmd.split())
+# def test_skip_existing_anaconda_org():
+#     """This test may give false errors, because multiple tests running in parallel (on different
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
+#     if it is being run by one person on one machine at a time."""
+#     # generated with conda_test_account user, command:
+#     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
+#     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
+#     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "empty_sections"))
+#     subprocess.check_call(cmd.split())
 
-    try:
-        # ensure that we skip with the package in the anaconda.org channel
-        cmd = ('conda build --no-anaconda-upload --override-channels '
-               '-c conda_test_account --skip-existing {}'
-                .format(os.path.join(metadata_dir, "empty_sections")))
-        process = subprocess.Popen(cmd.split(),
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
-        output = output.decode('utf-8')
-        error = error.decode('utf-8')
-    except:
-        raise
-    finally:
-        # clean up: remove the package
-        cmd = 'anaconda --token {} remove --force conda_test_account/empty_sections'\
-            .format(token)
-        subprocess.check_call(cmd.split())
+#     try:
+#         # ensure that we skip with the package in the anaconda.org channel
+#         cmd = ('conda build --no-anaconda-upload --override-channels '
+#                '-c conda_test_account --skip-existing {}'
+#                 .format(os.path.join(metadata_dir, "empty_sections")))
+#         process = subprocess.Popen(cmd.split(),
+#                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         output, error = process.communicate()
+#         output = output.decode('utf-8')
+#         error = error.decode('utf-8')
+#     except:
+#         raise
+#     finally:
+#         # clean up: remove the package
+#         cmd = 'anaconda --token {} remove --force conda_test_account/empty_sections'\
+#             .format(token)
+#         subprocess.check_call(cmd.split())
 
-    assert "is already built" in output, error
-    assert "conda_test_account" in output, error
+#     assert "is already built" in output, error
+#     assert "conda_test_account" in output, error
 
 
 def test_skip_existing_url():
