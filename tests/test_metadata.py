@@ -8,8 +8,8 @@ from conda_build.metadata import select_lines, handle_config_version
 def test_select_lines():
     lines = """
 test
-test [abc] no
-test [abc] # no
+ ' test [abc] no '
+ "test [abc] # no "
 
 test [abc]
 test # [abc]

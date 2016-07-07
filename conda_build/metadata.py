@@ -90,7 +90,7 @@ sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 def select_lines(data, namespace):
     lines = []
     for i, line in enumerate(data.splitlines()):
-        line = line.rstrip()
+        line = line.strip(' \'"')
         if line.lstrip().startswith('#'):
             # Don't bother with comment only lines
             continue
