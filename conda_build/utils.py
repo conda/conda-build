@@ -8,8 +8,9 @@ import tarfile
 import zipfile
 import subprocess
 import operator
-from os.path import dirname, getmtime, getsize, isdir, join
+from os.path import dirname, getmtime, getsize, isdir, isfile, join
 from collections import defaultdict
+from distutils.dir_util import copy_tree
 
 from conda.utils import md5_file, unix_path_to_win
 from conda.compat import PY3, iteritems
@@ -51,9 +52,28 @@ def copy_into(src, dst):
         dstname = os.path.join(dst, afile)
 
         if os.path.isdir(srcname):
-            shutil.copytree(srcname, dstname)
+            merge_tree(srcname, dstname)
         else:
             shutil.copy2(srcname, dstname)
+
+
+def merge_tree(src, dst):
+    """
+    Merge src into dst recursively by copying all files from src into dst.
+    Return a list of all files copied.
+
+    Like copy_tree(src, dst), but raises an error if merging the two trees
+    would overwrite any files.
+    """
+    new_files = copy_tree(src, dst, dry_run=True)
+    existing = [f for f in new_files if isfile(f)]
+
+    if existing:
+        raise IOError("Can't merge {0} into {1}: file exists: "
+                      "{2}".format(src, dst, existing[0]))
+
+    return copy_tree(src, dst)
+
 
 
 def relative(f, d='lib'):
