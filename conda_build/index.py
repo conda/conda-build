@@ -81,7 +81,7 @@ def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=T
         sys.exit("""\
 Error:
     Indexing a copy of the Anaconda conda package channel is neither
-    necessary nor supported.  If you which to add your own packages,
+    necessary nor supported.  If you wish to add your own packages,
     you can do so by adding them to a separate channel.
 """)
     for fn in files:

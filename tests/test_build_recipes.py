@@ -11,12 +11,27 @@ import pytest
 from conda.compat import PY3, TemporaryDirectory
 from conda.config import subdir
 from conda.fetch import download
+
 from conda_build.source import _guess_patch_strip_level, apply_patch
 from conda_build.build import get_build_folders
+import conda_build.config as config
+
+if PY3:
+    import urllib.parse as urlparse
+    import urllib.request as urllib
+else:
+    import urlparse
+    import urllib
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
 fail_dir = os.path.join(thisdir, 'test-recipes', 'fail')
+
+
+# Used for translating local paths into url (file://) paths
+#   http://stackoverflow.com/a/14298190/1170370
+def path2url(path):
+    return urlparse.urljoin('file:', urllib.pathname2url(path))
 
 
 def is_valid_dir(parent_dir, dirname):
@@ -302,22 +317,99 @@ def test_skip_existing():
                                                                                     "build_number"))
     process = subprocess.Popen(cmd.split(),
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, _ = process.communicate()
+    output, error = process.communicate()
     output = output.decode('utf-8')
-    assert "is already built, skipping." in output
+    error = error.decode('utf-8')
+    assert "is already built" in output, error
+
+
+# def test_skip_existing_anaconda_org():
+#     """This test may give false errors, because multiple tests running in parallel (on different
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
+#     if it is being run by one person on one machine at a time."""
+#     # generated with conda_test_account user, command:
+#     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
+#     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
+#     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "empty_sections"))
+#     subprocess.check_call(cmd.split())
+
+#     try:
+#         # ensure that we skip with the package in the anaconda.org channel
+#         cmd = ('conda build --no-anaconda-upload --override-channels '
+#                '-c conda_test_account --skip-existing {}'
+#                 .format(os.path.join(metadata_dir, "empty_sections")))
+#         process = subprocess.Popen(cmd.split(),
+#                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#         output, error = process.communicate()
+#         output = output.decode('utf-8')
+#         error = error.decode('utf-8')
+#     except:
+#         raise
+#     finally:
+#         # clean up: remove the package
+#         cmd = 'anaconda --token {} remove --force conda_test_account/empty_sections'\
+#             .format(token)
+#         subprocess.check_call(cmd.split())
+
+#     assert "is already built" in output, error
+#     assert "conda_test_account" in output, error
+
+
+def test_skip_existing_url():
+    # make sure that it is built
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "empty_sections"))
+    subprocess.check_call(cmd.split())
+
+    output_file = os.path.join(config.croot, subdir, "empty_sections-0.0-0.tar.bz2")
+
+    with TemporaryDirectory() as tmp:
+        platform = os.path.join(tmp, subdir)
+        os.makedirs(platform)
+        shutil.copy2(output_file, os.path.join(platform, os.path.basename(output_file)))
+
+        # create the index so conda can find the file
+        subprocess.check_call(["conda", "index"], cwd=platform)
+
+        channel_url = path2url(tmp)
+        cmd = ('conda build --override-channels --skip-existing '
+               '--no-anaconda-upload -c {} {}'.format(channel_url,
+                                                      os.path.join(metadata_dir, "empty_sections")))
+        process = subprocess.Popen(cmd.split(),
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+        output = output.decode('utf-8')
+        error = error.decode('utf-8')
+
+        assert "is already built" in output, (output + error)
+        assert channel_url in output, (output + error)
 
 
 def test_token_upload():
     # generated with conda_test_account user, command:
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
+
+    # clean up - we don't actually want this package to exist yet
+    cmd = 'anaconda --token {} remove --force conda_test_account/empty_sections'.format(token)
+    subprocess.check_call(cmd.split())
+
+    show_package = "anaconda show conda_test_account/empty_sections"
+    with pytest.raises(subprocess.CalledProcessError):
+        subprocess.check_call(show_package.split())
     # the folder with the test recipe to upload
     cmd = 'conda build --token {} {}'.format(token, os.path.join(metadata_dir, "empty_sections"))
     subprocess.check_call(cmd.split())
+
+    # make sure that the package is available (should raise CalledProcessError if it doesn't)
+    subprocess.check_call(show_package.split())
+
     # clean up - we don't actually want this package to exist
-    cmd = 'anaconda --token {} remove --force conda_test_account/conda-build-test-empty_sections'\
-    .format(token)
+    cmd = 'anaconda --token {} remove --force conda_test_account/empty_sections'.format(token)
     subprocess.check_call(cmd.split())
+
+    # verify cleanup:
+    with pytest.raises(subprocess.CalledProcessError):
+        subprocess.check_call(show_package.split())
 
 
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
@@ -602,3 +694,16 @@ def test_no_include_recipe_meta_yaml():
            '{}/_no_include_recipe').format(metadata_dir)
     subprocess.check_call(cmd.split(), cwd=metadata_dir)
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
+
+
+def test_early_abort():
+    """There have been some problems with conda-build dropping out early.
+    Make sure we aren't causing them"""
+    cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                               "_test_early_abort"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "Hello World" in output, error

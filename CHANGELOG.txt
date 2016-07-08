@@ -1,3 +1,27 @@
+2016-07-07 1.21.5:
+------------------
+
+Bug fixes:
+----------
+
+ * Make --skip-existing respect remote channels (s3, file, anaconda.org) #1102
+ * Reduce always_include_files glob fail exit to a warning #1101
+ * Fail more gracefully when finding a vcs executable fails #1100
+ * Add better error when PyPI fails with XMLRPC.  Add tests for published examples. #1098
+ * Fix lack of 'call' in windows test activate script that was terminating tests early #1097
+ * Take newest version from PyPI when creating skeleton #1092
+ * Fix unicode encoding error in conda skeleton pypi #1092
+ * Support PEP420 namespace packages (write into existing folders,
+   but raise error rather than overwrite existing files. #1090
+ * Fix an error where an intermediate None value broke jinja2 rendering #1088
+ * Add missing support for include_recipe in meta.yaml #1085
+
+Contributors:
+-------------
+ * @ikalev
+ * @msarahan
+
+
 2016-07-05 1.21.4:
 ------------------
 
