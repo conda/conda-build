@@ -75,7 +75,6 @@ def merge_tree(src, dst):
     return copy_tree(src, dst)
 
 
-
 def relative(f, d='lib'):
     assert not f.startswith('/'), f
     assert not d.startswith('/'), d
