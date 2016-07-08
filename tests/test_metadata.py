@@ -12,8 +12,8 @@ test [abc] no
 test [abc] # no
 
 test [abc]
-test # [abc]
-test # [abc] yes
+ 'quoted # [abc] '
+ "quoted # [abc] yes "
 test # stuff [abc] yes
 test {{ JINJA_VAR[:2] }}
 test {{ JINJA_VAR[:2] }} # stuff [abc] yes
@@ -28,8 +28,8 @@ test [abc] no
 test [abc] # no
 
 test
-test
-test
+ 'quoted'
+ "quoted"
 test
 test {{ JINJA_VAR[:2] }}
 test {{ JINJA_VAR[:2] }}
