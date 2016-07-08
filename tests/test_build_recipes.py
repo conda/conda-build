@@ -325,8 +325,8 @@ def test_skip_existing():
 
 # def test_skip_existing_anaconda_org():
 #     """This test may give false errors, because multiple tests running in parallel (on different
-#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
-#     if it is being run by one person on one machine at a time."""
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only
+#     reliable if it is being run by one person on one machine at a time."""
 #     # generated with conda_test_account user, command:
 #     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
 #     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
