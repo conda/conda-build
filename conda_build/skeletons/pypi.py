@@ -21,7 +21,7 @@ import yaml
 
 from conda.cli.common import spec_from_line, Completer
 from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import get_proxy_servers, default_python
+from conda.config import default_python
 from conda.connection import CondaSession
 from conda.fetch import (download, handle_proxy_407)
 from conda.install import rm_rf
@@ -35,9 +35,9 @@ from conda_build.config import config
 from conda_build.metadata import MetaData
 
 if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy, Transport, ProtocolError
+    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
 else:
-    from xmlrpc.client import ServerProxy, Transport, ProtocolError
+    from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
 
 
 # https://gist.github.com/chrisguitarguy/2354951
@@ -102,10 +102,15 @@ class RequestsTransport(Transport):
         """
         Parse the xmlrpc response.
         """
-        p, u = self.getparser()
-        p.feed(resp.text)
-        p.close()
-        return u.close()
+        try:
+            p, u = self.getparser()
+            p.feed(resp.text.encode("utf-8"))
+            p.close()
+            ret = u.close()
+        except Fault:
+            raise RuntimeError("XMLRPC Fault while parsing PyPI response.  "
+                               "This is likely a transient error - please try again soon.")
+        return ret
 
     def _build_url(self, host, handler):
         """
@@ -362,9 +367,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                           package)
                     for ver in versions:
                         print(ver)
-                    print("Using %s" % versions[0])
+                    print("Using %s" % versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = versions[0]
+                d['version'] = versions[-1]
 
         data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(client,
                                                                         package,
@@ -497,13 +502,7 @@ def add_parser(repos):
 
 
 def get_xmlrpc_client(pypi_url):
-    proxies = get_proxy_servers()
-
-    if proxies:
-        transport = RequestsTransport()
-    else:
-        transport = None
-    return ServerProxy(pypi_url, transport=transport)
+    return ServerProxy(pypi_url, transport=RequestsTransport())
 
 
 def get_download_data(client, package, version, is_url, all_urls, noprompt, manual_url):

@@ -131,7 +131,7 @@ different sets of packages."""
     p.add_argument(
         "--no-activate",
         action="store_false",
-        help="do not display progress bar",
+        help="do not activate the build and test envs; just prepend to PATH",
         dest='activate',
     )
 

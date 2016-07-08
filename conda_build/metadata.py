@@ -283,7 +283,7 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends'  # pin_depends is experimental still
+              'pin_depends', 'include-recipe'  # pin_depends is experimental still
               ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -454,13 +454,11 @@ class MetaData(object):
 
     def build_number(self):
         number = self.get_value('build/number', 0)
-
         # build number can come back as None if no setting (or jinja intermediate)
         try:
             build_int = int(number)
         except (ValueError, TypeError):
-            # todo specialize
-            raise Exception('Build number was invalid value "{}". Must be an integer.'.format(number))
+            build_int = ""
         return build_int
 
     def ms_depends(self, typ='run'):
@@ -536,7 +534,7 @@ class MetaData(object):
             res.append('_')
         if features:
             res.extend(('_'.join(features), '_'))
-        res.append('%d' % self.build_number())
+        res.append('{0}'.format(self.build_number()))
         return ''.join(res)
 
     def dist(self):
@@ -614,6 +612,9 @@ class MetaData(object):
 
     def always_include_files(self):
         return self.get_value('build/always_include_files', [])
+
+    def include_recipe(self):
+        return self.get_value('build/include-recipe', True)
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])

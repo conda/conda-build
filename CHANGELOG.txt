@@ -1,3 +1,52 @@
+2016-07-07 1.21.5:
+------------------
+
+Bug fixes:
+----------
+
+ * Make --skip-existing respect remote channels (s3, file, anaconda.org) #1102
+ * Reduce always_include_files glob fail exit to a warning #1101
+ * Fail more gracefully when finding a vcs executable fails #1100
+ * Add better error when PyPI fails with XMLRPC.  Add tests for published examples. #1098
+ * Fix lack of 'call' in windows test activate script that was terminating tests early #1097
+ * Take newest version from PyPI when creating skeleton #1092
+ * Fix unicode encoding error in conda skeleton pypi #1092
+ * Support PEP420 namespace packages (write into existing folders,
+   but raise error rather than overwrite existing files. #1090
+ * Fix an error where an intermediate None value broke jinja2 rendering #1088
+ * Add missing support for include_recipe in meta.yaml #1085
+
+Contributors:
+-------------
+ * @ikalev
+ * @msarahan
+
+
+2016-07-05 1.21.4:
+------------------
+
+Bug fixes:
+----------
+
+ * Choose newest Pypi skeleton version; fix unicode encoding in pypi metadata #1092
+ * Add Numpy 1.11 to all_versions dict for autocompletion #1078
+ * Fix MSVC 3.3/3.4 builds when Win7SDK not installed #1072
+ * Fix an error with build number, when build number is None or otherwise invalid #1088
+
+Known issues:
+-------------
+
+ * Environment activation requires conda >=4.1.6.  The activate.bat script does not look in the right place for the activate.d folder.
+ * The test suite on Linux and Mac fails the python-build, python-run, and python-build-run tests, because an errant __conda-version__.txt file is somehow present.  It is not clear where it comes from, and each of these tests pass when run individually.  If you have mysterious issues, and you use __conda-version__.txt or files like it, please file an issue.
+
+Contributors:
+-------------
+ * @adament
+ * @aleksey
+ * @ikalev
+ * @msarahan
+
+
 2016-06-27 1.21.3:
 ------------------
 
