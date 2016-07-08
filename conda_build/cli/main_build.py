@@ -127,6 +127,12 @@ different sets of packages."""
         '--user',
         help="User/organization to upload packages to on anaconda.org"
     )
+    p.add_argument(
+        "--no-activate",
+        action="store_false",
+        help="do not activate the build and test envs; just prepend to PATH",
+        dest='activate',
+    )
 
     add_parser_channels(p)
     p.set_defaults(func=execute)
