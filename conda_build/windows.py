@@ -185,29 +185,6 @@ def msvc_env_cmd(bits, override=None):
     return '\n'.join(msvc_env_lines) + '\n'
 
 
-def kill_processes(process_names=["msbuild.exe"]):
-    # for things that uniform across both APIs
-    import psutil
-    # list of pids changed APIs from v1 to v2.
-    try:
-        # V1 API
-        from psutil import get_pid_list
-    except:
-        try:
-            # V2 API
-            from psutil import pids as get_pid_list
-        except:
-            raise ImportError("psutil failed to import.")
-    for n in get_pid_list():
-        try:
-            p = psutil.Process(n)
-            if p.name.lower() in (process_name.lower() for process_name in process_names):
-                print('Terminating:', p.name)
-                p.terminate()
-        except:
-            continue
-
-
 def build(m, bld_bat, dirty=False, activate=True):
     env = environ.get_dict(m, dirty=dirty)
 
@@ -235,5 +212,4 @@ def build(m, bld_bat, dirty=False, activate=True):
 
         cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
-        kill_processes()
         fix_staged_scripts()
