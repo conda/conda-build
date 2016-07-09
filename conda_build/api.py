@@ -26,7 +26,6 @@ from conda_build.build import bldpkg_path as _bldpkg_path
 from conda_build.config import config as _config
 from conda_build.index import update_index as _update_index
 import conda_build.build as _build
-import conda_build.sign as _sign
 
 
 def render(recipe_path, no_download_source=False, verbose=False, **kwargs):
@@ -107,7 +106,8 @@ def keygen(name="conda_build_signing", size=2048):
     name: string name of key to be generated.
     size: length of the RSA key, in bits.  Should be power of 2.
     """
-    return _sign.keygen(name, size)
+    from .sign import keygen
+    return keygen(name, size)
 
 
 def import_sign_key(private_key_path, new_name=None):
@@ -116,18 +116,24 @@ def import_sign_key(private_key_path, new_name=None):
           generated automatically.  Specify ```new_name``` also to rename the
           private key in the copied location.
     """
-    return _sign.import_key(private_key_path, new_name=new_name)
+    from .sign import import_key
+    return import_key(private_key_path, new_name=new_name)
 
 
 def sign(file_path, key_name_or_path=None):
-    return _sign.sign_and_write(file_path, key_name_or_path)
+    from .sign import sign_and_write
+    return sign_and_write(file_path, key_name_or_path)
 
 
 def verify(file_path):
-    return _sign.verify(file_path)
+    from .sign import verify
+    return verify(file_path)
 
 
 def list_skeletons():
+    """List available skeletons for generating conda recipes from external sources.
+
+    The returned list is generally the names of supported repositories (pypi, cran, etc.)"""
     modules = _pkgutil.iter_modules(['conda_build/skeletons'])
     files = []
     for _, name, _ in modules:
@@ -142,6 +148,8 @@ def _is_url(name_or_url):
 
 
 def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kw):
+    """Generate a conda recipe from an external repo.  Translates metadata from external
+    sources into expected conda recipe format."""
     if isinstance(packages, _string_types):
         packages = [packages]
 
@@ -149,3 +157,17 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, *
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
                                             recursive=recursive, **kw)
     return skeleton_return
+
+
+def convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
+                  verbose=False, quiet=True, dry_run=False):
+    """Convert changes a package from one platform to another.  It applies only to things that are
+    portable, such as pure python, or header-only C/C++ libraries."""
+    from .convert import conda_convert
+    if file_path.endswith('tar.bz2'):
+        return conda_convert(file_path)
+    elif file_path.endswith('.whl'):
+        raise RuntimeError('Conversion from wheel packages is not '
+                            'implemented yet, stay tuned.')
+    else:
+        raise RuntimeError("cannot convert: %s" % file)

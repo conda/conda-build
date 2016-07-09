@@ -125,92 +125,6 @@ all.""",
     args_func(args, p)
 
 
-path_mapping = [  # (unix, windows)
-                ('lib/python{pyver}', 'Lib'),
-                ('bin', 'Scripts')]
-
-pyver_re = re.compile(r'python\s+(\d.\d)')
-
-
-def conda_convert(file, args):
-    if not args.show_imports and args.platforms is None:
-        sys.exit('Error: --platform option required for conda package conversion')
-
-    with tarfile.open(file) as t:
-        if args.show_imports:
-            has_cext(t, show=True)
-            return
-
-        if not args.force and has_cext(t, show=args.show_imports):
-            print("WARNING: Package %s has C extensions, skipping. Use -f to "
-                  "force conversion." % file, file=sys.stderr)
-            return
-
-        file_dir, fn = split(file)
-
-        info = json.loads(t.extractfile('info/index.json')
-                          .read().decode('utf-8'))
-        source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
-
-        nonpy_unix = False
-        nonpy_win = False
-
-        if 'all' in args.platforms:
-            args.platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
-        for platform in args.platforms:
-            output_dir = join(args.output_dir, platform)
-            if abspath(expanduser(join(output_dir, fn))) == file:
-                if not args.quiet:
-                    print("Skipping %s/%s. Same as input file" % (platform, fn))
-                continue
-            if not PY3:
-                platform = platform.decode('utf-8')
-            dest_plat = platform.split('-')[0]
-            dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
-
-            if source_type == 'unix' and dest_type == 'win':
-                nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
-                    unix_to_win=True,
-                    show=args.verbose,
-                    quiet=args.quiet)
-            if source_type == 'win' and dest_type == 'unix':
-                nonpy_win = nonpy_win or has_nonpy_entry_points(t,
-                    unix_to_win=False,
-                    show=args.verbose,
-                    quiet=args.quiet)
-
-            if nonpy_unix and not args.force:
-                print(("WARNING: Package %s has non-Python entry points, "
-                       "skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform), file=sys.stderr)
-                continue
-
-            if nonpy_win and not args.force:
-                print(("WARNING: Package %s has entry points, which are not "
-                       "supported yet. Skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform), file=sys.stderr)
-                continue
-
-            file_map = get_pure_py_file_map(t, platform)
-
-            if args.dry_run:
-                if not args.quiet:
-                    print("Would convert %s from %s to %s" %
-                        (file, info['platform'], dest_plat))
-                if args.verbose:
-                    pprint.pprint(file_map)
-                continue
-            else:
-                if not args.quiet:
-                    print("Converting %s from %s to %s" %
-                        (file, info['platform'], platform))
-
-            if not isdir(output_dir):
-                os.makedirs(output_dir)
-            tar_update(t, join(output_dir, fn), file_map,
-                verbose=args.verbose, quiet=args.quiet)
-
-
 def execute(args, parser):
     files = args.package_files
 
@@ -220,24 +134,7 @@ def execute(args, parser):
             file = file.decode(getpreferredencoding())
 
         file = abspath(expanduser(file))
-        if file.endswith('.tar.bz2'):
-            conda_convert(file, args)
-
-        elif file.endswith('.exe'):
-            from conda_build.convert_gohlke import convert
-
-            if args.platforms:
-                raise RuntimeError('--platform option not allowed for Gohlke '
-                                   '.exe package conversion')
-            convert(file, args.output_dir, add_depends=args.dependencies,
-                    verbose=args.verbose)
-
-        elif file.endswith('.whl'):
-            raise RuntimeError('Conversion from wheel packages is not '
-                               'implemented yet, stay tuned.')
-
-        else:
-            raise RuntimeError("cannot convert: %s" % file)
+        api.convert(file, args)
 
 
 if __name__ == '__main__':
