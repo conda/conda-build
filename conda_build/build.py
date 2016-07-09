@@ -746,8 +746,9 @@ def test(m, move_broken=True, activate=True):
 
         with open(test_script, 'w') as tf:
             if activate:
-                tf.write("{source}activate _test\n".format(source="call " if on_win
-                                                           else "source "))
+                source = "call " if on_win else "source "
+                ext = ".bat" if on_win else ""
+                tf.write("{source}activate{ext} _test\n".format(source=source, ext=ext))
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
