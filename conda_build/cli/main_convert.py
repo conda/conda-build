@@ -4,23 +4,14 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
-
-import json
-import pprint
-import re
-import sys
-import os
-import tarfile
 from locale import getpreferredencoding
-from os.path import abspath, expanduser, isdir, join, split
+from os.path import abspath, expanduser
 
 from conda.compat import PY3
 from conda.cli.conda_argparse import ArgumentParser
-from conda_build.cli.main_build import args_func
 
-from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
-                                 has_nonpy_entry_points)
+from conda_build.cli.main_build import args_func
+from conda_build import api
 
 
 epilog = """

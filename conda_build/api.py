@@ -10,40 +10,38 @@ or Changing arguments to anything in here should also mean changing the major
 version number.
 """
 
-# imports are done this way to keep the api clean and limited to conda-build's functionality.
+# imports are done locally to keep the api clean and limited strictly
+#    to conda-build's functionality.
 
-import importlib as _importlib
-import os as _os
-import pkgutil as _pkgutil
-import re as _re
+import sys as _sys
 
-from conda.compat import string_types as _string_types
 
-# imports done this way to hide other functions as private
-from conda_build.render import render_recipe as _render_recipe
-from conda_build.build import test as _test
-from conda_build.build import bldpkg_path as _bldpkg_path
-from conda_build.config import config as _config
-from conda_build.index import update_index as _update_index
-import conda_build.build as _build
+def _ensure_list(recipe_arg):
+    from conda.compat import string_types as _string_types
+    if isinstance(recipe_arg, _string_types):
+        recipe_arg = [recipe_arg]
+    return recipe_arg
 
 
 def render(recipe_path, no_download_source=False, verbose=False, **kwargs):
-    return _render_recipe(recipe_path, no_download_source=no_download_source,
-                          verbose=verbose, **kwargs)
+    from conda_build.render import render_recipe
+    return render_recipe(recipe_path, no_download_source=no_download_source,
+                         verbose=verbose, **kwargs)
 
 
 def get_output_file_path(recipe_path, no_download_source=False, verbose=False, **kwargs):
-    metadata, need_source_download = _render_recipe(recipe_path,
-                                                    no_download_source=no_download_source,
-                                                    verbose=verbose, **kwargs)
-    return _bldpkg_path(metadata, **kwargs)
+    from conda_build.render import render_recipe, bldpkg_path
+    metadata, need_source_download = render_recipe(recipe_path,
+                                                   no_download_source=no_download_source,
+                                                   verbose=verbose, **kwargs)
+    return bldpkg_path(metadata, **kwargs)
 
 
 def check(recipe_path, no_download_source=False, verbose=False, **kwargs):
-    metadata, need_source_download = _render_recipe(recipe_path,
-                                                    no_download_source=no_download_source,
-                                                    verbose=verbose, **kwargs)
+    from conda_build.render import render_recipe
+    metadata, need_source_download = render_recipe(recipe_path,
+                                                   no_download_source=no_download_source,
+                                                   verbose=verbose, **kwargs)
     metadata.check_fields()
 
 
@@ -52,12 +50,16 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
           dirty=False, already_built=None, build_only=False, notest=False, anaconda_upload=True,
           token=None, user=None, **kwargs):
 
-    if isinstance(recipe_path, _string_types):
-        recipe_path = [recipe_path]
+    import os
+    from conda_build.render import render_recipe
+    from conda_build.build import build_tree, get_build_index, update_index
+    from conda_build.config import config
+
+    recipe_path = _ensure_list(recipe_path)
 
     build_recipes = []
     for recipe in recipe_path:
-        metadata, _ = _render_recipe(recipe,
+        metadata, _ = render_recipe(recipe,
                                     no_download_source=(not need_source_download),
                                     verbose=verbose, dirty=dirty, **kwargs)
 
@@ -70,11 +72,11 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
             continue
 
         if skip_existing:
-            for d in _config.bldpkgs_dirs:
-                if not _os.path.isdir(d):
-                    _os.makedirs(d)
-                _update_index(d)
-            index = _build.get_build_index(clear_cache=True)
+            for d in config.bldpkgs_dirs:
+                if not os.path.isdir(d):
+                    os.makedirs(d)
+                update_index(d)
+            index = get_build_index(clear_cache=True)
 
             # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
             if ('local::' + metadata.pkg_fn() in index or
@@ -85,19 +87,21 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
 
         build_recipes.append(recipe)
 
-    return _build.build_tree(build_recipes, build_only=build_only, post=post, notest=notest,
-                             anaconda_upload=anaconda_upload, skip_existing=skip_existing,
-                             keep_old_work=keep_old_work, include_recipe=include_recipe,
-                             need_source_download=True, already_built=already_built,
-                             token=token, user=user, dirty=dirty)
+    return build_tree(build_recipes, build_only=build_only, post=post, notest=notest,
+                      anaconda_upload=anaconda_upload, skip_existing=skip_existing,
+                      keep_old_work=keep_old_work, include_recipe=include_recipe,
+                      need_source_download=True, already_built=already_built,
+                      token=token, user=user, dirty=dirty)
 
 
 def test(package_path, move_broken=True, verbose=False, **kwargs):
+    from conda_build.render import render_recipe
+    from conda_build.build import test
     # Note: internal test function depends on metadata already having been populated.
     # This may cause problems if post-build version stuff is used, as we have no way to pass
     # metadata out of build.  This is read from an existing package input here.
-    metadata, _ = _render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
-    return _test(metadata, move_broken=move_broken, **kwargs)
+    metadata, _ = render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
+    return test(metadata, move_broken=move_broken, **kwargs)
 
 
 def keygen(name="conda_build_signing", size=2048):
@@ -126,6 +130,7 @@ def sign(file_path, key_name_or_path=None):
 
 
 def verify(file_path):
+    """Verify a signed package"""
     from .sign import verify
     return verify(file_path)
 
@@ -134,7 +139,8 @@ def list_skeletons():
     """List available skeletons for generating conda recipes from external sources.
 
     The returned list is generally the names of supported repositories (pypi, cran, etc.)"""
-    modules = _pkgutil.iter_modules(['conda_build/skeletons'])
+    import pkgutil
+    modules = pkgutil.iter_modules(['conda_build/skeletons'])
     files = []
     for _, name, _ in modules:
         if not name.startswith("_"):
@@ -142,21 +148,27 @@ def list_skeletons():
     return files
 
 
-def _is_url(name_or_url):
-    return _re.findall(r"^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$",
-                       name_or_url) != []
-
-
 def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kw):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
-    if isinstance(packages, _string_types):
-        packages = [packages]
+    import importlib
 
-    module = _importlib.import_module("conda_build.skeletons." + repo)
+    packages = _ensure_list(packages)
+
+    module = importlib.import_module("conda_build.skeletons." + repo)
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
                                             recursive=recursive, **kw)
     return skeleton_return
+
+
+def develop(recipe_dir, prefix=_sys.prefix, no_pth_file=False,
+            build_ext=False, clean=False, uninstall=False):
+    """Install a Python package in 'development mode'.
+
+This works by creating a conda.pth file in site-packages."""
+    from .develop import execute
+    recipe_dir = _ensure_list(recipe_dir)
+    return execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
 def convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
@@ -171,3 +183,24 @@ def convert(file_path, output_dir=".", show_imports=False, platforms=None, force
                             'implemented yet, stay tuned.')
     else:
         raise RuntimeError("cannot convert: %s" % file)
+
+
+def test_installable(channel='defaults'):
+    """Check to make sure that packages in channel are installable.
+    This is a consistency check for the channel."""
+    from .inspect import test_installable
+    return test_installable(channel)
+
+
+def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all=False,
+                     show_files=False, groupby='package'):
+    from .inspect import inspect_linkages
+    packages = _ensure_list(packages)
+    return inspect_linkages(packages, prefix=prefix, untracked=untracked,
+                            all=all, show_files=show_files, groupby=groupby)
+
+
+def inspect_objects(packages, prefix=_sys.prefix, groupby='package'):
+    from .inspect import inspect_objects
+    packages = _ensure_list(packages)
+    return inspect_objects(packages, prefix=prefix, groupby=groupby)

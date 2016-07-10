@@ -9,13 +9,18 @@ Tools for converting conda packages
 
 """
 from __future__ import absolute_import, division, print_function
-import re
-import tarfile
-import json
 
 from copy import deepcopy
+import json
+import os
+from os.path import abspath, expanduser, isdir, join, split
+import pprint
+import re
+import sys
+import tarfile
 
 from conda.compat import PY3
+
 if PY3:
     from io import StringIO, BytesIO
 else:

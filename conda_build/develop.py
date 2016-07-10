@@ -1,6 +1,9 @@
 import shutil
 import sys
-from os.path import join, exists
+from os.path import join, exists, abspath, expanduser, isdir
+
+from conda.compat import string_types
+from conda.install import linked
 
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
@@ -78,7 +81,7 @@ def get_setup_py(path_):
     return setup_py
 
 
-def clean(setup_py):
+def _clean(setup_py):
     '''
     This invokes:
     $ python setup.py clean
@@ -92,7 +95,7 @@ def clean(setup_py):
     print("===============================================")
 
 
-def build_ext(setup_py):
+def _build_ext(setup_py):
     '''
     Define a develop function - similar to build function
     todo: need to test on win32 and linux
@@ -110,7 +113,7 @@ def build_ext(setup_py):
     print("===============================================")
 
 
-def uninstall(sp_dir, pkg_path):
+def _uninstall(sp_dir, pkg_path):
     '''
     Look for pkg_path in conda.pth file in site-packages directory and remove
     it. If pkg_path is not found in conda.pth, it means package is not
@@ -136,3 +139,54 @@ def uninstall(sp_dir, pkg_path):
         print("package not installed via conda develop")
 
     shutil.move(n_c_pth, o_c_pth)
+
+
+def execute(recipe_dirs, prefix=sys.prefix, no_pth_file=False,
+            build_ext=False, clean=False, uninstall=False):
+
+    if not isdir(prefix):
+        sys.exit("""\
+Error: environment does not exist: %s
+#
+# Use 'conda create' to create the environment first.
+#""" % prefix)
+    for package in linked(prefix):
+        name, ver, _ = package .rsplit('-', 2)
+        if name == 'python':
+            py_ver = ver[:3]  # x.y
+            break
+    else:
+        raise RuntimeError("python is not installed in %s" % prefix)
+
+    # current environment's site-packages directory
+    sp_dir = get_site_pkg(prefix, py_ver)
+
+    if type(recipe_dirs) == string_types:
+        recipe_dirs = [recipe_dirs]
+
+    for path in recipe_dirs:
+        pkg_path = abspath(expanduser(path))
+
+        if uninstall:
+            # uninstall then exit - does not do any other operations
+            _uninstall(sp_dir, pkg_path)
+            sys.exit(0)
+
+        if clean or build_ext:
+            setup_py = get_setup_py(pkg_path)
+            if clean:
+                _clean(setup_py)
+                if not build_ext:
+                    sys.exit(0)
+
+            # build extensions before adding to conda.pth
+            if build_ext:
+                _build_ext(setup_py)
+
+        if not no_pth_file:
+            write_to_conda_pth(sp_dir, pkg_path)
+
+        # go through the source looking for compiled extensions and make sure
+        # they use the conda environment for loading libraries at runtime
+        relink_sharedobjects(pkg_path, prefix)
+        print("completed operation for: " + pkg_path)

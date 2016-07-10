@@ -4,30 +4,11 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
-
-from collections import defaultdict
-from operator import itemgetter
-import os
-from os.path import abspath, join, dirname, exists, basename
-import re
-import sys
-import tempfile
-
-from conda.misc import which_package
-from conda.compat import iteritems
-from conda.cli.common import add_parser_prefix, get_prefix, InstalledPackages, specs_from_args
 from conda.cli.conda_argparse import ArgumentParser
-import conda.install as ci
-import conda.plan as plan
+from conda.cli.common import add_parser_prefix, InstalledPackages, get_prefix
 
-from conda.api import get_index
-from conda.config import get_default_urls
-
+from conda_build import api
 from conda_build.cli.main_build import args_func
-from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
-from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join
 
 
 def main():
@@ -158,134 +139,6 @@ Tools for investigating conda channels.
     args_func(args, p)
 
 
-def check_install(packages, platform=None, channel_urls=(), prepend=True,
-                  minimal_hint=False):
-    prefix = tempfile.mkdtemp('conda')
-    try:
-        specs = specs_from_args(packages)
-        index = get_index(channel_urls=channel_urls, prepend=prepend,
-                          platform=platform, prefix=prefix)
-        actions = plan.install_actions(prefix, index, specs, pinned=False,
-                                       minimal_hint=minimal_hint)
-        plan.display_actions(actions, index)
-        return actions
-    finally:
-        ci.rm_rf(prefix)
-
-
-def print_linkages(depmap, show_files=False):
-    # Print system and not found last
-    k = sorted(set(depmap.keys()) - {'system', 'not found'})
-    all_deps = k if 'not found' not in depmap.keys() else k + ['system', 'not found']
-    for dep in all_deps:
-        print("%s:" % dep)
-        if show_files:
-            for lib, path, binary in sorted(depmap[dep]):
-                print("    %s (%s) from %s" % (lib, path, binary))
-        else:
-            for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
-                print("    %s (%s)" % (lib, path))
-        print()
-
-
-def replace_path(binary, path, prefix):
-    if sys.platform.startswith('linux'):
-        return abspath(path)
-    elif sys.platform.startswith('darwin'):
-        if path == basename(binary):
-            return abspath(join(prefix, binary))
-        if '@rpath' in path:
-            rpaths = get_rpaths(join(prefix, binary))
-            if not rpaths:
-                return "NO LC_RPATH FOUND"
-            else:
-                for rpath in rpaths:
-                    path1 = path.replace("@rpath", rpath)
-                    path1 = path1.replace('@loader_path', join(prefix, dirname(binary)))
-                    if exists(abspath(join(prefix, path1))):
-                        path = path1
-                        break
-                else:
-                    return 'not found'
-        path = path.replace('@loader_path', join(prefix, dirname(binary)))
-        if path.startswith('/'):
-            return abspath(path)
-        return 'not found'
-
-
-def print_object_info(info, key):
-    gb = groupby(key, info)
-    for header in sorted(gb, key=str):
-        print(header)
-        for f_info in sorted(gb[header], key=getter('filename')):
-            for data in sorted(f_info):
-                if data == key:
-                    continue
-                if f_info[data] is None:
-                    continue
-                print('  %s: %s' % (data, f_info[data]))
-            if len([i for i in f_info if f_info[i] is not None and i != key]) > 1:
-                print()
-        print()
-
-
-class _untracked_package:
-    def __str__(self):
-        return "<untracked>"
-
-untracked_package = _untracked_package()
-
-
-def test_installable(channel='defaults', verbose=True):
-    if not verbose:
-        sys.stdout = open(os.devnull, 'w')
-
-    success = False
-    has_py = re.compile(r'py(\d)(\d)')
-    for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
-        print("######## Testing platform %s ########" % platform)
-        channels = [channel] + get_default_urls()
-        index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for package, rec in iteritems(index):
-            # If we give channels at the command line, only look at
-            # packages from those channels (not defaults).
-            if channel != 'defaults' and rec.get('schannel', 'defaults') == 'defaults':
-                continue
-            name = rec['name']
-            if name in {'conda', 'conda-build'}:
-                # conda can only be installed in the root environment
-                continue
-            # Don't fail just because the package is a different version of Python
-            # than the default.  We should probably check depends rather than the
-            # build string.
-            build = rec['build']
-            match = has_py.search(build)
-            assert match if 'py' in build else True, build
-            if match:
-                additional_packages = ['python=%s.%s' % (match.group(1), match.group(2))]
-            else:
-                additional_packages = []
-
-            version = rec['version']
-            print('Testing %s=%s' % (name, version))
-            # if additional_packages:
-            #     print("Including %s" % additional_packages[0])
-
-            try:
-                check_install([name + '=' + version] + additional_packages,
-                    channel_urls=channels, prepend=False,
-                    platform=platform)
-            except KeyboardInterrupt:
-                raise
-            # sys.exit raises an exception that doesn't subclass from Exception
-            except BaseException as e:
-                success = True
-                print("FAIL: %s %s on %s with %s (%s)" % (name, version,
-                    platform, additional_packages, e), file=sys.stderr)
-
-    return success
-
-
 def execute(args, parser):
     if not args.subcommand:
         parser.print_help()
@@ -295,121 +148,15 @@ def execute(args, parser):
         if not args.test_installable:
             parser.error("At least one option (--test-installable) is required.")
         else:
-            sys.exit(not test_installable(channel=args.channel, verbose=args.verbose))
-
-    prefix = get_prefix(args)
-    installed = ci.linked_data(prefix)
-    installed = {rec['name']: dist for dist, rec in iteritems(installed)}
-
-    if not args.packages and not args.untracked and not args.all:
-        parser.error("At least one package or --untracked or --all must be provided")
-
-    if args.all:
-        args.packages = sorted(installed.keys())
-
-    if args.untracked:
-        args.packages.append(untracked_package)
-
-    if args.subcommand == 'linkages':
-        pkgmap = {}
-        for pkg in args.packages:
-            if pkg == untracked_package:
-                dist = untracked_package
-            elif pkg not in installed:
-                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
-            else:
-                dist = installed[pkg]
-
-            if not sys.platform.startswith(('linux', 'darwin')):
-                sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
-
-            if dist == untracked_package:
-                obj_files = get_untracked_obj_files(prefix)
-            else:
-                obj_files = get_package_obj_files(dist, prefix)
-            linkages = get_linkages(obj_files, prefix)
-            depmap = defaultdict(list)
-            pkgmap[pkg] = depmap
-            depmap['not found'] = []
-            for binary in linkages:
-                for lib, path in linkages[binary]:
-                    path = replace_path(binary, path, prefix) if path not in {'',
-                                                                              'not found'} else path
-                    if path.startswith(prefix):
-                        deps = list(which_package(path))
-                        if len(deps) > 1:
-                            print("Warning: %s comes from multiple packages: %s" %
-                                  (path, comma_join(deps)), file=sys.stderr)
-                        if not deps:
-                            if exists(path):
-                                depmap['untracked'].append((lib, path.split(prefix +
-                                    '/', 1)[-1], binary))
-                            else:
-                                depmap['not found'].append((lib, path.split(prefix +
-                                    '/', 1)[-1], binary))
-                        for d in deps:
-                            depmap[d].append((lib, path.split(prefix + '/',
-                                1)[-1], binary))
-                    elif path == 'not found':
-                        depmap['not found'].append((lib, path, binary))
-                    else:
-                        depmap['system'].append((lib, path, binary))
-
-        if args.groupby == 'package':
-            for pkg in args.packages:
-                print(pkg)
-                print('-' * len(str(pkg)))
-                print()
-
-                print_linkages(pkgmap[pkg], show_files=args.show_files)
-        elif args.groupby == 'dependency':
-            # {pkg: {dep: [files]}} -> {dep: {pkg: [files]}}
-            inverted_map = defaultdict(lambda: defaultdict(list))
-            for pkg in pkgmap:
-                for dep in pkgmap[pkg]:
-                    if pkgmap[pkg][dep]:
-                        inverted_map[dep][pkg] = pkgmap[pkg][dep]
-
-            # print system and not found last
-            k = sorted(set(inverted_map.keys()) - {'system', 'not found'})
-            for dep in k + ['system', 'not found']:
-                print(dep)
-                print('-' * len(str(dep)))
-                print()
-
-                print_linkages(inverted_map[dep], show_files=args.show_files)
-
-        else:
-            raise ValueError("Unrecognized groupby: %s" % args.groupby)
-
-    if args.subcommand == 'objects':
-        for pkg in args.packages:
-            if pkg == untracked_package:
-                dist = untracked_package
-            elif pkg not in installed:
-                sys.exit("Package %s is not installed in %s" % (pkg, prefix))
-            else:
-                dist = installed[pkg]
-
-            print(pkg)
-            print('-' * len(str(pkg)))
-            print()
-
-            if not sys.platform.startswith('darwin'):
-                sys.exit("Error: conda inspect objects is only implemented in OS X")
-
-            if dist == untracked_package:
-                obj_files = get_untracked_obj_files(prefix)
-            else:
-                obj_files = get_package_obj_files(dist, prefix)
-
-            info = []
-            for f in obj_files:
-                f_info = {}
-                path = join(prefix, f)
-                f_info['filetype'] = human_filetype(path)
-                f_info['rpath'] = ':'.join(get_rpaths(path))
-                f_info['filename'] = f
-                info.append(f_info)
-
-            print_object_info(info, args.groupby)
+            return api.test_installable(args.channel)
+    elif args.subcommand == 'linkages':
+        return api.inspect_linkages(args.packages, prefix=get_prefix(args),
+                                    untracked=args.untracked, all=args.all,
+                                    show_files=args.show_files, groupby=args.groupby)
+    elif args.subcommand == 'objects':
+        return api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby)
+        pass
+    else:
+        raise ValueError("Unrecognized subcommand: {0}.  "
+                         "Please choose from {1}".format(args.subcommand,
+                                                         parser.subcommands))
