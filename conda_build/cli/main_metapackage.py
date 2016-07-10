@@ -7,15 +7,12 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
-from collections import defaultdict
 
 import conda.config
 from conda.cli.conda_argparse import ArgumentParser
 
+from conda_build import api
 from conda_build.cli.main_build import args_func
-from conda_build.metadata import MetaData
-from conda_build.build import build, bldpkg_path
-from conda_build.cli.main_build import handle_anaconda_upload
 
 
 def main():
@@ -102,22 +99,10 @@ command line with the conda metapackage command.
 
 
 def execute(args, parser):
-    d = defaultdict(dict)
-    d['package']['name'] = args.name
-    d['package']['version'] = args.version
-    d['build']['number'] = args.build_number
-    d['build']['entry_points'] = args.entry_points
-    # MetaData does the auto stuff if the build string is None
-    d['build']['string'] = args.build_string
-    d['requirements']['run'] = args.dependencies
-    d['about']['home'] = args.home
-    d['about']['license'] = args.license
-    d['about']['summary'] = args.summary
-    d = dict(d)
-    m = MetaData.fromdict(d)
+    api.create_metapackage(name=args.name, version=args.version, entry_points=args.entry_points,
+                           build_string=args.build_string, dependencies=args.dependencies,
+                           home=args.home, license=args.license, summary=args.summary)
 
-    build(m)
-    handle_anaconda_upload(bldpkg_path(m), args)
 
 if __name__ == '__main__':
     main()

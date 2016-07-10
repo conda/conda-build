@@ -204,3 +204,15 @@ def inspect_objects(packages, prefix=_sys.prefix, groupby='package'):
     from .inspect import inspect_objects
     packages = _ensure_list(packages)
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
+
+
+def create_metapackage(name, version, entry_points=(), build_string=None,
+                       dependencies=(), home=None, license=None, summary=None,
+                       anaconda_upload=None):
+    from .metapackage import create_metapackage
+    if anaconda_upload is None:
+        import conda.config
+        anaconda_upload = conda.config.anaconda_upload
+    return create_metapackage(name=name, version=version, entry_points=entry_points,
+                              build_string=build_string, dependencies=dependencies, home=home,
+                              license=license, summary=summary, anaconda_upload=anaconda_upload)
