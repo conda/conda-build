@@ -1,11 +1,11 @@
 '''
-Simple tests for testing functions in main_develop module
+Simple tests for testing functions in develop module - lower level than going through API.
 '''
 import os
 import shutil
 from os.path import dirname, join, exists
 
-from conda_build.cli.main_develop import uninstall, write_to_conda_pth
+from conda_build.develop import _uninstall, write_to_conda_pth
 
 import pytest
 
@@ -102,7 +102,7 @@ def test_uninstall(sp_dir, conda_pth, request):
 
     for to_rm, exp_num_pths in _torm_and_num_after_uninstall:
         # here's where the testing begins
-        uninstall(sp_dir, to_rm)
+        _uninstall(sp_dir, to_rm)
         assert exists(conda_pth)
 
         with open(conda_pth, 'r') as f:
