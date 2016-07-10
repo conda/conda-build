@@ -144,7 +144,7 @@ def execute(args, parser):
         parser.print_help()
         exit()
 
-    if args.subcommand == 'channels':
+    elif args.subcommand == 'channels':
         if not args.test_installable:
             parser.error("At least one option (--test-installable) is required.")
         else:
@@ -155,8 +155,5 @@ def execute(args, parser):
                                     show_files=args.show_files, groupby=args.groupby)
     elif args.subcommand == 'objects':
         return api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby)
-        pass
     else:
-        raise ValueError("Unrecognized subcommand: {0}.  "
-                         "Please choose from {1}".format(args.subcommand,
-                                                         parser.subcommands))
+        raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))

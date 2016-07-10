@@ -216,3 +216,17 @@ def create_metapackage(name, version, entry_points=(), build_string=None,
     return create_metapackage(name=name, version=version, entry_points=entry_points,
                               build_string=build_string, dependencies=dependencies, home=home,
                               license=license, summary=summary, anaconda_upload=anaconda_upload)
+
+
+def update_index(dir_paths, verbose=False, force=False, check_md5=False, remove=False):
+    from locale import getpreferredencoding
+    import os
+    from conda.compat import PY3
+    from conda_build.index import update_index
+    dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
+    # Don't use byte strings in Python 2
+    if not PY3:
+        dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
+
+    for path in dir_paths:
+        update_index(path, verbose=verbose, force=force, check_md5=check_md5, remove=remove)

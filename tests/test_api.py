@@ -89,14 +89,9 @@ def test_skeletonize_specific_repo(prefix, repo, package):
             raise
 
 
-# MCS 20160613 - disabling this for now.  Might be cute one day.
-# @pytest.mark.parametrize("prefix,repo,package", repo_packages)
-# def test_skeletonize_auto(prefix, repo, package):
-#     with TemporaryDirectory() as tmp:
-#         api.skeletonize(package, repo="auto", output_dir=tmp)
-#         try:
-#             package_name = "-".join([prefix, package]) if prefix else package
-#             assert os.path.isdir(os.path.join(tmp, package_name.lower()))
-#         except:
-#             print(os.listdir(tmp))
-#             raise
+def test_update_index():
+    with TemporaryDirectory() as tmp:
+        api.update_index(tmp)
+        files = ".index.json", "repodata.json", "repodata.json.bz2"
+        for f in files:
+            assert os.path.isfile(os.path.join(tmp, f))

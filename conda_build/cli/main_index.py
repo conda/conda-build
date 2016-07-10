@@ -1,13 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-from locale import getpreferredencoding
-from os.path import abspath
 
-from conda.compat import PY3
 from conda.cli.conda_argparse import ArgumentParser
 
-from conda_build.index import update_index
+from conda_build import api
 
 
 def main():
@@ -49,13 +46,7 @@ def main():
 
     args = p.parse_args()
 
-    dir_paths = [abspath(path) for path in args.dir]
-    # Don't use byte strings in Python 2
-    if not PY3:
-        dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
-
-    for path in dir_paths:
-        update_index(path, verbose=(not args.quiet), force=args.force,
+    api.update_index(args.dir, verbose=(not args.quiet), force=args.force,
             check_md5=args.check_md5, remove=args.remove)
 
 
