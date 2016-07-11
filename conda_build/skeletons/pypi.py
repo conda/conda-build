@@ -31,7 +31,7 @@ from conda.utils import human_bytes, hashsum_file
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
-from conda_build.config import config
+from conda_build.config import Config
 from conda_build.metadata import MetaData
 
 if sys.version_info < (3,):
@@ -294,9 +294,12 @@ def package_exists(package_name, pypi_url=None):
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 all_urls=False, pypi_url='https://pypi.io/pypi', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
-                all_extras=False, noarch_python=False, **kw):
+                all_extras=False, noarch_python=False, config=None):
     client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
+
+    if not config:
+        config = Config()
 
     # searching is faster than listing all packages
     print(packages)
@@ -386,7 +389,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
-                             noprompt, packages)
+                             noprompt, packages, config=config)
 
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -598,7 +601,8 @@ def version_compare(package, versions):
 
 
 def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
-                         recursive, created_recipes, noarch_python, noprompt, packages):
+                         recursive, created_recipes, noarch_python, noprompt, packages,
+                         config):
 
     print("Downloading %s" % package)
 
@@ -606,7 +610,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           filename=d['filename'],
                           pypiurl=d['pypiurl'],
                           md5=d['md5'],
-                          python_version=python_version)
+                          python_version=python_version,
+                          config=config)
 
     setuptools_build = pkginfo['setuptools']
     setuptools_run = False
@@ -619,10 +624,10 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             # makes sure it is left-shifted
             newstr = "\n".join(x.strip()
                                 for x in entry_points.splitlines())
-            config = configparser.ConfigParser()
+            _config = configparser.ConfigParser()
             entry_points = {}
             try:
-                config.readfp(StringIO(newstr))
+                _config.readfp(StringIO(newstr))
             except Exception as err:
                 print("WARNING: entry-points not understood: ",
                         err)
@@ -632,7 +637,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 setuptools_run = True
                 for section in config.sections():
                     if section in ['console_scripts', 'gui_scripts']:
-                        value = ['%s=%s' % (option, config.get(section, option))
+                        value = ['%s=%s' % (option, _config.get(section, option))
                                     for option in config.options(section)]
                         entry_points[section] = value
         if not isinstance(entry_points, dict):
@@ -838,7 +843,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version):
+def get_pkginfo(package, filename, pypiurl, md5, python_version, config):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
     # package uses distribute).  Our strategy is to download the package
@@ -865,7 +870,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version)
+        run_setuppy(src_dir, tempdir, python_version, config=config)
         with open(join(tempdir, 'pkginfo.yaml')) as fn:
             pkginfo = yaml.load(fn)
     finally:
@@ -874,7 +879,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
     return pkginfo
 
 
-def run_setuppy(src_dir, temp_dir, python_version):
+def run_setuppy(src_dir, temp_dir, python_version, config):
     '''
     Patch distutils and then run setup.py in a subprocess.
 
@@ -888,7 +893,8 @@ def run_setuppy(src_dir, temp_dir, python_version):
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
     create_env(config.build_prefix, ['python %s*' % python_version, 'pyyaml',
-        'setuptools', 'numpy'], clear_cache=False)
+                                     'setuptools', 'numpy'], clear_cache=False,
+               config=config)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

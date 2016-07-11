@@ -10,7 +10,6 @@ import locale
 import time
 
 from conda.fetch import download
-from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
 from conda_build.os_utils import external
@@ -388,9 +387,6 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
     """
 
     if sys.platform == 'win32':
-        if isdir(WORK_DIR):
-            move_to_trash(WORK_DIR, '')
-    else:
         rm_rf(WORK_DIR)
 
     if any(k in meta for k in ('fn', 'url')):

@@ -19,8 +19,10 @@ from conda.compat import PY3, iteritems
 from conda_build.os_utils import external
 
 # Backwards compatibility import. Do not remove.
-from conda.install import rm_rf
-rm_rf
+if sys.platform == 'win32':
+    from conda.install import move_to_trash as rm_rf
+else:
+    from conda.install import rm_rf
 
 
 def get_recipe_abspath(recipe):

@@ -5,6 +5,9 @@ import sys
 import pytest
 
 from conda.compat import StringIO
+from conda.config import subdir
+
+from conda_build.config import Config
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")

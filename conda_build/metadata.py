@@ -446,7 +446,7 @@ class MetaData(object):
         return res
 
     def version(self):
-        res = self.get_value('package/version')
+        res = str(self.get_value('package/version'))
         if res is None:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         check_bad_chrs(res, 'package/version')

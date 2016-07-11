@@ -448,7 +448,7 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
 
 def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=False,
                 cran_url="http://cran.r-project.org/", recursive=False, archive=True,
-                version_compare=False, update_outdated=False, **kwargs):
+                version_compare=False, update_outdated=False, config=None):
     if len(packages) > 1 and version_compare:
         raise ValueError("--version-compare only works with one package at a time")
     if not update_outdated and not packages:

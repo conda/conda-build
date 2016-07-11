@@ -47,6 +47,7 @@ class Config(object):
         self.include_recipe = kwargs.get('include_recipe', True)
         self.keep_old_work = kwargs.get('keep_old_work', False)
         self.noarch = kwargs.get("noarch", False)
+        self.no_download_source = kwargs.get('no_download_source', False)
         self.override_channels = kwargs.get("override_channels", False)
         self.skip_existing = kwargs.get("skip_existing", False)
         self.token = kwargs.get('token', None)

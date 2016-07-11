@@ -19,7 +19,7 @@ from conda.fetch import TmpDownload
 from conda.resolve import MatchSpec, Resolve
 from conda.utils import memoized
 
-from conda_build.config import config
+from conda_build.config import Config
 
 CPAN_META = """\
 package:
@@ -145,11 +145,15 @@ def package_exists(package_name):
 
 
 def skeletonize(packages, output_dir=".", version=None,
-         meta_cpan_url="http://api.metacpan.org",
-         recursive=False):
+                meta_cpan_url="http://api.metacpan.org",
+                recursive=False, config=None):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
+
+    if not config:
+        config = Config()
+
     perl_version = config.CONDA_PERL
     package_dicts = {}
     indent = '\n    - '

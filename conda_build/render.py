@@ -18,6 +18,7 @@ import tempfile
 import yaml
 
 from conda.compat import PY3
+
 from conda.lock import Locked
 
 from conda_build import exceptions
@@ -25,7 +26,7 @@ from conda_build.config import config
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
-from conda_build.utils import find_recipe
+from conda_build.utils import find_recipe, rm_rf
 
 
 def set_language_env_vars(args, parser, execute=None):
@@ -107,6 +108,9 @@ def parse_or_try_download(metadata, no_download_source, verbose,
 
 def render_recipe(recipe_path, no_download_source=False, verbose=False, dirty=False):
     with Locked(config.croot):
+        if not dirty:
+            rm_rf(config.work_dir)
+
         arg = find_recipe(recipe_path)
         # Don't use byte literals for paths in Python 2
         if not PY3:

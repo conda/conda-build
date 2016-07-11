@@ -29,11 +29,16 @@ def _ensure_list(recipe_arg):
     return recipe_arg
 
 
-def render(recipe_path, no_download_source=False, verbose=False, **kwargs):
+def render(recipe_path, config=None, **kwargs):
     from conda_build.render import render_recipe
+
+    if not config:
+        config = Config()
+
     if kwargs:
         config = Config(**kwargs)
-    return render_recipe(recipe_path, no_download_source=no_download_source,
+
+    return render_recipe(recipe_path, no_download_source=config.no_download_source,
                          verbose=config.verbose, dirty=config.dirty)
 
 
@@ -122,8 +127,10 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
 
 
 def test(package_path, move_broken=True, config=None, **kwargs):
-    from conda_build.render import render_recipe
     from conda_build.build import test
+    from conda_build.metadata import MetaData
+    import tarfile
+    import yaml
     # Note: internal test function depends on metadata already having been populated.
     # This may cause problems if post-build version stuff is used, as we have no way to pass
     # metadata out of build.  This is read from an existing package input here.
@@ -134,9 +141,17 @@ def test(package_path, move_broken=True, config=None, **kwargs):
     if kwargs:
         config = Config(**kwargs)
 
-    metadata, _ = render_recipe(package_path, no_download_source=False,
-                                verbose=config.verbose, dirty=config.dirty, **kwargs)
-    return test(metadata, move_broken=move_broken,
+    # try to extract the static meta.yaml and load metadata from it
+    with tarfile.open(package_path) as t:
+        try:
+            t.getmember('info/recipe/meta.yaml')
+            metayaml = t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
+            metadata = MetaData.fromdict(yaml.load(metayaml))
+        except KeyError:
+            # fall back to reconstructing metadata from info.json
+            metadata, _ = _render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
+
+    return test(metadata, config=config, move_broken=move_broken,
                 activate=config.activate, verbose=config.verbose)
 
 
@@ -184,16 +199,22 @@ def list_skeletons():
     return files
 
 
-def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kwargs):
+def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, config=None, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
     import importlib
+
+    if not config:
+        config = Config()
+
+    if kwargs:
+        config = Config(**kwargs)
 
     packages = _ensure_list(packages)
 
     module = importlib.import_module("conda_build.skeletons." + repo)
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                            recursive=recursive, **kwargs)
+                                            recursive=recursive, config=config)
     return skeleton_return
 
 

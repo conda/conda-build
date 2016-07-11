@@ -25,7 +25,7 @@ import conda.plan as plan
 from conda.api import get_index
 from conda.compat import PY3
 from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
+from conda.install import prefix_placeholder, linked, symlink_conda
 from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
@@ -452,11 +452,7 @@ def build(m, config, post=None, include_recipe=True, need_source_download=True):
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
-            if on_win:
-                if isdir(config.build_prefix):
-                    move_to_trash(config.build_prefix, '')
-            else:
-                rm_rf(config.build_prefix)
+            rm_rf(config.build_prefix)
 
             specs = [ms.spec for ms in m.ms_depends('build')]
             if config.activate:
@@ -613,7 +609,7 @@ def build(m, config, post=None, include_recipe=True, need_source_download=True):
                        prefix=config.build_prefix,
                        build_python=config.build_python,
                        croot=config.croot)
-            create_info_files(m, sorted(files2 - files1), info_dir=config.info_dir,
+            create_info_files(m, sorted(files2 - files1), config=config,
                               prefix=config.build_prefix,
                               include_recipe=bool(m.path) and include_recipe)
             if m.get_value('build/noarch_python'):
@@ -696,14 +692,8 @@ def test(m, config, move_broken=True, activate=True, verbose=False):
             return
 
         print("TEST START:", m.dist())
-        if on_win:
-            if isdir(config.build_prefix):
-                move_to_trash(config.build_prefix, '')
-            if isdir(config.test_prefix):
-                move_to_trash(config.test_prefix, '')
-        else:
-            rm_rf(config.build_prefix)
-            rm_rf(config.test_prefix)
+        rm_rf(config.build_prefix)
+        rm_rf(config.test_prefix)
 
         get_build_metadata(m)
         specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
