@@ -20,35 +20,38 @@ class Config(object):
     __package__ = __package__
     __doc__ = __doc__
 
-    def __init__(self, *args, **kw):
-        super(Config, self).__init__(*args, **kw)
+    def __init__(self, *args, **kwargs):
+        super(Config, self).__init__()
 
-        self.noarch = False
-
-        self.CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
-        self.CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
-        self.CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
-            '')).replace('.', ''))
-        self.CONDA_NPY = os.getenv("CONDA_NPY")
-        if not self.CONDA_NPY:
-            self.CONDA_NPY = None
-        else:
+        self.CONDA_PERL = kwargs.get('perl', os.getenv('CONDA_PERL', '5.18.2'))
+        self.CONDA_LUA = kwargs.get('lua', os.getenv('CONDA_LUA', '5.2'))
+        self.CONDA_PY = int(kwargs.get('python', os.getenv('CONDA_PY', cc.default_python))
+                            .replace('.', ''))
+        self.CONDA_NPY = kwargs.get('numpy', os.getenv("CONDA_NPY", None))
+        if self.CONDA_NPY:
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
-        self.CONDA_R = os.getenv("CONDA_R", "3.2.2")
+        self.CONDA_R = kwargs.get('r', os.getenv("CONDA_R", "3.2.2"))
 
-        self._build_id = ""
-        self._prefix_length = kw.get("prefix_length", 80)
+        self._build_id = kwargs.get('build_id', "")
+        self._prefix_length = kwargs.get("prefix_length", 80)
         # set default value (not actually None)
-        self._croot = None
+        self._croot = kwargs.get('croot', None)
 
         # Default to short prefixes
-        self.use_long_build_prefix = kw.get("use_long_build_prefix", False)
+        self.use_long_build_prefix = kwargs.get("use_long_build_prefix", False)
 
-        # these gloabls may be modified after importing this module
-        channel_urls = kw.get("channel_urls",  ())
-        override_channels = kw.get("override_channels", False)
-        verbose = kw.get("verbose", True)
-
+        self.activate = kwargs.get('activate', True)
+        self.anaconda_upload = kwargs.get('anaconda_upload', cc.binstar_upload)
+        self.channel_urls = kwargs.get("channel_urls", ())
+        self.dirty = kwargs.get('dirty', False)
+        self.include_recipe = kwargs.get('include_recipe', True)
+        self.keep_old_work = kwargs.get('keep_old_work', False)
+        self.noarch = kwargs.get("noarch", False)
+        self.override_channels = kwargs.get("override_channels", False)
+        self.skip_existing = kwargs.get("skip_existing", False)
+        self.token = kwargs.get('token', None)
+        self.user = kwargs.get('user', None)
+        self.verbose = kwargs.get("verbose", True)
 
     @property
     def croot(self):
@@ -66,16 +69,16 @@ class Config(object):
                 self._croot = abspath(expanduser('~/conda-bld'))
         return self._croot
 
+    @croot.setter
+    def croot(self, croot):
+        """Set croot - if None is passed, then the default value will be used"""
+        self._croot = croot
+
     @property
     def build_folder(self):
         """This is the core folder for a given build.
         It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
-
-    @croot.setter
-    def croot(self, croot):
-        """Set croot - if None is passed, then the default value will be used"""
-        self._croot = croot
 
     @property
     def PY3K(self):

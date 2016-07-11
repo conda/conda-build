@@ -83,8 +83,8 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
     if _setuptools_data is None:
         _setuptools_data = {}
 
-        def setup(**kw):
-            _setuptools_data.update(kw)
+        def setup(**kwargs):
+            _setuptools_data.update(kwargs)
 
         import setuptools
         import distutils.core

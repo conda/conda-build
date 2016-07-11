@@ -8,12 +8,18 @@
 This file defines the public API for conda-build.  Adding or removing functions,
 or Changing arguments to anything in here should also mean changing the major
 version number.
+
+Design philosophy: put variability into config.  Make each function here accept kwargs,
+but only use those kwargs in config.  Config must change to support new features elsewhere.
 """
 
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 
 import sys as _sys
+
+# make the Config class available in the api namespace
+from conda_build.config import Config
 
 
 def _ensure_list(recipe_arg):
@@ -25,35 +31,58 @@ def _ensure_list(recipe_arg):
 
 def render(recipe_path, no_download_source=False, verbose=False, **kwargs):
     from conda_build.render import render_recipe
+    if kwargs:
+        config = Config(**kwargs)
     return render_recipe(recipe_path, no_download_source=no_download_source,
-                         verbose=verbose, **kwargs)
+                         verbose=config.verbose, dirty=config.dirty)
 
 
-def get_output_file_path(recipe_path, no_download_source=False, verbose=False, **kwargs):
+def output_yaml(metadata, file_path=None):
+    from conda_build.render import output_yaml
+    return output_yaml(metadata, file_path)
+
+
+def get_output_file_path(recipe_path, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe, bldpkg_path
+
+    if not config:
+        config = Config()
+
+    if kwargs:
+        config = Config(**kwargs)
+
     metadata, need_source_download = render_recipe(recipe_path,
                                                    no_download_source=no_download_source,
-                                                   verbose=verbose, **kwargs)
-    return bldpkg_path(metadata, **kwargs)
+                                                   verbose=config.verbose, dirty=config.dirty)
+    return bldpkg_path(metadata)
 
 
-def check(recipe_path, no_download_source=False, verbose=False, **kwargs):
+def check(recipe_path, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe
+
+    if not config:
+        config = Config()
+
     metadata, need_source_download = render_recipe(recipe_path,
                                                    no_download_source=no_download_source,
-                                                   verbose=verbose, **kwargs)
+                                                   verbose=config.verbose, dirty=config.dirty)
     metadata.check_fields()
 
 
-def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
-          need_source_download=True, verbose=False, check=False, skip_existing=False,
-          dirty=False, already_built=None, build_only=False, notest=False, anaconda_upload=True,
-          token=None, user=None, **kwargs):
+def build(recipe_path, post=None, need_source_download=True, check=False,
+          already_built=None, build_only=False, notest=False,
+          config=None, **kwargs):
 
     import os
     from conda_build.render import render_recipe
     from conda_build.build import build_tree, get_build_index, update_index
     from conda_build.config import config
+
+    if not config:
+        config = Config()
+
+    if kwargs:
+        config = Config(**kwargs)
 
     recipe_path = _ensure_list(recipe_path)
 
@@ -61,7 +90,7 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
     for recipe in recipe_path:
         metadata, _ = render_recipe(recipe,
                                     no_download_source=(not need_source_download),
-                                    verbose=verbose, dirty=dirty, **kwargs)
+                                    verbose=config.verbose, dirty=config.dirty)
 
         if not already_built:
             already_built = set()
@@ -71,12 +100,12 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
                     "configuration." % metadata.dist())
             continue
 
-        if skip_existing:
+        if config.skip_existing:
             for d in config.bldpkgs_dirs:
                 if not os.path.isdir(d):
                     os.makedirs(d)
                 update_index(d)
-            index = get_build_index(clear_cache=True)
+            index = get_build_index(config=config, clear_cache=True)
 
             # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
             if ('local::' + metadata.pkg_fn() in index or
@@ -88,20 +117,27 @@ def build(recipe_path, post=None, include_recipe=True, keep_old_work=False,
         build_recipes.append(recipe)
 
     return build_tree(build_recipes, build_only=build_only, post=post, notest=notest,
-                      anaconda_upload=anaconda_upload, skip_existing=skip_existing,
-                      keep_old_work=keep_old_work, include_recipe=include_recipe,
                       need_source_download=True, already_built=already_built,
-                      token=token, user=user, dirty=dirty)
+                      config=config)
 
 
-def test(package_path, move_broken=True, verbose=False, **kwargs):
+def test(package_path, move_broken=True, config=None, **kwargs):
     from conda_build.render import render_recipe
     from conda_build.build import test
     # Note: internal test function depends on metadata already having been populated.
     # This may cause problems if post-build version stuff is used, as we have no way to pass
     # metadata out of build.  This is read from an existing package input here.
-    metadata, _ = render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
-    return test(metadata, move_broken=move_broken, **kwargs)
+
+    if not config:
+        config = Config()
+
+    if kwargs:
+        config = Config(**kwargs)
+
+    metadata, _ = render_recipe(package_path, no_download_source=False,
+                                verbose=config.verbose, dirty=config.dirty, **kwargs)
+    return test(metadata, move_broken=move_broken,
+                activate=config.activate, verbose=config.verbose)
 
 
 def keygen(name="conda_build_signing", size=2048):
@@ -148,7 +184,7 @@ def list_skeletons():
     return files
 
 
-def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kw):
+def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
     import importlib
@@ -157,7 +193,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, *
 
     module = importlib.import_module("conda_build.skeletons." + repo)
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                            recursive=recursive, **kw)
+                                            recursive=recursive, **kwargs)
     return skeleton_return
 
 
@@ -218,7 +254,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None,
                               license=license, summary=summary, anaconda_upload=anaconda_upload)
 
 
-def update_index(dir_paths, verbose=False, force=False, check_md5=False, remove=False):
+def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False):
     from locale import getpreferredencoding
     import os
     from conda.compat import PY3
@@ -228,5 +264,8 @@ def update_index(dir_paths, verbose=False, force=False, check_md5=False, remove=
     if not PY3:
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
+    if not config:
+        config = Config()
+
     for path in dir_paths:
-        update_index(path, verbose=verbose, force=force, check_md5=check_md5, remove=remove)
+        update_index(path, verbose=config.verbose, force=force, check_md5=check_md5, remove=remove)

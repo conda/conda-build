@@ -179,6 +179,6 @@ def output_yaml(metadata, filename=None):
     if filename:
         with open(filename, "w") as f:
             f.write(output)
-        return("Wrote yaml to %s" % filename)
+        return "Wrote yaml to %s" % filename
     else:
-        return(output)
+        return output
