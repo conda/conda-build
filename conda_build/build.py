@@ -157,14 +157,14 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     return data
 
 
-def get_run_dists(m):
+def get_run_dists(m, config):
     prefix = join(cc.envs_dirs[0], '_run')
     rm_rf(prefix)
-    create_env(prefix, [ms.spec for ms in m.ms_depends('run')])
+    create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=config)
     return sorted(linked(prefix))
 
 
-def create_info_files(m, files, info_dir, prefix, include_recipe=True):
+def create_info_files(m, files, config, prefix, include_recipe=True):
     '''
     Creates the metadata files that will be stored in the built package.
 
@@ -175,11 +175,11 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
-    if not isdir(info_dir):
-        os.makedirs(info_dir)
+    if not isdir(config.info_dir):
+        os.makedirs(config.info_dir)
 
     if include_recipe and m.include_recipe():
-        recipe_dir = join(info_dir, 'recipe')
+        recipe_dir = join(config.info_dir, 'recipe')
         os.makedirs(recipe_dir)
 
         for fn in os.listdir(m.path):
@@ -205,14 +205,14 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
     license_file = m.get_value('about/license_file')
     if license_file:
         shutil.copyfile(join(source.get_dir(), license_file),
-                        join(info_dir, 'LICENSE.txt'))
+                        join(config.info_dir, 'LICENSE.txt'))
 
     readme = m.get_value('about/readme')
     if readme:
         src = join(source.get_dir(), readme)
         if not isfile(src):
             sys.exit("Error: no readme file: %s" % readme)
-        dst = join(info_dir, readme)
+        dst = join(config.info_dir, readme)
         shutil.copyfile(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
             print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst", file=sys.stderr)  # noqa
@@ -220,8 +220,8 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
-        dists = get_run_dists(m)
-        with open(join(info_dir, 'requires'), 'w') as fo:
+        dists = get_run_dists(m, config=config)
+        with open(join(config.info_dir, 'requires'), 'w') as fo:
             fo.write("""\
 # This file as created when building:
 #
@@ -238,10 +238,10 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
-    with open(join(info_dir, 'index.json'), **mode_dict) as fo:
+    with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(info_index, fo, indent=2, sort_keys=True)
 
-    with open(join(info_dir, 'about.json'), 'w') as fo:
+    with open(join(config.info_dir, 'about.json'), 'w') as fo:
         d = {}
         for key in ('home', 'dev_url', 'doc_url', 'license_url',
                     'license', 'summary', 'description', 'license_family'):
@@ -254,7 +254,7 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    with open(join(info_dir, 'files'), **mode_dict) as fo:
+    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
         if m.get_value('build/noarch_python'):
             fo.write('\n')
         else:
@@ -287,7 +287,7 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
             # and we don't have a good method of escaping, and because older
             # versions of conda don't support quotes in has_prefix
             fmt_str = '%s %s %s\n'
-        with open(join(info_dir, 'has_prefix'), 'w') as fo:
+        with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
                 if (fn in text_has_prefix_files):
                     # register for text replacement, regardless of mode
@@ -316,18 +316,18 @@ def create_info_files(m, files, info_dir, prefix, include_recipe=True):
     if no_link:
         if not isinstance(no_link, list):
             no_link = [no_link]
-        with open(join(info_dir, 'no_link'), 'w') as fo:
+        with open(join(config.info_dir, 'no_link'), 'w') as fo:
             for f in files:
                 if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
 
     if m.get_value('source/git_url'):
-        with io.open(join(info_dir, 'git'), 'w', encoding='utf-8') as fo:
+        with io.open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
             source.git_info(fo)
 
     if m.get_value('app/icon'):
         shutil.copyfile(join(m.path, m.get_value('app/icon')),
-                        join(info_dir, 'icon.png'))
+                        join(config.info_dir, 'icon.png'))
 
 
 def get_build_index(config, clear_cache=True, arg_channels=None):
@@ -779,23 +779,23 @@ def test(m, config, move_broken=True, activate=True, verbose=False):
         try:
             subprocess.check_call(cmd, env=env, cwd=tmp_dir)
         except subprocess.CalledProcessError:
-            tests_failed(m, move_broken=move_broken)
+            tests_failed(m, move_broken=move_broken, broken_dir=config.broken_dir)
 
     print("TEST END:", m.dist())
 
 
-def tests_failed(m, move_broken, config):
+def tests_failed(m, move_broken, broken_dir):
     '''
     Causes conda to exit if any of the given package's tests failed.
 
     :param m: Package's metadata
     :type m: Metadata
     '''
-    if not isdir(config.broken_dir):
-        os.makedirs(config.broken_dir)
+    if not isdir(broken_dir):
+        os.makedirs(broken_dir)
 
     if move_broken:
-        shutil.move(bldpkg_path(m), join(config.broken_dir, "%s.tar.bz2" % m.dist()))
+        shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
 
 

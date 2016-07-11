@@ -6,7 +6,8 @@ import os
 import sys
 
 from conda_build import build
-from conda.compat import TemporaryDirectory
+
+from .utils import testing_workdir
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -20,21 +21,16 @@ def _write_prefix(filename, prefix, replacement):
         f.write("\n")
 
 
-def test_find_prefix_files():
+def test_find_prefix_files(testing_workdir):
     """
     Write test output that has the prefix to be found, then verify that the prefix finding
     identified the correct number of files.
     """
-    # create a temporary folder
-    prefix = os.path.join(sys.prefix, "envs", "_build")
-    if not os.path.isdir(prefix):
-        os.makedirs(prefix)
-    with TemporaryDirectory(prefix=prefix + os.path.sep) as tmpdir:
-        # create text files to be replaced
-        files = []
-        for slash_style in prefix_tests:
-            filename = os.path.join(tmpdir, "%s.txt" % slash_style)
-            _write_prefix(filename, prefix, prefix_tests[slash_style])
-            files.append(filename)
+    # create text files to be replaced
+    files = []
+    for slash_style in prefix_tests:
+        filename = os.path.join(testing_workdir, "%s.txt" % slash_style)
+        _write_prefix(filename, testing_workdir, prefix_tests[slash_style])
+        files.append(filename)
 
-        assert len(list(build.have_prefix_files(files))) == len(files)
+    assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
