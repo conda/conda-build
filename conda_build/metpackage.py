@@ -1,12 +1,16 @@
 from collections import defaultdict
+from conda_build.config import Config
 from conda_build.metadata import MetaData
 
 
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
-                       dependencies=(), home=None, license=None, summary=None,
-                       anaconda_upload=None):
-    # local import to avoid circular import, we provid create_metapackage in api.
+                       dependencies=(), home=None, license=None, summary=None, config=None):
+    # local import to avoid circular import, we provid create_metapackage in api
     from conda_build.api import build
+
+    if not config:
+        config = Config()
+
     d = defaultdict(dict)
     d['package']['name'] = name
     d['package']['version'] = version
@@ -19,6 +23,6 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
     d['about']['license'] = license
     d['about']['summary'] = summary
     d = dict(d)
-    m = MetaData.fromdict(d)
+    m = MetaData.fromdict(d, config=config)
 
     return build(m, anaconda_upload=anaconda_upload)

@@ -143,20 +143,13 @@ class Config(object):
         self._prefix_length = length
 
     @property
-    def _short_build_prefix(self):
-        return join(self.build_folder, '_build_env')
-
-    @property
-    def _long_build_prefix(self):
-        placeholder_length = self.prefix_length - len(self._short_build_prefix)
+    def build_prefix(self):
+        stub = join(self.build_folder, '_build_env')
+        placeholder_length = self.prefix_length - len(stub)
         placeholder = '_placehold'
         repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
-        placeholder = (self._short_build_prefix + repeats * placeholder)[:self.prefix_length]
-        return max(self._short_build_prefix, placeholder)
-
-    @property
-    def build_prefix(self):
-        return self._long_build_prefix if self.use_long_build_prefix else self._short_build_prefix
+        placeholder = (stub + repeats * placeholder)[:self.prefix_length]
+        return max(stub, placeholder)
 
     @property
     def test_prefix(self):

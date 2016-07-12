@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import logging
 import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
@@ -65,7 +64,7 @@ def download_to_cache(meta, config):
 
 def unpack(meta, config):
     ''' Uncompress a downloaded source. '''
-    src_path = download_to_cache(meta)
+    src_path = download_to_cache(meta, config)
 
     if not isdir(config.work_dir):
         os.makedirs(config.work_dir)

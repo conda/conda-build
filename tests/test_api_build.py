@@ -18,6 +18,7 @@ else:
     import urllib
 
 from conda_build import api
+from conda_build.utils import copy_into
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir,
                     testing_workdir, test_config, path2url)
@@ -81,6 +82,7 @@ def test_token_upload(testing_workdir):
 
     with pytest.raises(NotFound):
         show.main(args)
+
     # the folder with the test recipe to upload
     api.build(empty_sections, token=args.token)
 
@@ -143,18 +145,12 @@ def test_early_abort(capfd):
     output, err = capfd.readouterr()
     assert "Hello World" in output
 
-def test_output_build_path_git_source(testing_workdir):
-    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir, "source_git_jinja2"))
-    process = subprocess.Popen(cmd.split(),
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, error = process.communicate()
-    test_path = os.path.join(sys.prefix, "conda-bld", cc.subdir,
+def test_output_build_path_git_source(testing_workdir, test_config):
+    output = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"), config=test_config)
+    test_path = os.path.join(test_config.build_prefix, "conda-bld", cc.subdir,
                         "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
-    if PY3:
-        output = output.decode("UTF-8")
-        error = error.decode("UTF-8")
-    assert output.rstrip() == test_path, error
+    assert output == test_path
 
 
 def test_build_with_no_activate_does_not_activate():
@@ -185,7 +181,7 @@ def test_cached_source_not_interfere_with_versioning(testing_workdir, test_confi
         # be nothing to test.  If it succeeds, it means that it used the
         # cached master checkout for determining which version to test.
         cmd = 'conda build --output conda_build_test_recipe'
-        api.get_output_file_path('conda_build_test_recipe', config=test_config)
+        output = api.get_output_file_path('conda_build_test_recipe', config=test_config)
         assert "conda-build-test-source-git-jinja2-1.20.0" in output
     except:
         raise
@@ -313,13 +309,13 @@ def test_skip_existing(testing_workdir, test_config, capfd):
     output, error = capfd.readouterr()
     assert "is already built" in output
 
-def test_skip_existing_url(testing_workdir, test_config):
+def test_skip_existing_url(testing_workdir, test_config, capfd):
     # make sure that it is built
     api.build(empty_sections, config=test_config)
     output_file = os.path.join(test_config.croot, cc.subdir, "empty_sections-0.0-0.tar.bz2")
 
     platform = os.path.join(testing_workdir, cc.subdir)
-    shutil.copy2(output_file, os.path.join(platform, os.path.basename(output_file)))
+    copy_into(output_file, os.path.join(platform, os.path.basename(output_file)))
 
     # create the index so conda can find the file
     api.update_index(platform)

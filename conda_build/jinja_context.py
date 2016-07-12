@@ -15,7 +15,6 @@ import jinja2
 from conda.compat import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
-from .source import WORK_DIR
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -77,7 +76,7 @@ class FilteredLoader(jinja2.BaseLoader):
         return select_lines(contents, ns_cfg(self.config)), filename, uptodate
 
 
-def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     unload_modules=None):
     _setuptools_data = {}
 
@@ -94,12 +93,12 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=Non
     else:
         cd_to_work = True
         cwd = os.getcwd()
-        os.chdir(WORK_DIR)
+        os.chdir(config.work_dir)
         if not os.path.isabs(setup_file):
-            setup_file = os.path.join(WORK_DIR, setup_file)
+            setup_file = os.path.join(config.work_dir, setup_file)
         # this is very important - or else if versioneer or otherwise is in the start folder,
         # things will pick up the wrong versioneer/whatever!
-        sys.path.insert(0, WORK_DIR)
+        sys.path.insert(0, config.work_dir)
 
     # Patch setuptools, distutils
     setuptools_setup = setuptools.setup
@@ -143,7 +142,7 @@ def context_processor(initial_metadata, recipe_dir, config):
     environ = dict(os.environ)
     environ.update(get_environ(config=config, m=initial_metadata))
 
-    ctx.update(load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
+    ctx.update(load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir),
                load_npm=load_npm,
                environ=environ)
     return ctx

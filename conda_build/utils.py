@@ -78,7 +78,7 @@ def copy_into(src, dst, symlinks=False):
     "Copy all the files and directories in src to the directory dst"
 
     if isdir(src):
-            merge_tree(srcname, dstname)
+            merge_tree(src, dst, symlinks)
     else:
         tocopy = [src]
         for afile in tocopy:
@@ -91,7 +91,7 @@ def copy_into(src, dst, symlinks=False):
             log.debug("skipping {0} - already exists in {1}".format(srcname, dstname))
 
 
-def merge_tree(src, dst):
+def merge_tree(src, dst, symlinks=False):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -99,14 +99,14 @@ def merge_tree(src, dst):
     Like copy_tree(src, dst), but raises an error if merging the two trees
     would overwrite any files.
     """
-    new_files = copy_tree(src, dst, dry_run=True)
+    new_files = copy_tree(src, dst, preserve_symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
 
     if existing:
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
-    return copy_tree(src, dst)
+    return copy_tree(src, dst, preserve_symlinks=symlinks)
 
 
 def relative(f, d='lib'):

@@ -398,7 +398,7 @@ class MetaData(object):
             self.meta['requirements']['run'] = run_requirements
 
     @classmethod
-    def fromdict(cls, metadata):
+    def fromdict(cls, metadata, config=None):
         """
         Create a MetaData object from metadata dict directly.
         """
@@ -406,6 +406,12 @@ class MetaData(object):
         m.path = ''
         m.meta_path = ''
         m.meta = sanitize(metadata)
+
+        if not config:
+            config=Config()
+
+        m.config = config
+
         return m
 
     def get_section(self, section):

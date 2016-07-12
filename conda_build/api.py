@@ -145,7 +145,7 @@ def test(package_path, move_broken=True, config=None, **kwargs):
         try:
             t.getmember('info/recipe/meta.yaml')
             metayaml = t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
-            metadata = MetaData.fromdict(yaml.load(metayaml))
+            metadata = MetaData.fromdict(yaml.load(metayaml), config=config)
         except KeyError:
             # fall back to reconstructing metadata from info.json
             metadata, _ = render_recipe(package_path, no_download_source=False,
