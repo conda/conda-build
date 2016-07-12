@@ -185,29 +185,6 @@ def msvc_env_cmd(bits, override=None):
     return '\n'.join(msvc_env_lines) + '\n'
 
 
-def kill_processes(process_names=["msbuild.exe"]):
-    # for things that uniform across both APIs
-    import psutil
-    # list of pids changed APIs from v1 to v2.
-    try:
-        # V1 API
-        from psutil import get_pid_list
-    except:
-        try:
-            # V2 API
-            from psutil import pids as get_pid_list
-        except:
-            raise ImportError("psutil failed to import.")
-    for n in get_pid_list():
-        try:
-            p = psutil.Process(n)
-            if p.name.lower() in (process_name.lower() for process_name in process_names):
-                print('Terminating:', p.name)
-                p.terminate()
-        except:
-            continue
-
-
 def build(m, bld_bat, config):
     env = environ.get_dict(config=config, m=m, dirty=config.dirty)
 
@@ -229,11 +206,10 @@ def build(m, bld_bat, config):
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if config.activate:
-                fo.write("call activate {0}\n".format(config.build_prefix))
+                fo.write("call activate.bat {0}\n".format(config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
-        kill_processes()
         fix_staged_scripts()

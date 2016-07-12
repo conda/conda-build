@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+import logging
 import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
-from subprocess import check_call, Popen, PIPE, check_output
+from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
 import locale
 import time
 
@@ -19,6 +20,7 @@ def get_dir(config):
     if not isdir(config.work_dir):
         os.makedirs(config.work_dir)
     lst = [fn for fn in os.listdir(config.work_dir) if not fn.startswith('.')]
+
     if len(lst) == 1:
         dir_path = join(config.work_dir, lst[0])
         if isdir(dir_path):
@@ -282,20 +284,26 @@ def svn_source(meta, config):
 def get_repository_info(recipe_path):
     """This tries to get information about where a recipe came from.  This is different
     from the source - you can have a recipe in svn that gets source via git."""
-    if isdir(join(recipe_path, ".git")):
-        origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
-        rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
-        return "Origin {}, commit {}".format(origin, rev)
-    elif isdir(join(recipe_path, ".hg")):
-        origin = check_output(["hg", "paths", "default"], cwd=recipe_path)
-        rev = check_output(["hg", "id"], cwd=recipe_path).split()[0]
-        return "Origin {}, commit {}".format(origin, rev)
-    elif isdir(join(recipe_path, ".svn")):
-        info = check_output(["svn", "info"], cwd=recipe_path)
-        server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
-        revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
-        return "{}, Revision {}".format(server, revision)
-    else:
+    try:
+        if isdir(join(recipe_path, ".git")):
+            origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
+            rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
+            return "Origin {}, commit {}".format(origin, rev)
+        elif isdir(join(recipe_path, ".hg")):
+            origin = check_output(["hg", "paths", "default"], cwd=recipe_path)
+            rev = check_output(["hg", "id"], cwd=recipe_path).split()[0]
+            return "Origin {}, commit {}".format(origin, rev)
+        elif isdir(join(recipe_path, ".svn")):
+            info = check_output(["svn", "info"], cwd=recipe_path)
+            server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
+            revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
+            return "{}, Revision {}".format(server, revision)
+        else:
+            return "{}, last modified {}".format(recipe_path,
+                                             time.ctime(os.path.getmtime(
+                                                 join(recipe_path, "meta.yaml"))))
+    except CalledProcessError:
+        log.debug("Failed to checkout source in " + recipe_path)
         return "{}, last modified {}".format(recipe_path,
                                              time.ctime(os.path.getmtime(
                                                  join(recipe_path, "meta.yaml"))))
