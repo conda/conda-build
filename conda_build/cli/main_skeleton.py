@@ -15,7 +15,7 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda.lock import Locked
 
 import conda_build.api as api
-from conda_build.config import config
+from conda_build.config import Config
 from conda_build.cli.main_build import args_func
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
@@ -56,7 +56,7 @@ def execute(args, parser):
         parser.print_help()
         sys.exit()
 
-    with Locked(config.croot):
+    with Locked(Config().croot):
         for package in args.packages:
             api.skeletonize(**args.__dict__)
 

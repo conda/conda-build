@@ -214,19 +214,19 @@ class Config(object):
 
     @property
     def src_cache(self):
-        return join(config.croot, 'src_cache')
+        return join(self.croot, 'src_cache')
 
     @property
     def git_cache(self):
-        return join(config.croot, 'git_cache')
+        return join(self.croot, 'git_cache')
 
     @property
     def hg_cache(self):
-        return join(config.croot, 'hg_cache')
+        return join(self.croot, 'hg_cache')
 
     @property
     def svn_cache(self):
-        return join(config.croot, 'svn_cache')
+        return join(self.croot, 'svn_cache')
 
     @property
     def work_dir(self):
@@ -238,18 +238,13 @@ class Config(object):
         return join(self.build_folder, 'test_tmp')
 
 
-config = Config()
-
-croot = config.croot
-
-
-def show():
+def show(config):
     print('CONDA_PY:', config.CONDA_PY)
     print('CONDA_NPY:', config.CONDA_NPY)
     print('subdir:', cc.subdir)
-    print('croot:', croot)
+    print('croot:', config.croot)
     print('build packages directory:', config.bldpkgs_dir)
 
 
 if __name__ == '__main__':
-    show()
+    show(Config())

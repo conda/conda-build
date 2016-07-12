@@ -66,14 +66,15 @@ class FilteredLoader(jinja2.BaseLoader):
     filtered according to any metadata selectors in the source text.
     """
 
-    def __init__(self, unfiltered_loader):
+    def __init__(self, unfiltered_loader, config):
         self._unfiltered_loader = unfiltered_loader
         self.list_templates = unfiltered_loader.list_templates
+        self.config = config
 
     def get_source(self, environment, template):
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
-        return select_lines(contents, ns_cfg()), filename, uptodate
+        return select_lines(contents, ns_cfg(self.config)), filename, uptodate
 
 
 def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
@@ -120,16 +121,16 @@ def load_npm():
         return json.load(pkg)
 
 
-def context_processor(initial_metadata, recipe_dir):
+def context_processor(initial_metadata, recipe_dir, config):
     """
     Return a dictionary to use as context for jinja templates.
 
     initial_metadata: Augment the context with values from this MetaData object.
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
-    ctx = get_environ(m=initial_metadata)
+    ctx = get_environ(config=config, m=initial_metadata)
     environ = dict(os.environ)
-    environ.update(get_environ(m=initial_metadata))
+    environ.update(get_environ(config=config, m=initial_metadata))
 
     ctx.update(load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
                load_npm=load_npm,

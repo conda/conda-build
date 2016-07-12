@@ -16,24 +16,23 @@ from conda.compat import text_type, PY3  # noqa
 from conda_build.os_utils import external
 from conda_build import source
 from conda_build import utils
-from conda_build.config import config
 from conda_build.features import feature_list
 from conda_build.scripts import prepend_bin_path
 
 
-def get_perl_ver():
+def get_perl_ver(config):
     return str(config.CONDA_PERL)
 
 
-def get_lua_ver():
+def get_lua_ver(config):
     return str(config.CONDA_LUA)
 
 
-def get_py_ver():
+def get_py_ver(config):
     return '.'.join(str(config.CONDA_PY))
 
 
-def get_npy_ver():
+def get_npy_ver(config):
     if config.CONDA_NPY:
         # Convert int -> string, e.g.
         #   17 -> '1.7'
@@ -43,17 +42,17 @@ def get_npy_ver():
     return ''
 
 
-def get_stdlib_dir():
+def get_stdlib_dir(config):
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
-                'lib/python%s' % get_py_ver())
+                'lib/python%s' % get_py_ver(config))
 
 
-def get_lua_include_dir():
+def get_lua_include_dir(config):
     return join(config.build_prefix, "include")
 
 
-def get_sp_dir():
-    return join(get_stdlib_dir(), 'site-packages')
+def get_sp_dir(config):
+    return join(get_stdlib_dir(config), 'site-packages')
 
 
 def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
@@ -158,20 +157,20 @@ def get_git_info(repo):
     return d
 
 
-def get_dict(m=None, prefix=None, dirty=False):
+def get_dict(config, m=None, prefix=None, dirty=False):
     if not prefix:
         prefix = config.build_prefix
 
     # conda-build specific vars
-    d = conda_build_vars(prefix, dirty)
+    d = conda_build_vars(prefix, config)
 
     # languages
-    d.update(python_vars())
-    d.update(perl_vars())
-    d.update(lua_vars())
+    d.update(python_vars(config))
+    d.update(perl_vars(config))
+    d.update(lua_vars(config))
 
     if m:
-        d.update(meta_vars(m))
+        d.update(meta_vars(m, config))
 
     # system
     d.update(system_vars(d, prefix))
@@ -183,59 +182,60 @@ def get_dict(m=None, prefix=None, dirty=False):
     return d
 
 
-def conda_build_vars(prefix, dirty):
+def conda_build_vars(prefix, config):
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
-        'CONDA_DEFAULT_ENV': config.build_prefix,
+        'CONDA_DEFAULT_ENV': prefix,
         'ARCH': str(cc.bits),
         'PREFIX': prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
         'SUBDIR': cc.subdir,
-        'SRC_DIR': source.get_dir(),
+        'SRC_DIR': source.get_dir(config),
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
-        'DIRTY': '1' if dirty else '',
+        'DIRTY': '1' if config.dirty else '',
+        'ROOT': cc.root_dir,
     }
 
 
-def python_vars():
+def python_vars(config):
     vars = {
         'PYTHON': config.build_python,
         'PY3K': str(config.PY3K),
-        'STDLIB_DIR': get_stdlib_dir(),
-        'SP_DIR': get_sp_dir(),
-        'PY_VER': get_py_ver(),
+        'STDLIB_DIR': get_stdlib_dir(config),
+        'SP_DIR': get_sp_dir(config),
+        'PY_VER': get_py_ver(config),
         'CONDA_PY': str(config.CONDA_PY),
     }
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
-    if get_npy_ver():
-        vars['NPY_VER'] = get_npy_ver()
+    if get_npy_ver(config):
+        vars['NPY_VER'] = get_npy_ver(config)
         vars['CONDA_NPY'] = str(config.CONDA_NPY)
     return vars
 
 
-def perl_vars():
+def perl_vars(config):
     return {
-        'PERL_VER': get_perl_ver(),
+        'PERL_VER': get_perl_ver(config),
     }
 
 
-def lua_vars():
+def lua_vars(config):
     lua = config.build_lua
     if lua:
         return {
             'LUA': lua,
-            'LUA_INCLUDE_DIR': get_lua_include_dir(),
-            'LUA_VER': get_lua_ver(),
+            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+            'LUA_VER': get_lua_ver(config),
         }
     else:
         return {}
 
 
-def meta_vars(meta):
+def meta_vars(meta, config):
     d = {}
     for var_name in meta.get_value('build/script_env', []):
         value = os.getenv(var_name)
@@ -247,12 +247,12 @@ def meta_vars(meta):
         else:
             d[var_name] = value
 
-    git_dir = join(source.get_dir(), '.git')
+    git_dir = join(source.get_dir(config), '.git')
     if not isinstance(git_dir, str):
         # On Windows, subprocess env can't handle unicode.
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-    if external.find_executable('git') and os.path.exists(git_dir):
+    if external.find_executable('git', config) and os.path.exists(git_dir):
         git_url = meta.get_value('source/git_url')
 
         if os.path.exists(git_url):
@@ -371,7 +371,8 @@ def system_vars(env_dict, prefix):
 
 
 if __name__ == '__main__':
-    e = get_dict()
+    from conda.config import Config
+    e = get_dict(config=Config())
     for k in sorted(e):
         assert isinstance(e[k], str), k
         print('%s=%s' % (k, e[k]))

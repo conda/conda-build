@@ -22,6 +22,7 @@ from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          render_recipe, get_render_parser, bldpkg_path)
 import conda_build.source as source
 from conda_build.utils import find_recipe, get_recipe_abspath
+from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
 
@@ -138,33 +139,33 @@ different sets of packages."""
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args_func(args, p)
+    args_func(args, p, Config())
 
 
-def output_action(metadata):
-    print(bldpkg_path(metadata))
+def output_action(metadata, config):
+    print(bldpkg_path(metadata, config))
 
 
-def source_action(metadata):
-    source.provide(metadata.path, metadata.get_section('source'))
-    print('Source tree in:', source.get_dir())
+def source_action(metadata, config):
+    source.provide(metadata.path, metadata.get_section('source'), config=config)
+    print('Source tree in:', source.get_dir(config))
 
 
-def test_action(metadata):
-    return api.test(metadata.path, move_broken=False)
+def test_action(metadata, config):
+    return api.test(metadata.path, move_broken=False, config=config)
 
 
-def check_action(metadata):
+def check_action(metadata, config):
     return api.check(metadata.path)
 
 
-def execute(args, parser):
-    build.check_external()
+def execute(args, parser, config):
+    build.check_external(config)
 
     # change globals in build module, see comment there as well
-    build.channel_urls = args.channel or ()
-    build.override_channels = args.override_channels
-    build.verbose = not args.quiet
+    config.channel_urls = args.channel or ()
+    config.override_channels = args.override_channels
+    config.verbose = not args.quiet
 
     if on_win:
         try:
@@ -180,7 +181,7 @@ def execute(args, parser):
                           "imported that is hard-linked by files in the trash. "
                           "Will try again on next run.")
 
-    set_language_env_vars(args, parser, execute=execute)
+    set_language_env_vars(args, parser, config=config, execute=execute)
 
     action = None
     if args.output:
@@ -203,8 +204,8 @@ def execute(args, parser):
 
             # this fully renders any jinja templating, throwing an error if any data is missing
             m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                    verbose=False, dirty=args.dirty)
-            action(m)
+                                                    config=config)
+            action(m, config)
 
             if need_cleanup:
                 shutil.rmtree(recipe_dir)
@@ -216,9 +217,9 @@ def execute(args, parser):
                    token=args.token, user=args.user, dirty=args.dirty)
 
 
-def args_func(args, p):
+def args_func(args, p, config):
     try:
-        args.func(args, p)
+        args.func(args, p, config)
     except RuntimeError as e:
         if 'maximum recursion depth exceeded' in str(e):
             print_issue_message(e)

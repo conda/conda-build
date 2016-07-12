@@ -29,7 +29,7 @@ from conda.resolve import normalized_version
 from conda.utils import human_bytes, hashsum_file
 
 from conda_build.utils import tar_xf, unzip
-from conda_build.source import SRC_CACHE, apply_patch
+from conda_build.source import apply_patch
 from conda_build.build import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
@@ -852,20 +852,20 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config):
     # distribute itself already works by monkeypatching distutils.
     tempdir = mkdtemp('conda_skeleton_' + filename)
 
-    if not isdir(SRC_CACHE):
-        makedirs(SRC_CACHE)
+    if not isdir(config.src_cache):
+        makedirs(config.src_cache)
 
     try:
         # Download it to the build source cache. That way, you have
         # it.
-        download_path = join(SRC_CACHE, filename)
+        download_path = join(config.src_cache, filename)
         if not isfile(download_path) or \
                 hashsum_file(download_path, 'md5') != md5:
-            download(pypiurl, join(SRC_CACHE, filename))
+            download(pypiurl, join(config.src_cache, filename))
         else:
             print("Using cached download")
         print("Unpacking %s..." % package)
-        unpack(join(SRC_CACHE, filename), tempdir)
+        unpack(join(config.src_cache, filename), tempdir)
         print("done")
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
@@ -919,7 +919,7 @@ def run_setuppy(src_dir, temp_dir, python_version, config):
     else:
         copy2(join(stdlib_dir, 'distutils', 'core.py'), join(stdlib_dir,
             'distutils', 'core.py-copy'))
-    apply_patch(join(stdlib_dir, 'distutils'), patch)
+    apply_patch(join(stdlib_dir, 'distutils'), patch, config=config)
 
     # Save PYTHONPATH for later
     env = os.environ.copy()

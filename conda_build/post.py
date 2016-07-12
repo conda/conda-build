@@ -82,18 +82,18 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
 def write_pth(egg_path):
     fn = basename(egg_path)
-    with open(join(environ.get_sp_dir(),
+    with open(join(environ.get_sp_dir(config),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
 
-def remove_easy_install_pth(files, prefix, preserve_egg_dir=False):
+def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
     absfiles = [join(prefix, f) for f in files]
-    sp_dir = environ.get_sp_dir()
+    sp_dir = environ.get_sp_dir(config)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
@@ -141,9 +141,9 @@ def rm_py_along_so(prefix):
                         os.unlink(join(root, name + ext))
 
 
-def compile_missing_pyc(build_python):
-    sp_dir = environ.get_sp_dir()
-    stdlib_dir = environ.get_stdlib_dir()
+def compile_missing_pyc(config):
+    sp_dir = environ.get_sp_dir(config)
+    stdlib_dir = environ.get_stdlib_dir(config)
 
     need_compile = False
     for root, dirs, files in os.walk(sp_dir):
@@ -153,16 +153,16 @@ def compile_missing_pyc(build_python):
                 break
     if need_compile:
         print('compiling .pyc files...')
-        utils._check_call([build_python, '-Wi',
+        utils._check_call([config.build_python, '-Wi',
                            join(stdlib_dir, 'compileall.py'),
                            '-q', '-x', 'port_v3', sp_dir])
 
 
-def post_process(files, prefix, build_python, CONDA_PY, preserve_egg_dir=False):
-    remove_easy_install_pth(files, prefix, preserve_egg_dir=preserve_egg_dir)
-    rm_py_along_so(build_python)
-    if CONDA_PY < 30:
-        compile_missing_pyc(build_python)
+def post_process(files, prefix, config, preserve_egg_dir=False):
+    remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
+    rm_py_along_so(config.build_python)
+    if config.CONDA_PY < 30:
+        compile_missing_pyc(config)
 
 
 def find_lib(link, prefix, path=None):
@@ -373,8 +373,8 @@ def check_symlinks(files, prefix, croot):
         sys.exit(1)
 
 
-def get_build_metadata(m):
-    src_dir = source.get_dir()
+def get_build_metadata(m, config):
+    src_dir = source.get_dir(config)
     if "build" not in m.meta:
         m.meta["build"] = {}
     if exists(join(src_dir, '__conda_version__.txt')):

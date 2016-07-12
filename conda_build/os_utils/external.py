@@ -5,10 +5,9 @@ import sys
 from os.path import isfile, join, expanduser
 
 import conda.config as cc
-from conda_build.config import config
 
 
-def find_executable(executable):
+def find_executable(executable, config):
     # dir_paths is referenced as a module-level variable
     #  in other code
     global dir_paths
@@ -37,4 +36,3 @@ def find_executable(executable):
             path = join(dir_path, executable)
             if isfile(expanduser(path)):
                 return expanduser(path)
-    return None

@@ -9,7 +9,6 @@ from __future__ import absolute_import, division, print_function
 from locale import getpreferredencoding
 import os
 from os.path import isdir, isfile, abspath
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -22,14 +21,13 @@ from conda.compat import PY3
 from conda.lock import Locked
 
 from conda_build import exceptions
-from conda_build.config import config
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
 from conda_build.utils import find_recipe, rm_rf
 
 
-def set_language_env_vars(args, parser, execute=None):
+def set_language_env_vars(args, parser, config, execute=None):
     """Given args passed into conda command, set language env vars"""
     for lang in all_versions:
         versions = getattr(args, lang)
@@ -69,23 +67,22 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def bldpkg_path(m):
+def bldpkg_path(m, config):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def parse_or_try_download(metadata, no_download_source, verbose,
-                          force_download=False, dirty=False):
+def parse_or_try_download(metadata, no_download_source, config,
+                          force_download=False):
     if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not dirty:
-                source.provide(metadata.path, metadata.get_section('source'),
-                               verbose=verbose)
-            metadata.parse_again(permit_undefined_jinja=False)
+            if not config.dirty:
+                source.provide(metadata.path, metadata.get_section('source'), config=config)
+            metadata.parse_again(permit_undefined_jinja=False, config=config)
             need_source_download = False
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
@@ -95,20 +92,22 @@ def parse_or_try_download(metadata, no_download_source, verbose,
             need_source_download = True
     elif not metadata.get_section('source'):
         need_source_download = False
+        if not os.path.isdir(config.work_dir):
+            os.makedirs(config.work_dir)
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
         need_source_download = not no_download_source
-        metadata.parse_again(permit_undefined_jinja=False)
+        metadata.parse_again(permit_undefined_jinja=False, config=config)
         if metadata.undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(metadata.undefined_jinja_vars))
     return metadata, need_source_download
 
 
-def render_recipe(recipe_path, no_download_source=False, verbose=False, dirty=False):
+def render_recipe(recipe_path, config, no_download_source=False):
     with Locked(config.croot):
-        if not dirty:
+        if not config.dirty:
             rm_rf(config.work_dir)
 
         arg = find_recipe(recipe_path)
@@ -139,10 +138,10 @@ def render_recipe(recipe_path, no_download_source=False, verbose=False, dirty=Fa
             sys.exit(1)
 
         m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
-                                                 verbose=verbose, dirty=dirty)
+                                                 config=config)
 
         if need_cleanup:
-            shutil.rmtree(recipe_dir)
+            rm_rf(recipe_dir)
 
     return m, need_download
 

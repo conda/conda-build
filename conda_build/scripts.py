@@ -11,9 +11,7 @@ import shutil
 from os.path import dirname, isdir, join
 
 import conda.install
-import conda.config as cc
-
-from conda_build.config import config
+from conda.config import bits
 
 
 PY_TMPL = """\
@@ -37,7 +35,7 @@ def iter_entry_points(items):
         yield m.groups()
 
 
-def create_entry_point(path, module, func):
+def create_entry_point(path, module, func, config):
     pyscript = PY_TMPL % {'module': module, 'func': func}
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w') as fo:
@@ -46,8 +44,7 @@ def create_entry_point(path, module, func):
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % cc.bits),
-                        path + '.exe')
+        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe')
     else:
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % config.build_python)
@@ -55,14 +52,14 @@ def create_entry_point(path, module, func):
         os.chmod(path, int('755', 8))
 
 
-def create_entry_points(items):
+def create_entry_points(items, config):
     if not items:
         return
     bin_dir = join(config.build_prefix, bin_dirname)
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
     for cmd, module, func in iter_entry_points(items):
-        create_entry_point(join(bin_dir, cmd), module, func)
+        create_entry_point(join(bin_dir, cmd), module, func, config)
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):

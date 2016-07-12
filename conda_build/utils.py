@@ -1,7 +1,9 @@
 from __future__ import absolute_import, division, print_function
 
+from distutils.dir_util import copy_tree
 import fnmatch
 from locale import getpreferredencoding
+import logging
 import os
 import sys
 import shutil
@@ -18,11 +20,13 @@ from conda.compat import PY3, iteritems
 
 from conda_build.os_utils import external
 
-# Backwards compatibility import. Do not remove.
+log = logging.getLogger(__file__)
+
+# elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
 if sys.platform == 'win32':
-    from conda.install import move_to_trash as rm_rf
+    from conda.install import move_to_trash as rm_rf  # NOQA
 else:
-    from conda.install import rm_rf
+    from conda.install import rm_rf  # NOQA
 
 
 def get_recipe_abspath(recipe):
@@ -69,21 +73,21 @@ def find_recipe(path):
     return os.path.dirname(results[0])
 
 
-def copy_into(src, dst):
+def copy_into(src, dst, symlinks=False):
     "Copy all the files and directories in src to the directory dst"
 
-    if not isdir(src):
-        tocopy = [src]
+    if isdir(src):
+        copy_tree(src, dst, preserve_symlinks=symlinks)
     else:
-        tocopy = os.listdir(src)
-    for afile in tocopy:
-        srcname = os.path.join(src, afile)
-        dstname = os.path.join(dst, afile)
+        tocopy = [src]
+        for afile in tocopy:
+            srcname = os.path.join(src, afile)
+            dstname = os.path.join(dst, afile)
 
-        if os.path.isdir(srcname):
-            shutil.copytree(srcname, dstname)
-        else:
+        try:
             shutil.copy2(srcname, dstname)
+        except shutil.Error:
+            log.debug("skipping {0} - already exists in {1}".format(srcname, dstname))
 
 
 def relative(f, d='lib'):

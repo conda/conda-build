@@ -27,6 +27,7 @@ from conda.install import rm_rf
 from conda import compat
 
 from conda_build import source, metadata
+from conda_build.config import Config
 
 CRAN_META = """\
 {{% set posix = 'm2-' if win else '' %}}
@@ -398,9 +399,9 @@ def get_package_metadata(cran_url, package, session):
     return d
 
 
-def get_latest_git_tag():
+def get_latest_git_tag(config):
     p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
@@ -449,6 +450,10 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
 def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=False,
                 cran_url="http://cran.r-project.org/", recursive=False, archive=True,
                 version_compare=False, update_outdated=False, config=None):
+
+    if not config:
+        config = Config()
+
     if len(packages) > 1 and version_compare:
         raise ValueError("--version-compare only works with one package at a time")
     if not update_outdated and not packages:
@@ -470,11 +475,11 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
         url = package
 
         if is_github_url:
-            rm_rf(source.WORK_DIR)
+            rm_rf(config.work_dir)
             source.git_source({'git_url': package}, '.')
-            git_tag = git_tag[0] if git_tag else get_latest_git_tag()
+            git_tag = git_tag[0] if git_tag else get_latest_git_tag(config)
             p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
-                                 stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+                                 stderr=subprocess.PIPE, cwd=config.work_dir)
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
@@ -486,10 +491,10 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
             if stderr:
                 print(stderr, file=sys.stderr)
 
-            DESCRIPTION = join(source.WORK_DIR, "DESCRIPTION")
+            DESCRIPTION = join(config.work_dir, "DESCRIPTION")
             if not isfile(DESCRIPTION):
-                sub_description_pkg = join(source.WORK_DIR, 'pkg', "DESCRIPTION")
-                sub_description_name = join(source.WORK_DIR, package.split('/')[-1], "DESCRIPTION")
+                sub_description_pkg = join(config.work_dir, 'pkg', "DESCRIPTION")
+                sub_description_name = join(config.work_dir, package.split('/')[-1], "DESCRIPTION")
                 if isfile(sub_description_pkg):
                     DESCRIPTION = sub_description_pkg
                 elif isfile(sub_description_name):

@@ -175,7 +175,7 @@ def skeletonize(packages, output_dir=".", version=None,
 
         # Convert modules into distributions
         orig_package = package
-        package = dist_for_module(meta_cpan_url, package, perl_version)
+        package = dist_for_module(meta_cpan_url, package, perl_version, config=config)
         if package == 'perl':
             print(("WARNING: {0} is a Perl core module that is not developed " +
                     "outside of Perl, so we are skipping creating a recipe " +
@@ -187,7 +187,7 @@ def skeletonize(packages, output_dir=".", version=None,
                                                                 package))
 
         latest_release_data = get_release_info(meta_cpan_url, package,
-                                                None, perl_version)
+                                                None, perl_version, config=config)
         packagename = perl_to_conda(package)
 
         # Skip duplicates
@@ -209,12 +209,13 @@ def skeletonize(packages, output_dir=".", version=None,
                                                 'import_tests': ''})
 
         # Fetch all metadata from CPAN
-        core_version = core_module_version(package, perl_version)
+        core_version = core_module_version(package, perl_version, config=config)
         release_data = get_release_info(meta_cpan_url, package,
                                         (LooseVersion(version) if
                                             version is not None else
                                             core_version),
-                                        perl_version)
+                                        perl_version,
+                                        config=config)
         # Check if recipe directory already exists
         dir_path = join(output_dir, packagename)
         if exists(dir_path):
@@ -261,7 +262,7 @@ def skeletonize(packages, output_dir=".", version=None,
             build_deps, run_deps, packages_to_append = deps_for_package(
                 package, release_data=release_data, perl_version=perl_version,
                 output_dir=output_dir, processed_packages=processed_packages,
-                meta_cpan_url=meta_cpan_url, recursive=recursive)
+                meta_cpan_url=meta_cpan_url, recursive=recursive, config=config)
             d['build_depends'] += indent.join([''] + list(build_deps |
                                                             run_deps))
             d['run_depends'] += indent.join([''] + list(run_deps))
@@ -344,7 +345,7 @@ def latest_pkg_version(pkg):
 
 
 @memoized
-def core_module_version(module, version):
+def core_module_version(module, version, config):
     '''
     :param module: Name of a Perl core module
     :type module: str
@@ -392,7 +393,7 @@ def core_module_version(module, version):
 
 
 def deps_for_package(package, release_data, perl_version, output_dir,
-                     processed_packages, meta_cpan_url, recursive):
+                     processed_packages, meta_cpan_url, recursive, config):
     '''
     Build the sets of dependencies and packages we need recipes for. This should
     only be called for non-core modules/distributions, as dependencies are
@@ -429,7 +430,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
             sys.stdout.flush()
             # Format dependency string (with Perl trailing dist comment)
             orig_dist = dist_for_module(meta_cpan_url, dep_dict['module'],
-                                        perl_version)
+                                        perl_version, config=config)
             dep_entry = perl_to_conda(orig_dist)
             # Skip perl as a dependency, since it's already in list
             if orig_dist.lower() == 'perl':
@@ -443,7 +444,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
             # Make sure specified version is valid
             try:
                 get_release_info(meta_cpan_url, dep_dict['module'],
-                                 dep_version, perl_version, dependency=True)
+                                 dep_version, perl_version, dependency=True, config=config)
             except InvalidReleaseError:
                 print(('WARNING: The version of %s listed as a ' +
                        'dependency for %s, %s, is not available on MetaCPAN, ' +
@@ -458,7 +459,8 @@ def deps_for_package(package, release_data, perl_version, output_dir,
                 # If we don't have a package, use core version as version
                 if pkg_version is None:
                     pkg_version = core_module_version(dep_entry,
-                                                      perl_version)
+                                                      perl_version,
+                                                      config=config)
                 # If no package is available at all, it's in the core, or
                 # the latest is already good enough, don't specify version.
                 # This is because conda doesn't support > in version
@@ -488,7 +490,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
 
 
 @memoized
-def dist_for_module(cpan_url, module, perl_version):
+def dist_for_module(cpan_url, module, perl_version, config):
     '''
     Given a name that could be a module or a distribution, return the
     distribution.
@@ -514,7 +516,7 @@ def dist_for_module(cpan_url, module, perl_version):
                     mod_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
         # If there was an error, report it
         except RuntimeError:
-            core_version = core_module_version(module, perl_version)
+            core_version = core_module_version(module, perl_version, config=config)
             if core_version is None:
                 sys.exit(('Error: Could not find module or distribution named' +
                           ' %s on MetaCPAN') % module)
@@ -526,7 +528,7 @@ def dist_for_module(cpan_url, module, perl_version):
     return distribution
 
 
-def get_release_info(cpan_url, package, version, perl_version,
+def get_release_info(cpan_url, package, version, perl_version, config,
                      dependency=False):
     '''
     Return a dictionary of the JSON information stored at cpan.metacpan.org
@@ -534,7 +536,7 @@ def get_release_info(cpan_url, package, version, perl_version,
     '''
     # Transform module name to dist name if necessary
     orig_package = package
-    package = dist_for_module(cpan_url, package, perl_version)
+    package = dist_for_module(cpan_url, package, perl_version, config=config)
     package = package.replace('::', '-')
 
     # Get latest info to find author, which is necessary for retrieving a

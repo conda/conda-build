@@ -7,7 +7,9 @@ from __future__ import absolute_import, division, print_function
 import shutil
 import sys
 
-from os.path import dirname, join, isdir, exists
+from os.path import dirname, join, exists
+
+from conda_build.utils import copy_into
 
 
 def create_files(dir_path, m):
@@ -22,10 +24,7 @@ def create_files(dir_path, m):
     for fn in m.get_value('test/files', []):
         has_files = True
         path = join(m.path, fn)
-        if isdir(path):
-            shutil.copytree(path, join(dir_path, fn))
-        else:
-            shutil.copy(path, dir_path)
+        copy_into(path, join(dir_path, fn))
     return has_files
 
 

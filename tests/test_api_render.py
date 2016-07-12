@@ -35,12 +35,12 @@ def test_get_output_file_path(testing_workdir, test_config):
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "python_build"),
                                           config=test_config,
                                           no_download_source=True)
-    assert build_path == os.path.join(sys.prefix, "conda-bld",
-                                      subdir, "conda-build-test-python-build-1.0-0.tar.bz2")
+    assert build_path == os.path.join(test_config.croot, subdir,
+                                      "conda-build-test-python-build-1.0-0.tar.bz2")
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "python_build"),
                                           config=test_config)
-    assert build_path == os.path.join(sys.prefix, "conda-bld",
-                                      subdir, "conda-build-test-python-build-1.0-0.tar.bz2")
+    assert build_path == os.path.join(test_config.croot, subdir,
+                                      "conda-build-test-python-build-1.0-0.tar.bz2")
 
 
 def test_get_output_file_path_jinja2(testing_workdir, test_config):
@@ -54,8 +54,6 @@ def test_get_output_file_path_jinja2(testing_workdir, test_config):
                                               no_download_source=True)
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                           config=test_config)
-    assert build_path == os.path.join(sys.prefix,
-                                      "conda-bld",
-                                      subdir,
+    assert build_path == os.path.join(test_config.croot, subdir,
                                       "conda-build-test-source-git-jinja2-1.8.1-"
                                       "py{0}_0_gf3d51ae.tar.bz2".format(test_config.CONDA_PY))

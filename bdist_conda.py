@@ -17,7 +17,6 @@ import conda.config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import api, build, pypi, render
-from conda_build.config import config
 from conda_build.cli.main_build import handle_anaconda_upload
 
 # TODO: Add support for all the options that conda build has
@@ -267,13 +266,13 @@ class bdist_conda(install):
             if self.anaconda_upload:
                 class args:
                     anaconda_upload = self.anaconda_upload
-                handle_anaconda_upload(render.bldpkg_path(m), args)
+                handle_anaconda_upload(render.bldpkg_path(m, config), args)
             else:
                 no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
 # $ anaconda upload %s
-""" % render.bldpkg_path(m)
+""" % render.bldpkg_path(m, config=config)
                 print(no_upload_message)
 
 

@@ -208,15 +208,15 @@ def kill_processes(process_names=["msbuild.exe"]):
             continue
 
 
-def build(m, bld_bat, dirty=False, activate=True):
-    env = environ.get_dict(m, dirty=dirty)
+def build(m, bld_bat, config):
+    env = environ.get_dict(config=config, m=m, dirty=config.dirty)
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
         if not isdir(path):
             os.makedirs(path)
 
-    src_dir = source.get_dir()
+    src_dir = source.get_dir(config)
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
@@ -228,8 +228,8 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
-            if activate:
-                fo.write("call activate _build\n")
+            if config.activate:
+                fo.write("call activate {0}\n".format(config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 

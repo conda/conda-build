@@ -13,6 +13,7 @@ from conda.cli.common import specs_from_url
 
 from conda_build import exceptions
 from conda_build.features import feature_list
+from conda_build.config import Config
 
 try:
     import yaml
@@ -26,13 +27,12 @@ except ImportError:
     sys.exit('Error: could not import yaml (required to read meta.yaml '
              'files of conda recipes)')
 
-from conda_build.config import config
 from conda_build.utils import comma_join
 
 on_win = (sys.platform == 'win32')
 
 
-def ns_cfg():
+def ns_cfg(config):
     # Remember to update the docs of any of this changes
     plat = cc.subdir
     py = config.CONDA_PY
@@ -160,8 +160,8 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
-def parse(data, path=None):
-    data = select_lines(data, ns_cfg())
+def parse(data, config, path=None):
+    data = select_lines(data, ns_cfg(config))
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:
@@ -342,7 +342,13 @@ def handle_config_version(ms, ver, dep_type='run'):
 
 class MetaData(object):
 
-    def __init__(self, path):
+    def __init__(self, path, config=None):
+
+        if not config:
+            config=Config()
+
+        self.config = config
+
         assert isdir(path)
         self.path = path
         self.meta_path = join(path, 'meta.yaml')
@@ -355,16 +361,18 @@ class MetaData(object):
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
         self.meta = parse("package:\n"
-                          "  name: uninitialized", path=self.meta_path)
+                          "  name: uninitialized",
+                          path=self.meta_path,
+                          config=self.config)
 
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         self.undefined_jinja_vars = []
-        self.parse_again(permit_undefined_jinja=True)
+        self.parse_again(config=config, permit_undefined_jinja=True)
 
-    def parse_again(self, permit_undefined_jinja=False):
+    def parse_again(self, config, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -374,7 +382,8 @@ class MetaData(object):
         if not self.meta_path:
             return
 
-        self.meta = parse(self._get_contents(permit_undefined_jinja), path=self.meta_path)
+        self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
+                          config=config, path=self.meta_path)
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
@@ -464,13 +473,13 @@ class MetaData(object):
     def ms_depends(self, typ='run'):
         res = []
         name_ver_list = [
-            ('python', config.CONDA_PY),
-            ('numpy', config.CONDA_NPY),
-            ('perl', config.CONDA_PERL),
-            ('lua', config.CONDA_LUA),
+            ('python', self.config.CONDA_PY),
+            ('numpy', self.config.CONDA_NPY),
+            ('perl', self.config.CONDA_PERL),
+            ('lua', self.config.CONDA_LUA),
             # r is kept for legacy installations, r-base deprecates it.
-            ('r', config.CONDA_R),
-            ('r-base', config.CONDA_R),
+            ('r', self.config.CONDA_R),
+            ('r-base', self.config.CONDA_R),
         ]
         for spec in self.get_value('requirements/' + typ, []):
             try:
@@ -629,7 +638,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja):
+    def _get_contents(self, permit_undefined_jinja, config):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -670,11 +679,11 @@ class MetaData(object):
             UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
-        loader = FilteredLoader(jinja2.ChoiceLoader(loaders))
+        loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
-        env.globals.update(ns_cfg())
-        env.globals.update(context_processor(self, path))
+        env.globals.update(ns_cfg(config))
+        env.globals.update(context_processor(self, path, config=config))
 
         try:
             template = env.get_or_select_template(filename)

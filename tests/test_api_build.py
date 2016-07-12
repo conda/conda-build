@@ -59,14 +59,14 @@ def recipe(request):
 
 
 # This tests any of the folders in the test-recipes/metadata forlder that don't start with _
-def test_recipe_builds(recipe):
+def test_recipe_builds(recipe, test_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     os.environ["CONDA_TEST_VAR"] = "conda_test"
     os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
     ok_to_test = api.build(recipe, config=test_config)
     if ok_to_test:
-        api.test(recipe, verbose=True)
+        api.test(recipe, config=config)
 
 
 def test_token_upload(testing_workdir):
@@ -162,14 +162,13 @@ def test_build_with_no_activate_does_not_activate():
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="no binary prefix manipulation done on windows.")
-def test_binary_has_prefix_files(testing_workdir):
-    cmd = 'conda build --no-anaconda-upload {}/_binary_has_prefix_files'.format(metadata_dir)
-    subprocess.check_call(cmd.split())
+def test_binary_has_prefix_files(testing_workdir, test_config):
+    api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=test_config)
 
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows permission errors w/ git when removing repo files on cleanup.")
-def test_cached_source_not_interfere_with_versioning(testing_workdir):
+def test_cached_source_not_interfere_with_versioning(testing_workdir, test_config):
     """Test that work dir does not cache and cause inaccurate test target"""
     try:
         subprocess.check_call(['git', 'clone',
@@ -177,10 +176,7 @@ def test_cached_source_not_interfere_with_versioning(testing_workdir):
         # build to make sure we have a work directory with source in it.
         #    We want to make sure that whatever version that is does not
         #    interfere with the test we run next.
-        subprocess.check_call(['conda', 'build', '--no-test',
-                            '--no-anaconda-upload',
-                            'conda_build_test_recipe'])
-
+        api.build('conda_build_test_recipe', notest=True, config=test_config)
         os.chdir('conda_build_test_recipe')
         subprocess.check_call(['git', 'checkout', '1.20.0'])
         os.chdir('..')
@@ -189,39 +185,37 @@ def test_cached_source_not_interfere_with_versioning(testing_workdir):
         # be nothing to test.  If it succeeds, it means that it used the
         # cached master checkout for determining which version to test.
         cmd = 'conda build --output conda_build_test_recipe'
-        output = subprocess.check_output(cmd.split())
-        if PY3:
-            output = output.decode("UTF-8")
-        assert ("conda-build-test-source-git-jinja2-1.20.0" in output)
+        api.get_output_file_path('conda_build_test_recipe', config=test_config)
+        assert "conda-build-test-source-git-jinja2-1.20.0" in output
     except:
         raise
 
 
-def test_relative_path_git_versioning(testing_workdir):
+def test_relative_path_git_versioning(testing_workdir, test_config):
     tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
-    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
-                                                        "_source_git_jinja2_relative_path"))
-    output = subprocess.check_output(cmd.split())
+    recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_path")
+    output = api.get_output_file_path(recipe, config=test_config)
     assert tag in output
 
 
-def test_relative_git_url_git_versioning(testing_workdir):
+def test_relative_git_url_git_versioning(testing_workdir, test_config):
     tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
-    cmd = 'conda build --output {}'.format(os.path.join(metadata_dir,
-                                                        "_source_git_jinja2_relative_git_url"))
-    output = subprocess.check_output(cmd.split())
+    recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_git_url")
+    output = api.get_output_file_path(recipe, config=test_config)
     assert tag in output
 
 
-def test_dirty_variable_available_in_build_scripts(testing_workdir):
+def test_dirty_variable_available_in_build_scripts(testing_workdir, test_config):
     recipe = os.path.join(metadata_dir, "_dirty_skip_section")
-    api.build(recipe, dirty=True)
+    test_config.dirty = True
+    api.build(recipe, config=test_config)
 
     with pytest.raises(SystemExit):
-        api.build(recipe)
+        test_config.dirty = False
+        api.build(recipe, config=test_config)
 
 
-def test_checkout_tool_as_dependency(testing_workdir):
+def test_checkout_tool_as_dependency(testing_workdir, test_config):
     # "hide" svn by putting a known bad one on PATH
     dummyfile = os.path.join(testing_workdir, "svn")
     # empty prefix by default - extra bit at beginning of file
@@ -245,7 +239,7 @@ exit -1
         os.chmod(dummyfile, st.st_mode | stat.S_IEXEC)
     env = dict(os.environ)
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
-    api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'))
+    api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=test_config)
 
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
@@ -278,14 +272,14 @@ def test_build_msvc_compiler(msvc_ver):
 
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
-def test_cmake_generator(platform, target_compiler, testing_workdir):
+def test_cmake_generator(platform, target_compiler, testing_workdir, test_config):
     test_config.python = target_compiler
     api.build(os.path.join(metadata_dir, '_cmake_generator'), config=test_config)
 
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="No windows symlinks")
-def test_symlink_fail(testing_workdir, capfd):
+def test_symlink_fail(testing_workdir, test_config, capfd):
     with pytest.raises(SystemExit):
         api.build(os.path.join(fail_dir, "symlinks"), config=test_config)
     output, error = capfd.readouterr()
@@ -294,13 +288,13 @@ def test_symlink_fail(testing_workdir, capfd):
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows doesn't show this error")
-def test_broken_conda_meta(testing_workdir):
+def test_broken_conda_meta(testing_workdir, test_config):
     with pytest.raises(SystemExit):
         api.build(os.path.join(fail_dir, "conda-meta"), config=test_config)
         assert "Error: Untracked file(s) ('conda-meta/nope',)" in exc
 
 
-def test_recursive_fail(testing_workdir):
+def test_recursive_fail(testing_workdir, test_config):
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)
         assert "recursive-build2" in exc
@@ -312,7 +306,7 @@ def test_jinja_typo(testing_workdir, test_config):
         assert "'GIT_DSECRIBE_TAG' is undefined" in exc
 
 
-def test_skip_existing(testing_workdir, capfd):
+def test_skip_existing(testing_workdir, test_config, capfd):
     # build the recipe first
     api.build(empty_sections, config=test_config)
     api.build(empty_sections, config=test_config, skip_existing=True)
@@ -322,14 +316,13 @@ def test_skip_existing(testing_workdir, capfd):
 def test_skip_existing_url(testing_workdir, test_config):
     # make sure that it is built
     api.build(empty_sections, config=test_config)
-    output_file = os.path.join(config.croot, subdir, "empty_sections-0.0-0.tar.bz2")
+    output_file = os.path.join(test_config.croot, cc.subdir, "empty_sections-0.0-0.tar.bz2")
 
-    platform = os.path.join(testing_workdir, subdir)
-    os.makedirs(platform)
+    platform = os.path.join(testing_workdir, cc.subdir)
     shutil.copy2(output_file, os.path.join(platform, os.path.basename(output_file)))
 
     # create the index so conda can find the file
-    subprocess.check_call(["conda", "index"], cwd=platform)
+    api.update_index(platform)
 
     channel_url = path2url(testing_workdir)
     test_config.skip_existing = True

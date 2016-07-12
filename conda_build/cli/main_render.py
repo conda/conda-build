@@ -16,6 +16,7 @@ from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path
 from conda_build.utils import find_recipe
 from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
                                     LuaVersionsCompleter, NumPyVersionCompleter)
+from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
 
@@ -119,10 +120,12 @@ def main():
     args = p.parse_args()
     set_language_env_vars(args, p)
 
+    config = Config()
+
     metadata, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
                                  verbose=args.verbose)
     if args.output:
-        print(bldpkg_path(metadata))
+        print(bldpkg_path(metadata, config=config))
     else:
         print(output_yaml(metadata, args.file))
 

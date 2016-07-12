@@ -38,8 +38,7 @@ def render(recipe_path, config=None, **kwargs):
     if kwargs:
         config = Config(**kwargs)
 
-    return render_recipe(recipe_path, no_download_source=config.no_download_source,
-                         verbose=config.verbose, dirty=config.dirty)
+    return render_recipe(recipe_path, no_download_source=config.no_download_source, config=config)
 
 
 def output_yaml(metadata, file_path=None):
@@ -58,8 +57,8 @@ def get_output_file_path(recipe_path, no_download_source=False, config=None, **k
 
     metadata, need_source_download = render_recipe(recipe_path,
                                                    no_download_source=no_download_source,
-                                                   verbose=config.verbose, dirty=config.dirty)
-    return bldpkg_path(metadata)
+                                                   config=config)
+    return bldpkg_path(metadata, config)
 
 
 def check(recipe_path, no_download_source=False, config=None, **kwargs):
@@ -70,7 +69,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
 
     metadata, need_source_download = render_recipe(recipe_path,
                                                    no_download_source=no_download_source,
-                                                   verbose=config.verbose, dirty=config.dirty)
+                                                   config=config)
     metadata.check_fields()
 
 
@@ -81,7 +80,6 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
     import os
     from conda_build.render import render_recipe
     from conda_build.build import build_tree, get_build_index, update_index
-    from conda_build.config import config
 
     if not config:
         config = Config()
@@ -95,7 +93,7 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
     for recipe in recipe_path:
         metadata, _ = render_recipe(recipe,
                                     no_download_source=(not need_source_download),
-                                    verbose=config.verbose, dirty=config.dirty)
+                                    config=config)
 
         if not already_built:
             already_built = set()
@@ -128,6 +126,7 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
 
 def test(package_path, move_broken=True, config=None, **kwargs):
     from conda_build.build import test
+    from conda_build.render import render_recipe
     from conda_build.metadata import MetaData
     import tarfile
     import yaml
@@ -149,10 +148,10 @@ def test(package_path, move_broken=True, config=None, **kwargs):
             metadata = MetaData.fromdict(yaml.load(metayaml))
         except KeyError:
             # fall back to reconstructing metadata from info.json
-            metadata, _ = _render_recipe(package_path, no_download_source=False, verbose=verbose, **kwargs)
+            metadata, _ = render_recipe(package_path, no_download_source=False,
+                                        config=config, **kwargs)
 
-    return test(metadata, config=config, move_broken=move_broken,
-                activate=config.activate, verbose=config.verbose)
+    return test(metadata, config=config, move_broken=move_broken)
 
 
 def keygen(name="conda_build_signing", size=2048):
