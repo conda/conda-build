@@ -6,22 +6,16 @@ import tarfile
 
 from conda.compat import PY3
 import conda.config as cc
+from conda.utils import url_path
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
 
-if PY3:
-    import urllib.parse as urlparse
-    import urllib.request as urllib
-else:
-    import urlparse
-    import urllib
-
 from conda_build import api
-from conda_build.utils import copy_into
+from conda_build.utils import copy_into, path2url
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir,
-                    testing_workdir, test_config, path2url)
+                    testing_workdir, test_config)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -36,6 +30,11 @@ class AnacondaClientArgs(object):
         self.site = site
         self.log_level = log_level
         self.force = force
+
+def describe_root():
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"],
+                        cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))).rstrip()
+    return tag
 
 
 def package_has_file(package_path, file_path):
@@ -147,7 +146,7 @@ def test_early_abort(capfd):
 
 def test_output_build_path_git_source(testing_workdir, test_config):
     output = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"), config=test_config)
-    test_path = os.path.join(test_config.build_prefix, "conda-bld", cc.subdir,
+    test_path = os.path.join(test_config.croot, cc.subdir,
                         "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     assert output == test_path
@@ -188,14 +187,14 @@ def test_cached_source_not_interfere_with_versioning(testing_workdir, test_confi
 
 
 def test_relative_path_git_versioning(testing_workdir, test_config):
-    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    tag = describe_root()
     recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_path")
     output = api.get_output_file_path(recipe, config=test_config)
     assert tag in output
 
 
 def test_relative_git_url_git_versioning(testing_workdir, test_config):
-    tag = subprocess.check_output(["git", "describe", "--abbrev=0"]).rstrip()
+    tag = describe_root()
     recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_git_url")
     output = api.get_output_file_path(recipe, config=test_config)
     assert tag in output
@@ -279,7 +278,7 @@ def test_symlink_fail(testing_workdir, test_config, capfd):
     with pytest.raises(SystemExit):
         api.build(os.path.join(fail_dir, "symlinks"), config=test_config)
     output, error = capfd.readouterr()
-    assert error.count("Error") == 6
+    assert error.count("Error") == 2, "did not find appropriate count of Error in: " + error
 
 
 @pytest.mark.skipif(sys.platform == "win32",
@@ -318,15 +317,11 @@ def test_skip_existing_url(testing_workdir, test_config, capfd):
     copy_into(output_file, os.path.join(platform, os.path.basename(output_file)))
 
     # create the index so conda can find the file
-    api.update_index(platform)
+    api.update_index(platform, config=test_config)
 
-    channel_url = path2url(testing_workdir)
-    test_config.skip_existing = True
-    test_config.override_channels = True
-    test_config.channel_urls = (channel_url, )
-    api.build(os.path.join(metadata_dir, "empty_sections"), skip_existing=True, config=test_config)
+    api.build(os.path.join(metadata_dir, "empty_sections"), skip_existing=True,
+              config=test_config, channel_urls=[url_path(testing_workdir)])
 
     output, error = capfd.readouterr()
     assert "is already built" in output
-    assert "is already built" in output, (output + error)
-    assert channel_url in output, (output + error)
+    assert url_path(test_config.croot) in output

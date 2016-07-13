@@ -1,11 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
+import locale
+import logging
 import os
 import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
 from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
-import locale
 import time
 
 from conda.fetch import download
@@ -13,6 +14,8 @@ from conda.utils import hashsum_file
 
 from conda_build.os_utils import external
 from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode, copy_into
+
+log = logging.getLogger(__file__)
 
 
 def get_dir(config):
@@ -72,13 +75,13 @@ def unpack(meta, config):
         print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
             '.tar', 'tar.z')):
-        tar_xf(src_path, config.work_dir)
+        tar_xf(src_path, get_dir(config))
     elif src_path.lower().endswith('.zip'):
-        unzip(src_path, config.work_dir)
+        unzip(src_path, get_dir(config))
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-        copy_into(src_path, config.work_dir)
+        copy_into(src_path, get_dir(config))
 
 
 def git_source(meta, recipe_dir, config):

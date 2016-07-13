@@ -9,7 +9,7 @@ def main():
         data = f.read()
 
     print(data)
-    assert prefix.encode('utf-8') in data
+    assert prefix.encode('utf-8') in data, prefix + " not found in " + data
 
 if __name__ == '__main__':
     main()

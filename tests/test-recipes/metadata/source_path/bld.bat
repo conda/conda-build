@@ -1,5 +1,5 @@
 rem If directory exists, we did it right
-cd tests/test-recipes/test-package
+cd %RECIPE_DIR%\..\..\test-package
 if errorlevel 1 exit 1
 
 

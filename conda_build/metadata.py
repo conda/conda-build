@@ -397,6 +397,32 @@ class MetaData(object):
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
 
+    def parse_until_resolved(self, config):
+        # undefined_jinja_vars is refreshed by self.parse again
+        undefined_jinja_vars = ()
+        # always parse again at least once.
+        self.parse_again(config, permit_undefined_jinja=True)
+
+        while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
+            undefined_jinja_vars = self.undefined_jinja_vars
+            self.parse_again(config, permit_undefined_jinja=True)
+        if undefined_jinja_vars:
+            sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
+                     "source downloading and try again.".format(self.undefined_jinja_vars))
+
+        # always parse again at the end, too.
+        self.parse_again(config, permit_undefined_jinja=True)
+
+    @classmethod
+    def fromstring(cls, metadata, config=None):
+        m = super(MetaData, cls).__new__(cls)
+        if not config:
+            config=Config()
+        m.meta = parse(metadata, path='', config=config)
+        m.config = config
+        m.parse_again(config=config, permit_undefined_jinja=True)
+        return m
+
     @classmethod
     def fromdict(cls, metadata, config=None):
         """
@@ -474,7 +500,7 @@ class MetaData(object):
         return res
 
     def build_number(self):
-        number = self.get_value('build/number', 0)
+        number = self.get_value('build/number')
         # build number can come back as None if no setting (or jinja intermediate)
         try:
             build_int = int(number)
@@ -555,7 +581,7 @@ class MetaData(object):
             res.append('_')
         if features:
             res.extend(('_'.join(features), '_'))
-        res.append('{0}'.format(self.build_number()))
+        res.append('{0}'.format(self.build_number() if self.build_number() else 0))
         return ''.join(res)
 
     def dist(self):
@@ -588,7 +614,7 @@ class MetaData(object):
             name=self.name(),
             version=self.version(),
             build=self.build_id(),
-            build_number=self.build_number(),
+            build_number=self.build_number() if self.build_number() else 0,
             platform=cc.platform,
             arch=cc.arch_name,
             subdir=cc.subdir,

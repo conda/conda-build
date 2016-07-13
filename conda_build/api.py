@@ -78,6 +78,8 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
           config=None, **kwargs):
 
     import os
+    import conda.config as cc
+    from conda.utils import url_path
     from conda_build.render import render_recipe
     from conda_build.build import build_tree, get_build_index, update_index
 
@@ -89,11 +91,11 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
 
     recipe_path = _ensure_list(recipe_path)
 
-    build_recipes = []
+    build_metadata = []
     for recipe in recipe_path:
-        metadata, _ = render_recipe(recipe,
-                                    no_download_source=(not need_source_download),
-                                    config=config)
+        metadata, need_source_download = render_recipe(recipe,
+                                            no_download_source=(not need_source_download),
+                                            config=config)
 
         if not already_built:
             already_built = set()
@@ -110,26 +112,32 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
                 update_index(d)
             index = get_build_index(config=config, clear_cache=True)
 
-            # 'or m.pkg_fn() in index' is for conda <4.1 and could be removed in the future.
-            if ('local::' + metadata.pkg_fn() in index or
-                    metadata.pkg_fn() in index or
+            urls = [url_path(config.croot)] + cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
+            if config.channel_urls:
+                urls.extend(config.channel_urls)
+
+            # will be empty if none found, and evalute to False
+            package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
+            if (package_exists or metadata.pkg_fn() in index or
                     metadata.pkg_fn() in already_built):
-                print(metadata.dist(), "is already built, skipping.")
+                print(metadata.dist(), "is already built in {0}, skipping.".format(package_exists))
                 continue
 
-        build_recipes.append(recipe)
+        build_metadata.append((metadata, need_source_download))
 
-    return build_tree(build_recipes, build_only=build_only, post=post, notest=notest,
-                      need_source_download=True, already_built=already_built,
+    return build_tree(build_metadata, build_only=build_only, post=post, notest=notest,
+                      need_source_download=need_source_download, already_built=already_built,
                       config=config)
 
 
 def test(package_path, move_broken=True, config=None, **kwargs):
+    import os
+    import tarfile
+    from conda.compat import TemporaryDirectory
     from conda_build.build import test
     from conda_build.render import render_recipe
     from conda_build.metadata import MetaData
-    import tarfile
-    import yaml
+    from conda_build.utils import tar_xf
     # Note: internal test function depends on metadata already having been populated.
     # This may cause problems if post-build version stuff is used, as we have no way to pass
     # metadata out of build.  This is read from an existing package input here.
@@ -140,18 +148,20 @@ def test(package_path, move_broken=True, config=None, **kwargs):
     if kwargs:
         config = Config(**kwargs)
 
-    # try to extract the static meta.yaml and load metadata from it
-    with tarfile.open(package_path) as t:
-        try:
-            t.getmember('info/recipe/meta.yaml')
-            metayaml = t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
-            metadata = MetaData.fromdict(yaml.load(metayaml), config=config)
-        except KeyError:
-            # fall back to reconstructing metadata from info.json
+    with TemporaryDirectory() as tmp:
+        tar_xf(package_path, tmp)
+        recipe_dir = os.path.join(tmp, 'info', 'recipe')
+
+        # try to extract the static meta.yaml and load metadata from it
+        if os.path.isdir(recipe_dir):
+            metadata, _ = render_recipe(recipe_dir, config=config)
+        else:
+            # fall back to old way (use recipe, rather than package)
             metadata, _ = render_recipe(package_path, no_download_source=False,
                                         config=config, **kwargs)
 
-    return test(metadata, config=config, move_broken=move_broken)
+        test_result = test(metadata, config=config, move_broken=move_broken)
+    return test_result
 
 
 def keygen(name="conda_build_signing", size=2048):

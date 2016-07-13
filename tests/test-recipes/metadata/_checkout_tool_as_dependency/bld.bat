@@ -1,3 +1,4 @@
+svn upgrade
 svn info
 if errorlevel 1 exit 1
 for /f "delims=" %%i in ('svn info ^| grep "Revision"') do set svnrev=%%i

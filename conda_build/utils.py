@@ -19,6 +19,13 @@ from distutils.dir_util import copy_tree
 from conda.utils import md5_file, unix_path_to_win
 from conda.compat import PY3, iteritems
 
+if PY3:
+    import urllib.parse as urlparse
+    import urllib.request as urllib
+else:
+    import urlparse
+    import urllib
+
 from conda_build.os_utils import external
 
 log = logging.getLogger(__file__)
@@ -280,3 +287,9 @@ def convert_unix_path_to_win(path):
     else:
         path = unix_path_to_win(path)
     return path
+
+
+# Used for translating local paths into url (file://) paths
+#   http://stackoverflow.com/a/14298190/1170370
+def path2url(path):
+    return urlparse.urljoin('file:', urllib.pathname2url(path))

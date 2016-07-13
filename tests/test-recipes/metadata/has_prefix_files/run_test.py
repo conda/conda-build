@@ -11,14 +11,14 @@ def main():
 
     print('automatic-prefix')
     print(data)
-    assert prefix in data
+    assert prefix in data, prefix + " not found in " + data
 
     with open(join(prefix, 'has-prefix')) as f:
         data = f.read()
 
     print('has-prefix')
     print(data)
-    assert prefix in data
+    assert prefix in data, prefix + " not found in " + data
 
     if sys.platform == 'win32':
         forward_slash_prefix = prefix.replace('\\', '/')
@@ -27,13 +27,13 @@ def main():
 
         print('forward-slash-prefix')
         print(data)
-        assert forward_slash_prefix in data
+        assert forward_slash_prefix in data, prefix + " not found in " + data
     else:
         with open(join(prefix, 'binary-has-prefix'), 'rb') as f:
             data = f.read()
         print('binary-has-prefix')
         print(data)
-        assert prefix.encode('utf-8') in data
+        assert prefix.encode('utf-8') in data, prefix + " not found in " + data
 
 if __name__ == '__main__':
     main()

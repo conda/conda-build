@@ -3,5 +3,7 @@ package:
   version: 1.0
 
 build:
-  has_prefix_files:
+  binary_has_prefix_files:
     - binary-has-prefix
+  has_prefix_files:
+    - has-prefix

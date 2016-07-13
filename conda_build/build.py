@@ -37,7 +37,7 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.scripts import create_entry_points, prepend_bin_path
-from conda_build.utils import rm_rf, _check_call, copy_into
+from conda_build.utils import rm_rf, _check_call, copy_into, path2url
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -269,13 +269,10 @@ def create_info_files(m, files, config, prefix):
         # do we have a list of files, or just ignore everything?
         if hasattr(ignore_files, "__iter__"):
             files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
-            binary_has_prefix_files = [f for f in binary_has_prefix_files if f[2] not in ignore_files]  # noqa
-            text_has_prefix_files = [f for f in text_has_prefix_files if f[2] not in ignore_files]
         else:
             files_with_prefix = []
 
     if files_with_prefix and not m.get_value('build/noarch_python'):
-        auto_detect = m.get_value('build/detect_binary_files_with_prefix')
         if on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -286,21 +283,16 @@ def create_info_files(m, files, config, prefix):
             # and we don't have a good method of escaping, and because older
             # versions of conda don't support quotes in has_prefix
             fmt_str = '%s %s %s\n'
+
         with open(join(config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-                if (fn in text_has_prefix_files):
-                    # register for text replacement, regardless of mode
-                    fo.write(fmt_str % (pfix, 'text', fn))
-                    text_has_prefix_files.remove(fn)
-                elif ((mode == 'binary') and (fn in binary_has_prefix_files)):
-                    print("Detected hard-coded path in binary file %s" % fn)
-                    fo.write(fmt_str % (pfix, mode, fn))
+                print("Detected hard-coded path in %s file %s" % (mode, fn))
+                fo.write(fmt_str % (pfix, mode, fn))
+
+                if mode == 'binary' and fn in binary_has_prefix_files:
                     binary_has_prefix_files.remove(fn)
-                elif (auto_detect or (mode == 'text')):
-                    print("Detected hard-coded path in %s file %s" % (mode, fn))
-                    fo.write(fmt_str % (pfix, mode, fn))
-                else:
-                    print("Ignored hard-coded path in %s" % fn)
+                elif mode == 'text' and fn in text_has_prefix_files:
+                    text_has_prefix_files.remove(fn)
 
     # make sure we found all of the files expected
     errstr = ""
@@ -335,7 +327,9 @@ def get_build_index(config, clear_cache=True, arg_channels=None):
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
     arg_channels = [] if not arg_channels else arg_channels
-    return get_index(channel_urls=[url_path(config.croot)] + list(config.channel_urls) + arg_channels,
+    return get_index(channel_urls=[url_path(config.croot)] +
+                     list(config.channel_urls) +
+                     arg_channels,
                      prepend=not config.override_channels)
 
 
@@ -510,10 +504,12 @@ def build(m, config, post=None, need_source_download=True):
 
             print("Package:", m.dist())
 
-            assert isdir(config.work_dir)
-            contents = os.listdir(config.work_dir)
+            # get_dir here might be just work, or it might be one level deeper, dependening on the source.
+            src_dir = source.get_dir(config)
+            assert isdir(src_dir)
+            contents = os.listdir(src_dir)
             if contents:
-                print("source tree in:", config.work_dir)
+                print("source tree in:", src_dir)
             else:
                 print("no source")
 
@@ -542,7 +538,7 @@ def build(m, config, post=None, need_source_download=True):
             if on_win:
                 build_file = join(m.path, 'bld.bat')
                 if script:
-                    build_file = join(source.get_dir(config), 'bld.bat')
+                    build_file = join(src_dir, 'bld.bat')
                     with open(build_file, 'w') as bf:
                         bf.write(script)
                 import conda_build.windows as windows
@@ -574,7 +570,7 @@ def build(m, config, post=None, need_source_download=True):
                     if isfile(work_file):
                         cmd = [shell_path, '-x', '-e', work_file]
                         # this should raise
-                        _check_call(cmd, env=env, cwd=config.work_dir)
+                        _check_call(cmd, env=env, cwd=src_dir)
 
         if post in [True, None]:
             if post:
@@ -609,7 +605,7 @@ def build(m, config, post=None, need_source_download=True):
                               prefix=config.build_prefix)
             if m.get_value('build/noarch_python'):
                 import conda_build.noarch_python as noarch_python
-                noarch_python.transform(m, sorted(files2 - files1))
+                noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
 
             files3 = prefix_files(prefix=config.build_prefix)
             fix_permissions(files3 - files1, config.build_prefix)
@@ -799,15 +795,14 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def build_tree(recipe_list, config, check=False, build_only=False, post=False, notest=False,
+def build_tree(metadata_list, config, check=False, build_only=False, post=False, notest=False,
                need_source_download=True, already_built=None):
 
     to_build_recursive = []
-    recipes = deque(recipe_list)
+    metadata_list = deque(metadata_list)
     if not already_built:
         already_built = set()
-    cwd = os.getcwd()
-    while recipes:
+    while metadata_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
             post = False
@@ -820,13 +815,11 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
         else:
             post = None
 
-        recipe = recipes.popleft()
-        recipe_abspath = os.path.realpath(recipe)
-        recipe_parent_dir = os.path.dirname(recipe_abspath)
+        metadata, need_source_download = metadata_list.popleft()
+        recipe_parent_dir = os.path.dirname(metadata.path)
+        cwd = os.getcwd()
+        os.chdir(recipe_parent_dir)
         try:
-            os.chdir(recipe_parent_dir)
-
-            metadata, need_source_download = render_recipe(recipe_abspath, config=config)
             ok_to_test = build(metadata, post=post,
                                need_source_download=need_source_download,
                                config=config)
@@ -841,7 +834,7 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
             # rebuilt).
             skip_names = ['python', 'r']
             # add the failed one back in
-            add_recipes = [recipe]
+            add_recipes = [metadata.path]
             for line in error_str.splitlines():
                 if not line.startswith('  - '):
                     continue
@@ -864,32 +857,34 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
                         to_build_recursive.append(pkg)
                 else:
                     raise
-            recipes.extendleft(add_recipes)
+            print(add_recipes)
+            metadata_list.extendleft([render_recipe(add_recipe, config=config) for add_recipe in add_recipes])
         finally:
-            if cwd:
-                os.chdir(cwd)
+            os.chdir(cwd)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         output_file = bldpkg_path(metadata, config=config)
-        handle_anaconda_upload(output_file, anaconda_upload=config.anaconda_upload,
-                              token=config.token, user=config.user)
+        handle_anaconda_upload(output_file, config=config)
 
         already_built.add(output_file)
 
 
-def handle_anaconda_upload(path, anaconda_upload=None, token=None, user=None):
+def handle_anaconda_upload(path, config):
     import subprocess
     from conda_build.os_utils.external import find_executable
 
     upload = False
     # this is the default, for no explicit argument.
     # remember that anaconda_upload takes defaults from condarc
-    if anaconda_upload is None:
+    if config.anaconda_upload is None:
         pass
     # rc file has uploading explicitly turned off
-    elif anaconda_upload is False:
+    elif config.anaconda_upload is False:
         print("# Automatic uploading is disabled")
     else:
+        upload = True
+
+    if config.token or config.user:
         upload = True
 
     no_upload_message = """\
@@ -904,7 +899,7 @@ def handle_anaconda_upload(path, anaconda_upload=None, token=None, user=None):
         print(no_upload_message)
         return
 
-    anaconda = find_executable('anaconda')
+    anaconda = find_executable('anaconda', config)
     if anaconda is None:
         print(no_upload_message)
         sys.exit('''
@@ -915,11 +910,11 @@ Error: cannot locate anaconda command (required for upload)
     print("Uploading to anaconda.org")
     cmd = [anaconda, ]
 
-    if token:
-        cmd.extend(['--token', token])
+    if config.token:
+        cmd.extend(['--token', config.token])
     cmd.append('upload')
-    if user:
-        cmd.extend(['--user', user])
+    if config.user:
+        cmd.extend(['--user', config.user])
     cmd.append(path)
     try:
         subprocess.call(cmd)

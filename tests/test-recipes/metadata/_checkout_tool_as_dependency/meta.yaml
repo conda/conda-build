@@ -5,7 +5,7 @@ package:
   version: 1.0
 
 source:
-  svn_url: file://{{ recipe_dir }}/_svn_repo/dummy
+  svn_url: https://github.com/conda/conda_build_test_recipe.git
   svn_rev: 1
 
 requirements:

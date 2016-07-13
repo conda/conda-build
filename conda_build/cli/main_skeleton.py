@@ -48,17 +48,17 @@ options available.
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args_func(args, p)
+    args_func(args, p, Config(**args.__dict__))
 
 
-def execute(args, parser):
+def execute(args, parser, config):
     if not args.repo:
         parser.print_help()
         sys.exit()
 
-    with Locked(Config().croot):
+    with Locked(config.croot):
         for package in args.packages:
-            api.skeletonize(**args.__dict__)
+            api.skeletonize(package, config=config)
 
 
 if __name__ == '__main__':

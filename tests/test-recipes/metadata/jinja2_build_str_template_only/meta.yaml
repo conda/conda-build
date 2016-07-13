@@ -12,4 +12,3 @@ requirements:
   build:
     # To test the conda_build version
     - python
-    - git

@@ -82,7 +82,6 @@ def parse_or_try_download(metadata, no_download_source, config,
         try:
             if not config.dirty:
                 source.provide(metadata.path, metadata.get_section('source'), config=config)
-            metadata.parse_again(permit_undefined_jinja=False, config=config)
             need_source_download = False
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
@@ -98,10 +97,7 @@ def parse_or_try_download(metadata, no_download_source, config,
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
         need_source_download = not no_download_source
-        metadata.parse_again(permit_undefined_jinja=False, config=config)
-        if metadata.undefined_jinja_vars:
-            sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
-                     "source downloading and try again.".format(metadata.undefined_jinja_vars))
+    metadata.parse_until_resolved(config=config)
     return metadata, need_source_download
 
 

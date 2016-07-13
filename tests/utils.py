@@ -4,7 +4,7 @@ import sys
 
 import pytest
 
-from conda.compat import StringIO
+from conda.compat import StringIO, PY3
 from conda.config import subdir
 
 from conda_build.config import Config
@@ -44,10 +44,4 @@ def testing_workdir(tmpdir, request):
 
 @pytest.fixture
 def test_config(testing_workdir, request):
-    return Config(croot=testing_workdir)
-
-
-# Used for translating local paths into url (file://) paths
-#   http://stackoverflow.com/a/14298190/1170370
-def path2url(path):
-    return urlparse.urljoin('file:', urllib.pathname2url(path))
+    return Config(croot=testing_workdir, verbose=True)

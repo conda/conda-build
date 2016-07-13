@@ -6,7 +6,6 @@ import shutil
 import locale
 from os.path import basename, dirname, isdir, join, isfile
 
-from conda_build.config import config
 from conda_build.post import SHEBANG_PAT
 
 ISWIN = sys.platform.startswith('win')
@@ -88,7 +87,7 @@ def handle_file(f, d, prefix):
     # Treat scripts specially with the logic from above
     elif f.startswith(('bin/', 'Scripts')):
         fn = basename(path)
-        fn = rewrite_script(fn)
+        fn = rewrite_script(fn, prefix)
         d['python-scripts'].append(fn)
 
     # Include examples in the metadata doc
@@ -131,7 +130,7 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
 
     # Populate site-package, python-scripts, and Examples into above
     for f in files:
-        handle_file(f, d)
+        handle_file(f, d, prefix)
 
     # Windows path conversion
     if ISWIN:

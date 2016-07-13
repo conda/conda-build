@@ -34,6 +34,7 @@ def create_shell_files(dir_path, m):
         name = 'run_test.bat'
     else:
         name = 'run_test.sh'
+
     if exists(join(m.path, name)):
         shutil.copy(join(m.path, name), dir_path)
         has_tests = True
@@ -73,6 +74,8 @@ def create_py_files(dir_path, m):
             has_tests = True
         except IOError:
             fo.write("# no run_test.py exists for this package\n")
+        except AttributeError:
+            fo.write("# tests were not packaged with this module, and cannot be run\n")
         fo.write("\nprint('===== %s OK =====')\n" % m.dist())
 
     return has_tests
