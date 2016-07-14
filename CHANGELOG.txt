@@ -1,3 +1,22 @@
+2016-07-14 1.21.6:
+------------------
+
+Bug fixes:
+----------
+
+* Support PEP420 namespace packages (don't barf on existing folders.)  Do barf on existing files.  #1074
+* Fix handling of quotes in selectors #1104
+* Fix load_setuptools in jinja context.  Problem was incorrect cwd in function. #1106
+* Make Win activate script file extensions explicit #1107
+* Warn users on failed git repo info failure, rather than crash #1108
+* Remove killing MSBuild.exe at end of win build.  Remove psutil dependency.  #1109
+
+Contributors:
+-------------
+
+ * @ikalev
+ * @msarahan
+
 2016-07-07 1.21.5:
 ------------------
 
