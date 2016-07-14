@@ -118,12 +118,12 @@ def main():
         help='Enable verbose output from download tools and progress updates',
     )
     args = p.parse_args()
-    set_language_env_vars(args, p)
 
     config = Config()
+    set_language_env_vars(args, p, config)
 
     metadata, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
-                                 verbose=args.verbose)
+                                config=config)
     if args.output:
         print(bldpkg_path(metadata, config=config))
     else:

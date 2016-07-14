@@ -58,7 +58,7 @@ def execute(args, parser, config):
 
     with Locked(config.croot):
         for package in args.packages:
-            api.skeletonize(package, config=config)
+            api.skeletonize(package, repo=args.repo, config=config)
 
 
 if __name__ == '__main__':
