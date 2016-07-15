@@ -358,6 +358,11 @@ def create_env(prefix, specs, clear_cache=True):
             os.makedirs(d)
         update_index(d)
     if specs:  # Don't waste time if there is nothing to do
+
+        # FIXME: stupid hack to put test prefix on PATH so that runtime libs can be found
+        old_path = os.environ['PATH']
+        os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+
         index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
@@ -366,6 +371,9 @@ def create_env(prefix, specs, clear_cache=True):
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
+
+        os.environ['PATH'] = old_path
+
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
