@@ -168,7 +168,8 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
              'the construction of the recipe and in the recipe itself.'
              'For options that include a double-hypen or to pass multiple '
              'options, use the syntax '
-             '--setup-options="--option1 --optin-with-arg arg"')
+             '--setup-options="--option1 --option-with-arg arg"'
+    )
 
     pypi.add_argument(
         "--pin-numpy",
