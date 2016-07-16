@@ -51,14 +51,15 @@ def test_skeleton_with_setup_options(tmpdir):
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
 
+    package_name = 'photutils'
     # Test that the setup option is used in constructing the skeleton.
-    cmd = ("conda skeleton pypi --output-dir {} --version=0.2.2 photutils "
-           "--setup-options=--offline".format(tmpdir))
+    cmd = ("conda skeleton pypi --output-dir {} --version=0.2.2 {} "
+           "--setup-options=--offline".format(tmpdir, package_name))
     subprocess.check_call(cmd.split())
 
     # Check that the setup option occurs in bld.bat and build.sh.
     for script in ['bld.bat', 'build.sh']:
-        with open('{}/ccdproc/{}'.format(tmpdir, script)) as f:
+        with open('{}/{}/{}'.format(tmpdir, package_name, script)) as f:
             content = f.read()
             assert '--offline' in content
 
@@ -66,10 +67,11 @@ def test_skeleton_with_setup_options(tmpdir):
 def test_skeleton_pin_numpy(tmpdir):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    cmd = "conda skeleton pypi --output-dir {} --version=0.9.0 --pin-numpy msumastro".format(tmpdir)
+    package_name = 'msumastro'
+    cmd = "conda skeleton pypi --output-dir {} --version=0.9.0 --pin-numpy {}".format(tmpdir, package_name)
     subprocess.check_call(cmd.split())
 
-    with open('{}/msumastro/meta.yaml'.format(tmpdir)) as f:
+    with open('{}/{}/meta.yaml'.format(tmpdir, package_name)) as f:
         actual = yaml.load(f)
 
     assert 'numpy x.x' in actual['requirements']['run']
