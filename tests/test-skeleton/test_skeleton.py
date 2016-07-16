@@ -52,7 +52,7 @@ def test_skeleton_with_setup_options(tmpdir):
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
-    cmd = ("conda skeleton pypi --output-dir {} ccdproc "
+    cmd = ("conda skeleton pypi --output-dir {} --version=0.2.2 photutils "
            "--setup-options=--offline".format(tmpdir))
     subprocess.check_call(cmd.split())
 
