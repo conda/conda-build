@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import shutil
@@ -13,6 +14,7 @@ from conda.fetch import download
 
 from conda_build.source import _guess_patch_strip_level, apply_patch
 import conda_build.config as config
+import conda_build.scripts as scripts
 
 if PY3:
     import urllib.parse as urlparse
@@ -43,10 +45,10 @@ def package_has_file(package_path, file_path):
     try:
         with tarfile.open(package_path) as t:
             try:
-                t.getmember(file_path)
-                return True
+                f = t.extractfile(file_path).read()
+                return f
             except KeyError:
-                return False
+                return None
             except OSError as e:
                 raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
     except tarfile.ReadError:
@@ -548,3 +550,14 @@ def test_early_abort():
     output = output.decode('utf-8')
     error = error.decode('utf-8')
     assert "Hello World" in output, error
+
+
+def test_environment_recording():
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "empty_sections"))
+    subprocess.check_call(cmd.split())
+    output_file = os.path.join(sys.prefix, "conda-bld", subdir,
+                               "empty_sections-0.0-0.tar.bz2")
+    environ_file = package_has_file(output_file, "info/recipe/build_environment.json")
+    assert environ_file
+    assert json.loads(environ_file)['PATH'] == scripts.prepend_bin_path(os.environ.copy(),
+                                                                        config.config.build_prefix)["PATH"]

@@ -206,6 +206,10 @@ def create_info_files(m, files, include_recipe=True):
             f.write("# ------------------------------------------------\n\n")
             f.write(metayaml)
 
+        # record the current environment variables, to potentially help with reproducibility
+        with open(join(recipe_dir, "build_environment.json"), 'w') as f:
+            json.dump(environ.get_dict(m), f)
+
     license_file = m.get_value('about/license_file')
     if license_file:
         shutil.copyfile(join(source.get_dir(), license_file),
