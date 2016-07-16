@@ -548,3 +548,11 @@ def test_early_abort():
     output = output.decode('utf-8')
     error = error.decode('utf-8')
     assert "Hello World" in output, error
+
+
+def test_failed_tests_exit_build():
+    """https://github.com/conda/conda-build/issues/1112"""
+    with pytest.raises(subprocess.CalledProcessError):
+        cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                                "_test_failed_test_exits"))
+        subprocess.check_call(cmd.split())

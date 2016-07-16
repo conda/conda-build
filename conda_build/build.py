@@ -753,25 +753,31 @@ def test(m, move_broken=True, activate=True):
                 source = "call " if on_win else "source "
                 ext = ".bat" if on_win else ""
                 tf.write("{source}activate{ext} _test\n".format(source=source, ext=ext))
+                tf.write("if errorlevel 1 exit 1\n")
+
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
                     test_file=join(tmp_dir, 'run_test.py')))
+                tf.write("if errorlevel 1 exit 1\n")
 
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.pl')))
+                tf.write("if errorlevel 1 exit 1\n")
 
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.lua')))
+                tf.write("if errorlevel 1 exit 1\n")
 
             if shell_files:
                 test_file = join(tmp_dir, 'run_test.' + suffix)
                 if on_win:
                     tf.write("call {test_file}\n".format(test_file=test_file))
+                    tf.write("if errorlevel 1 exit 1\n")
                 else:
                     # TODO: Run the test/commands here instead of in run_test.py
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
