@@ -749,25 +749,25 @@ def test(m, move_broken=True, activate=True):
                 source = "call " if on_win else "source "
                 ext = ".bat" if on_win else ""
                 tf.write("{source}activate{ext} _test\n".format(source=source, ext=ext))
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
                     test_file=join(tmp_dir, 'run_test.py')))
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.pl')))
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.lua')))
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if shell_files:
                 test_file = join(tmp_dir, 'run_test.' + suffix)
