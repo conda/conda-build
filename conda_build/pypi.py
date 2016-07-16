@@ -105,7 +105,7 @@ about:
 PYPI_BUILD_SH = """\
 #!/bin/bash
 
-$PYTHON setup.py install
+$PYTHON setup.py install {recipe_setup_options}
 
 # Add more build steps here, if they are necessary.
 
@@ -115,7 +115,7 @@ $PYTHON setup.py install
 """
 
 PYPI_BLD_BAT = """\
-"%PYTHON%" setup.py install
+"%PYTHON%" setup.py install {recipe_setup_options}
 if errorlevel 1 exit 1
 
 :: Add more build steps here, if they are necessary.
@@ -366,6 +366,22 @@ def main(args, parser):
         if d['entry_comment'] == d['import_comment'] == '# ':
             d['test_comment'] = '# '
 
+        d['recipe_setup_options'] = ' '.join(args.setup_options)
+
+        # Change requirements to use format that guarantees the numpy
+        # version will be pinned when the recipe is built and that
+        # the version is included in the build string.
+        if args.pin_numpy:
+            for depends in ['build_depends', 'run_depends']:
+                deps = d[depends].split(INDENT)
+                numpy_dep = [idx for idx, dep in enumerate(deps)
+                             if 'numpy' in dep]
+                if numpy_dep:
+                    # Turns out this needs to be inserted before the rest
+                    # of the numpy spec.
+                    deps.insert(numpy_dep[0], 'numpy x.x')
+                    d[depends] = INDENT.join(deps)
+
     for package in package_dicts:
         d = package_dicts[package]
         name = d['packagename']
@@ -483,7 +499,8 @@ def get_package_metadata(args, package, d, data):
                           filename=d['filename'],
                           pypiurl=d['pypiurl'],
                           md5=d['md5'],
-                          python_version=args.python_version)
+                          python_version=args.python_version,
+                          setup_options=args.setup_options)
 
     setuptools_build = pkginfo['setuptools']
     setuptools_run = False
@@ -715,7 +732,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version):
+def get_pkginfo(package, filename, pypiurl, md5, python_version, setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
     # package uses distribute).  Our strategy is to download the package
@@ -742,7 +759,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version)
+        run_setuppy(src_dir, tempdir, python_version, setup_options)
         with open(join(tempdir, 'pkginfo.yaml')) as fn:
             pkginfo = yaml.load(fn)
     finally:
@@ -751,7 +768,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
     return pkginfo
 
 
-def run_setuppy(src_dir, temp_dir, python_version):
+def run_setuppy(src_dir, temp_dir, python_version, setup_options):
     '''
     Patch distutils and then run setup.py in a subprocess.
 
@@ -802,6 +819,7 @@ def run_setuppy(src_dir, temp_dir, python_version):
     cwd = getcwd()
     chdir(src_dir)
     cmdargs = [config.build_python, 'setup.py', 'install']
+    cmdargs.extend(setup_options)
     try:
         subprocess.check_call(cmdargs, env=env)
     except subprocess.CalledProcessError:
