@@ -362,6 +362,11 @@ def create_env(prefix, specs, clear_cache=True):
             os.makedirs(d)
         update_index(d)
     if specs:  # Don't waste time if there is nothing to do
+
+        # FIXME: stupid hack to put test prefix on PATH so that runtime libs can be found
+        old_path = os.environ['PATH']
+        os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+
         index = get_build_index(clear_cache=True)
 
         warn_on_old_conda_build(index)
@@ -370,6 +375,9 @@ def create_env(prefix, specs, clear_cache=True):
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=verbose)
+
+        os.environ['PATH'] = old_path
+
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
@@ -728,7 +736,11 @@ def test(m, move_broken=True, activate=True):
             # not sure how this shakes out
             specs += ['lua %s*' % environ.get_lua_ver()]
 
+        # FIXME: stupid hack to put test prefix on PATH so that runtime libs can be found
+        old_env = os.environ.copy()
+        os.environ = prepend_bin_path(os.environ.copy(), config.test_prefix, True)
         create_env(config.test_prefix, specs)
+        os.environ = old_env
         env = dict(os.environ)
         env.update(environ.get_dict(m, prefix=config.test_prefix))
 
@@ -753,25 +765,31 @@ def test(m, move_broken=True, activate=True):
                 source = "call " if on_win else "source "
                 ext = ".bat" if on_win else ""
                 tf.write("{source}activate{ext} _test\n".format(source=source, ext=ext))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
+
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
                     test_file=join(tmp_dir, 'run_test.py')))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.pl')))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.lua')))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if shell_files:
                 test_file = join(tmp_dir, 'run_test.' + suffix)
                 if on_win:
                     tf.write("call {test_file}\n".format(test_file=test_file))
+                    tf.write("if errorlevel 1 exit 1\n")
                 else:
                     # TODO: Run the test/commands here instead of in run_test.py
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,

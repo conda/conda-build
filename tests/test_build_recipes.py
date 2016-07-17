@@ -322,8 +322,8 @@ def test_skip_existing():
 
 # def test_skip_existing_anaconda_org():
 #     """This test may give false errors, because multiple tests running in parallel (on different
-#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
-#     if it is being run by one person on one machine at a time."""
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only
+#     reliable if it is being run by one person on one machine at a time."""
 #     # generated with conda_test_account user, command:
 #     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
 #     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
@@ -560,4 +560,12 @@ def test_environment_recording():
     environ_file = package_has_file(output_file, "info/recipe/build_environment.json")
     assert environ_file
     assert json.loads(environ_file)['PATH'] == scripts.prepend_bin_path(os.environ.copy(),
-                                                                        config.config.build_prefix)["PATH"]
+                                                      config.config.build_prefix)["PATH"]
+
+
+def test_failed_tests_exit_build():
+    """https://github.com/conda/conda-build/issues/1112"""
+    with pytest.raises(subprocess.CalledProcessError):
+        cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                                "_test_failed_test_exits"))
+        subprocess.check_call(cmd.split())
