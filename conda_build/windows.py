@@ -197,20 +197,22 @@ def build(m, bld_bat, dirty=False, activate=True):
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
-        with open(join(src_dir, 'bld.bat'), 'w') as fo:
-            # more debuggable with echo on
-            fo.write('@echo on\n')
-            for key, value in env.items():
-                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
-            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
-            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
-            if activate:
-                fo.write("call activate.bat _build\n")
-            fo.write("set > build_environment.txt\n")
-            fo.write("REM ===== end generated header =====\n")
-            fo.write(data)
+    else:
+        data = ""
+    with open(join(src_dir, 'bld.bat'), 'w') as fo:
+        # more debuggable with echo on
+        fo.write('@echo on\n')
+        for key, value in env.items():
+            fo.write('set "{key}={value}"\n'.format(key=key, value=value))
+        fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
+        fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+        fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
+        if activate:
+            fo.write("call activate.bat _build\n")
+        fo.write("set > build_environment.txt\n")
+        fo.write("REM ===== end generated header =====\n")
+        fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
-        _check_call(cmd, cwd=src_dir)
-        fix_staged_scripts()
+    cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+    _check_call(cmd, cwd=src_dir)
+    fix_staged_scripts()
