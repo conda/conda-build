@@ -9,6 +9,7 @@ import sys
 
 from os.path import dirname, join, isdir, exists
 
+
 def create_files(dir_path, m):
     """
     Create the test files for pkg in the directory given.  The resulting

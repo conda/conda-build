@@ -16,11 +16,15 @@ requirements:
     - python
   run:
     - python
-    - conda
+    - conda  >=4.1
     - jinja2
     - patchelf      [linux]
 
 test:
+  requires:
+    - pytest
+    - pytest-cov
+    - mock
   commands:
     - conda-build -h
   imports:

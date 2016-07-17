@@ -33,6 +33,7 @@ elif sys.platform == 'darwin':
 
 SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
+
 def is_obj(path):
     assert sys.platform != 'win32'
     return bool((sys.platform.startswith('linux') and elf.is_elf(path)) or
@@ -96,7 +97,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
-                in walk_prefix(egg_path, False, windows_forward_slashes=False)):
+                    in walk_prefix(egg_path, False, windows_forward_slashes=False)):
                 write_pth(egg_path)
                 continue
 
@@ -121,7 +122,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
 
         elif isfile(egg_path):
-            if not egg_path in absfiles:
+            if egg_path not in absfiles:
                 continue
             print('found egg:', egg_path)
             write_pth(egg_path)
@@ -172,7 +173,7 @@ def find_lib(link, path=None):
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
-    if link.startswith('/'): # but doesn't start with the build prefix
+    if link.startswith('/'):  # but doesn't start with the build prefix
         return
     if link.startswith('@rpath/'):
         # Assume the rpath already points to lib, so there is no need to
@@ -267,17 +268,18 @@ def mk_relative_osx(path, build_prefix=None):
         rpath = join('@loader_path',
                      relpath(join(config.build_prefix, 'lib'),
                              dirname(path)), '').replace('/./', '/')
-        macho.add_rpath(path, rpath, verbose = True)
+        macho.add_rpath(path, rpath, verbose=True)
 
         # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
         # .. and remove config.build_prefix/lib which was added in-place of
         # DYLD_FALLBACK_LIBRARY_PATH since El Capitan's SIP.
-        #macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
+        # macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
 
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
         assert_relative_osx(path)
+
 
 def mk_relative_linux(f, rpaths=('lib',)):
     path = join(config.build_prefix, f)
@@ -314,7 +316,7 @@ def fix_permissions(files):
     for f in files:
         path = join(config.build_prefix, f)
         st = os.lstat(path)
-        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR) # chmod u+w
+        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
 
 
 def post_build(m, files):
@@ -336,6 +338,7 @@ def post_build(m, files):
             mk_relative(m, f)
 
     check_symlinks(files)
+
 
 def check_symlinks(files):
     if readlink is False:
@@ -372,18 +375,29 @@ def check_symlinks(files):
 
 def get_build_metadata(m):
     src_dir = source.get_dir()
+    if "build" not in m.meta:
+        m.meta["build"] = {}
     if exists(join(src_dir, '__conda_version__.txt')):
+        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 2.0."  # noqa
+              "Try Jinja templates instead: "
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_version__.txt')) as f:
             version = f.read().strip()
             print("Setting version from __conda_version__.txt: %s" % version)
             m.meta['package']['version'] = version
     if exists(join(src_dir, '__conda_buildnum__.txt')):
+        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 2.0."  # noqa
+              "Try Jinja templates instead: "
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_buildnum__.txt')) as f:
             build_number = f.read().strip()
             print("Setting build number from __conda_buildnum__.txt: %s" %
                   build_number)
             m.meta['build']['number'] = build_number
     if exists(join(src_dir, '__conda_buildstr__.txt')):
+        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 2.0."  # noqa
+              "Try Jinja templates instead: "
+              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
         with open(join(src_dir, '__conda_buildstr__.txt')) as f:
             buildstr = f.read().strip()
             print("Setting version from __conda_buildstr__.txt: %s" % buildstr)

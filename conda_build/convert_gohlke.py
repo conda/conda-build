@@ -33,7 +33,7 @@ file_map = [
 def info_from_fn(fn):
     m = fn_pat.match(fn)
     if m is None:
-         return
+        return
     py_ver = m.group(4)
     return {
         "name": m.group(1).lower(),
@@ -85,8 +85,8 @@ def convert(path, repo_dir='.', add_depends=None, verbose=False):
     fn1 = basename(path)
     info = info_from_fn(fn1)
     if info is None:
-         print("WARNING: Invalid .exe filename '%s', skipping" % fn1)
-         return
+        print("WARNING: Invalid .exe filename '%s', skipping" % fn1)
+        return
     fn2 = '%(name)s-%(version)s-%(build)s.tar.bz2' % info
     subdir = subdir_map[info['arch']]
     if verbose:

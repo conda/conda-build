@@ -28,6 +28,9 @@ from conda import compat
 from conda_build import source, metadata
 
 CRAN_META = """\
+{{% set posix = 'm2-' if win else '' %}}
+{{% set native = 'm2w64-' if win else '' %}}
+
 package:
   name: {packagename}
   # Note that conda versions cannot contain -, so any -'s in the version have
@@ -190,6 +193,7 @@ VERSION_DEPENDENCY_REGEX = re.compile(
     r'?(\s*\[(?P<archs>[\s!\w\-]+)\])?\s*$'
 )
 
+
 def dict_from_cran_lines(lines):
     d = {}
     for line in lines:
@@ -204,6 +208,7 @@ def dict_from_cran_lines(lines):
         #     print("Warning: Unknown key %s" % k)
     d['orig_lines'] = lines
     return d
+
 
 def remove_package_line_continuations(chunk):
     """
@@ -225,7 +230,7 @@ def remove_package_line_continuations(chunk):
      'Imports: MASS, R.methodsS3 (>= 1.5.2), R.oo (>= 1.15.8), R.utils (>= 1.27.1), matrixStats (>= 0.8.12), R.filesets (>= 2.3.0), sampleSelection, scatterplot3d, strucchange, systemfit, rgl,'
      'License: GPL (>= 2)',
      'NeedsCompilation: no']
-    """
+    """  # NOQA
     continuation = (' ', '\t')
     continued_ix = None
     continued_line = None
@@ -243,7 +248,7 @@ def remove_package_line_continuations(chunk):
                 chunk[i] = None
             else:
                 accumulating_continuations = True
-                continued_ix = i-1
+                continued_ix = i - 1
                 continued_line = chunk[continued_ix] + line
                 had_continuation = True
                 chunk[i] = None
@@ -257,11 +262,12 @@ def remove_package_line_continuations(chunk):
 
     if had_continuation:
         # Remove the None(s).
-        chunk = [ c for c in chunk if c ]
+        chunk = [c for c in chunk if c]
 
     chunk.append('')
 
     return chunk
+
 
 def yaml_quote_string(string):
     """
@@ -275,11 +281,13 @@ def yaml_quote_string(string):
     """
     return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ')
 
+
 def clear_trailing_whitespace(string):
     lines = []
     for line in string.splitlines():
         lines.append(line.rstrip())
     return '\n'.join(lines)
+
 
 def get_package_metadata(cran_url, package, session):
     url = cran_url + 'web/packages/' + package + '/DESCRIPTION'
@@ -295,6 +303,7 @@ def get_package_metadata(cran_url, package, session):
     d['orig_description'] = DESCRIPTION
     return d
 
+
 def get_latest_git_tag():
     p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
@@ -309,6 +318,7 @@ def get_latest_git_tag():
 
     print("Using tag %s" % tags[-1])
     return tags[-1]
+
 
 def get_session(output_dir, verbose=True, cache=[]):
     if cache:
@@ -328,6 +338,7 @@ def get_session(output_dir, verbose=True, cache=[]):
     cache.append(session)
     return session
 
+
 def get_cran_metadata(cran_url, output_dir, verbose=True):
     session = get_session(output_dir, verbose=verbose)
     if verbose:
@@ -335,9 +346,11 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
     r = session.get(cran_url + "src/contrib/PACKAGES")
     r.raise_for_status()
     PACKAGES = r.text
-    package_list =  [remove_package_line_continuations(i.splitlines()) for i in PACKAGES.split('\n\n')]
+    package_list = [remove_package_line_continuations(i.splitlines())
+                    for i in PACKAGES.split('\n\n')]
     return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
         package_list)}
+
 
 def main(args, parser):
     if len(args.packages) > 1 and args.version_compare:
@@ -356,24 +369,24 @@ def main(args, parser):
         for pkg in args.packages:
             rm_rf(join(args.output_dir[0], 'r-' + pkg))
 
-
     while args.packages:
         package = args.packages.pop()
 
         is_github_url = 'github.com' in package
         url = package
 
-
         if is_github_url:
             rm_rf(source.WORK_DIR)
             source.git_source({'git_url': package}, '.')
             git_tag = args.git_tag[0] if args.git_tag else get_latest_git_tag()
-            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=source.WORK_DIR)
+            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, cwd=source.WORK_DIR)
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
             if p.returncode:
-                sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" % (git_tag, stderr.strip()))
+                sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" %
+                         (git_tag, stderr.strip()))
             if stdout:
                 print(stdout, file=sys.stdout)
             if stderr:
@@ -388,13 +401,15 @@ def main(args, parser):
                 elif isfile(sub_description_name):
                     DESCRIPTION = sub_description_name
                 else:
-                    sys.exit("%s does not appear to be a valid R package (no DESCRIPTION file in %s, %s)"
+                    sys.exit("%s does not appear to be a valid R package "
+                             "(no DESCRIPTION file in %s, %s)"
                                  % (package, sub_description_pkg, sub_description_name))
 
             with open(DESCRIPTION) as f:
                 description_text = clear_trailing_whitespace(f.read())
 
-            d = dict_from_cran_lines(remove_package_line_continuations(description_text.splitlines()))
+            d = dict_from_cran_lines(remove_package_line_continuations(
+                description_text.splitlines()))
             d['orig_description'] = description_text
             package = d['Package'].lower()
             cran_metadata[package] = d
@@ -477,10 +492,11 @@ def main(args, parser):
         d['license'] = cran_package.get("License", "None")
 
         # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
-        if 'GPL (>=2)' in d['license'] or d['license'] == 'GPL':
+        if 'GPL (>= 2)' in d['license'] or d['license'] == 'GPL':
             d['license_family'] = 'GPL3'
         else:
-            d['license_family'] = get_close_matches(d['license'], metadata.allowed_license_families, 1, 0.0)[0]
+            d['license_family'] = get_close_matches(d['license'],
+                                                    metadata.allowed_license_families, 1, 0.0)[0]
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
         if cran_package.get('License_restricts_use', None) == 'yes':
@@ -539,49 +555,41 @@ def main(args, parser):
                     continue
                 if name == 'R':
                     # Put R first
-                    if d['cran_packagename'] in R_RECOMMENDED_PACKAGE_NAMES and dep_type == 'build':
-                        # On Linux and OS X, r is a metapackage depending on
-                        # r-base and r-recommended. Recommended packages cannot
-                        # build depend on r as they would then build depend on
-                        # themselves and the built package would end up being
-                        # empty (because conda would find no new files)
-                        r_name = 'r-base'
-                    else:
-                        r_name = 'r'
+                    # Regarless of build or run, and whether this is a recommended package or not,
+                    # it can only depend on 'r-base' since anything else can and will cause cycles
+                    # in the dependency graph. The cran metadata lists all dependencies anyway, even
+                    # those packages that are in the recommended group.
+                    r_name = 'r-base'
                     # We don't include any R version restrictions because we
                     # always build R packages against an exact R version
                     deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
                 else:
                     conda_name = 'r-' + name.lower()
 
-                    # The r package on Windows includes the recommended packages
-                    if name in R_RECOMMENDED_PACKAGE_NAMES:
-                        end = ' # [not win]'
-                    else:
-                        end = ''
                     if dep_dict[name]:
-                        deps.append('{indent}{name} {version}{end}'.format(name=conda_name,
-                            version=dep_dict[name], end=end, indent=INDENT))
+                        deps.append('{indent}{name} {version}'.format(name=conda_name,
+                            version=dep_dict[name], indent=INDENT))
                     else:
-                        deps.append('{indent}{name}{end}'.format(name=conda_name,
-                            indent=INDENT, end=end))
+                        deps.append('{indent}{name}'.format(name=conda_name,
+                            indent=INDENT))
                     if args.recursive:
                         if not exists(join(output_dir, conda_name)):
                             args.packages.append(name)
 
             if cran_package.get("NeedsCompilation", 'no') == 'yes':
                 if dep_type == 'build':
-                    deps.append('{indent}gcc # [not win]'.format(indent=INDENT))
-                else:
-                    deps.append('{indent}libgcc # [not win]'.format(indent=INDENT))
+                    deps.append('{indent}posix               # [win]'.format(indent=INDENT))
+                    deps.append('{indent}{{{{native}}}}toolchain # [win]'.format(indent=INDENT))
+                    deps.append('{indent}gcc                 # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
         d = package_dicts[package]
         name = d['packagename']
 
-        #Normalize the metadata values
-        d = {k:unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore').decode() for k, v in compat.iteritems(d)}
+        # Normalize the metadata values
+        d = {k: unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore')
+             .decode() for k, v in compat.iteritems(d)}
 
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
@@ -594,6 +602,7 @@ def main(args, parser):
 
     print("Done")
 
+
 def version_compare(recipe_dir, newest_conda_version):
     m = metadata.MetaData(recipe_dir)
     local_version = m.version()
@@ -604,6 +613,7 @@ def version_compare(recipe_dir, newest_conda_version):
     print("The version on CRAN for %s is %s." % (package, newest_conda_version))
 
     return local_version == newest_conda_version
+
 
 def get_outdated(output_dir, cran_metadata, packages=()):
     to_update = []

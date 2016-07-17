@@ -13,6 +13,7 @@ import conda.config as cc
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
 
+
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
@@ -57,7 +58,7 @@ class Config(object):
         croot = abspath(expanduser('~/conda-bld'))
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = max(short_build_prefix, (short_build_prefix + 8 * '_placehold')[:80])
+    long_build_prefix = max(short_build_prefix, (short_build_prefix + 25 * '_placehold')[:255])
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False

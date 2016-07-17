@@ -20,17 +20,17 @@ from conda.cli.common import add_parser_channels
 from conda.install import delete_trash
 from conda.resolve import NoPackagesFound, Unsatisfiable
 
+from conda_build.build import bldpkg_path
 from conda_build.index import update_index
 from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
-from conda_build.main_render import (get_package_build_string, set_language_env_vars,
-                                     RecipeCompleter, render_recipe)
+from conda_build.main_render import (set_language_env_vars, RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
 
 def main():
-    p=get_render_parser()
-    p.description="""
+    p = get_render_parser()
+    p.description = """
 Tool for building conda packages. A conda package is a binary tarball
 containing system-level libraries, Python modules, executable programs, or
 other components. conda keeps track of dependencies between packages and
@@ -70,7 +70,9 @@ different sets of packages."""
     p.add_argument(
         '-t', "--test",
         action="store_true",
-        help="Test package (assumes package is already build).",
+        help="Test package (assumes package is already built).  RECIPE_DIR argument can be either "
+        "recipe directory, in which case source download may be necessary to resolve package"
+        "version, or path to built package .tar.bz2 file, in which case no source is necessary.",
     )
     p.add_argument(
         '--no-test',
@@ -102,7 +104,7 @@ different sets of packages."""
         action='store_true',
         help="""Skip recipes for which there already exists an existing build
         (locally or in the channels). """
-        )
+    )
     p.add_argument(
         '--keep-old-work',
         action='store_true',
@@ -110,9 +112,29 @@ different sets of packages."""
         callstacks involving multiple packages/recipes. """
     )
     p.add_argument(
+        '--dirty',
+        action='store_true',
+        help='Do not remove work directory or _build environment, '
+        'to speed up debugging.  Does not apply patches or download source.'
+    )
+    p.add_argument(
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
+    )
+    p.add_argument(
+        '--token',
+        help="Token to pass through to anaconda upload"
+    )
+    p.add_argument(
+        '--user',
+        help="User/organization to upload packages to on anaconda.org"
+    )
+    p.add_argument(
+        "--no-activate",
+        action="store_false",
+        help="do not display progress bar",
+        dest='activate',
     )
 
     add_parser_channels(p)
@@ -126,16 +148,20 @@ def handle_binstar_upload(path, args):
     import subprocess
     from conda_build.external import find_executable
 
-    if args.binstar_upload is None:
+    upload = False
+    if args.token or args.user:
+        args.yes = True
+        upload = True
+    # this is the default, for no explicit argument.
+    # remember that args.binstar_upload takes defaults from condarc
+    elif args.binstar_upload is None:
         args.yes = False
         args.dry_run = False
-#        upload = common.confirm_yn(
-#            args,
-#            message="Do you want to upload this "
-#            "package to binstar", default='yes', exit_no=False)
-        upload = False
+    # rc file has uploading explicitly turned off
+    elif args.binstar_upload is False:
+        print("# Automatic uploading is disabled")
     else:
-        upload = args.binstar_upload
+        upload = True
 
     no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
@@ -158,9 +184,16 @@ Error: cannot locate anaconda command (required for upload)
 # $ conda install anaconda-client
 ''')
     print("Uploading to anaconda.org")
-    args = [binstar, 'upload', path]
+    cmd = [binstar, ]
+
+    if hasattr(args, "token") and args.token:
+        cmd.extend(['--token', args.token])
+    cmd.append('upload')
+    if hasattr(args, "user") and args.user:
+        cmd.extend(['--user', args.user])
+    cmd.append(path)
     try:
-        subprocess.call(args)
+        subprocess.call(cmd)
     except:
         print(no_upload_message)
         raise
@@ -190,7 +223,8 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
-    from conda.lock import Locked
+    import conda.config as cc
+
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
@@ -223,122 +257,143 @@ def execute(args, parser):
             if not isdir(d):
                 makedirs(d)
             update_index(d)
+        arg_channels = ['local']
+        if args.channel:
+            arg_channels.extend(args.channel)
+        index = build.get_build_index(clear_cache=True,
+                                      arg_channels=arg_channels)
 
-    already_built = []
+    already_built = set()
     to_build_recursive = []
-    with Locked(config.croot):
-        recipes = deque(args.recipe)
-        while recipes:
-            arg = recipes.popleft()
-            try_again = False
-            # Don't use byte literals for paths in Python 2
-            if not PY3:
-                arg = arg.decode(getpreferredencoding() or 'utf-8')
-            if isfile(arg):
-                if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                    recipe_dir = tempfile.mkdtemp()
-                    t = tarfile.open(arg, 'r:*')
-                    t.extractall(path=recipe_dir)
-                    t.close()
-                    need_cleanup = True
-                else:
-                    print("Ignoring non-recipe: %s" % arg)
-                    continue
+    recipes = deque(args.recipe)
+    while recipes:
+        arg = recipes.popleft()
+        try_again = False
+        # Don't use byte literals for paths in Python 2
+        if not PY3:
+            arg = arg.decode(getpreferredencoding() or 'utf-8')
+        if isfile(arg):
+            if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+                recipe_dir = tempfile.mkdtemp()
+                t = tarfile.open(arg, 'r:*')
+                t.extractall(path=recipe_dir)
+                t.close()
+                need_cleanup = True
             else:
-                recipe_dir = abspath(arg)
-                need_cleanup = False
-
-            # recurse looking for meta.yaml that is potentially not in immediate folder
-            recipe_dir = find_recipe(recipe_dir)
-            if not isdir(recipe_dir):
-                sys.exit("Error: no such directory: %s" % recipe_dir)
-
-            # this fully renders any jinja templating, throwing an error if any data is missing
-            m = render_recipe(recipe_dir, no_download_source=False)
-            if m.get_value('build/noarch_python'):
-                config.noarch = True
-
-            if args.check and len(args.recipe) > 1:
-                print(m.path)
-            m.check_fields()
-            if args.check:
+                print("Ignoring non-recipe: %s" % arg)
                 continue
-            if m.skip():
-                print("Skipped: The %s recipe defines build/skip for this "
-                      "configuration." % m.dist())
+        else:
+            recipe_dir = abspath(arg)
+            need_cleanup = False
+
+        # recurse looking for meta.yaml that is potentially not in immediate folder
+        recipe_dir = find_recipe(recipe_dir)
+        if not isdir(recipe_dir):
+            sys.exit("Error: no such directory: %s" % recipe_dir)
+
+        # this fully renders any jinja templating, throwing an error if any data is missing
+        m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
+                                                verbose=False, dirty=args.dirty)
+        if m.get_value('build/noarch_python'):
+            config.noarch = True
+
+        if args.check and len(args.recipe) > 1:
+            print(m.path)
+        m.check_fields()
+        if args.check:
+            continue
+        if m.skip():
+            print("Skipped: The %s recipe defines build/skip for this "
+                    "configuration." % m.dist())
+            continue
+        if args.skip_existing:
+            urls = cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
+            if args.channel:
+                urls.extend(args.channel)
+
+            # will be empty if none found, and evalute to False
+            package_exists = [url for url in urls if url + '::' + m.pkg_fn() in index]
+            if (package_exists or m.pkg_fn() in index or m.pkg_fn() in already_built):
+                print(m.dist(), "is already built in {0}, skipping.".format(package_exists))
                 continue
-            if args.output:
-                print(get_package_build_string(m, no_download_source=False))
-                continue
-            elif args.test:
-                build.test(m, move_broken=False)
-            elif args.source:
-                source.provide(m.path, m.get_section('source'))
-                print('Source tree in:', source.get_dir())
+        if args.output:
+            print(bldpkg_path(m))
+            continue
+        elif args.test:
+            build.test(m, move_broken=False)
+        elif args.source and need_source_download:
+            source.provide(m.path, m.get_section('source'), verbose=build.verbose)
+            print('Source tree in:', source.get_dir())
+        else:
+            # This loop recursively builds dependencies if recipes exist
+            if args.build_only:
+                post = False
+                args.notest = True
+                args.binstar_upload = False
+            elif args.post:
+                post = True
+                args.notest = True
+                args.binstar_upload = False
             else:
-                # This loop recursively builds dependencies if recipes exist
-                if args.build_only:
-                    post = False
-                    args.notest = True
-                    args.binstar_upload = False
-                elif args.post:
-                    post = True
-                    args.notest = True
-                    args.binstar_upload = False
-                else:
-                    post = None
-                try:
-                    build.build(m, post=post,
-                                include_recipe=args.include_recipe,
-                                keep_old_work=args.keep_old_work)
-                except (NoPackagesFound, Unsatisfiable) as e:
-                    error_str = str(e)
-                    # Typically if a conflict is with one of these
-                    # packages, the other package needs to be rebuilt
-                    # (e.g., a conflict with 'python 3.5*' and 'x' means
-                    # 'x' isn't build for Python 3.5 and needs to be
-                    # rebuilt).
-                    skip_names = ['python', 'r']
-                    add_recipes = []
-                    for line in error_str.splitlines():
-                        if not line.startswith('  - '):
-                            continue
-                        pkg = line.lstrip('  - ').split(' -> ')[-1]
-                        pkg = pkg.strip().split(' ')[0]
-                        if pkg in skip_names:
-                            continue
-                        recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
-                        if os.path.exists(pkg):
-                            recipe_glob.append(pkg)
-                        if recipe_glob:
-                            try_again = True
-                            for recipe_dir in recipe_glob:
-                                if pkg in to_build_recursive:
-                                    sys.exit(str(e))
-                                print(error_str)
-                                print(("Missing dependency {0}, but found" +
-                                       " recipe directory, so building " +
-                                       "{0} first").format(pkg))
-                                add_recipes.append(recipe_dir)
-                                to_build_recursive.append(pkg)
-                        else:
-                            raise
-                    recipes.appendleft(arg)
-                    recipes.extendleft(reversed(add_recipes))
+                post = None
+            try:
+                build.build(m, post=post,
+                            include_recipe=args.include_recipe,
+                            keep_old_work=args.keep_old_work,
+                            need_source_download=need_source_download,
+                            dirty=args.dirty, activate=args.activate)
+            except (NoPackagesFound, Unsatisfiable) as e:
+                error_str = str(e)
+                # Typically if a conflict is with one of these
+                # packages, the other package needs to be rebuilt
+                # (e.g., a conflict with 'python 3.5*' and 'x' means
+                # 'x' isn't build for Python 3.5 and needs to be
+                # rebuilt).
+                skip_names = ['python', 'r']
+                add_recipes = []
+                for line in error_str.splitlines():
+                    if not line.startswith('  - '):
+                        continue
+                    pkg = line.lstrip('  - ').split(' -> ')[-1]
+                    pkg = pkg.strip().split(' ')[0]
+                    if pkg in skip_names:
+                        sys.stderr.write("Warning: package conflict - you may have unresolved "
+                                         "dependencies. Try to conda install each of your "
+                                         "dependencies to figure out which has unresolved "
+                                         "dependencies.")
+                        continue
+                    recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                    if os.path.exists(pkg):
+                        recipe_glob.append(pkg)
+                    if recipe_glob:
+                        try_again = True
+                        for recipe_dir in recipe_glob:
+                            if pkg in to_build_recursive:
+                                sys.exit(str(e))
+                            print(error_str)
+                            print(("Missing dependency {0}, but found" +
+                                    " recipe directory, so building " +
+                                    "{0} first").format(pkg))
+                            add_recipes.append(recipe_dir)
+                            to_build_recursive.append(pkg)
+                    else:
+                        raise
+                recipes.appendleft(arg)
+                recipes.extendleft(reversed(add_recipes))
 
-                if try_again:
-                    continue
+            if try_again:
+                continue
 
-                if not args.notest:
-                    build.test(m)
+            if not args.notest:
+                build.test(m, activate=args.activate)
 
-            if need_cleanup:
-                shutil.rmtree(recipe_dir)
+        if need_cleanup:
+            shutil.rmtree(recipe_dir)
 
-            if args.binstar_upload:
-                handle_binstar_upload(build.bldpkg_path(m), args)
+        # outputs message, or does upload, depending on value of args.binstar_upload
+        handle_binstar_upload(build.bldpkg_path(m), args)
 
-            already_built.append(m.pkg_fn())
+        already_built.add(m.pkg_fn())
 
 
 def args_func(args, p):
@@ -352,6 +407,7 @@ def args_func(args, p):
     except Exception as e:
         print_issue_message(e)
         raise  # as if we did not catch it
+
 
 def print_issue_message(e):
     if e.__class__.__name__ not in ('ScannerError', 'ParserError'):

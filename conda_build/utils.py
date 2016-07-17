@@ -11,7 +11,7 @@ import operator
 from os.path import dirname, getmtime, getsize, isdir, join
 from collections import defaultdict
 
-from conda.utils import md5_file
+from conda.utils import md5_file, unix_path_to_win
 from conda.compat import PY3, iteritems
 
 from conda_build import external
@@ -19,6 +19,7 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from conda.install import rm_rf
 rm_rf
+
 
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
@@ -123,6 +124,7 @@ def file_info(path):
 
 # Taken from toolz
 
+
 def groupby(key, seq):
     """ Group a collection by a key function
     >>> names = ['Alice', 'Bob', 'Charlie', 'Dan', 'Edith', 'Frank']
@@ -151,6 +153,7 @@ def groupby(key, seq):
         rv[k] = v.__self__
     return rv
 
+
 def getter(index):
     if isinstance(index, list):
         if len(index) == 1:
@@ -162,6 +165,7 @@ def getter(index):
             return lambda x: ()
     else:
         return operator.itemgetter(index)
+
 
 def comma_join(items):
     """
@@ -210,3 +214,16 @@ def rec_glob(path, patterns):
         if m:
             result.extend([os.path.join(d_f[0], f) for f in m])
     return result
+
+
+def convert_unix_path_to_win(path):
+    if external.find_executable('cygpath'):
+        cmd = "cygpath -w {0}".format(path)
+        if PY3:
+            path = subprocess.getoutput(cmd)
+        else:
+            path = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
+
+    else:
+        path = unix_path_to_win(path)
+    return path

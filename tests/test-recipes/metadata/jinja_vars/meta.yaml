@@ -4,7 +4,7 @@ package:
 
 build:
   number: 123
-  string: {{CONDA_TEST_VAR}}_{{PKG_BUILDNUM}}
+  string: {{CONDA_TEST_VAR[:]}}_{{PKG_BUILDNUM}} # [True]
 
   script_env:
     - CONDA_TEST_VAR

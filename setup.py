@@ -2,13 +2,12 @@
 import sys
 from glob import glob
 
+import versioneer
+
 if 'develop' in sys.argv:
     from setuptools import setup
 else:
     from distutils.core import setup
-
-import versioneer
-
 
 if sys.version_info[:2] < (2, 7):
     sys.exit("conda-build is only meant for Python >=2.7"
@@ -35,8 +34,8 @@ setup(
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
     ],
     description="tools for building conda packages",
     long_description=open('README.rst').read(),

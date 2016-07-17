@@ -30,6 +30,7 @@ def read_index_tar(tar_path):
     except tarfile.ReadError:
         raise RuntimeError("Could not extract metadata from %s. File probably corrupt." % tar_path)
 
+
 def write_repodata(repodata, dir_path):
     """ Write updated repodata.json and repodata.json.bz2 """
     data = json.dumps(repodata, indent=2, sort_keys=True)
@@ -42,6 +43,7 @@ def write_repodata(repodata, dir_path):
         fo.write(data)
     with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
         fo.write(bz2.compress(data.encode('utf-8')))
+
 
 def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=True):
     """
@@ -74,7 +76,7 @@ def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=T
         sys.exit("""\
 Error:
     Indexing a copy of the Anaconda conda package channel is neither
-    necessary nor supported.  If you which to add your own packages,
+    necessary nor supported.  If you wish to add your own packages,
     you can do so by adding them to a separate channel.
 """)
     for fn in files:

@@ -1,0 +1,6 @@
+package:
+  name: _conda-build-test-environment-vars-in-build-env
+  version: 1.0
+
+about:
+  summary: test that scripts with activate.d and deactivate.d (set up activate/deactivate scripts)

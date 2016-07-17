@@ -13,28 +13,32 @@ import subprocess
 import sys
 from collections import defaultdict
 from os import makedirs, listdir, getcwd, chdir
-from os.path import join, isdir, exists, isfile
+from os.path import join, isdir, exists, isfile, abspath
 from tempfile import mkdtemp
 from shutil import copy2
 
-if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy, Transport, ProtocolError
-else:
-    from xmlrpc.client import ServerProxy, Transport, ProtocolError
+from requests.packages.urllib3.util.url import parse_url
+import yaml
 
-from conda.fetch import (download, handle_proxy_407)
-from conda.connection import CondaSession
-from conda.utils import human_bytes, hashsum_file
-from conda.install import rm_rf
-from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import get_proxy_servers
 from conda.cli.common import spec_from_line
+from conda.compat import input, configparser, StringIO, string_types, PY3
+from conda.connection import CondaSession
+from conda.fetch import (download, handle_proxy_407)
+from conda.install import rm_rf
+from conda.resolve import normalized_version
+from conda.utils import human_bytes, hashsum_file
+
 from conda_build.utils import tar_xf, unzip
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
 from conda_build.config import config
+from conda_build.metadata import MetaData
 
-from requests.packages.urllib3.util.url import parse_url
+if sys.version_info < (3,):
+    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
+else:
+    from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
+
 
 PYPI_META = """\
 package:
@@ -101,7 +105,7 @@ about:
 PYPI_BUILD_SH = """\
 #!/bin/bash
 
-$PYTHON setup.py install
+$PYTHON setup.py install {recipe_setup_options}
 
 # Add more build steps here, if they are necessary.
 
@@ -111,7 +115,7 @@ $PYTHON setup.py install
 """
 
 PYPI_BLD_BAT = """\
-"%PYTHON%" setup.py install
+"%PYTHON%" setup.py install {recipe_setup_options}
 if errorlevel 1 exit 1
 
 :: Add more build steps here, if they are necessary.
@@ -171,6 +175,8 @@ diff core.py core.py
 INDENT = '\n    - '
 
 # https://gist.github.com/chrisguitarguy/2354951
+
+
 class RequestsTransport(Transport):
     """
     Drop in Transport for xmlrpclib that uses Requests instead of httplib
@@ -194,11 +200,14 @@ class RequestsTransport(Transport):
         url = self._build_url(host, handler)
 
         try:
-            resp = self.session.post(url, data=request_body, headers=headers, proxies=self.session.proxies)
+            resp = self.session.post(url,
+                                     data=request_body,
+                                     headers=headers,
+                                     proxies=self.session.proxies)
             resp.raise_for_status()
 
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 407: # Proxy Authentication Required
+            if e.response.status_code == 407:  # Proxy Authentication Required
                 handle_proxy_407(url, self.session)
                 # Try again
                 return self.request(host, handler, request_body, verbose)
@@ -210,7 +219,7 @@ class RequestsTransport(Transport):
             # error and http gives the above error. Also, there is no status_code
             # attribute here. We have to just check if it looks like 407.  See
             # https://github.com/kennethreitz/requests/issues/2061.
-            if "407" in str(e): # Proxy Authentication Required
+            if "407" in str(e):  # Proxy Authentication Required
                 handle_proxy_407(url, self.session)
                 # Try again
                 return self.request(host, handler, request_body, verbose)
@@ -227,10 +236,15 @@ class RequestsTransport(Transport):
         """
         Parse the xmlrpc response.
         """
-        p, u = self.getparser()
-        p.feed(resp.text)
-        p.close()
-        return u.close()
+        try:
+            p, u = self.getparser()
+            p.feed(resp.text.encode("utf-8"))
+            p.close()
+            ret = u.close()
+        except Fault:
+            raise RuntimeError("XMLRPC Fault while parsing PyPI response.  "
+                               "This is likely a transient error - please try again soon.")
+        return ret
 
     def _build_url(self, host, handler):
         """
@@ -240,21 +254,18 @@ class RequestsTransport(Transport):
         scheme = 'https' if self.use_https else 'http'
         return '%s://%s/%s' % (scheme, host, handler)
 
-def get_xmlrpc_client(pypi_url):
-    proxies = get_proxy_servers()
 
-    if proxies:
-        transport = RequestsTransport()
-    else:
-        transport = None
-    return ServerProxy(pypi_url, transport=transport)
+def get_xmlrpc_client(pypi_url):
+    return ServerProxy(pypi_url, transport=RequestsTransport())
+
 
 def main(args, parser):
     client = get_xmlrpc_client(args.pypi_url)
     package_dicts = {}
     [output_dir] = args.output_dir
 
-    all_packages = client.list_packages()
+    # searching is faster than listing all packages
+    all_packages = [match["name"] for match in client.search({"name": args.packages}, "or")]
     all_packages_lower = [i.lower() for i in all_packages]
 
     args.created_recipes = []
@@ -321,9 +332,9 @@ def main(args, parser):
                           package)
                     for ver in versions:
                         print(ver)
-                    print("Using %s" % versions[0])
+                    print("Using %s" % versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = versions[0]
+                d['version'] = versions[-1]
 
         data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(args,
                                                                         client,
@@ -354,6 +365,22 @@ def main(args, parser):
 
         if d['entry_comment'] == d['import_comment'] == '# ':
             d['test_comment'] = '# '
+
+        d['recipe_setup_options'] = ' '.join(args.setup_options)
+
+        # Change requirements to use format that guarantees the numpy
+        # version will be pinned when the recipe is built and that
+        # the version is included in the build string.
+        if args.pin_numpy:
+            for depends in ['build_depends', 'run_depends']:
+                deps = d[depends].split(INDENT)
+                numpy_dep = [idx for idx, dep in enumerate(deps)
+                             if 'numpy' in dep]
+                if numpy_dep:
+                    # Turns out this needs to be inserted before the rest
+                    # of the numpy spec.
+                    deps.insert(numpy_dep[0], 'numpy x.x')
+                    d[depends] = INDENT.join(deps)
 
     for package in package_dicts:
         d = package_dicts[package]
@@ -437,9 +464,6 @@ def version_compare(args, package, versions):
         # to a method in main() to take care of that.
         return
 
-    from os.path import abspath, isdir
-    from conda_build.metadata import MetaData
-    from conda.resolve import normalized_version
     nv = normalized_version
 
     norm_versions = [nv(ver) for ver in versions]
@@ -475,7 +499,8 @@ def get_package_metadata(args, package, d, data):
                           filename=d['filename'],
                           pypiurl=d['pypiurl'],
                           md5=d['md5'],
-                          python_version=args.python_version)
+                          python_version=args.python_version,
+                          setup_options=args.setup_options)
 
     setuptools_build = pkginfo['setuptools']
     setuptools_run = False
@@ -519,10 +544,8 @@ def get_package_metadata(args, package, d, data):
             if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
                 setuptools_build = True
                 setuptools_run = True
-            entry_list = (
-                cs
-                # TODO: Use pythonw for these
-                + gs)
+            # TODO: Use pythonw for gui scripts
+            entry_list = (cs + gs)
             if len(cs + gs) != 0:
                 d['entry_points'] = INDENT.join([''] + entry_list)
                 d['entry_comment'] = ''
@@ -541,9 +564,9 @@ def get_package_metadata(args, package, d, data):
             # Every item may be a single requirement
             #  or a multiline requirements string...
             for dep in deptext:
-                #... and may also contain comments...
+                # ... and may also contain comments...
                 dep = dep.split('#')[0].strip()
-                if dep: #... and empty (or comment only) lines
+                if dep:  # ... and empty (or comment only) lines
                     spec = spec_from_line(dep)
                     if spec is None:
                         sys.exit("Error: Could not parse: %s" % dep)
@@ -653,8 +676,7 @@ def get_package_metadata(args, package, d, data):
 
 
 def valid(name):
-    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name)
-            and not keyword.iskeyword(name)):
+    if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name) and not keyword.iskeyword(name)):
         return name
     else:
         return ''
@@ -710,14 +732,13 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version):
+def get_pkginfo(package, filename, pypiurl, md5, python_version, setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
     # package uses distribute).  Our strategy is to download the package
     # and "fake" distribute/setuptools's setup() function to get this
     # information from setup.py. If this sounds evil, keep in mind that
     # distribute itself already works by monkeypatching distutils.
-    import yaml
     tempdir = mkdtemp('conda_skeleton_' + filename)
 
     if not isdir(SRC_CACHE):
@@ -738,7 +759,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version)
+        run_setuppy(src_dir, tempdir, python_version, setup_options)
         with open(join(tempdir, 'pkginfo.yaml')) as fn:
             pkginfo = yaml.load(fn)
     finally:
@@ -747,7 +768,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version):
     return pkginfo
 
 
-def run_setuppy(src_dir, temp_dir, python_version):
+def run_setuppy(src_dir, temp_dir, python_version, setup_options):
     '''
     Patch distutils and then run setup.py in a subprocess.
 
@@ -760,19 +781,21 @@ def run_setuppy(src_dir, temp_dir, python_version):
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
-    create_env(config.build_prefix, ['python %s*' % python_version, 'pyyaml',
-        'setuptools', 'numpy'], clear_cache=False)
+    create_env(config.build_prefix, ['python %s*' % python_version,
+                                     'pyyaml', 'yaml',
+                                     'setuptools', 'numpy'], clear_cache=False)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)
 
     patch = join(temp_dir, 'pypi-distutils.patch')
     with open(patch, 'w') as f:
-        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\','\\\\')))
+        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\', '\\\\')))
 
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
-        copy2(join(stdlib_dir, 'distutils', 'core.py-copy'), join(stdlib_dir, 'distutils', 'core.py'))
+        copy2(join(stdlib_dir, 'distutils', 'core.py-copy'),
+              join(stdlib_dir, 'distutils', 'core.py'))
         # Avoid race conditions. Invalidate the cache.
         if PY3:
             rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
@@ -796,6 +819,7 @@ def run_setuppy(src_dir, temp_dir, python_version):
     cwd = getcwd()
     chdir(src_dir)
     cmdargs = [config.build_python, 'setup.py', 'install']
+    cmdargs.extend(setup_options)
     try:
         subprocess.check_call(cmdargs, env=env)
     except subprocess.CalledProcessError:
@@ -803,6 +827,7 @@ def run_setuppy(src_dir, temp_dir, python_version):
         sys.exit('Error: command failed: %s' % ' '.join(cmdargs))
     finally:
         chdir(cwd)
+
 
 def make_entry_tests(entry_list):
     tests = []
