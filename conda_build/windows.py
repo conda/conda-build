@@ -207,6 +207,7 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if activate:
                 fo.write("call activate.bat _build\n")
+            fo.write("set > build_environment.txt\n")
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 

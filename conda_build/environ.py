@@ -350,7 +350,6 @@ def system_vars(env_dict, prefix):
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
     d['PATH'] = os.environ['PATH']
-    d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
         d.update(windows_vars(prefix))

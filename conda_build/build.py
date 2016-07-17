@@ -206,9 +206,8 @@ def create_info_files(m, files, include_recipe=True):
             f.write("# ------------------------------------------------\n\n")
             f.write(metayaml)
 
-        # record the current environment variables, to potentially help with reproducibility
-        with open(join(recipe_dir, "build_environment.json"), 'w') as f:
-            json.dump(environ.get_dict(m), f)
+        environment_file = os.path.join(source.get_dir(), 'build_environment.txt')
+        shutil.move(environment_file, recipe_dir)
 
     license_file = m.get_value('about/license_file')
     if license_file:
@@ -578,31 +577,36 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             else:
                 build_file = join(m.path, 'build.sh')
 
-                # There is no sense in trying to run an empty build script.
-                if isfile(build_file) or script:
-                    env = environ.get_dict(m, dirty=dirty)
-                    work_file = join(source.get_dir(), 'conda_build.sh')
-                    if script:
-                        with open(work_file, 'w') as bf:
-                            bf.write(script)
+                env = environ.get_dict(m, dirty=dirty)
+                work_file = join(source.get_dir(), 'conda_build.sh')
+                if script:
+                    with open(work_file, 'w') as bf:
+                        bf.write(script)
+                if isfile(build_file):
+                    data = open(build_file).read()
+                elif script:
+                    data = open(work_file).read()
+                else:
+                    data = ""
+
+                with open(work_file, 'w') as bf:
                     if activate:
-                        if isfile(build_file):
-                            data = open(build_file).read()
-                        else:
-                            data = open(work_file).read()
-                        with open(work_file, 'w') as bf:
-                            bf.write("source activate {build_prefix}\n".format(
-                                build_prefix=config.build_prefix))
-                            bf.write(data)
+                        bf.write("source activate {build_prefix}\n".format(
+                            build_prefix=config.build_prefix))
                     else:
-                        if not isfile(work_file):
-                            shutil.copy(build_file, work_file)
+                        bf.write("export PATH=" + prepend_bin_path(os.environ.copy(),
+                                                                    config.build_prefix)["PATH"])
+
+                    # export our variables
+                    bf.write("env > build_environment.txt\n")
+                    bf.write(data)
+
+                    if not isfile(work_file):
+                        shutil.copy(build_file, work_file)
                     os.chmod(work_file, 0o766)
 
-                    if isfile(work_file):
-                        cmd = [shell_path, '-x', '-e', work_file]
-
-                        _check_call(cmd, env=env, cwd=src_dir)
+                cmd = [shell_path, '-x', '-e', work_file]
+                _check_call(cmd, env=env, cwd=src_dir)
 
         if post in [True, None]:
             if post:
@@ -766,6 +770,8 @@ def test(m, move_broken=True, activate=True):
                 ext = ".bat" if on_win else ""
                 tf.write("{source}activate{ext} _test\n".format(source=source, ext=ext))
                 tf.write("if errorlevel 1 exit 1\n") if on_win else None
+            else:
+                tf.write("PATH=" + prepend_bin_path(os.environ.copy(), config.test_prefix)["PATH"])
 
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(

@@ -1,5 +1,5 @@
-import json
 import os
+import re
 import subprocess
 import shutil
 import sys
@@ -553,14 +553,29 @@ def test_early_abort():
 
 
 def test_environment_recording():
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "empty_sections"))
-    subprocess.check_call(cmd.split())
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                                    "set_env_var_activate_build"))
+    env = os.environ.copy()
+    # in addition to making sure that we capture things for reproducibility, we also need to make
+    #   sure that we are not unintentionally capturing sensitive data.
+    env["BAD_VAR"] = "NoNo"
+    subprocess.check_call(cmd.split(), env=env)
     output_file = os.path.join(sys.prefix, "conda-bld", subdir,
-                               "empty_sections-0.0-0.tar.bz2")
-    environ_file = package_has_file(output_file, "info/recipe/build_environment.json")
+                               "conda-build-test-environment-vars-in-build-env-1.0-0.tar.bz2")
+    environ_file = package_has_file(output_file, "info/recipe/build_environment.txt")
     assert environ_file
-    assert json.loads(environ_file)['PATH'] == scripts.prepend_bin_path(os.environ.copy(),
+    match = re.search("\s*PATH=(.*)", environ_file, re.I)
+    assert match, environ_file
+    assert match.group(1) == scripts.prepend_bin_path(os.environ.copy(),
                                                       config.config.build_prefix)["PATH"]
+    # this one is defined by a dependency's activate.d script
+    match = re.search("\s*TEST_VAR=(.*)", environ_file, re.I)
+    assert match
+    assert match.group(1) == '1'
+
+    # assert that we did not pick up "BAD_VAR" from the calling environment
+    match = re.search("BAD_VAR", environ_file, re.I)
+    assert not match
 
 
 def test_failed_tests_exit_build():
