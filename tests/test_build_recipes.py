@@ -564,14 +564,15 @@ def test_environment_recording():
                                "conda-build-test-environment-vars-in-build-env-1.0-0.tar.bz2")
     environ_file = package_has_file(output_file, "info/recipe/build_environment.txt")
     assert environ_file
-    match = re.search("\s*PATH=(.*)", environ_file, re.I)
+    environ_file = environ_file.decode('UTF-8')
+    match = re.search(u"\s*PATH=(.*)", environ_file, re.I)
+    # output contents of environ_file if we don't find PATH
     assert match, environ_file
-    assert match.group(1) == scripts.prepend_bin_path(os.environ.copy(),
-                                                      config.config.build_prefix)["PATH"]
+    assert config.config.build_prefix in match.group(1)
     # this one is defined by a dependency's activate.d script
-    match = re.search("\s*TEST_VAR=(.*)", environ_file, re.I)
+    match = re.search(u"\s*TEST_VAR=(.*)", environ_file, re.I)
     assert match
-    assert match.group(1) == '1'
+    assert match.group(1) == u'1'
 
     # assert that we did not pick up "BAD_VAR" from the calling environment
     match = re.search("BAD_VAR", environ_file, re.I)
