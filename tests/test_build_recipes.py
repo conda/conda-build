@@ -1,9 +1,13 @@
+from __future__ import print_function
+
 import os
 import subprocess
 import shutil
 import sys
 import tarfile
 import tempfile
+import yaml
+from collections import OrderedDict
 
 import pytest
 
@@ -24,6 +28,21 @@ else:
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, 'test-recipes', 'metadata')
 fail_dir = os.path.join(thisdir, 'test-recipes', 'fail')
+
+
+def represent_ordereddict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+
+yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 # Used for translating local paths into url (file://) paths
@@ -141,6 +160,74 @@ def test_relative_git_url_git_versioning():
                                                         "_source_git_jinja2_relative_git_url"))
     output = subprocess.check_output(cmd.split())
     assert tag in output
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows permission errors w/ git when removing repo files on cleanup.")
+def test_relative_git_url_submodule_clone():
+    """Test git submodules identified with relative URLs can be mirrored then cloned. Also tests
+       pushing changes and new tags and making sure those are reflected with GIT_DESCRIBE_TAG"""
+    basedir = os.getcwd()
+    try:
+        with TemporaryDirectory() as tmp:
+            os.chdir(tmp)
+            toplevel = os.path.join(tmp, 'toplevel')
+            os.mkdir(toplevel)
+            relative_sub = os.path.join(tmp, 'relative_sub')
+            os.mkdir(relative_sub)
+            absolute_sub = os.path.join(tmp, 'absolute_sub')
+            os.mkdir(absolute_sub)
+
+            for tag in range(2):
+                os.chdir(absolute_sub)
+                if tag == 0:
+                    subprocess.check_call(['git', 'init'])
+                with open('absolute', 'w') as f:
+                    print(str(tag), file=f)
+                subprocess.check_call(['git', 'add', 'absolute'])
+                subprocess.check_call(['git', 'commit', '-m' 'absolute {}'.format(tag)])
+
+                os.chdir(relative_sub)
+                if tag == 0:
+                    subprocess.check_call(['git', 'init'])
+                with open('relative', 'w') as f:
+                    print(str(tag), file=f)
+                subprocess.check_call(['git', 'add', 'relative'])
+                subprocess.check_call(['git', 'commit', '-m' 'relative {}'.format(tag)])
+
+                os.chdir(toplevel)
+                if tag == 0:
+                    subprocess.check_call(['git', 'init'])
+                with open('toplevel', 'w') as f:
+                    print(str(tag), file=f)
+                subprocess.check_call(['git', 'add', 'toplevel'])
+                subprocess.check_call(['git', 'commit', '-m' 'toplevel {}'.format(tag)])
+                if tag == 0:
+                    subprocess.check_call(['git', 'submodule', 'add', absolute_sub, 'absolute'])
+                    subprocess.check_call(['git', 'submodule', 'add', os.path.join('..', 'relative_sub'),
+                                           'relative'])
+                subprocess.check_call(['git', 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)])
+
+                filename = os.path.join(tmp, 'meta.yaml')
+                data = OrderedDict([
+                    ('package', OrderedDict([
+                        ('name', 'relative_submodules'),
+                        ('version', '{{ GIT_DESCRIBE_TAG }}')])),
+                    ('source', OrderedDict([
+                        ('git_url', toplevel),
+                        ('git_tag', str(tag))]))
+                ])
+
+                with open(filename, 'w') as outfile:
+                    outfile.write(yaml.dump(data, default_flow_style=False))
+                output = subprocess.check_output(['conda', 'build', '--output', tmp])
+                if PY3:
+                    output = output.decode("UTF-8")
+                assert ("relative_submodules-{}-0".format(tag) in output)
+    except:
+        raise
+    finally:
+        os.chdir(basedir)
 
 
 def test_package_test():
