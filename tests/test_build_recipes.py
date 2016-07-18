@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import shutil
 import sys
@@ -13,6 +14,7 @@ from conda.fetch import download
 
 from conda_build.source import _guess_patch_strip_level, apply_patch
 import conda_build.config as config
+import conda_build.scripts as scripts
 
 if PY3:
     import urllib.parse as urlparse
@@ -43,10 +45,10 @@ def package_has_file(package_path, file_path):
     try:
         with tarfile.open(package_path) as t:
             try:
-                t.getmember(file_path)
-                return True
+                f = t.extractfile(file_path).read()
+                return f
             except KeyError:
-                return False
+                return None
             except OSError as e:
                 raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
     except tarfile.ReadError:
@@ -320,8 +322,8 @@ def test_skip_existing():
 
 # def test_skip_existing_anaconda_org():
 #     """This test may give false errors, because multiple tests running in parallel (on different
-#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
-#     if it is being run by one person on one machine at a time."""
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only
+#     reliable if it is being run by one person on one machine at a time."""
 #     # generated with conda_test_account user, command:
 #     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
 #     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
@@ -548,6 +550,33 @@ def test_early_abort():
     output = output.decode('utf-8')
     error = error.decode('utf-8')
     assert "Hello World" in output, error
+
+
+def test_environment_recording():
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                                    "set_env_var_activate_build"))
+    env = os.environ.copy()
+    # in addition to making sure that we capture things for reproducibility, we also need to make
+    #   sure that we are not unintentionally capturing sensitive data.
+    env["BAD_VAR"] = "NoNo"
+    subprocess.check_call(cmd.split(), env=env)
+    output_file = os.path.join(sys.prefix, "conda-bld", subdir,
+                               "conda-build-test-environment-vars-in-build-env-1.0-0.tar.bz2")
+    environ_file = package_has_file(output_file, "info/recipe/build_environment.txt")
+    assert environ_file
+    environ_file = environ_file.decode('UTF-8')
+    match = re.search(u"^\s*PATH=(.*)", environ_file, re.I | re.M)
+    # output contents of environ_file if we don't find PATH
+    assert match, environ_file
+    assert config.config.build_prefix.decode('utf-8') in match.group(1)
+    # this one is defined by a dependency's activate.d script
+    match = re.search(u"^\s*TEST_VAR=(.*)", environ_file, re.I | re.M)
+    assert match
+    assert match.group(1).rstrip() == u'1'
+
+    # assert that we did not pick up "BAD_VAR" from the calling environment
+    match = re.search("BAD_VAR", environ_file, re.I)
+    assert not match, environ_file
 
 
 def test_failed_tests_exit_build():
