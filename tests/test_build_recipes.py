@@ -565,18 +565,18 @@ def test_environment_recording():
     environ_file = package_has_file(output_file, "info/recipe/build_environment.txt")
     assert environ_file
     environ_file = environ_file.decode('UTF-8')
-    match = re.search(u"\s*PATH=(.*)", environ_file, re.I)
+    match = re.search(u"^\s*PATH=(.*)", environ_file, re.I | re.M)
     # output contents of environ_file if we don't find PATH
     assert match, environ_file
-    assert config.config.build_prefix in match.group(1)
+    assert config.config.build_prefix.decode('utf-8') in match.group(1)
     # this one is defined by a dependency's activate.d script
-    match = re.search(u"\s*TEST_VAR=(.*)", environ_file, re.I)
+    match = re.search(u"^\s*TEST_VAR=(.*)", environ_file, re.I | re.M)
     assert match
-    assert match.group(1) == u'1'
+    assert match.group(1).rstrip() == u'1'
 
     # assert that we did not pick up "BAD_VAR" from the calling environment
     match = re.search("BAD_VAR", environ_file, re.I)
-    assert not match
+    assert not match, environ_file
 
 
 def test_failed_tests_exit_build():

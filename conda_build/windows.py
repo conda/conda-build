@@ -98,10 +98,10 @@ def msvc_env_cmd(bits, override=None):
     # For > 3.5 it literally just skips the validation logic.
     # See distutils _msvccompiler.py and msvc9compiler.py / msvccompiler.py
     # for more information.
-    msvc_env_lines.append('set DISTUTILS_USE_SDK=1')
+    msvc_env_lines.append('set "DISTUTILS_USE_SDK=1"')
     # This is also required to hit the 'don't validate' logic on < 3.5.
     # For > 3.5 this is ignored.
-    msvc_env_lines.append('set MSSdk=1')
+    msvc_env_lines.append('set "MSSdk=1"')
 
     if not version:
         if config.PY3K and config.use_MSVC2015:
@@ -186,7 +186,7 @@ def msvc_env_cmd(bits, override=None):
 
 
 def build(m, bld_bat, dirty=False, activate=True):
-    env = environ.get_dict(m, dirty=dirty)
+    env = environ.get_dict(m, dirty=dirty, activate=activate)
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
@@ -202,17 +202,24 @@ def build(m, bld_bat, dirty=False, activate=True):
     with open(join(src_dir, 'bld.bat'), 'w') as fo:
         # more debuggable with echo on
         fo.write('@echo on\n')
+        fo.write('REM  Define our variables for the build\n')
         for key, value in env.items():
             fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-        fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
-        fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+        fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
+        fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
         fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
         if activate:
-            fo.write("call activate.bat _build\n")
+            fo.write('call "{0}\\Scripts\\activate.bat" "{1}"\n'.format(cc.root_dir,
+                                                                      config.build_prefix))
+        fo.write('echo %CD%\n'.format(src_dir))
         fo.write("set > build_environment.txt\n")
         fo.write("REM ===== end generated header =====\n")
         fo.write(data)
 
-    cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+    # this scary mess is attempting to start a "clean" shell - one that captures
+    #    only explicitly listed variables
+    cmd = [os.environ['COMSPEC'], '/k', 'start', '/i', '/b', '/d', src_dir,
+           'cmd.exe', '/c', 'bld.bat']
+    # no env passed here because we set variables up above
     _check_call(cmd, cwd=src_dir)
     fix_staged_scripts()

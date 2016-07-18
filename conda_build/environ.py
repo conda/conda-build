@@ -158,7 +158,7 @@ def get_git_info(repo):
     return d
 
 
-def get_dict(m=None, prefix=None, dirty=False):
+def get_dict(m=None, prefix=None, dirty=False, activate=True):
     if not prefix:
         prefix = config.build_prefix
 
@@ -174,7 +174,7 @@ def get_dict(m=None, prefix=None, dirty=False):
         d.update(meta_vars(m))
 
     # system
-    d.update(system_vars(d, prefix))
+    d.update(system_vars(d, prefix, activate=activate))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
@@ -296,15 +296,21 @@ def get_cpu_count():
 def windows_vars(prefix):
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
-    return {
+    pass_throughs = ['PATHEXT', "VS90COMNTOOLS", 'VS100COMNTOOLS', 'VS140COMNTOOLS']
+    vars = {
         'SCRIPTS': join(prefix, 'Scripts'),
         'LIBRARY_PREFIX': library_prefix,
         'LIBRARY_BIN': join(library_prefix, 'bin'),
         'LIBRARY_INC': join(library_prefix, 'include'),
         'LIBRARY_LIB': join(library_prefix, 'lib'),
         'R': join(prefix, 'Scripts', 'R.exe'),
-        'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/')))
+        'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/'))),
     }
+
+    # pass-throughs that are important to keep defined
+    for pt in pass_throughs:
+        vars[pt] = os.environ[pt] if pt in os.environ else None
+    return vars
 
 
 def unix_vars(prefix):
@@ -338,7 +344,7 @@ def linux_vars(compiler_vars, prefix):
     return {}
 
 
-def system_vars(env_dict, prefix):
+def system_vars(env_dict, prefix, activate):
     d = dict()
     compiler_vars = defaultdict(text_type)
 
@@ -350,6 +356,8 @@ def system_vars(env_dict, prefix):
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
     d['PATH'] = os.environ['PATH']
+    if not activate:
+        d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
         d.update(windows_vars(prefix))

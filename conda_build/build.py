@@ -577,7 +577,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             else:
                 build_file = join(m.path, 'build.sh')
 
-                env = environ.get_dict(m, dirty=dirty)
+                env = environ.get_dict(m, dirty=dirty, activate=activate)
                 work_file = join(source.get_dir(), 'conda_build.sh')
                 if script:
                     with open(work_file, 'w') as bf:
