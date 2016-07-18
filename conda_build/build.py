@@ -760,7 +760,8 @@ def test(m, move_broken=True, activate=True):
             if activate:
                 source = "call " if on_win else "source "
                 ext = ".bat" if on_win else ""
-                tf.write("{source}activate{ext} _test\n".format(source=source, ext=ext))
+                tf.write("{source}activate{ext} {test_env}\n".format(source=source, ext=ext,
+                                                                     test_env=config.test_prefix))
                 tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if py_files:
