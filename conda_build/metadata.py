@@ -289,7 +289,7 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends', 'include-recipe'  # pin_depends is experimental still
+              'pin_depends', 'include_recipe'  # pin_depends is experimental still
               ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -618,7 +618,7 @@ class MetaData(object):
         return self.get_value('build/always_include_files', [])
 
     def include_recipe(self):
-        return self.get_value('build/include-recipe', True)
+        return self.get_value('build/include_recipe', True)
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])
