@@ -68,7 +68,8 @@ def test_skeleton_pin_numpy(tmpdir):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     package_name = 'msumastro'
-    cmd = "conda skeleton pypi --output-dir {} --version=0.9.0 --pin-numpy {}".format(tmpdir, package_name)
+    cmd = "conda skeleton pypi --output-dir {} --version=0.9.0 --pin-numpy {}".format(tmpdir,
+                                                                                      package_name)
     subprocess.check_call(cmd.split())
 
     with open('{}/{}/meta.yaml'.format(tmpdir, package_name)) as f:

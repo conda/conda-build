@@ -1,0 +1,6 @@
+package:
+  name: requirements_txt_run_reqs
+  version: 1.0
+
+requirements:
+  run: []
