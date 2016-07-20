@@ -149,16 +149,16 @@ def handle_binstar_upload(path, args):
     from conda_build.external import find_executable
 
     upload = False
-    if args.token or args.user:
+    if getattr(args, "token", None) or getattr(args, "user", None):
         args.yes = True
         upload = True
     # this is the default, for no explicit argument.
     # remember that args.binstar_upload takes defaults from condarc
-    elif args.binstar_upload is None:
+    elif getattr(args, "binstar_upload", None) is None:
         args.yes = False
         args.dry_run = False
     # rc file has uploading explicitly turned off
-    elif args.binstar_upload is False:
+    elif getattr(args, "binstar_upload", None) is False:
         print("# Automatic uploading is disabled")
     else:
         upload = True
@@ -186,10 +186,10 @@ Error: cannot locate anaconda command (required for upload)
     print("Uploading to anaconda.org")
     cmd = [binstar, ]
 
-    if hasattr(args, "token") and args.token:
+    if getattr(args, "token", None):
         cmd.extend(['--token', args.token])
     cmd.append('upload')
-    if hasattr(args, "user") and args.user:
+    if getattr(args, "user", None):
         cmd.extend(['--user', args.user])
     cmd.append(path)
     try:
