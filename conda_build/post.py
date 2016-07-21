@@ -7,7 +7,7 @@ import sys
 import stat
 from glob import glob
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
-                     islink, realpath, relpath)
+                     islink, realpath, relpath, normpath)
 try:
     from os import readlink
 except ImportError:
@@ -169,7 +169,7 @@ def find_lib(link, path=None):
     from conda_build.build import prefix_files
     files = prefix_files()
     if link.startswith(config.build_prefix):
-        link = link[len(config.build_prefix) + 1:]
+        link = normpath(link[len(config.build_prefix) + 1:])
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
