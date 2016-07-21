@@ -732,12 +732,8 @@ def test(m, move_broken=True, activate=True):
             # not sure how this shakes out
             specs += ['lua %s*' % environ.get_lua_ver()]
 
-        # FIXME: stupid hack to put test prefix on PATH so that runtime libs can be found
-        old_env = os.environ.copy()
-        os.environ = prepend_bin_path(os.environ.copy(), config.test_prefix, True)
         create_env(config.test_prefix, specs)
-        os.environ = old_env
-        env = dict(os.environ)
+        env = dict(os.environ.copy())
         env.update(environ.get_dict(m, prefix=config.test_prefix))
 
         if not activate:
