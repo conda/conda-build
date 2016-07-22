@@ -19,7 +19,7 @@ class TarCheck(object):
         self.t = tarfile.open(path)
         self.paths = set(m.path for m in self.t.getmembers())
         self.dist = dist_fn(basename(path))
-        self.name, self.version, self.build = self.dist.rsplit('-', 2)
+        self.name, self.version, self.build = self.dist.split('::', 1)[-1].rsplit('-', 2)
 
     def info_files(self):
         if 'py_' in self.build:

@@ -235,9 +235,9 @@ def create_info_files(m, files, include_recipe=True):
 # $ conda create --name <env> --file <this file>
 """ % (m.dist(), cc.subdir))
             for dist in sorted(dists + [m.dist()]):
-                fo.write('%s\n' % '='.join(dist.rsplit('-', 2)))
+                fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':
-            info_index['depends'] = [' '.join(dist.rsplit('-', 2))
+            info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
                                      for dist in dists]
 
     # Deal with Python 2 and 3's different json module type reqs
@@ -386,8 +386,8 @@ def create_env(prefix, specs, clear_cache=True):
 
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
-    vers_inst = [dist.rsplit('-', 2)[1] for dist in root_linked
-        if dist.rsplit('-', 2)[0] == 'conda-build']
+    vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
+        if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
         print("WARNING: Could not detect installed version of conda-build", file=sys.stderr)
         return
