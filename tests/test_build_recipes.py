@@ -4,6 +4,7 @@ import shutil
 import sys
 import tarfile
 import tempfile
+import time
 
 import pytest
 
@@ -12,6 +13,7 @@ from conda.config import subdir
 from conda.fetch import download
 
 from conda_build.source import _guess_patch_strip_level, apply_patch
+from conda_build.build import get_build_folders
 import conda_build.config as config
 
 if PY3:
@@ -73,10 +75,11 @@ def test_output_build_path_git_source():
     test_path = os.path.join(sys.prefix, "conda-bld", subdir,
                         "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
+    output = output.rstrip()
     if PY3:
         output = output.decode("UTF-8")
         error = error.decode("UTF-8")
-    assert output.rstrip() == test_path, error
+    assert output == test_path, "{} != {}".format(output, test_path)
 
 
 def test_build_with_no_activate_does_not_activate():
@@ -282,7 +285,9 @@ def test_broken_conda_meta():
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     output, error = process.communicate()
     error = error.decode('utf-8')
-    assert "Error: Untracked file(s) ('conda-meta/nope',)" in error
+    # u for unicode may or may not be in error, depending on python version
+    assert (u"Error: Untracked file(s) (u'conda-meta/nope',)" in error or
+            u"Error: Untracked file(s) ('conda-meta/nope',)" in error)
 
 
 def test_recursive_fail():
@@ -320,8 +325,8 @@ def test_skip_existing():
 
 # def test_skip_existing_anaconda_org():
 #     """This test may give false errors, because multiple tests running in parallel (on different
-#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
-#     if it is being run by one person on one machine at a time."""
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only
+#     reliable if it is being run by one person on one machine at a time."""
 #     # generated with conda_test_account user, command:
 #     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
 #     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
@@ -497,6 +502,160 @@ def test_git_describe_info_on_branch():
     output = output.decode('utf-8').rstrip()
     error = error.decode('utf-8')
     assert test_path == output, error
+
+
+# concurrency code derived from
+# http://stackoverflow.com/a/636601/1170370
+def test_concurrent_build():
+
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}'
+    running_procs = []
+    packages = ['source_git', 'source_git_jinja2', 'source_hg', 'source_svn']
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        for package in packages:
+            cmd = cmd.format(os.path.join(metadata_dir, package))
+            running_procs.append(subprocess.Popen(cmd.split(), env=env,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE))
+            time.sleep(0.2)
+
+        while running_procs:
+            for proc in running_procs:
+                retcode = proc.poll()
+                if retcode is not None:  # Process finished.
+                    running_procs.remove(proc)
+                    # Here, `proc` has finished with return code `retcode`
+                    if retcode != 0:
+                        """Error handling."""
+                        out, error = proc.communicate()
+                        raise RuntimeError(error)
+
+                    break
+                else:  # No process is done, wait a bit and check again.
+                    time.sleep(.1)
+                    continue
+
+        assert len(get_build_folders(tmp)) == len(packages)
+
+
+def test_concurrent_build_overlap_warns():
+    """Concurrency is hard.  Let's say two users are building the same package
+    at the same time, but with different recipes.  We need to make sure that these
+    users understand what they are going to get, and that it is not a race condition."""
+    pass
+
+
+def test_cleanup():
+    cmd = 'conda build --no-anaconda-upload {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+
+        assert "# --keep-old-work flag not specified.  Removing source and build files." in error
+        assert len(get_build_folders(tmp)) == 0
+
+
+def test_cleanup_leaves_dir_with_keep_old_work():
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+
+        assert ("# --keep-old-work flag not specified.  "
+                "Removing source and build files.") not in error
+        assert len(get_build_folders(tmp)) == 1
+
+
+def test_cleanup_leaves_old_work_but_warns():
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+
+        # this one should clean up after itself, but not touch the prior one
+        cmd = cmd.replace("--keep-old-work ", "")
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+        output = output.decode('utf-8')
+
+        assert "# --keep-old-work flag not specified.  Removing source and build files." in error
+        assert "There are currently 1 accumulated" in output
+        assert len(get_build_folders(tmp)) == 1
+
+
+def test_dirty_uses_old_source():
+    cmd = 'conda build --no-anaconda-upload --keep-old-work {}/empty_sections'.format(metadata_dir)
+
+    # set up a temporary build root for cleanliness
+    with TemporaryDirectory() as tmp:
+        env = os.environ.copy()
+        env["CONDA_BLD_PATH"] = tmp
+
+        proc = subprocess.Popen(cmd.split(), env=env,
+                                      stdout=subprocess.PIPE,
+                                      stderr=subprocess.PIPE)
+        _, _ = proc.communicate()
+
+        folders = get_build_folders(tmp)
+        assert len(folders) == 1
+
+        build_folder = folders[0]
+        test_file = os.path.join(build_folder, "test_tmp", "run_test.py")
+        with open(test_file, 'w') as f:
+            f.write("print('dirty file ok')\n")
+
+        # this one should use the earlier build, which has the extra test
+        cmd = cmd.replace("--keep-old-work ", "--dirty ")
+
+        proc = subprocess.Popen(cmd, env=env,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                shell=True)
+        output, error = proc.communicate()
+        error = error.decode('utf-8')
+        output = output.decode('utf-8')
+
+        # dirty should not clean up old work.  It's a development tool, and this behavior
+        #    would not be intuitive
+        assert ("# --keep-old-work flag not specified.  "
+                "Removing source and build files.") not in error
+        assert "There are currently 1 accumulated" in output, error
+        assert len(get_build_folders(tmp)) == 1, error
+        # make sure that our extra file is still there to validate that this is our "dirty" folder
+        assert os.path.isfile(test_file)
 
 
 def test_no_include_recipe_cmd_line_arg():

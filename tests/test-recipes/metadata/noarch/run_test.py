@@ -4,7 +4,8 @@ import subprocess
 
 import noarch_test_package
 
-pkgs_dir = os.path.abspath(os.path.join(sys.prefix, '..', '..', 'pkgs'))
+# test env is going to be in <root>/conda-bld/noarch-<buildtime>/_test_env/
+pkgs_dir = os.path.abspath(os.path.join(sys.prefix, '..', '..', '..', 'pkgs'))
 pkg_dir = os.path.join(pkgs_dir, 'noarch_test_package-1.0-py_0')
 
 assert os.path.isdir(pkg_dir)

@@ -6,6 +6,7 @@ import os
 import sys
 
 from conda_build import build
+from conda_build.config import config
 from conda.compat import TemporaryDirectory
 
 prefix_tests = {"normal": os.path.sep}
@@ -26,15 +27,15 @@ def test_find_prefix_files():
     identified the correct number of files.
     """
     # create a temporary folder
-    prefix = os.path.join(sys.prefix, "envs", "_build")
-    if not os.path.isdir(prefix):
-        os.makedirs(prefix)
-    with TemporaryDirectory(prefix=prefix + os.path.sep) as tmpdir:
+    with TemporaryDirectory() as tmpdir:
+        config.croot = tmpdir
+        config.build_id = "_build"
+        os.makedirs(config.build_prefix)
         # create text files to be replaced
         files = []
         for slash_style in prefix_tests:
-            filename = os.path.join(tmpdir, "%s.txt" % slash_style)
-            _write_prefix(filename, prefix, prefix_tests[slash_style])
+            filename = os.path.join(config.build_prefix, "%s.txt" % slash_style)
+            _write_prefix(filename, config.build_prefix, prefix_tests[slash_style])
             files.append(filename)
 
         assert len(list(build.have_prefix_files(files))) == len(files)

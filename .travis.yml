@@ -21,13 +21,13 @@ install:
   - conda install -q --force --no-deps conda requests
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - conda install -q anaconda-client conda-build
-  - pip install pytest-cov
+  - pip install pytest-cov pytest-xdist
   - python setup.py install
   - conda info -a
 
 script:
   - flake8 .
-  - py.test -v --cov conda_build --cov-report xml tests
+  - py.test -v --cov conda_build --cov-report xml tests -n 4
   - conda build --help
 
 notifications:

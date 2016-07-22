@@ -78,20 +78,23 @@ def parse_or_try_download(metadata, no_download_source, verbose,
                           force_download=False, dirty=False):
 
     if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
-        # this try/catch is for when the tool to download source is actually in
-        #    meta.yaml, and not previously installed in builder env.
-        try:
-            if not dirty:
-                source.provide(metadata.path, metadata.get_section('source'),
-                               verbose=verbose)
-            metadata.parse_again(permit_undefined_jinja=False)
-            need_source_download = False
-        except subprocess.CalledProcessError as error:
-            print("Warning: failed to download source.  If building, will try "
-                "again after downloading recipe dependencies.")
-            print("Error was: ")
-            print(error)
-            need_source_download = True
+        # lock this while downloading or moving source.  This does not affect other recipes/builds
+        # - they each have their own build_folder.
+        with Locked(config.build_folder):
+            # this try/catch is for when the tool to download source is actually in
+            #    meta.yaml, and not previously installed in builder env.
+            try:
+                if not dirty:
+                    source.provide(metadata.path, metadata.get_section('source'),
+                                verbose=verbose)
+                metadata.parse_again(permit_undefined_jinja=False)
+                need_source_download = False
+            except subprocess.CalledProcessError as error:
+                print("Warning: failed to download source.  If building, will try "
+                    "again after downloading recipe dependencies.")
+                print("Error was: ")
+                print(error)
+                need_source_download = True
     elif not metadata.get_section('source'):
         need_source_download = False
     else:
@@ -103,39 +106,38 @@ def parse_or_try_download(metadata, no_download_source, verbose,
 
 
 def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
-    with Locked(config.croot):
-        arg = recipe_path
-        # Don't use byte literals for paths in Python 2
-        if not PY3:
-            arg = arg.decode(getpreferredencoding() or 'utf-8')
-        if isfile(arg):
-            if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                recipe_dir = tempfile.mkdtemp()
-                t = tarfile.open(arg, 'r:*')
-                t.extractall(path=recipe_dir)
-                t.close()
-                need_cleanup = True
-            else:
-                print("Ignoring non-recipe: %s" % arg)
-                return
+    arg = recipe_path
+    # Don't use byte literals for paths in Python 2
+    if not PY3:
+        arg = arg.decode(getpreferredencoding() or 'utf-8')
+    if isfile(arg):
+        if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+            recipe_dir = tempfile.mkdtemp()
+            t = tarfile.open(arg, 'r:*')
+            t.extractall(path=recipe_dir)
+            t.close()
+            need_cleanup = True
         else:
-            recipe_dir = abspath(arg)
-            need_cleanup = False
+            print("Ignoring non-recipe: %s" % arg)
+            return
+    else:
+        recipe_dir = abspath(arg)
+        need_cleanup = False
 
-        if not isdir(recipe_dir):
-            sys.exit("Error: no such directory: %s" % recipe_dir)
+    if not isdir(recipe_dir):
+        sys.exit("Error: no such directory: %s" % recipe_dir)
 
-        try:
-            m = MetaData(recipe_dir)
-        except exceptions.YamlParsingError as e:
-            sys.stderr.write(e.error_msg())
-            sys.exit(1)
+    try:
+        m = MetaData(recipe_dir)
+    except exceptions.YamlParsingError as e:
+        sys.stderr.write(e.error_msg())
+        sys.exit(1)
 
-        m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose, dirty=dirty)
+    m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
+                                verbose=verbose, dirty=dirty)
 
-        if need_cleanup:
-            shutil.rmtree(recipe_dir)
+    if need_cleanup:
+        shutil.rmtree(recipe_dir)
 
     return m, need_download
 

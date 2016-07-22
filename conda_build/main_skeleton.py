@@ -6,6 +6,8 @@
 
 from __future__ import absolute_import, division, print_function
 
+import os
+
 from conda.config import default_python
 from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
@@ -325,11 +327,10 @@ def execute(args, parser):
     import conda_build.cran as cran
     import conda_build.luarocks as luarocks
     from conda.lock import Locked
-    from conda_build.config import config
 
     if not args.repo:
         parser.print_help()
-    with Locked(config.croot):
+    with Locked(os.getcwd()):
         if args.repo == "pypi":
             pypi.main(args, parser)
         elif args.repo == "cpan":
