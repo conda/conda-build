@@ -556,3 +556,18 @@ def test_failed_tests_exit_build():
         cmd = 'conda build {}'.format(os.path.join(metadata_dir,
                                                 "_test_failed_test_exits"))
         subprocess.check_call(cmd.split())
+
+
+def test_requirements_txt_for_run_reqs():
+    """
+    If run reqs are blank, then conda-build looks for requirements.txt in the recipe folder.
+    There has been a report of issue with unsatisfiable requirements at
+
+    https://github.com/Anaconda-Platform/anaconda-server/issues/2565
+
+    This test attempts to reproduce those conditions: a channel other than defaults with this
+    requirements.txt
+    """
+    cmd = 'conda build --no-anaconda-upload -c conda-forge {}'.format(os.path.join(metadata_dir,
+                                                                    "_requirements_txt_run_reqs"))
+    subprocess.check_call(cmd.split())
