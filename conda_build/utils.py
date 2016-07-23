@@ -246,3 +246,11 @@ def convert_unix_path_to_win(path):
     else:
         path = unix_path_to_win(path)
     return path
+
+
+def get_site_packages(prefix):
+    if sys.platform == 'win32':
+        sp = os.path.join(prefix, 'Lib', 'site-packages')
+    else:
+        sp = os.path.join(prefix, 'lib', 'python%s' % sys.version[:3], 'site-packages')
+    return sp

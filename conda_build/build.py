@@ -31,7 +31,7 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, external
 from conda_build.config import config
-from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path
+from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, reparse
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -419,8 +419,8 @@ def rm_pkgs_cache(dist):
 
 
 def build(m, post=None, include_recipe=True, keep_old_work=False,
-          need_source_download=True, verbose=True, dirty=False,
-          activate=True):
+          need_source_download=True, need_reparse_in_env=False,
+          verbose=True, dirty=False, activate=True):
     '''
     Build the package with the specified metadata.
 
@@ -466,6 +466,8 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
+            if not need_source_download or not need_reparse_in_env:
+                print("    (actual version deferred until further download or env creation)")
             if on_win:
                 if isdir(config.short_build_prefix):
                     move_to_trash(config.short_build_prefix, '')
@@ -512,7 +514,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                     os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
                                                           config.build_prefix)['PATH']
                 try:
-                    m, need_source_download = parse_or_try_download(m,
+                    m, need_source_download, need_reparse_in_env = parse_or_try_download(m,
                                                                     no_download_source=False,
                                                                     force_download=True,
                                                                     verbose=verbose,
@@ -521,6 +523,11 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 finally:
                     if not activate:
                         os.environ['PATH'] = _old_path
+                print("BUILD START:", m.dist())
+
+            if need_reparse_in_env:
+                reparse(m)
+                print("BUILD START:", m.dist())
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %
@@ -533,13 +540,12 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
 
             print("Package:", m.dist())
 
-            assert isdir(source.WORK_DIR)
             src_dir = source.get_dir()
-            contents = os.listdir(src_dir)
-            if contents:
+            if isdir(source.WORK_DIR) and os.listdir(src_dir):
                 print("source tree in:", src_dir)
             else:
-                print("no source")
+                print("no source - creating empty work folder")
+                os.makedirs(source.WORK_DIR)
 
             rm_rf(config.info_dir)
             files1 = prefix_files()
@@ -563,42 +569,43 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                 if isinstance(script, list):
                     script = '\n'.join(script)
 
-            if on_win:
-                build_file = join(m.path, 'bld.bat')
-                if script:
-                    build_file = join(source.get_dir(), 'bld.bat')
-                    with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
-                        bf.write(script)
-                import conda_build.windows as windows
-                windows.build(m, build_file, dirty=dirty, activate=activate)
-            else:
-                build_file = join(m.path, 'build.sh')
-
-                # There is no sense in trying to run an empty build script.
-                if isfile(build_file) or script:
-                    env = environ.get_dict(m, dirty=dirty)
-                    work_file = join(source.get_dir(), 'conda_build.sh')
+            if isdir(source.WORK_DIR):
+                if on_win:
+                    build_file = join(m.path, 'bld.bat')
                     if script:
-                        with open(work_file, 'w') as bf:
+                        build_file = join(source.get_dir(), 'bld.bat')
+                        with open(join(source.get_dir(), 'bld.bat'), 'w') as bf:
                             bf.write(script)
-                    if activate:
-                        if isfile(build_file):
-                            data = open(build_file).read()
+                    import conda_build.windows as windows
+                    windows.build(m, build_file, dirty=dirty, activate=activate)
+                else:
+                    build_file = join(m.path, 'build.sh')
+
+                    # There is no sense in trying to run an empty build script.
+                    if isfile(build_file) or script:
+                        env = environ.get_dict(m, dirty=dirty)
+                        work_file = join(source.get_dir(), 'conda_build.sh')
+                        if script:
+                            with open(work_file, 'w') as bf:
+                                bf.write(script)
+                        if activate:
+                            if isfile(build_file):
+                                data = open(build_file).read()
+                            else:
+                                data = open(work_file).read()
+                            with open(work_file, 'w') as bf:
+                                bf.write("source activate {build_prefix}\n".format(
+                                    build_prefix=config.build_prefix))
+                                bf.write(data)
                         else:
-                            data = open(work_file).read()
-                        with open(work_file, 'w') as bf:
-                            bf.write("source activate {build_prefix}\n".format(
-                                build_prefix=config.build_prefix))
-                            bf.write(data)
-                    else:
-                        if not isfile(work_file):
-                            shutil.copy(build_file, work_file)
-                    os.chmod(work_file, 0o766)
+                            if not isfile(work_file):
+                                shutil.copy(build_file, work_file)
+                        os.chmod(work_file, 0o766)
 
-                    if isfile(work_file):
-                        cmd = [shell_path, '-x', '-e', work_file]
+                        if isfile(work_file):
+                            cmd = [shell_path, '-x', '-e', work_file]
 
-                        _check_call(cmd, env=env, cwd=src_dir)
+                            _check_call(cmd, env=env, cwd=src_dir)
 
         if post in [True, None]:
             if post:

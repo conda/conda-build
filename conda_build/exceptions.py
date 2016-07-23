@@ -44,3 +44,7 @@ class UnableToParseMissingJinja2(UnableToParse):
                 package, then attempt to build.
             """),
         ])
+
+
+class UnableToParseMissingSetuptoolsDependencies(CondaBuildException):
+    pass

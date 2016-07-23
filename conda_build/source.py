@@ -11,12 +11,11 @@ import locale
 import time
 
 from conda.fetch import download
-from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
+from conda_build.utils import tar_xf, unzip, safe_print_unicode
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
@@ -28,13 +27,12 @@ log = logging.getLogger(__file__)
 
 
 def get_dir():
-    if not isdir(WORK_DIR):
-        os.makedirs(WORK_DIR)
-    lst = [fn for fn in os.listdir(WORK_DIR) if not fn.startswith('.')]
-    if len(lst) == 1:
-        dir_path = join(WORK_DIR, lst[0])
-        if isdir(dir_path):
-            return dir_path
+    if os.path.isdir(WORK_DIR):
+        lst = [fn for fn in os.listdir(WORK_DIR) if not fn.startswith('.')]
+        if len(lst) == 1:
+            dir_path = join(WORK_DIR, lst[0])
+            if isdir(dir_path):
+                return dir_path
     return WORK_DIR
 
 
@@ -391,12 +389,6 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
       - unpack
       - apply patches (if any)
     """
-
-    if sys.platform == 'win32':
-        if isdir(WORK_DIR):
-            move_to_trash(WORK_DIR, '')
-    else:
-        rm_rf(WORK_DIR)
 
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta, verbose=verbose)
