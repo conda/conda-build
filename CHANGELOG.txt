@@ -1,3 +1,24 @@
+2016-07-22 1.21.7:
+------------------
+
+Bug fixes:
+----------
+
+* Add test of requirements.txt parsing for runtime requirements #1127
+* Set PY_VCRUNTIME_REDIST for VS 2015+, so that DLL linkage is used #1129
+* Use os.path.normpath in find_lib #1132
+* Fix path prepending in test (use only PATH, and use consolidated code) #1135
+* Add dist split for channel names #1136
+* Provide fallback path to render recipe when build environment is necessary for rendering #1140
+* Sort package versions coming from PyPI for skeleton #1141
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2016-07-14 1.21.6:
 ------------------
 
