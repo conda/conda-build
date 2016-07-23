@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os
 import re
 import sys
@@ -30,6 +31,7 @@ from conda_build.config import config
 from conda_build.utils import comma_join
 
 on_win = (sys.platform == 'win32')
+log = logging.getLogger(__file__)
 
 
 def ns_cfg():
@@ -694,6 +696,13 @@ class MetaData(object):
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))
 
+        except (IOError, ImportError) as ex:
+            if permit_undefined_jinja:
+                log.debug("Context processor failed with message:  {}".format(ex.message))
+
+            else:
+                raise exceptions.UnableToParseMissingSetuptoolsDependencies
+
     def __unicode__(self):
         '''
         String representation of the MetaData.
@@ -736,6 +745,10 @@ class MetaData(object):
                         vcs = "mercurial"
                     return vcs
         return None
+
+    def uses_setuptools_in_meta(self):
+        with open(self.meta_path) as f:
+            return "load_setuptools" in f.read()
 
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"
