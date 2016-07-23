@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os
 import re
 import sys
@@ -30,6 +31,7 @@ except ImportError:
 from conda_build.utils import comma_join
 
 on_win = (sys.platform == 'win32')
+log = logging.getLogger(__file__)
 
 
 def ns_cfg(config):
@@ -289,7 +291,7 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends', 'include-recipe'  # pin_depends is experimental still
+              'pin_depends', 'include_recipe'  # pin_depends is experimental still
               ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -351,7 +353,7 @@ class MetaData(object):
     def __init__(self, path, config=None):
 
         if not config:
-            config=Config()
+            config = Config()
 
         self.config = config
 
@@ -417,7 +419,7 @@ class MetaData(object):
     def fromstring(cls, metadata, config=None):
         m = super(MetaData, cls).__new__(cls)
         if not config:
-            config=Config()
+            config = Config()
         m.meta = parse(metadata, path='', config=config)
         m.config = config
         m.parse_again(config=config, permit_undefined_jinja=True)
@@ -434,7 +436,7 @@ class MetaData(object):
         m.meta = sanitize(metadata)
 
         if not config:
-            config=Config()
+            config = Config()
 
         m.config = config
 
@@ -661,7 +663,7 @@ class MetaData(object):
         return self.get_value('build/always_include_files', [])
 
     def include_recipe(self):
-        return self.get_value('build/include-recipe', True)
+        return self.get_value('build/include_recipe', True)
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])
@@ -737,6 +739,13 @@ class MetaData(object):
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))
 
+        except (IOError, ImportError) as ex:
+            if permit_undefined_jinja:
+                log.debug("Context processor failed with message:  {}".format(ex.message))
+
+            else:
+                raise exceptions.UnableToParseMissingSetuptoolsDependencies
+
     def __unicode__(self):
         '''
         String representation of the MetaData.
@@ -779,6 +788,10 @@ class MetaData(object):
                         vcs = "mercurial"
                     return vcs
         return None
+
+    def uses_setuptools_in_meta(self):
+        with open(self.meta_path) as f:
+            return "load_setuptools" in f.read()
 
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"

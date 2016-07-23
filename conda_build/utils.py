@@ -1,23 +1,24 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import defaultdict
 from distutils.dir_util import copy_tree
 import fnmatch
 from locale import getpreferredencoding
 import logging
+import operator
 import os
+from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
 import sys
 import shutil
 import tarfile
 import tempfile
 import zipfile
 import subprocess
-import operator
-from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
-from collections import defaultdict
-from distutils.dir_util import copy_tree
 
 from conda.utils import md5_file, unix_path_to_win
 from conda.compat import PY3, iteritems
+
+from conda_build.os_utils import external
 
 if PY3:
     import urllib.parse as urlparse
@@ -26,7 +27,6 @@ else:
     import urlparse
     import urllib
 
-from conda_build.os_utils import external
 
 log = logging.getLogger(__file__)
 
@@ -293,3 +293,11 @@ def convert_unix_path_to_win(path):
 #   http://stackoverflow.com/a/14298190/1170370
 def path2url(path):
     return urlparse.urljoin('file:', urllib.pathname2url(path))
+
+
+def get_site_packages(prefix):
+    if sys.platform == 'win32':
+        sp = os.path.join(prefix, 'Lib', 'site-packages')
+    else:
+        sp = os.path.join(prefix, 'lib', 'python%s' % sys.version[:3], 'site-packages')
+    return sp

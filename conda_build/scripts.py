@@ -7,11 +7,12 @@ from __future__ import absolute_import, division, print_function
 import re
 import os
 import sys
-import shutil
 from os.path import dirname, isdir, join
 
 import conda.install
 from conda.config import bits
+
+from conda_build.utils import copy_into
 
 
 PY_TMPL = """\

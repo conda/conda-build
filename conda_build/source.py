@@ -13,20 +13,18 @@ from conda.fetch import download
 from conda.utils import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode, copy_into
+from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into
 
 log = logging.getLogger(__file__)
 
 
 def get_dir(config):
-    if not isdir(config.work_dir):
-        os.makedirs(config.work_dir)
-    lst = [fn for fn in os.listdir(config.work_dir) if not fn.startswith('.')]
-
-    if len(lst) == 1:
-        dir_path = join(config.work_dir, lst[0])
-        if isdir(dir_path):
-            return dir_path
+    if os.path.isdir(config.work_dir):
+        lst = [fn for fn in os.listdir(config.work_dir) if not fn.startswith('.')]
+        if len(lst) == 1:
+            dir_path = join(config.work_dir, lst[0])
+            if isdir(dir_path):
+                return dir_path
     return config.work_dir
 
 
@@ -387,9 +385,6 @@ def provide(recipe_dir, meta, config, patch=True):
       - unpack
       - apply patches (if any)
     """
-
-    if sys.platform == 'win32':
-        rm_rf(config.work_dir)
 
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta, config=config)

@@ -1,3 +1,55 @@
+2016-07-22 1.21.7:
+------------------
+
+Bug fixes:
+----------
+
+* Add test of requirements.txt parsing for runtime requirements #1127
+* Set PY_VCRUNTIME_REDIST for VS 2015+, so that DLL linkage is used #1129
+* Use os.path.normpath in find_lib #1132
+* Fix path prepending in test (use only PATH, and use consolidated code) #1135
+* Add dist split for channel names #1136
+* Provide fallback path to render recipe when build environment is necessary for rendering #1140
+* Sort package versions coming from PyPI for skeleton #1141
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
+2016-07-14 1.21.6:
+------------------
+
+New Things:
+-----------
+
+* Allow pass-through of setup.py options in conda skeleton pypi #680
+* Allow specification of pinning numpy in conda skeleton pypi #680
+* Support PEP420 namespace packages (don't barf on existing folders.)  Do barf on existing files.  #1074
+
+
+Bug fixes:
+----------
+
+* Fix handling of quotes in selectors #1104
+* Fix load_setuptools in jinja context.  Problem was incorrect cwd in function. #1106
+* Make Win activate script file extensions explicit #1107
+* Warn users on failed git repo info failure, rather than crash #1108
+* Remove killing MSBuild.exe at end of win build.  Remove psutil dependency.  #1109
+* Prepend PATH before creating env, to ensure post-link script success.  #1115, #1118
+* Make Python tests drop out on failure appropiately on win  #1122
+* Make hyphenation consistent with include_recipe in meta.yaml  #1124
+* Use full path of test env when activating #1125
+
+Contributors:
+-------------
+
+ * @ikalev
+ * @msarahan
+ * @mwcraig
+
 2016-07-07 1.21.5:
 ------------------
 

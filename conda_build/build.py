@@ -32,12 +32,13 @@ from conda.resolve import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
-from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, render_recipe
+from conda_build.render import (parse_or_try_download, output_yaml, bldpkg_path,
+                                render_recipe, reparse)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.scripts import create_entry_points, prepend_bin_path
-from conda_build.utils import rm_rf, _check_call, copy_into, path2url
+from conda_build.utils import rm_rf, _check_call, copy_into
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -214,7 +215,8 @@ def create_info_files(m, files, config, prefix):
         dst = join(config.info_dir, readme)
         shutil.copyfile(src, dst)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
-            print("WARNING: anaconda.org only recognizes about/readme as README.md and README.rst", file=sys.stderr)  # noqa
+            print("WARNING: anaconda.org only recognizes about/readme "
+                  "as README.md and README.rst", file=sys.stderr)
 
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
@@ -230,9 +232,9 @@ def create_info_files(m, files, config, prefix):
 # $ conda create --name <env> --file <this file>
 """ % (m.dist(), cc.subdir))
             for dist in sorted(dists + [m.dist()]):
-                fo.write('%s\n' % '='.join(dist.rsplit('-', 2)))
+                fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':
-            info_index['depends'] = [' '.join(dist.rsplit('-', 2))
+            info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
                                      for dist in dists]
 
     # Deal with Python 2 and 3's different json module type reqs
@@ -347,6 +349,10 @@ def create_env(prefix, specs, config, clear_cache=True):
             os.makedirs(d)
         update_index(d)
     if specs:  # Don't waste time if there is nothing to do
+        # FIXME: stupid hack to put test prefix on PATH so that runtime libs can be found
+        old_path = os.environ['PATH']
+        os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+
         index = get_build_index(config=config, clear_cache=True)
 
         warn_on_old_conda_build(index)
@@ -355,6 +361,9 @@ def create_env(prefix, specs, config, clear_cache=True):
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
         plan.execute_actions(actions, index, verbose=config.verbose)
+
+        os.environ['PATH'] = old_path
+
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
         os.makedirs(prefix)
@@ -367,8 +376,8 @@ def create_env(prefix, specs, config, clear_cache=True):
 
 def warn_on_old_conda_build(index):
     root_linked = linked(cc.root_dir)
-    vers_inst = [dist.rsplit('-', 2)[1] for dist in root_linked
-        if dist.rsplit('-', 2)[0] == 'conda-build']
+    vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
+        if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
         print("WARNING: Could not detect installed version of conda-build", file=sys.stderr)
         return
@@ -399,7 +408,7 @@ def rm_pkgs_cache(dist):
     plan.execute_plan(rmplan)
 
 
-def build(m, config, post=None, need_source_download=True):
+def build(m, config, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
 
@@ -445,6 +454,9 @@ def build(m, config, post=None, need_source_download=True):
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
+            if need_source_download or need_reparse_in_env:
+                print("    (actual version deferred until further download or env creation)")
+
             rm_rf(config.build_prefix)
 
             specs = [ms.spec for ms in m.ms_depends('build')]
@@ -484,7 +496,7 @@ def build(m, config, post=None, need_source_download=True):
                     os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
                                                           config.build_prefix)['PATH']
                 try:
-                    m, need_source_download = parse_or_try_download(m,
+                    m, need_source_download, need_reparse_in_env = parse_or_try_download(m,
                                                                     no_download_source=False,
                                                                     force_download=True,
                                                                     config=config)
@@ -492,6 +504,11 @@ def build(m, config, post=None, need_source_download=True):
                 finally:
                     if not config.activate:
                         os.environ['PATH'] = _old_path
+                print("BUILD START:", m.dist())
+
+            if need_reparse_in_env:
+                reparse(m)
+                print("BUILD START:", m.dist())
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
                 print("%s is installed as a build dependency. Removing." %
@@ -504,14 +521,14 @@ def build(m, config, post=None, need_source_download=True):
 
             print("Package:", m.dist())
 
-            # get_dir here might be just work, or it might be one level deeper, dependening on the source.
+            # get_dir here might be just work, or it might be one level deeper,
+            #    dependening on the source.
             src_dir = source.get_dir(config)
-            assert isdir(src_dir)
-            contents = os.listdir(src_dir)
-            if contents:
+            if isdir(source.WORK_DIR) and os.listdir(src_dir):
                 print("source tree in:", src_dir)
             else:
-                print("no source")
+                print("no source - creating empty work folder")
+                os.makedirs(source.WORK_DIR)
 
             rm_rf(config.info_dir)
             files1 = prefix_files(prefix=config.build_prefix)
@@ -535,42 +552,43 @@ def build(m, config, post=None, need_source_download=True):
                 if isinstance(script, list):
                     script = '\n'.join(script)
 
-            if on_win:
-                build_file = join(m.path, 'bld.bat')
-                if script:
-                    build_file = join(src_dir, 'bld.bat')
-                    with open(build_file, 'w') as bf:
-                        bf.write(script)
-                import conda_build.windows as windows
-                windows.build(m, build_file, config=config)
-            else:
-                build_file = join(m.path, 'build.sh')
-
-                # There is no sense in trying to run an empty build script.
-                if isfile(build_file) or script:
-                    env = environ.get_dict(config=config, m=m, dirty=config.dirty)
-                    work_file = join(source.get_dir(config), 'conda_build.sh')
+            if isdir(source.WORK_DIR):
+                if on_win:
+                    build_file = join(m.path, 'bld.bat')
                     if script:
-                        with open(work_file, 'w') as bf:
+                        build_file = join(src_dir, 'bld.bat')
+                        with open(build_file, 'w') as bf:
                             bf.write(script)
-                    if config.activate:
-                        if isfile(build_file):
-                            data = open(build_file).read()
-                        else:
-                            data = open(work_file).read()
-                        with open(work_file, 'w') as bf:
-                            bf.write("source activate {build_prefix}\n".format(
-                                build_prefix=config.build_prefix))
-                            bf.write(data)
-                    else:
-                        if not isfile(work_file):
-                            shutil.copy(build_file, work_file)
-                    os.chmod(work_file, 0o766)
+                    import conda_build.windows as windows
+                    windows.build(m, build_file, config=config)
+                else:
+                    build_file = join(m.path, 'build.sh')
 
-                    if isfile(work_file):
-                        cmd = [shell_path, '-x', '-e', work_file]
-                        # this should raise
-                        _check_call(cmd, env=env, cwd=src_dir)
+                    # There is no sense in trying to run an empty build script.
+                    if isfile(build_file) or script:
+                        env = environ.get_dict(config=config, m=m, dirty=config.dirty)
+                        work_file = join(source.get_dir(), 'conda_build.sh')
+                        if script:
+                            with open(work_file, 'w') as bf:
+                                bf.write(script)
+                        if config.activate:
+                            if isfile(build_file):
+                                data = open(build_file).read()
+                            else:
+                                data = open(work_file).read()
+                            with open(work_file, 'w') as bf:
+                                bf.write("source activate {build_prefix}\n".format(
+                                    build_prefix=config.build_prefix))
+                                bf.write(data)
+                        else:
+                            if not isfile(work_file):
+                                shutil.copy(build_file, work_file)
+                        os.chmod(work_file, 0o766)
+
+                        if isfile(work_file):
+                            cmd = [shell_path, '-x', '-e', work_file]
+                            # this should raise if any problems occur while building
+                            _check_call(cmd, env=env, cwd=src_dir)
 
         if post in [True, None]:
             if post:
@@ -707,7 +725,8 @@ def test(m, config, move_broken=True):
 
         create_env(config.test_prefix, specs, config=config)
 
-        env = dict(os.environ)
+        create_env(config.test_prefix, specs)
+        env = dict(os.environ.copy())
         env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
 
         if not config.activate:
@@ -732,25 +751,30 @@ def test(m, config, move_broken=True):
                                                                      else "source ",
                                                                      ext=ext,
                                                                      test_env=config.test_prefix))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
                     test_file=join(tmp_dir, 'run_test.py')))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.pl')))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
                     python=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.lua')))
+                tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if shell_files:
                 test_file = join(tmp_dir, 'run_test.' + suffix)
                 if on_win:
                     tf.write("call {test_file}\n".format(test_file=test_file))
+                    tf.write("if errorlevel 1 exit 1\n")
                 else:
                     # TODO: Run the test/commands here instead of in run_test.py
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
@@ -858,7 +882,8 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
                 else:
                     raise
             print(add_recipes)
-            metadata_list.extendleft([render_recipe(add_recipe, config=config) for add_recipe in add_recipes])
+            metadata_list.extendleft([render_recipe(add_recipe, config=config)
+                                      for add_recipe in add_recipes])
         finally:
             os.chdir(cwd)
 

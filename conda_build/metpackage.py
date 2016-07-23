@@ -25,4 +25,4 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
     d = dict(d)
     m = MetaData.fromdict(d, config=config)
 
-    return build(m, anaconda_upload=anaconda_upload)
+    return build(m, anaconda_upload=config.anaconda_upload)

@@ -8,7 +8,7 @@ import sys
 import stat
 from glob import glob
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
-                     islink, realpath, relpath)
+                     islink, realpath, relpath, normpath)
 try:
     from os import readlink
 except ImportError:
@@ -80,7 +80,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     os.chmod(path, int('755', 8))
 
 
-def write_pth(egg_path):
+def write_pth(egg_path, config):
     fn = basename(egg_path)
     with open(join(environ.get_sp_dir(config),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
@@ -98,7 +98,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
                     in walk_prefix(egg_path, False, windows_forward_slashes=False)):
-                write_pth(egg_path)
+                write_pth(egg_path, config=config)
                 continue
 
             print('found egg dir:', egg_path)
@@ -125,7 +125,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
             if egg_path not in absfiles:
                 continue
             print('found egg:', egg_path)
-            write_pth(egg_path)
+            write_pth(egg_path, config=config)
 
     utils.rm_rf(join(sp_dir, 'easy-install.pth'))
 
@@ -169,7 +169,7 @@ def find_lib(link, prefix, path=None):
     from conda_build.build import prefix_files
     files = prefix_files(prefix)
     if link.startswith(prefix):
-        link = link[len(prefix) + 1:]
+        link = normpath(link[len(prefix) + 1:])
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link

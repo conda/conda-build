@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 
 from functools import partial
 import json
+import logging
 import os
 import sys
 
@@ -15,6 +16,8 @@ import jinja2
 from conda.compat import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
+
+log = logging.getLogger(__file__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -90,7 +93,7 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
 
     if from_recipe_dir and recipe_dir:
         setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
-    else:
+    elif os.path.exists(config.work_dir):
         cd_to_work = True
         cwd = os.getcwd()
         os.chdir(config.work_dir)
@@ -99,6 +102,10 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
         # this is very important - or else if versioneer or otherwise is in the start folder,
         # things will pick up the wrong versioneer/whatever!
         sys.path.insert(0, config.work_dir)
+    else:
+        log.debug("Did not find setup.py file in manually specified location, and source "
+                  "not downloaded yet.")
+        return {}
 
     # Patch setuptools, distutils
     setuptools_setup = setuptools.setup
@@ -115,8 +122,8 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
         distutils.core.setup = distutils_setup
         setuptools.setup = setuptools_setup
     # this happens if setup.py is used in load_setuptools, but source is not yet downloaded
-    except IOError:
-        pass
+    except:
+        raise
     finally:
         if cd_to_work:
             os.chdir(cwd)

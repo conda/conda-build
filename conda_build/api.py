@@ -132,11 +132,9 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
 
 def test(package_path, move_broken=True, config=None, **kwargs):
     import os
-    import tarfile
     from conda.compat import TemporaryDirectory
     from conda_build.build import test
     from conda_build.render import render_recipe
-    from conda_build.metadata import MetaData
     from conda_build.utils import tar_xf
     # Note: internal test function depends on metadata already having been populated.
     # This may cause problems if post-build version stuff is used, as we have no way to pass
@@ -208,7 +206,8 @@ def list_skeletons():
     return files
 
 
-def skeletonize(packages, repo, output_dir=".", version=None, recursive=False, config=None, **kwargs):
+def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
+                config=None, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
     import importlib
