@@ -73,7 +73,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
     metadata.check_fields()
 
 
-def build(recipe_path, post=None, need_source_download=True, check=False,
+def build(recipe_path, post=None, need_source_download=True,
           already_built=None, build_only=False, notest=False,
           config=None, **kwargs):
 
@@ -221,8 +221,10 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     packages = _ensure_list(packages)
 
     module = importlib.import_module("conda_build.skeletons." + repo)
+    func_args = module.skeletonize.func_code.co_varnames
+    kwargs = {name: value for name, value in kwargs.items() if name in func_args}
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                            recursive=recursive, config=config)
+                                            recursive=recursive, config=config, **kwargs)
     return skeleton_return
 
 
@@ -265,7 +267,7 @@ def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all=False,
                             all=all, show_files=show_files, groupby=groupby)
 
 
-def inspect_objects(packages, prefix=_sys.prefix, groupby='package'):
+def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):
     from .inspect import inspect_objects
     packages = _ensure_list(packages)
     return inspect_objects(packages, prefix=prefix, groupby=groupby)

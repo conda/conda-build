@@ -116,19 +116,15 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
         '__doc__': None,
         '__file__': setup_file,
     }
-    try:
+    if os.path.isfile(setup_file):
         code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
         distutils.core.setup = distutils_setup
         setuptools.setup = setuptools_setup
-    # this happens if setup.py is used in load_setuptools, but source is not yet downloaded
-    except:
-        raise
-    finally:
-        if cd_to_work:
-            os.chdir(cwd)
+    if cd_to_work:
+        os.chdir(cwd)
     del sys.path[-1]
-    return _setuptools_data
+    return _setuptools_data if _setuptools_data else None
 
 
 def load_npm():

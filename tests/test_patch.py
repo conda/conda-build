@@ -2,7 +2,7 @@ import os
 
 from conda_build.source import _guess_patch_strip_level, apply_patch
 
-from .utils import testing_workdir
+from .utils import testing_workdir, test_config
 
 
 def test_patch_strip_level(testing_workdir):

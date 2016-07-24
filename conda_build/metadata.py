@@ -739,13 +739,6 @@ class MetaData(object):
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))
 
-        except (IOError, ImportError) as ex:
-            if permit_undefined_jinja:
-                log.debug("Context processor failed with message:  {}".format(ex.message))
-
-            else:
-                raise exceptions.UnableToParseMissingSetuptoolsDependencies
-
     def __unicode__(self):
         '''
         String representation of the MetaData.

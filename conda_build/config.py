@@ -23,17 +23,28 @@ class Config(object):
     def __init__(self, *args, **kwargs):
         super(Config, self).__init__()
 
-        self.CONDA_PERL = kwargs.get('perl', os.getenv('CONDA_PERL', '5.18.2'))
-        self.CONDA_LUA = kwargs.get('lua', os.getenv('CONDA_LUA', '5.2'))
-        self.CONDA_PY = int(kwargs.get('python', os.getenv('CONDA_PY', cc.default_python))
+        def env(lang, default):
+            version = kwargs.get(lang)
+            if not version:
+                # Hooray for corner cases.
+                if lang == 'python':
+                    lang = 'py'
+                var = 'CONDA_' + lang.upper()
+                version = os.getenv(var) if os.getenv(var) else default
+            return version
+
+        self.CONDA_PERL = env('perl', '5.18.2')
+        self.CONDA_LUA = env('lua', '5.2')
+        self.CONDA_R = env('r', '3.2.2')
+        self.CONDA_PY = int(env('python', cc.default_python)
                             .replace('.', ''))
-        self.CONDA_NPY = kwargs.get('numpy', os.getenv("CONDA_NPY", None))
+
+        self.CONDA_NPY = kwargs.get('numpy', os.getenv("CONDA_NPY"))
         if self.CONDA_NPY:
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
-        self.CONDA_R = kwargs.get('r', os.getenv("CONDA_R", "3.2.2"))
 
         self._build_id = kwargs.get('build_id', "")
-        self._prefix_length = kwargs.get("prefix_length", 80)
+        self._prefix_length = kwargs.get("prefix_length", 255)
         # set default value (not actually None)
         self._croot = kwargs.get('croot', None)
 

@@ -43,3 +43,40 @@ def test_pypi_url(testing_workdir, test_config):
     with open('sympy/meta.yaml') as f:
         actual = yaml.load(f)
     assert expected == actual, (expected, actual)
+
+def test_pypi_with_setup_options(testing_workdir):
+    # Use package below because  skeleton will fail unless the setup.py is given
+    # the flag --offline because of a bootstrapping a helper file that
+    # occurs by default.
+
+    # Test that the setup option is used in constructing the skeleton.
+    api.skeletonize('photutils', 'pypi', version="0.2.2", setup_options="--offline")
+
+    # Check that the setup option occurs in bld.bat and build.sh.
+    for script in ['bld.bat', 'build.sh']:
+        with open('photutils/{}'.format(script)) as f:
+            content = f.read()
+            assert '--offline' in content
+
+
+def test_pypi_pin_numpy(testing_workdir):
+    # The package used here must have a numpy dependence for pin-numpy to have
+    # any effect.
+    api.skeletonize("msumastro", "pypi", version='0.9.0', pin_numpy=True)
+
+    with open('msumastro/meta.yaml') as f:
+        actual = yaml.load(f)
+
+    assert 'numpy x.x' in actual['requirements']['run']
+    assert 'numpy x.x' in actual['requirements']['build']
+
+
+def test_pypi_version_sorting(testing_workdir):
+    # The package used here must have a numpy dependence for pin-numpy to have
+    # any effect.
+    api.skeletonize("conda_version_test", "pypi")
+
+    with open('conda_version_test/meta.yaml') as f:
+        actual = yaml.load(f)
+        assert actual['package']['version'] != "0.1.0"
+        assert actual['package']['version'] >= "0.1.0-1"

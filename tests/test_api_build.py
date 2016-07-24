@@ -66,7 +66,7 @@ def test_recipe_builds(recipe, test_config, testing_workdir):
     os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
     ok_to_test = api.build(recipe, config=test_config)
     if ok_to_test:
-        api.test(recipe, config=config)
+        api.test(recipe, config=test_config)
 
 
 def test_token_upload(testing_workdir):
@@ -284,7 +284,7 @@ def test_symlink_fail(testing_workdir, test_config, capfd):
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows doesn't show this error")
 def test_broken_conda_meta(testing_workdir, test_config):
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "conda-meta"), config=test_config)
         assert "Error: Untracked file(s) ('conda-meta/nope',)" in exc
 
@@ -325,3 +325,24 @@ def test_skip_existing_url(testing_workdir, test_config, capfd):
     output, error = capfd.readouterr()
     assert "is already built" in output
     assert url_path(test_config.croot) in output
+
+
+def test_failed_tests_exit_build(testing_workdir, test_config):
+    """https://github.com/conda/conda-build/issues/1112"""
+    with pytest.raises(SystemExit) as exc:
+        api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=test_config)
+        assert 'TESTS FAILED' in exc
+
+
+def test_requirements_txt_for_run_reqs(testing_workdir, test_config):
+    """
+    If run reqs are blank, then conda-build looks for requirements.txt in the recipe folder.
+    There has been a report of issue with unsatisfiable requirements at
+
+    https://github.com/Anaconda-Platform/anaconda-server/issues/2565
+
+    This test attempts to reproduce those conditions: a channel other than defaults with this
+    requirements.txt
+    """
+    test_config.channel_urls = ('conda-forge', )
+    api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=test_config)

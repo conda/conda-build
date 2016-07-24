@@ -139,7 +139,8 @@ different sets of packages."""
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args_func(args, p, Config())
+    config = Config(**args.__dict__)
+    args_func(args, p, config)
 
 
 def output_action(metadata, config):
@@ -203,18 +204,15 @@ def execute(args, parser, config):
                 sys.exit("Error: no such directory: %s" % recipe_dir)
 
             # this fully renders any jinja templating, throwing an error if any data is missing
-            m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                    config=config)
+            m, _, _ = render_recipe(recipe_dir, no_download_source=False, config=config)
             action(m, config)
 
             if need_cleanup:
                 shutil.rmtree(recipe_dir)
     else:
-        api.build(args.recipe, build_only=args.build_only, post=args.post,
-                   notest=args.notest, anaconda_upload=args.anaconda_upload,
-                   skip_existing=args.skip_existing, keep_old_work=args.keep_old_work,
-                   include_recipe=args.include_recipe, already_built=None,
-                   token=args.token, user=args.user, dirty=args.dirty)
+        api.build(args.recipe, post=args.post, build_only=args.build_only,
+                   notest=args.notest, keep_old_work=args.keep_old_work,
+                   already_built=None)
 
 
 def args_func(args, p, config):

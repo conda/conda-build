@@ -302,6 +302,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     if not setup_options:
         setup_options = []
 
+    if isinstance(setup_options, string_types):
+        setup_options = [setup_options]
+
     if not config:
         config = Config()
 
