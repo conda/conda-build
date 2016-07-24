@@ -116,7 +116,7 @@ def replace_path(binary, path, prefix):
 
 
 def test_installable(channel='defaults'):
-    success = False
+    success = True
     has_py = re.compile(r'py(\d)(\d)')
     for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
         log.info("######## Testing platform %s ########" % platform)
@@ -147,17 +147,17 @@ def test_installable(channel='defaults'):
 
             try:
                 install_steps = check_install([name + '=' + version] + additional_packages,
-                                              channel_urls=channels, prepend=False,
-                                              platform=platform)
-                success = bool(install_steps)
+                                                channel_urls=channels, prepend=False,
+                                                platform=platform)
+                success &= bool(install_steps)
             except KeyboardInterrupt:
                 raise
             # sys.exit raises an exception that doesn't subclass from Exception
             except BaseException as e:
-                success = True
+                success = False
                 log.error("FAIL: %s %s on %s with %s (%s)" % (name, version,
-                                                              platform, additional_packages,
-                                                              e))
+                                                                platform, additional_packages,
+                                                                e))
     return success
 
 
