@@ -5,6 +5,7 @@ import os
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import api
+from conda_build.config import Config
 
 
 def main():
@@ -45,8 +46,10 @@ def main():
     )
 
     args = p.parse_args()
+    config = Config(**args.__dict__)
+    config.verbose = not args.quiet
 
-    api.update_index(args.dir, verbose=(not args.quiet), force=args.force,
+    api.update_index(args.dir, config=config, force=args.force,
             check_md5=args.check_md5, remove=args.remove)
 
 

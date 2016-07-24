@@ -164,6 +164,7 @@ def test_installable(channel='defaults'):
 def _installed(prefix):
     installed = ci.linked_data(prefix)
     installed = {rec['name']: dist for dist, rec in iteritems(installed)}
+    return installed
 
 
 def _underlined_text(text):

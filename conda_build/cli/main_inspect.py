@@ -8,6 +8,7 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda.cli.common import add_parser_prefix, InstalledPackages, get_prefix
 
 from conda_build import api
+from conda_build.config import Config
 from conda_build.cli.main_build import args_func
 
 
@@ -136,10 +137,11 @@ Tools for investigating conda channels.
 
     p.set_defaults(func=execute)
     args = p.parse_args()
-    args_func(args, p)
+    config = Config(**args.__dict__)
+    args_func(args, p, config=config)
 
 
-def execute(args, parser):
+def execute(args, parser, config):
     if not args.subcommand:
         parser.print_help()
         exit()
@@ -148,12 +150,12 @@ def execute(args, parser):
         if not args.test_installable:
             parser.error("At least one option (--test-installable) is required.")
         else:
-            return api.test_installable(args.channel)
+            print(api.test_installable(args.channel))
     elif args.subcommand == 'linkages':
-        return api.inspect_linkages(args.packages, prefix=get_prefix(args),
-                                    untracked=args.untracked, all=args.all,
-                                    show_files=args.show_files, groupby=args.groupby)
+        print(api.inspect_linkages(args.packages, prefix=get_prefix(args),
+                                   untracked=args.untracked, all=args.all,
+                                   show_files=args.show_files, groupby=args.groupby))
     elif args.subcommand == 'objects':
-        return api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby)
+        print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
     else:
         raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))

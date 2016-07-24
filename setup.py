@@ -42,7 +42,7 @@ setup(
                             'conda-convert = conda_build.cli.main_convert:main',
                             'conda-develop = conda_build.cli.main_develop:main',
                             'conda-index = conda_build.cli.main_index:main',
-                            'conda-inspect = conda_build.cli.main_index:main',
+                            'conda-inspect = conda_build.cli.main_inspect:main',
                             'conda-metapackage = conda_build.cli.main_metapackage:main',
                             'conda-pipbuild = conda_build.cli.main_pipbuild:main',
                             'conda-render = conda_build.cli.main_render:main',

@@ -3,21 +3,23 @@ import sys
 import pytest
 
 from conda_build import api
-from .utils import testing_workdir
+
 
 def test_inspect_linkages():
-    api.inspect_linkages("python")
+    out_string = api.inspect_linkages("python")
+    assert 'openssl' in out_string
 
 
 pytest.mark.skipif(sys.platform != "darwin",
                    reason="object inspection only implemented for mac.")
 def test_inspect_objects():
-    api.inspect_objects("python")
+    out_string = api.inspect_objects("python")
+    assert 'rpath: @loader_path' in out_string
 
 
-# def test_channel_installable(testing_workdir):
-#     # make sure the default channel is installable as a reference
-#     assert api.test_installable()
+def test_channel_installable():
+    # make sure the default channel is installable as a reference
+    assert api.test_installable('conda-team')
 
 #     # create a channel that is not installable to validate function
 
