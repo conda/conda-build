@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os
 import re
 import sys
@@ -30,6 +31,7 @@ from conda_build.config import config
 from conda_build.utils import comma_join
 
 on_win = (sys.platform == 'win32')
+log = logging.getLogger(__file__)
 
 
 def ns_cfg():
@@ -89,8 +91,14 @@ sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 def select_lines(data, namespace):
     lines = []
+
     for i, line in enumerate(data.splitlines()):
         line = line.rstrip()
+
+        trailing_quote = ""
+        if line and line[-1] in ("'", '"'):
+            trailing_quote = line[-1]
+
         if line.lstrip().startswith('#'):
             # Don't bother with comment only lines
             continue
@@ -99,7 +107,7 @@ def select_lines(data, namespace):
             cond = m.group(3)
             try:
                 if eval(cond, namespace, {}):
-                    lines.append(m.group(1))
+                    lines.append(m.group(1) + trailing_quote)
             except:
                 sys.exit('''\
 Error: Invalid selector in meta.yaml line %d:
@@ -283,7 +291,7 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends', 'include-recipe'  # pin_depends is experimental still
+              'pin_depends', 'include_recipe'  # pin_depends is experimental still
               ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -612,7 +620,7 @@ class MetaData(object):
         return self.get_value('build/always_include_files', [])
 
     def include_recipe(self):
-        return self.get_value('build/include-recipe', True)
+        return self.get_value('build/include_recipe', True)
 
     def binary_has_prefix_files(self):
         ret = self.get_value('build/binary_has_prefix_files', [])
@@ -688,6 +696,13 @@ class MetaData(object):
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, ex.message))
 
+        except (IOError, ImportError) as ex:
+            if permit_undefined_jinja:
+                log.debug("Context processor failed with message:  {}".format(ex.message))
+
+            else:
+                raise exceptions.UnableToParseMissingSetuptoolsDependencies
+
     def __unicode__(self):
         '''
         String representation of the MetaData.
@@ -730,6 +745,10 @@ class MetaData(object):
                         vcs = "mercurial"
                     return vcs
         return None
+
+    def uses_setuptools_in_meta(self):
+        with open(self.meta_path) as f:
+            return "load_setuptools" in f.read()
 
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"

@@ -5,17 +5,20 @@ Created on Jan 16, 2014
 '''
 from __future__ import absolute_import, division, print_function
 
-import json
-import os
 from functools import partial
+import json
+import logging
+import os
+import sys
 
 import jinja2
 
 from conda.compat import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
+from .source import WORK_DIR
 
-_setuptools_data = None
+log = logging.getLogger(__file__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -76,40 +79,55 @@ class FilteredLoader(jinja2.BaseLoader):
         return select_lines(contents, ns_cfg()), filename, uptodate
 
 
-def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
-                    recipe_dir=None):
-    global _setuptools_data
+def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+                    unload_modules=None, fail_on_error=False):
+    _setuptools_data = {}
 
-    if _setuptools_data is None:
-        _setuptools_data = {}
+    def setup(**kw):
+        _setuptools_data.update(kw)
 
-        def setup(**kw):
-            _setuptools_data.update(kw)
+    import setuptools
+    import distutils.core
 
-        import setuptools
-        import distutils.core
-        # Add current directory to path
-        import sys
-        sys.path.append('.')
+    cd_to_work = False
 
-        if from_recipe_dir and recipe_dir:
-            setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
+    if from_recipe_dir and recipe_dir:
+        setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
+    elif os.path.exists(WORK_DIR):
+        cd_to_work = True
+        cwd = os.getcwd()
+        os.chdir(WORK_DIR)
+        if not os.path.isabs(setup_file):
+            setup_file = os.path.join(WORK_DIR, setup_file)
+        # this is very important - or else if versioneer or otherwise is in the start folder,
+        # things will pick up the wrong versioneer/whatever!
+        sys.path.insert(0, WORK_DIR)
+    else:
+        log.debug("Did not find setup.py file in manually specified location, and source "
+                  "not downloaded yet.")
+        return {}
 
-        # Patch setuptools, distutils
-        setuptools_setup = setuptools.setup
-        distutils_setup = distutils.core.setup
-        setuptools.setup = distutils.core.setup = setup
-        ns = {
-            '__name__': '__main__',
-            '__doc__': None,
-            '__file__': setup_file,
-        }
-        code = compile(open(setup_file).read(), setup_file, 'exec',
-                       dont_inherit=1)
+    # Patch setuptools, distutils
+    setuptools_setup = setuptools.setup
+    distutils_setup = distutils.core.setup
+    setuptools.setup = distutils.core.setup = setup
+    ns = {
+        '__name__': '__main__',
+        '__doc__': None,
+        '__file__': setup_file,
+    }
+    try:
+        code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
         distutils.core.setup = distutils_setup
         setuptools.setup = setuptools_setup
-        del sys.path[-1]
+    # this happens if setup.py is used in load_setuptools, but source is not yet downloaded
+    except:
+        raise
+    finally:
+        if cd_to_work:
+            os.chdir(cwd)
+    del sys.path[-1]
     return _setuptools_data
 
 

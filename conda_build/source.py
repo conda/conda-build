@@ -1,22 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+import logging
 import re
 import sys
 from os.path import join, isdir, isfile, abspath, expanduser, basename
 from shutil import copytree, copy2
-from subprocess import check_call, Popen, PIPE, check_output
+from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
 import locale
 import time
 
 from conda.fetch import download
-from conda.install import move_to_trash
 from conda.utils import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
-from conda_build.utils import rm_rf, tar_xf, unzip, safe_print_unicode
-
+from conda_build.utils import tar_xf, unzip, safe_print_unicode
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
@@ -24,15 +23,16 @@ HG_CACHE = join(config.croot, 'hg_cache')
 SVN_CACHE = join(config.croot, 'svn_cache')
 WORK_DIR = join(config.croot, 'work')
 
+log = logging.getLogger(__file__)
+
 
 def get_dir():
-    if not isdir(WORK_DIR):
-        os.makedirs(WORK_DIR)
-    lst = [fn for fn in os.listdir(WORK_DIR) if not fn.startswith('.')]
-    if len(lst) == 1:
-        dir_path = join(WORK_DIR, lst[0])
-        if isdir(dir_path):
-            return dir_path
+    if os.path.isdir(WORK_DIR):
+        lst = [fn for fn in os.listdir(WORK_DIR) if not fn.startswith('.')]
+        if len(lst) == 1:
+            dir_path = join(WORK_DIR, lst[0])
+            if isdir(dir_path):
+                return dir_path
     return WORK_DIR
 
 
@@ -288,20 +288,26 @@ def svn_source(meta, verbose=False):
 def get_repository_info(recipe_path):
     """This tries to get information about where a recipe came from.  This is different
     from the source - you can have a recipe in svn that gets source via git."""
-    if isdir(join(recipe_path, ".git")):
-        origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
-        rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
-        return "Origin {}, commit {}".format(origin, rev)
-    elif isdir(join(recipe_path, ".hg")):
-        origin = check_output(["hg", "paths", "default"], cwd=recipe_path)
-        rev = check_output(["hg", "id"], cwd=recipe_path).split()[0]
-        return "Origin {}, commit {}".format(origin, rev)
-    elif isdir(join(recipe_path, ".svn")):
-        info = check_output(["svn", "info"], cwd=recipe_path)
-        server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
-        revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
-        return "{}, Revision {}".format(server, revision)
-    else:
+    try:
+        if isdir(join(recipe_path, ".git")):
+            origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
+            rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
+            return "Origin {}, commit {}".format(origin, rev)
+        elif isdir(join(recipe_path, ".hg")):
+            origin = check_output(["hg", "paths", "default"], cwd=recipe_path)
+            rev = check_output(["hg", "id"], cwd=recipe_path).split()[0]
+            return "Origin {}, commit {}".format(origin, rev)
+        elif isdir(join(recipe_path, ".svn")):
+            info = check_output(["svn", "info"], cwd=recipe_path)
+            server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
+            revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
+            return "{}, Revision {}".format(server, revision)
+        else:
+            return "{}, last modified {}".format(recipe_path,
+                                             time.ctime(os.path.getmtime(
+                                                 join(recipe_path, "meta.yaml"))))
+    except CalledProcessError:
+        log.debug("Failed to checkout source in " + recipe_path)
         return "{}, last modified {}".format(recipe_path,
                                              time.ctime(os.path.getmtime(
                                                  join(recipe_path, "meta.yaml"))))
@@ -383,12 +389,6 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
       - unpack
       - apply patches (if any)
     """
-
-    if sys.platform == 'win32':
-        if isdir(WORK_DIR):
-            move_to_trash(WORK_DIR, '')
-    else:
-        rm_rf(WORK_DIR)
 
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta, verbose=verbose)

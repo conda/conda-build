@@ -111,6 +111,12 @@ def msvc_env_cmd(bits, override=None):
         else:
             version = '9.0'
 
+    if float(version) >= 14.0:
+        # For Python 3.5+, ensure that we link with the dynamic runtime.  See
+        # http://stevedower.id.au/blog/building-for-python-3-5-part-two/ for more info
+        msvc_env_lines.append('set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\vcruntime{0}.dll'.format(
+            version.replace('.', '')))
+
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
@@ -206,7 +212,7 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if activate:
-                fo.write("call activate _build\n")
+                fo.write("call activate.bat _build\n")
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 

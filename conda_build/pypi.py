@@ -305,7 +305,7 @@ def main(args, parser):
         if is_url:
             d['version'] = 'UNKNOWN'
         else:
-            versions = client.package_releases(package, True)
+            versions = sorted(client.package_releases(package, True))
             if args.version_compare:
                 version_compare(args, package, versions)
             if args.version:

@@ -320,8 +320,8 @@ def test_skip_existing():
 
 # def test_skip_existing_anaconda_org():
 #     """This test may give false errors, because multiple tests running in parallel (on different
-#     platforms) will all use the same central anaconda.org account.  Thus, this test is only reliable
-#     if it is being run by one person on one machine at a time."""
+#     platforms) will all use the same central anaconda.org account.  Thus, this test is only
+#     reliable if it is being run by one person on one machine at a time."""
 #     # generated with conda_test_account user, command:
 #     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
 #     token = "co-79de533f-926f-4e5e-a766-d393e33ae98f"
@@ -548,3 +548,26 @@ def test_early_abort():
     output = output.decode('utf-8')
     error = error.decode('utf-8')
     assert "Hello World" in output, error
+
+
+def test_failed_tests_exit_build():
+    """https://github.com/conda/conda-build/issues/1112"""
+    with pytest.raises(subprocess.CalledProcessError):
+        cmd = 'conda build {}'.format(os.path.join(metadata_dir,
+                                                "_test_failed_test_exits"))
+        subprocess.check_call(cmd.split())
+
+
+def test_requirements_txt_for_run_reqs():
+    """
+    If run reqs are blank, then conda-build looks for requirements.txt in the recipe folder.
+    There has been a report of issue with unsatisfiable requirements at
+
+    https://github.com/Anaconda-Platform/anaconda-server/issues/2565
+
+    This test attempts to reproduce those conditions: a channel other than defaults with this
+    requirements.txt
+    """
+    cmd = 'conda build --no-anaconda-upload -c conda-forge {}'.format(os.path.join(metadata_dir,
+                                                                    "_requirements_txt_run_reqs"))
+    subprocess.check_call(cmd.split())

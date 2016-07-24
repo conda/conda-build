@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import logging
 import os
 import sys
 from collections import deque
@@ -26,6 +27,8 @@ from conda_build.main_render import get_render_parser
 from conda_build.utils import find_recipe
 from conda_build.main_render import (set_language_env_vars, RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
+
+log = logging.getLogger(__file__)
 
 
 def main():
@@ -292,8 +295,11 @@ def execute(args, parser):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
         # this fully renders any jinja templating, throwing an error if any data is missing
-        m, need_source_download = render_recipe(recipe_dir, no_download_source=False,
-                                                verbose=False, dirty=args.dirty)
+        m, need_source_download, need_reparse_in_env = render_recipe(recipe_dir,
+                                                                     no_download_source=False,
+                                                                     verbose=False,
+                                                                     dirty=args.dirty)
+
         if m.get_value('build/noarch_python'):
             config.noarch = True
 
@@ -341,6 +347,7 @@ def execute(args, parser):
                             include_recipe=args.include_recipe,
                             keep_old_work=args.keep_old_work,
                             need_source_download=need_source_download,
+                            need_reparse_in_env=need_reparse_in_env,
                             dirty=args.dirty, activate=args.activate)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)

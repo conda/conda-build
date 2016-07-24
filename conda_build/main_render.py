@@ -121,7 +121,7 @@ def main():
     args = p.parse_args()
     set_language_env_vars(args, p)
 
-    metadata, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
+    metadata, _, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
                                  verbose=args.verbose)
     if args.output:
         print(bldpkg_path(metadata))
