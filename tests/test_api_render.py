@@ -1,5 +1,4 @@
 import os
-import sys
 
 import pytest
 
@@ -11,18 +10,21 @@ from .utils import testing_workdir, test_config, metadata_dir, subdir
 def test_render_need_download(testing_workdir, test_config):
     # First get metadata with a recipe that is known to need a download:
     with pytest.raises(SystemExit):
-        metadata, need_download = api.render(os.path.join(metadata_dir, "source_git_jinja2"),
-                                             config=test_config,
-                                             no_download_source=True)
-    metadata, need_download = api.render(os.path.join(metadata_dir, "source_git_jinja2"),
-                                         config=test_config)
+        metadata, need_download, need_reparse_in_env = api.render(
+            os.path.join(metadata_dir, "source_git_jinja2"),
+            config=test_config,
+            no_download_source=True)
+    metadata, need_download, need_reparse_in_env = api.render(
+        os.path.join(metadata_dir, "source_git_jinja2"),
+        config=test_config)
     assert not need_download
     assert metadata.meta["package"]["version"] == "1.8.1"
 
 
 def test_render_yaml_output(testing_workdir, test_config):
-    metadata, need_download = api.render(os.path.join(metadata_dir, "source_git_jinja2"),
-                                         config=test_config)
+    metadata, need_download, need_reparse_in_env = api.render(
+        os.path.join(metadata_dir, "source_git_jinja2"),
+        config=test_config)
     yaml_metadata = api.output_yaml(metadata)
     assert "package:" in yaml_metadata
 

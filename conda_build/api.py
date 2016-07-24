@@ -55,9 +55,9 @@ def get_output_file_path(recipe_path, no_download_source=False, config=None, **k
     if kwargs:
         config = Config(**kwargs)
 
-    metadata, need_source_download = render_recipe(recipe_path,
-                                                   no_download_source=no_download_source,
-                                                   config=config)
+    metadata, _, _ = render_recipe(recipe_path,
+                                   no_download_source=no_download_source,
+                                   config=config)
     return bldpkg_path(metadata, config)
 
 
@@ -93,7 +93,7 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
 
     build_metadata = []
     for recipe in recipe_path:
-        metadata, need_source_download = render_recipe(recipe,
+        metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                             no_download_source=(not need_source_download),
                                             config=config)
 
@@ -123,7 +123,7 @@ def build(recipe_path, post=None, need_source_download=True, check=False,
                 print(metadata.dist(), "is already built in {0}, skipping.".format(package_exists))
                 continue
 
-        build_metadata.append((metadata, need_source_download))
+        build_metadata.append((metadata, need_source_download, need_reparse_in_env))
 
     return build_tree(build_metadata, build_only=build_only, post=post, notest=notest,
                       need_source_download=need_source_download, already_built=already_built,
@@ -152,10 +152,10 @@ def test(package_path, move_broken=True, config=None, **kwargs):
 
         # try to extract the static meta.yaml and load metadata from it
         if os.path.isdir(recipe_dir):
-            metadata, _ = render_recipe(recipe_dir, config=config)
+            metadata, _, _ = render_recipe(recipe_dir, config=config)
         else:
             # fall back to old way (use recipe, rather than package)
-            metadata, _ = render_recipe(package_path, no_download_source=False,
+            metadata, _, _ = render_recipe(package_path, no_download_source=False,
                                         config=config, **kwargs)
 
         test_result = test(metadata, config=config, move_broken=move_broken)

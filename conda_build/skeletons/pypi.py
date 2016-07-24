@@ -299,6 +299,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
 
+    if not setup_options:
+        setup_options = []
+
     if not config:
         config = Config()
 

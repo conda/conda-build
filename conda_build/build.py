@@ -20,6 +20,10 @@ import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
+# this one is some strange error that requests raises: "LookupError: unknown encoding: idna"
+#    http://stackoverflow.com/a/13057751/1170370
+import encodings.idna  # noqa
+
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index
@@ -349,7 +353,7 @@ def create_env(prefix, specs, config, clear_cache=True):
             os.makedirs(d)
         update_index(d)
     if specs:  # Don't waste time if there is nothing to do
-        # FIXME: stupid hack to put test prefix on PATH so that runtime libs can be found
+        # FIXME: stupid hack to put prefix on PATH so that runtime libs can be found
         old_path = os.environ['PATH']
         os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
 
@@ -507,7 +511,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                 print("BUILD START:", m.dist())
 
             if need_reparse_in_env:
-                reparse(m)
+                reparse(m, config=config)
                 print("BUILD START:", m.dist())
 
             if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
@@ -524,11 +528,11 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             # get_dir here might be just work, or it might be one level deeper,
             #    dependening on the source.
             src_dir = source.get_dir(config)
-            if isdir(source.WORK_DIR) and os.listdir(src_dir):
+            if isdir(src_dir):
                 print("source tree in:", src_dir)
             else:
                 print("no source - creating empty work folder")
-                os.makedirs(source.WORK_DIR)
+                os.makedirs(src_dir)
 
             rm_rf(config.info_dir)
             files1 = prefix_files(prefix=config.build_prefix)
@@ -552,7 +556,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                 if isinstance(script, list):
                     script = '\n'.join(script)
 
-            if isdir(source.WORK_DIR):
+            if isdir(src_dir):
                 if on_win:
                     build_file = join(m.path, 'bld.bat')
                     if script:
@@ -567,7 +571,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                     # There is no sense in trying to run an empty build script.
                     if isfile(build_file) or script:
                         env = environ.get_dict(config=config, m=m, dirty=config.dirty)
-                        work_file = join(source.get_dir(), 'conda_build.sh')
+                        work_file = join(source.get_dir(config), 'conda_build.sh')
                         if script:
                             with open(work_file, 'w') as bf:
                                 bf.write(script)
@@ -725,7 +729,6 @@ def test(m, config, move_broken=True):
 
         create_env(config.test_prefix, specs, config=config)
 
-        create_env(config.test_prefix, specs)
         env = dict(os.environ.copy())
         env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
 
@@ -839,7 +842,7 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
         else:
             post = None
 
-        metadata, need_source_download = metadata_list.popleft()
+        metadata, need_source_download, need_reparse_in_env = metadata_list.popleft()
         recipe_parent_dir = os.path.dirname(metadata.path)
         cwd = os.getcwd()
         os.chdir(recipe_parent_dir)

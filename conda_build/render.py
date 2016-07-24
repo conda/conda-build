@@ -21,7 +21,6 @@ from conda.compat import PY3
 from conda.lock import Locked
 
 from conda_build import exceptions, utils
-from conda_build.config import config
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
@@ -88,7 +87,7 @@ def parse_or_try_download(metadata, no_download_source, config,
                 source.provide(metadata.path, metadata.get_section('source'), config=config)
                 need_source_download = False
             try:
-                metadata.parse_again(permit_undefined_jinja=False)
+                metadata.parse_again(config=config, permit_undefined_jinja=False)
             except exceptions.UnableToParseMissingSetuptoolsDependencies:
                 need_reparse_in_env = True
         except subprocess.CalledProcessError as error:
@@ -112,12 +111,12 @@ def parse_or_try_download(metadata, no_download_source, config,
     return metadata, need_source_download, need_reparse_in_env
 
 
-def reparse(metadata):
+def reparse(metadata, config):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
     sys.path.insert(0, config.build_prefix)
     sys.path.insert(0, utils.get_site_packages(config.build_prefix))
-    metadata.parse_again(permit_undefined_jinja=False)
+    metadata.parse_again(config=config, permit_undefined_jinja=False)
 
 
 def render_recipe(recipe_path, config, no_download_source=False):
@@ -125,7 +124,7 @@ def render_recipe(recipe_path, config, no_download_source=False):
         if not config.dirty:
             rm_rf(config.work_dir)
 
-        assert not isdir(source.WORK_DIR), ("Failed to clean work directory.  Please close open"
+        assert not isdir(config.work_dir), ("Failed to clean work directory.  Please close open"
                                     " programs/terminals/folders and try again.")
 
         arg = find_recipe(recipe_path)

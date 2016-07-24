@@ -12,7 +12,6 @@ from distutils.msvc9compiler import Reg, WINSDK_BASE
 
 import conda.config as cc
 
-from conda_build.config import config
 from conda_build import environ
 from conda_build import source
 from conda_build.utils import _check_call
@@ -31,7 +30,7 @@ VS_VERSION_STRING = {
 }
 
 
-def fix_staged_scripts():
+def fix_staged_scripts(config):
     """
     Fixes scripts which have been installed unix-style to have a .bat
     helper
@@ -84,7 +83,7 @@ def build_vcvarsall_vs_path(version):
                             'vcvarsall.bat')
 
 
-def msvc_env_cmd(bits, override=None):
+def msvc_env_cmd(bits, config, override=None):
     arch_selector = 'x86' if bits == 32 else 'amd64'
 
     msvc_env_lines = []
@@ -210,7 +209,8 @@ def build(m, bld_bat, config):
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
             fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
             fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
-            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
+            fo.write(msvc_env_cmd(bits=cc.bits, config=config,
+                                  override=m.get_value('build/msvc_compiler', None)))
             if config.activate:
                 fo.write("call activate.bat {0}\n".format(config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
@@ -218,4 +218,4 @@ def build(m, bld_bat, config):
 
         cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
-        fix_staged_scripts()
+        fix_staged_scripts(config=config)
