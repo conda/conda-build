@@ -2,7 +2,6 @@ import os
 import subprocess
 import shutil
 import sys
-import tarfile
 import tempfile
 
 import pytest
@@ -13,6 +12,7 @@ from conda.fetch import download
 
 from conda_build.source import _guess_patch_strip_level, apply_patch
 import conda_build.config as config
+from .utils import package_has_file
 
 if PY3:
     import urllib.parse as urlparse
@@ -37,21 +37,6 @@ def is_valid_dir(parent_dir, dirname):
     valid &= not dirname.startswith("_")
     valid &= ('osx_is_app' != dirname or sys.platform == "darwin")
     return valid
-
-
-def package_has_file(package_path, file_path):
-    try:
-        with tarfile.open(package_path) as t:
-            try:
-                t.getmember(file_path)
-                return True
-            except KeyError:
-                return False
-            except OSError as e:
-                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
-    except tarfile.ReadError:
-        raise RuntimeError("Could not extract metadata from %s. "
-                           "File probably corrupt." % package_path)
 
 
 # def test_CONDA_BLD_PATH():

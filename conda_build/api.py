@@ -271,16 +271,16 @@ def inspect_objects(packages, prefix=_sys.prefix, groupby='package'):
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
 
 
-def create_metapackage(name, version, entry_points=(), build_string=None,
+def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
                        dependencies=(), home=None, license=None, summary=None,
-                       anaconda_upload=None):
+                       config=None):
     from .metapackage import create_metapackage
-    if anaconda_upload is None:
-        import conda.config
-        anaconda_upload = conda.config.anaconda_upload
+    if not config:
+        config = Config()
     return create_metapackage(name=name, version=version, entry_points=entry_points,
-                              build_string=build_string, dependencies=dependencies, home=home,
-                              license=license, summary=summary, anaconda_upload=anaconda_upload)
+                              build_string=build_string, build_number=build_number,
+                              dependencies=dependencies, home=home,
+                              license=license, summary=summary, config=config)
 
 
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False):

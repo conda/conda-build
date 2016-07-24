@@ -12,6 +12,7 @@ import conda.config
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import api
+from conda_build.config import Config
 from conda_build.cli.main_build import args_func
 
 
@@ -33,14 +34,14 @@ command line with the conda metapackage command.
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='anaconda_upload',
-        default=conda.config.anaconda_upload,
+        default=conda.config.binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='anaconda_upload',
-        default=conda.config.anaconda_upload,
+        default=conda.config.binstar_upload,
     )
     p.add_argument(
         "name",
@@ -95,13 +96,14 @@ command line with the conda metapackage command.
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args_func(args, p)
+    args_func(args, p, config=Config(**args.__dict__))
 
 
-def execute(args, parser):
+def execute(args, parser, config):
     api.create_metapackage(name=args.name, version=args.version, entry_points=args.entry_points,
-                           build_string=args.build_string, dependencies=args.dependencies,
-                           home=args.home, license=args.license, summary=args.summary)
+                           build_string=args.build_string, build_number=args.build_number,
+                           dependencies=args.dependencies, home=args.home, license=args.license,
+                           summary=args.summary)
 
 
 if __name__ == '__main__':

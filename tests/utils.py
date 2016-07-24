@@ -1,9 +1,11 @@
 from contextlib import contextmanager
 import os
 import sys
+import tarfile
 
 import pytest
 
+# these are here to be imported by other things.  Do not remove.
 from conda.compat import StringIO, PY3
 from conda.config import subdir
 
@@ -45,3 +47,18 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, verbose=True)
+
+
+def package_has_file(package_path, file_path):
+    try:
+        with tarfile.open(package_path) as t:
+            try:
+                text = t.extractfile(file_path).read()
+                return text
+            except KeyError:
+                return False
+            except OSError as e:
+                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
+    except tarfile.ReadError:
+        raise RuntimeError("Could not extract metadata from %s. "
+                           "File probably corrupt." % package_path)

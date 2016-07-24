@@ -844,8 +844,10 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
 
         metadata, need_source_download, need_reparse_in_env = metadata_list.popleft()
         recipe_parent_dir = os.path.dirname(metadata.path)
-        cwd = os.getcwd()
-        os.chdir(recipe_parent_dir)
+        cwd = None
+        if recipe_parent_dir:
+            cwd = os.getcwd()
+            os.chdir(recipe_parent_dir)
         try:
             ok_to_test = build(metadata, post=post,
                                need_source_download=need_source_download,
@@ -884,11 +886,11 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
                         to_build_recursive.append(pkg)
                 else:
                     raise
-            print(add_recipes)
             metadata_list.extendleft([render_recipe(add_recipe, config=config)
                                       for add_recipe in add_recipes])
         finally:
-            os.chdir(cwd)
+            if cwd:
+                os.chdir(cwd)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         output_file = bldpkg_path(metadata, config=config)
