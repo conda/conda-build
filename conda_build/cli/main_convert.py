@@ -7,11 +7,12 @@
 from locale import getpreferredencoding
 from os.path import abspath, expanduser
 
-from conda.compat import PY3
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build.cli.main_build import args_func
 from conda_build import api
+from conda_build.config import Config
+from conda_build.utils import PY3
 
 
 epilog = """
@@ -113,19 +114,22 @@ all.""",
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args_func(args, p)
+    config = Config(**args.__dict__)
+    args_func(args, p, config)
 
 
-def execute(args, parser):
+def execute(args, parser, config):
     files = args.package_files
+    del args.__dict__['package_files']
+    del args.__dict__['func']
 
-    for file in files:
+    for f in files:
         # Don't use byte literals for paths in Python 2
         if not PY3:
-            file = file.decode(getpreferredencoding())
+            f = f.decode(getpreferredencoding())
 
-        file = abspath(expanduser(file))
-        api.convert(file, args)
+        f = abspath(expanduser(f))
+        api.convert(f, **args.__dict__)
 
 
 if __name__ == '__main__':

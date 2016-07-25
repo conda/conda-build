@@ -16,8 +16,10 @@ import os
 from os.path import abspath, expanduser, isdir, join, split
 import pprint
 import re
+import shutil
 import sys
 import tarfile
+import tempfile
 
 from conda.compat import PY3
 
@@ -162,6 +164,19 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
     finally:
         t.close()
 
+
+def write_info(t, info):
+    tmp_dir = tempfile.mkdtemp()
+    with open(join(tmp_dir, 'files'), 'w') as fo:
+        for m in t.getmembers():
+            fo.write('%s\n' % m.path)
+    with open(join(tmp_dir, 'index.json'), 'w') as fo:
+        json.dump(info, fo, indent=2, sort_keys=True)
+    for fn in os.listdir(tmp_dir):
+        t.add(join(tmp_dir, fn), 'info/' + fn)
+    shutil.rmtree(tmp_dir)
+
+
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
     (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
@@ -291,7 +306,7 @@ pyver_re = re.compile(r'python\s+(\d.\d)')
 
 
 def conda_convert(file, output_dir=".", show_imports=False, platforms=None, force=False,
-                  verbose=False, quiet=True, dry_run=False):
+                  dependencies=None, verbose=False, quiet=True, dry_run=False):
     if not show_imports and platforms is None:
         sys.exit('Error: --platform option required for conda package conversion')
 
@@ -311,13 +326,17 @@ def conda_convert(file, output_dir=".", show_imports=False, platforms=None, forc
                           .read().decode('utf-8'))
         source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
 
+        if dependencies:
+            info['depends'].extend(dependencies)
+
         nonpy_unix = False
         nonpy_win = False
 
         if 'all' in platforms:
             platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
+        base_output_dir = output_dir
         for platform in platforms:
-            output_dir = join(output_dir, platform)
+            output_dir = join(base_output_dir, platform)
             if abspath(expanduser(join(output_dir, fn))) == file:
                 if not quiet:
                     print("Skipping %s/%s. Same as input file" % (platform, fn))
@@ -368,3 +387,5 @@ def conda_convert(file, output_dir=".", show_imports=False, platforms=None, forc
                 os.makedirs(output_dir)
             tar_update(t, join(output_dir, fn), file_map,
                 verbose=verbose, quiet=quiet)
+            with tarfile.open(join(output_dir, fn), 'w:bz2') as tf:
+                write_info(tf, info)

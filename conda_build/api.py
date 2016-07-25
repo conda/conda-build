@@ -238,14 +238,18 @@ This works by creating a conda.pth file in site-packages."""
     return execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
-def convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
-                  verbose=False, quiet=True, dry_run=False):
+def convert(package_files, output_dir=".", show_imports=False, platforms=None, force=False,
+                  dependencies=None, verbose=False, quiet=True, dry_run=False):
     """Convert changes a package from one platform to another.  It applies only to things that are
     portable, such as pure python, or header-only C/C++ libraries."""
     from .convert import conda_convert
-    if file_path.endswith('tar.bz2'):
-        return conda_convert(file_path)
-    elif file_path.endswith('.whl'):
+    if not platforms:
+        platforms = []
+    if package_files.endswith('tar.bz2'):
+        return conda_convert(package_files, output_dir=output_dir, show_imports=show_imports,
+                             platforms=platforms, force=force, verbose=verbose, quiet=quiet,
+                             dry_run=dry_run, dependencies=dependencies)
+    elif package_files.endswith('.whl'):
         raise RuntimeError('Conversion from wheel packages is not '
                             'implemented yet, stay tuned.')
     else:

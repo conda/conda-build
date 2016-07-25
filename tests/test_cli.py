@@ -10,6 +10,7 @@ import sys
 import pytest
 
 from conda.compat import PY3
+from conda.fetch import download
 
 from conda_build.utils import on_win, get_site_packages
 from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
@@ -124,7 +125,6 @@ def test_inspect_objects(testing_workdir):
 
 
 def test_develop(testing_env):
-    from conda.fetch import download
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")
     from conda_build.utils import tar_xf
@@ -140,9 +140,15 @@ def test_develop(testing_env):
 
 def test_convert(testing_workdir):
     # download a sample py2.7 package
-    # convert it to py3.5
-    # verify folder layout structure
-    raise NotImplementedError
+    f = 'https://repo.continuum.io/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
+    pkg_name = "affine-2.0.0-py27_0.tar.bz2"
+    download(f, pkg_name)
+    # convert it to all platforms
+    subprocess.check_call('conda convert -o converted --platform all {0}'.format(pkg_name).split())
+    platforms = ['osx-64', 'win-32', 'win-64', 'linux-64', 'linux-32']
+    for platform in platforms:
+        assert os.path.isdir(os.path.join('converted', platform))
+        assert pkg_name in os.listdir(os.path.join('converted', platform))
 
 
 def test_sign(testing_workdir):
