@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import os
+import subprocess
 import sys
 import tarfile
 
@@ -10,6 +11,7 @@ from conda.compat import StringIO, PY3
 from conda.config import subdir
 
 from conda_build.config import Config
+from conda_build.scripts import prepend_bin_path
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
@@ -47,6 +49,23 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, verbose=True)
+
+
+@pytest.fixture
+def testing_env(testing_workdir, request):
+    env_path = os.path.join(testing_workdir, 'env')
+
+    subprocess.check_call(['conda', 'create', '-yq', '-p', env_path, 'python'])
+    path_backup = os.environ['PATH']
+    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH']
+    os.chdir(env_path)
+
+    # cleanup is done by just cleaning up the testing_workdir
+    def reset_path():
+        os.environ['PATH'] = path_backup
+
+    request.addfinalizer(reset_path)
+    return env_path
 
 
 def package_has_file(package_path, file_path):

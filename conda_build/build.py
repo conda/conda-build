@@ -42,7 +42,7 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.scripts import create_entry_points, prepend_bin_path
-from conda_build.utils import rm_rf, _check_call, copy_into
+from conda_build.utils import rm_rf, _check_call, copy_into, on_win
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -50,7 +50,6 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 
-on_win = (sys.platform == 'win32')
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
@@ -473,7 +472,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                 if vcs_source and vcs_source not in specs:
                     vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
                     has_vcs_available = os.path.isfile(external.find_executable(vcs_executable,
-                                                                                config) or "")
+                                                                        config.build_prefix) or "")
                     if not has_vcs_available:
                         if (vcs_source != "mercurial" or
                                 not any(spec.startswith('python') and "3." in spec
@@ -811,7 +810,7 @@ def tests_failed(m, move_broken, broken_dir, config):
 
 def check_external(config):
     if sys.platform.startswith('linux'):
-        patchelf = external.find_executable('patchelf', config)
+        patchelf = external.find_executable('patchelf')
         if patchelf is None:
             sys.exit("""\
 Error:
@@ -929,7 +928,7 @@ def handle_anaconda_upload(path, config):
         print(no_upload_message)
         return
 
-    anaconda = find_executable('anaconda', config)
+    anaconda = find_executable('anaconda')
     if anaconda is None:
         print(no_upload_message)
         sys.exit('''

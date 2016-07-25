@@ -11,7 +11,8 @@ import pytest
 
 from conda.compat import PY3
 
-from .utils import testing_workdir, metadata_dir, subdir, package_has_file
+from conda_build.utils import on_win, get_site_packages
+from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
 
 
 def test_build():
@@ -122,11 +123,25 @@ def test_inspect_objects(testing_workdir):
     assert 'rpath: @loader_path' in out
 
 
-def test_develop(testing_workdir):
-    raise NotImplementedError
+def test_develop(testing_env):
+    from conda.fetch import download
+    f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
+    download(f, "conda_version_test.tar.gz")
+    from conda_build.utils import tar_xf
+    tar_xf("conda_version_test.tar.gz", testing_env)
+    extract_folder = 'conda_version_test-0.1.0-1'
+    subprocess.check_output('conda develop -p {0} {1}'.format(testing_env, extract_folder).split())
+    assert testing_env in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read()
+    subprocess.check_output('conda develop --uninstall -p {0} {1}'.format(testing_env,
+                                                                          extract_folder).split())
+    assert testing_env not in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read()
+
 
 
 def test_convert(testing_workdir):
+    # download a sample py2.7 package
+    # convert it to py3.5
+    # verify folder layout structure
     raise NotImplementedError
 
 

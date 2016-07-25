@@ -281,11 +281,15 @@ def mk_relative_osx(path, prefix, build_prefix=None):
         assert_relative_osx(path, prefix)
 
 
-def mk_relative_linux(f, prefix, rpaths=('lib',)):
+def mk_relative_linux(f, prefix, build_prefix=None, rpaths=('lib',)):
     path = join(prefix, f)
+    if build_prefix is None:
+        assert path.startswith(prefix + '/')
+    else:
+        prefix = build_prefix
     rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) if not
         d.startswith('/') else d for d in rpaths)
-    patchelf = external.find_executable('patchelf')
+    patchelf = external.find_executable('patchelf', prefix)
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 

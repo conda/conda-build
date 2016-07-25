@@ -93,7 +93,7 @@ def git_source(meta, recipe_dir, config):
     if not isdir(config.git_cache):
         os.makedirs(config.git_cache)
 
-    git = external.find_executable('git', config)
+    git = external.find_executable('git', config.build_prefix)
     if not git:
         sys.exit("Error: git is not installed")
     git_url = meta['git_url']
@@ -209,7 +209,7 @@ def hg_source(meta, config):
         stdout = FNULL
         stderr = FNULL
 
-    hg = external.find_executable('hg', config)
+    hg = external.find_executable('hg', config.build_prefix)
     if not hg:
         sys.exit('Error: hg not installed')
     hg_url = meta['hg_url']
@@ -250,7 +250,7 @@ def svn_source(meta, config):
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
 
-    svn = external.find_executable('svn', config)
+    svn = external.find_executable('svn', config.build_prefix)
     if not svn:
         sys.exit("Error: svn is not installed")
     svn_url = meta['svn_url']
@@ -360,7 +360,7 @@ def apply_patch(src_dir, path, config):
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
 
-    patch = external.find_executable('patch', config)
+    patch = external.find_executable('patch', config.build_prefix)
     if patch is None:
         sys.exit("""\
 Error:

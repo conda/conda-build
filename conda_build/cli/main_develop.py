@@ -11,6 +11,7 @@ from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build.cli.main_build import args_func
 from conda_build import api
+from conda_build.config import Config
 
 
 def main():
@@ -55,10 +56,11 @@ This works by creating a conda.pth file in site-packages."""
     p.set_defaults(func=execute)
 
     args = p.parse_args()
-    args_func(args, p)
+    config = Config(**args.__dict__)
+    args_func(args, p, config)
 
 
-def execute(args, parser):
+def execute(args, parser, config):
     prefix = get_prefix(args)
     api.develop(args.source, prefix=prefix, no_pth_file=args.no_pth_file,
                 build_ext=args.build_ext, clean=args.clean, uninstall=args.uninstall)

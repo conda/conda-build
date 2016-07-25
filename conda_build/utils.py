@@ -36,6 +36,7 @@ if sys.platform == 'win32':
 else:
     from conda.install import rm_rf  # NOQA
 
+on_win = (sys.platform == 'win32')
 
 def get_recipe_abspath(recipe):
     """resolve recipe dir as absolute path.  If recipe is a tarball rather than a folder,

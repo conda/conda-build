@@ -252,7 +252,7 @@ def meta_vars(meta, config):
         # On Windows, subprocess env can't handle unicode.
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-    if external.find_executable('git', config) and os.path.exists(git_dir):
+    if external.find_executable('git', config.build_prefix) and os.path.exists(git_dir):
         git_url = meta.get_value('source/git_url')
 
         if os.path.exists(git_url):

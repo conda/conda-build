@@ -48,7 +48,7 @@ def write_to_conda_pth(sp_dir, pkg_path):
 
         # only append pkg_path if it doesn't already exist in conda.pth
         if pkg_path + '\n' in pkgs_in_dev_mode:
-            print("path exits, skipping " + pkg_path)
+            print("path exists, skipping " + pkg_path)
         else:
             f.write(pkg_path + '\n')
             print("added " + pkg_path)
