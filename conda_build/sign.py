@@ -1,8 +1,13 @@
+from __future__ import absolute_import, division, print_function
+
 import base64
+import logging
 import os
-from os.path import isdir, join
+from os.path import isfile, join, isdir
 import shutil
 import sys
+
+from conda.signature import KEYS, KEYS_DIR, hash_file
 
 try:
     from Crypto import Random
@@ -16,7 +21,7 @@ Error: could not import Crypto (required for "conda sign").
     $ conda install -n root pycrypto
 """)
 
-from conda.signature import KEYS_DIR, hash_file
+log = logging.getLogger(__file__)
 
 
 def keygen(name, size=2048):
@@ -79,7 +84,35 @@ def sign(path, key_name_or_path=None):
 
 
 def sign_and_write(path, key_name_or_path):
+    if not key_name_or_path:
+        key_name_or_path = get_default_keyname()
     with open('%s.sig' % path, 'w') as fo:
         fo.write('%s ' % key_name_or_path)
         fo.write(sign(path, key_name_or_path))
         fo.write('\n')
+
+
+def verify(path):
+    """
+    Verify the file `path`, with signature `path`.sig, against the key
+    found under ~/.conda/keys/<key_name>.pub.  This function returns:
+      - True, if the signature is valid
+      - False, if the signature is invalid
+    It raises SignatureError when the signature file, or the public key
+    does not exist.
+    """
+    sig_path = path + '.sig'
+    if not isfile(sig_path):
+        log.error("signature does not exist: %s" % sig_path)
+        return False
+    with open(sig_path) as fi:
+        key_name, sig = fi.read().split()
+    if key_name not in KEYS:
+        key_path = join(KEYS_DIR, '%s.pub' % key_name)
+        if not isfile(key_path):
+            log.error("public key does not exist: %s" % key_path)
+            return False
+        KEYS[key_name] = RSA.importKey(open(key_path).read())
+    key = KEYS[key_name]
+    verifier = PKCS1_PSS.new(key)
+    return verifier.verify(hash_file(path), base64.b64decode(sig))
