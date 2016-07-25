@@ -38,6 +38,7 @@ else:
 
 on_win = (sys.platform == 'win32')
 
+
 def get_recipe_abspath(recipe):
     """resolve recipe dir as absolute path.  If recipe is a tarball rather than a folder,
     extract it and return the extracted directory.
