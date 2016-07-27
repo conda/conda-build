@@ -131,10 +131,23 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=Non
     return _setuptools_data
 
 
-def load_npm():
+def load_npm(package_fn='package.json'):
+    '''
+    Load npm package.json data
+    
+    for useage in a conda build template like::
+    
+        #meta.yaml
+        {% set npm = load_npm() %}
+        
+        package:
+          name: {{ npm['name'] }}
+          version: {{ npm['version'] }}
+    '''
+    
     # json module expects bytes in Python 2 and str in Python 3.
     mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
-    with open('package.json', **mode_dict) as pkg:
+    with open(package_fn, **mode_dict) as pkg:
         return json.load(pkg)
 
 
