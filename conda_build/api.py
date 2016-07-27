@@ -19,7 +19,7 @@ but only use those kwargs in config.  Config must change to support new features
 import sys as _sys
 
 # make the Config class available in the api namespace
-from conda_build.config import Config
+from conda_build.config import Config, get_or_merge_config
 
 
 def _ensure_list(recipe_arg):
@@ -31,13 +31,7 @@ def _ensure_list(recipe_arg):
 
 def render(recipe_path, config=None, **kwargs):
     from conda_build.render import render_recipe
-
-    if not config:
-        config = Config()
-
-    if kwargs:
-        config = Config(**kwargs)
-
+    config = get_or_merge_config(config, **kwargs)
     return render_recipe(recipe_path, no_download_source=config.no_download_source, config=config)
 
 
@@ -48,13 +42,7 @@ def output_yaml(metadata, file_path=None):
 
 def get_output_file_path(recipe_path, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe, bldpkg_path
-
-    if not config:
-        config = Config()
-
-    if kwargs:
-        config = Config(**kwargs)
-
+    config = get_or_merge_config(config, **kwargs)
     metadata, _, _ = render_recipe(recipe_path,
                                    no_download_source=no_download_source,
                                    config=config)
@@ -63,10 +51,7 @@ def get_output_file_path(recipe_path, no_download_source=False, config=None, **k
 
 def check(recipe_path, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe
-
-    if not config:
-        config = Config()
-
+    config = get_or_merge_config(config, **kwargs)
     metadata, need_source_download = render_recipe(recipe_path,
                                                    no_download_source=no_download_source,
                                                    config=config)
@@ -83,11 +68,7 @@ def build(recipe_path, post=None, need_source_download=True,
     from conda_build.render import render_recipe
     from conda_build.build import build_tree, get_build_index, update_index
 
-    if not config:
-        config = Config()
-
-    if kwargs:
-        config = Config(**kwargs)
+    config = get_or_merge_config(config, **kwargs)
 
     recipe_path = _ensure_list(recipe_path)
 
@@ -140,12 +121,7 @@ def test(package_path, move_broken=True, config=None, **kwargs):
     # This may cause problems if post-build version stuff is used, as we have no way to pass
     # metadata out of build.  This is read from an existing package input here.
 
-    if not config:
-        config = Config()
-
-    if kwargs:
-        config = Config(**kwargs)
-
+    config = get_or_merge_config(config, **kwargs)
     with TemporaryDirectory() as tmp:
         tar_xf(package_path, tmp)
         recipe_dir = os.path.join(tmp, 'info', 'recipe')
@@ -212,12 +188,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     sources into expected conda recipe format."""
     import importlib
 
-    if not config:
-        config = Config()
-
-    if kwargs:
-        config = Config(**kwargs)
-
+    config = get_or_merge_config(config, **kwargs)
     packages = _ensure_list(packages)
 
     module = importlib.import_module("conda_build.skeletons." + repo)

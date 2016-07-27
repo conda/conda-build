@@ -212,7 +212,7 @@ def execute(args, parser, config):
     else:
         api.build(args.recipe, post=args.post, build_only=args.build_only,
                    notest=args.notest, keep_old_work=args.keep_old_work,
-                   already_built=None)
+                   already_built=None, config=config)
 
 
 def args_func(args, p, config):

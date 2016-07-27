@@ -124,8 +124,8 @@ def render_recipe(recipe_path, config, no_download_source=False):
         if not config.dirty:
             rm_rf(config.work_dir)
 
-        assert not isdir(config.work_dir), ("Failed to clean work directory.  Please close open"
-                                    " programs/terminals/folders and try again.")
+            assert not isdir(config.work_dir), ("Failed to clean work directory.  Please close open"
+                                                " programs/terminals/folders and try again.")
 
         arg = find_recipe(recipe_path)
 

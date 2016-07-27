@@ -3,6 +3,7 @@ Module to store conda build settings.
 '''
 from __future__ import absolute_import, division, print_function
 
+from collections import namedtuple
 import math
 import os
 import sys
@@ -22,7 +23,13 @@ class Config(object):
 
     def __init__(self, *args, **kwargs):
         super(Config, self).__init__()
+        self.set_keys(**kwargs)
 
+    def _set_attribute_from_kwargs(self, kwargs, attr, default):
+        value = kwargs.get(attr, getattr(self, attr) if hasattr(self, attr) else default)
+        setattr(self, attr, value)
+
+    def set_keys(self, **kwargs):
         def env(lang, default):
             version = kwargs.get(lang)
             if not version:
@@ -44,26 +51,30 @@ class Config(object):
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
 
         self._build_id = kwargs.get('build_id', "")
-        self._prefix_length = kwargs.get("prefix_length", 255)
+        self._prefix_length = kwargs.get("prefix_length", 80)
         # set default value (not actually None)
         self._croot = kwargs.get('croot', None)
 
         # Default to short prefixes
         self.use_long_build_prefix = kwargs.get("use_long_build_prefix", False)
 
-        self.activate = kwargs.get('activate', True)
-        self.anaconda_upload = kwargs.get('anaconda_upload', cc.binstar_upload)
-        self.channel_urls = kwargs.get("channel_urls", ())
-        self.dirty = kwargs.get('dirty', False)
-        self.include_recipe = kwargs.get('include_recipe', True)
-        self.keep_old_work = kwargs.get('keep_old_work', False)
-        self.noarch = kwargs.get("noarch", False)
-        self.no_download_source = kwargs.get('no_download_source', False)
-        self.override_channels = kwargs.get("override_channels", False)
-        self.skip_existing = kwargs.get("skip_existing", False)
-        self.token = kwargs.get('token', None)
-        self.user = kwargs.get('user', None)
-        self.verbose = kwargs.get("verbose", True)
+        Setting = namedtuple("ConfigSetting", "name, default")
+        values = [Setting('activate', True),
+                  Setting('anaconda_upload', cc.binstar_upload),
+                  Setting('channel_urls', ()),
+                  Setting('dirty', False),
+                  Setting('include_recipe', True),
+                  Setting('keep_old_work', False),
+                  Setting('noarch', False),
+                  Setting('no_download_source', False),
+                  Setting('override_channels', False),
+                  Setting('skip_existing', False),
+                  Setting('token', None),
+                  Setting('user', None),
+                  Setting('verbose', False),
+                  ]
+        for value in values:
+            self._set_attribute_from_kwargs(kwargs, value.name, value.default)
 
     @property
     def croot(self):
@@ -240,6 +251,14 @@ class Config(object):
     def test_dir(self):
         """The temporary folder where test files are copied to, and where tests start execution"""
         return join(self.build_folder, 'test_tmp')
+
+
+def get_or_merge_config(config, **kwargs):
+    if not config:
+        config = Config()
+    if kwargs:
+        config.set_keys(**kwargs)
+    return config
 
 
 def show(config):

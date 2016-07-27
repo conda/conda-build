@@ -32,7 +32,7 @@ log = logging.getLogger(__file__)
 
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
 if sys.platform == 'win32':
-    from conda.install import move_to_trash as rm_rf  # NOQA
+    from conda.install import move_path_to_trash as rm_rf  # NOQA
 else:
     from conda.install import rm_rf  # NOQA
 
