@@ -6,15 +6,23 @@ from conda_build import api
 
 
 def test_inspect_linkages():
-    out_string = api.inspect_linkages("python")
-    assert 'openssl' in out_string
+    if sys.platform == 'win32':
+        with pytest.raises(SystemExit) as exc:
+            out_string = api.inspect_linkages("python")
+            assert 'conda inspect linkages is only implemented in Linux and OS X' in exc
+    else:
+        out_string = api.inspect_linkages("python")
+        assert 'openssl' in out_string
 
 
-@pytest.mark.skipif(sys.platform != "darwin",
-                   reason="object inspection only implemented for mac.")
 def test_inspect_objects():
-    out_string = api.inspect_objects("python")
-    assert 'rpath: @loader_path' in out_string
+    if sys.platform != 'darwin':
+        with pytest.raises(SystemExit) as exc:
+            out_string = api.inspect_objects("python")
+            assert 'conda inspect objects is only implemented in OS X' in exc
+    else:
+        out_string = api.inspect_objects("python")
+        assert 'rpath: @loader_path' in out_string
 
 
 def test_channel_installable():

@@ -34,6 +34,8 @@ class AnacondaClientArgs(object):
 def describe_root():
     tag = subprocess.check_output(["git", "describe", "--abbrev=0"],
                         cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))).rstrip()
+    if PY3:
+        tag = tag.decode("utf-8")
     return tag
 
 

@@ -107,9 +107,9 @@ def test_metapackage_metadata(testing_workdir):
                            ).split())
     test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-0.tar.bz2')
     assert os.path.isfile(test_path)
-    info = json.loads(package_has_file(test_path, 'info/index.json'))
+    info = json.loads(package_has_file(test_path, 'info/index.json').decode('utf-8'))
     assert info['license'] == 'BSD'
-    info = json.loads(package_has_file(test_path, 'info/about.json'))
+    info = json.loads(package_has_file(test_path, 'info/about.json').decode('utf-8'))
     assert info['home'] == 'http://abc.com'
     assert info['summary'] == 'wee'
 
