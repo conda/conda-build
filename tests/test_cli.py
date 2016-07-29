@@ -53,9 +53,9 @@ def test_render_output_build_path():
 def test_render_output_build_path_set_python():
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
-        version = 2.7
+        version = "2.7"
     else:
-        version = 3.5
+        version = "3.5"
 
     cmd = 'conda render --output {0} --python {1}'.format(
         os.path.join(metadata_dir, "python_run"), version)
