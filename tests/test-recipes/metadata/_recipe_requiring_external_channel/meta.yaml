@@ -1,0 +1,9 @@
+package:
+  name: requires_external_channel
+  version: 1.0
+
+requirements:
+  build:
+    # dummy package that exists only on conda-forge
+    - python
+    - conda-smithy
