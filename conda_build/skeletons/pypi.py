@@ -35,9 +35,18 @@ from conda_build.config import Config
 from conda_build.metadata import MetaData
 
 if PY3:
-    from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
+    try:
+        from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
+    except ImportError:
+        print(sys.path)
+        raise
 else:
-    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
+    try:
+        from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
+    except ImportError:
+        print(sys.path)
+        raise
+
 
 # https://gist.github.com/chrisguitarguy/2354951
 

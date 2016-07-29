@@ -125,20 +125,28 @@ def test_inspect_installable(testing_workdir):
 
 def test_inspect_linkages(testing_workdir):
     # get a package that has known object output
-    out = subprocess.check_output(("conda inspect linkages python").split())
-    if PY3:
-        out = out.decode('utf-8')
-    assert 'openssl' in out
+    if sys.platform == 'win32':
+        with pytest.raises(subprocess.CalledProcessError) as exc:
+            out = subprocess.check_output(("conda inspect linkages python").split())
+            assert 'conda inspect linkages is only implemented in Linux and OS X' in exc
+    else:
+        out = subprocess.check_output(("conda inspect linkages python").split())
+        if PY3:
+            out = out.decode('utf-8')
+        assert 'openssl' in out
 
 
-@pytest.mark.skipif(sys.platform != 'darwin',
-                    reason="Inspect objects only supported on Mac")
 def test_inspect_objects(testing_workdir):
     # get a package that has known object output
-    out = subprocess.check_output(("conda inspect objects python").split())
-    if PY3:
-        out = out.decode('utf-8')
-    assert 'rpath: @loader_path' in out
+    if sys.platform != 'darwin':
+        with pytest.raises(subprocess.CalledProcessError) as exc:
+            out = subprocess.check_output(("conda inspect objects python").split())
+            assert 'conda inspect objects is only implemented in OS X' in exc
+    else:
+        out = subprocess.check_output(("conda inspect objects python").split())
+        if PY3:
+            out = out.decode('utf-8')
+        assert 'rpath: @loader_path' in out
 
 
 def test_develop(testing_env):

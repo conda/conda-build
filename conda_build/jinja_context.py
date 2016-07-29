@@ -123,7 +123,8 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
         setuptools.setup = setuptools_setup
     if cd_to_work:
         os.chdir(cwd)
-    del sys.path[-1]
+    # remove our workdir from sys.path
+    del sys.path[0]
     return _setuptools_data if _setuptools_data else None
 
 
