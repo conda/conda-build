@@ -79,11 +79,15 @@ def unpack(meta, verbose=False):
         os.makedirs(WORK_DIR)
     if verbose:
         print("Extracting download")
+    if sys.platform.startswith('win'):
+        long_path_names = '\\\\?\\'
+    else:
+        long_path_names = ''
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
-            '.tar', 'tar.z')):
-        tar_xf(src_path, WORK_DIR)
+                '.tar', 'tar.z')):
+        tar_xf(src_path, long_path_names + WORK_DIR)
     elif src_path.lower().endswith('.zip'):
-        unzip(src_path, WORK_DIR)
+        unzip(src_path, long_path_names + WORK_DIR)
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
