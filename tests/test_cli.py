@@ -143,12 +143,12 @@ def test_develop(testing_env):
     from conda_build.utils import tar_xf
     tar_xf("conda_version_test.tar.gz", testing_env)
     extract_folder = 'conda_version_test-0.1.0-1'
+    cwd = os.getcwd()
     subprocess.check_output('conda develop -p {0} {1}'.format(testing_env, extract_folder).split())
-    assert testing_env in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read()
+    assert cwd in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read()
     subprocess.check_output('conda develop --uninstall -p {0} {1}'.format(testing_env,
                                                                           extract_folder).split())
-    assert testing_env not in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read()
-
+    assert (cwd not in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read())
 
 
 def test_convert(testing_workdir):

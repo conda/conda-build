@@ -9,16 +9,17 @@ from .utils import testing_workdir, test_config, metadata_dir, subdir
 
 def test_render_need_download(testing_workdir, test_config):
     # First get metadata with a recipe that is known to need a download:
+    metadata, need_download, need_reparse_in_env = api.render(
+        os.path.join(metadata_dir, "source_git_jinja2"),
+        config=test_config)
+    assert not need_download
+    assert metadata.meta["package"]["version"] == "1.20.2"
+
     with pytest.raises(SystemExit):
         metadata, need_download, need_reparse_in_env = api.render(
             os.path.join(metadata_dir, "source_git_jinja2"),
             config=test_config,
             no_download_source=True)
-    metadata, need_download, need_reparse_in_env = api.render(
-        os.path.join(metadata_dir, "source_git_jinja2"),
-        config=test_config)
-    assert not need_download
-    assert metadata.meta["package"]["version"] == "1.8.1"
 
 
 def test_render_yaml_output(testing_workdir, test_config):
@@ -57,5 +58,5 @@ def test_get_output_file_path_jinja2(testing_workdir, test_config):
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                           config=test_config)
     assert build_path == os.path.join(test_config.croot, subdir,
-                                      "conda-build-test-source-git-jinja2-1.8.1-"
-                                      "py{0}_0_gf3d51ae.tar.bz2".format(test_config.CONDA_PY))
+                                      "conda-build-test-source-git-jinja2-1.20.2-"
+                                      "py{0}_0_g262d444.tar.bz2".format(test_config.CONDA_PY))

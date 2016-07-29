@@ -145,9 +145,10 @@ def test_early_abort(capfd):
     assert "Hello World" in output
 
 def test_output_build_path_git_source(testing_workdir, test_config):
-    output = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"), config=test_config)
+    output = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
+                                      config=test_config)
     test_path = os.path.join(test_config.croot, cc.subdir,
-                        "conda-build-test-source-git-jinja2-1.8.1-py{}{}_0_gf3d51ae.tar.bz2".format(
+                     "conda-build-test-source-git-jinja2-1.20.2-py{}{}_0_g262d444.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     assert output == test_path
 

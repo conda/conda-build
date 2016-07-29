@@ -2,9 +2,6 @@ package:
   name: conda-build-test-build-msvc-compiler
   version: 1.0
 
-source:
-  path: ../../../../
-
 build:
   msvc_compiler: {{ environ.get('CONDATEST_MSVC_VER') }}
   script_env:

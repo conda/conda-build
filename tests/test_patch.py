@@ -22,6 +22,7 @@ def test_patch_strip_level(testing_workdir):
     assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 2
     os.chdir(folders[2])
     assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 3
+    os.chdir(testing_workdir)
 
 
 def test_patch(testing_workdir, test_config):

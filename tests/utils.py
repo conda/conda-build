@@ -1,5 +1,7 @@
 from contextlib import contextmanager
+import glob
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -25,7 +27,7 @@ def is_valid_dir(parent_dir, dirname):
     return valid
 
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def testing_workdir(tmpdir, request):
     """ Create a workdir in a safe temporary folder; cd into dir above before test, cd out after
 
@@ -36,29 +38,33 @@ def testing_workdir(tmpdir, request):
     saved_path = os.getcwd()
 
     tmpdir.chdir()
-    workdir = tmpdir.mkdir('mysubdir')
+    # temporary folder for profiling output, if any
+    tmpdir.mkdir('prof')
 
     def return_to_saved_path():
+        if os.path.isdir(os.path.join(saved_path, 'prof')):
+            files = tmpdir.join('prof').listdir('*.prof')
+            for f in files:
+                f.rename(os.path.join(saved_path, 'prof', f.basename))
         os.chdir(saved_path)
 
     request.addfinalizer(return_to_saved_path)
 
-    return str(workdir)
+    return str(tmpdir)
 
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, verbose=True)
 
 
-@pytest.fixture
+@pytest.fixture(scope='function')
 def testing_env(testing_workdir, request):
     env_path = os.path.join(testing_workdir, 'env')
 
     subprocess.check_call(['conda', 'create', '-yq', '-p', env_path, 'python'])
     path_backup = os.environ['PATH']
     os.environ['PATH'] = prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH']
-    os.chdir(env_path)
 
     # cleanup is done by just cleaning up the testing_workdir
     def reset_path():

@@ -349,7 +349,6 @@ def handle_config_version(ms, ver, dep_type='run'):
 
 
 class MetaData(object):
-
     def __init__(self, path, config=None):
 
         if not config:
