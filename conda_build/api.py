@@ -225,7 +225,7 @@ def convert(package_files, output_dir=".", show_imports=False, platforms=None, f
         raise RuntimeError('Conversion from wheel packages is not '
                             'implemented yet, stay tuned.')
     else:
-        raise RuntimeError("cannot convert: %s" % file)
+        raise RuntimeError("cannot convert: %s" % package_files)
 
 
 def test_installable(channel='defaults'):
