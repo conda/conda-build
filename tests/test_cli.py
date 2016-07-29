@@ -35,7 +35,7 @@ def test_build_add_channel():
 
 
 def test_render_output_build_path():
-    cmd = 'conda render --output {0} --python {1}.{2}'.format(
+    cmd = 'conda render --output {0}'.format(
         os.path.join(metadata_dir, "python_run"),
         sys.version_info.major, sys.version_info.minor)
     process = subprocess.Popen(cmd.split(),
@@ -50,8 +50,29 @@ def test_render_output_build_path():
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
+def test_render_output_build_path_set_python():
+    # build the other major thing, whatever it is
+    if sys.version_info.major == 3:
+        version = 2.7
+    else:
+        version = 3.5
+
+    cmd = 'conda render --output {0} --python {1}'.format(
+        os.path.join(metadata_dir, "python_run"), version)
+    process = subprocess.Popen(cmd.split(),
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=os.environ)
+    output, error = process.communicate()
+    test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+                                      version.split('.')[0], version.split('.')[1])
+    if PY3:
+        output = output.decode("UTF-8")
+        error = error.decode("UTF-8")
+    assert os.path.basename(output.rstrip()) == test_path, error
+
+
 def test_build_output_build_path():
-    cmd = 'conda build --output {0} --python {1}.{2}'.format(
+    cmd = 'conda build --output {0}'.format(
         os.path.join(metadata_dir, "python_run"),
         sys.version_info.major, sys.version_info.minor)
     process = subprocess.Popen(cmd.split(),
