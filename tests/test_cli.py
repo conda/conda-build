@@ -74,7 +74,7 @@ def test_metapackage(testing_workdir):
     subprocess.check_call(('conda metapackage metapackage_test 1.0 '
                            '-d bzip2 '
                            ).split())
-    test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-1.tar.bz2')
+    test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-0.tar.bz2')
     assert os.path.isfile(test_path)
 
 
