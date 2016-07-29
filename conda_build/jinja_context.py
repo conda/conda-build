@@ -90,6 +90,7 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
     import distutils.core
 
     cd_to_work = False
+    path_backup = sys.path
 
     if from_recipe_dir and recipe_dir:
         setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
@@ -124,7 +125,7 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
     if cd_to_work:
         os.chdir(cwd)
     # remove our workdir from sys.path
-    del sys.path[0]
+    sys.path = path_backup
     return _setuptools_data if _setuptools_data else None
 
 
