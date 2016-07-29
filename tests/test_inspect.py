@@ -10,7 +10,7 @@ def test_inspect_linkages():
     assert 'openssl' in out_string
 
 
-pytest.mark.skipif(sys.platform != "darwin",
+@pytest.mark.skipif(sys.platform != "darwin",
                    reason="object inspection only implemented for mac.")
 def test_inspect_objects():
     out_string = api.inspect_objects("python")
