@@ -42,7 +42,7 @@ def set_language_env_vars(args, parser, config, execute=None):
             for ver in versions[:]:
                 setattr(args, lang, [str(ver)])
                 if execute:
-                    execute(args, parser)
+                    execute(args, parser, config)
                 # This is necessary to make all combinations build.
                 setattr(args, lang, versions)
             return
