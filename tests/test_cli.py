@@ -126,6 +126,8 @@ def test_inspect_installable(testing_workdir):
 def test_inspect_linkages(testing_workdir):
     # get a package that has known object output
     out = subprocess.check_output(("conda inspect linkages python").split())
+    if PY3:
+        out = out.decode('utf-8')
     assert 'openssl' in out
 
 
@@ -134,6 +136,8 @@ def test_inspect_linkages(testing_workdir):
 def test_inspect_objects(testing_workdir):
     # get a package that has known object output
     out = subprocess.check_output(("conda inspect objects python").split())
+    if PY3:
+        out = out.decode('utf-8')
     assert 'rpath: @loader_path' in out
 
 

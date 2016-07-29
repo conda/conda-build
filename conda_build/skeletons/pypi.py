@@ -34,11 +34,10 @@ from conda_build.build import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 
-if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
-else:
+if PY3:
     from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
-
+else:
+    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
 
 # https://gist.github.com/chrisguitarguy/2354951
 

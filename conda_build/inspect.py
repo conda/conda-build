@@ -251,7 +251,8 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
 
     else:
         raise ValueError("Unrecognized groupby: %s" % groupby)
-
+    if hasattr(output_string, 'decode'):
+        output_string = output_string.decode('utf-8')
     return output_string
 
 
@@ -287,4 +288,6 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
             info.append(f_info)
 
         output_string += print_object_info(info, groupby)
+    if hasattr(output_string, 'decode'):
+        output_string = output_string.decode('utf-8')
     return output_string

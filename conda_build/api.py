@@ -186,13 +186,14 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
                 config=None, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
-    import importlib
 
     config = get_or_merge_config(config, **kwargs)
     packages = _ensure_list(packages)
 
-    module = importlib.import_module("conda_build.skeletons." + repo)
-    func_args = module.skeletonize.func_code.co_varnames
+    module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
+                                fromlist=[repo]),
+                     repo)
+    func_args = module.skeletonize.__code__.co_varnames
     kwargs = {name: value for name, value in kwargs.items() if name in func_args}
     skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
                                             recursive=recursive, config=config, **kwargs)
