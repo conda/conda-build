@@ -1,0 +1,14 @@
+{% set data = load_npm('../../test-npm-package/package.json', recipe_dir=True, env=environ) %}
+
+package:
+  name: test-jinja-npm
+  version: {{ data.get('version') }}
+
+source:
+  path: ../../test-npm-package
+
+requirements:
+  build:
+    - python
+    - nodejs
+

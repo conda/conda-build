@@ -131,7 +131,7 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=Non
     return _setuptools_data
 
 
-def load_npm(package_fn='package.json'):
+def load_npm(package_fn='package.json', recipe_dir=False, env=None):
     '''
     Load npm package.json data
     
@@ -147,6 +147,18 @@ def load_npm(package_fn='package.json'):
     
     # json module expects bytes in Python 2 and str in Python 3.
     mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+
+    if env is None:
+        env = get_environ()
+
+    if recipe_dir:
+        dirname = env.get('RECIPE_DIR', '.')
+    else:
+        dirname = env.get('SRC_DIR', '.') 
+
+    package_fn = os.path.join(dirname, package_fn)
+
+
     with open(package_fn, **mode_dict) as pkg:
         return json.load(pkg)
 
