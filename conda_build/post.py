@@ -153,7 +153,7 @@ def compile_missing_pyc():
                 break
     if need_compile:
         print('compiling .pyc files...')
-        utils._check_call([config.build_python, '-Wi',
+        call([config.build_python, '-Wi',
                            join(stdlib_dir, 'compileall.py'),
                            '-q', '-x', 'port_v3', sp_dir])
 
