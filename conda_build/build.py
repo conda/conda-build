@@ -457,7 +457,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
-            if need_source_download or need_reparse_in_env:
+            if need_reparse_in_env:
                 print("    (actual version deferred until further download or env creation)")
 
             rm_rf(config.build_prefix)

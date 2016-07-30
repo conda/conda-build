@@ -38,13 +38,15 @@ class Config(object):
                     lang = 'py'
                 var = 'CONDA_' + lang.upper()
                 version = os.getenv(var) if os.getenv(var) else default
+            elif isinstance(version, list) and len(version) == 1:
+                version = version[0]
             return version
 
         self.CONDA_PERL = env('perl', '5.18.2')
         self.CONDA_LUA = env('lua', '5.2')
         self.CONDA_R = env('r', '3.2.2')
         self.CONDA_PY = int(env('python', "%s%s" % (sys.version_info.major, sys.version_info.minor))
-                            .replace('.', ''))
+                        .replace('.', ''))
 
         self.CONDA_NPY = kwargs.get('numpy', os.getenv("CONDA_NPY"))
         if self.CONDA_NPY:
