@@ -541,7 +541,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             print("Package:", m.dist())
 
             src_dir = source.get_dir()
-            if isdir(source.WORK_DIR) and os.listdir(src_dir):
+            if isdir(source.WORK_DIR):
                 print("source tree in:", src_dir)
             else:
                 print("no source - creating empty work folder")
