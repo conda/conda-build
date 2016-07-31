@@ -571,3 +571,19 @@ def test_requirements_txt_for_run_reqs():
     cmd = 'conda build --no-anaconda-upload -c conda-forge {}'.format(os.path.join(metadata_dir,
                                                                     "_requirements_txt_run_reqs"))
     subprocess.check_call(cmd.split())
+
+
+def test_compileall_compiles_all_good_files():
+    output_file = os.path.join(sys.prefix, "conda-bld", subdir,
+                               'test_compileall-1.0-py27_0.tar.bz2')
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                        "_compile-test"))
+    subprocess.check_call(cmd.split())
+    good_files = ['f1.py', 'f3.py']
+    bad_file = 'f2_bad.py'
+    for f in good_files:
+        assert package_has_file(output_file, f)
+        # look for the compiled file also
+        assert package_has_file(output_file, f + 'c')
+    assert package_has_file(output_file, bad_file)
+    assert not package_has_file(output_file, bad_file + 'c')

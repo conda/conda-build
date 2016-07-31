@@ -141,28 +141,23 @@ def rm_py_along_so():
                         os.unlink(join(root, name + ext))
 
 
-def compile_missing_pyc():
-    sp_dir = environ.get_sp_dir()
-    stdlib_dir = environ.get_stdlib_dir()
+def compile_missing_pyc(files):
 
     need_compile = False
-    for root, dirs, files in os.walk(sp_dir):
-        for fn in files:
-            if fn.endswith('.py') and fn + 'c' not in files:
-                need_compile = True
-                break
+    for fn in files:
+        if fn.endswith('.py') and fn + 'c' not in files:
+            need_compile = True
+            break
     if need_compile:
         print('compiling .pyc files...')
-        call([config.build_python, '-Wi',
-                           join(stdlib_dir, 'compileall.py'),
-                           '-q', '-x', 'port_v3', sp_dir])
+        call([config.build_python, '-Wi', '-m', 'py_compile'] + files,
+             cwd=config.build_prefix)
 
 
 def post_process(files, preserve_egg_dir=False):
     remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
-    if config.CONDA_PY < 30:
-        compile_missing_pyc()
+    compile_missing_pyc(files)
 
 
 def find_lib(link, path=None):
