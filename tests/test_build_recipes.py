@@ -587,3 +587,17 @@ def test_compileall_compiles_all_good_files():
         assert package_has_file(output_file, f + 'c')
     assert package_has_file(output_file, bad_file)
     assert not package_has_file(output_file, bad_file + 'c')
+
+
+def test_rendering_env_var():
+    """
+    This environment variable is provided for users to selectively change what they do
+    during the rendering phase, regarding their recipe.  For example, only part of
+    setup.py might be processed.
+    """
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                        "_source_setuptools_env_var"))
+    out = subprocess.check_output(cmd.split())
+    if PY3:
+        out = out.decode("UTF-8")
+    assert "Rendering environment variable set OK" in out
