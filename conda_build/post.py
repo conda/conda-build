@@ -148,7 +148,7 @@ def coerce_pycache_to_old_style(files):
     Since Conda allows only one Python install in a given prefix, there is no reason
     for these additional suffixes.  Newer Python will find these pyc files without issue.
     """
-    for f in files:
+    for f in [f for f in files if os.path.isfile(f) and not f.endswith('pyc')]:
         if '/' in f:
             folder = os.path.join(os.path.dirname(f), '__pycache__')
         else:
@@ -158,21 +158,17 @@ def coerce_pycache_to_old_style(files):
                                               sys.version_info.minor))
         if os.path.isfile(fname):
             os.rename(fname, f + 'c')
+        if os.path.isdir(folder):
+            os.rmdir(folder)
 
 
-def compile_missing_pyc(files):
-
-    need_compile = False
-    for fn in files:
-        if fn.endswith('.py') and fn + 'c' not in files:
-            need_compile = True
-            break
-    if need_compile:
+def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_python):
+    compile_files = [f for f in files if f.endswith('py') and f + 'c' not in files]
+    if compile_files:
         print('compiling .pyc files...')
-        call([config.build_python, '-Wi', '-m', 'py_compile'] + files,
-             cwd=config.build_prefix)
+        call([python_exe, '-Wi', '-m', 'py_compile'] + compile_files, cwd=cwd)
         if PY3:
-            coerce_pycache_to_old_style(files)
+            coerce_pycache_to_old_style(compile_files)
 
 
 def post_process(files, preserve_egg_dir=False):
