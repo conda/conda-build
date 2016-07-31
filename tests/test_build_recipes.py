@@ -585,3 +585,22 @@ def test_rendering_env_var():
     if PY3:
         out = out.decode("UTF-8")
     assert "Rendering environment variable set OK" in out
+
+
+def test_condarc_channel_available():
+    with TemporaryDirectory() as tmp:
+        rcfile = os.path.join(tmp, ".condarc")
+        with open(rcfile, 'w') as f:
+            f.write("channels:\n")
+            f.write("  - conda-forge\n")
+            f.write("  - defaults\n")
+        env = os.environ.copy()
+        env["CONDARC"] = rcfile
+        cmd = "conda build {}/_condarc_channel".format(metadata_dir)
+        subprocess.check_call(cmd.split(), env=env)
+        # ensure that the test fails without the channel
+        with open(rcfile, 'w') as f:
+            f.write("channels:\n")
+            f.write("  - defaults\n")
+        with pytest.raises(subprocess.CalledProcessError):
+            subprocess.check_call(cmd.split(), env=env)
