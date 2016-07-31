@@ -141,25 +141,30 @@ def rm_py_along_so():
                         os.unlink(join(root, name + ext))
 
 
-def coerce_pycache_to_old_style(files):
+def coerce_pycache_to_old_style(files, cwd):
     """
     For the sake of simplicity, remove the filename additions, like .cpython-35.pyc
 
     Since Conda allows only one Python install in a given prefix, there is no reason
     for these additional suffixes.  Newer Python will find these pyc files without issue.
     """
-    for f in [f for f in files if os.path.isfile(f) and not f.endswith('pyc')]:
+    for f in files:
+        if not os.path.exists(f):
+            f = os.path.join(cwd, f)
+        if not os.path.isfile(f) or not f.endswith('py'):
+            continue
         if '/' in f:
-            folder = os.path.join(os.path.dirname(f), '__pycache__')
+            folder = os.path.join(cwd, os.path.dirname(f), '__pycache__')
         else:
-            folder = '__pycache__'
+            folder = os.path.join(cwd, '__pycache__')
         fname = os.path.join(folder, os.path.splitext(os.path.basename(f))[0] +
                  '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
                                               sys.version_info.minor))
         if os.path.isfile(fname):
             os.rename(fname, f + 'c')
-        if os.path.isdir(folder):
-            os.rmdir(folder)
+    for root, folders, files in os.walk(cwd):
+        if root.endswith("__pycache__") and not files:
+            os.rmdir(root)
 
 
 def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_python):
@@ -168,7 +173,7 @@ def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_
         print('compiling .pyc files...')
         call([python_exe, '-Wi', '-m', 'py_compile'] + compile_files, cwd=cwd)
         if PY3:
-            coerce_pycache_to_old_style(compile_files)
+            coerce_pycache_to_old_style(compile_files, cwd=cwd)
 
 
 def post_process(files, preserve_egg_dir=False):

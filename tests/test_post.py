@@ -50,7 +50,7 @@ def test_coerce_pycache_to_old_style():
         os.chdir(tmp)
         for root, dirs, files in os.walk(tmp):
             fs = [os.path.join(root, _) for _ in files]
-            post.coerce_pycache_to_old_style(fs)
+            post.coerce_pycache_to_old_style(fs, cwd=tmp)
         try:
             assert os.path.isfile(os.path.join(tmp, 'test.pyc')), os.listdir(tmp)
             assert os.path.isfile(os.path.join(tmp, 'testdir', 'test.pyc')), \
