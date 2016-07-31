@@ -575,7 +575,8 @@ def test_requirements_txt_for_run_reqs():
 
 def test_compileall_compiles_all_good_files():
     output_file = os.path.join(sys.prefix, "conda-bld", subdir,
-                               'test_compileall-1.0-py27_0.tar.bz2')
+                               'test_compileall-1.0-py{0}{1}_0.tar.bz2'.format(
+                                    sys.version_info.major, sys.version_info.minor))
     cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
                                                         "_compile-test"))
     subprocess.check_call(cmd.split())
@@ -584,9 +585,21 @@ def test_compileall_compiles_all_good_files():
     for f in good_files:
         assert package_has_file(output_file, f)
         # look for the compiled file also
-        assert package_has_file(output_file, f + 'c')
+        if PY3:
+            assert package_has_file(output_file, os.path.join(
+                os.path.join('__pycache__', os.path.splitext(f)[0] +
+                             '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
+                                                          sys.version_info.minor))))
+        else:
+            assert package_has_file(output_file, f + 'c')
     assert package_has_file(output_file, bad_file)
-    assert not package_has_file(output_file, bad_file + 'c')
+    if PY3:
+            assert not package_has_file(output_file, os.path.join(
+                os.path.join('__pycache__', os.path.splitext(bad_file)[0] +
+                             '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
+                                                          sys.version_info.minor))))
+    else:
+        assert not package_has_file(output_file, bad_file + 'c')
 
 
 def test_rendering_env_var():
