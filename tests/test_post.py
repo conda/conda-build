@@ -49,11 +49,12 @@ def test_coerce_pycache_to_old_style():
 
         os.chdir(tmp)
         for root, dirs, files in os.walk(tmp):
-            fs = [os.path.join(root, f) for f in files]
+            fs = [os.path.join(root, _) for _ in files]
             post.coerce_pycache_to_old_style(fs)
         try:
             assert os.path.isfile(os.path.join(tmp, 'test.pyc')), os.listdir(tmp)
-            assert os.path.isfile(os.path.join(tmp, 'testdir', 'test.pyc')), os.listdir(os.path.join(tmp, 'testdir'))
+            assert os.path.isfile(os.path.join(tmp, 'testdir', 'test.pyc')), \
+                os.listdir(os.path.join(tmp, 'testdir'))
             for root, dirs, files in os.walk(tmp):
                 assert '__pycache__' not in dirs
         except:
