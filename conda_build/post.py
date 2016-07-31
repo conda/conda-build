@@ -22,7 +22,7 @@ from conda_build import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
-from conda.compat import lchmod
+from conda.compat import lchmod, PY3
 from conda.misc import walk_prefix
 from conda.utils import md5_file
 
@@ -141,6 +141,25 @@ def rm_py_along_so():
                         os.unlink(join(root, name + ext))
 
 
+def coerce_pycache_to_old_style(files):
+    """
+    For the sake of simplicity, remove the filename additions, like .cpython-35.pyc
+
+    Since Conda allows only one Python install in a given prefix, there is no reason
+    for these additional suffixes.  Newer Python will find these pyc files without issue.
+    """
+    for f in files:
+        if '/' in f:
+            folder = os.path.join(os.path.dirname(f), '__pycache__')
+        else:
+            folder = '__pycache__'
+        fname = os.path.join(folder, os.path.splitext(os.path.basename(f))[0] +
+                 '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
+                                              sys.version_info.minor))
+        if os.path.isfile(fname):
+            os.rename(fname, f + 'c')
+
+
 def compile_missing_pyc(files):
 
     need_compile = False
@@ -152,6 +171,8 @@ def compile_missing_pyc(files):
         print('compiling .pyc files...')
         call([config.build_python, '-Wi', '-m', 'py_compile'] + files,
              cwd=config.build_prefix)
+        if PY3:
+            coerce_pycache_to_old_style(files)
 
 
 def post_process(files, preserve_egg_dir=False):

@@ -585,21 +585,9 @@ def test_compileall_compiles_all_good_files():
     for f in good_files:
         assert package_has_file(output_file, f)
         # look for the compiled file also
-        if PY3:
-            assert package_has_file(output_file, os.path.join(
-                os.path.join('__pycache__', os.path.splitext(f)[0] +
-                             '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
-                                                          sys.version_info.minor))))
-        else:
-            assert package_has_file(output_file, f + 'c')
+        assert package_has_file(output_file, f + 'c')
     assert package_has_file(output_file, bad_file)
-    if PY3:
-            assert not package_has_file(output_file, os.path.join(
-                os.path.join('__pycache__', os.path.splitext(bad_file)[0] +
-                             '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
-                                                          sys.version_info.minor))))
-    else:
-        assert not package_has_file(output_file, bad_file + 'c')
+    assert not package_has_file(output_file, bad_file + 'c')
 
 
 def test_rendering_env_var():
