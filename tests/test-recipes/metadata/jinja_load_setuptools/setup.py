@@ -9,7 +9,7 @@ def version_func():
 
 
 setup(
-    name="conda-build-load_setuptools",
+    name="conda-build-load_setup_py_data",
     version=version_func(),
     author="Continuum Analytics, Inc.",
     url="https://github.com/conda/conda-build",

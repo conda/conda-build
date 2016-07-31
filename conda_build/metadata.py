@@ -748,7 +748,7 @@ class MetaData(object):
 
     def uses_setuptools_in_meta(self):
         with open(self.meta_path) as f:
-            return "load_setuptools" in f.read()
+            return "load_setup_py_data" in f.read()
 
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"

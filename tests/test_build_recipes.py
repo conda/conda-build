@@ -571,3 +571,28 @@ def test_requirements_txt_for_run_reqs():
     cmd = 'conda build --no-anaconda-upload -c conda-forge {}'.format(os.path.join(metadata_dir,
                                                                     "_requirements_txt_run_reqs"))
     subprocess.check_call(cmd.split())
+
+
+def test_rendering_env_var():
+    """
+    This environment variable is provided for users to selectively change what they do
+    during the rendering phase, regarding their recipe.  For example, only part of
+    setup.py might be processed.
+    """
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                        "_source_setuptools_env_var"))
+    out = subprocess.check_output(cmd.split())
+    if PY3:
+        out = out.decode("UTF-8")
+    assert "Rendering environment variable set OK" in out
+
+
+def test_render_setup_py_old_funcname():
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                        "_source_setuptools"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in error

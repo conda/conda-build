@@ -1,4 +1,4 @@
-{% set data = load_setuptools(from_recipe_dir=True) %}
+{% set data = load_setup_py_data(from_recipe_dir=True) %}
 
 package:
   name: test-jinja-setuptools
