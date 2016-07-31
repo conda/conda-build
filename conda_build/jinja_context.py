@@ -79,7 +79,7 @@ class FilteredLoader(jinja2.BaseLoader):
         return select_lines(contents, ns_cfg()), filename, uptodate
 
 
-def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+def load_setup_py_data(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     unload_modules=None, fail_on_error=False):
     _setuptools_data = {}
 
@@ -121,7 +121,7 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=Non
         exec(code, ns, ns)
         distutils.core.setup = distutils_setup
         setuptools.setup = setuptools_setup
-    # this happens if setup.py is used in load_setuptools, but source is not yet downloaded
+    # this happens if setup.py is used in load_setup_py_data, but source is not yet downloaded
     except:
         raise
     finally:
@@ -129,6 +129,15 @@ def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=Non
             os.chdir(cwd)
     del sys.path[-1]
     return _setuptools_data
+
+
+def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+                    unload_modules=None, fail_on_error=False):
+    log.warn("Deprecation notice: the load_setuptools function has been renamed to "
+             "load_setup_py_data.  load_setuptools will be removed in a future release.")
+    return load_setup_py_data(setup_file=setup_file, from_recipe_dir=from_recipe_dir,
+                              recipe_dir=recipe_dir, unload_modules=unload_modules,
+                              fail_on_error=fail_on_error)
 
 
 def load_npm():
@@ -149,7 +158,10 @@ def context_processor(initial_metadata, recipe_dir):
     environ = dict(os.environ)
     environ.update(get_environ(m=initial_metadata))
 
-    ctx.update(load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
-               load_npm=load_npm,
-               environ=environ)
+    ctx.update(
+        load_setup_py_data=partial(load_setup_py_data, recipe_dir=recipe_dir),
+        # maintain old alias for backwards compatibility:
+        load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
+        load_npm=load_npm,
+        environ=environ)
     return ctx

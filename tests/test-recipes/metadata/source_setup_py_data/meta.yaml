@@ -7,11 +7,12 @@
 {% set data = load_setup_py_data() %}
 
 package:
-  name: conda-build-test-source-setuptools
+  name: conda-build-test-source-setup-py-data
   version: {{ data.get('version') }}
 
 source:
-  path: ../../test-package
+  git_url: ../../../../
+  git_tag: 1.21.5
 
 requirements:
   build:

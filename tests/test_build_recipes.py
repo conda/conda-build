@@ -587,6 +587,17 @@ def test_rendering_env_var():
     assert "Rendering environment variable set OK" in out
 
 
+def test_render_setup_py_old_funcname():
+    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                        "_source_setuptools"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in error
+
+
 def test_condarc_channel_available():
     with TemporaryDirectory() as tmp:
         rcfile = os.path.join(tmp, ".condarc")
