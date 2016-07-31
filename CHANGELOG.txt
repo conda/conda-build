@@ -1,3 +1,26 @@
+2016-07-31 1.21.8:
+------------------
+
+Bug fixes:
+----------
+
+* Fix --source argument to build - was building when should only download source.  #1152
+* Don't try to create work folder when it exists (but is empty) #1153
+* Fix a logic error with need_source_download not existing #1148
+
+New Things:
+-----------
+
+* Don't exit on compileall failure #1146
+* Add CONDA_BUILD_RENDERING environment variable that is set during recipe rendering #1154
+
+Contributors:
+-------------
+* @daler
+* @minrk
+* @msarahan
+
+
 2016-07-22 1.21.7:
 ------------------
 
