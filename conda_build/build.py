@@ -344,10 +344,20 @@ def get_build_index(clear_cache=True, arg_channels=None):
                      prepend=not override_channels)
 
 
-def create_env(prefix, specs, clear_cache=True):
+def create_env(prefix, specs, clear_cache=True, debug=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
+    if not debug:
+        # This squelches a ton of conda output that is not hugely relevant
+        logging.getLogger("conda.install").setLevel(logging.ERROR)
+        logging.getLogger("fetch").setLevel(logging.WARN)
+        logging.getLogger("print").setLevel(logging.WARN)
+        logging.getLogger("progress").setLevel(logging.WARN)
+        logging.getLogger("dotupdate").setLevel(logging.WARN)
+        logging.getLogger("stdoutlog").setLevel(logging.WARN)
+        logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+
     specs = list(specs)
     for feature, value in feature_list:
         if value:
@@ -370,7 +380,7 @@ def create_env(prefix, specs, clear_cache=True):
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
-        plan.execute_actions(actions, index, verbose=verbose)
+        plan.execute_actions(actions, index, verbose=debug)
 
         os.environ['PATH'] = old_path
 
@@ -420,7 +430,7 @@ def rm_pkgs_cache(dist):
 
 def build(m, post=None, include_recipe=True, keep_old_work=False,
           need_source_download=True, need_reparse_in_env=False,
-          verbose=True, dirty=False, activate=True):
+          verbose=True, dirty=False, activate=True, debug=False):
     '''
     Build the package with the specified metadata.
 
@@ -503,7 +513,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
                                             "your mercurial actions outside of your build script.")
             # Display the name only
             # Version number could be missing due to dependency on source info.
-            create_env(config.build_prefix, specs)
+            create_env(config.build_prefix, specs, debug=debug)
 
             if need_source_download:
                 # Execute any commands fetching the source (e.g., git) in the _build environment.
@@ -677,7 +687,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             shutil.rmtree(old_WORK_DIR, ignore_errors=True)
 
 
-def test(m, move_broken=True, activate=True):
+def test(m, move_broken=True, activate=True, debug=False):
     '''
     Execute any test scripts for the given package.
 
@@ -739,7 +749,7 @@ def test(m, move_broken=True, activate=True):
             # not sure how this shakes out
             specs += ['lua %s*' % environ.get_lua_ver()]
 
-        create_env(config.test_prefix, specs)
+        create_env(config.test_prefix, specs, debug=debug)
         env = dict(os.environ.copy())
         env.update(environ.get_dict(m, prefix=config.test_prefix))
 
