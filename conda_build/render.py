@@ -123,6 +123,8 @@ def reparse(metadata):
 
 
 def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
+    if not isdir(config.croot):
+        os.makedirs(config.croot)
     with Locked(config.croot):
         if not dirty:
             if sys.platform == 'win32':
