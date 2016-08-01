@@ -633,3 +633,22 @@ def test_condarc_channel_available():
             f.write("  - defaults\n")
         with pytest.raises(subprocess.CalledProcessError):
             subprocess.check_call(cmd.split(), env=env)
+
+
+def test_debug_build_option():
+    cmd = 'conda build --debug --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
+                                                        "jinja2"))
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "DEBUG:" in error
+
+    cmd = cmd.replace("--debug ", "")
+    process = subprocess.Popen(cmd.split(),
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = process.communicate()
+    output = output.decode('utf-8')
+    error = error.decode('utf-8')
+    assert "DEBUG:" not in error
