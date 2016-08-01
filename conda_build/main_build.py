@@ -139,7 +139,11 @@ different sets of packages."""
         help="do not display progress bar",
         dest='activate',
     )
-
+    p.add_argument(
+        '--debug',
+        action='store_true',
+        help="show debugging output from conda and conda-build",
+    )
     add_parser_channels(p)
     p.set_defaults(func=execute)
 
@@ -237,7 +241,7 @@ def execute(args, parser):
     # change globals in build module, see comment there as well
     build.channel_urls = args.channel or ()
     build.override_channels = args.override_channels
-    build.verbose = not args.quiet
+    build.verbose = not args.quiet or args.debug
 
     if on_win:
         try:
@@ -326,7 +330,7 @@ def execute(args, parser):
             print(bldpkg_path(m))
             continue
         elif args.test:
-            build.test(m, move_broken=False)
+            build.test(m, move_broken=False, debug=args.debug)
         elif args.source:
             if need_source_download:
                 source.provide(m.path, m.get_section('source'), verbose=build.verbose)
@@ -349,7 +353,8 @@ def execute(args, parser):
                             keep_old_work=args.keep_old_work,
                             need_source_download=need_source_download,
                             need_reparse_in_env=need_reparse_in_env,
-                            dirty=args.dirty, activate=args.activate)
+                            dirty=args.dirty, activate=args.activate,
+                            debug=args.debug)
             except (NoPackagesFound, Unsatisfiable) as e:
                 error_str = str(e)
                 # Typically if a conflict is with one of these
@@ -393,7 +398,7 @@ def execute(args, parser):
                 continue
 
             if not args.notest:
-                build.test(m, activate=args.activate)
+                build.test(m, activate=args.activate, debug=args.debug)
 
         if need_cleanup:
             shutil.rmtree(recipe_dir)

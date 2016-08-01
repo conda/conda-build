@@ -74,6 +74,7 @@ class Config(object):
                   Setting('token', None),
                   Setting('user', None),
                   Setting('verbose', False),
+                  Setting('debug', False),
                   ]
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)

@@ -342,6 +342,16 @@ def create_env(prefix, specs, config, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
+    if not config.debug:
+        # This squelches a ton of conda output that is not hugely relevant
+        logging.getLogger("conda.install").setLevel(logging.ERROR)
+        logging.getLogger("fetch").setLevel(logging.WARN)
+        logging.getLogger("print").setLevel(logging.WARN)
+        logging.getLogger("progress").setLevel(logging.WARN)
+        logging.getLogger("dotupdate").setLevel(logging.WARN)
+        logging.getLogger("stdoutlog").setLevel(logging.WARN)
+        logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+
     specs = list(specs)
     for feature, value in feature_list:
         if value:
@@ -363,7 +373,7 @@ def create_env(prefix, specs, config, clear_cache=True):
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
-        plan.execute_actions(actions, index, verbose=config.verbose)
+        plan.execute_actions(actions, index, verbose=config.debug)
 
         os.environ['PATH'] = old_path
 

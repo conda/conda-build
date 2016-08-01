@@ -44,6 +44,14 @@ command line with the conda metapackage command.
         default=conda.config.binstar_upload,
     )
     p.add_argument(
+        '--token',
+        help="Token to pass through to anaconda upload"
+    )
+    p.add_argument(
+        '--user',
+        help="User/organization to upload packages to on anaconda.org"
+    )
+    p.add_argument(
         "name",
         help="Name of the created package.",
     )

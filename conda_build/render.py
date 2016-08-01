@@ -121,6 +121,8 @@ def reparse(metadata, config):
 
 
 def render_recipe(recipe_path, config, no_download_source=False):
+    if not isdir(config.croot):
+        os.makedirs(config.croot)
     with Locked(config.croot):
         if not config.dirty:
             rm_rf(config.work_dir)
