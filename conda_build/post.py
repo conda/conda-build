@@ -22,7 +22,7 @@ from conda_build import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
-from conda.compat import lchmod
+from conda.compat import lchmod, PY3
 from conda.misc import walk_prefix
 from conda.utils import md5_file
 
@@ -141,28 +141,45 @@ def rm_py_along_so():
                         os.unlink(join(root, name + ext))
 
 
-def compile_missing_pyc():
-    sp_dir = environ.get_sp_dir()
-    stdlib_dir = environ.get_stdlib_dir()
+def coerce_pycache_to_old_style(files, cwd):
+    """
+    For the sake of simplicity, remove the filename additions, like .cpython-35.pyc
 
-    need_compile = False
-    for root, dirs, files in os.walk(sp_dir):
-        for fn in files:
-            if fn.endswith('.py') and fn + 'c' not in files:
-                need_compile = True
-                break
-    if need_compile:
+    Since Conda allows only one Python install in a given prefix, there is no reason
+    for these additional suffixes.  Newer Python will find these pyc files without issue.
+    """
+    for f in files:
+        if not os.path.exists(f):
+            f = os.path.join(cwd, f)
+        if not os.path.isfile(f) or not f.endswith('py'):
+            continue
+        if '/' in f or '\\' in f:
+            folder = os.path.join(cwd, os.path.dirname(f), '__pycache__')
+        else:
+            folder = os.path.join(cwd, '__pycache__')
+        fname = os.path.join(folder, os.path.splitext(os.path.basename(f))[0] +
+                 '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
+                                              sys.version_info.minor))
+        if os.path.isfile(fname):
+            os.rename(fname, f + 'c')
+    for root, folders, files in os.walk(cwd):
+        if root.endswith("__pycache__") and not files:
+            os.rmdir(root)
+
+
+def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_python):
+    compile_files = [f for f in files if f.endswith('py') and f + 'c' not in files]
+    if compile_files:
         print('compiling .pyc files...')
-        call([config.build_python, '-Wi',
-                           join(stdlib_dir, 'compileall.py'),
-                           '-q', '-x', 'port_v3', sp_dir])
+        call([python_exe, '-Wi', '-m', 'py_compile'] + compile_files, cwd=cwd)
+        if PY3:
+            coerce_pycache_to_old_style(compile_files, cwd=cwd)
 
 
 def post_process(files, preserve_egg_dir=False):
     remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
-    if config.CONDA_PY < 30:
-        compile_missing_pyc()
+    compile_missing_pyc(files)
 
 
 def find_lib(link, path=None):
