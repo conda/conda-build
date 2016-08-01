@@ -153,7 +153,7 @@ def coerce_pycache_to_old_style(files, cwd):
             f = os.path.join(cwd, f)
         if not os.path.isfile(f) or not f.endswith('py'):
             continue
-        if '/' in f:
+        if '/' in f or '\\' in f:
             folder = os.path.join(cwd, os.path.dirname(f), '__pycache__')
         else:
             folder = os.path.join(cwd, '__pycache__')
