@@ -633,3 +633,10 @@ def test_condarc_channel_available():
             f.write("  - defaults\n")
         with pytest.raises(subprocess.CalledProcessError):
             subprocess.check_call(cmd.split(), env=env)
+
+
+def test_metapackage():
+    cmd = ('conda metapackage --no-anaconda-upload --build-number 0 '
+           '--dependencies python zlib openssl '
+           '--summary "test" test-metapackage 0.1')
+    subprocess.check_call(cmd.split())
