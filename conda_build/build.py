@@ -342,15 +342,29 @@ def create_env(prefix, specs, config, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
-    if not config.debug:
+    if config.debug:
+        logging.getLogger("conda").setLevel(logging.DEBUG)
+        logging.getLogger("binstar").setLevel(logging.DEBUG)
+        logging.getLogger("install").setLevel(logging.DEBUG)
+        logging.getLogger("conda.install").setLevel(logging.DEBUG)
+        logging.getLogger("fetch").setLevel(logging.DEBUG)
+        logging.getLogger("print").setLevel(logging.DEBUG)
+        logging.getLogger("progress").setLevel(logging.DEBUG)
+        logging.getLogger("dotupdate").setLevel(logging.DEBUG)
+        logging.getLogger("stdoutlog").setLevel(logging.DEBUG)
+        logging.getLogger("requests").setLevel(logging.DEBUG)
+    else:
         # This squelches a ton of conda output that is not hugely relevant
+        logging.getLogger("conda").setLevel(logging.WARN)
+        logging.getLogger("binstar").setLevel(logging.WARN)
+        logging.getLogger("install").setLevel(logging.ERROR)
         logging.getLogger("conda.install").setLevel(logging.ERROR)
         logging.getLogger("fetch").setLevel(logging.WARN)
         logging.getLogger("print").setLevel(logging.WARN)
         logging.getLogger("progress").setLevel(logging.WARN)
         logging.getLogger("dotupdate").setLevel(logging.WARN)
         logging.getLogger("stdoutlog").setLevel(logging.WARN)
-        logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+        logging.getLogger("requests").setLevel(logging.WARN)
 
     specs = list(specs)
     for feature, value in feature_list:

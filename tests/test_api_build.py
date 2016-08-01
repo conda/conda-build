@@ -101,8 +101,8 @@ def test_token_upload(testing_workdir):
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
 def test_no_anaconda_upload_condarc(service_name, testing_workdir, capfd):
     api.build(empty_sections, anaconda_upload=False)
-    output, err = capfd.readouterr()
-    assert "Automatic uploading is disabled" in output, err
+    output, error = capfd.readouterr()
+    assert "Automatic uploading is disabled" in output, error
 
 
 def test_git_describe_info_on_branch():
@@ -143,7 +143,7 @@ def test_early_abort(capfd):
     """There have been some problems with conda-build dropping out early.
     Make sure we aren't causing them"""
     api.build(os.path.join(metadata_dir, '_test_early_abort'), anaconda_upload=False)
-    output, err = capfd.readouterr()
+    output, error = capfd.readouterr()
     assert "Hello World" in output
 
 def test_output_build_path_git_source(testing_workdir, test_config):
@@ -373,14 +373,14 @@ def test_rendering_env_var(testing_workdir, test_config, capfd):
     setup.py might be processed.
     """
     api.build(os.path.join(metadata_dir, "_source_setuptools_env_var"), config=test_config)
-    output, err = capfd.readouterr()
-    assert "Rendering environment variable set OK" in output, err
+    output, error = capfd.readouterr()
+    assert "Rendering environment variable set OK" in output, error
 
 
 def test_render_setup_py_old_funcname(testing_workdir, test_config, capfd):
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
-    output, err = capfd.readouterr()
-    assert "Deprecation notice: the load_setuptools function has been renamed to " in err
+    output, error = capfd.readouterr()
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in error
 
 
 def test_condarc_channel_available(testing_workdir, test_config):
@@ -402,3 +402,19 @@ def test_condarc_channel_available(testing_workdir, test_config):
         os.environ["CONDARC"] = rcfile_backup
     else:
         del os.environ["CONDARC"]
+
+
+def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
+    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    assert 'Fetching package metadata ...' not in caplog.text()
+    assert 'Checking satisfiability of current install' not in caplog.text()
+    output, error = capfd.readouterr()
+    assert "DEBUG:conda.fetch" not in output
+    assert "DEBUG:conda.fetch" not in error
+
+    test_config.debug = True
+    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    assert 'Fetching package metadata ...' in caplog.text()
+    assert 'Checking satisfiability of current install' in caplog.text()
+    output, error = capfd.readouterr()
+    assert "DEBUG:conda.fetch" in error
