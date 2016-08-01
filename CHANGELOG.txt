@@ -13,6 +13,9 @@ New Things:
 
 * Don't exit on compileall failure #1146
 * Add CONDA_BUILD_RENDERING environment variable that is set during recipe rendering #1154
+* Change pyc compilation to only affect files that would be packaged (not all of site-packages).  Compile pyc files on py3.  #1155
+* Rename load_setuptools to load_setup_py_data (keep load_setuptools for compat; but show warning) #1156
+* Test that condarc channels are respected in build #1157
 
 Contributors:
 -------------
