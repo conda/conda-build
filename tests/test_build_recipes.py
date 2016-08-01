@@ -635,6 +635,13 @@ def test_condarc_channel_available():
             subprocess.check_call(cmd.split(), env=env)
 
 
+def test_metapackage():
+    cmd = ('conda metapackage --no-anaconda-upload --build-number 0 '
+           '--dependencies python zlib openssl '
+           '--summary "test" test-metapackage 0.1')
+    subprocess.check_call(cmd.split())
+
+
 def test_debug_build_option():
     cmd = 'conda build --debug --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
                                                         "jinja2"))
