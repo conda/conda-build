@@ -6,6 +6,8 @@
 
 from __future__ import absolute_import, division, print_function
 
+import os
+
 from conda.config import default_python
 from conda_build.main_build import args_func
 from conda.cli.conda_argparse import ArgumentParser
@@ -329,6 +331,8 @@ def execute(args, parser):
 
     if not args.repo:
         parser.print_help()
+    if not os.path.isdir(config.croot):
+        os.makedirs(config.croot)
     with Locked(config.croot):
         if args.repo == "pypi":
             pypi.main(args, parser)
