@@ -1,0 +1,20 @@
+# This recipe tests that all files are compiled with compileall.  Anything that can't be
+# compiled remains as a .py file, but this should not kill the build.
+
+package:
+  name: test_compileall
+  version: 1.0
+
+source:
+  path: .
+
+build:
+  script:
+    - cp *.py $PREFIX  # [unix]
+    - copy *.py %PREFIX%  # [win]
+
+requirements:
+  build:
+    - python
+  run:
+    - python

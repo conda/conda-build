@@ -1,4 +1,4 @@
-{% set data = load_setuptools()%}
+{% set data = load_setup_py_data()%}
 {% block body -%}
 {% block package -%}
 package:

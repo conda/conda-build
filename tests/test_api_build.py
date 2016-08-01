@@ -349,3 +349,56 @@ def test_requirements_txt_for_run_reqs(testing_workdir, test_config):
     """
     test_config.channel_urls = ('conda-forge', )
     api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=test_config)
+
+
+def test_compileall_compiles_all_good_files(testing_workdir, test_config):
+    output_file = os.path.join(test_config.croot, cc.subdir,
+                               'test_compileall-1.0-py{0}{1}_0.tar.bz2'.format(
+                                   sys.version_info.major, sys.version_info.minor))
+    api.build(os.path.join(metadata_dir, "_compile-test"), config=test_config)
+    good_files = ['f1.py', 'f3.py']
+    bad_file = 'f2_bad.py'
+    for f in good_files:
+        assert package_has_file(output_file, f)
+        # look for the compiled file also
+        assert package_has_file(output_file, f + 'c')
+    assert package_has_file(output_file, bad_file)
+    assert not package_has_file(output_file, bad_file + 'c')
+
+
+def test_rendering_env_var(testing_workdir, test_config, capfd):
+    """
+    This environment variable is provided for users to selectively change what they do
+    during the rendering phase, regarding their recipe.  For example, only part of
+    setup.py might be processed.
+    """
+    api.build(os.path.join(metadata_dir, "_source_setuptools_env_var"), config=test_config)
+    output, err = capfd.readouterr()
+    assert "Rendering environment variable set OK" in output, err
+
+
+def test_render_setup_py_old_funcname(testing_workdir, test_config, capfd):
+    api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
+    output, err = capfd.readouterr()
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in err
+
+
+def test_condarc_channel_available(testing_workdir, test_config):
+    rcfile = os.path.join(testing_workdir, ".condarc")
+    with open(rcfile, 'w') as f:
+        f.write("channels:\n")
+        f.write("  - conda-forge\n")
+        f.write("  - defaults\n")
+    rcfile_backup = os.environ.get("CONDARC")
+    os.environ["CONDARC"] = rcfile
+    api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
+    # ensure that the test fails without the channel
+    with open(rcfile, 'w') as f:
+        f.write("channels:\n")
+        f.write("  - defaults\n")
+    with pytest.raises(subprocess.CalledProcessError):
+        api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
+    if rcfile_backup:
+        os.environ["CONDARC"] = rcfile_backup
+    else:
+        del os.environ["CONDARC"]

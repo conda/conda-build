@@ -389,8 +389,14 @@ class MetaData(object):
         if not self.meta_path:
             return
 
-        self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
-                          config=config, path=self.meta_path)
+        try:
+            os.environ["CONDA_BUILD_RENDERING"] = "True"
+            self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
+                              config=config, path=self.meta_path)
+        except:
+            raise
+        finally:
+            del os.environ["CONDA_BUILD_RENDERING"]
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
@@ -783,7 +789,7 @@ class MetaData(object):
 
     def uses_setuptools_in_meta(self):
         with open(self.meta_path) as f:
-            return "load_setuptools" in f.read()
+            return "load_setup_py_data" in f.read()
 
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"

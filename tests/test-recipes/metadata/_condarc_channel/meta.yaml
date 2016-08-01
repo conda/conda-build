@@ -1,0 +1,9 @@
+package:
+  name: test_recipe_needing_channel
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    # this is only available at conda-forge, and is a test of whether that channel is available.
+    - conda-smithy

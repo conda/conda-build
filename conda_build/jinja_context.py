@@ -79,8 +79,8 @@ class FilteredLoader(jinja2.BaseLoader):
         return select_lines(contents, ns_cfg(self.config)), filename, uptodate
 
 
-def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
-                    unload_modules=None):
+def load_setup_py_data(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+                    unload_modules=None, fail_on_error=False):
     _setuptools_data = {}
 
     def setup(**kw):
@@ -129,6 +129,15 @@ def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe
     return _setuptools_data if _setuptools_data else None
 
 
+def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+                    unload_modules=None, fail_on_error=False):
+    log.warn("Deprecation notice: the load_setuptools function has been renamed to "
+             "load_setup_py_data.  load_setuptools will be removed in a future release.")
+    return load_setup_py_data(setup_file=setup_file, from_recipe_dir=from_recipe_dir,
+                              recipe_dir=recipe_dir, unload_modules=unload_modules,
+                              fail_on_error=fail_on_error)
+
+
 def load_npm():
     # json module expects bytes in Python 2 and str in Python 3.
     mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
@@ -147,7 +156,10 @@ def context_processor(initial_metadata, recipe_dir, config):
     environ = dict(os.environ)
     environ.update(get_environ(config=config, m=initial_metadata))
 
-    ctx.update(load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir),
-               load_npm=load_npm,
-               environ=environ)
+    ctx.update(
+        load_setup_py_data=partial(load_setup_py_data, recipe_dir=recipe_dir),
+        # maintain old alias for backwards compatibility:
+        load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
+        load_npm=load_npm,
+        environ=environ)
     return ctx
