@@ -4,6 +4,7 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
+import logging
 import os
 import sys
 import base64
@@ -22,6 +23,8 @@ Error: could not import Crypto (required for "conda sign").
 """)
 
 from conda.signature import KEYS_DIR, hash_file, verify, SignatureError
+
+logging.basicConfig(level=logging.INFO)
 
 
 def keygen(name, size=2048):

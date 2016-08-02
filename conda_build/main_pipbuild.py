@@ -6,6 +6,7 @@
 
 from __future__ import print_function, division, absolute_import
 
+import logging
 import sys
 import os
 import os.path
@@ -24,6 +25,8 @@ if sys.version_info < (3,):
     from xmlrpclib import ServerProxy
 else:
     from xmlrpc.client import ServerProxy
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

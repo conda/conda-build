@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import logging
 import sys
 from os.path import join, isdir, abspath, expanduser, exists
 import shutil
@@ -17,6 +18,8 @@ from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
 
 from conda.install import linked
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

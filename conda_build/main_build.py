@@ -28,6 +28,7 @@ from conda_build.utils import find_recipe
 from conda_build.main_render import (set_language_env_vars, RecipeCompleter, render_recipe)
 on_win = (sys.platform == 'win32')
 
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__file__)
 
 

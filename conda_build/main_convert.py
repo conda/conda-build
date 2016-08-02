@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import json
+import logging
 import pprint
 import re
 import sys
@@ -21,6 +22,8 @@ from conda_build.main_build import args_func
 
 from conda_build.convert import (has_cext, tar_update, get_pure_py_file_map,
                                  has_nonpy_entry_points)
+
+logging.basicConfig(level=logging.INFO)
 
 
 epilog = """
