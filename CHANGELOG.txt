@@ -1,3 +1,21 @@
+2016-08-02 1.21.10:
+-------------------
+
+Bug fixes:
+----------
+
+* Compile files ending with .py, not py.  #1163
+* Move root logger to entry points, to not interfere with conda #1164 #1166
+* Use setuptools entry points, rather than pre-defined scripts #1165
+* Always use the long build prefix to avoid confusion #1168
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2016-08-01 1.21.9:
 ------------------
 
