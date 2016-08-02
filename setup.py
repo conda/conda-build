@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 import sys
-from glob import glob
 
 import versioneer
 
-if 'develop' in sys.argv:
-    from setuptools import setup
-else:
-    from distutils.core import setup
+from setuptools import setup
 
 if sys.version_info[:2] < (2, 7):
     sys.exit("conda-build is only meant for Python >=2.7"
@@ -24,9 +20,9 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     author="Continuum Analytics, Inc.",
-    author_email="ilan@continuum.io",
+    author_email="conda@continuum.io",
     url="https://github.com/conda/conda-build",
-    license="BSD",
+    license="BSD 3-clause",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
@@ -39,8 +35,20 @@ setup(
     ],
     description="tools for building conda packages",
     long_description=open('README.rst').read(),
-    packages=['conda_build'],
-    scripts=glob('bin/*'),
+    packages=['conda_build', ],
+    entry_points={
+        'console_scripts': ['conda-build = conda_build.main_build:main',
+                            'conda-convert = conda_build.main_convert:main',
+                            'conda-develop = conda_build.main_develop:main',
+                            'conda-index = conda_build.main_index:main',
+                            'conda-inspect = conda_build.main_inspect:main',
+                            'conda-metapackage = conda_build.main_metapackage:main',
+                            'conda-pipbuild = conda_build.main_pipbuild:main',
+                            'conda-render = conda_build.main_render:main',
+                            'conda-sign = conda_build.main_sign:main',
+                            'conda-skeleton = conda_build.main_skeleton:main',
+                            ]},
     install_requires=['conda'],
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
+    zip_safe=False,
 )
