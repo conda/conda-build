@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os
 from locale import getpreferredencoding
 from os.path import abspath
@@ -8,6 +9,8 @@ from conda.compat import PY3
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build.index import update_index
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():
