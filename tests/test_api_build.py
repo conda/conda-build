@@ -377,10 +377,9 @@ def test_rendering_env_var(testing_workdir, test_config, capfd):
     assert "Rendering environment variable set OK" in output, error
 
 
-def test_render_setup_py_old_funcname(testing_workdir, test_config, capfd):
+def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
-    output, error = capfd.readouterr()
-    assert "Deprecation notice: the load_setuptools function has been renamed to " in error
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
 
 
 def test_condarc_channel_available(testing_workdir, test_config):
@@ -389,32 +388,27 @@ def test_condarc_channel_available(testing_workdir, test_config):
         f.write("channels:\n")
         f.write("  - conda-forge\n")
         f.write("  - defaults\n")
-    rcfile_backup = os.environ.get("CONDARC")
-    os.environ["CONDARC"] = rcfile
+    cc.load_condarc(rcfile)
     api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
     # ensure that the test fails without the channel
     with open(rcfile, 'w') as f:
         f.write("channels:\n")
         f.write("  - defaults\n")
+    cc.load_condarc(rcfile)
     with pytest.raises(subprocess.CalledProcessError):
         api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
-    if rcfile_backup:
-        os.environ["CONDARC"] = rcfile_backup
-    else:
-        del os.environ["CONDARC"]
 
 
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    # this comes from an info message
     assert 'Fetching package metadata ...' not in caplog.text()
+    # this comes from a debug message
     assert 'Checking satisfiability of current install' not in caplog.text()
-    output, error = capfd.readouterr()
-    assert "DEBUG:conda.fetch" not in output
-    assert "DEBUG:conda.fetch" not in error
 
     test_config.debug = True
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    # this comes from an info message
     assert 'Fetching package metadata ...' in caplog.text()
+    # this comes from a debug message
     assert 'Checking satisfiability of current install' in caplog.text()
-    output, error = capfd.readouterr()
-    assert "DEBUG:conda.fetch" in error

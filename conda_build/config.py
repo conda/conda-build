@@ -53,7 +53,7 @@ class Config(object):
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
 
         self._build_id = kwargs.get('build_id', "")
-        self._prefix_length = kwargs.get("prefix_length", 80)
+        self._prefix_length = kwargs.get("prefix_length", 255)
         # set default value (not actually None)
         self._croot = kwargs.get('croot', None)
 

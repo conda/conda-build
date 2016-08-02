@@ -207,7 +207,7 @@ def create_info_files(m, files, config, prefix):
 
     license_file = m.get_value('about/license_file')
     if license_file:
-        shutil.copyfile(join(config.work_dir, license_file),
+        shutil.copyfile(join(source.get_dir(config), license_file),
                         join(config.info_dir, 'LICENSE.txt'))
 
     readme = m.get_value('about/readme')
@@ -332,10 +332,14 @@ def get_build_index(config, clear_cache=True, arg_channels=None):
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
     arg_channels = [] if not arg_channels else arg_channels
-    return get_index(channel_urls=[url_path(config.croot)] +
-                     list(config.channel_urls) +
-                     arg_channels,
-                     prepend=not config.override_channels)
+    # priority: local by croot (can vary), then by traditional croot, then channels passed as args,
+    #     then channels from config.
+    return get_index(channel_urls=[url_path(config.croot),
+                                   url_path(os.path.join(sys.prefix, 'conda-bld'))] +
+                     arg_channels +
+                     list(config.channel_urls),
+                     prepend=not config.override_channels,
+                     use_local=True)
 
 
 def create_env(prefix, specs, config, clear_cache=True):

@@ -22,16 +22,16 @@ def test_build():
 
 
 def test_build_add_channel():
-    """This recipe requires the vc package, which is only on conda-forge.
+    """This recipe requires the conda-smithy package, which is only on conda-forge.
     This verifies that the -c argument works."""
     cmd = 'conda build --no-anaconda-upload -c conda-forge {}'.format(os.path.join(metadata_dir,
                                                         "_recipe_requiring_external_channel"))
-    subprocess.check_call(cmd.split(), env=os.environ)
+    subprocess.check_call(cmd.split())
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
-    #    we probably have channels in condarc
+    #    we probably have channels in condarc, and this is not a good test.
     cmd = cmd.replace("-c conda-forge", "")
     with pytest.raises(subprocess.CalledProcessError):
-        subprocess.check_call(cmd.split(), env=os.environ)
+        subprocess.check_call(cmd.split())
 
 
 def test_render_output_build_path():
