@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import logging
 import sys
 
 from conda.cli.common import add_parser_channels
@@ -18,6 +19,8 @@ from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVe
                                     LuaVersionsCompleter, NumPyVersionCompleter)
 
 on_win = (sys.platform == 'win32')
+
+logging.basicConfig(level=logging.INFO)
 
 
 def get_render_parser():

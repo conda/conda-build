@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+import logging
 import sys
 import re
 import os
@@ -28,6 +29,8 @@ from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():
