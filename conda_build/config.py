@@ -94,11 +94,7 @@ class Config(object):
 
     @property
     def build_prefix(self):
-        if self.use_long_build_prefix is None:
-            raise Exception("I don't know which build prefix to use yet")
-        if self.use_long_build_prefix:
-            return self.long_build_prefix
-        return self.short_build_prefix
+        return self.long_build_prefix
 
     @property
     def build_python(self):
