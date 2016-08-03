@@ -27,6 +27,8 @@ def test_find_prefix_files():
     """
     # create a temporary folder
     prefix = os.path.join(sys.prefix, "envs", "_build")
+    # duplicate long build prefix
+    prefix = max(prefix, (prefix + 8 * '_placehold')[:80])
     if not os.path.isdir(prefix):
         os.makedirs(prefix)
     with TemporaryDirectory(prefix=prefix + os.path.sep) as tmpdir:
