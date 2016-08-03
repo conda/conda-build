@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import os
+import re
 import shutil
 import stat
 import subprocess
@@ -107,6 +108,8 @@ def have_prefix_files(files):
         forward_slash_prefix_bytes = forward_slash_prefix.encode('utf-8')
         double_backslash_prefix = prefix.replace('\\', '\\\\')
         double_backslash_prefix_bytes = double_backslash_prefix.encode('utf-8')
+        # moar escapes for regex
+        prefix_bytes = prefix_bytes.replace('\\', '\\\\')
 
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
@@ -136,8 +139,9 @@ def have_prefix_files(files):
                 mm.close() and fi.close()
                 fi = open(path, 'rb+')
                 mm = mmap.mmap(fi.fileno(), 0)
-        if mm.find(prefix_bytes) != -1:
-            yield (prefix, mode, f)
+        prefix_matches = re.findall(prefix_bytes, mm, re.IGNORECASE)
+        for match in prefix_matches:
+            yield (match, mode, f)
         if on_win and mm.find(forward_slash_prefix_bytes) != -1:
             # some windows libraries use unix-style path separators
             yield (forward_slash_prefix, mode, f)
