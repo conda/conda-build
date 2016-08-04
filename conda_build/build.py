@@ -109,7 +109,7 @@ def have_prefix_files(files):
         double_backslash_prefix = prefix.replace('\\', '\\\\')
         double_backslash_prefix_bytes = double_backslash_prefix.encode('utf-8')
         # moar escapes for regex
-        prefix_bytes = prefix_bytes.replace('\\', '\\\\')
+        prefix_bytes = prefix_bytes.replace(b'\\', b'\\\\')
 
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
