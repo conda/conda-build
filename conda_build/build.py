@@ -565,11 +565,11 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
             print("Package:", m.dist())
 
             src_dir = source.get_dir()
-            if isdir(source.WORK_DIR):
+            if isdir(src_dir):
                 print("source tree in:", src_dir)
             else:
                 print("no source - creating empty work folder")
-                os.makedirs(source.WORK_DIR)
+                os.makedirs(src_dir)
 
             rm_rf(config.info_dir)
             files1 = prefix_files()
