@@ -208,8 +208,8 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write('@echo on\n')
             for key, value in env.items():
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
-            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
+            fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
+            fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
             fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
             if activate:
                 fo.write("call activate.bat {0}\n".format(config.build_prefix))
