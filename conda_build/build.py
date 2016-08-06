@@ -42,6 +42,9 @@ from conda_build.create_test import (create_files, create_shell_files,
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
+# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
+#    eventually.
+import encodings.idna  # NOQA
 
 on_win = (sys.platform == 'win32')
 if 'bsd' in sys.platform:
@@ -348,15 +351,29 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
-    if not debug:
+    if debug:
+        logging.getLogger("conda").setLevel(logging.DEBUG)
+        logging.getLogger("binstar").setLevel(logging.DEBUG)
+        logging.getLogger("install").setLevel(logging.DEBUG)
+        logging.getLogger("conda.install").setLevel(logging.DEBUG)
+        logging.getLogger("fetch").setLevel(logging.DEBUG)
+        logging.getLogger("print").setLevel(logging.DEBUG)
+        logging.getLogger("progress").setLevel(logging.DEBUG)
+        logging.getLogger("dotupdate").setLevel(logging.DEBUG)
+        logging.getLogger("stdoutlog").setLevel(logging.DEBUG)
+        logging.getLogger("requests").setLevel(logging.DEBUG)
+    else:
         # This squelches a ton of conda output that is not hugely relevant
+        logging.getLogger("conda").setLevel(logging.WARN)
+        logging.getLogger("binstar").setLevel(logging.WARN)
+        logging.getLogger("install").setLevel(logging.ERROR)
         logging.getLogger("conda.install").setLevel(logging.ERROR)
         logging.getLogger("fetch").setLevel(logging.WARN)
         logging.getLogger("print").setLevel(logging.WARN)
         logging.getLogger("progress").setLevel(logging.WARN)
         logging.getLogger("dotupdate").setLevel(logging.WARN)
         logging.getLogger("stdoutlog").setLevel(logging.WARN)
-        logging.getLogger("requests.packages.urllib3.connectionpool").setLevel(logging.WARN)
+        logging.getLogger("requests").setLevel(logging.WARN)
 
     specs = list(specs)
     for feature, value in feature_list:

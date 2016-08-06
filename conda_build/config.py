@@ -9,6 +9,8 @@ from os.path import abspath, expanduser, join
 
 import conda.config as cc
 
+on_win = (sys.platform == 'win32')
+
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
@@ -94,11 +96,9 @@ class Config(object):
 
     @property
     def build_prefix(self):
-        if self.use_long_build_prefix is None:
-            raise Exception("I don't know which build prefix to use yet")
-        if self.use_long_build_prefix:
-            return self.long_build_prefix
-        return self.short_build_prefix
+        if on_win:
+            return self.short_build_prefix
+        return self.long_build_prefix
 
     @property
     def build_python(self):

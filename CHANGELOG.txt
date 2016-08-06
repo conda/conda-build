@@ -1,3 +1,82 @@
+2016-08-06 1.21.11:
+-------------------
+
+Bug fixes:
+----------
+
+* Correct logic for printout of meta.dist determination #1174
+* Attempt to use src_dir instead of WORK_DIR for directory creation #1175
+* Fix escaping problem with PY_VCRUNTIME_REDIST setting #1172
+* Set build prefix for win by path, not name #1172
+* Quote INCLUDE and LIB env var settings for win better #1172
+* Fix pypi skeleton package search #1181
+
+Contributors:
+-------------
+
+* @msarahan
+* @pelson
+
+2016-08-02 1.21.10:
+-------------------
+
+Bug fixes:
+----------
+
+* Compile files ending with .py, not py.  #1163
+* Move root logger to entry points, to not interfere with conda #1164 #1166
+* Use setuptools entry points, rather than pre-defined scripts #1165
+* Always use the long build prefix to avoid confusion #1168
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
+2016-08-01 1.21.9:
+------------------
+
+Bug fixes:
+----------
+
+* Add debug option that shows conda output during build.  Hide output otherwise.  #1159
+* Add regression test for conda metapackage command, fix missing token and user args. #1160
+* Create croot (conda-bld) folder if missing before locking in render and skeleton. #1161
+
+Contributors:
+-------------
+
+* @msarahan
+
+
+2016-07-31 1.21.8:
+------------------
+
+Bug fixes:
+----------
+
+* Fix --source argument to build - was building when should only download source.  #1152
+* Don't try to create work folder when it exists (but is empty) #1153
+* Fix a logic error with need_source_download not existing #1148
+
+New Things:
+-----------
+
+* Don't exit on compileall failure #1146
+* Add CONDA_BUILD_RENDERING environment variable that is set during recipe rendering #1154
+* Change pyc compilation to only affect files that would be packaged (not all of site-packages).  Compile pyc files on py3.  #1155
+* Rename load_setuptools to load_setup_py_data (keep load_setuptools for compat; but show warning) #1156
+* Test that condarc channels are respected in build #1157
+
+Contributors:
+-------------
+* @daler
+* @minrk
+* @msarahan
+
+
 2016-07-22 1.21.7:
 ------------------
 
