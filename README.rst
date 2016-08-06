@@ -5,11 +5,8 @@ conda-build
 .. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
                :target: https://travis-ci.org/conda/conda-build
 
-.. image:: https://ci.appveyor.com/api/projects/status/wdis0rkcfdoeql3x?svg=true
-               :target: https://ci.appveyor.com/project/ContinuumAnalytics/conda-build
-               
-.. image:: https://anaconda.org/conda-team/conda-build/badges/build.svg
-               :target: https://anaconda.org/conda-team/conda-build/
+.. image:: https://ci.appveyor.com/api/projects/status/07r1m8fy55jee9th?svg=true
+               :target: https://ci.appveyor.com/project/ContinuumAnalyticsFOSS/conda-build
                
 .. image:: https://www.quantifiedcode.com/api/v1/project/1960a96404aa431bab5d834edff1cf85/badge.svg
   :target: https://www.quantifiedcode.com/app/project/1960a96404aa431bab5d834edff1cf85
@@ -73,3 +70,10 @@ The documentation for conda is at http://conda.pydata.org/docs/. You can
 subscribe to the `conda mailing list
 <https://groups.google.com/a/continuum.io/forum/#!forum/conda>`_.  The source
 code and issue tracker for conda are on `GitHub <https://github.com/pydata/conda>`_.
+
+
+Contributing
+------------
+
+Contributions to conda-build are always welcome!  Please fork the conda/conda-build repository, and submit a PR.  If a PR is a work in progress, please put [WIP] in the title.  Contributions are expected to pass flake8 and test suites run on Travis CI (linux) and AppVeyor (windows).  Contributors also need to have signed our `Contributor License Agreement <https://www.clahub.com/agreements/conda/conda-build>`_
+
