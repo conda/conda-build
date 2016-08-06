@@ -85,8 +85,6 @@ def test_build_with_no_activate_does_not_activate():
     subprocess.check_call(cmd.split(), cwd=metadata_dir)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="no binary prefix manipulation done on windows.")
 def test_binary_has_prefix_files():
     cmd = 'conda build --no-anaconda-upload {}/_binary_has_prefix_files'.format(metadata_dir)
     subprocess.check_call(cmd.split())
