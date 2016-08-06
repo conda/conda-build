@@ -113,7 +113,7 @@ Create recipe skeleton for packages hosted on the Python Packaging Index
     pypi.add_argument(
         "--pypi-url",
         action="store",
-        default='https://pypi.io/pypi',
+        default='https://pypi.python.org/pypi',
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(

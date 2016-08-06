@@ -36,8 +36,7 @@ def test_name_with_version_specified(tmpdir):
 
 def test_url(tmpdir):
     cmd = "conda skeleton pypi --output-dir {} \
-https://pypi.io/packages/source/s/sympy/\
-sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9".format(tmpdir)
+https://pypi.python.org/packages/8c/a5/5fa8adee81837687f7315122769fc0b0e8b042c69e2fe5809c41191c7183/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9".format(tmpdir)  # NOQA
     subprocess.check_call(cmd.split())
     with open('{}/sympy-0.7.5-url/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
