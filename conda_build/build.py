@@ -397,7 +397,21 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
-        plan.execute_actions(actions, index, verbose=debug)
+
+        try:
+            plan.execute_actions(actions, index, verbose=debug)
+        except SystemExit as exc:
+            if "too short in" in exc.message and config.prefix_length > 80:
+                log.warn("Build prefix failed with prefix length {0}."
+                         .format(config.prefix_length))
+                log.warn("Error was: ")
+                log.warn(exc.message)
+                log.warn("One or more of your package dependencies needs to be rebuilt with a "
+                         "longer prefix length.")
+                log.warn("Falling back to legacy prefix length of 80 characters.")
+                log.warn("Your package will not install into prefixes longer than 80 characters.")
+                config.prefix_length = 80
+                create_env(prefix, specs, clear_cache=clear_cache, debug=debug)
 
         os.environ['PATH'] = old_path
 

@@ -59,8 +59,10 @@ class Config(object):
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
+    prefix_length = 255
+
     short_build_prefix = join(cc.envs_dirs[0], '_build')
-    long_build_prefix = max(short_build_prefix, (short_build_prefix + 25 * '_placehold')[:255])
+
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False
@@ -93,6 +95,12 @@ class Config(object):
         else:
             res = join(prefix, 'bin/{}'.format(binary_name))
         return res
+
+    @property
+    def long_build_prefix(self):
+        return max(self.short_build_prefix,
+                            (self.short_build_prefix +
+                             int(self.prefix_length / 10) * '_placehold')[:self.prefix_length])
 
     @property
     def build_prefix(self):
