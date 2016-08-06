@@ -832,7 +832,7 @@ Error:
 def build_tree(metadata_list, config, check=False, build_only=False, post=False, notest=False,
                need_source_download=True, already_built=None):
 
-    to_build_recursive = []
+    mo_build_recursive = []
     metadata_list = deque(metadata_list)
     if not already_built:
         already_built = set()
@@ -908,8 +908,8 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
         if not config.keep_old_work and not config.dirty:
             sys.stderr.write("# --keep-old-work flag not specified.  "
                              "Removing source and build files.\n")
+            # build folder is the whole burrito containing envs and source folders
             shutil.rmtree(config.build_folder)
-            shutil.rmtree(config.work_dir)
 
 
 def handle_anaconda_upload(path, config):

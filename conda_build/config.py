@@ -58,7 +58,6 @@ class Config(object):
         self._prefix_length = kwargs.get("prefix_length", 255)
         # set default value (not actually None)
         self._croot = kwargs.get('croot', None)
-        self._short_build_prefix = join(self.build_folder, '_build_env')
 
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
