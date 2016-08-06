@@ -37,4 +37,3 @@ def test_find_prefix_files():
             files.append(filename)
 
         assert len(list(build.have_prefix_files(files))) == len(files)
-
