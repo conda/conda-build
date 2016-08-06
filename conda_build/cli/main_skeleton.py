@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import importlib
+import logging
 import os
 import pkgutil
 import sys
@@ -19,6 +20,7 @@ from conda_build.config import Config
 from conda_build.cli.main_build import args_func
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

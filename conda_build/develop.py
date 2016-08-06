@@ -6,7 +6,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-import logging
 from os.path import join, isdir, abspath, expanduser, exists
 import shutil
 import sys
@@ -16,8 +15,6 @@ from conda.install import linked
 
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
-
-logging.basicConfig(level=logging.INFO)
 
 
 def relink_sharedobjects(pkg_path, build_prefix):

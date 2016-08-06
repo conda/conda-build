@@ -4,12 +4,15 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
+import logging
 import sys
 
 from conda_build import api
 
 from conda.cli.conda_argparse import ArgumentParser
 from conda.signature import SignatureError
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

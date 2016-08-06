@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import logging
 
 import conda.config
 from conda.cli.conda_argparse import ArgumentParser
@@ -14,6 +15,8 @@ from conda.cli.conda_argparse import ArgumentParser
 from conda_build import api
 from conda_build.config import Config
 from conda_build.cli.main_build import args_func
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

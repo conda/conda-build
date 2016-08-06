@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import logging
 from os.path import isdir
 import shutil
 import sys
@@ -25,6 +26,7 @@ from conda_build.utils import find_recipe, get_recipe_abspath
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
+logging.basicConfig(level=logging.INFO)
 
 
 def main():

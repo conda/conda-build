@@ -5,6 +5,7 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
 from locale import getpreferredencoding
+import logging
 from os.path import abspath, expanduser
 
 from conda.cli.conda_argparse import ArgumentParser
@@ -14,6 +15,7 @@ from conda_build import api
 from conda_build.config import Config
 from conda_build.utils import PY3
 
+logging.basicConfig(level=logging.INFO)
 
 epilog = """
 
