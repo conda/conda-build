@@ -18,12 +18,12 @@ environment:
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Python27_32"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-
     - PYTHON: "C:\\Python35_32"
       PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "32"
+
+    - PYTHON: "C:\\Python27_32"
+      PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python34_32"
@@ -59,10 +59,10 @@ install:
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pytest pytest-cov mock requests pycrypto git anaconda-client
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests
+  - conda install -q pyflakes=1.1 pycrypto git anaconda-client
   - conda install -c conda-forge -q perl
   # this is to ensure dependencies
-  - conda install -q conda-build
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
   - pip install --no-deps .

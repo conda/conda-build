@@ -151,7 +151,7 @@ def coerce_pycache_to_old_style(files, cwd):
     for f in files:
         if not os.path.exists(f):
             f = os.path.join(cwd, f)
-        if not os.path.isfile(f) or not f.endswith('py'):
+        if not os.path.isfile(f) or not f.endswith('.py'):
             continue
         if '/' in f or '\\' in f:
             folder = os.path.join(cwd, os.path.dirname(f), '__pycache__')
@@ -168,7 +168,7 @@ def coerce_pycache_to_old_style(files, cwd):
 
 
 def compile_missing_pyc(files, cwd, python_exe):
-    compile_files = [f for f in files if f.endswith('py') and f + 'c' not in files]
+    compile_files = [f for f in files if f.endswith('.py') and f + 'c' not in files]
     if compile_files:
         print('compiling .pyc files...')
         call([python_exe, '-Wi', '-m', 'py_compile'] + compile_files, cwd=cwd)

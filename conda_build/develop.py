@@ -1,12 +1,23 @@
+# (c) Continuum Analytics, Inc. / http://continuum.io
+# All Rights Reserved
+#
+# conda is distributed under the terms of the BSD 3-clause license.
+# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
+
+from __future__ import absolute_import, division, print_function
+
+import logging
+from os.path import join, isdir, abspath, expanduser, exists
 import shutil
 import sys
-from os.path import join, exists, abspath, expanduser, isdir
 
 from conda.compat import string_types
 from conda.install import linked
 
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
+
+logging.basicConfig(level=logging.INFO)
 
 
 def relink_sharedobjects(pkg_path, build_prefix):

@@ -49,6 +49,9 @@ from conda_build.create_test import (create_files, create_shell_files,
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
+# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
+#    eventually.
+import encodings.idna  # NOQA
 
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
@@ -485,7 +488,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
-            if need_reparse_in_env:
+            if need_source_download or need_reparse_in_env:
                 print("    (actual version deferred until further download or env creation)")
 
             rm_rf(config.build_prefix)

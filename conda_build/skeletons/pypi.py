@@ -36,13 +36,13 @@ from conda_build.metadata import MetaData
 
 if PY3:
     try:
-        from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
+        from xmlrpc.client import ServerProxy, Transport, ProtocolError
     except ImportError:
         print(sys.path)
         raise
 else:
     try:
-        from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
+        from xmlrpclib import ServerProxy, Transport, ProtocolError
     except ImportError:
         print(sys.path)
         raise
@@ -110,14 +110,10 @@ class RequestsTransport(Transport):
         """
         Parse the xmlrpc response.
         """
-        try:
-            p, u = self.getparser()
-            p.feed(resp.text.encode("utf-8"))
-            p.close()
-            ret = u.close()
-        except Fault:
-            raise RuntimeError("XMLRPC Fault while parsing PyPI response.  "
-                               "This is likely a transient error - please try again soon.")
+        p, u = self.getparser()
+        p.feed(resp.text.encode("utf-8"))
+        p.close()
+        ret = u.close()
         return ret
 
     def _build_url(self, host, handler):
@@ -316,12 +312,13 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     if not config:
         config = Config()
 
-    # searching is faster than listing all packages
-    print(packages)
+    # all_packages = client.list_packages()
+    # searching is faster than listing all packages, but we need to separate URLs from names
     all_packages = []
-    for package in packages:
-        if ':' not in package:
-            all_packages.extend([match["name"] for match in client.search({"name": [package]})])
+
+    urls = [package for package in packages if ':' in package]
+    names = [package for package in packages if package not in urls]
+    all_packages = urls + [match["name"] for match in client.search({"name": names}, "or")]
     all_packages_lower = [i.lower() for i in all_packages]
 
     created_recipes = []

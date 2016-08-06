@@ -11,6 +11,8 @@ from os.path import abspath, expanduser, join
 
 import conda.config as cc
 
+on_win = (sys.platform == 'win32')
+
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
@@ -56,9 +58,7 @@ class Config(object):
         self._prefix_length = kwargs.get("prefix_length", 255)
         # set default value (not actually None)
         self._croot = kwargs.get('croot', None)
-
-        # Default to short prefixes
-        self.use_long_build_prefix = kwargs.get("use_long_build_prefix", False)
+        self._short_build_prefix = join(self.build_folder, '_build_env')
 
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
@@ -168,13 +168,18 @@ class Config(object):
         self._prefix_length = length
 
     @property
-    def build_prefix(self):
-        stub = join(self.build_folder, '_build_env')
-        placeholder_length = self.prefix_length - len(stub)
+    def _long_build_prefix(self):
+        placeholder_length = self.prefix_length - len(self._short_build_prefix)
         placeholder = '_placehold'
         repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
-        placeholder = (stub + repeats * placeholder)[:self.prefix_length]
-        return max(stub, placeholder)
+        placeholder = (self._short_build_prefix + repeats * placeholder)[:self.prefix_length]
+        return max(self._short_build_prefix, placeholder)
+
+    @property
+    def build_prefix(self):
+        if on_win:
+            return self._short_build_prefix
+        return self._long_build_prefix
 
     @property
     def test_prefix(self):

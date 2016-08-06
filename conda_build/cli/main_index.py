@@ -1,11 +1,14 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os
 
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import api
 from conda_build.config import Config
+
+logging.basicConfig(level=logging.INFO)
 
 
 def main():
