@@ -141,7 +141,7 @@ def have_prefix_files(files):
                 mm = mmap.mmap(fi.fileno(), 0)
         prefix_matches = re.findall(prefix_bytes, mm, re.IGNORECASE)
         for match in prefix_matches:
-            yield (match, mode, f)
+            yield (match.decode('utf-8'), mode, f)
         if on_win and mm.find(forward_slash_prefix_bytes) != -1:
             # some windows libraries use unix-style path separators
             yield (forward_slash_prefix, mode, f)
