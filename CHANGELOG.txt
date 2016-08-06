@@ -1,3 +1,22 @@
+2016-08-06 1.21.11:
+-------------------
+
+Bug fixes:
+----------
+
+* Correct logic for printout of meta.dist determination #1174
+* Attempt to use src_dir instead of WORK_DIR for directory creation #1175
+* Fix escaping problem with PY_VCRUNTIME_REDIST setting #1172
+* Set build prefix for win by path, not name #1172
+* Quote INCLUDE and LIB env var settings for win better #1172
+* Fix pypi skeleton package search #1181
+
+Contributors:
+-------------
+
+* @msarahan
+* @pelson
+
 2016-08-02 1.21.10:
 -------------------
 
