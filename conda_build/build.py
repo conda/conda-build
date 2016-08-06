@@ -42,6 +42,9 @@ from conda_build.create_test import (create_files, create_shell_files,
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
+# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
+#    eventually.
+import encodings.idna  # NOQA
 
 on_win = (sys.platform == 'win32')
 if 'bsd' in sys.platform:
