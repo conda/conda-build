@@ -35,9 +35,9 @@ from conda_build.config import config
 from conda_build.metadata import MetaData
 
 if sys.version_info < (3,):
-    from xmlrpclib import ServerProxy, Transport, ProtocolError, Fault
+    from xmlrpclib import ServerProxy, Transport, ProtocolError
 else:
-    from xmlrpc.client import ServerProxy, Transport, ProtocolError, Fault
+    from xmlrpc.client import ServerProxy, Transport, ProtocolError
 
 
 PYPI_META = """\
@@ -236,14 +236,10 @@ class RequestsTransport(Transport):
         """
         Parse the xmlrpc response.
         """
-        try:
-            p, u = self.getparser()
-            p.feed(resp.text.encode("utf-8"))
-            p.close()
-            ret = u.close()
-        except Fault:
-            raise RuntimeError("XMLRPC Fault while parsing PyPI response.  "
-                               "This is likely a transient error - please try again soon.")
+        p, u = self.getparser()
+        p.feed(resp.text.encode("utf-8"))
+        p.close()
+        ret = u.close()
         return ret
 
     def _build_url(self, host, handler):
@@ -264,8 +260,13 @@ def main(args, parser):
     package_dicts = {}
     [output_dir] = args.output_dir
 
-    # searching is faster than listing all packages
-    all_packages = [match["name"] for match in client.search({"name": args.packages}, "or")]
+    # all_packages = client.list_packages()
+    # searching is faster than listing all packages, but we need to separate URLs from names
+    all_packages = []
+
+    urls = [package for package in args.packages if ':' in package]
+    names = [package for package in args.packages if package not in urls]
+    all_packages = urls + [match["name"] for match in client.search({"name": names}, "or")]
     all_packages_lower = [i.lower() for i in all_packages]
 
     args.created_recipes = []
