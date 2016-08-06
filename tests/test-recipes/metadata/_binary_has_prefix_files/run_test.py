@@ -8,6 +8,9 @@ def main():
     with open(fn, 'rb') as f:
         data = f.read()
 
+    print("Prefix: ")
+    print(prefix)
+    print("Binary data (prefix should be in this): ")
     print(data)
     assert prefix.encode('utf-8') in data
 
