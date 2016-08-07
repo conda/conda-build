@@ -43,7 +43,9 @@ def testing_workdir(tmpdir, request):
 
     def return_to_saved_path():
         if os.path.isdir(os.path.join(saved_path, 'prof')):
-            files = tmpdir.join('prof').listdir('*.prof')
+            profdir = tmpdir.join('prof')
+            files = profdir.listdir('*.prof') if profdir.isdir() else []
+
             for f in files:
                 f.rename(os.path.join(saved_path, 'prof', f.basename))
         os.chdir(saved_path)

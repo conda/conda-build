@@ -335,12 +335,12 @@ def get_build_index(config, clear_cache=True, arg_channels=None):
     arg_channels = [] if not arg_channels else arg_channels
     # priority: local by croot (can vary), then by traditional croot, then channels passed as args,
     #     then channels from config.
-    return get_index(channel_urls=[url_path(config.croot),
-                                   url_path(os.path.join(sys.prefix, 'conda-bld'))] +
+    return get_index(channel_urls=[url_path(config.croot)] +
                      arg_channels +
                      list(config.channel_urls),
                      prepend=not config.override_channels,
-                     use_local=True)
+                     # do not use local because we have that above with config.croot
+                     use_local=False)
 
 
 def create_env(prefix, specs, config, clear_cache=True):
