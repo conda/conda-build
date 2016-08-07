@@ -378,8 +378,8 @@ class MetaData(object):
         assert isdir(path)
 
         if isfile(path):
-            self.path = os.path.dirname(path)
             self.meta_path = path
+            self.path = os.path.dirname(path)
         else:
             self.meta_path = find_recipe(path)
             self.path = os.path.dirname(self.meta_path)
@@ -815,6 +815,8 @@ class MetaData(object):
 
     @property
     def uses_jinja(self):
+        if not self.meta_path:
+            return False
         with open(self.meta_path) as f:
             metayaml = f.read()
             matches = re.findall(r"{{.*}}", metayaml)

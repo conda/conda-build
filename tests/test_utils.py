@@ -32,12 +32,12 @@ class TestCopyInto(unittest.TestCase):
         with open(name, 'w') as f:
             f.write(contents)
 
-    def test_copy_source_tree(self, test_config):
+    def test_copy_source_tree(self, test_config=test_config):
         utils.copy_into(self.src, self.dst, test_config)
         self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package',
                                                     'module.py')))
 
-    def test_merge_namespace_trees(self, test_config):
+    def test_merge_namespace_trees(self, test_config=test_config):
 
         dep = os.path.join(self.dst, 'namespace', 'package', 'dependency.py')
         self.makefile(dep)
@@ -47,7 +47,7 @@ class TestCopyInto(unittest.TestCase):
                                                     'module.py')))
         self.assertTrue(os.path.isfile(dep))
 
-    def test_disallow_merge_conflicts(self, test_config):
+    def test_disallow_merge_conflicts(self, test_config=test_config):
 
         duplicate = os.path.join(self.dst, 'namespace', 'package', 'module.py')
         self.makefile(duplicate)
