@@ -13,7 +13,6 @@ import pkgutil
 import sys
 
 from conda.cli.conda_argparse import ArgumentParser
-from conda.lock import Locked
 
 import conda_build.api as api
 from conda_build.config import Config
@@ -58,9 +57,8 @@ def execute(args, parser, config):
         parser.print_help()
         sys.exit()
 
-    with Locked(config.croot):
-        for package in args.packages:
-            api.skeletonize(package, repo=args.repo, config=config)
+    for package in args.packages:
+        api.skeletonize(package, repo=args.repo, config=config)
 
 
 if __name__ == '__main__':

@@ -17,11 +17,12 @@ import stat
 import subprocess
 import sys
 import tarfile
-import time
 
 # this one is some strange error that requests raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # noqa
+
+import filelock
 
 import conda.config as cc
 import conda.plan as plan
@@ -29,7 +30,6 @@ from conda.api import get_index
 from conda.compat import PY3, TemporaryDirectory
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, symlink_conda
-from conda.lock import Locked
 from conda.utils import url_path
 from conda.resolve import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 
@@ -393,7 +393,22 @@ def create_env(prefix, specs, config, clear_cache=True):
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
-        plan.execute_actions(actions, index, verbose=config.debug)
+        # lock each pkg folder from specs
+        locks = []
+        for link_pkg in actions['LINK']:
+            pkg = link_pkg.split(" ")[0]
+            dirname = os.path.join(cc.root_dir, 'pkgs', pkg)
+            if os.path.isdir(dirname):
+                locks.append(filelock.FileLock(os.path.join(dirname, ".conda_lock")))
+        try:
+            for lock in locks:
+                lock.acquire(timeout=10)
+            plan.execute_actions(actions, index, verbose=config.debug)
+        except:
+            raise
+        finally:
+            for lock in locks:
+                lock.release()
 
         os.environ['PATH'] = old_path
 
@@ -468,7 +483,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
               "configuration." % m.dist())
         return False
 
-    with Locked(config.build_folder):
+    with filelock.FileLock(join(config.build_folder, ".conda_lock")):
 
         if post in [False, None]:
             print("Removing old build environment")
@@ -672,7 +687,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
                 # lock the packages folder while performing this operation,
                 #    so package and index are each safe
-                with Locked(os.path.dirname(path)):
+                with filelock.FileLock(join(os.path.dirname(path), ".conda_lock")):
                     shutil.copy2(tmp_path, path)
                     update_index(config.bldpkgs_dir)
 
@@ -691,7 +706,7 @@ def test(m, config, move_broken=True):
     :type m: Metadata
     '''
 
-    with Locked(config.build_folder):
+    with filelock.FileLock(join(config.build_folder, ".conda_lock")):
 
         # remove from package cache
         rm_pkgs_cache(m.dist())

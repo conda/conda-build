@@ -11,8 +11,9 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
+import filelock
+
 from conda.compat import PY3
-from conda.lock import Locked
 from conda.utils import md5_file
 
 from conda_build.utils import file_info
@@ -20,7 +21,7 @@ from conda_build.utils import file_info
 
 def read_index_tar(tar_path):
     """ Returns the index.json dict inside the given package tarball. """
-    with Locked(os.path.dirname(tar_path)):
+    with filelock.FileLock(join(os.path.dirname(tar_path), ".conda_lock")):
         try:
             with tarfile.open(tar_path) as t:
                 try:
@@ -37,7 +38,7 @@ def read_index_tar(tar_path):
 
 def write_repodata(repodata, dir_path):
     """ Write updated repodata.json and repodata.json.bz2 """
-    with Locked(dir_path):
+    with filelock.FileLock(join(dir_path, ".conda_lock")):
         data = json.dumps(repodata, indent=2, sort_keys=True)
         # strip trailing whitespace
         data = '\n'.join(line.rstrip() for line in data.splitlines())

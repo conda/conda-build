@@ -8,18 +8,16 @@ from __future__ import absolute_import, division, print_function
 
 from locale import getpreferredencoding
 import os
-from os.path import isdir, isfile, abspath
+from os.path import isdir, isfile, abspath, join
 import subprocess
 import sys
 import tarfile
 import tempfile
-import time
 
+import filelock
 import yaml
 
 from conda.compat import PY3
-
-from conda.lock import Locked
 
 from conda_build import exceptions, utils
 from conda_build.metadata import MetaData
@@ -84,7 +82,7 @@ def parse_or_try_download(metadata, no_download_source, config,
 
         # lock this while downloading or moving source.  This does not affect other recipes/builds
         # - they each have their own build_folder.
-        with Locked(config.build_folder):
+        with filelock.FileLock(join(config.build_folder, ".conda_lock")):
             # this try/catch is for when the tool to download source is actually in
             #    meta.yaml, and not previously installed in builder env.
             try:
