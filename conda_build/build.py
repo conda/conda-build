@@ -851,10 +851,6 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
 
         metadata, need_source_download, need_reparse_in_env = metadata_list.popleft()
         recipe_parent_dir = os.path.dirname(metadata.path)
-        cwd = None
-        if recipe_parent_dir:
-            cwd = os.getcwd()
-            os.chdir(recipe_parent_dir)
         try:
             ok_to_test = build(metadata, post=post,
                                need_source_download=need_source_download,
@@ -878,7 +874,7 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
                 pkg = pkg.strip().split(' ')[0]
                 if pkg in skip_names:
                     continue
-                recipe_glob = glob(pkg + '-[v0-9][0-9.]*')
+                recipe_glob = glob(os.path.join(recipe_parent_dir, pkg + '-[v0-9][0-9.]*'))
                 if os.path.exists(pkg):
                     recipe_glob.append(pkg)
                 if recipe_glob:
@@ -889,15 +885,12 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
                         print(("Missing dependency {0}, but found" +
                                 " recipe directory, so building " +
                                 "{0} first").format(pkg))
-                        add_recipes.append(os.path.join(recipe_parent_dir, recipe_dir))
+                        add_recipes.append(recipe_dir)
                         to_build_recursive.append(pkg)
                 else:
                     raise
             metadata_list.extendleft([render_recipe(add_recipe, config=config)
                                       for add_recipe in add_recipes])
-        finally:
-            if cwd:
-                os.chdir(cwd)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         output_file = bldpkg_path(metadata, config=config)
