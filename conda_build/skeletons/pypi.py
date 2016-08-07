@@ -296,7 +296,7 @@ def package_exists(package_name, pypi_url=None):
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                all_urls=False, pypi_url='https://pypi.io/pypi', noprompt=False,
+                all_urls=False, pypi_url='https://pypi.python.org/pypi', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
                 pin_numpy=False):

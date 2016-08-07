@@ -222,7 +222,7 @@ def execute(args, parser, config):
                    already_built=None, config=config)
 
     if len(build.get_build_folders(config.croot)) > 0:
-        build.print_build_intermediate_warning()
+        build.print_build_intermediate_warning(config)
 
 
 def args_func(args, p, config):
