@@ -4,10 +4,10 @@ conda_build/noarch_python.py.
 
 """
 import os
-import sys
 from os.path import dirname, exists, isdir, join, normpath
+import sys
+import shutil
 
-from conda_build.utils import copy_into
 
 # Silence pyflakes. This variable is added when link.py is written by
 # conda_build.noarch_python.
@@ -32,7 +32,7 @@ def _link(src, dst):
         os.link(src, dst)
         # on Windows os.link raises AttributeError
     except (OSError, AttributeError):
-        copy_into(src, dst)
+        shutil.copy2(src, dst)
 
 
 def _unlink(path):
@@ -70,11 +70,11 @@ def create_script(fn):
     src = join(THIS_DIR, 'python-scripts', fn)
     dst = join(BIN_DIR, fn)
     if sys.platform == 'win32':
-        copy_into(src, dst + '-script.py')
+        shutil.copy2(src, dst + '-script.py')
         FILES.append('Scripts/%s-script.py' % fn)
-        copy_into(join(THIS_DIR,
-                             'cli-%d.exe' % (8 * tuple.__itemsize__)),
-                        dst + '.exe')
+        shutil.copy2(join(THIS_DIR,
+                          'cli-%d.exe' % (8 * tuple.__itemsize__)),
+                     dst + '.exe')
         FILES.append('Scripts/%s.exe' % fn)
     else:
         with open(src) as fi:

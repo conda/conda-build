@@ -890,9 +890,7 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
                 pkg = pkg.strip().split(' ')[0]
                 if pkg in skip_names:
                     continue
-                recipe_glob = glob(os.path.join(recipe_parent_dir, pkg + '-[v0-9][0-9.]*'))
-                if os.path.exists(pkg):
-                    recipe_glob.append(pkg)
+                recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
                 if recipe_glob:
                     for recipe_dir in recipe_glob:
                         if pkg in to_build_recursive:
