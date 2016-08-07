@@ -713,6 +713,8 @@ def test(m, config, move_broken=True):
     :type m: Metadata
     '''
 
+    if not os.path.isdir(config.build_folder):
+        os.makedirs(config.build_folder)
     with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
 
         # remove from package cache
@@ -780,10 +782,11 @@ def test(m, config, move_broken=True):
         with open(test_script, 'w') as tf:
             if config.activate:
                 ext = ".bat" if on_win else ""
-                tf.write("{source} activate{ext} {test_env}\n".format(source="call" if on_win
-                                                                     else "source",
-                                                                     ext=ext,
-                                                                     test_env=config.test_prefix))
+                tf.write("{source} activate{ext} {test_env} {squelch}\n".format(
+                    source="call" if on_win else "source",
+                    ext=ext,
+                    test_env=config.test_prefix,
+                    squelch=">nul 2>&1" if on_win else "&> /dev/null"))
                 tf.write("if errorlevel 1 exit 1\n") if on_win else None
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(

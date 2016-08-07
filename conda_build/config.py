@@ -158,8 +158,8 @@ class Config(object):
         unique work folders for build and test."""
         return self._build_id
 
-    def compute_build_id(self, package_name):
-        if not self.build_id:
+    def compute_build_id(self, package_name, reset=False):
+        if not self.build_id or reset:
             build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)
                                 if package_name in build_folder])
 

@@ -134,6 +134,7 @@ def test(package_path, move_broken=True, config=None, **kwargs):
             metadata, _, _ = render_recipe(package_path, no_download_source=False,
                                         config=config, **kwargs)
 
+        config.compute_build_id(metadata.name(), reset=True)
         test_result = test(metadata, config=config, move_broken=move_broken)
     return test_result
 
