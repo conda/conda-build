@@ -6,10 +6,13 @@ from __future__ import absolute_import, division, print_function
 from collections import namedtuple
 import math
 import os
-import sys
 from os.path import abspath, expanduser, join
+import sys
+import time
 
 import conda.config as cc
+
+from .utils import get_build_folders
 
 on_win = (sys.platform == 'win32')
 
@@ -153,6 +156,21 @@ class Config(object):
         time since the epoch, in ms.  It is appended to build and test prefixes, and used to create
         unique work folders for build and test."""
         return self._build_id
+
+    def compute_build_id(self, package_name):
+        if not self.build_id:
+            build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)
+                                if package_name in build_folder])
+
+            if self.dirty and build_folders:
+                # Use the most recent build with matching recipe name
+                self.build_id = build_folders[-1]
+            else:
+                # here we uniquely name folders, so that more than one build can happen concurrently
+                #    keep 6 decimal places so that prefix < 80 chars
+                build_id = package_name + "_" + str(int(time.time() * 1000))
+                # important: this is recomputing prefixes and determines where work folders are.
+                self.build_id = build_id
 
     @build_id.setter
     def build_id(self, _build_id):

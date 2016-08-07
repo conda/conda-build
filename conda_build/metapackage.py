@@ -24,5 +24,6 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
     d['about']['summary'] = summary
     d = dict(d)
     m = MetaData.fromdict(d, config=config)
+    config.compute_build_id(m.name())
 
     return build_tree([(m, False, False)], config=config)

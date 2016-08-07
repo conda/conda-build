@@ -153,20 +153,8 @@ def render_recipe(recipe_path, config, no_download_source=False):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    build_folders = sorted([build_folder for build_folder in utils.get_build_folders(config.croot)
-                            if m.name() in build_folder])
-
-    if config.dirty and build_folders:
-        # Use the most recent build with matching recipe name
-        config.build_id = build_folders[-1]
-    else:
-        # here we uniquely name folders, so that more than one build can happen concurrently
-        #    keep 6 decimal places so that prefix < 80 chars
-        build_id = os.path.basename(m.name()) + "_" + str(int(time.time() * 1000))
-        # important: this is recomputing prefixes and determines where work folders are.
-        config.build_id = build_id
-
-
+    # updates a unique build id if not already computed
+    config.compute_build_id(m.name())
 
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,
