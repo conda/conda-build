@@ -45,7 +45,7 @@ def create_entry_point(path, module, func, config):
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe')
+        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config)
     else:
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % config.build_python)

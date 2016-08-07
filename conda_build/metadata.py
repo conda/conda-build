@@ -782,6 +782,7 @@ class MetaData(object):
         '''
         return self.__str__()
 
+    @property
     def uses_vcs_in_meta(self):
         """returns true if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
@@ -807,10 +808,19 @@ class MetaData(object):
                     return vcs
         return None
 
+    @property
     def uses_setuptools_in_meta(self):
         with open(self.meta_path) as f:
             return "load_setup_py_data" in f.read()
 
+    @property
+    def uses_jinja(self):
+        with open(self.meta_path) as f:
+            metayaml = f.read()
+            matches = re.findall(r"{{.*}}", metayaml)
+        return len(matches) > 0
+
+    @property
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(os.path.dirname(self.meta_path), build_script)

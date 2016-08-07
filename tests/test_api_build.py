@@ -316,7 +316,7 @@ def test_skip_existing_url(testing_workdir, test_config, capfd):
     output_file = os.path.join(test_config.croot, cc.subdir, "empty_sections-0.0-0.tar.bz2")
 
     platform = os.path.join(testing_workdir, cc.subdir)
-    copy_into(output_file, os.path.join(platform, os.path.basename(output_file)))
+    copy_into(output_file, os.path.join(platform, os.path.basename(output_file)), test_config)
 
     # create the index so conda can find the file
     api.update_index(platform, config=test_config)

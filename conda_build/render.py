@@ -77,12 +77,13 @@ def parse_or_try_download(metadata, no_download_source, config,
                           force_download=False):
 
     need_reparse_in_env = False
-    if (force_download or (not no_download_source and (metadata.uses_vcs_in_meta() or
-                                                       metadata.uses_setuptools_in_meta()))):
+    if (force_download or (not no_download_source and (metadata.uses_vcs_in_meta or
+                                                       metadata.uses_setuptools_in_meta))):
 
         # lock this while downloading or moving source.  This does not affect other recipes/builds
         # - they each have their own build_folder.
-        with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=10):
+        with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"),
+                                   timeout=config.timeout):
             # this try/catch is for when the tool to download source is actually in
             #    meta.yaml, and not previously installed in builder env.
             try:

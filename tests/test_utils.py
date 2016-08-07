@@ -4,6 +4,7 @@ import shutil
 import os
 
 import conda_build.utils as utils
+from .utils import test_config
 
 
 class TestCopyInto(unittest.TestCase):
@@ -31,26 +32,26 @@ class TestCopyInto(unittest.TestCase):
         with open(name, 'w') as f:
             f.write(contents)
 
-    def test_copy_source_tree(self):
-        utils.copy_into(self.src, self.dst)
+    def test_copy_source_tree(self, test_config):
+        utils.copy_into(self.src, self.dst, test_config)
         self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package',
                                                     'module.py')))
 
-    def test_merge_namespace_trees(self):
+    def test_merge_namespace_trees(self, test_config):
 
         dep = os.path.join(self.dst, 'namespace', 'package', 'dependency.py')
         self.makefile(dep)
 
-        utils.copy_into(self.src, self.dst)
+        utils.copy_into(self.src, self.dst, test_config)
         self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package',
                                                     'module.py')))
         self.assertTrue(os.path.isfile(dep))
 
-    def test_disallow_merge_conflicts(self):
+    def test_disallow_merge_conflicts(self, test_config):
 
         duplicate = os.path.join(self.dst, 'namespace', 'package', 'module.py')
         self.makefile(duplicate)
-        self.assertRaises(IOError, utils.copy_into, self.src, self.dst)
+        self.assertRaises(IOError, utils.copy_into, self.src, self.dst, test_config)
 
     def tearDown(self):
         shutil.rmtree(self.dst)

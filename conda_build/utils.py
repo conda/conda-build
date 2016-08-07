@@ -16,6 +16,8 @@ import tempfile
 import zipfile
 import subprocess
 
+import filelock
+
 from conda.utils import md5_file, unix_path_to_win
 from conda.compat import PY3, iteritems
 
@@ -66,8 +68,13 @@ def get_recipe_abspath(recipe):
     return recipe_dir, need_cleanup
 
 
-def copy_into(src, dst, symlinks=False):
+def copy_into(src, dst, config, symlinks=False):
     "Copy all the files and directories in src to the directory dst"
+    lock = None
+    if isdir(dst):
+        lock = filelock.SoftFileLock(join(dst, ".conda_lock"),
+                                     timeout=config.timeout)
+        lock.acquire()
 
     if isdir(src):
             merge_tree(src, dst, symlinks)

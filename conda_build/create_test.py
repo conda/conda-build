@@ -4,7 +4,6 @@ Module to handle generating test files.
 
 from __future__ import absolute_import, division, print_function
 
-import shutil
 import sys
 
 from os.path import dirname, join, exists
@@ -12,7 +11,7 @@ from os.path import dirname, join, exists
 from conda_build.utils import copy_into
 
 
-def create_files(dir_path, m):
+def create_files(dir_path, m, config):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
@@ -24,11 +23,11 @@ def create_files(dir_path, m):
     for fn in m.get_value('test/files', []):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(dir_path, fn))
+        copy_into(path, join(dir_path, fn), config)
     return has_files
 
 
-def create_shell_files(dir_path, m):
+def create_shell_files(dir_path, m, config):
     has_tests = False
     if sys.platform == 'win32':
         name = 'run_test.bat'
@@ -36,7 +35,7 @@ def create_shell_files(dir_path, m):
         name = 'run_test.sh'
 
     if exists(join(m.path, name)):
-        shutil.copy(join(m.path, name), dir_path)
+        copy_into(join(m.path, name), dir_path, config)
         has_tests = True
 
     with open(join(dir_path, name), 'a') as f:

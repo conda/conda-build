@@ -63,7 +63,6 @@ def build(recipe_path, post=None, need_source_download=True,
           config=None, **kwargs):
 
     import os
-    import time
     import conda.config as cc
     from conda.utils import url_path
     from conda_build.render import render_recipe
@@ -91,7 +90,7 @@ def build(recipe_path, post=None, need_source_download=True,
             for d in config.bldpkgs_dirs:
                 if not os.path.isdir(d):
                     os.makedirs(d)
-                update_index(d)
+                update_index(d, config)
             index = get_build_index(config=config, clear_cache=True)
 
             urls = [url_path(config.croot)] + cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
@@ -276,4 +275,4 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         config = Config()
 
     for path in dir_paths:
-        update_index(path, verbose=config.verbose, force=force, check_md5=check_md5, remove=remove)
+        update_index(path, config, force=force, check_md5=check_md5, remove=remove)

@@ -116,7 +116,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                     # so the package directory already exists
                     # from another installed dependency
                     if os.path.exists(join(sp_dir, fn)):
-                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn))
+                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config)
                         utils.rm_rf(join(egg_path, fn))
                     else:
                         os.rename(join(egg_path, fn), join(sp_dir, fn))

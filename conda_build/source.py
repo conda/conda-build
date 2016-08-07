@@ -79,7 +79,7 @@ def unpack(meta, config):
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-        copy_into(src_path, get_dir(config))
+        copy_into(src_path, get_dir(config), config)
 
 
 def git_source(meta, recipe_dir, config):
@@ -273,7 +273,7 @@ def svn_source(meta, config):
         assert isdir(cache_repo)
 
     # now copy into work directory
-    copy_into(cache_repo, config.work_dir, symlinks=True)
+    copy_into(cache_repo, config.work_dir, config, symlinks=True)
 
     if not config.verbose:
         FNULL.close()
@@ -403,7 +403,7 @@ def provide(recipe_dir, meta, config, patch=True):
                                         config.work_dir))
         # careful here: we set test path to be outside of conda-build root in setup.cfg.
         #    If you don't do that, this is a recursive function
-        copy_into(abspath(join(recipe_dir, meta.get('path'))), config.work_dir)
+        copy_into(abspath(join(recipe_dir, meta.get('path'))), config.work_dir, config)
     else:  # no source
         if not isdir(config.work_dir):
             os.makedirs(config.work_dir)
