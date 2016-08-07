@@ -81,22 +81,26 @@ def parse_or_try_download(metadata, no_download_source, config,
     if (force_download or (not no_download_source and (metadata.uses_vcs_in_meta() or
                                                        metadata.uses_setuptools_in_meta()))):
 
-        # this try/catch is for when the tool to download source is actually in
-        #    meta.yaml, and not previously installed in builder env.
-        try:
-            if not config.dirty:
-                source.provide(metadata.path, metadata.get_section('source'), config=config)
-                need_source_download = False
+        # lock this while downloading or moving source.  This does not affect other recipes/builds
+        # - they each have their own build_folder.
+        with Locked(config.build_folder):
+            # this try/catch is for when the tool to download source is actually in
+            #    meta.yaml, and not previously installed in builder env.
             try:
-                metadata.parse_again(config=config, permit_undefined_jinja=False)
-            except exceptions.UnableToParseMissingSetuptoolsDependencies:
-                need_reparse_in_env = True
-        except subprocess.CalledProcessError as error:
-            print("Warning: failed to download source.  If building, will try "
-                "again after downloading recipe dependencies.")
-            print("Error was: ")
-            print(error)
-            need_source_download = True
+                if not config.dirty:
+                    source.provide(metadata.path, metadata.get_section('source'), config=config)
+                    need_source_download = False
+                try:
+                    metadata.parse_again(config=config, permit_undefined_jinja=False)
+                except exceptions.UnableToParseMissingSetuptoolsDependencies:
+                    need_reparse_in_env = True
+            except subprocess.CalledProcessError as error:
+                print("Warning: failed to download source.  If building, will try "
+                    "again after downloading recipe dependencies.")
+                print("Error was: ")
+                print(error)
+                need_source_download = True
+
     elif not metadata.get_section('source'):
         need_source_download = False
         if not os.path.isdir(config.work_dir):
@@ -121,49 +125,39 @@ def reparse(metadata, config):
 
 
 def render_recipe(recipe_path, config, no_download_source=False):
-    if not isdir(config.croot):
-        os.makedirs(config.croot)
-    with Locked(config.croot):
-        if not config.dirty:
-            rm_rf(config.work_dir)
-
-            assert not isdir(config.work_dir), ("Failed to clean work directory.  Please close open"
-                                                " programs/terminals/folders and try again.")
-
-        arg = find_recipe(recipe_path)
-
-        # Don't use byte literals for paths in Python 2
-        if not PY3:
-            arg = arg.decode(getpreferredencoding() or 'utf-8')
-        if isfile(arg):
-            if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                recipe_dir = tempfile.mkdtemp()
-                t = tarfile.open(arg, 'r:*')
-                t.extractall(path=recipe_dir)
-                t.close()
-                need_cleanup = True
-            else:
-                print("Ignoring non-recipe: %s" % arg)
-                return
+    arg = recipe_path
+    # Don't use byte literals for paths in Python 2
+    if not PY3:
+        arg = arg.decode(getpreferredencoding() or 'utf-8')
+    if isfile(arg):
+        if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+            recipe_dir = tempfile.mkdtemp()
+            t = tarfile.open(arg, 'r:*')
+            t.extractall(path=recipe_dir)
+            t.close()
+            need_cleanup = True
         else:
-            recipe_dir = abspath(arg)
-            need_cleanup = False
+            print("Ignoring non-recipe: %s" % arg)
+            return
+    else:
+        recipe_dir = abspath(arg)
+        need_cleanup = False
 
-        if not isdir(recipe_dir):
-            sys.exit("Error: no such directory: %s" % recipe_dir)
+    if not isdir(recipe_dir):
+        sys.exit("Error: no such directory: %s" % recipe_dir)
 
-        try:
-            m = MetaData(recipe_dir)
-        except exceptions.YamlParsingError as e:
-            sys.stderr.write(e.error_msg())
-            sys.exit(1)
+    try:
+        m = MetaData(recipe_dir)
+    except exceptions.YamlParsingError as e:
+        sys.stderr.write(e.error_msg())
+        sys.exit(1)
 
-        m, need_download, need_reparse_in_env = parse_or_try_download(m,
-                                                   no_download_source=no_download_source,
-                                                   config=config)
+    m, need_download, need_reparse_in_env = parse_or_try_download(m,
+                                                no_download_source=no_download_source,
+                                                config=config)
 
-        if need_cleanup:
-            rm_rf(recipe_dir)
+    if need_cleanup:
+        rm_rf(recipe_dir)
 
     return m, need_download, need_reparse_in_env
 

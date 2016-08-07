@@ -26,7 +26,7 @@ from conda.cli.common import Completer
 from conda.install import rm_rf
 from conda import compat
 
-from conda_build import source, metadata
+from conda_build import metadata, source
 from conda_build.config import Config
 
 CRAN_META = """\
@@ -401,7 +401,7 @@ def get_package_metadata(cran_url, package, session):
 
 def get_latest_git_tag(config):
     p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')

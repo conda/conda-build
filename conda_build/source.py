@@ -412,6 +412,7 @@ def provide(recipe_dir, meta, config, patch=True):
         src_dir = get_dir(config)
         for patch in meta.get('patches', []):
             apply_patch(src_dir, join(recipe_dir, patch), config)
+    return config.work_dir
 
 
 if __name__ == '__main__':

@@ -168,6 +168,10 @@ class Config(object):
         self._prefix_length = length
 
     @property
+    def _short_build_prefix(self):
+        return join(self.build_folder, '_build_env')
+
+    @property
     def _long_build_prefix(self):
         placeholder_length = self.prefix_length - len(self._short_build_prefix)
         placeholder = '_placehold'

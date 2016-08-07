@@ -1,5 +1,4 @@
 import os
-import sys
 
 pkgs = os.path.join(os.environ["ROOT"], "pkgs")
 info_dir = os.path.join(pkgs, "conda-build-test-ignore-some-prefix-files-1.0-0", "info")

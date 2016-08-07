@@ -20,6 +20,7 @@ install:
   - conda update -q --all
   - conda install -q --force --no-deps conda requests
 <<<<<<< HEAD
+<<<<<<< HEAD
   - conda install -q pip pytest requests jinja2 mock patchelf flake8 pyflakes=1.1
   - conda install -q anaconda-client
   - conda install -c conda-forge -q perl
@@ -30,11 +31,17 @@ install:
   - conda install -q anaconda-client pip pytest-cov
   - pip install --no-deps .
 >>>>>>> 00a704338dbee32f83ba3309e4090fd66bee6bad
+=======
+  - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
+  - conda install -q anaconda-client conda-build
+  - pip install pytest-cov pytest-xdist
+  - python setup.py install
+>>>>>>> multiple_folders
   - conda info -a
 
 script:
   - flake8 .
-  - py.test -v --cov conda_build --cov-report xml tests
+  - py.test -v --cov conda_build --cov-report xml tests -n 4
   - conda build --help
 
 notifications:

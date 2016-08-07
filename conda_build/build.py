@@ -13,10 +13,8 @@ import shutil
 import stat
 import subprocess
 import sys
-import time
 import tarfile
 import fnmatch
-import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
@@ -27,7 +25,7 @@ import encodings.idna  # noqa
 import conda.config as cc
 import conda.plan as plan
 from conda.api import get_index
-from conda.compat import PY3
+from conda.compat import PY3, TemporaryDirectory
 from conda.fetch import fetch_index
 from conda.install import prefix_placeholder, linked, symlink_conda
 from conda.lock import Locked
@@ -469,29 +467,13 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
               "configuration." % m.dist())
         return False
 
-    with Locked(cc.root_dir):
-
-        # If --keep-old-work, then move the contents of config.work_dir to a
-        # temporary directory for the duration of the build.
-        # The source unpacking procedure is too varied and complex
-        # to allow this to be written cleanly (see source.get_dir() for example)
-        if config.keep_old_work:
-            old_WORK_DIR = tempfile.mkdtemp()
-            old_sub_dirs = [name for name in os.listdir(config.work_dir)
-                            if os.path.isdir(os.path.join(config.work_dir, name))]
-            if len(old_sub_dirs):
-                print("Keeping old work directory backup: %s => %s"
-                    % (old_sub_dirs, old_WORK_DIR))
-                for old_sub in old_sub_dirs:
-                    shutil.move(os.path.join(config.work_dir, old_sub), old_WORK_DIR)
+    with Locked(config.build_folder):
 
         if post in [False, None]:
             print("Removing old build environment")
             print("BUILD START:", m.dist())
             if need_source_download or need_reparse_in_env:
                 print("    (actual version deferred until further download or env creation)")
-
-            rm_rf(config.build_prefix)
 
             specs = [ms.spec for ms in m.ms_depends('build')]
             if config.activate:
@@ -644,11 +626,11 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             files2 = prefix_files(prefix=config.build_prefix)
             if any(config.meta_dir in join(config.build_prefix, f) for f in
                     files2 - files1):
+                meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
+                        join(config.build_prefix, f)),)
                 sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
     This error usually comes from using conda in the build script.  Avoid doing this, as it
-    can lead to packages that include their dependencies.""" %
-                    (tuple(f for f in files2 - files1 if config.meta_dir in
-                        join(config.build_prefix, f)),)))
+    can lead to packages that include their dependencies.""" % meta_files))
             post_build(m, sorted(files2 - files1),
                        prefix=config.build_prefix,
                        build_python=config.build_python,
@@ -663,40 +645,39 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             fix_permissions(files3 - files1, config.build_prefix)
 
             path = bldpkg_path(m, config)
-            t = tarfile.open(path, 'w:bz2')
 
-            def order(f):
-                # we don't care about empty files so send them back via 100000
-                fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
-                # info/* records will be False == 0, others will be 1.
-                info_order = int(os.path.dirname(f) != 'info')
-                return info_order, fsize
+            # lock the output directory while we build this file
+            # create the tarball in a temporary directory to minimize lock time
+            with TemporaryDirectory() as tmp:
+                tmp_path = os.path.join(tmp, os.path.basename(path))
+                t = tarfile.open(tmp_path, 'w:bz2')
 
-            # add files in order of a) in info directory, b) increasing size so
-            # we can access small manifest or json files without decompressing
-            # possible large binary or data files
-            for f in sorted(files3 - files1, key=order):
-                t.add(join(config.build_prefix, f), f)
-            t.close()
+                def order(f):
+                    # we don't care about empty files so send them back via 100000
+                    fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
+                    # info/* records will be False == 0, others will be 1.
+                    info_order = int(os.path.dirname(f) != 'info')
+                    return info_order, fsize
 
-            print("BUILD END:", m.dist())
+                # add files in order of a) in info directory, b) increasing size so
+                # we can access small manifest or json files without decompressing
+                # possible large binary or data files
+                for f in sorted(files3 - files1, key=order):
+                    t.add(join(config.build_prefix, f), f)
+                t.close()
 
-            # we're done building, perform some checks
-            tarcheck.check_all(path)
-            update_index(config.bldpkgs_dir)
+                # we're done building, perform some checks
+                tarcheck.check_all(tmp_path)
+
+                # lock the packages folder while performing this operation,
+                #    so package and index are each safe
+                with Locked(os.path.dirname(path)):
+                    shutil.copy2(tmp_path, path)
+                    update_index(config.bldpkgs_dir)
+
         else:
             print("STOPPING BUILD BEFORE POST:", m.dist())
 
-        if config.keep_old_work and len(old_sub_dirs):
-            print("Restoring old work directory backup: %s :: %s => %s"
-                % (old_WORK_DIR, old_sub_dirs, config.work_dir))
-            for old_sub in old_sub_dirs:
-                if os.path.exists(os.path.join(config.work_dir, old_sub)):
-                    print("Not restoring old source directory %s over new build's version" %
-                          (old_sub))
-                else:
-                    shutil.move(os.path.join(old_WORK_DIR, old_sub), config.work_dir)
-            shutil.rmtree(old_WORK_DIR, ignore_errors=True)
     # returning true here says package is OK to test
     return True
 
@@ -709,16 +690,14 @@ def test(m, config, move_broken=True):
     :type m: Metadata
     '''
 
-    with Locked(cc.root_dir):
+    with Locked(config.build_folder):
 
         # remove from package cache
         rm_pkgs_cache(m.dist())
 
-        tmp_dir = join(config.croot, 'test-tmp_dir')
-        rm_rf(tmp_dir)
-        if on_win:
-            time.sleep(1)  # wait for rm_rf(tmp_dir) to finish before recreating tmp_dir
-        os.makedirs(tmp_dir)
+        tmp_dir = config.test_dir
+        if not isdir(tmp_dir):
+            os.makedirs(tmp_dir)
         create_files(tmp_dir, m)
         # Make Perl or Python-specific test files
         if m.name().startswith('perl-'):
@@ -735,8 +714,6 @@ def test(m, config, move_broken=True):
             return
 
         print("TEST START:", m.dist())
-        rm_rf(config.build_prefix)
-        rm_rf(config.test_prefix)
 
         get_build_metadata(m, config=config)
         specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
@@ -780,8 +757,8 @@ def test(m, config, move_broken=True):
         with open(test_script, 'w') as tf:
             if config.activate:
                 ext = ".bat" if on_win else ""
-                tf.write("{source}activate{ext} {test_env}\n".format(source="call " if on_win
-                                                                     else "source ",
+                tf.write("{source} activate{ext} {test_env}\n".format(source="call" if on_win
+                                                                     else "source",
                                                                      ext=ext,
                                                                      test_env=config.test_prefix))
                 tf.write("if errorlevel 1 exit 1\n") if on_win else None
@@ -981,3 +958,24 @@ Error: cannot locate anaconda command (required for upload)
     except:
         print(no_upload_message)
         raise
+
+
+def get_build_folders(croot=config.croot):
+    # remember, glob is not a regex.
+    return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
+
+
+def print_build_intermediate_warning():
+    print("\n\n")
+    print('#' * 80)
+    print("Source and build intermediates have been left in " + config.croot + ".")
+    build_folders = get_build_folders()
+    print("There are currently {num_builds} accumulated.".format(num_builds=len(build_folders)))
+    print("To remove them, you can run the ```conda build purge``` command")
+
+
+def clean_build(folders=None):
+    if not folders:
+        folders = get_build_folders()
+    for folder in folders:
+        shutil.rmtree(folder)
