@@ -35,9 +35,9 @@ def test_name_with_version_specified(testing_workdir, test_config):
 
 
 def test_pypi_url(testing_workdir, test_config):
-    api.skeletonize('https://pypi.io/packages/source/s/sympy/'
+    api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
                     'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
-                    'pypi', config=test_config)
+                    repo='pypi', config=test_config)
     with open('{}/test-skeleton/sympy-0.7.5-url/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
     with open('sympy/meta.yaml') as f:
