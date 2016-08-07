@@ -97,7 +97,8 @@ different sets of packages."""
         metavar='RECIPE_PATH',
         nargs='+',
         choices=RecipeCompleter(),
-        help="Path to recipe directory.",
+        help="Path to recipe directory.  Pass 'purge' here to clean the "
+        "work and test intermediates.",
     )
     p.add_argument(
         '--skip-existing',
@@ -170,6 +171,10 @@ def execute(args, parser, config):
     config.override_channels = args.override_channels
     config.verbose = not args.quiet
 
+    if 'purge' in args.recipe:
+        build.clean_build(config)
+        return
+
     if on_win:
         try:
             # needs to happen before any c extensions are imported that might be
@@ -215,6 +220,9 @@ def execute(args, parser, config):
         api.build(args.recipe, post=args.post, build_only=args.build_only,
                    notest=args.notest, keep_old_work=args.keep_old_work,
                    already_built=None, config=config)
+
+    if len(build.get_build_folders(config)) > 0:
+        build.print_build_intermediate_warning()
 
 
 def args_func(args, p, config):

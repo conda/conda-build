@@ -905,6 +905,12 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
 
         already_built.add(output_file)
 
+        if not config.keep_old_work and not config.dirty:
+            sys.stderr.write("# --keep-old-work flag not specified.  "
+                             "Removing source and build files.\n")
+            shutil.rmtree(config.build_folder)
+            shutil.rmtree(config.work_dir)
+
 
 def handle_anaconda_upload(path, config):
     import subprocess
@@ -960,12 +966,12 @@ Error: cannot locate anaconda command (required for upload)
         raise
 
 
-def get_build_folders(croot=config.croot):
+def get_build_folders(croot):
     # remember, glob is not a regex.
     return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
 
 
-def print_build_intermediate_warning():
+def print_build_intermediate_warning(config):
     print("\n\n")
     print('#' * 80)
     print("Source and build intermediates have been left in " + config.croot + ".")
@@ -974,8 +980,8 @@ def print_build_intermediate_warning():
     print("To remove them, you can run the ```conda build purge``` command")
 
 
-def clean_build(folders=None):
+def clean_build(config, folders=None):
     if not folders:
-        folders = get_build_folders()
+        folders = get_build_folders(config)
     for folder in folders:
         shutil.rmtree(folder)
