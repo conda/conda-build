@@ -21,7 +21,7 @@ from conda_build.utils import file_info
 
 def read_index_tar(tar_path):
     """ Returns the index.json dict inside the given package tarball. """
-    with filelock.FileLock(join(os.path.dirname(tar_path), ".conda_lock")):
+    with filelock.SoftFileLock(join(os.path.dirname(tar_path), ".conda_lock"), timeout=10):
         try:
             with tarfile.open(tar_path) as t:
                 try:
@@ -38,7 +38,7 @@ def read_index_tar(tar_path):
 
 def write_repodata(repodata, dir_path):
     """ Write updated repodata.json and repodata.json.bz2 """
-    with filelock.FileLock(join(dir_path, ".conda_lock")):
+    with filelock.SoftFileLock(join(dir_path, ".conda_lock"), timeout=10):
         data = json.dumps(repodata, indent=2, sort_keys=True)
         # strip trailing whitespace
         data = '\n'.join(line.rstrip() for line in data.splitlines())

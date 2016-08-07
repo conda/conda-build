@@ -82,7 +82,7 @@ def parse_or_try_download(metadata, no_download_source, config,
 
         # lock this while downloading or moving source.  This does not affect other recipes/builds
         # - they each have their own build_folder.
-        with filelock.FileLock(join(config.build_folder, ".conda_lock")):
+        with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=10):
             # this try/catch is for when the tool to download source is actually in
             #    meta.yaml, and not previously installed in builder env.
             try:

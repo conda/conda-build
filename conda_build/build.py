@@ -399,7 +399,8 @@ def create_env(prefix, specs, config, clear_cache=True):
             pkg = link_pkg.split(" ")[0]
             dirname = os.path.join(cc.root_dir, 'pkgs', pkg)
             if os.path.isdir(dirname):
-                locks.append(filelock.FileLock(os.path.join(dirname, ".conda_lock")))
+                locks.append(filelock.SoftFileLock(os.path.join(dirname, ".conda_lock"),
+                                                   timeout=10))
         try:
             for lock in locks:
                 lock.acquire(timeout=10)
@@ -483,7 +484,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
               "configuration." % m.dist())
         return False
 
-    with filelock.FileLock(join(config.build_folder, ".conda_lock")):
+    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=10):
 
         if post in [False, None]:
             print("Removing old build environment")
@@ -685,11 +686,11 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                 # we're done building, perform some checks
                 tarcheck.check_all(tmp_path)
 
-                # lock the packages folder while performing this operation,
-                #    so package and index are each safe
-                with filelock.FileLock(join(os.path.dirname(path), ".conda_lock")):
+                # lock the packages folder while copying to avoid weird race conditions
+                with filelock.SoftFileLock(join(os.path.dirname(path), ".conda_lock"), timeout=10):
                     shutil.copy2(tmp_path, path)
-                    update_index(config.bldpkgs_dir)
+                # update_index locks things appropriately itself on a finer level
+                update_index(config.bldpkgs_dir)
 
         else:
             print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -706,7 +707,7 @@ def test(m, config, move_broken=True):
     :type m: Metadata
     '''
 
-    with filelock.FileLock(join(config.build_folder, ".conda_lock")):
+    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=10):
 
         # remove from package cache
         rm_pkgs_cache(m.dist())
