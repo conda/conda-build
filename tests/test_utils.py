@@ -3,59 +3,53 @@ import tempfile
 import shutil
 import os
 
+import pytest
+
 import conda_build.utils as utils
-from .utils import test_config
+from .utils import test_config, testing_workdir
 
 
-class TestCopyInto(unittest.TestCase):
+def makefile(name, contents=""):
+    name = os.path.abspath(name)
+    path = os.path.dirname(name)
 
-    def setUp(self):
-        self.src = tempfile.mkdtemp()
-        self.dst = tempfile.mkdtemp()
+    if not os.path.exists(path):
+        os.makedirs(path)
 
-        self.namespace = os.path.join(self.src, 'namespace')
-        self.package = os.path.join(self.namespace, 'package')
-        self.module = os.path.join(self.package, 'module.py')
+    with open(name, 'w') as f:
+        f.write(contents)
 
-        os.makedirs(self.namespace)
-        os.makedirs(self.package)
-        self.makefile(self.module)
 
-    def makefile(self, name, contents=''):
+@pytest.fixture(scope='function')
+def namespace_setup(testing_workdir, request):
+    namespace = os.path.join(testing_workdir, 'namespace')
+    package = os.path.join(namespace, 'package')
+    makefile(os.path.join(package, "module.py"))
+    return testing_workdir
 
-        name = os.path.abspath(name)
-        path = os.path.dirname(name)
 
-        if not os.path.exists(path):
-            os.makedirs(path)
+def test_copy_source_tree(namespace_setup, test_config):
+    dst = namespace_setup.join('dest')
+    utils.copy_into(namespace_setup, dst, test_config)
+    assert os.path.isfile(os.path.join(dst, 'namespace', 'package', 'module.py'))
 
-        with open(name, 'w') as f:
-            f.write(contents)
 
-    def test_copy_source_tree(self, test_config=test_config):
-        utils.copy_into(self.src, self.dst, test_config)
-        self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package',
-                                                    'module.py')))
+def test_merge_namespace_trees(namespace_setup, test_config):
+    dep = os.path.join(namespace_setup, 'other_tree', 'namespace', 'package', 'dependency.py')
+    makefile(dep)
 
-    def test_merge_namespace_trees(self, test_config=test_config):
+    utils.copy_into(os.path.join(namespace_setup, 'other_tree'), namespace_setup, test_config)
+    assert os.path.isfile(os.path.join(namespace_setup, 'namespace', 'package',
+                                                'module.py'))
+    assert os.path.isfile(dep)
 
-        dep = os.path.join(self.dst, 'namespace', 'package', 'dependency.py')
-        self.makefile(dep)
 
-        utils.copy_into(self.src, self.dst, test_config)
-        self.assertTrue(os.path.isfile(os.path.join(self.dst, 'namespace', 'package',
-                                                    'module.py')))
-        self.assertTrue(os.path.isfile(dep))
-
-    def test_disallow_merge_conflicts(self, test_config=test_config):
-
-        duplicate = os.path.join(self.dst, 'namespace', 'package', 'module.py')
-        self.makefile(duplicate)
-        self.assertRaises(IOError, utils.copy_into, self.src, self.dst, test_config)
-
-    def tearDown(self):
-        shutil.rmtree(self.dst)
-        shutil.rmtree(self.src)
+def test_disallow_merge_conflicts(namespace_setup, test_config):
+    duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
+    makefile(duplicate)
+    with pytest.raises(IOError):
+        utils.merge_tree(os.path.dirname(duplicate), os.path.join(namespace_setup, 'namespace',
+                                                 'package'), test_config)
 
 
 class TestUtils(unittest.TestCase):
