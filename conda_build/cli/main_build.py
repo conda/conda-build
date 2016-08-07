@@ -221,7 +221,7 @@ def execute(args, parser, config):
                    notest=args.notest, keep_old_work=args.keep_old_work,
                    already_built=None, config=config)
 
-    if len(build.get_build_folders(config)) > 0:
+    if len(build.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning()
 
 

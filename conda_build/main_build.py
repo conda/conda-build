@@ -297,7 +297,8 @@ def execute(args, parser):
         if not isdir(recipe_dir):
             sys.exit("Error: no such directory: %s" % recipe_dir)
 
-        build_folders = sorted([build_folder for build_folder in build.get_build_folders()
+        build_folders = sorted([build_folder for build_folder in
+                                build.get_build_folders(config.croot)
                                 if os.path.basename(recipe_dir) in build_folder])
 
         if args.dirty and build_folders:
@@ -421,8 +422,8 @@ def execute(args, parser):
                              "Removing source and build files.\n")
             shutil.rmtree(config.build_folder)
 
-        if len(build.get_build_folders()) > 0:
-            build.print_build_intermediate_warning()
+        if len(build.get_build_folders(config.croot)) > 0:
+            build.print_build_intermediate_warning(config)
 
 
 def args_func(args, p):
