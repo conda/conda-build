@@ -182,7 +182,6 @@ def test_cached_source_not_interfere_with_versioning(testing_workdir, test_confi
         # this should fail, because we have not built v1.0, so there should
         # be nothing to test.  If it succeeds, it means that it used the
         # cached master checkout for determining which version to test.
-        cmd = 'conda build --output conda_build_test_recipe'
         output = api.get_output_file_path('conda_build_test_recipe', config=test_config)
         assert "conda-build-test-source-git-jinja2-1.20.0" in output
     except:

@@ -1,4 +1,5 @@
 import os
+import sys
 
 import pytest
 
@@ -14,7 +15,13 @@ def config():
 def test_set_build_id(config):
     build_id = "test123"
     config.build_id = build_id
-    assert config.build_prefix == os.path.join(config.croot, build_id, "_build_env")
+    # windows always uses the short prefix due to its limitation of 260 char paths
+    if sys.platform == 'win32':
+        assert config.build_prefix == os.path.join(config.croot, build_id, "_build_env")
+    else:
+        long_prefix = os.path.join(config.croot, build_id,
+                                   "_build_env" + "_placehold" * 25)[:config.prefix_length]
+        assert config.build_prefix == long_prefix
 
 
 def test_long_build_prefix_length(config):
