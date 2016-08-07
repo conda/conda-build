@@ -12,8 +12,8 @@ import pytest
 from conda.compat import PY3
 from conda.fetch import download
 
-from conda_build.utils import on_win, get_site_packages
-from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
+from conda_build.utils import get_site_packages
+from .utils import testing_workdir, metadata_dir, subdir, package_has_file
 
 
 def test_build():

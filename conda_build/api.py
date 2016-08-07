@@ -63,6 +63,7 @@ def build(recipe_path, post=None, need_source_download=True,
           config=None, **kwargs):
 
     import os
+    import time
     import conda.config as cc
     from conda.utils import url_path
     from conda_build.render import render_recipe

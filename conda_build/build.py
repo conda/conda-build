@@ -5,18 +5,19 @@ from __future__ import absolute_import, division, print_function
 
 from collections import deque
 import io
+import fnmatch
 from glob import glob
 import json
 import logging
+import mmap
 import os
+from os.path import exists, isdir, isfile, islink, join
 import shutil
 import stat
 import subprocess
 import sys
 import tarfile
-import fnmatch
-from os.path import exists, isdir, isfile, islink, join
-import mmap
+import time
 
 # this one is some strange error that requests raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
@@ -466,6 +467,19 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
         return False
+
+    build_folders = sorted([build_folder for build_folder in get_build_folders(config.croot)
+                            if os.path.basename(m.name()) in build_folder])
+
+    if config.dirty and build_folders:
+        # Use the most recent build with matching recipe name
+        config.build_id = build_folders[-1]
+    else:
+        # here we uniquely name folders, so that more than one build can happen concurrently
+        #    keep 6 decimal places so that prefix < 80 chars
+        build_id = os.path.basename(m.name()) + "_" + str(int(time.time() * 1000))
+        # important: this is recomputing prefixes and determines where work folders are.
+        config.build_id = build_id
 
     with Locked(config.build_folder):
 
