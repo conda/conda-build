@@ -86,9 +86,11 @@ def git_source(meta, recipe_dir, config):
     ''' Download a source from Git repo. '''
     if config.verbose:
         stdout = None
+        stderr = None
     else:
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
+        stderr = FNULL
 
     if not isdir(config.git_cache):
         os.makedirs(config.git_cache)
@@ -118,7 +120,7 @@ def git_source(meta, recipe_dir, config):
     # update (or create) the cache repo
     if isdir(cache_repo):
         if meta.get('git_rev', 'HEAD') != 'HEAD':
-            check_call([git, 'fetch'], cwd=cache_repo, stdout=stdout)
+            check_call([git, 'fetch'], cwd=cache_repo, stdout=stdout, stderr=stderr)
         else:
             # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
             # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -127,15 +129,15 @@ def git_source(meta, recipe_dir, config):
             # but the user is working with a branch other than 'master' without
             # explicitly providing git_rev.
             check_call([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
-                       cwd=cache_repo, stdout=stdout)
+                       cwd=cache_repo, stdout=stdout, stderr=stderr)
             check_call([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
-                       cwd=cache_repo, stdout=stdout)
+                       cwd=cache_repo, stdout=stdout, stderr=stderr)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
 
-        check_call(args + [git_url, cache_repo_arg], stdout=stdout)
+        check_call(args + [git_url, cache_repo_arg], stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now clone into the work directory
@@ -144,19 +146,19 @@ def git_source(meta, recipe_dir, config):
     # assume the user wants the current HEAD
     if not checkout and git_url.startswith('.'):
         process = Popen(["git", "rev-parse", "HEAD"],
-                    stdout=PIPE, cwd=git_url)
+                        stdout=PIPE, cwd=git_url, stderr=stderr)
         output = process.communicate()[0].strip()
         checkout = output.decode('utf-8')
     if checkout and config.verbose:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', cache_repo_arg, config.work_dir], stdout=stdout)
+    check_call([git, 'clone', cache_repo_arg, config.work_dir], stdout=stdout, stderr=stderr)
     if checkout:
-        check_call([git, 'checkout', checkout], cwd=config.work_dir, stdout=stdout)
+        check_call([git, 'checkout', checkout], cwd=config.work_dir, stdout=stdout, stderr=stderr)
 
     # Submodules must be updated after checkout.
     check_call([git, 'submodule', 'update', '--init', '--recursive'],
-               cwd=config.work_dir, stdout=stdout)
+               cwd=config.work_dir, stdout=stdout, stderr=stderr)
 
     git_info(config=config)
 

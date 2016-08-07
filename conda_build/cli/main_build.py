@@ -22,7 +22,7 @@ import conda_build.build as build
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          render_recipe, get_render_parser, bldpkg_path)
 import conda_build.source as source
-from conda_build.utils import get_recipe_abspath
+from conda_build.utils import get_recipe_abspath, silence_loggers
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -147,7 +147,9 @@ different sets of packages."""
 
 
 def output_action(metadata, config):
+    silence_loggers(show_warnings_and_errors=False)
     print(bldpkg_path(metadata, config))
+    sys.exit(0)
 
 
 def source_action(metadata, config):
@@ -194,6 +196,8 @@ def execute(args, parser, config):
     action = None
     if args.output:
         action = output_action
+        config.verbose = False
+        config.quiet = True
     elif args.test:
         action = test_action
     elif args.source:

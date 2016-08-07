@@ -41,7 +41,8 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.scripts import create_entry_points, prepend_bin_path
-from conda_build.utils import rm_rf, _check_call, copy_into, on_win, get_build_folders
+from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
+                               silence_loggers)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -362,17 +363,7 @@ def create_env(prefix, specs, config, clear_cache=True):
         logging.getLogger("stdoutlog").setLevel(logging.DEBUG)
         logging.getLogger("requests").setLevel(logging.DEBUG)
     else:
-        # This squelches a ton of conda output that is not hugely relevant
-        logging.getLogger("conda").setLevel(logging.WARN)
-        logging.getLogger("binstar").setLevel(logging.WARN)
-        logging.getLogger("install").setLevel(logging.ERROR)
-        logging.getLogger("conda.install").setLevel(logging.ERROR)
-        logging.getLogger("fetch").setLevel(logging.WARN)
-        logging.getLogger("print").setLevel(logging.WARN)
-        logging.getLogger("progress").setLevel(logging.WARN)
-        logging.getLogger("dotupdate").setLevel(logging.WARN)
-        logging.getLogger("stdoutlog").setLevel(logging.WARN)
-        logging.getLogger("requests").setLevel(logging.WARN)
+        silence_loggers(show_warnings_and_errors=True)
 
     specs = list(specs)
     for feature, value in feature_list:
@@ -975,7 +966,7 @@ Error: cannot locate anaconda command (required for upload)
 
 def print_build_intermediate_warning(config):
     print("\n\n")
-    print('#' * 80)
+    print('#' * 84)
     print("Source and build intermediates have been left in " + config.croot + ".")
     build_folders = get_build_folders(config.croot)
     print("There are currently {num_builds} accumulated.".format(num_builds=len(build_folders)))

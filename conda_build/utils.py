@@ -303,3 +303,21 @@ def get_site_packages(prefix):
 def get_build_folders(croot):
     # remember, glob is not a regex.
     return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
+
+
+def silence_loggers(show_warnings_and_errors=True):
+    if show_warnings_and_errors:
+        log_level = logging.WARN
+    else:
+        log_level = logging.CRITICAL + 1
+    # This squelches a ton of conda output that is not hugely relevant
+    logging.getLogger("conda").setLevel(log_level)
+    logging.getLogger("binstar").setLevel(log_level)
+    logging.getLogger("install").setLevel(log_level + 10)
+    logging.getLogger("conda.install").setLevel(log_level + 10)
+    logging.getLogger("fetch").setLevel(log_level)
+    logging.getLogger("print").setLevel(log_level)
+    logging.getLogger("progress").setLevel(log_level)
+    logging.getLogger("dotupdate").setLevel(log_level)
+    logging.getLogger("stdoutlog").setLevel(log_level)
+    logging.getLogger("requests").setLevel(log_level)
