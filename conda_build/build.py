@@ -397,7 +397,23 @@ def create_env(prefix, specs, config, clear_cache=True):
         try:
             for lock in locks:
                 lock.acquire(timeout=config.timeout)
-            plan.execute_actions(actions, index, verbose=config.debug)
+            try:
+                plan.execute_actions(actions, index, verbose=config.debug)
+            except SystemExit as exc:
+                if "too short in" in exc.message and config.prefix_length > 80:
+                    log.warn("Build prefix failed with prefix length {0}."
+                            .format(config.prefix_length))
+                    log.warn("Error was: ")
+                    log.warn(exc.message)
+                    log.warn("One or more of your package dependencies needs to be rebuilt with a "
+                            "longer prefix length.")
+                    log.warn("Falling back to legacy prefix length of 80 characters.")
+                    log.warn("Your package will not install into prefixes > 80 characters.")
+                    config.prefix_length = 80
+
+                    for lock in locks:
+                        lock.release()
+                    create_env(prefix, specs, config=config, clear_cache=clear_cache)
         except:
             raise
         finally:
