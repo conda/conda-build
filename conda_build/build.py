@@ -41,7 +41,7 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.scripts import create_entry_points, prepend_bin_path
-from conda_build.utils import rm_rf, _check_call, copy_into, on_win
+from conda_build.utils import rm_rf, _check_call, copy_into, on_win, get_build_folders
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -467,19 +467,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
         return False
-
-    build_folders = sorted([build_folder for build_folder in get_build_folders(config.croot)
-                            if os.path.basename(m.name()) in build_folder])
-
-    if config.dirty and build_folders:
-        # Use the most recent build with matching recipe name
-        config.build_id = build_folders[-1]
-    else:
-        # here we uniquely name folders, so that more than one build can happen concurrently
-        #    keep 6 decimal places so that prefix < 80 chars
-        build_id = os.path.basename(m.name()) + "_" + str(int(time.time() * 1000))
-        # important: this is recomputing prefixes and determines where work folders are.
-        config.build_id = build_id
 
     with Locked(config.build_folder):
 
@@ -971,11 +958,6 @@ Error: cannot locate anaconda command (required for upload)
     except:
         print(no_upload_message)
         raise
-
-
-def get_build_folders(croot):
-    # remember, glob is not a regex.
-    return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
 
 
 def print_build_intermediate_warning(config):

@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 from collections import defaultdict
 from distutils.dir_util import copy_tree
 import fnmatch
+from glob import glob
 from locale import getpreferredencoding
 import logging
 import operator
@@ -303,3 +304,8 @@ def get_site_packages(prefix):
     else:
         sp = os.path.join(prefix, 'lib', 'python%s' % sys.version[:3], 'site-packages')
     return sp
+
+
+def get_build_folders(croot):
+    # remember, glob is not a regex.
+    return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
