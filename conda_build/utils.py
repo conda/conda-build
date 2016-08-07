@@ -66,24 +66,6 @@ def get_recipe_abspath(recipe):
     return recipe_dir, need_cleanup
 
 
-def find_recipe(path):
-    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
-
-    Returns folder containing meta.yaml, to be built.
-
-    If we have a base level meta.yaml and other supplemental ones, use that first"""
-    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
-    if len(results) > 1:
-        base_recipe = os.path.join(path, "meta.yaml")
-        if base_recipe in results:
-            return os.path.dirname(base_recipe)
-        else:
-            raise IOError("More than one meta.yaml files found in %s" % path)
-    elif not results:
-        raise IOError("No meta.yaml files found in %s" % path)
-    return os.path.dirname(results[0])
-
-
 def copy_into(src, dst, symlinks=False):
     "Copy all the files and directories in src to the directory dst"
 

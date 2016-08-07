@@ -22,7 +22,7 @@ import conda_build.build as build
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          render_recipe, get_render_parser, bldpkg_path)
 import conda_build.source as source
-from conda_build.utils import find_recipe, get_recipe_abspath
+from conda_build.utils import get_recipe_abspath
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -205,8 +205,6 @@ def execute(args, parser, config):
         for recipe in args.recipe:
             recipe_dir, need_cleanup = get_recipe_abspath(recipe)
 
-            # recurse looking for meta.yaml that is potentially not in immediate folder
-            recipe_dir = find_recipe(recipe_dir)
             if not isdir(recipe_dir):
                 sys.exit("Error: no such directory: %s" % recipe_dir)
 

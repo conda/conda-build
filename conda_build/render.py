@@ -25,7 +25,7 @@ from conda_build import exceptions, utils
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
-from conda_build.utils import find_recipe, rm_rf
+from conda_build.utils import rm_rf
 
 
 def set_language_env_vars(args, parser, config, execute=None):

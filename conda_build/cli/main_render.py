@@ -14,7 +14,6 @@ from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build import __version__
 from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path, output_yaml
-from conda_build.utils import find_recipe
 from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
                                     LuaVersionsCompleter, NumPyVersionCompleter)
 from conda_build.config import Config
@@ -125,8 +124,7 @@ def main():
     config = Config()
     set_language_env_vars(args, p, config)
 
-    metadata, _, _ = render_recipe(find_recipe(args.recipe), no_download_source=args.no_source,
-                                config=config)
+    metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source, config=config)
     if args.output:
         print(bldpkg_path(metadata, config=config))
     else:

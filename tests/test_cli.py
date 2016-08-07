@@ -13,7 +13,7 @@ from conda.compat import PY3
 from conda.fetch import download
 
 from conda_build.utils import get_site_packages
-from .utils import testing_workdir, metadata_dir, subdir, package_has_file
+from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
 
 
 def test_build():

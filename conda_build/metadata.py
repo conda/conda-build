@@ -15,6 +15,7 @@ from conda.cli.common import specs_from_url
 from conda_build import exceptions
 from conda_build.features import feature_list
 from conda_build.config import Config
+from conda_build.utils import rec_glob
 
 try:
     import yaml
@@ -348,6 +349,24 @@ def handle_config_version(ms, ver, dep_type='run'):
     return MatchSpec('%s %s*' % (ms.name, ver))
 
 
+def find_recipe(path):
+    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
+
+    Returns folder containing meta.yaml, to be built.
+
+    If we have a base level meta.yaml and other supplemental ones, use that first"""
+    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
+    if len(results) > 1:
+        base_recipe = os.path.join(path, "meta.yaml")
+        if base_recipe in results:
+            return os.path.dirname(base_recipe)
+        else:
+            raise IOError("More than one meta.yaml files found in %s" % path)
+    elif not results:
+        raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
+    return results[0]
+
+
 class MetaData(object):
     def __init__(self, path, config=None):
 
@@ -357,13 +376,14 @@ class MetaData(object):
         self.config = config
 
         assert isdir(path)
-        self.path = path
-        self.meta_path = join(path, 'meta.yaml')
-        self.requirements_path = join(path, 'requirements.txt')
-        if not isfile(self.meta_path):
-            self.meta_path = join(path, 'conda.yaml')
-            if not isfile(self.meta_path):
-                sys.exit("Error: meta.yaml or conda.yaml not found in %s" % path)
+
+        if isfile(path):
+            self.path = os.path.dirname(path)
+            self.meta_path = path
+        else:
+            self.meta_path = find_recipe(path)
+            self.path = os.path.dirname(self.meta_path)
+        self.requirements_path = join(self.path, 'requirements.txt')
 
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
