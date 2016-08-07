@@ -80,26 +80,22 @@ def parse_or_try_download(metadata, no_download_source, config,
     if (force_download or (not no_download_source and (metadata.uses_vcs_in_meta or
                                                        metadata.uses_setuptools_in_meta))):
 
-        # lock this while downloading or moving source.  This does not affect other recipes/builds
-        # - they each have their own build_folder.
-        with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"),
-                                   timeout=config.timeout):
-            # this try/catch is for when the tool to download source is actually in
-            #    meta.yaml, and not previously installed in builder env.
+        # this try/catch is for when the tool to download source is actually in
+        #    meta.yaml, and not previously installed in builder env.
+        try:
+            if not config.dirty:
+                source.provide(metadata.path, metadata.get_section('source'), config=config)
+                need_source_download = False
             try:
-                if not config.dirty:
-                    source.provide(metadata.path, metadata.get_section('source'), config=config)
-                    need_source_download = False
-                try:
-                    metadata.parse_again(config=config, permit_undefined_jinja=False)
-                except exceptions.UnableToParseMissingSetuptoolsDependencies:
-                    need_reparse_in_env = True
-            except subprocess.CalledProcessError as error:
-                print("Warning: failed to download source.  If building, will try "
-                    "again after downloading recipe dependencies.")
-                print("Error was: ")
-                print(error)
-                need_source_download = True
+                metadata.parse_again(config=config, permit_undefined_jinja=False)
+            except exceptions.UnableToParseMissingSetuptoolsDependencies:
+                need_reparse_in_env = True
+        except subprocess.CalledProcessError as error:
+            print("Warning: failed to download source.  If building, will try "
+                "again after downloading recipe dependencies.")
+            print("Error was: ")
+            print(error)
+            need_source_download = True
 
     elif not metadata.get_section('source'):
         need_source_download = False
