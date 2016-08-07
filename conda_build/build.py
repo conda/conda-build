@@ -832,7 +832,7 @@ Error:
 def build_tree(metadata_list, config, check=False, build_only=False, post=False, notest=False,
                need_source_download=True, already_built=None):
 
-    mo_build_recursive = []
+    to_build_recursive = []
     metadata_list = deque(metadata_list)
     if not already_built:
         already_built = set()
