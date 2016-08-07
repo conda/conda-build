@@ -76,18 +76,23 @@ def copy_into(src, dst, config, symlinks=False):
                                      timeout=config.timeout)
         lock.acquire()
 
-    if isdir(src):
+    try:
+        if isdir(src):
             merge_tree(src, dst, symlinks)
-    else:
-        tocopy = [src]
-        for afile in tocopy:
-            srcname = os.path.join(src, afile)
-            dstname = os.path.join(dst, afile)
 
-        try:
-            shutil.copy2(srcname, dstname)
-        except shutil.Error:
-            log.debug("skipping {0} - already exists in {1}".format(srcname, dstname))
+        else:
+            if isdir(dst):
+                dst_fn = os.path.join(dst, os.path.basename(src))
+            else:
+                dst_fn = dst
+
+            try:
+                shutil.copy2(src, dst_fn)
+            except shutil.Error:
+                log.debug("skipping {0} - already exists in {1}".format(os.path.basename(src), dst))
+    finally:
+        if lock:
+            lock.release()
 
 
 def merge_tree(src, dst, symlinks=False):

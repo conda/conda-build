@@ -336,7 +336,7 @@ def get_build_index(config, clear_cache=True, arg_channels=None):
         # this is necessary because we add the local build repo URL
         fetch_index.cache = {}
     arg_channels = [] if not arg_channels else arg_channels
-    # priority: local by croot (can vary), then by traditional croot, then channels passed as args,
+    # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
     return get_index(channel_urls=[url_path(config.croot)] +
                      arg_channels +
@@ -612,7 +612,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                             else:
                                 data = open(work_file).read()
                             with open(work_file, 'w') as bf:
-                                bf.write("source activate {build_prefix}\n".format(
+                                bf.write("source activate {build_prefix} &> /dev/null\n".format(
                                     build_prefix=config.build_prefix))
                                 bf.write(data)
                         else:
@@ -689,7 +689,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                 tarcheck.check_all(tmp_path)
 
                 copy_into(tmp_path, path, config=config)
-                update_index(config.bldpkgs_dir, config)
+            update_index(config.bldpkgs_dir, config)
 
         else:
             print("STOPPING BUILD BEFORE POST:", m.dist())
