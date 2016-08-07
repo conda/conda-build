@@ -280,7 +280,7 @@ def test_symlink_fail(testing_workdir, test_config, capfd):
     with pytest.raises(SystemExit):
         api.build(os.path.join(fail_dir, "symlinks"), config=test_config)
     output, error = capfd.readouterr()
-    assert error.count("Error") == 2, "did not find appropriate count of Error in: " + error
+    assert error.count("Error") == 6, "did not find appropriate count of Error in: " + error
 
 
 @pytest.mark.skipif(sys.platform == "win32",
