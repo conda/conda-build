@@ -365,6 +365,9 @@ def create_env(prefix, specs, config, clear_cache=True):
     else:
         silence_loggers(show_warnings_and_errors=True)
 
+    if os.path.isdir(prefix):
+        shutil.rmtree(prefix)
+
     specs = list(specs)
     for feature, value in feature_list:
         if value:
@@ -414,6 +417,8 @@ def create_env(prefix, specs, config, clear_cache=True):
                     for lock in locks:
                         lock.release()
                     create_env(prefix, specs, config=config, clear_cache=clear_cache)
+                else:
+                    raise
         except:
             raise
         finally:

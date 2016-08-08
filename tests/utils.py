@@ -14,6 +14,7 @@ from conda.config import subdir
 
 from conda_build.config import Config
 from conda_build.scripts import prepend_bin_path
+from conda_build.utils import on_win
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
@@ -57,7 +58,9 @@ def testing_workdir(tmpdir, request):
 
 @pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
-    return Config(croot=testing_workdir, anaconda_upload=False, verbose=True)
+    config = Config(croot=testing_workdir, anaconda_upload=False, verbose=True)
+    config.croot = 'C:\\cbtmp' if on_win else '/tmp/cbtmp'
+    return config
 
 
 @pytest.fixture(scope='function')
