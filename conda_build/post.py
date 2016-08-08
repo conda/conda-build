@@ -168,7 +168,18 @@ def coerce_pycache_to_old_style(files, cwd):
 
 
 def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_python):
-    compile_files = [f for f in files if f.endswith('.py') and f + 'c' not in files]
+    compile_files = []
+    for fn in files:
+        # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
+        if sys.platform == 'win32':
+            if any([fn.lower().startswith(start) for start in ['library/bin', 'library\\bin',
+                                                               'scripts']]):
+                continue
+        else:
+            if fn.startswith('bin'):
+                continue
+        compile_files.append(fn)
+
     if compile_files:
         print('compiling .pyc files...')
         call([python_exe, '-Wi', '-m', 'py_compile'] + compile_files, cwd=cwd)
