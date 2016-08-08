@@ -20,7 +20,6 @@ import conda.install as ci
 import conda.plan as plan
 
 from conda.api import get_index
-from conda.config import get_default_urls
 try:
     from conda.install import install_linked
 except ImportError:
@@ -155,7 +154,7 @@ def test_installable(channel='defaults'):
     has_py = re.compile(r'py(\d)(\d)')
     for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
         log.info("######## Testing platform %s ########" % platform)
-        channels = [channel] + get_default_urls()
+        channels = [channel]
         index = get_index(channel_urls=channels, prepend=False, platform=platform)
         for package, rec in iteritems(index):
             # If we give channels at the command line, only look at
