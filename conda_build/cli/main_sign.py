@@ -10,7 +10,10 @@ import sys
 from conda_build import api
 
 from conda.cli.conda_argparse import ArgumentParser
-from conda.signature import SignatureError
+try:
+    from conda.signature import SignatureError
+except ImportError:
+    from conda.signature import CondaSignatureError as SignatureError
 
 logging.basicConfig(level=logging.INFO)
 

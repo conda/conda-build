@@ -8,12 +8,17 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 
-from conda.cli.common import add_parser_prefix, get_prefix
+from conda.cli.common import add_parser_prefix
 from conda.cli.conda_argparse import ArgumentParser
 
 from conda_build.cli.main_build import args_func
 from conda_build import api
 from conda_build.config import Config
+
+try:
+    from conda.cli.common import get_prefix
+except ImportError:
+    from conda_env.cli.common import get_prefix
 
 logging.basicConfig(level=logging.INFO)
 

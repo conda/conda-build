@@ -9,12 +9,11 @@ from __future__ import absolute_import, division, print_function
 from collections import defaultdict
 import logging
 from operator import itemgetter
-from os.path import abspath, join, dirname, exists, basename
+from os.path import abspath, join, dirname, exists, basename, isdir
 import re
 import sys
 import tempfile
 
-from conda.misc import which_package
 from conda.compat import iteritems
 from conda.cli.common import specs_from_args
 import conda.install as ci
@@ -22,6 +21,10 @@ import conda.plan as plan
 
 from conda.api import get_index
 from conda.config import get_default_urls
+try:
+    from conda.install import install_linked
+except ImportError:
+    from conda.install import linked as install_linked
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
@@ -29,6 +32,38 @@ from conda_build.utils import groupby, getter, comma_join
 
 
 log = logging.getLogger(__file__)
+
+
+def which_prefix(path):
+    """
+    given the path (to a (presumably) conda installed file) return the
+    environment prefix in which the file in located
+    """
+    prefix = abspath(path)
+    while True:
+        if isdir(join(prefix, 'conda-meta')):
+            # we found the it, so let's return it
+            return prefix
+        if prefix == dirname(prefix):
+            # we cannot chop off any more directories, so we didn't find it
+            return None
+        prefix = dirname(prefix)
+
+
+def which_package(path):
+    """
+    given the path (of a (presumably) conda installed file) iterate over
+    the conda packages the file came from.  Usually the iteration yields
+    only one package.
+    """
+    path = abspath(path)
+    prefix = which_prefix(path)
+    if prefix is None:
+        raise RuntimeError("could not determine conda prefix from: %s" % path)
+    for dist in install_linked(prefix):
+        meta = ci.is_linked(prefix, dist)
+        if any(abspath(join(prefix, f)) == path for f in meta['files']):
+            yield dist
 
 
 def print_object_info(info, key):
