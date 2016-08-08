@@ -531,19 +531,15 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             # Execute any commands fetching the source (e.g., git) in the _build environment.
             # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
             # dependencies.
-            if not config.activate:
-                _old_path = os.environ['PATH']
-                os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                        config.build_prefix)['PATH']
-            try:
-                m, need_source_download, need_reparse_in_env = parse_or_try_download(m,
-                                                                no_download_source=False,
-                                                                force_download=True,
-                                                                config=config)
-                assert not need_source_download, "Source download failed.  Please investigate."
-            finally:
-                if not config.activate:
-                    os.environ['PATH'] = _old_path
+            _old_path = os.environ['PATH']
+            os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
+                                                    config.build_prefix)['PATH']
+            m, need_source_download, need_reparse_in_env = parse_or_try_download(m,
+                                                            no_download_source=False,
+                                                            force_download=True,
+                                                            config=config)
+            assert not need_source_download, "Source download failed.  Please investigate."
+            os.environ['PATH'] = _old_path
             print("BUILD START:", m.dist())
 
         if need_reparse_in_env:
