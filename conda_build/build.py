@@ -401,11 +401,11 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
         try:
             plan.execute_actions(actions, index, verbose=debug)
         except SystemExit as exc:
-            if "too short in" in exc.message and config.prefix_length > 80:
+            if "too short in" in str(exc) and config.prefix_length > 80:
                 log.warn("Build prefix failed with prefix length {0}."
                          .format(config.prefix_length))
                 log.warn("Error was: ")
-                log.warn(exc.message)
+                log.warn(str(exc))
                 log.warn("One or more of your package dependencies needs to be rebuilt with a "
                          "longer prefix length.")
                 log.warn("Falling back to legacy prefix length of 80 characters.")
