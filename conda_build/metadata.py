@@ -809,9 +809,9 @@ class MetaData(object):
         return None
 
     @property
-    def uses_setuptools_in_meta(self):
+    def uses_setup_py_in_meta(self):
         with open(self.meta_path) as f:
-            return "load_setup_py_data" in f.read()
+            return "load_setup_py_data" in f.read() or "load_setuptools" in f.read()
 
     @property
     def uses_jinja(self):
