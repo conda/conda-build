@@ -20,4 +20,3 @@ sub_commands = [
     'sign',
     'skeleton',
 ]
-
