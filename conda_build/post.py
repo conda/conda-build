@@ -1,21 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import defaultdict
+from glob import glob
+import io
 import locale
+import mmap
 import re
 import os
-import sys
-import stat
-from glob import glob
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath, normpath)
+import stat
+from subprocess import call
+import sys
 try:
     from os import readlink
 except ImportError:
     readlink = False
-import io
-from subprocess import call
-from collections import defaultdict
-import mmap
 
 from conda_build.config import config
 from conda_build import external
@@ -178,13 +178,15 @@ def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_
         else:
             if fn.startswith('bin'):
                 continue
-        compile_files.append(fn)
+        if fn.endswith(".py"):
+            compile_files.append(fn)
 
     if compile_files:
         print('compiling .pyc files...')
-        call([python_exe, '-Wi', '-m', 'py_compile'] + compile_files, cwd=cwd)
         if PY3:
             coerce_pycache_to_old_style(compile_files, cwd=cwd)
+        for f in compile_files:
+            call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
 
 
 def post_process(files, preserve_egg_dir=False):
