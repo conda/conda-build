@@ -5,5 +5,5 @@ package:
 requirements:
   build:
     - python
-    # package that exists only on conda-forge
+    # package that does not exist on defaults, but only on our test channel
     - blinker

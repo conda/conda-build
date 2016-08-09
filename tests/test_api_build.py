@@ -6,6 +6,7 @@ import tarfile
 
 from conda.compat import PY3
 import conda.config as cc
+from conda.resolve import NoPackagesFound
 from conda.utils import url_path
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -346,7 +347,7 @@ def test_requirements_txt_for_run_reqs(testing_workdir, test_config):
     This test attempts to reproduce those conditions: a channel other than defaults with this
     requirements.txt
     """
-    test_config.channel_urls = ('conda-forge', )
+    test_config.channel_urls = ('conda_build_test', )
     api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=test_config)
 
 
@@ -385,17 +386,21 @@ def test_condarc_channel_available(testing_workdir, test_config):
     rcfile = os.path.join(testing_workdir, ".condarc")
     with open(rcfile, 'w') as f:
         f.write("channels:\n")
-        f.write("  - conda-forge\n")
+        f.write("  - conda_build_test\n")
         f.write("  - defaults\n")
     cc.load_condarc(rcfile)
-    api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
-    # ensure that the test fails without the channel
-    with open(rcfile, 'w') as f:
-        f.write("channels:\n")
-        f.write("  - defaults\n")
-    cc.load_condarc(rcfile)
-    with pytest.raises(subprocess.CalledProcessError):
+    try:
         api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
+        # ensure that the test fails without the channel
+        with open(rcfile, 'w') as f:
+            f.write("channels:\n")
+            f.write("  - defaults\n")
+        cc.load_condarc(rcfile)
+        with pytest.raises(NoPackagesFound):
+            api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
+    finally:
+        cc.load_condarc(cc.sys_rc_path)
+
 
 
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
