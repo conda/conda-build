@@ -4,6 +4,6 @@ package:
 
 requirements:
   build:
-    # dummy package that exists only on conda-forge
     - python
-    - conda-smithy
+    # package that exists only on conda-forge
+    - blinker
