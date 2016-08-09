@@ -124,9 +124,9 @@ different sets of packages."""
         help="do not display progress bar",
     )
     p.add_argument(
-        '-V', "--verbose",
+        '--debug',
         action="store_true",
-        help="Show more output from source checkouts and conda",
+        help="Show debug output from source checkouts and conda",
     )
     p.add_argument(
         '--token',
@@ -176,6 +176,7 @@ def execute(args, parser, config):
     # change globals in build module, see comment there as well
     config.channel_urls = args.channel or ()
     config.override_channels = args.override_channels
+    config.verbose = not args.quiet or args.debug
 
     if 'purge' in args.recipe:
         build.clean_build(config)
