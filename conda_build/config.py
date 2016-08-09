@@ -4,9 +4,11 @@ Module to store conda build settings.
 from __future__ import absolute_import, division, print_function
 
 from collections import namedtuple
+import logging
 import math
 import os
 from os.path import abspath, expanduser, join
+import shutil
 import sys
 import time
 
@@ -14,6 +16,7 @@ import conda.config as cc
 
 from .utils import get_build_folders
 
+log = logging.getLogger(__file__)
 on_win = (sys.platform == 'win32')
 
 # Don't "save" an attribute of this module for later, like build_prefix =
@@ -281,6 +284,20 @@ class Config(object):
     def test_dir(self):
         """The temporary folder where test files are copied to, and where tests start execution"""
         return join(self.build_folder, 'test_tmp')
+
+    def clean(self):
+        # build folder is the whole burrito containing envs and source folders
+        shutil.rmtree(self.build_folder)
+
+    # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
+    def __enter__(self):
+        if not os.path.isdir(self.build_folder):
+            os.makedirs(self.build_folder)
+
+    def __exit__(self, type, value, traceback):
+        if not getattr(self, 'dirty') and not getattr(self, 'keep_old_work'):
+            log.info("--keep-old-work flag not specified.  Removing source and build files.\n")
+            self.clean()
 
 
 def get_or_merge_config(config, **kwargs):

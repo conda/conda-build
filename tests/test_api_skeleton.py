@@ -44,7 +44,7 @@ def test_pypi_url(testing_workdir, test_config):
         actual = yaml.load(f)
     assert expected == actual, (expected, actual)
 
-def test_pypi_with_setup_options(testing_workdir):
+def test_pypi_with_setup_options(testing_workdir, test_config):
     # Use package below because  skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
@@ -59,7 +59,7 @@ def test_pypi_with_setup_options(testing_workdir):
             assert '--offline' in content
 
 
-def test_pypi_pin_numpy(testing_workdir):
+def test_pypi_pin_numpy(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize("msumastro", "pypi", version='0.9.0', pin_numpy=True)
@@ -71,7 +71,7 @@ def test_pypi_pin_numpy(testing_workdir):
     assert 'numpy x.x' in actual['requirements']['build']
 
 
-def test_pypi_version_sorting(testing_workdir):
+def test_pypi_version_sorting(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize("conda_version_test", "pypi")

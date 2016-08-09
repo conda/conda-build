@@ -879,11 +879,13 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
         metadata, need_source_download, need_reparse_in_env = metadata_list.popleft()
         recipe_parent_dir = os.path.dirname(metadata.path)
         try:
-            ok_to_test = build(metadata, post=post,
-                               need_source_download=need_source_download,
-                               config=config)
-            if not notest and ok_to_test:
-                test(metadata, config=config)
+            config.compute_build_id(metadata.name())
+            with config:
+                ok_to_test = build(metadata, post=post,
+                                need_source_download=need_source_download,
+                                config=config)
+                if not notest and ok_to_test:
+                    test(metadata, config=config)
         except (NoPackagesFound, Unsatisfiable) as e:
             error_str = str(e)
             # Typically if a conflict is with one of these
@@ -922,12 +924,6 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
         handle_anaconda_upload(output_file, config=config)
 
         already_built.add(output_file)
-
-        if not config.keep_old_work and not config.dirty:
-            sys.stderr.write("# --keep-old-work flag not specified.  "
-                             "Removing source and build files.\n")
-            # build folder is the whole burrito containing envs and source folders
-            shutil.rmtree(config.build_folder)
 
 
 def handle_anaconda_upload(path, config):

@@ -134,8 +134,9 @@ def test(package_path, move_broken=True, config=None, **kwargs):
             metadata, _, _ = render_recipe(package_path, no_download_source=False,
                                         config=config, **kwargs)
 
-        config.compute_build_id(metadata.name(), reset=True)
-        test_result = test(metadata, config=config, move_broken=move_broken)
+        # config.compute_build_id(metadata.name(), reset=True)
+        with config:
+            test_result = test(metadata, config=config, move_broken=move_broken)
     return test_result
 
 
@@ -189,6 +190,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     sources into expected conda recipe format."""
 
     config = get_or_merge_config(config, **kwargs)
+    config.compute_build_id('skeleton')
     packages = _ensure_list(packages)
 
     module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
@@ -196,8 +198,9 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
                      repo)
     func_args = module.skeletonize.__code__.co_varnames
     kwargs = {name: value for name, value in kwargs.items() if name in func_args}
-    skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                            recursive=recursive, config=config, **kwargs)
+    with config:
+        skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
+                                                recursive=recursive, config=config, **kwargs)
     return skeleton_return
 
 

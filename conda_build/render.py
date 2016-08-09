@@ -8,13 +8,12 @@ from __future__ import absolute_import, division, print_function
 
 from locale import getpreferredencoding
 import os
-from os.path import isdir, isfile, abspath, join
+from os.path import isdir, isfile, abspath
 import subprocess
 import sys
 import tarfile
 import tempfile
 
-import filelock
 import yaml
 
 from conda.compat import PY3

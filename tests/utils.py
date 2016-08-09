@@ -58,14 +58,7 @@ def testing_workdir(tmpdir, request):
 
 @pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
-    config = Config(croot=testing_workdir, anaconda_upload=False, verbose=True)
-    config.croot = 'C:\\cbtmp' if on_win else '/tmp/cbtmp'
-
-    def reinit_config():
-        config = Config()
-
-    request.addfinalizer(reinit_config)
-    return config
+    return Config(croot=testing_workdir, anaconda_upload=False, verbose=True)
 
 
 @pytest.fixture(scope='function')
