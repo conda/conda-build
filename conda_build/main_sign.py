@@ -22,7 +22,7 @@ Error: could not import Crypto (required for "conda sign").
     $ conda install -n root pycrypto
 """)
 
-from conda.signature import KEYS_DIR, hash_file, verify, SignatureError
+from .conda_interface import KEYS_DIR, hash_file, verify, SignatureError
 
 logging.basicConfig(level=logging.INFO)
 
@@ -64,7 +64,7 @@ def sign(path, key):
 
 
 def main():
-    from conda.cli.conda_argparse import ArgumentParser
+    from .conda_interface import ArgumentParser
 
     p = ArgumentParser(
         description="""\

@@ -11,13 +11,13 @@ import sys
 from os.path import join, isdir, abspath, expanduser, exists
 import shutil
 
-from conda.cli.common import add_parser_prefix, get_prefix
-from conda.cli.conda_argparse import ArgumentParser
+from .conda_interface import add_parser_prefix, get_prefix
+from .conda_interface import ArgumentParser
 from conda_build.main_build import args_func
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
 
-from conda.install import linked
+from .conda_interface import linked
 
 logging.basicConfig(level=logging.INFO)
 

@@ -17,7 +17,7 @@ from .conda_interface import binstar_upload, default_prefix  # NOQA
 from .conda_interface import ArgumentParser
 
 from conda_build.main_build import args_func
-from conda.install import rm_rf
+from .conda_interface import rm_rf
 import conda_build.build as build
 from conda_build.metadata import MetaData
 

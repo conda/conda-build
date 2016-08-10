@@ -22,10 +22,9 @@ from itertools import chain
 import subprocess
 from difflib import get_close_matches
 
-from conda.install import rm_rf
-from conda import compat
-
 from conda_build import source, metadata
+from .conda_interface import rm_rf
+from .conda_interface import compat
 
 CRAN_META = """\
 {{% set posix = 'm2-' if win else '' %}}
