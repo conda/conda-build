@@ -411,7 +411,7 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
                 log.warn("Falling back to legacy prefix length of 80 characters.")
                 log.warn("Your package will not install into prefixes longer than 80 characters.")
                 config.prefix_length = 80
-                create_env(prefix, specs, clear_cache=clear_cache, debug=debug)
+                create_env(config.build_prefix, specs, clear_cache=clear_cache, debug=debug)
 
         os.environ['PATH'] = old_path
 
