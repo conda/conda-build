@@ -66,7 +66,7 @@ def build_vcvarsall_vs_path(version):
     """
     Given the Visual Studio version, returns the default path to the
     Microsoft Visual Studio vcvarsall.bat file.
-    Expected versions are of the form {9, 10, 12, 14}
+    Expected versions are of the form {9.0, 10.0, 12.0, 14.0}
     """
     # Set up a load of paths that can be imported from the tests
     if 'ProgramFiles(x86)' in os.environ:
@@ -74,7 +74,9 @@ def build_vcvarsall_vs_path(version):
     else:
         PROGRAM_FILES_PATH = os.environ['ProgramFiles']
 
-    vstools = "VS{0}0COMNTOOLS".format(version)
+    flatversion = str(version).replace('.', '')
+    vstools = "VS{0}COMNTOOLS".format(flatversion)
+    
     if vstools in os.environ:
         return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
     else:
