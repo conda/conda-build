@@ -16,7 +16,7 @@ from locale import getpreferredencoding
 import warnings
 
 from .conda_interface import cc
-from .conda_interface import add_parser_channels
+from .conda_interface import add_parser_channels, PY3
 from .conda_interface import delete_trash
 from .conda_interface import NoPackagesFound, Unsatisfiable
 
@@ -260,7 +260,7 @@ def execute(args, parser):
     set_language_env_vars(args, parser, execute=execute)
 
     if args.skip_existing:
-        for d in cc.bldpkgs_dirs:
+        for d in config.bldpkgs_dirs:
             if not isdir(d):
                 makedirs(d)
             update_index(d)
@@ -305,7 +305,7 @@ def execute(args, parser):
                                                                      dirty=args.dirty)
 
         if m.get_value('build/noarch_python'):
-            cc.noarch = True
+            config.noarch = True
 
         if args.check and len(args.recipe) > 1:
             print(m.path)
