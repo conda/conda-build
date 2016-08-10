@@ -15,7 +15,7 @@ from collections import defaultdict
 from operator import itemgetter
 import tempfile
 
-from .conda_interface import which_package
+from .conda_interface import which_package, linked_data
 from .conda_interface import iteritems
 from .conda_interface import add_parser_prefix, get_prefix, InstalledPackages, specs_from_args
 from .conda_interface import ArgumentParser
@@ -300,7 +300,7 @@ def execute(args, parser):
             sys.exit(not test_installable(channel=args.channel, verbose=args.verbose))
 
     prefix = get_prefix(args)
-    installed = conda.install.linked_data(prefix)
+    installed = linked_data(prefix)
     installed = {rec['name']: dist for dist, rec in iteritems(installed)}
 
     if not args.packages and not args.untracked and not args.all:

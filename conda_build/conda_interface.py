@@ -6,7 +6,7 @@ from functools import partial
 from conda import compat, plan  # NOQA
 from conda.api import get_index  # NOQA
 from conda.cli.common import (Completer, InstalledPackages, add_parser_channels, add_parser_prefix,  # NOQA
-                              specs_from_args, spec_from_line)  # NOQA
+                              specs_from_args, spec_from_line, specs_from_url)  # NOQA
 from conda.cli.conda_argparse import ArgumentParser  # NOQA
 from conda.compat import (PY3, StringIO, configparser, input, iteritems, lchmod, string_types,  # NOQA
                           text_type)  # NOQA
