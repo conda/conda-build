@@ -345,7 +345,11 @@ def system_vars(env_dict, prefix):
     if 'MAKEFLAGS' in os.environ:
         d['MAKEFLAGS'] = os.environ['MAKEFLAGS']
 
-    d['CPU_COUNT'] = get_cpu_count()
+    if 'CPU_COUNT' in os.environ:
+        d['CPU_COUNT'] = os.environ['CPU_COUNT']
+    else:
+        d['CPU_COUNT'] = get_cpu_count()
+
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
     d['PATH'] = os.environ['PATH']
