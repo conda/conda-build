@@ -1,3 +1,19 @@
+XXXX-YY-ZZ 1.21.x:
+------------------
+
+Enhancements:
+-------------
+
+* Whitelist the CPU_COUNT environment variable. #1149
+
+Bug fixes:
+----------
+
+Contributors:
+-------------
+
+* @jakirkham
+
 2016-08-06 1.21.11:
 -------------------
 
