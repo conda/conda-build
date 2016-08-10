@@ -547,7 +547,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
                 rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
                 rel_dict['version'] = rel_dict['version'].lstrip('v')
     except RuntimeError:
-        core_version = core_module_version(orig_package, perl_version)
+        core_version = core_module_version(orig_package, perl_version, config=config)
         if core_version is not None and (version is None or
                                          (version == core_version)):
             print(("WARNING: {0} is not available on MetaCPAN, but it's a " +
@@ -576,7 +576,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
                     new_rel_dict['version'] = new_rel_dict['version'].lstrip()
         # Check if this is a core module, and don't die if it is
         except RuntimeError:
-            core_version = core_module_version(orig_package, perl_version)
+            core_version = core_module_version(orig_package, perl_version, config=config)
             if core_version is not None and (version == core_version):
                 print(("WARNING: Version {0} of {1} is not available on " +
                        "MetaCPAN, but it's a core module, so we do not " +

@@ -3,7 +3,7 @@ package:
   version: 1.0
 
 source:
-  path: ../../../../
+  path: ../../../../../conda_build_test_recipe
 
 build:
   entry_points:

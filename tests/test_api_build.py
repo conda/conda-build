@@ -32,9 +32,11 @@ class AnacondaClientArgs(object):
         self.log_level = log_level
         self.force = force
 
-def describe_root():
-    tag = subprocess.check_output(["git", "describe", "--abbrev=0"],
-                        cwd=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))).rstrip()
+
+def describe_root(cwd=None):
+    if not cwd:
+        cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    tag = subprocess.check_output(["git", "describe", "--abbrev=0"], cwd=cwd).rstrip()
     if PY3:
         tag = tag.decode("utf-8")
     return tag
@@ -166,39 +168,21 @@ def test_binary_has_prefix_files(testing_workdir, test_config):
     api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=test_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="Windows permission errors w/ git when removing repo files on cleanup.")
-def test_cached_source_not_interfere_with_versioning(testing_workdir, test_config):
-    """Test that work dir does not cache and cause inaccurate test target"""
-    try:
-        subprocess.check_call(['git', 'clone',
-                                'https://github.com/conda/conda_build_test_recipe'])
-        # build to make sure we have a work directory with source in it.
-        #    We want to make sure that whatever version that is does not
-        #    interfere with the test we run next.
-        api.build('conda_build_test_recipe', notest=True, config=test_config)
-        os.chdir('conda_build_test_recipe')
-        subprocess.check_call(['git', 'checkout', '1.20.0'])
-        os.chdir('..')
-
-        # this should fail, because we have not built v1.0, so there should
-        # be nothing to test.  If it succeeds, it means that it used the
-        # cached master checkout for determining which version to test.
-        output = api.get_output_file_path('conda_build_test_recipe', config=test_config)
-        assert "conda-build-test-source-git-jinja2-1.20.0" in output
-    except:
-        raise
-
-
 def test_relative_path_git_versioning(testing_workdir, test_config):
-    tag = describe_root()
+    # conda_build_test_recipe is a manual step.  Clone it at the same level as
+    #    your conda-build source.
+    cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
+                                       'conda_build_test_recipe'))
+    tag = describe_root(cwd)
     recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_path")
     output = api.get_output_file_path(recipe, config=test_config)
     assert tag in output
 
 
 def test_relative_git_url_git_versioning(testing_workdir, test_config):
-    tag = describe_root()
+    cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
+                                       'conda_build_test_recipe'))
+    tag = describe_root(cwd)
     recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_git_url")
     output = api.get_output_file_path(recipe, config=test_config)
     assert tag in output
@@ -215,6 +199,8 @@ def test_dirty_variable_available_in_build_scripts(testing_workdir, test_config)
 
 
 def test_checkout_tool_as_dependency(testing_workdir, test_config):
+    # temporarily necessary because we have custom rebuilt svn for longer prefix here
+    test_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
     dummyfile = os.path.join(testing_workdir, "svn")
     # empty prefix by default - extra bit at beginning of file

@@ -8,18 +8,23 @@ from .utils import testing_workdir, test_config, metadata_dir, subdir
 
 
 def test_render_need_download(testing_workdir, test_config):
-    # First get metadata with a recipe that is known to need a download:
-    metadata, need_download, need_reparse_in_env = api.render(
-        os.path.join(metadata_dir, "source_git_jinja2"),
-        config=test_config)
-    assert not need_download
-    assert metadata.meta["package"]["version"] == "1.20.2"
-
+    # first, test that the download/render system renders all it can,
+    #    and accurately returns its needs
     with pytest.raises(SystemExit):
         metadata, need_download, need_reparse_in_env = api.render(
             os.path.join(metadata_dir, "source_git_jinja2"),
             config=test_config,
             no_download_source=True)
+        assert need_download
+        assert need_reparse_in_env
+
+    # Test that allowing source download lets it to the right thing.
+    metadata, need_download, need_reparse_in_env = api.render(
+        os.path.join(metadata_dir, "source_git_jinja2"),
+        config=test_config,
+        no_download_source=False)
+    assert not need_download
+    assert metadata.meta["package"]["version"] == "1.20.2"
 
 
 def test_render_yaml_output(testing_workdir, test_config):

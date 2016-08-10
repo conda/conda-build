@@ -24,7 +24,7 @@ def test_build():
 def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
-    cmd = ('conda build --no-anaconda-upload --verbose '
+    cmd = ('conda build --no-anaconda-upload '
            '-c conda_build_test {}'.format(os.path.join(metadata_dir,
                                                    "_recipe_requiring_external_channel")))
     subprocess.check_call(cmd.split())

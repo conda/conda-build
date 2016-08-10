@@ -133,8 +133,8 @@ def get_git_info(repo):
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    env=env)
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env, cwd=os.path.dirname(repo))
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
 
@@ -144,7 +144,8 @@ def get_git_info(repo):
 
     # get the _full_ hash of the current HEAD
     process = subprocess.Popen(["git", "rev-parse", "HEAD"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                               cwd=os.path.dirname(repo))
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
 
