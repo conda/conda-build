@@ -12,8 +12,8 @@ import tarfile
 from os.path import isfile, join, getmtime
 
 from conda_build.utils import file_info
-from conda.compat import PY3
-from conda.utils import md5_file
+from .conda_interface import PY3
+from .conda_interface import md5_file
 
 
 def read_index_tar(tar_path):

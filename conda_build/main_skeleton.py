@@ -9,10 +9,10 @@ from __future__ import absolute_import, division, print_function
 import logging
 import os
 
-from conda.config import default_python
+from .conda_interface import default_python
 from conda_build.main_build import args_func
-from conda.cli.conda_argparse import ArgumentParser
-from conda.cli.common import Completer
+from .conda_interface import ArgumentParser
+from .conda_interface import Completer
 
 logging.basicConfig(level=logging.INFO)
 
@@ -329,7 +329,7 @@ def execute(args, parser):
     import conda_build.cpan as cpan
     import conda_build.cran as cran
     import conda_build.luarocks as luarocks
-    from conda.lock import Locked
+    from .conda_interface import Locked
     from conda_build.config import config
 
     if not args.repo:

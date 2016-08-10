@@ -18,15 +18,15 @@ import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
-import conda.config as cc
-import conda.plan as plan
-from conda.api import get_index
-from conda.compat import PY3
-from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
-from conda.lock import Locked
-from conda.utils import url_path
-from conda.resolve import Resolve, MatchSpec, NoPackagesFound
+from .conda_interface import cc
+from .conda_interface import plan
+from .conda_interface import get_index
+from .conda_interface import PY3
+from .conda_interface import fetch_index
+from .conda_interface import prefix_placeholder, linked, move_to_trash, symlink_conda
+from .conda_interface import Locked
+from .conda_interface import url_path
+from .conda_interface import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, external

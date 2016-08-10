@@ -5,8 +5,8 @@ import os
 from locale import getpreferredencoding
 from os.path import abspath
 
-from conda.compat import PY3
-from conda.cli.conda_argparse import ArgumentParser
+from .conda_interface import PY3
+from .conda_interface import ArgumentParser
 
 from conda_build.index import update_index
 

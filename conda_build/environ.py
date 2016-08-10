@@ -9,9 +9,9 @@ from collections import defaultdict
 from os.path import join, normpath
 import subprocess
 
-import conda.config as cc
+from .conda_interface import cc
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
-from conda.compat import text_type, PY3  # noqa
+from .conda_interface import text_type, PY3  # noqa
 
 from conda_build import external
 from conda_build import source

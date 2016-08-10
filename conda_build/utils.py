@@ -12,14 +12,13 @@ from os.path import dirname, getmtime, getsize, isdir, isfile, join
 from collections import defaultdict
 from distutils.dir_util import copy_tree
 
-from conda.utils import md5_file, unix_path_to_win
-from conda.compat import PY3, iteritems
+from .conda_interface import md5_file, unix_path_to_win
+from .conda_interface import PY3, iteritems
 
 from conda_build import external
 
 # Backwards compatibility import. Do not remove.
-from conda.install import rm_rf
-rm_rf
+from .conda_interface import rm_rf  # NOQA
 
 
 def find_recipe(path):

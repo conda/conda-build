@@ -10,7 +10,7 @@ from os.path import dirname, isdir, isfile, join
 from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 from distutils.msvc9compiler import Reg, WINSDK_BASE
 
-import conda.config as cc
+from .conda_interface import cc
 
 from conda_build.config import config
 from conda_build import environ

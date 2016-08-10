@@ -4,7 +4,7 @@ import os
 import sys
 from os.path import isfile, join, expanduser
 
-import conda.config as cc
+from .conda_interface import cc
 from conda_build.config import config
 
 
