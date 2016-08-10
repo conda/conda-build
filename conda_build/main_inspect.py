@@ -15,15 +15,14 @@ from collections import defaultdict
 from operator import itemgetter
 import tempfile
 
-from conda.misc import which_package
-from conda.compat import iteritems
-from conda.cli.common import add_parser_prefix, get_prefix, InstalledPackages, specs_from_args
-from conda.cli.conda_argparse import ArgumentParser
-import conda.install
-from conda import plan
-
-from conda.api import get_index
-from conda.config import get_default_urls
+from .conda_interface import which_package
+from .conda_interface import iteritems
+from .conda_interface import add_parser_prefix, get_prefix, InstalledPackages, specs_from_args
+from .conda_interface import ArgumentParser
+from .conda_interface import rm_rf
+from .conda_interface import plan
+from .conda_interface import get_index
+from .conda_interface import get_default_urls
 
 from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
@@ -173,7 +172,7 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
         plan.display_actions(actions, index)
         return actions
     finally:
-        conda.install.rm_rf(prefix)
+        rm_rf(prefix)
 
 
 def print_linkages(depmap, show_files=False):

@@ -7,7 +7,7 @@ import os
 import sys
 from os.path import abspath, expanduser, join
 
-import conda.config as cc
+from .conda_interface import cc
 
 on_win = (sys.platform == 'win32')
 
@@ -70,8 +70,8 @@ class Config(object):
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
-            import conda.install
-            packages = conda.install.linked(prefix)
+            from .conda_interface import linked
+            packages = linked(prefix)
             packages_names = (pkg.split('-')[0] for pkg in packages)
             if 'debug' in packages_names:
                 res = join(prefix, 'python_d.exe')

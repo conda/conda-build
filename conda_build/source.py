@@ -10,8 +10,8 @@ from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
 import locale
 import time
 
-from conda.fetch import download
-from conda.utils import hashsum_file
+from .conda_interface import download
+from .conda_interface import hashsum_file
 
 from conda_build import external
 from conda_build.config import config

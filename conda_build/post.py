@@ -22,9 +22,9 @@ from conda_build import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
-from conda.compat import lchmod
-from conda.misc import walk_prefix
-from conda.utils import md5_file
+from .conda_interface import lchmod
+from .conda_interface import walk_prefix
+from .conda_interface import md5_file
 
 if sys.platform.startswith('linux'):
     from conda_build import elf

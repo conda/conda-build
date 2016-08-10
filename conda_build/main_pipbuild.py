@@ -13,11 +13,11 @@ import os.path
 import subprocess
 import yaml
 
-import conda.config as cc
-from conda.cli.conda_argparse import ArgumentParser
+from .conda_interface import cc
+from .conda_interface import ArgumentParser
 
 from conda_build.main_build import args_func
-from conda.install import rm_rf
+from .conda_interface import rm_rf
 import conda_build.build as build
 from conda_build.metadata import MetaData
 
@@ -202,8 +202,8 @@ def convert_recipe(direc, package, noarch_python=False):
 
 
 def get_all_dependencies(package, version):
-    import conda.config
-    prefix = os.path.join(conda.config.default_prefix, 'envs', '_pipbuild_')
+    from .conda_interface import cc
+    prefix = os.path.join(cc.default_prefix, 'envs', '_pipbuild_')
     cmd1 = "conda create -n _pipbuild_ --yes python pip"
     print(cmd1)
     subprocess.Popen(cmd1.split()).wait()

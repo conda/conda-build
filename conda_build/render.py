@@ -17,9 +17,9 @@ import subprocess
 
 import yaml
 
-from conda.compat import PY3
-from conda.install import move_to_trash, rm_rf
-from conda.lock import Locked
+from .conda_interface import PY3
+from .conda_interface import move_to_trash, rm_rf
+from .conda_interface import Locked
 
 from conda_build import exceptions, utils
 from conda_build.config import config

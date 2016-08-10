@@ -14,10 +14,10 @@ from glob import glob
 from os import makedirs
 from os.path import basename, dirname, join, exists
 
-from conda.api import get_index
-from conda.fetch import TmpDownload
-from conda.resolve import MatchSpec, Resolve
-from conda.utils import memoized
+from .conda_interface import get_index
+from .conda_interface import TmpDownload
+from .conda_interface import MatchSpec, Resolve
+from .conda_interface import memoized
 
 from conda_build.config import config
 

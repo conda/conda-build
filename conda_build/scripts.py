@@ -10,8 +10,8 @@ import sys
 import shutil
 from os.path import dirname, isdir, join
 
-import conda.install
-import conda.config as cc
+from .conda_interface import linked
+from .conda_interface import cc
 
 from conda_build.config import config
 
@@ -41,7 +41,7 @@ def create_entry_point(path, module, func):
     pyscript = PY_TMPL % {'module': module, 'func': func}
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w') as fo:
-            packages = conda.install.linked(config.build_prefix)
+            packages = linked(config.build_prefix)
             packages_names = (pkg.split('-')[0] for pkg in packages)
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')

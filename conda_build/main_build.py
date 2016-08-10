@@ -15,11 +15,10 @@ from glob import glob
 from locale import getpreferredencoding
 import warnings
 
-import conda.config as config
-from conda.compat import PY3
-from conda.cli.common import add_parser_channels
-from conda.install import delete_trash
-from conda.resolve import NoPackagesFound, Unsatisfiable
+from .conda_interface import cc
+from .conda_interface import add_parser_channels
+from .conda_interface import delete_trash
+from .conda_interface import NoPackagesFound, Unsatisfiable
 
 from conda_build.build import bldpkg_path
 from conda_build.index import update_index
@@ -50,14 +49,14 @@ different sets of packages."""
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='binstar_upload',
-        default=config.binstar_upload,
+        default=cc.binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='binstar_upload',
-        default=config.binstar_upload,
+        default=cc.binstar_upload,
     )
     p.add_argument(
         "--no-include-recipe",
@@ -231,7 +230,7 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
-    import conda.config as cc
+    from .conda_interface import cc
 
     import conda_build.build as build
     import conda_build.source as source
@@ -261,7 +260,7 @@ def execute(args, parser):
     set_language_env_vars(args, parser, execute=execute)
 
     if args.skip_existing:
-        for d in config.bldpkgs_dirs:
+        for d in cc.bldpkgs_dirs:
             if not isdir(d):
                 makedirs(d)
             update_index(d)
@@ -306,7 +305,7 @@ def execute(args, parser):
                                                                      dirty=args.dirty)
 
         if m.get_value('build/noarch_python'):
-            config.noarch = True
+            cc.noarch = True
 
         if args.check and len(args.recipe) > 1:
             print(m.path)
