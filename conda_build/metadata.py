@@ -370,6 +370,8 @@ def find_recipe(path):
 class MetaData(object):
     def __init__(self, path, config=None):
 
+        self.undefined_jinja_vars = []
+
         if not config:
             config = Config()
 
@@ -396,7 +398,6 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
-        self.undefined_jinja_vars = []
         self.parse_again(config=config, permit_undefined_jinja=True)
 
     def parse_again(self, config, permit_undefined_jinja=False):
@@ -811,7 +812,7 @@ class MetaData(object):
     @property
     def uses_setup_py_in_meta(self):
         with open(self.meta_path) as f:
-            return "load_setup_py_data" in f.read() or "load_setuptools" in f.read()
+            return ("load_setup_py_data" in f.read()) or ("load_setuptools" in f.read())
 
     @property
     def uses_jinja(self):

@@ -147,6 +147,7 @@ def test_early_abort(capfd):
     output, error = capfd.readouterr()
     assert "Hello World" in output
 
+
 def test_output_build_path_git_source(testing_workdir, test_config):
     output = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                       config=test_config)

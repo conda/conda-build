@@ -61,54 +61,21 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
 def build(recipe_path, post=None, need_source_download=True,
           already_built=None, build_only=False, notest=False,
           config=None, **kwargs):
-
     import os
-    import conda.config as cc
-    from conda.utils import url_path
-    from conda_build.render import render_recipe
-    from conda_build.build import build_tree, get_build_index, update_index
+    from conda_build.build import build_tree
 
     config = get_or_merge_config(config, **kwargs)
 
     recipe_path = _ensure_list(recipe_path)
-
-    build_metadata = []
+    absolute_paths = []
     for recipe in recipe_path:
-        metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
-                                            no_download_source=(not need_source_download),
-                                            config=config)
+        if os.path.isabs(recipe):
+            absolute_paths.append(recipe)
+        else:
+            absolute_paths.append(os.path.join(os.getcwd(), recipe))
 
-        if not already_built:
-            already_built = set()
-
-        if metadata.skip():
-            print("Skipped: The %s recipe defines build/skip for this "
-                    "configuration." % metadata.dist())
-            continue
-
-        if config.skip_existing:
-            for d in config.bldpkgs_dirs:
-                if not os.path.isdir(d):
-                    os.makedirs(d)
-                update_index(d, config)
-            index = get_build_index(config=config, clear_cache=True)
-
-            urls = [url_path(config.croot)] + cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
-            if config.channel_urls:
-                urls.extend(config.channel_urls)
-
-            # will be empty if none found, and evalute to False
-            package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
-            if (package_exists or metadata.pkg_fn() in index or
-                    metadata.pkg_fn() in already_built):
-                print(metadata.dist(), "is already built in {0}, skipping.".format(package_exists))
-                continue
-
-        build_metadata.append((metadata, need_source_download, need_reparse_in_env))
-
-    return build_tree(build_metadata, build_only=build_only, post=post, notest=notest,
-                      need_source_download=need_source_download, already_built=already_built,
-                      config=config)
+    return build_tree(absolute_paths, build_only=build_only, post=post, notest=notest,
+                      need_source_download=need_source_download, config=config)
 
 
 def test(package_path, move_broken=True, config=None, **kwargs):
@@ -125,6 +92,13 @@ def test(package_path, move_broken=True, config=None, **kwargs):
     with TemporaryDirectory() as tmp:
         tar_xf(package_path, tmp)
         recipe_dir = os.path.join(tmp, 'info', 'recipe')
+        package_fn = os.path.basename(package_path)
+        package_name = package_fn.rsplit('-', 2)[0]
+
+        # This will create a new local build folder if and only if config doesn't already have one.
+        #   What this means is that if we're running a test immediately after build, we use the one
+        #   that the build already provided
+        config.compute_build_id(package_name)
 
         # try to extract the static meta.yaml and load metadata from it
         if os.path.isdir(recipe_dir):
@@ -134,7 +108,6 @@ def test(package_path, move_broken=True, config=None, **kwargs):
             metadata, _, _ = render_recipe(package_path, no_download_source=False,
                                         config=config, **kwargs)
 
-        # config.compute_build_id(metadata.name(), reset=True)
         with config:
             test_result = test(metadata, config=config, move_broken=move_broken)
     return test_result

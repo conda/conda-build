@@ -60,10 +60,10 @@ class Config(object):
         if self.CONDA_NPY:
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
 
-        self._build_id = kwargs.get('build_id', "")
-        self._prefix_length = kwargs.get("prefix_length", 255)
+        self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
+        self._prefix_length = kwargs.get("prefix_length", getattr(self, '_prefix_length', 255))
         # set default value (not actually None)
-        self._croot = kwargs.get('croot', None)
+        self._croot = kwargs.get('croot', getattr(self, '_croot', None))
 
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
@@ -162,22 +162,26 @@ class Config(object):
         return self._build_id
 
     def compute_build_id(self, package_name, reset=False):
-        if not self.build_id or reset:
+        if not self._build_id or reset:
+            assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
+                                                     "to preserve croot during path joins")
             build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)
                                 if package_name in build_folder])
 
             if self.dirty and build_folders:
                 # Use the most recent build with matching recipe name
-                self.build_id = build_folders[-1]
+                self._build_id = build_folders[-1]
             else:
                 # here we uniquely name folders, so that more than one build can happen concurrently
                 #    keep 6 decimal places so that prefix < 80 chars
                 build_id = package_name + "_" + str(int(time.time() * 1000))
                 # important: this is recomputing prefixes and determines where work folders are.
-                self.build_id = build_id
+                self._build_id = build_id
 
     @build_id.setter
     def build_id(self, _build_id):
+        assert not os.path.isabs(_build_id), ("build_id should not be a absolute path, "
+                                              "to preserve croot during path joins")
         self._build_id = _build_id
 
     @property
@@ -287,15 +291,16 @@ class Config(object):
 
     def clean(self):
         # build folder is the whole burrito containing envs and source folders
-        shutil.rmtree(self.build_folder)
+        #   It will only exist if we download source, or create a build or test environment
+        if os.path.isdir(self.build_folder):
+            shutil.rmtree(self.build_folder)
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):
-        if not os.path.isdir(self.build_folder):
-            os.makedirs(self.build_folder)
+        pass
 
-    def __exit__(self, type, value, traceback):
-        if not getattr(self, 'dirty') and not getattr(self, 'keep_old_work'):
+    def __exit__(self, e_type, e_value, traceback):
+        if not getattr(self, 'dirty') and not getattr(self, 'keep_old_work') and e_type is None:
             log.info("--keep-old-work flag not specified.  Removing source and build files.\n")
             self.clean()
 

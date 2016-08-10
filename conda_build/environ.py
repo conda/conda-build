@@ -102,10 +102,10 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
 
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
-        if remote_url.lower() != git_url.lower():
-            logging.debug("\nremote does not match git_url\n")
-            logging.debug("Remote: " + remote_url.lower() + "\n")
-            logging.debug("git_url: " + git_url.lower() + "\n")
+        if not os.path.isdir(remote_url) and remote_url.lower() != git_url.lower():
+            logging.debug("remote does not match git_url")
+            logging.debug("Remote: " + remote_url.lower())
+            logging.debug("git_url: " + git_url.lower())
             return False
     except subprocess.CalledProcessError as error:
         logging.warn("Error obtaining git information.  Error was: ")

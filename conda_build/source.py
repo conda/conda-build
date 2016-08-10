@@ -6,7 +6,7 @@ import logging
 import os
 import re
 import sys
-from os.path import join, isdir, isfile, abspath, expanduser, basename
+from os.path import join, isdir, isfile, abspath, expanduser, basename, exists
 from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
 import time
 
@@ -288,7 +288,7 @@ def get_repository_info(recipe_path):
     """This tries to get information about where a recipe came from.  This is different
     from the source - you can have a recipe in svn that gets source via git."""
     try:
-        if isdir(join(recipe_path, ".git")):
+        if exists(join(recipe_path, ".git")):
             origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
             rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
             return "Origin {}, commit {}".format(origin, rev)

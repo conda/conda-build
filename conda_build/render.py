@@ -141,14 +141,13 @@ def render_recipe(recipe_path, config, no_download_source=False):
     if not isdir(recipe_dir):
         sys.exit("Error: no such directory: %s" % recipe_dir)
 
+    # updates a unique build id if not already computed
+    config.compute_build_id(os.path.basename(recipe_dir))
     try:
-        m = MetaData(recipe_dir)
+        m = MetaData(recipe_dir, config=config)
     except exceptions.YamlParsingError as e:
         sys.stderr.write(e.error_msg())
         sys.exit(1)
-
-    # updates a unique build id if not already computed
-    config.compute_build_id(m.name())
 
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,

@@ -484,18 +484,15 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
     (due to missing tools), retry here after build env is populated
     '''
 
-    if (m.get_value('build/detect_binary_files_with_prefix') or
-            m.binary_has_prefix_files()) and not on_win:
-        # We must use a long prefix here as the package will only be
-        # installable into prefixes shorter than this one.
-        config.use_long_build_prefix = True
-    else:
-        # In case there are multiple builds in the same process
-        config.use_long_build_prefix = False
-
     if m.skip():
         print("Skipped: The %s recipe defines build/skip for this "
               "configuration." % m.dist())
+        return False
+
+    if config.skip_existing:
+        package_exists = is_package_built(m, config)
+        if package_exists:
+            print(m.dist(), "is already built in {0}, skipping.".format(package_exists))
         return False
 
     if post in [False, None]:
@@ -856,14 +853,14 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def build_tree(metadata_list, config, check=False, build_only=False, post=False, notest=False,
-               need_source_download=True, already_built=None):
+def build_tree(recipe_list, config, check=False, build_only=False, post=False, notest=False,
+               need_source_download=True):
 
     to_build_recursive = []
-    metadata_list = deque(metadata_list)
-    if not already_built:
-        already_built = set()
-    while metadata_list:
+    recipe_list = deque(recipe_list)
+
+    already_built = set()
+    while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
             post = False
@@ -876,14 +873,16 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
         else:
             post = None
 
-        metadata, need_source_download, need_reparse_in_env = metadata_list.popleft()
-        recipe_parent_dir = os.path.dirname(metadata.path)
+        recipe = recipe_list.popleft()
+        recipe_parent_dir = os.path.dirname(recipe)
         try:
-            config.compute_build_id(metadata.name())
+            config.compute_build_id(os.path.basename(recipe), reset=True)
+            metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
+                                                                                config=config)
             with config:
                 ok_to_test = build(metadata, post=post,
-                                need_source_download=need_source_download,
-                                config=config)
+                                   need_source_download=need_source_download,
+                                   config=config)
                 if not notest and ok_to_test:
                     test(metadata, config=config)
         except (NoPackagesFound, Unsatisfiable) as e:
@@ -895,7 +894,7 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
             # rebuilt).
             skip_names = ['python', 'r']
             # add the failed one back in
-            add_recipes = [metadata.path]
+            add_recipes = [recipe]
             for line in error_str.splitlines():
                 if not line.startswith('  - '):
                     continue
@@ -916,8 +915,7 @@ def build_tree(metadata_list, config, check=False, build_only=False, post=False,
                         to_build_recursive.append(pkg)
                 else:
                     raise
-            metadata_list.extendleft([render_recipe(add_recipe, config=config)
-                                      for add_recipe in add_recipes])
+            recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         output_file = bldpkg_path(metadata, config=config)
@@ -994,3 +992,19 @@ def clean_build(config, folders=None):
         folders = get_build_folders(config.croot)
     for folder in folders:
         shutil.rmtree(folder)
+
+
+def is_package_built(metadata, config):
+    for d in config.bldpkgs_dirs:
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        update_index(d, config)
+    index = get_build_index(config=config, clear_cache=True)
+
+    urls = [url_path(config.croot)] + cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
+    if config.channel_urls:
+        urls.extend(config.channel_urls)
+
+    # will be empty if none found, and evalute to False
+    package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
+    return package_exists or metadata.pkg_fn() in index
