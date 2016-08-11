@@ -283,7 +283,7 @@ def test_broken_conda_meta(testing_workdir, test_config):
 
 
 def test_recursive_fail(testing_workdir, test_config):
-    with pytest.raises(SystemExit) as exc:
+    with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)
         assert "recursive-build2" in exc
 

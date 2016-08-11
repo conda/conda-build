@@ -875,7 +875,7 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
 
         recipe = recipe_list.popleft()
         recipe_parent_dir = os.path.dirname(recipe)
-        to_build_recursive.append(recipe)
+        to_build_recursive.append(os.path.basename(recipe))
         try:
             config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
@@ -895,6 +895,8 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
             # rebuilt).
             skip_names = ['python', 'r']
             add_recipes = []
+            # add the failed one back in at the beginning - but its deps may come before it
+            recipe_list.extendleft([recipe])
             for line in error_str.splitlines():
                 if not line.startswith('  - '):
                     continue
@@ -906,11 +908,10 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
                 if pkg in to_build_recursive:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
                                        .format(recipe) + error_str)
+
                 recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
                 if recipe_glob:
                     for recipe_dir in recipe_glob:
-                        if pkg in to_build_recursive:
-                            sys.exit(str(e))
                         print(error_str)
                         print(("Missing dependency {0}, but found" +
                                 " recipe directory, so building " +
@@ -919,9 +920,6 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
                 else:
                     raise
             recipe_list.extendleft(add_recipes)
-            # add the failed one back in
-            recipe_list.append(recipe)
-            to_build_recursive.append(recipe)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         output_file = bldpkg_path(metadata, config=config)
