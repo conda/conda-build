@@ -238,7 +238,6 @@ else:
 @pytest.mark.skipif(sys.platform != "win32", reason="MSVC only on windows")
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver):
-    env = dict(os.environ)
     # verify that the correct compiler is available
     cl_versions = {"9.0": 15,
                    "10.0": 16,
@@ -246,11 +245,17 @@ def test_build_msvc_compiler(msvc_ver):
                    "12.0": 18,
                    "14.0": 19}
 
-    env['CONDATEST_MSVC_VER'] = msvc_ver
-    env['CL_EXE_VERSION'] = str(cl_versions[msvc_ver])
+    os.environ['CONDATEST_MSVC_VER'] = msvc_ver
+    os.environ['CL_EXE_VERSION'] = str(cl_versions[msvc_ver])
 
-    # Always build Python 2.7 - but set MSVC version manually via Jinja template
-    api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="2.7")
+    try:
+        # Always build Python 2.7 - but set MSVC version manually via Jinja template
+        api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="2.7")
+    except:
+        raise
+    finally:
+        del os.environ['CONDATEST_MSVC_VER']
+        del os.environ['CL_EXE_VERSION']
 
 
 @pytest.mark.parametrize("platform", platforms)
