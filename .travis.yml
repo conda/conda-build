@@ -28,7 +28,7 @@ install:
 
 script:
   - flake8 .
-  - py.test -v --cov conda_build --cov-report xml tests -n 4
+  - py.test -v --cov conda_build --cov-report xml tests
   - conda build --help
 
 notifications:
