@@ -29,7 +29,7 @@ def namespace_setup(testing_workdir, request):
 
 
 def test_copy_source_tree(namespace_setup, test_config):
-    dst = namespace_setup.join('dest')
+    dst = os.path.join(namespace_setup, 'dest')
     utils.copy_into(namespace_setup, dst, test_config)
     assert os.path.isfile(os.path.join(dst, 'namespace', 'package', 'module.py'))
 
