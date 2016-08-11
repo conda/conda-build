@@ -15,7 +15,7 @@ from glob import glob
 from locale import getpreferredencoding
 import warnings
 
-from .conda_interface import cc
+from .conda_interface import binstar_upload, get_rc_urls, get_local_urls
 from .conda_interface import add_parser_channels, PY3
 from .conda_interface import delete_trash
 from .conda_interface import NoPackagesFound, Unsatisfiable
@@ -49,14 +49,14 @@ different sets of packages."""
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='binstar_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='binstar_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-include-recipe",
@@ -230,8 +230,6 @@ def execute(args, parser):
     from os import makedirs
     from os.path import abspath, isdir, isfile
 
-    from .conda_interface import cc
-
     import conda_build.build as build
     import conda_build.source as source
     from conda_build.config import config
@@ -317,7 +315,7 @@ def execute(args, parser):
                     "configuration." % m.dist())
             continue
         if args.skip_existing:
-            urls = cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
+            urls = get_rc_urls() + get_local_urls() + ['local', ]
             if args.channel:
                 urls.extend(args.channel)
 

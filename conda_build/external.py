@@ -4,7 +4,7 @@ import os
 import sys
 from os.path import isfile, join, expanduser
 
-from .conda_interface import cc
+from .conda_interface import root_dir
 from conda_build.config import config
 
 
@@ -17,13 +17,13 @@ def find_executable(executable):
                      join(config.build_prefix, 'Library\\mingw-w64\\bin'),
                      join(config.build_prefix, 'Library\\usr\\bin'),
                      join(config.build_prefix, 'Library\\bin'),
-                     join(cc.root_dir, 'Scripts'),
-                     join(cc.root_dir, 'Library\\mingw-w64\\bin'),
-                     join(cc.root_dir, 'Library\\usr\\bin'),
-                     join(cc.root_dir, 'Library\\bin'), ]
+                     join(root_dir, 'Scripts'),
+                     join(root_dir, 'Library\\mingw-w64\\bin'),
+                     join(root_dir, 'Library\\usr\\bin'),
+                     join(root_dir, 'Library\\bin'), ]
     else:
         dir_paths = [join(config.build_prefix, 'bin'),
-                     join(cc.root_dir, 'bin'), ]
+                     join(root_dir, 'bin'), ]
 
     dir_paths.extend(os.environ['PATH'].split(os.pathsep))
 

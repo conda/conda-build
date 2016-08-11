@@ -13,7 +13,7 @@ import os.path
 import subprocess
 import yaml
 
-from .conda_interface import cc
+from .conda_interface import binstar_upload, default_prefix  # NOQA
 from .conda_interface import ArgumentParser
 
 from conda_build.main_build import args_func
@@ -44,14 +44,14 @@ Tool for building conda packages using pip install.
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='binstar_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--anaconda-upload",
         action="store_true",
         help="Upload the package to anaconda.org.",
         dest='binstar_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         'pypi_name',
@@ -202,8 +202,7 @@ def convert_recipe(direc, package, noarch_python=False):
 
 
 def get_all_dependencies(package, version):
-    from .conda_interface import cc
-    prefix = os.path.join(cc.default_prefix, 'envs', '_pipbuild_')
+    prefix = os.path.join(default_prefix, 'envs', '_pipbuild_')
     cmd1 = "conda create -n _pipbuild_ --yes python pip"
     print(cmd1)
     subprocess.Popen(cmd1.split()).wait()
