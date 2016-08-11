@@ -32,14 +32,12 @@ else:
 
 
 log = logging.getLogger(__file__)
-# Backwards compatibility import. Do not remove.
-from .conda_interface import rm_rf  # NOQA
 
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
 if sys.platform == 'win32':
-    from conda.install import move_path_to_trash as rm_rf  # NOQA
+    from .conda_interface import move_path_to_trash as rm_rf  # NOQA
 else:
-    from conda.install import rm_rf  # NOQA
+    from .conda_interface import rm_rf  # NOQA
 
 on_win = (sys.platform == 'win32')
 

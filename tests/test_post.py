@@ -2,7 +2,7 @@ import os
 import shutil
 import sys
 
-from conda.compat import TemporaryDirectory, PY3
+from conda_build.conda_interface import TemporaryDirectory, PY3
 import pytest
 
 from conda_build import post

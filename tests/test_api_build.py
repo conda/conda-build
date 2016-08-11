@@ -4,16 +4,14 @@ import subprocess
 import sys
 import tarfile
 
-from conda.compat import PY3
-import conda.config as cc
-from conda.resolve import NoPackagesFound
-from conda.utils import url_path
+from conda_build.conda_interface import PY3, cc, NoPackagesFound, url_path
+
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
 
 from conda_build import api
-from conda_build.utils import copy_into, path2url
+from conda_build.utils import copy_into
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir,
                     testing_workdir, test_config)

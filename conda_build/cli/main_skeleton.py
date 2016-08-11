@@ -12,7 +12,7 @@ import os
 import pkgutil
 import sys
 
-from conda.cli.conda_argparse import ArgumentParser
+from conda_build.conda_interface import ArgumentParser
 
 import conda_build.api as api
 from conda_build.config import Config

@@ -4,7 +4,7 @@ import os
 import sys
 from os.path import isfile, join, expanduser
 
-from .conda_interface import cc
+from conda_build.conda_interface import cc
 
 
 def find_executable(executable, prefix=None):

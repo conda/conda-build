@@ -6,17 +6,12 @@
 
 import logging
 
-from conda.cli.conda_argparse import ArgumentParser
-from conda.cli.common import add_parser_prefix, InstalledPackages
+from conda_build.conda_interface import (ArgumentParser, add_parser_prefix, InstalledPackages,
+                                         get_prefix)
 
 from conda_build import api
 from conda_build.config import Config
 from conda_build.cli.main_build import args_func
-
-try:
-    from conda.cli.common import get_prefix
-except ImportError:
-    from conda_env.cli.common import get_prefix
 
 logging.basicConfig(level=logging.INFO)
 

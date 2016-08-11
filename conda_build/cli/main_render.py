@@ -9,8 +9,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 import sys
 
-from .conda_interface import add_parser_channels
-from .conda_interface import ArgumentParser
+from conda_build.conda_interface import ArgumentParser, add_parser_channels
 
 from conda_build import __version__
 from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path, output_yaml

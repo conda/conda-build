@@ -8,7 +8,7 @@ from locale import getpreferredencoding
 import logging
 from os.path import abspath, expanduser
 
-from conda.cli.conda_argparse import ArgumentParser
+from conda_build.conda_interface import ArgumentParser
 
 from conda_build.cli.main_build import args_func
 from conda_build import api

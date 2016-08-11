@@ -5,9 +5,9 @@ import re
 import subprocess
 from os.path import join, basename
 
-from .conda_interface import memoized
-from .conda_interface import untracked
-from .conda_interface import linked_data
+from conda_build.conda_interface import memoized
+from conda_build.conda_interface import untracked
+from conda_build.conda_interface import linked_data
 
 from conda_build import post
 from conda_build.os_utils.macho import otool

@@ -29,10 +29,10 @@ from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import PY3
 from .conda_interface import fetch_index
-from .conda_interface import prefix_placeholder, linked, move_to_trash, symlink_conda
-from .conda_interface import Locked
+from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
-from .conda_interface import Resolve, MatchSpec, NoPackagesFound
+from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
+from .conda_interface import TemporaryDirectory
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck

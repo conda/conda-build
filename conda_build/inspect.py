@@ -14,20 +14,13 @@ import re
 import sys
 import tempfile
 
-from conda.compat import iteritems
-from conda.cli.common import specs_from_args
-import conda.install as ci
-import conda.plan as plan
+from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linked_data, linked,
+                              get_index)
 
-from conda.api import get_index
-try:
-    from conda.install import install_linked
-except ImportError:
-    from conda.install import linked as install_linked
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join
+from conda_build.utils import groupby, getter, comma_join, rm_rf
 
 
 log = logging.getLogger(__file__)
@@ -59,8 +52,8 @@ def which_package(path):
     prefix = which_prefix(path)
     if prefix is None:
         raise RuntimeError("could not determine conda prefix from: %s" % path)
-    for dist in install_linked(prefix):
-        meta = ci.is_linked(prefix, dist)
+    for dist in linked(prefix):
+        meta = is_linked(prefix, dist)
         if any(abspath(join(prefix, f)) == path for f in meta['files']):
             yield dist
 
@@ -103,7 +96,7 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
         plan.display_actions(actions, index)
         return actions
     finally:
-        ci.rm_rf(prefix)
+        rm_rf(prefix)
     return None
 
 
@@ -196,7 +189,7 @@ def test_installable(channel='defaults'):
 
 
 def _installed(prefix):
-    installed = ci.linked_data(prefix)
+    installed = linked_data(prefix)
     installed = {rec['name']: dist for dist, rec in iteritems(installed)}
     return installed
 

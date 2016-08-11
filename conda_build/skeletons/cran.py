@@ -25,8 +25,8 @@ except ImportError:
 from conda_build import source, metadata
 from conda_build.config import Config
 from conda_build.utils import rm_rf
-from .conda_interface.compat import text_type, iteritems
-from .conda_interface.cli.common import Completer
+from conda_build.conda_interface import text_type, iteritems
+from conda_build.conda_interface import Completer
 
 CRAN_META = """\
 {{% set posix = 'm2-' if win else '' %}}

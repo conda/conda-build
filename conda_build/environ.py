@@ -376,8 +376,7 @@ def system_vars(env_dict, prefix):
 
 
 if __name__ == '__main__':
-    from conda.config import Config
-    e = get_dict(config=Config())
+    e = get_dict(cc)
     for k in sorted(e):
         assert isinstance(e[k], str), k
         print('%s=%s' % (k, e[k]))

@@ -7,7 +7,7 @@ from os.path import isfile, join, isdir
 import shutil
 import sys
 
-from conda.signature import KEYS, KEYS_DIR, hash_file
+from .conda_interface import KEYS, KEYS_DIR, hash_file
 
 try:
     from Crypto import Random

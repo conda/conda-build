@@ -23,8 +23,8 @@ from conda_build.config import Config, get_or_merge_config
 
 
 def _ensure_list(recipe_arg):
-    from conda.compat import string_types as _string_types
-    if isinstance(recipe_arg, _string_types):
+    from .conda_interface import string_types
+    if isinstance(recipe_arg, string_types):
         recipe_arg = [recipe_arg]
     return recipe_arg
 
@@ -80,7 +80,7 @@ def build(recipe_path, post=None, need_source_download=True,
 
 def test(package_path, move_broken=True, config=None, **kwargs):
     import os
-    from conda.compat import TemporaryDirectory
+    from .conda_interface import TemporaryDirectory
     from conda_build.build import test
     from conda_build.render import render_recipe
     from conda_build.utils import tar_xf
@@ -241,7 +241,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False):
     from locale import getpreferredencoding
     import os
-    from conda.compat import PY3
+    from .conda_interface import PY3
     from conda_build.index import update_index
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
     # Don't use byte strings in Python 2

@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from conda.compat import PY3
+from conda_build.conda_interface import PY3
 
 from .utils import subdir
 

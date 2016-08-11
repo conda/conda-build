@@ -13,14 +13,13 @@ import shutil
 import sys
 import warnings
 
-import conda.config as cc
-from conda.cli.common import add_parser_channels
-from conda.install import delete_trash
-
 import conda_build.api as api
 import conda_build.build as build
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          render_recipe, get_render_parser, bldpkg_path)
+from conda_build.conda_interface import cc
+from conda_build.conda_interface import delete_trash
+from conda_build.conda_interface import add_parser_channels
 import conda_build.source as source
 from conda_build.utils import get_recipe_abspath, silence_loggers
 from conda_build.config import Config

@@ -9,8 +9,7 @@ import sys
 
 import pytest
 
-from conda.compat import PY3
-from conda.fetch import download
+from conda_build.conda_interface import PY3, download
 
 from conda_build.utils import get_site_packages
 from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
