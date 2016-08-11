@@ -2,10 +2,10 @@
 Simple tests for testing functions in develop module - lower level than going through API.
 '''
 import os
-import shutil
 from os.path import dirname, join, exists
 
 from conda_build.develop import _uninstall, write_to_conda_pth
+from conda_build.utils import rm_rf
 
 import pytest
 
@@ -21,13 +21,13 @@ def sp_dir(request):
     base_dir = dirname(__file__)
     sp = join(base_dir, 'site-packages')
     if exists(sp):
-        shutil.rmtree(sp)
+        rm_rf(sp)
 
     os.mkdir(sp)
 
     def cleanup():
         # session scoped cleanup is called at end of the session
-        shutil.rmtree(sp)
+        rm_rf(sp)
 
     request.addfinalizer(cleanup)
 

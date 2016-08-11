@@ -367,7 +367,7 @@ def create_env(prefix, specs, config, clear_cache=True):
         silence_loggers(show_warnings_and_errors=True)
 
     if os.path.isdir(prefix):
-        shutil.rmtree(prefix)
+        rm_rf(prefix)
 
     specs = list(specs)
     for feature, value in feature_list:
@@ -991,7 +991,7 @@ def clean_build(config, folders=None):
     if not folders:
         folders = get_build_folders(config.croot)
     for folder in folders:
-        shutil.rmtree(folder)
+        rm_rf(folder)
 
 
 def is_package_built(metadata, config):

@@ -8,13 +8,12 @@ import logging
 import math
 import os
 from os.path import abspath, expanduser, join
-import shutil
 import sys
 import time
 
 from .conda_interface import cc
 
-from .utils import get_build_folders
+from .utils import get_build_folders, rm_rf
 
 log = logging.getLogger(__file__)
 on_win = (sys.platform == 'win32')
@@ -293,7 +292,7 @@ class Config(object):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
         if os.path.isdir(self.build_folder):
-            shutil.rmtree(self.build_folder)
+            rm_rf(self.build_folder)
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):

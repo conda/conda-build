@@ -9,7 +9,6 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import logging
 from os.path import isdir
-import shutil
 import sys
 import warnings
 
@@ -21,7 +20,7 @@ from conda_build.conda_interface import cc
 from conda_build.conda_interface import delete_trash
 from conda_build.conda_interface import add_parser_channels
 import conda_build.source as source
-from conda_build.utils import get_recipe_abspath, silence_loggers
+from conda_build.utils import get_recipe_abspath, silence_loggers, rm_rf
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -221,7 +220,7 @@ def execute(args, parser, config):
             action(m, config)
 
             if need_cleanup:
-                shutil.rmtree(recipe_dir)
+                rm_rf(recipe_dir)
     else:
         api.build(args.recipe, post=args.post, build_only=args.build_only,
                    notest=args.notest, keep_old_work=args.keep_old_work,

@@ -16,12 +16,12 @@ import os
 from os.path import abspath, expanduser, isdir, join, split
 import pprint
 import re
-import shutil
 import sys
 import tarfile
 import tempfile
 
 from .conda_interface import PY3
+from .utils import rm_rf
 
 if PY3:
     from io import StringIO, BytesIO
@@ -174,7 +174,7 @@ def write_info(t, info):
         json.dump(info, fo, indent=2, sort_keys=True)
     for fn in os.listdir(tmp_dir):
         t.add(join(tmp_dir, fn), 'info/' + fn)
-    shutil.rmtree(tmp_dir)
+    rm_rf(tmp_dir)
 
 
 path_mapping_bat_proxy = [
