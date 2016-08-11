@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 
-from conda.compat import iteritems
+from .conda_interface import iteritems
 
 
 env_vars = [

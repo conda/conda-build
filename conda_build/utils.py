@@ -18,8 +18,8 @@ import subprocess
 
 import filelock
 
-from conda.utils import md5_file, unix_path_to_win
-from conda.compat import PY3, iteritems
+from .conda_interface import md5_file, unix_path_to_win
+from .conda_interface import PY3, iteritems
 
 from conda_build.os_utils import external
 
@@ -32,6 +32,8 @@ else:
 
 
 log = logging.getLogger(__file__)
+# Backwards compatibility import. Do not remove.
+from .conda_interface import rm_rf  # NOQA
 
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
 if sys.platform == 'win32':

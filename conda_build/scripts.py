@@ -9,9 +9,8 @@ import os
 import sys
 from os.path import dirname, isdir, join
 
-import conda.install
-from conda.config import bits
-
+from .conda_interface import linked
+from .conda_interface import cc
 from conda_build.utils import copy_into
 
 
@@ -40,12 +39,12 @@ def create_entry_point(path, module, func, config):
     pyscript = PY_TMPL % {'module': module, 'func': func}
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w') as fo:
-            packages = conda.install.linked(config.build_prefix)
+            packages = linked(config.build_prefix)
             packages_names = (pkg.split('-')[0] for pkg in packages)
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config)
+        copy_into(join(dirname(__file__), 'cli-%d.exe' % cc.bits), path + '.exe', config)
     else:
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % config.build_python)

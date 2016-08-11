@@ -13,7 +13,7 @@ import sys
 
 import jinja2
 
-from conda.compat import PY3
+from .conda_interface import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
 

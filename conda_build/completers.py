@@ -1,6 +1,6 @@
 import os
 from os.path import isdir, isfile, join
-from conda.cli.common import Completer
+from .conda_interface import Completer
 
 
 all_versions = {

@@ -9,8 +9,8 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import logging
 
-import conda.config
-from conda.cli.conda_argparse import ArgumentParser
+from .conda_interface import cc
+from .conda_interface import ArgumentParser
 
 from conda_build import api
 from conda_build.config import Config
@@ -37,14 +37,14 @@ command line with the conda metapackage command.
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='anaconda_upload',
-        default=conda.config.binstar_upload,
+        default=cc.binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='anaconda_upload',
-        default=conda.config.binstar_upload,
+        default=cc.binstar_upload,
     )
     p.add_argument(
         '--token',

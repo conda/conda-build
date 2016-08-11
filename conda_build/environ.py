@@ -9,9 +9,9 @@ from collections import defaultdict
 from os.path import join, normpath
 import subprocess
 
-import conda.config as cc
+from .conda_interface import cc
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
-from conda.compat import text_type, PY3  # noqa
+from .conda_interface import text_type, PY3  # noqa
 
 from conda_build.os_utils import external
 from conda_build import source
@@ -346,7 +346,11 @@ def system_vars(env_dict, prefix):
     if 'MAKEFLAGS' in os.environ:
         d['MAKEFLAGS'] = os.environ['MAKEFLAGS']
 
-    d['CPU_COUNT'] = get_cpu_count()
+    if 'CPU_COUNT' in os.environ:
+        d['CPU_COUNT'] = os.environ['CPU_COUNT']
+    else:
+        d['CPU_COUNT'] = get_cpu_count()
+
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
     d['PATH'] = os.environ['PATH']

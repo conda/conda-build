@@ -19,16 +19,15 @@ import requests
 from requests.packages.urllib3.util.url import parse_url
 import yaml
 
-from conda.cli.common import spec_from_line, Completer
-from conda.compat import input, configparser, StringIO, string_types, PY3
-from conda.config import default_python
-from conda.connection import CondaSession
-from conda.fetch import (download, handle_proxy_407)
-from conda.install import rm_rf
-from conda.resolve import normalized_version
-from conda.utils import human_bytes, hashsum_file
+from .conda_interface import spec_from_line, Completer
+from .conda_interface import input, configparser, StringIO, string_types, PY3
+from .conda_interface import CondaSession
+from .conda_interface import download, handle_proxy_407
+from .conda_interface import normalized_version
+from .conda_interface import human_bytes, hashsum_file
+from .conda_interface import default_python
 
-from conda_build.utils import tar_xf, unzip
+from conda_build.utils import tar_xf, unzip, rm_rf
 from conda_build.source import apply_patch
 from conda_build.build import create_env
 from conda_build.config import Config

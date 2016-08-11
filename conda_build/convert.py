@@ -21,7 +21,7 @@ import sys
 import tarfile
 import tempfile
 
-from conda.compat import PY3
+from .conda_interface import PY3
 
 if PY3:
     from io import StringIO, BytesIO

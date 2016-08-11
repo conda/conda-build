@@ -10,8 +10,8 @@ from os.path import join, isdir, isfile, abspath, expanduser, basename, exists
 from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
 import time
 
-from conda.fetch import download
-from conda.utils import hashsum_file
+from .conda_interface import download
+from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
 from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into

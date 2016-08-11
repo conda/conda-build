@@ -22,12 +22,11 @@ try:
 except ImportError:
     from yaml import SafeDumper
 
-from conda.cli.common import Completer
-from conda.install import rm_rf
-from conda import compat
-
-from conda_build import metadata, source
+from conda_build import source, metadata
 from conda_build.config import Config
+from conda_build.utils import rm_rf
+from .conda_interface.compat import text_type, iteritems
+from .conda_interface.cli.common import Completer
 
 CRAN_META = """\
 {{% set posix = 'm2-' if win else '' %}}
@@ -686,8 +685,8 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
         name = d['packagename']
 
         # Normalize the metadata values
-        d = {k: unicodedata.normalize("NFKD", compat.text_type(v)).encode('ascii', 'ignore')
-             .decode() for k, v in compat.iteritems(d)}
+        d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
+             .decode() for k, v in iteritems(d)}
 
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())

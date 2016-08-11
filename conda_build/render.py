@@ -16,7 +16,7 @@ import tempfile
 
 import yaml
 
-from conda.compat import PY3
+from .conda_interface import PY3
 
 from conda_build import exceptions, utils
 from conda_build.metadata import MetaData

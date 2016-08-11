@@ -6,11 +6,11 @@ import re
 import sys
 from os.path import isdir, isfile, join
 
-from conda.compat import iteritems, PY3, text_type
-from conda.utils import memoized, md5_file
-import conda.config as cc
-from conda.resolve import MatchSpec
-from conda.cli.common import specs_from_url
+from .conda_interface import iteritems, PY3, text_type
+from .conda_interface import memoized, md5_file
+from .conda_interface import cc
+from .conda_interface import MatchSpec
+from .conda_interface import specs_from_url
 
 from conda_build import exceptions
 from conda_build.features import feature_list
