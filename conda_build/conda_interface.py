@@ -40,9 +40,9 @@ try:
     root_writable = context.root_writable
     subdir = context.subdir
 
-    get_rc_urls = lambda: context.channels
+    get_rc_urls = lambda: list(context.channels)
     from conda.models.channel import get_conda_build_local_url
-    get_local_urls = lambda: get_conda_build_local_url() or []
+    get_local_urls = lambda: list(get_conda_build_local_url()) or []
 
 except ImportError:
     from conda.config import get_default_urls, non_x86_linux_machines  # NOQA
