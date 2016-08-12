@@ -6,11 +6,11 @@ import re
 import sys
 from os.path import isdir, isfile, join
 
-from conda.compat import iteritems, PY3, text_type
-from conda.utils import memoized, md5_file
-import conda.config as cc
-from conda.resolve import MatchSpec
-from conda.cli.common import specs_from_url
+from .conda_interface import iteritems, PY3, text_type
+from .conda_interface import memoized, md5_file
+from .conda_interface import non_x86_linux_machines, subdir, platform, arch_name
+from .conda_interface import MatchSpec
+from .conda_interface import specs_from_url
 
 from conda_build import exceptions
 from conda_build.features import feature_list
@@ -36,7 +36,7 @@ log = logging.getLogger(__file__)
 
 def ns_cfg():
     # Remember to update the docs of any of this changes
-    plat = cc.subdir
+    plat = subdir
     py = config.CONDA_PY
     np = config.CONDA_NPY
     pl = config.CONDA_PERL
@@ -69,7 +69,7 @@ def ns_cfg():
         os=os,
         environ=os.environ,
     )
-    for machine in cc.non_x86_linux_machines:
+    for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
     for feature, value in feature_list:
@@ -580,9 +580,9 @@ class MetaData(object):
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number(),
-            platform=cc.platform,
-            arch=cc.arch_name,
-            subdir=cc.subdir,
+            platform=platform,
+            arch=arch_name,
+            subdir=subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
         )

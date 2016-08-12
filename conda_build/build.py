@@ -18,15 +18,16 @@ import tempfile
 from os.path import exists, isdir, isfile, islink, join
 import mmap
 
-import conda.config as cc
-import conda.plan as plan
-from conda.api import get_index
-from conda.compat import PY3
-from conda.fetch import fetch_index
-from conda.install import prefix_placeholder, linked, move_to_trash, symlink_conda
-from conda.lock import Locked
-from conda.utils import url_path
-from conda.resolve import Resolve, MatchSpec, NoPackagesFound
+from .conda_interface import cc
+from .conda_interface import envs_dirs, root_dir, subdir
+from .conda_interface import plan
+from .conda_interface import get_index
+from .conda_interface import PY3
+from .conda_interface import fetch_index
+from .conda_interface import prefix_placeholder, linked, move_to_trash, symlink_conda
+from .conda_interface import Locked
+from .conda_interface import url_path
+from .conda_interface import Resolve, MatchSpec, NoPackagesFound
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, external
@@ -161,7 +162,7 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
 
 
 def get_run_dists(m):
-    prefix = join(cc.envs_dirs[0], '_run')
+    prefix = join(envs_dirs[0], '_run')
     rm_rf(prefix)
     create_env(prefix, [ms.spec for ms in m.ms_depends('run')])
     return sorted(linked(prefix))
@@ -232,7 +233,7 @@ def create_info_files(m, files, include_recipe=True):
 #
 # It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
-""" % (m.dist(), cc.subdir))
+""" % (m.dist(), subdir))
             for dist in sorted(dists + [m.dist()]):
                 fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':
@@ -412,7 +413,7 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
 
 
 def warn_on_old_conda_build(index):
-    root_linked = linked(cc.root_dir)
+    root_linked = linked(root_dir)
     vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
         if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
@@ -474,7 +475,7 @@ def build(m, post=None, include_recipe=True, keep_old_work=False,
               "configuration." % m.dist())
         return
 
-    with Locked(cc.root_dir):
+    with Locked(root_dir):
 
         # If --keep-old-work, then move the contents of source.WORK_DIR to a
         # temporary directory for the duration of the build.
@@ -712,7 +713,7 @@ def test(m, move_broken=True, activate=True, debug=False):
     :type m: Metadata
     '''
 
-    with Locked(cc.root_dir):
+    with Locked(root_dir):
 
         # remove from package cache
         rm_pkgs_cache(m.dist())

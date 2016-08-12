@@ -10,7 +10,7 @@ from os.path import dirname, isdir, isfile, join
 from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 from distutils.msvc9compiler import Reg, WINSDK_BASE
 
-import conda.config as cc
+from .conda_interface import bits
 
 from conda_build.config import config
 from conda_build import environ
@@ -55,7 +55,7 @@ def fix_staged_scripts():
             with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
                 fo.write(f.read())
             # now create the .exe file
-            shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % cc.bits),
+            shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % bits),
                             join(scripts_dir, fn + '.exe'))
 
         # remove the original script
@@ -208,7 +208,7 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write('@echo on\n')
             for key, value in env.items():
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
+            fo.write(msvc_env_cmd(bits=bits, override=m.get_value('build/msvc_compiler', None)))
             # Reset echo on, because MSVC scripts might have turned it off
             fo.write('@echo on\n')
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))

@@ -7,7 +7,8 @@ import os
 import sys
 from os.path import abspath, expanduser, join
 
-import conda.config as cc
+from .conda_interface import cc
+from .conda_interface import envs_dirs, subdir, root_dir, root_writable, default_python
 
 on_win = (sys.platform == 'win32')
 
@@ -23,7 +24,7 @@ class Config(object):
 
     CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
     CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
-    CONDA_PY = int(os.getenv('CONDA_PY', cc.default_python.replace('.',
+    CONDA_PY = int(os.getenv('CONDA_PY', default_python.replace('.',
         '')).replace('.', ''))
     CONDA_NPY = os.getenv("CONDA_NPY")
     if not CONDA_NPY:
@@ -54,17 +55,18 @@ class Config(object):
         croot = abspath(expanduser(_bld_root_env))
     elif _bld_root_rc:
         croot = abspath(expanduser(_bld_root_rc))
-    elif cc.root_writable:
-        croot = join(cc.root_dir, 'conda-bld')
+    elif root_writable:
+        croot = join(root_dir, 'conda-bld')
     else:
         croot = abspath(expanduser('~/conda-bld'))
 
     short_build_prefix = join(cc.envs_dirs[0], '_build')
     long_build_prefix = max(short_build_prefix, (short_build_prefix + 8 * '_placehold')[:80])
+
     # XXX: Make this None to be more rigorous about requiring the build_prefix
     # to be known before it is used.
     use_long_build_prefix = False
-    test_prefix = join(cc.envs_dirs[0], '_test')
+    test_prefix = join(envs_dirs[0], '_test')
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
@@ -142,12 +144,12 @@ class Config(object):
         if self.noarch:
             return join(self.croot, "noarch")
         else:
-            return join(self.croot, cc.subdir)
+            return join(self.croot, subdir)
 
     @property
     def bldpkgs_dirs(self):
         """ Dirs where previous build packages might be. """
-        return join(self.croot, cc.subdir), join(self.croot, "noarch")
+        return join(self.croot, subdir), join(self.croot, "noarch")
 
 config = Config()
 
@@ -157,7 +159,7 @@ croot = config.croot
 def show():
     print('CONDA_PY:', config.CONDA_PY)
     print('CONDA_NPY:', config.CONDA_NPY)
-    print('subdir:', cc.subdir)
+    print('subdir:', subdir)
     print('croot:', croot)
     print('build packages directory:', config.bldpkgs_dir)
 
