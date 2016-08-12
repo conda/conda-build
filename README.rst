@@ -5,11 +5,8 @@ conda-build
 .. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
                :target: https://travis-ci.org/conda/conda-build
 
-.. image:: https://ci.appveyor.com/api/projects/status/wdis0rkcfdoeql3x?svg=true
-               :target: https://ci.appveyor.com/project/ContinuumAnalytics/conda-build
-               
-.. image:: https://anaconda.org/conda-team/conda-build/badges/build.svg
-               :target: https://anaconda.org/conda-team/conda-build/
+.. image:: https://ci.appveyor.com/api/projects/status/07r1m8fy55jee9th?svg=true
+               :target: https://ci.appveyor.com/project/ContinuumAnalyticsFOSS/conda-build
                
 .. image:: https://www.quantifiedcode.com/api/v1/project/1960a96404aa431bab5d834edff1cf85/badge.svg
   :target: https://www.quantifiedcode.com/app/project/1960a96404aa431bab5d834edff1cf85
@@ -78,5 +75,41 @@ code and issue tracker for conda are on `GitHub <https://github.com/pydata/conda
 Contributing
 ------------
 
-Contributions to conda-build are always welcome!  Please fork the conda/conda-build repository, and submit a PR.  If a PR is a work in progress, please put [WIP] in the title.  Contributions are expected to pass flake8 and test suites run on Travis CI (linux) and AppVeyor (windows).  Contributors also need to have signed our `Contributor License Agreement <https://www.clahub.com/agreements/conda/conda-build>`_
+Contributions to conda-build are always welcome! Please fork the
+conda/conda-build repository, and submit a PR. If a PR is a work in progress,
+please put [WIP] in the title. Contributions are expected to pass flake8 and
+test suites run on Travis CI (linux) and AppVeyor (windows). Contributors also
+need to have signed our `Contributor License Agreement
+<https://www.clahub.com/agreements/conda/conda-build>`_
 
+Testing
+-------
+
+Running our test suite requires cloning one other repo at the same level as conda-build:
+https://github.com/conda/conda_build_test_repo - this is necessary for relative path tests
+outside of conda build's build tree.
+
+The test suite runs with py.test. Some useful commands to run select tests,
+assuming you are in the conda-build root folder:
+
+Run all tests:
+==============
+
+    py.test tests
+
+Run one test function:
+======================
+
+    py.test tests/test_api_build.py::test_early_abort
+
+Run one parameter of one parametrized test function:
+====================================================
+
+Several tests are parametrized, to run some small change, or build several
+recipe folders. To choose only one of them:
+
+    py.test tests/test_api_build.py::test_recipe_builds.py[entry_points]
+
+Note that our tests use py.test fixtures extensively. These sometimes trip up IDE
+style checkers about unused or redefined variables. These warnings are safe to
+ignore.
