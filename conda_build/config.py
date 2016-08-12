@@ -11,7 +11,7 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import cc
+from .conda_interface import cc, string_types
 
 from .utils import get_build_folders, rm_rf
 
@@ -49,7 +49,7 @@ class Config(object):
                 version = version[0]
             return version
 
-        self.CONDA_PERL = env('perl', '5.18.2')
+        self.CONDA_PERL = env('perl', '5.20.3')
         self.CONDA_LUA = env('lua', '5.2')
         self.CONDA_R = env('r', '3.2.2')
         self.CONDA_PY = int(env('python', "%s%s" % (sys.version_info.major, sys.version_info.minor))
@@ -57,6 +57,8 @@ class Config(object):
 
         self.CONDA_NPY = kwargs.get('numpy', os.getenv("CONDA_NPY"))
         if self.CONDA_NPY:
+            if not isinstance(self.CONDA_NPY, string_types):
+                self.CONDA_NPY = self.CONDA_NPY[0]
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
