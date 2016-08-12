@@ -11,7 +11,7 @@ import shutil
 from os.path import dirname, isdir, join
 
 from .conda_interface import linked
-from .conda_interface import cc
+from .conda_interface import bits
 
 from conda_build.config import config
 
@@ -46,7 +46,7 @@ def create_entry_point(path, module, func):
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % cc.bits),
+        shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % bits),
                         path + '.exe')
     else:
         with open(path, 'w') as fo:
