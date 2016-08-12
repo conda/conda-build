@@ -62,7 +62,8 @@ def test_config(testing_workdir, request):
 def testing_env(testing_workdir, request):
     env_path = os.path.join(testing_workdir, 'env')
 
-    subprocess.check_call(['conda', 'create', '-yq', '-p', env_path, 'python'])
+    subprocess.check_call(['conda', 'create', '-yq', '-p', env_path,
+                           'python={0}'.format(sys.version[:3])])
     path_backup = os.environ['PATH']
     os.environ['PATH'] = prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH']
 
