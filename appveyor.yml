@@ -85,8 +85,8 @@ test_script:
   - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp
 
 on_failure:
-  - 7z.exe a C:\cbtmp.7z -r C:\cbtmp\
-  - appveyor PushArtifact C:\cbtmp.7z
+  - 7z.exe a cbtmp.7z C:\cbtmp
+  - appveyor PushArtifact cbtmp.7z
 
 on_success:
   - pip install codecov
