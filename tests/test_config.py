@@ -4,6 +4,7 @@ import sys
 import pytest
 
 from conda_build.config import Config
+from conda_build.utils import on_win
 
 
 @pytest.fixture
@@ -24,6 +25,7 @@ def test_set_build_id(config):
         assert config.build_prefix == long_prefix
 
 
+@pytest.mark.skipif(on_win, reason="Windows uses only the short prefix")
 def test_long_build_prefix_length(config):
     config.use_long_build_prefix = True
     config.prefix_length = 80
