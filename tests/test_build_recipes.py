@@ -650,7 +650,7 @@ def test_debug_build_option():
     output, error = process.communicate()
     output = output.decode('utf-8')
     error = error.decode('utf-8')
-    assert "DEBUG:" in error
+    assert "DEBUG" in error
 
     cmd = cmd.replace("--debug ", "")
     process = subprocess.Popen(cmd.split(),
