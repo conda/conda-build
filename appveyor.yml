@@ -83,6 +83,8 @@ test_script:
   - set PATH
   - mkdir C:\cbtmp
   - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp
+  - 7z.exe a -tzip C:\cbtmp.zip C:\cbtmp -mem=AES256
+  - appveyor PushArtifact C:\cbtmp.zip
 
 on_success:
   - pip install codecov
