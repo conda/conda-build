@@ -8,7 +8,7 @@ from os.path import isdir, isfile, join
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import memoized, md5_file
-from .conda_interface import cc
+from .conda_interface import non_x86_linux_machines, subdir, platform, arch_name
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
 
@@ -37,7 +37,7 @@ log = logging.getLogger(__file__)
 
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
-    plat = cc.subdir
+    plat = subdir
     py = config.CONDA_PY
     np = config.CONDA_NPY
     pl = config.CONDA_PERL
@@ -70,7 +70,7 @@ def ns_cfg(config):
         os=os,
         environ=os.environ,
     )
-    for machine in cc.non_x86_linux_machines:
+    for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
     for feature, value in feature_list:
@@ -643,9 +643,9 @@ class MetaData(object):
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number() if self.build_number() else 0,
-            platform=cc.platform,
-            arch=cc.arch_name,
-            subdir=cc.subdir,
+            platform=platform,
+            arch=arch_name,
+            subdir=subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
         )
@@ -785,19 +785,10 @@ class MetaData(object):
 
     @property
     def uses_vcs_in_meta(self):
-        """returns true if recipe contains metadata associated with version control systems.
+        """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
         vcs_types = ["git", "svn", "hg"]
-        if "source" in self.meta:
-            for vcs in vcs_types:
-                if vcs + "_url" in self.meta["source"]:
-                    # translate command name to package name.
-                    # If more than hg, need a dict for this.
-                    if vcs == "hg":
-                        vcs = "mercurial"
-                    return vcs
-
         # We would get here if we use Jinja2 templating, but specify source with path.
         with open(self.meta_path) as f:
             metayaml = f.read()

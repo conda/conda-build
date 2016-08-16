@@ -25,6 +25,7 @@ import encodings.idna  # noqa
 import filelock
 
 from .conda_interface import cc
+from .conda_interface import envs_dirs, root_dir, subdir
 from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import memoized
@@ -167,7 +168,7 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
 
 
 def get_run_dists(m, config):
-    prefix = join(cc.envs_dirs[0], '_run')
+    prefix = join(envs_dirs[0], '_run')
     rm_rf(prefix)
     create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=config)
     return sorted(linked(prefix))
@@ -239,7 +240,7 @@ def create_info_files(m, files, config, prefix):
 #
 # It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
-""" % (m.dist(), cc.subdir))
+""" % (m.dist(), subdir))
             for dist in sorted(dists + [m.dist()]):
                 fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':
@@ -449,7 +450,7 @@ def create_env(prefix, specs, config, clear_cache=True):
 
 
 def warn_on_old_conda_build(index):
-    root_linked = linked(cc.root_dir)
+    root_linked = linked(root_dir)
     vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
         if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
@@ -554,18 +555,19 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
         if need_reparse_in_env:
             reparse(m, config=config)
-            print("BUILD START:", m.dist())
 
-            if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
-                print("%s is installed as a build dependency. Removing." %
-                    m.name())
-                index = get_build_index(config=config, clear_cache=False)
-                actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
-                assert not plan.nothing_to_do(actions), actions
-                plan.display_actions(actions, index)
-                plan.execute_actions(actions, index)
+        print("BUILD START:", m.dist())
 
-            print("Package:", m.dist())
+        if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
+            print("%s is installed as a build dependency. Removing." %
+                m.name())
+            index = get_build_index(config=config, clear_cache=False)
+            actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
+            assert not plan.nothing_to_do(actions), actions
+            plan.display_actions(actions, index)
+            plan.execute_actions(actions, index)
+
+        print("Package:", m.dist())
 
         with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"),
                                    timeout=config.timeout):
@@ -722,7 +724,6 @@ def test(m, config, move_broken=True):
     if not os.path.isdir(config.build_folder):
         os.makedirs(config.build_folder)
     with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
-
         # remove from package cache
         rm_pkgs_cache(m.dist())
 

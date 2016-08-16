@@ -397,7 +397,6 @@ def test_condarc_channel_available(testing_workdir, test_config):
     cc.load_condarc(cc.sys_rc_path)
 
 
-
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
     # this comes from an info message

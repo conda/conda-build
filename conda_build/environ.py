@@ -9,9 +9,9 @@ from collections import defaultdict
 from os.path import join, normpath
 import subprocess
 
-from .conda_interface import cc
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
+from .conda_interface import subdir, bits, root_dir
 
 from conda_build.os_utils import external
 from conda_build import source
@@ -187,17 +187,17 @@ def conda_build_vars(prefix, config):
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
-        'CONDA_DEFAULT_ENV': prefix,
-        'ARCH': str(cc.bits),
+        'CONDA_DEFAULT_ENV': config.build_prefix,
+        'ARCH': str(bits),
         'PREFIX': prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
-        'SUBDIR': cc.subdir,
+        'SUBDIR': subdir,
         'SRC_DIR': source.get_dir(config),
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
         'DIRTY': '1' if config.dirty else '',
-        'ROOT': cc.root_dir,
+        'ROOT': root_dir,
     }
 
 
@@ -318,7 +318,7 @@ def unix_vars(prefix):
 
 
 def osx_vars(compiler_vars):
-    OSX_ARCH = 'i386' if cc.bits == 32 else 'x86_64'
+    OSX_ARCH = 'i386' if bits == 32 else 'x86_64'
     compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
@@ -333,7 +333,7 @@ def osx_vars(compiler_vars):
 
 def linux_vars(compiler_vars, prefix):
     compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
-    if cc.bits == 32:
+    if bits == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
     return {}

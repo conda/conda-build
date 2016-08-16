@@ -12,6 +12,7 @@ import sys
 import time
 
 from .conda_interface import cc, string_types
+from .conda_interface import envs_dirs, subdir, root_dir, root_writable, default_python
 
 from .utils import get_build_folders, rm_rf
 
@@ -258,12 +259,12 @@ class Config(object):
         if self.noarch:
             return join(self.croot, "noarch")
         else:
-            return join(self.croot, cc.subdir)
+            return join(self.croot, subdir)
 
     @property
     def bldpkgs_dirs(self):
         """ Dirs where previous build packages might be. """
-        return join(self.croot, cc.subdir), join(self.croot, "noarch")
+        return join(self.croot, subdir), join(self.croot, "noarch")
 
     @property
     def src_cache(self):
@@ -317,7 +318,7 @@ def get_or_merge_config(config, **kwargs):
 def show(config):
     print('CONDA_PY:', config.CONDA_PY)
     print('CONDA_NPY:', config.CONDA_NPY)
-    print('subdir:', cc.subdir)
+    print('subdir:', subdir)
     print('croot:', config.croot)
     print('build packages directory:', config.bldpkgs_dir)
 
