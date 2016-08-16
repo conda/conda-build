@@ -378,22 +378,23 @@ def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
 
 def test_condarc_channel_available(testing_workdir, test_config):
     rcfile = os.path.join(testing_workdir, ".condarc")
+    # ensure that the test fails without the channel
+    with open(rcfile, 'w') as f:
+        f.write("channels:\n")
+        f.write("  - defaults\n")
+    cc.load_condarc(rcfile)
+    with pytest.raises(NoPackagesFound):
+        api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
+
     with open(rcfile, 'w') as f:
         f.write("channels:\n")
         f.write("  - conda_build_test\n")
         f.write("  - defaults\n")
     cc.load_condarc(rcfile)
-    try:
-        api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
-        # ensure that the test fails without the channel
-        with open(rcfile, 'w') as f:
-            f.write("channels:\n")
-            f.write("  - defaults\n")
-        cc.load_condarc(rcfile)
-        with pytest.raises(NoPackagesFound):
-            api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
-    finally:
-        cc.load_condarc(cc.sys_rc_path)
+    api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
+
+    # clean up - remove this rcfile and go back to the system default rcfile
+    cc.load_condarc(cc.sys_rc_path)
 
 
 
