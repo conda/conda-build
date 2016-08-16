@@ -11,8 +11,8 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import cc, string_types
-from .conda_interface import envs_dirs, subdir, root_dir, root_writable, default_python
+from .conda_interface import string_types, binstar_upload
+from .conda_interface import subdir, root_dir, root_writable, cc
 
 from .utils import get_build_folders, rm_rf
 
@@ -69,7 +69,7 @@ class Config(object):
 
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
-                  Setting('anaconda_upload', cc.binstar_upload),
+                  Setting('anaconda_upload', binstar_upload),
                   Setting('channel_urls', ()),
                   Setting('dirty', False),
                   Setting('include_recipe', True),
@@ -97,8 +97,8 @@ class Config(object):
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
                 self._croot = abspath(expanduser(_bld_root_rc))
-            elif cc.root_writable:
-                self._croot = join(cc.root_dir, 'conda-bld')
+            elif root_writable:
+                self._croot = join(root_dir, 'conda-bld')
             else:
                 self._croot = abspath(expanduser('~/conda-bld'))
         return self._croot

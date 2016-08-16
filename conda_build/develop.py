@@ -10,7 +10,7 @@ from os.path import join, isdir, abspath, expanduser, exists
 import shutil
 import sys
 
-from .conda_interface import linked, string_types
+from .conda_interface import string_types
 
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob

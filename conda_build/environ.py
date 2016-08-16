@@ -11,7 +11,7 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import subdir, bits, root_dir
+from .conda_interface import subdir, bits, root_dir, cc
 
 from conda_build.os_utils import external
 from conda_build import source
