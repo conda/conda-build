@@ -9,6 +9,7 @@ import re
 import os
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath, normpath)
+import shutil
 import stat
 from subprocess import call
 import sys
@@ -365,6 +366,7 @@ def post_build(m, files):
             fix_shebang(f, osx_is_app=osx_is_app)
         if binary_relocation:
             mk_relative(m, f)
+        make_hardlink_copy(f)
 
     check_symlinks(files)
 
@@ -402,8 +404,22 @@ def check_symlinks(files):
         sys.exit(1)
 
 
+def make_hardlink_copy(path):
+    """Hardlinks create invalid packages.  Copy files to break the link.
+    Symlinks are OK, and unaffected here."""
+    nlinks = os.lstat(path).st_nlink
+    if nlinks > 1:
+        # copy file to new name
+        shutil.copy2(path, "tmpfile")
+        # remove old file
+        os.remove(path)
+        # rename copy to original filename
+        os.rename("tmpfile", path)
+
+
 def get_build_metadata(m):
     src_dir = source.get_dir()
+
     if "build" not in m.meta:
         m.meta["build"] = {}
     if exists(join(src_dir, '__conda_version__.txt')):
