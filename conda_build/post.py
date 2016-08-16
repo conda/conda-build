@@ -407,6 +407,8 @@ def check_symlinks(files):
 def make_hardlink_copy(path):
     """Hardlinks create invalid packages.  Copy files to break the link.
     Symlinks are OK, and unaffected here."""
+    if not os.path.isabs(path) and not os.path.exists(path):
+        path = os.path.normpath(os.path.join(config.build_prefix, path))
     nlinks = os.lstat(path).st_nlink
     if nlinks > 1:
         # copy file to new name

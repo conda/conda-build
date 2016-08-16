@@ -71,7 +71,8 @@ def test_hardlinks_to_copies():
         assert os.lstat('test1').st_nlink == 2
         assert os.lstat('test2').st_nlink == 2
 
-        post.make_hardlinks_copies(['test1', 'test2'])
+        post.make_hardlink_copy('test1')
+        post.make_hardlink_copy('test2')
 
         assert os.lstat('test1').st_nlink == 1
         assert os.lstat('test2').st_nlink == 1
