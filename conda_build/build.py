@@ -27,6 +27,7 @@ import filelock
 from .conda_interface import cc
 from .conda_interface import plan
 from .conda_interface import get_index
+from .conda_interface import memoized
 from .conda_interface import PY3
 from .conda_interface import fetch_index
 from .conda_interface import prefix_placeholder, linked, symlink_conda
@@ -333,6 +334,19 @@ def create_info_files(m, files, config, prefix):
 
 
 def get_build_index(config, clear_cache=True, arg_channels=None):
+    # first, get the memoized remote index
+    index = _get_build_index(config, clear_cache, arg_channels)
+
+    # tack on the local index
+    index.update(get_index(channel_urls=[url_path(config.croot)],
+                           prepend=not config.override_channels,
+                           # do not use local because we have that above with config.croot
+                           use_local=False))
+    return index
+
+
+@memoized
+def _get_build_index(config, clear_cache, arg_channels):
     if clear_cache:
         # remove the cache such that a refetch is made,
         # this is necessary because we add the local build repo URL
@@ -340,12 +354,12 @@ def get_build_index(config, clear_cache=True, arg_channels=None):
     arg_channels = [] if not arg_channels else arg_channels
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
-    return get_index(channel_urls=[url_path(config.croot)] +
-                     arg_channels +
-                     list(config.channel_urls),
-                     prepend=not config.override_channels,
-                     # do not use local because we have that above with config.croot
-                     use_local=False)
+    index = get_index(channel_urls=arg_channels + list(config.channel_urls),
+                      prepend=not config.override_channels)
+    # bump priority down on these remotes - local should be top priority
+    for key, pkg in index.items():
+        pkg['priority'] += 1
+    return index
 
 
 def create_env(prefix, specs, config, clear_cache=True):
