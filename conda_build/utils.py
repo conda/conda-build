@@ -20,6 +20,8 @@ from conda_build import external
 # Backwards compatibility import. Do not remove.
 from .conda_interface import rm_rf  # NOQA
 
+on_win = (sys.platform == 'win32')
+
 
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
