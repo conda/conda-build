@@ -27,7 +27,7 @@ on_win = (sys.platform == 'win32')
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def parse_args(args):
     p = get_render_parser()
     p.description = """
 Tool for building conda packages. A conda package is a binary tarball
@@ -142,11 +142,9 @@ different sets of packages."""
     )
 
     add_parser_channels(p)
-    p.set_defaults(func=execute)
 
-    args = p.parse_args()
-    config = Config(**args.__dict__)
-    args_func(args, p, config)
+    args = p.parse_args(args)
+    return p, args
 
 
 def output_action(metadata, config):
@@ -168,7 +166,9 @@ def check_action(metadata, config):
     return api.check(metadata.path)
 
 
-def execute(args, parser, config):
+def execute(args):
+    parser, args = parse_args(args)
+    config = Config(**args.__dict__)
     build.check_external(config)
 
     # change globals in build module, see comment there as well
@@ -230,19 +230,6 @@ def execute(args, parser, config):
         build.print_build_intermediate_warning(config)
 
 
-def args_func(args, p, config):
-    try:
-        args.func(args, p, config)
-    except RuntimeError as e:
-        if 'maximum recursion depth exceeded' in str(e):
-            print_issue_message(e)
-            raise
-        sys.exit("Error: %s" % e)
-    except Exception as e:
-        print_issue_message(e)
-        raise  # as if we did not catch it
-
-
 def print_issue_message(e):
     if e.__class__.__name__ not in ('ScannerError', 'ParserError'):
         message = """\
@@ -255,6 +242,16 @@ Include the output of the command 'conda info' in your report.
 
 """
         print(message, file=sys.stderr)
+
+
+def main():
+    try:
+        execute(sys.argv[1:])
+    except Exception as e:
+        print_issue_message(str(e))
+        sys.exit(1)
+    return
+
 
 if __name__ == '__main__':
     main()

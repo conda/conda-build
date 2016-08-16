@@ -99,7 +99,7 @@ source to try fill in related template variables.",
     return p
 
 
-def main():
+def parse_args(args):
     p = get_render_parser()
     p.add_argument(
         '-f', '--file',
@@ -119,7 +119,12 @@ def main():
         action='store_true',
         help='Enable verbose output from download tools and progress updates',
     )
-    args = p.parse_args()
+    args = p.parse_args(args)
+    return p, args
+
+
+def execute(args):
+    p, args = parse_args(args)
 
     config = Config()
     set_language_env_vars(args, p, config)
@@ -130,6 +135,11 @@ def main():
         print(bldpkg_path(metadata, config=config))
     else:
         print(output_yaml(metadata, args.file))
+
+
+def main():
+    return execute(sys.argv[1:])
+
 
 if __name__ == '__main__':
     main()

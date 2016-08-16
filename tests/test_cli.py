@@ -9,69 +9,60 @@ import sys
 
 import pytest
 
-from conda_build.conda_interface import PY3, download
+from conda_build.conda_interface import PY3, download, StringIO
 
 from conda_build.utils import get_site_packages
 from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
 
+import conda_build.cli.main_build as main_build
+import conda_build.cli.main_sign as main_sign
+import conda_build.cli.main_render as main_render
+
 
 def test_build():
-    cmd = 'conda build --no-anaconda-upload {}'.format(os.path.join(metadata_dir, "python_run"))
-    subprocess.check_call(cmd.split(), env=os.environ.copy())
+    args = ['--no-anaconda-upload', os.path.join(metadata_dir, "python_run")]
+    main_build.execute(args)
 
 
 def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
-    cmd = ('conda build --no-anaconda-upload '
-           '-c conda_build_test {}'.format(os.path.join(metadata_dir,
-                                                   "_recipe_requiring_external_channel")))
-    subprocess.check_call(cmd.split())
+
+    args = ['--no-anaconda-upload', '-c', 'conda_build_test',
+            os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
+    main_build.execute(args)
 
 
 @pytest.mark.xfail
 def test_build_without_channel_fails():
-    cmd = ('conda --build --no-anaconda-upload {}'.format(os.path.join(metadata_dir,
-                                                   "_recipe_requiring_external_channel")))
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
     #    we probably have channels in condarc, and this is not a good test.
-    subprocess.check_call(cmd.split())
+    args = ['--no-anaconda-upload',
+            os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
+    main_build.execute(args)
 
 
-def test_render_output_build_path():
-    cmd = 'conda render --output {0}'.format(
-        os.path.join(metadata_dir, "python_run"),
-        sys.version_info.major, sys.version_info.minor)
-    process = subprocess.Popen(cmd.split(),
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=os.environ.copy())
-    output, error = process.communicate()
+def test_render_output_build_path(capfd):
+    args = ['--output', os.path.join(metadata_dir, "python_run")]
+    main_render.execute(args)
     test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor)
-    if PY3:
-        output = output.decode("UTF-8")
-        error = error.decode("UTF-8")
+    output, error = capfd.readouterr()
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_render_output_build_path_set_python():
+def test_render_output_build_path_set_python(capfd):
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
         version = "2.7"
     else:
         version = "3.5"
 
-    cmd = 'conda render --output {0} --python {1}'.format(
-        os.path.join(metadata_dir, "python_run"), version)
-    process = subprocess.Popen(cmd.split(),
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                               env=os.environ.copy())
-    output, error = process.communicate()
+    args = ['--output', os.path.join(metadata_dir, "python_run"), '--python', version]
+    main_render.execute(args)
     test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       version.split('.')[0], version.split('.')[1])
-    if PY3:
-        output = output.decode("UTF-8")
-        error = error.decode("UTF-8")
+    output, error = capfd.readouterr()
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
