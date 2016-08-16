@@ -34,3 +34,16 @@ def test_find_prefix_files(testing_workdir):
         files.append(filename)
 
     assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
+
+
+def test_environment_creation_preserves_PATH(testing_workdir, test_config):
+    ref_path = os.environ['PATH']
+    build.create_env(testing_workdir, ['python'], test_config)
+    assert os.environ['PATH'] == ref_path
+
+
+def test_build_preserves_PATH(testing_workdir, test_config):
+    m = MetaData(os.path.join(metadata_dir, 'source_git'), config=test_config)
+    ref_path = os.environ['PATH']
+    build.build(m, test_config)
+    assert os.environ['PATH'] == ref_path

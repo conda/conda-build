@@ -42,9 +42,9 @@ from conda_build.render import (parse_or_try_download, output_yaml, bldpkg_path,
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
-                               silence_loggers)
+                               silence_loggers, path_prepended, create_entry_points,
+                               prepend_bin_path)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -393,53 +393,50 @@ def create_env(prefix, specs, config, clear_cache=True):
             os.makedirs(d)
         update_index(d, config)
     if specs:  # Don't waste time if there is nothing to do
-        # FIXME: stupid hack to put prefix on PATH so that runtime libs can be found
-        old_path = os.environ['PATH']
-        os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+        with path_prepended(prefix):
+            index = get_build_index(config=config, clear_cache=True)
 
-        index = get_build_index(config=config, clear_cache=True)
+            warn_on_old_conda_build(index)
 
-        warn_on_old_conda_build(index)
-
-        cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        actions = plan.install_actions(prefix, index, specs)
-        plan.display_actions(actions, index)
-        # lock each pkg folder from specs
-        locks = []
-        for link_pkg in actions['LINK']:
-            pkg = link_pkg.split(" ")[0]
-            dirname = os.path.join(cc.root_dir, 'pkgs', pkg)
-            if os.path.isdir(dirname):
-                locks.append(filelock.SoftFileLock(os.path.join(dirname, ".conda_lock"),
-                                                   timeout=config.timeout))
-        try:
-            for lock in locks:
-                lock.acquire(timeout=config.timeout)
+            cc.pkgs_dirs = cc.pkgs_dirs[:1]
+            actions = plan.install_actions(prefix, index, specs)
+            plan.display_actions(actions, index)
+            # lock each pkg folder from specs
+            locks = []
+            for link_pkg in actions['LINK']:
+                pkg = link_pkg.split(" ")[0]
+                dirname = os.path.join(cc.root_dir, 'pkgs', pkg)
+                if os.path.isdir(dirname):
+                    locks.append(filelock.SoftFileLock(os.path.join(dirname, ".conda_lock"),
+                                                    timeout=config.timeout))
             try:
-                plan.execute_actions(actions, index, verbose=config.debug)
-            except SystemExit as exc:
-                if "too short in" in exc.message and config.prefix_length > 80:
-                    log.warn("Build prefix failed with prefix length {0}."
-                            .format(config.prefix_length))
-                    log.warn("Error was: ")
-                    log.warn(exc.message)
-                    log.warn("One or more of your package dependencies needs to be rebuilt with a "
-                            "longer prefix length.")
-                    log.warn("Falling back to legacy prefix length of 80 characters.")
-                    log.warn("Your package will not install into prefixes > 80 characters.")
-                    config.prefix_length = 80
+                for lock in locks:
+                    lock.acquire(timeout=config.timeout)
+                try:
+                    plan.execute_actions(actions, index, verbose=config.debug)
+                except SystemExit as exc:
+                    if "too short in" in exc.message and config.prefix_length > 80:
+                        log.warn("Build prefix failed with prefix length {0}."
+                                .format(config.prefix_length))
+                        log.warn("Error was: ")
+                        log.warn(exc.message)
+                        log.warn("One or more of your package dependencies needs to be rebuilt "
+                                "with a longer prefix length.")
+                        log.warn("Falling back to legacy prefix length of 80 characters.")
+                        log.warn("Your package will not install into prefixes > 80 characters.")
+                        config.prefix_length = 80
 
-                    for lock in locks:
-                        lock.release()
-                    create_env(config.build_prefix, specs, config=config, clear_cache=clear_cache)
-                else:
-                    raise
-        except:
-            raise
-        finally:
-            for lock in locks:
-                lock.release()
-        os.environ['PATH'] = old_path
+                        for lock in locks:
+                            lock.release()
+                        create_env(config.build_prefix, specs, config=config,
+                                   clear_cache=clear_cache)
+                    else:
+                        raise
+            except:
+                raise
+            finally:
+                for lock in locks:
+                    lock.release()
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
@@ -547,15 +544,12 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             # Execute any commands fetching the source (e.g., git) in the _build environment.
             # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
             # dependencies.
-            _old_path = os.environ['PATH']
-            os.environ['PATH'] = prepend_bin_path({'PATH': _old_path},
-                                                    config.build_prefix)['PATH']
-            m, need_source_download, need_reparse_in_env = parse_or_try_download(m,
-                                                            no_download_source=False,
-                                                            force_download=True,
-                                                            config=config)
+            with path_prepended(config.build_prefix):
+                m, need_source_download, need_reparse_in_env = parse_or_try_download(m,
+                                                                no_download_source=False,
+                                                                force_download=True,
+                                                                config=config)
             assert not need_source_download, "Source download failed.  Please investigate."
-            os.environ['PATH'] = _old_path
             print("BUILD START:", m.dist())
 
         if need_reparse_in_env:

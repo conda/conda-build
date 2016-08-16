@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+import contextlib
 from distutils.dir_util import copy_tree
 import fnmatch
 from glob import glob
@@ -9,6 +10,7 @@ import logging
 import operator
 import os
 from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
+import re
 import sys
 import shutil
 import tarfile
@@ -18,8 +20,10 @@ import subprocess
 
 import filelock
 
-from .conda_interface import md5_file, unix_path_to_win
+from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
+from .conda_interface import linked
+from .conda_interface import bits
 
 from conda_build.os_utils import external
 
@@ -40,6 +44,15 @@ else:
     from .conda_interface import rm_rf  # NOQA
 
 on_win = (sys.platform == 'win32')
+
+
+PY_TMPL = """\
+if __name__ == '__main__':
+    import sys
+    import %(module)s
+
+    sys.exit(%(module)s.%(func)s())
+"""
 
 
 def get_recipe_abspath(recipe):
@@ -286,6 +299,19 @@ def convert_unix_path_to_win(path):
     return path
 
 
+def convert_win_path_to_unix(path):
+    if external.find_executable('cygpath'):
+        cmd = "cygpath -u {0}".format(path)
+        if PY3:
+            path = subprocess.getoutput(cmd)
+        else:
+            path = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
+
+    else:
+        path = win_path_to_unix(path)
+    return path
+
+
 # Used for translating local paths into url (file://) paths
 #   http://stackoverflow.com/a/14298190/1170370
 def path2url(path):
@@ -321,3 +347,66 @@ def silence_loggers(show_warnings_and_errors=True):
     logging.getLogger("dotupdate").setLevel(log_level)
     logging.getLogger("stdoutlog").setLevel(log_level)
     logging.getLogger("requests").setLevel(log_level)
+
+
+def prepend_bin_path(env, prefix, prepend_prefix=False):
+    # bin_dirname takes care of bin on *nix, Scripts on win
+    env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
+    if sys.platform == "win32":
+        env['PATH'] = join(prefix, "Library", "mingw-w64", "bin") + os.pathsep + \
+                      join(prefix, "Library", "usr", "bin") + os.pathsep + os.pathsep + \
+                      join(prefix, "Library", "bin") + os.pathsep + \
+                      env['PATH']
+        prepend_prefix = True  # windows has Python in the prefix.  Use it.
+    if prepend_prefix:
+        env['PATH'] = prefix + os.pathsep + env['PATH']
+    return env
+
+
+@contextlib.contextmanager
+def path_prepended(prefix):
+    old_path = os.environ['PATH']
+    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+    try:
+        yield
+    finally:
+        os.environ['PATH'] = old_path
+
+bin_dirname = 'Scripts' if sys.platform == 'win32' else 'bin'
+
+entry_pat = re.compile('\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$')
+
+
+def iter_entry_points(items):
+    for item in items:
+        m = entry_pat.match(item)
+        if m is None:
+            sys.exit("Error cound not match entry point: %r" % item)
+        yield m.groups()
+
+
+def create_entry_point(path, module, func, config):
+    pyscript = PY_TMPL % {'module': module, 'func': func}
+    if sys.platform == 'win32':
+        with open(path + '-script.py', 'w') as fo:
+            packages = linked(config.build_prefix)
+            packages_names = (pkg.split('-')[0] for pkg in packages)
+            if 'debug' in packages_names:
+                fo.write('#!python_d\n')
+            fo.write(pyscript)
+        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config)
+    else:
+        with open(path, 'w') as fo:
+            fo.write('#!%s\n' % config.build_python)
+            fo.write(pyscript)
+        os.chmod(path, int('755', 8))
+
+
+def create_entry_points(items, config):
+    if not items:
+        return
+    bin_dir = join(config.build_prefix, bin_dirname)
+    if not isdir(bin_dir):
+        os.mkdir(bin_dir)
+    for cmd, module, func in iter_entry_points(items):
+        create_entry_point(join(bin_dir, cmd), module, func, config)

@@ -10,8 +10,7 @@ from conda_build.conda_interface import StringIO, PY3
 from conda_build.conda_interface import subdir
 
 from conda_build.config import Config
-from conda_build.scripts import prepend_bin_path
-from conda_build.utils import on_win
+from conda_build.utils import on_win, prepend_bin_path
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
