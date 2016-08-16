@@ -1,13 +1,15 @@
 """
-This file tests prefix finding for Windows and *nix.
+This file tests the build.py module.  It sits lower in the stack than the API tests,
+and is more unit-test oriented.
 """
 
 import os
 import sys
 
 from conda_build import build
+from conda_build.metadata import MetaData
 
-from .utils import testing_workdir
+from .utils import testing_workdir, test_config, metadata_dir
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":

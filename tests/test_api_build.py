@@ -1,3 +1,7 @@
+"""
+This module tests the build API.  These are high-level integration tests.
+"""
+
 import logging
 import os
 import subprocess

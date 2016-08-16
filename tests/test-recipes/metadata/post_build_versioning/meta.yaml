@@ -2,5 +2,4 @@ package:
   name: post-build-versioning
 
 source:
-  fn: master.zip
-  url: https://github.com/conda/conda-build/archive/master.zip
+  path: ../../../../../conda_build_test_recipe

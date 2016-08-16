@@ -1,5 +1,11 @@
+"""
+This module tests the test API.  These are high-level integration tests.  Lower level unit tests
+should go in test_render.py
+"""
+
 import os
 
+import mock
 import pytest
 
 from conda_build import api
@@ -65,3 +71,10 @@ def test_get_output_file_path_jinja2(testing_workdir, test_config):
     assert build_path == os.path.join(test_config.croot, subdir,
                                       "conda-build-test-source-git-jinja2-1.20.2-"
                                       "py{0}_0_g262d444.tar.bz2".format(test_config.CONDA_PY))
+
+
+@mock.patch('conda_build.source')
+def test_output_without_jinja_does_not_download(mock_source, testing_workdir, test_config):
+        api.get_output_file_path(os.path.join(metadata_dir, "source_git"),
+                                              config=test_config)
+        mock_source.provide.assert_not_called()

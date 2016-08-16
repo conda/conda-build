@@ -9,7 +9,3 @@ echo "%gitdesc%"
 if not "%gitdesc%"=="1.21.0" exit 1
 echo "%PKG_VERSION%"
 if not "%PKG_VERSION%"=="1.21.0" exit 1
-git status
-if errorlevel 1 exit 1
-git diff
-if errorlevel 1 exit 1
