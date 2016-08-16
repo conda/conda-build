@@ -28,6 +28,8 @@ from conda_build.main_build import args_func
 from conda_build.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join
+from conda_build.tarcheck import check_prefix_lengths
+from conda_build.config import config
 
 logging.basicConfig(level=logging.INFO)
 
@@ -153,6 +155,22 @@ Tools for investigating conda channels.
         nargs='?',
         default="defaults",
         help="The channel to test. The default is %(default)s."
+    )
+    prefix_lengths = subcommand.add_parser(
+        "prefix-lengths",
+        help="""Inspect packages in given path, finding those with binary
+            prefixes shorter than specified""",
+        description=linkages_help,
+    )
+    prefix_lengths.add_argument(
+        'folder',
+        help='folder containing packages to inspect.',
+    )
+    prefix_lengths.add_argument(
+        '--min-prefix-length', '-m',
+        help='Minimum length.  Only packages with prefixes below this are shown.',
+        default=config.prefix_length,
+        type=int,
     )
 
     p.set_defaults(func=execute)
@@ -298,6 +316,18 @@ def execute(args, parser):
             parser.error("At least one option (--test-installable) is required.")
         else:
             sys.exit(not test_installable(channel=args.channel, verbose=args.verbose))
+
+    if args.subcommand == 'prefix-lengths':
+        prefix_lengths = check_prefix_lengths(args.folder, args.min_prefix_length)
+        if prefix_lengths:
+            print("Packages with binary prefixes shorter than %d characters:"
+                  % args.min_prefix_length)
+            for fn, length in prefix_lengths.items():
+                print("{0} ({1} chars)".format(fn, length))
+        else:
+            print("No packages found with binary prefixes shorter than %d characters."
+                  % args.min_prefix_length)
+        sys.exit(len(prefix_lengths) == 0)
 
     prefix = get_prefix(args)
     installed = linked_data(prefix)
