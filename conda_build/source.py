@@ -13,7 +13,10 @@ from .conda_interface import download
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into
+from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into, on_win
+
+if on_win:
+    from conda_build.utils import convert_win_path_to_unix
 
 log = logging.getLogger(__file__)
 
@@ -111,11 +114,8 @@ def git_source(meta, recipe_dir, config):
     else:
         git_dn = git_url.split(':')[-1].replace('/', '_')
     cache_repo = cache_repo_arg = join(config.git_cache, git_dn)
-    if sys.platform == 'win32':
-        is_cygwin = 'cygwin' in git.lower()
-        cache_repo_arg = cache_repo_arg.replace('\\', '/')
-        if is_cygwin:
-            cache_repo_arg = '/cygdrive/c/' + cache_repo_arg[3:]
+    if on_win:
+        cache_repo_arg = convert_win_path_to_unix(cache_repo_arg)
 
     # update (or create) the cache repo
     if isdir(cache_repo):
@@ -152,7 +152,11 @@ def git_source(meta, recipe_dir, config):
     if checkout and config.verbose:
         print('checkout: %r' % checkout)
 
-    check_call([git, 'clone', cache_repo_arg, config.work_dir], stdout=stdout, stderr=stderr)
+    dest = config.work_dir
+    if on_win:
+        dest = convert_win_path_to_unix(dest)
+
+    check_call([git, 'clone', cache_repo_arg, dest], stdout=stdout, stderr=stderr)
     if checkout:
         check_call([git, 'checkout', checkout], cwd=config.work_dir, stdout=stdout, stderr=stderr)
 

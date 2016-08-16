@@ -14,6 +14,7 @@ from .conda_interface import linked, string_types
 
 from conda_build.post import mk_relative_osx
 from conda_build.utils import _check_call, rec_glob
+from conda_build.os_utils.external import find_executable
 
 
 def relink_sharedobjects(pkg_path, build_prefix):
@@ -157,15 +158,11 @@ Error: environment does not exist: %s
 #
 # Use 'conda create' to create the environment first.
 #""" % prefix)
-    for package in linked(prefix):
-        name, ver, _ = package .rsplit('-', 2)
-        if name == 'python':
-            py_ver = ver[:3]  # x.y
-            break
-    else:
-        raise RuntimeError("python is not installed in %s" % prefix)
+
+    assert find_executable('python', prefix=prefix)
 
     # current environment's site-packages directory
+    py_ver = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
     sp_dir = get_site_pkg(prefix, py_ver)
 
     if type(recipe_dirs) == string_types:

@@ -174,7 +174,7 @@ def get_dict(config, m=None, prefix=None, dirty=False):
         d.update(meta_vars(m, config))
 
     # system
-    d.update(system_vars(d, prefix))
+    d.update(system_vars(d, prefix, config))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
@@ -339,7 +339,7 @@ def linux_vars(compiler_vars, prefix):
     return {}
 
 
-def system_vars(env_dict, prefix):
+def system_vars(env_dict, prefix, config):
     d = dict()
     compiler_vars = defaultdict(text_type)
 
@@ -353,8 +353,9 @@ def system_vars(env_dict, prefix):
 
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
-    d['PATH'] = os.environ['PATH']
-    d = prepend_bin_path(d, prefix)
+    d['PATH'] = os.environ.copy()['PATH']
+    if not config.activate:
+        d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
         d.update(windows_vars(prefix))
