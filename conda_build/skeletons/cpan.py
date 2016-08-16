@@ -5,21 +5,23 @@ Tools for converting CPAN packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 import contextlib
-import gzip
-import json
-import subprocess
-import sys
 from distutils.version import LooseVersion
 from glob import glob
-from os import makedirs
+import gzip
+import json
+from os import makedirs, environ
 from os.path import basename, dirname, join, exists
+import subprocess
+import sys
+import tempfile
 
 from conda_build.conda_interface import get_index
-from conda_build.conda_interface import TmpDownload
+from conda_build.conda_interface import TmpDownload, download
 from conda_build.conda_interface import MatchSpec, Resolve
 from conda_build.conda_interface import memoized
 
 from conda_build.config import Config
+from conda_build.utils import on_win
 
 CPAN_META = """\
 package:
@@ -135,9 +137,29 @@ class InvalidReleaseError(RuntimeError):
     pass
 
 
+class PerlTmpDownload(TmpDownload):
+    '''
+    Subclass Conda's TmpDownload to replace : in download filenames.  Critical on win.
+    '''
+    def __enter__(self):
+        if '://' not in self.url:
+            # if we provide the file itself, no tmp dir is created
+            self.tmp_dir = None
+            return self.url
+        else:
+            self.tmp_dir = tempfile.mkdtemp()
+            dst = join(self.tmp_dir, basename(self.url).replace('::', '-'))
+            download(self.url, dst)
+            return dst
+
+
 def package_exists(package_name):
     try:
-        subprocess.check_call(['cpan', '-D', package_name])
+        cmd = ['cpan', '-D', package_name]
+        if on_win:
+            cmd.insert(0, '/c')
+            cmd.insert(0, 'cmd.exe')
+        subprocess.check_call(cmd)
         in_repo = True
     except subprocess.CalledProcessError:
         in_repo = False
@@ -361,9 +383,13 @@ def core_module_version(module, version, config):
         version = LooseVersion(config.CONDA_PERL)
     else:
         version = LooseVersion(version)
-    cmd = ['corelist', '-v', str(version), module]
+    corelist = 'corelist' + ('.bat' if on_win else '')
+    cmd = [corelist, '-v', str(version), module]
+    if on_win:
+        cmd.insert(0, '/c')
+        cmd.insert(0, 'cmd.exe')
     try:
-        output = subprocess.check_output(cmd).decode('utf-8')
+        output = subprocess.check_output(cmd, env=environ.copy()).decode('utf-8')
     except subprocess.CalledProcessError:
         sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
                   'the perl conda package installed in your default ' +
@@ -372,7 +398,10 @@ def core_module_version(module, version, config):
     # If undefined, that could either mean it's versionless or not in core
     if mod_version == 'undef':
         # Check if it's actually in core
-        cmd = ['corelist', module]
+        cmd = [corelist, module]
+        if on_win:
+            cmd.insert(0, '/c')
+            cmd.insert(0, 'cmd.exe')
         output = subprocess.check_output(cmd).decode('utf-8')
         # If it's in core...
         if 'perl v' in output:
@@ -497,7 +526,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
     '''
     # First check if its already a distribution
     try:
-        with TmpDownload('{}/v0/release/{}'.format(cpan_url,
+        with PerlTmpDownload('{}/v0/release/{}'.format(cpan_url,
                                                    module)) as json_path:
             with contextlib.closing(gzip.open(json_path)) as dist_json_file:
                 rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
@@ -507,19 +536,19 @@ def dist_for_module(cpan_url, module, perl_version, config):
     else:
         distribution = module
 
-    # Check if
+    # Check if it's a module instead
     if rel_dict is None:
         try:
-            with TmpDownload('{}/v0/module/{}'.format(cpan_url,
+            with PerlTmpDownload('{}/v0/module/{}'.format(cpan_url,
                                                       module)) as json_path:
                 with contextlib.closing(gzip.open(json_path)) as dist_json_file:
                     mod_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
         # If there was an error, report it
-        except RuntimeError:
+        except RuntimeError as exc:
             core_version = core_module_version(module, perl_version, config=config)
             if core_version is None:
-                sys.exit(('Error: Could not find module or distribution named' +
-                          ' %s on MetaCPAN') % module)
+                sys.exit(('Error: Could not find module or distribution named'
+                          ' %s on MetaCPAN. Error was: %s') % (module, str(exc)))
             else:
                 distribution = 'perl'
         else:
@@ -542,7 +571,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # Get latest info to find author, which is necessary for retrieving a
     # specific version
     try:
-        with TmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
+        with PerlTmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
             with contextlib.closing(gzip.open(json_path)) as dist_json_file:
                 rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
                 rel_dict['version'] = rel_dict['version'].lstrip('v')
@@ -567,7 +596,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
             (rel_dict['version'] != version_str)):
         author = rel_dict['author']
         try:
-            with TmpDownload('{}/v0/release/{}/{}-{}'.format(cpan_url,
+            with PerlTmpDownload('{}/v0/release/{}/{}-{}'.format(cpan_url,
                                                              author,
                                                              package,
                                                              version_str)) as json_path:
@@ -611,7 +640,7 @@ def get_checksum_and_size(download_url):
     '''
     base_url = dirname(download_url)
     filename = basename(download_url)
-    with TmpDownload(base_url + '/CHECKSUMS') as checksum_path:
+    with PerlTmpDownload(base_url + '/CHECKSUMS') as checksum_path:
         with open(checksum_path) as checksum_file:
             found_file = False
             md5 = None
