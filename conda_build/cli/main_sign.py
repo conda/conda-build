@@ -13,8 +13,7 @@ from conda_build.conda_interface import ArgumentParser, SignatureError
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
-
+def parse_args(args):
     p = ArgumentParser(
         description="""\
 Tool for signing conda packages.  Signatures will be written alongside the
@@ -39,11 +38,14 @@ files as FILE.sig.""")
                    default="",
                    help="Name of or path to private key to use for signing")
 
-    args = p.parse_args()
+    return p, p.parse_args(args)
 
+
+def execute(args):
+    parser, args = parse_args(args)
     if args.keygen:
         if args.files:
-            p.error('no arguments expected for --keygen')
+            parser.error('no arguments expected for --keygen')
         try:
             api.keygen(args.keygen, int(2048 if args.size is None else args.size))
         except ValueError as e:
@@ -51,7 +53,7 @@ files as FILE.sig.""")
         return
 
     if args.size is not None:
-        p.error('--size option is only allowed with --keygen option')
+        parser.error('--size option is only allowed with --keygen option')
 
     if args.verify:
         for path in args.files:
@@ -66,6 +68,10 @@ files as FILE.sig.""")
     for path in args.files:
         print('signing: %s' % path)
         return api.sign(path, args.input_key)
+
+
+def main():
+    return execute(sys.argv[1:])
 
 
 if __name__ == '__main__':

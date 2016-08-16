@@ -211,7 +211,9 @@ def test_convert(testing_workdir):
 
 def test_sign(testing_workdir):
     # test keygen
-    subprocess.check_call('conda sign -k testkey'.split(), env=os.environ.copy())
+    import conda_build.cli.main_sign as main_sign
+    args = ['-k', 'testkey']
+    main_sign.execute(args)
     keypath = os.path.expanduser("~/.conda/keys/testkey")
     assert os.path.isfile(keypath)
     assert os.path.isfile(keypath + '.pub')
@@ -221,10 +223,12 @@ def test_sign(testing_workdir):
     f = 'https://repo.continuum.io/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
     pkg_name = "affine-2.0.0-py27_0.tar.bz2"
     download(f, pkg_name)
-    subprocess.check_call('conda sign {0}'.format(pkg_name).split(), env=os.environ.copy())
+    args = [pkg_name]
+    main_sign.execute(args)
     assert os.path.isfile(pkg_name + '.sig')
 
     # test verification
-    subprocess.check_call('conda sign -v {0}'.format(pkg_name).split(), env=os.environ.copy())
+    args = ['-v', pkg_name]
+    main_sign.execute(args)
     os.remove(keypath)
     os.remove(keypath + '.pub')
