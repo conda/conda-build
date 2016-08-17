@@ -22,6 +22,7 @@ from conda_build import external
 from .conda_interface import rm_rf  # NOQA
 
 codec = getpreferredencoding() or 'utf-8'
+on_win = sys.platform == "win32"
 
 
 def find_recipe(path):
