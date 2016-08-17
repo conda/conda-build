@@ -14,7 +14,7 @@ matrix:
     - python: '3.5'
       os: linux
       language: python
-      env: CONDA_PRERELEASE=1
+      env: CONDA_PRERELEASE=True
 
 install:
   # TODO: Use a "latest" url
