@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import fnmatch
+from locale import getpreferredencoding
 import os
 import sys
 import shutil
@@ -19,6 +20,9 @@ from conda_build import external
 
 # Backwards compatibility import. Do not remove.
 from .conda_interface import rm_rf  # NOQA
+
+codec = getpreferredencoding() or 'utf-8'
+on_win = sys.platform == "win32"
 
 
 def find_recipe(path):
