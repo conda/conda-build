@@ -76,7 +76,7 @@ def build_vcvarsall_vs_path(version):
 
     flatversion = str(version).replace('.', '')
     vstools = "VS{0}COMNTOOLS".format(flatversion)
-    
+
     if vstools in os.environ:
         return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
     else:
@@ -223,6 +223,6 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+        cmd = ['cmd.exe', '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
         fix_staged_scripts()

@@ -24,7 +24,7 @@ from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import PY3
 from .conda_interface import fetch_index
-from .conda_interface import prefix_placeholder, linked, move_to_trash, symlink_conda
+from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import Locked
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound
@@ -36,7 +36,7 @@ from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, 
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.utils import rm_rf, _check_call, on_win, codec
+from conda_build.utils import rm_rf, _check_call, on_win, codec, move_to_trash
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -394,11 +394,11 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
         cc.pkgs_dirs = cc.pkgs_dirs[:1]
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
-        plan.execute_actions(actions, index, verbose=debug)
+
         if on_win:
-            os.environ = {k.encode(codec) if hasattr(k, 'encode') else k:
-                            v.encode(codec) if hasattr(v, 'encode') else v
-                            for k, v in os.environ.items()}
+            for k, v in os.environ.items():
+                os.environ[k] = str(v)
+        plan.execute_actions(actions, index, verbose=debug)
 
         os.environ['PATH'] = old_path
 
@@ -823,7 +823,7 @@ def test(m, move_broken=True, activate=True, debug=False):
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
                                                                        test_file=test_file))
         if on_win:
-            cmd = [env["COMSPEC"], "/d", "/c", test_script]
+            cmd = ['cmd.exe', "/d", "/c", test_script]
         else:
             cmd = [shell_path, '-x', '-e', test_script]
         try:
