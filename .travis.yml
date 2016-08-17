@@ -1,11 +1,21 @@
 language: python
-python:
-  # We don't actually use the system Python but this keeps it organized.
-  - "2.7"
-  - "3.4"
-  - "3.5"
-env:
-  -
+
+matrix:
+  include:
+    - python: '3.5'
+      os: linux
+      language: python
+    - python: '2.7'
+      os: linux
+      language: python
+    - python: '3.4'
+      os: linux
+      language: python
+    - python: '3.5'
+      os: linux
+      language: python
+      env: CONDA_PRERELEASE=1
+
 install:
   # TODO: Use a "latest" url
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -18,7 +28,10 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda update -q --all
-  - conda install -q --force --no-deps conda requests
+  - conda install -q --force conda requests
+  - if [[ "CONDA_PRERELEASE" == "True" ]]; then
+      conda install -c conda-canary conda
+    fi
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - conda install -q anaconda-client pip pytest-cov
   - pip install --no-deps .
