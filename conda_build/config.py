@@ -22,7 +22,7 @@ class Config(object):
     __package__ = __package__
     __doc__ = __doc__
 
-    CONDA_PERL = os.getenv('CONDA_PERL', '5.18.2')
+    CONDA_PERL = os.getenv('CONDA_PERL', '5.20.3')
     CONDA_LUA = os.getenv('CONDA_LUA', '5.2')
     CONDA_PY = int(os.getenv('CONDA_PY', default_python.replace('.',
         '')).replace('.', ''))
@@ -31,7 +31,7 @@ class Config(object):
         CONDA_NPY = None
     else:
         CONDA_NPY = int(CONDA_NPY.replace('.', '')) or None
-    CONDA_R = os.getenv("CONDA_R", "3.2.2")
+    CONDA_R = os.getenv("CONDA_R", "3.3.1")
 
     @property
     def PY3K(self):
