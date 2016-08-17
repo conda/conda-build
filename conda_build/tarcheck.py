@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+import glob
 import json
-import tarfile
+import os
 from os.path import basename
+import tarfile
 
 
 def dist_fn(fn):
@@ -53,9 +55,34 @@ class TarCheck(object):
                                                   getattr(self, varname)))
         assert isinstance(info['build_number'], int)
 
+    def prefix_length(self):
+        prefix_length = None
+        if 'info/has_prefix' in self.t.getnames():
+            prefix_files = self.t.extractfile('info/has_prefix').readlines()
+            for line in prefix_files:
+                try:
+                    prefix, file_type, containing_file = line.split()
+                # lines not conforming to the split
+                except ValueError:
+                    continue
+                if file_type == 'binary':
+                    prefix_length = len(prefix)
+                    break
+        return prefix_length
+
 
 def check_all(path):
     x = TarCheck(path)
     x.info_files()
     x.index_json()
     x.t.close()
+
+
+def check_prefix_lengths(folder, min_prefix_length=255):
+    files = glob.glob(os.path.join(folder, "*.tar.bz2"))
+    lengths = {}
+    for f in files:
+        length = TarCheck(f).prefix_length()
+        if length and length < min_prefix_length:
+            lengths[f] = length
+    return lengths

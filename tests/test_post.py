@@ -6,6 +6,9 @@ from conda_build.conda_interface import TemporaryDirectory, PY3
 import pytest
 
 from conda_build import post
+from conda_build.utils import on_win
+
+from .utils import test_config
 
 
 def test_compile_missing_pyc():
@@ -61,3 +64,25 @@ def test_coerce_pycache_to_old_style():
             raise
         finally:
             os.chdir(cwd)
+
+
+@pytest.mark.skipif(on_win, reason="no linking on win")
+def test_hardlinks_to_copies():
+    with open('test1', 'w') as f:
+        f.write("\n")
+    try:
+        os.link('test1', 'test2')
+        assert os.lstat('test1').st_nlink == 2
+        assert os.lstat('test2').st_nlink == 2
+
+        post.make_hardlink_copy('test1', os.getcwd())
+        post.make_hardlink_copy('test2', os.getcwd())
+
+        assert os.lstat('test1').st_nlink == 1
+        assert os.lstat('test2').st_nlink == 1
+    except:
+        raise
+    finally:
+        os.remove('test1')
+        if os.path.exists('test2'):
+            os.remove('test2')

@@ -45,6 +45,9 @@ else:
 
 on_win = (sys.platform == 'win32')
 
+codec = getpreferredencoding() or 'utf-8'
+on_win = sys.platform == "win32"
+
 
 PY_TMPL = """\
 if __name__ == '__main__':

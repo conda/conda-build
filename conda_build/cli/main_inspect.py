@@ -5,12 +5,12 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
 import logging
+import sys
 
 from conda_build.conda_interface import (ArgumentParser, add_parser_prefix, InstalledPackages,
                                          get_prefix)
 
 from conda_build import api
-from conda_build.config import Config
 
 logging.basicConfig(level=logging.INFO)
 
@@ -144,7 +144,6 @@ Tools for investigating conda channels.
 
 def execute(args):
     parser, args = parse_args(args)
-    config = Config(**args.__dict__)
 
     if not args.subcommand:
         parser.print_help()
