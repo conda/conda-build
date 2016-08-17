@@ -36,7 +36,7 @@ from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, 
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.utils import rm_rf, _check_call
+from conda_build.utils import rm_rf, _check_call, on_win, codec
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -47,7 +47,6 @@ from conda_build.features import feature_list
 #    eventually.
 import encodings.idna  # NOQA
 
-on_win = (sys.platform == 'win32')
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
@@ -104,13 +103,13 @@ def have_prefix_files(files):
     :type files: list of tuples containing strings (prefix, mode, filename)
     '''
     prefix = config.build_prefix
-    prefix_bytes = prefix.encode('utf-8')
-    prefix_placeholder_bytes = prefix_placeholder.encode('utf-8')
+    prefix_bytes = prefix.encode(codec)
+    prefix_placeholder_bytes = prefix_placeholder.encode(codec)
     if on_win:
         forward_slash_prefix = prefix.replace('\\', '/')
-        forward_slash_prefix_bytes = forward_slash_prefix.encode('utf-8')
+        forward_slash_prefix_bytes = forward_slash_prefix.encode(codec)
         double_backslash_prefix = prefix.replace('\\', '\\\\')
-        double_backslash_prefix_bytes = double_backslash_prefix.encode('utf-8')
+        double_backslash_prefix_bytes = double_backslash_prefix.encode(codec)
 
     for f in files:
         if f.endswith(('.pyc', '.pyo', '.a')):
@@ -412,6 +411,10 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
                 log.warn("Falling back to legacy prefix length of 80 characters.")
                 log.warn("Your package will not install into prefixes longer than 80 characters.")
                 config.prefix_length = 80
+                if on_win:
+                    os.environ = {k.encode(codec) if hasattr(k, 'encode') else k:
+                                    v.encode(codec) if hasattr(v, 'encode') else v
+                                    for k, v in os.environ.items()}
                 create_env(config.build_prefix, specs, clear_cache=clear_cache, debug=debug)
 
         os.environ['PATH'] = old_path
