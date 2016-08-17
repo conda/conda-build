@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import fnmatch
 from locale import getpreferredencoding
+import logging
 import os
 import sys
 import shutil
@@ -23,6 +24,7 @@ from .conda_interface import rm_rf  # NOQA
 
 codec = getpreferredencoding() or 'utf-8'
 on_win = sys.platform == "win32"
+log = logging.getLogger(__file__)
 
 
 def find_recipe(path):
@@ -257,3 +259,8 @@ def get_site_packages(prefix):
     else:
         sp = os.path.join(prefix, 'lib', 'python%s' % sys.version[:3], 'site-packages')
     return sp
+
+
+def move_to_trash(path, placeholder=""):
+    from .conda_interface import move_path_to_trash as trash
+    return trash(path)
