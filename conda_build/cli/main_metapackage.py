@@ -8,17 +8,16 @@ from __future__ import absolute_import, division, print_function
 
 import argparse
 import logging
+import sys
 
 from conda_build.conda_interface import binstar_upload
 from conda_build.conda_interface import ArgumentParser
 from conda_build import api
-from conda_build.config import Config
-from conda_build.cli.main_build import args_func
 
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def parse_args(args):
     p = ArgumentParser(
         description='''
 Tool for building conda metapackages.  A metapackage is a package with no
@@ -103,18 +102,18 @@ command line with the conda metapackage command.
         bsdiff4=bsdiff4.cli:main_bsdiff4 will create an entry point called
         bsdiff4 that calls bsdiff4.cli.main_bsdiff4(). """,
     )
-    p.set_defaults(func=execute)
 
-    args = p.parse_args()
-    args_func(args, p, config=Config(**args.__dict__))
+    args = p.parse_args(args)
+    return p, args
 
 
-def execute(args, parser, config):
+def execute(args):
+    parser, args = parse_args(args)
     api.create_metapackage(name=args.name, version=args.version, entry_points=args.entry_points,
                            build_string=args.build_string, build_number=args.build_number,
                            dependencies=args.dependencies, home=args.home, license=args.license,
                            summary=args.summary)
 
 
-if __name__ == '__main__':
-    main()
+def main():
+    return execute(sys.argv[1:])

@@ -16,13 +16,12 @@ from conda_build.conda_interface import ArgumentParser
 
 import conda_build.api as api
 from conda_build.config import Config
-from conda_build.cli.main_build import args_func
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def parse_args(args):
     p = ArgumentParser(
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
@@ -46,13 +45,14 @@ options available.
         module = importlib.import_module("conda_build.skeletons." + skeleton)
         module.add_parser(repos)
 
-    p.set_defaults(func=execute)
-
-    args = p.parse_args()
-    args_func(args, p, Config(**args.__dict__))
+    args = p.parse_args(args)
+    return p, args
 
 
-def execute(args, parser, config):
+def execute(args):
+    parser, args = parse_args(args)
+    config = Config(**args.__dict__)
+
     if not args.repo:
         parser.print_help()
         sys.exit()
@@ -61,5 +61,5 @@ def execute(args, parser, config):
         api.skeletonize(package, repo=args.repo, config=config)
 
 
-if __name__ == '__main__':
-    main()
+def main():
+    return execute(sys.argv[1:])

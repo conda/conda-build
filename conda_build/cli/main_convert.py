@@ -7,12 +7,11 @@
 from locale import getpreferredencoding
 import logging
 from os.path import abspath, expanduser
+import sys
 
 from conda_build.conda_interface import ArgumentParser
 
-from conda_build.cli.main_build import args_func
 from conda_build import api
-from conda_build.config import Config
 from conda_build.utils import PY3
 
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +47,7 @@ or higher:
 """
 
 
-def main():
+def parse_args(args):
     p = ArgumentParser(
         description="""
 Various tools to convert conda packages. Takes a pure Python package build for
@@ -59,8 +58,7 @@ all.""",
 
     # TODO: Factor this into a subcommand, since it's python package specific
     p.add_argument(
-        'package_files',
-        metavar='package-files',
+        'files',
         nargs='+',
         help="Package files to convert."
     )
@@ -113,17 +111,14 @@ all.""",
         help="Don't print as much output."
     )
 
-    p.set_defaults(func=execute)
-
-    args = p.parse_args()
-    config = Config(**args.__dict__)
-    args_func(args, p, config)
+    args = p.parse_args(args)
+    return p, args
 
 
-def execute(args, parser, config):
-    files = args.package_files
-    del args.__dict__['package_files']
-    del args.__dict__['func']
+def execute(args):
+    parser, args = parse_args(args)
+    files = args.files
+    del args.__dict__['files']
 
     for f in files:
         # Don't use byte literals for paths in Python 2
@@ -134,5 +129,5 @@ def execute(args, parser, config):
         api.convert(f, **args.__dict__)
 
 
-if __name__ == '__main__':
-    main()
+def main():
+    return execute(sys.argv[1:])

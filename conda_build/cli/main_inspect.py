@@ -11,12 +11,11 @@ from conda_build.conda_interface import (ArgumentParser, add_parser_prefix, Inst
 
 from conda_build import api
 from conda_build.config import Config
-from conda_build.cli.main_build import args_func
 
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def parse_args(args):
     p = ArgumentParser(
         description='Tools for inspecting conda packages.',
         epilog="""
@@ -139,13 +138,14 @@ Tools for investigating conda channels.
         help="The channel to test. The default is %(default)s."
     )
 
-    p.set_defaults(func=execute)
-    args = p.parse_args()
+    args = p.parse_args(args)
+    return p, args
+
+
+def execute(args):
+    parser, args = parse_args(args)
     config = Config(**args.__dict__)
-    args_func(args, p, config=config)
 
-
-def execute(args, parser, config):
     if not args.subcommand:
         parser.print_help()
         exit()
@@ -163,3 +163,7 @@ def execute(args, parser, config):
         print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
     else:
         raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))
+
+
+def main():
+    return execute(sys.argv[1:])

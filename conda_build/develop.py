@@ -174,14 +174,14 @@ Error: environment does not exist: %s
         if uninstall:
             # uninstall then exit - does not do any other operations
             _uninstall(sp_dir, pkg_path)
-            sys.exit(0)
+            return
 
         if clean or build_ext:
             setup_py = get_setup_py(pkg_path)
             if clean:
                 _clean(setup_py)
                 if not build_ext:
-                    sys.exit(0)
+                    return
 
             # build extensions before adding to conda.pth
             if build_ext:

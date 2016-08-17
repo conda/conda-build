@@ -7,18 +7,16 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import sys
 
 from conda_build.conda_interface import ArgumentParser, add_parser_prefix, get_prefix
-
-from conda_build.cli.main_build import args_func
 from conda_build import api
-from conda_build.config import Config
 
 
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def parse_args(args):
     p = ArgumentParser(
         description="""
 
@@ -59,15 +57,16 @@ This works by creating a conda.pth file in site-packages."""
     add_parser_prefix(p)
     p.set_defaults(func=execute)
 
-    args = p.parse_args()
-    config = Config(**args.__dict__)
-    args_func(args, p, config)
+    args = p.parse_args(args)
+    return p, args
 
 
-def execute(args, parser, config):
+def execute(args):
+    parser, args = parse_args(args)
     prefix = get_prefix(args)
     api.develop(args.source, prefix=prefix, no_pth_file=args.no_pth_file,
                 build_ext=args.build_ext, clean=args.clean, uninstall=args.uninstall)
 
-if __name__ == '__main__':
-    main()
+
+def main():
+    return execute(sys.argv[1:])

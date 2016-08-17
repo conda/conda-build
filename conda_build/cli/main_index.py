@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import os
+import sys
 
 from conda_build.conda_interface import ArgumentParser
 
@@ -11,7 +12,7 @@ from conda_build.config import Config
 logging.basicConfig(level=logging.INFO)
 
 
-def main():
+def parse_args(args):
     p = ArgumentParser(
         description="Update package index metadata files in given directories.")
 
@@ -48,7 +49,12 @@ def main():
         help="Don't remove entries for files that don't exist.",
     )
 
-    args = p.parse_args()
+    args = p.parse_args(args)
+    return p, args
+
+
+def execute(args):
+    p, args = parse_args(args)
     config = Config(**args.__dict__)
     config.verbose = not args.quiet
 
@@ -56,5 +62,5 @@ def main():
             check_md5=args.check_md5, remove=args.remove)
 
 
-if __name__ == '__main__':
-    main()
+def main():
+    return execute(sys.argv[1:])
