@@ -80,4 +80,5 @@ def test_hardlinks_to_copies():
         raise
     finally:
         os.remove('test1')
-        os.remove('test2')
+        if os.path.exists('test2'):
+            os.remove('test2')
