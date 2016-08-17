@@ -47,6 +47,7 @@ on_win = (sys.platform == 'win32')
 
 codec = getpreferredencoding() or 'utf-8'
 on_win = sys.platform == "win32"
+log = logging.getLogger(__file__)
 
 
 PY_TMPL = """\
@@ -413,3 +414,8 @@ def create_entry_points(items, config):
         os.mkdir(bin_dir)
     for cmd, module, func in iter_entry_points(items):
         create_entry_point(join(bin_dir, cmd), module, func, config)
+
+
+def move_to_trash(path, placeholder=""):
+    from .conda_interface import move_path_to_trash as trash
+    return trash(path)

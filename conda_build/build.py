@@ -414,11 +414,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                 for lock in locks:
                     lock.acquire(timeout=config.timeout)
                 try:
-
                     if on_win:
-                        os.environ = {k.encode(codec) if hasattr(k, 'encode') else k:
-                                        v.encode(codec) if hasattr(v, 'encode') else v
-                                        for k, v in os.environ.items()}
+                        for k, v in os.environ.items():
+                            os.environ[k] = str(v)
                     plan.execute_actions(actions, index, verbose=config.debug)
                 except SystemExit as exc:
                     if "too short in" in exc.message and config.prefix_length > 80:
@@ -443,6 +441,7 @@ def create_env(prefix, specs, config, clear_cache=True):
             finally:
                 for lock in locks:
                     lock.release()
+        warn_on_old_conda_build(index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
@@ -828,7 +827,7 @@ def test(m, config, move_broken=True):
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
                                                                        test_file=test_file))
         if on_win:
-            cmd = [env["COMSPEC"], "/d", "/c", test_script]
+            cmd = ['cmd.exe', "/d", "/c", test_script]
         else:
             cmd = [shell_path, '-x', '-e', test_script]
         try:
