@@ -432,7 +432,10 @@ def create_env(prefix, specs, config, clear_cache=True):
 
                         for lock in locks:
                             lock.release()
-                        create_env(config.build_prefix, specs, config=config,
+                        # Set this here and use to create environ
+                        #   Setting this here is important because we use it below (symlink)
+                        prefix = config.build_prefix
+                        create_env(prefix, specs, config=config,
                                    clear_cache=clear_cache)
                     else:
                         raise
