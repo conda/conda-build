@@ -32,7 +32,7 @@ install:
 
 script:
   - flake8 .
-  - py.test -v -n 4 --cov conda_build --cov-report xml tests
+  - py.test -v -n 3 --cov conda_build --cov-report xml tests
   - conda build --help
 
 notifications:

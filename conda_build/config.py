@@ -82,7 +82,7 @@ class Config(object):
                   Setting('user', None),
                   Setting('verbose', False),
                   Setting('debug', False),
-                  Setting('timeout', 20),
+                  Setting('timeout', 90),
                   ]
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
