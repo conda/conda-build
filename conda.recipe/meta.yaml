@@ -26,6 +26,7 @@ test:
   requires:
     - pytest
     - pytest-cov
+    - pytest-env
     - mock
   commands:
     - conda-build -h
