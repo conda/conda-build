@@ -415,7 +415,8 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
                     os.environ = {k.encode(codec) if hasattr(k, 'encode') else k:
                                     v.encode(codec) if hasattr(v, 'encode') else v
                                     for k, v in os.environ.items()}
-                create_env(config.build_prefix, specs, clear_cache=clear_cache, debug=debug)
+                prefix = config.build_prefix
+                create_env(prefix, specs, clear_cache=clear_cache, debug=debug)
 
         os.environ['PATH'] = old_path
 
