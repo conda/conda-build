@@ -1,3 +1,16 @@
+2016-08-18 1.21.14:
+
+Bug fixes:
+----------
+
+* fix pyc compilation when egg files/folders are present #1225
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2016-08-18 1.21.13:
 
 Enhancements:
