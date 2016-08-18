@@ -82,7 +82,7 @@ test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
   - mkdir C:\cbtmp
-  - py.test -v --cov conda_build --cov-report xml tests --basetemp -n 3 C:\cbtmp
+  - py.test -v --cov conda_build --cov-report xml tests --basetemp -n 4 C:\cbtmp
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp
