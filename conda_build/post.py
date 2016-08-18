@@ -191,9 +191,9 @@ def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_
 
 
 def post_process(files, preserve_egg_dir=False):
+    compile_missing_pyc(files)
     remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so()
-    compile_missing_pyc(files)
 
 
 def find_lib(link, path=None):
