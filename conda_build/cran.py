@@ -489,7 +489,8 @@ def main(args, parser):
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
-        d['license_family'] = utils.guess_license_family(d['license'], metadata.allowed_license_families)
+        d['license_family'] = utils.guess_license_family(d['license'],
+                                                         metadata.allowed_license_families)
 
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
