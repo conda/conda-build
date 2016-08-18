@@ -155,6 +155,7 @@ test:
 about:
   home: http://code.google.com/p/sympy
   license: BSD License
+  license_family: BSD
   summary: 'Computer algebra system (CAS) in Python'
 
 # See

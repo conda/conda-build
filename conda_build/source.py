@@ -1,26 +1,26 @@
 from __future__ import absolute_import, division, print_function
 
-import os
+import locale
 import logging
 import re
-import sys
+import os
 from os.path import join, isdir, isfile, abspath, expanduser, basename
 from shutil import copytree, copy2
 from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
-if sys.version_info[0] == 3:
-    from urllib.parse import urljoin
-else:
-    from urlparse import urljoin
-import locale
+import sys
 import time
-from conda.compat import TemporaryDirectory
 
-from .conda_interface import download
+from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
 from conda_build.utils import tar_xf, unzip, safe_print_unicode
+
+if sys.version_info[0] == 3:
+    from urllib.parse import urljoin
+else:
+    from urlparse import urljoin
 
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
