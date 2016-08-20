@@ -25,7 +25,7 @@ import encodings.idna  # noqa
 import filelock
 
 from .conda_interface import cc
-from .conda_interface import envs_dirs, root_dir, subdir
+from .conda_interface import envs_dirs, root_dir
 from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import memoized
@@ -240,7 +240,7 @@ def create_info_files(m, files, config, prefix):
 #
 # It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
-""" % (m.dist(), subdir))
+""" % (m.dist(), config.subdir))
             for dist in sorted(dists + [m.dist()]):
                 fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':

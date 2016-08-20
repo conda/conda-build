@@ -5,10 +5,6 @@ import tarfile
 
 import pytest
 
-# these are here to be imported by other things.  Do not remove.
-from conda_build.conda_interface import StringIO, PY3
-from conda_build.conda_interface import subdir
-
 from conda_build.config import Config
 from conda_build.utils import on_win, prepend_bin_path
 

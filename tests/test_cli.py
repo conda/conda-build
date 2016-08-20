@@ -11,7 +11,7 @@ import pytest
 from conda_build.conda_interface import download
 
 from conda_build.utils import get_site_packages
-from .utils import testing_workdir, metadata_dir, subdir, package_has_file, testing_env
+from .utils import testing_workdir, metadata_dir, package_has_file, testing_env, test_config
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -39,7 +39,7 @@ def test_build_add_channel():
 
 
 @pytest.mark.xfail
-def test_build_without_channel_fails():
+def test_build_without_channel_fails(testing_workdir):
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
     #    we probably have channels in condarc, and this is not a good test.
     args = ['--no-anaconda-upload',
@@ -47,7 +47,7 @@ def test_build_without_channel_fails():
     main_build.execute(args)
 
 
-def test_render_output_build_path(capfd):
+def test_render_output_build_path(testing_workdir, capfd):
     args = ['--output', os.path.join(metadata_dir, "python_run")]
     main_render.execute(args)
     test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
@@ -56,17 +56,17 @@ def test_render_output_build_path(capfd):
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_build_output_build_path(capfd):
+def test_build_output_build_path(testing_workdir, test_config, capfd):
     args = ['--output', os.path.join(metadata_dir, "python_run")]
     main_render.execute(args)
-    test_path = os.path.join(sys.prefix, "conda-bld", subdir,
+    test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                   "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
 
 
-def test_render_output_build_path_set_python(capfd):
+def test_render_output_build_path_set_python(testing_workdir, capfd):
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
         version = "2.7"
@@ -91,35 +91,35 @@ def test_skeleton_pypi(testing_workdir):
     main_build.execute(args)
 
 
-def test_metapackage(testing_workdir):
+def test_metapackage(test_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2']
     main_metapackage.execute(args)
-    test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-0.tar.bz2')
+    test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir, 'metapackage_test-1.0-0.tar.bz2')
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_build_number(testing_workdir):
+def test_metapackage_build_number(test_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--build-number', '1']
     main_metapackage.execute(args)
-    test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-1.tar.bz2')
+    test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir, 'metapackage_test-1.0-1.tar.bz2')
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_build_string(testing_workdir):
+def test_metapackage_build_string(test_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--build-string', 'frank']
     main_metapackage.execute(args)
-    test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-frank.tar.bz2')
+    test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir, 'metapackage_test-1.0-frank.tar.bz2')
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_metadata(testing_workdir):
+def test_metapackage_metadata(test_config, testing_workdir):
     args = ['metapackage_test', '1.0', '-d', 'bzip2', "--home", "http://abc.com", "--summary", "wee",
             "--license", "BSD"]
     main_metapackage.execute(args)
-    test_path = os.path.join(sys.prefix, "conda-bld", subdir, 'metapackage_test-1.0-0.tar.bz2')
+    test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir, 'metapackage_test-1.0-0.tar.bz2')
     assert os.path.isfile(test_path)
     info = json.loads(package_has_file(test_path, 'info/index.json').decode('utf-8'))
     assert info['license'] == 'BSD'

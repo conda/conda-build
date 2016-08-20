@@ -11,7 +11,7 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import subdir, bits, root_dir, cc
+from .conda_interface import root_dir, cc
 
 from conda_build.os_utils import external
 from conda_build import source
@@ -188,11 +188,11 @@ def conda_build_vars(prefix, config):
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
         'CONDA_DEFAULT_ENV': config.build_prefix,
-        'ARCH': str(bits),
+        'ARCH': str(config.bits),
         'PREFIX': prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
-        'SUBDIR': subdir,
+        'SUBDIR': config.subdir,
         'SRC_DIR': source.get_dir(config),
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
@@ -317,8 +317,8 @@ def unix_vars(prefix):
     }
 
 
-def osx_vars(compiler_vars):
-    OSX_ARCH = 'i386' if bits == 32 else 'x86_64'
+def osx_vars(compiler_vars, config):
+    OSX_ARCH = 'i386' if config.bits == 32 else 'x86_64'
     compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
@@ -331,9 +331,9 @@ def osx_vars(compiler_vars):
     }
 
 
-def linux_vars(compiler_vars, prefix):
+def linux_vars(compiler_vars, prefix, config):
     compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
-    if bits == 32:
+    if config.bits == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
     return {}
@@ -363,9 +363,9 @@ def system_vars(env_dict, prefix, config):
         d.update(unix_vars(prefix))
 
     if sys.platform == 'darwin':
-        d.update(osx_vars(compiler_vars))
+        d.update(osx_vars(compiler_vars, config))
     elif sys.platform.startswith('linux'):
-        d.update(linux_vars(compiler_vars, prefix))
+        d.update(linux_vars(compiler_vars, prefix, config))
 
     # make sure compiler_vars get appended to anything already set, including build/script_env
     for key in compiler_vars:

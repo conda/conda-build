@@ -8,7 +8,7 @@ from os.path import isdir, isfile, join
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import memoized, md5_file
-from .conda_interface import non_x86_linux_machines, subdir, platform, arch_name
+from .conda_interface import non_x86_linux_machines, platform, arch_name
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
 
@@ -37,7 +37,7 @@ log = logging.getLogger(__file__)
 
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
-    plat = subdir
+    plat = config.subdir
     py = config.CONDA_PY
     np = config.CONDA_NPY
     pl = config.CONDA_PERL
@@ -645,7 +645,7 @@ class MetaData(object):
             build_number=self.build_number() if self.build_number() else 0,
             platform=platform,
             arch=arch_name,
-            subdir=subdir,
+            subdir=self.config.subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
         )

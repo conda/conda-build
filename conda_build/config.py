@@ -12,7 +12,7 @@ import sys
 import time
 
 from .conda_interface import string_types, binstar_upload
-from .conda_interface import subdir, root_dir, root_writable, cc
+from .conda_interface import subdir, root_dir, root_writable, cc, bits
 
 from .utils import get_build_folders, rm_rf
 
@@ -52,7 +52,7 @@ class Config(object):
 
         self.CONDA_PERL = env('perl', '5.20.3')
         self.CONDA_LUA = env('lua', '5.2')
-        self.CONDA_R = env('r', '3.2.2')
+        self.CONDA_R = env('r', '3.3.1')
         self.CONDA_PY = int(env('python', "%s%s" % (sys.version_info.major, sys.version_info.minor))
                         .replace('.', ''))
 
@@ -83,6 +83,8 @@ class Config(object):
                   Setting('verbose', False),
                   Setting('debug', False),
                   Setting('timeout', 90),
+                  Setting('subdir', subdir),
+                  Setting('bits', bits)
                   ]
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
@@ -259,12 +261,12 @@ class Config(object):
         if self.noarch:
             return join(self.croot, "noarch")
         else:
-            return join(self.croot, subdir)
+            return join(self.croot, self.subdir)
 
     @property
     def bldpkgs_dirs(self):
         """ Dirs where previous build packages might be. """
-        return join(self.croot, subdir), join(self.croot, "noarch")
+        return join(self.croot, self.subdir), join(self.croot, "noarch")
 
     @property
     def src_cache(self):
@@ -318,7 +320,7 @@ def get_or_merge_config(config, **kwargs):
 def show(config):
     print('CONDA_PY:', config.CONDA_PY)
     print('CONDA_NPY:', config.CONDA_NPY)
-    print('subdir:', subdir)
+    print('subdir:', config.subdir)
     print('croot:', config.croot)
     print('build packages directory:', config.bldpkgs_dir)
 
