@@ -13,14 +13,15 @@ from distutils.dist import Distribution
 from conda.compat import (StringIO, string_types, configparser, PY3, text_type
 as unicode)
 from conda.lock import Locked
-import conda.config
+from conda.config import Config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import build, pypi, render
-from conda_build.config import config
 from conda_build.main_build import handle_binstar_upload
 
 # TODO: Add support for all the options that conda build has
+
+config = Config()
 
 
 class CondaDistribution(Distribution):
@@ -228,7 +229,7 @@ class bdist_conda(install):
                         d['requirements']['run'].append('setuptools')
                         d['requirements']['build'].append('setuptools')
                     entry_list = rs + cs + gs
-                    if gs and conda.config.platform == 'osx':
+                    if gs and config.platform == 'osx':
                         d['build']['osx_is_app'] = True
                     if len(cs + gs) != 0:
                         d['build']['entry_points'] = entry_list

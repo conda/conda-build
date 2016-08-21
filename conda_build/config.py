@@ -12,7 +12,7 @@ import sys
 import time
 
 from .conda_interface import string_types, binstar_upload
-from .conda_interface import subdir, root_dir, root_writable, cc, bits
+from .conda_interface import subdir, root_dir, root_writable, cc, bits, platform
 
 from .utils import get_build_folders, rm_rf
 
@@ -84,7 +84,8 @@ class Config(object):
                   Setting('debug', False),
                   Setting('timeout', 90),
                   Setting('subdir', subdir),
-                  Setting('bits', bits)
+                  Setting('bits', bits),
+                  Setting('platform', platform),
                   ]
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
