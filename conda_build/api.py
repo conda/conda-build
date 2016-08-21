@@ -52,10 +52,9 @@ def get_output_file_path(recipe_path, no_download_source=False, config=None, **k
 def check(recipe_path, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
-    metadata, need_source_download = render_recipe(recipe_path,
-                                                   no_download_source=no_download_source,
-                                                   config=config)
-    metadata.check_fields()
+    metadata, _, _ = render_recipe(recipe_path, no_download_source=no_download_source,
+                                   config=config)
+    return metadata.check_fields()
 
 
 def build(recipe_path, post=None, need_source_download=True,

@@ -80,3 +80,8 @@ def test_pypi_version_sorting(testing_workdir, test_config):
         actual = yaml.load(f)
         assert actual['package']['version'] != "0.1.0"
         assert actual['package']['version'] >= "0.1.0-1"
+
+
+def test_list_skeletons():
+    skeletons = api.list_skeletons()
+    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks'])

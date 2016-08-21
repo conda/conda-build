@@ -53,8 +53,10 @@ def import_key(private_key_path, new_name=None):
     """
     if not new_name:
         new_name = os.path.basename(private_key_path)
+    if not os.path.isdir(KEYS_DIR):
+        os.makedirs(KEYS_DIR)
     shutil.copy(private_key_path, os.path.join(KEYS_DIR, new_name))
-    with open(os.path.join(KEYS_DIR, new_name + ".pub")) as f:
+    with open(os.path.join(KEYS_DIR, new_name + ".pub"), 'w') as f:
         key = RSA.importKey(open(private_key_path).read())
         f.write(key.publickey().exportKey())
 
