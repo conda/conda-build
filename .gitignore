@@ -11,3 +11,4 @@ ve
 venv
 junit.xml
 .cache
+.DS_Store

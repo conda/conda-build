@@ -6,4 +6,4 @@ requirements:
   build:
     - python
     # this is only available at conda-forge, and is a test of whether that channel is available.
-    - conda-smithy
+    - blinker

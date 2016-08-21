@@ -4,13 +4,39 @@ Module to handle generating test files.
 
 from __future__ import absolute_import, division, print_function
 
-import shutil
 import sys
 
-from os.path import dirname, join, isdir, exists
+from os.path import join, exists
+
+from conda_build.utils import copy_into
 
 
-def create_files(dir_path, m):
+header = '''
+from __future__ import absolute_import, division, print_function
+
+import sys
+import subprocess
+from distutils.spawn import find_executable
+import shlex
+
+
+def call_args(string):
+    args = shlex.split(string)
+    arg0 = args[0]
+    args[0] = find_executable(arg0)
+    if not args[0]:
+        sys.exit("Command not found: '%s'" % arg0)
+
+    try:
+        subprocess.check_call(args)
+    except subprocess.CalledProcessError:
+        sys.exit('Error: command failed: %s' % ' '.join(args))
+
+# --- end header
+'''
+
+
+def create_files(dir_path, m, config):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
@@ -22,21 +48,19 @@ def create_files(dir_path, m):
     for fn in m.get_value('test/files', []):
         has_files = True
         path = join(m.path, fn)
-        if isdir(path):
-            shutil.copytree(path, join(dir_path, fn))
-        else:
-            shutil.copy(path, dir_path)
+        copy_into(path, join(dir_path, fn), config)
     return has_files
 
 
-def create_shell_files(dir_path, m):
+def create_shell_files(dir_path, m, config):
     has_tests = False
     if sys.platform == 'win32':
         name = 'run_test.bat'
     else:
         name = 'run_test.sh'
+
     if exists(join(m.path, name)):
-        shutil.copy(join(m.path, name), dir_path)
+        copy_into(join(m.path, name), dir_path, config)
         has_tests = True
 
     with open(join(dir_path, name), 'a') as f:
@@ -55,8 +79,7 @@ def create_py_files(dir_path, m):
     has_tests = False
     with open(join(dir_path, 'run_test.py'), 'w') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
-        with open(join(dirname(__file__), 'header_test.py')) as fi:
-            fo.write(fi.read() + '\n')
+        fo.write(header + '\n')
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
         for name in m.get_value('test/imports', []):
@@ -74,6 +97,8 @@ def create_py_files(dir_path, m):
             has_tests = True
         except IOError:
             fo.write("# no run_test.py exists for this package\n")
+        except AttributeError:
+            fo.write("# tests were not packaged with this module, and cannot be run\n")
         fo.write("\nprint('===== %s OK =====')\n" % m.dist())
 
     return has_tests

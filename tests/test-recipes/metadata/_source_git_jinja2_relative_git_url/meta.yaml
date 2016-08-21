@@ -7,4 +7,4 @@ build:
   string: {{ environ.get('GIT_DESCRIBE_NUMBER', '0') + '_JPMC' }}
 
 source:
-  git_url: ../../../../
+  git_url: ../../../../../conda_build_test_recipe

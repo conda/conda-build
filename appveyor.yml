@@ -18,12 +18,12 @@ environment:
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Python27_32"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "32"
-
     - PYTHON: "C:\\Python35_32"
       PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "32"
+
+    - PYTHON: "C:\\Python27_32"
+      PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "32"
 
     - PYTHON: "C:\\Python34_32"
@@ -53,23 +53,26 @@ install:
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - conda config --set always_yes yes
-  # test with master of conda
   - conda update -q conda
   - conda info
   - conda update -q --all
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
-  - conda install -q pip pytest requests jinja2 patch flake8 mock pyflakes=1.1
-  - conda install -q anaconda-client pip pytest-cov
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests
+  - conda install -q pyflakes=1.1 pycrypto posix m2-git anaconda-client
+  - conda install -c conda-forge -q perl
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
   - pip install --no-deps .
+  - pip install pytest-xdist pytest-capturelog pytest-env filelock
   - set PATH
   - conda build --version
   - call appveyor\setup_x64.bat
   - copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
+  # This is an extra repo that we clone for relative path entries
+  - cmd: pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
 
 
 # Not a .NET project, we build package in the install step instead
@@ -78,7 +81,12 @@ build: false
 test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
-  - py.test -v --cov conda_build --cov-report xml tests
+  - mkdir C:\cbtmp
+  - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 4
+
+on_failure:
+  - 7z.exe a cbtmp.7z C:\cbtmp
+  - appveyor PushArtifact cbtmp.7z
 
 on_success:
   - pip install codecov

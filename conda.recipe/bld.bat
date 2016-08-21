@@ -1,4 +1,4 @@
-python setup.py install
+pip install --no-deps .
 if errorlevel 1 exit 1
 
 del %SCRIPTS%\conda-init

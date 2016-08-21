@@ -1,6 +1,6 @@
 conda list -p "%PREFIX%" --canonical
 if errorlevel 1 exit 1
-for /f "delims=" %%i in ('conda list -p "%PREFIX%" --canonical') do set condalist=%%i
+for /f "delims=" %%i in ('conda list -p "%PREFIX%"') do set condalist=%%i
 if errorlevel 1 exit 1
 echo "%condalist%"
 if not "%condalist%"=="conda-build-test-build-number-1.0-1" exit 1

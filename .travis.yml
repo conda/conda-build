@@ -21,12 +21,18 @@ install:
   - conda install -q --force --no-deps conda requests
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - conda install -q anaconda-client pip pytest-cov
+  - conda install -c conda-forge -q perl
+  - pip install pytest-cov pytest-xdist pytest-capturelog filelock
   - pip install --no-deps .
   - conda info -a
+  # This is an extra repo that we clone for relative path entries
+  - pushd ..
+  - git clone https://github.com/conda/conda_build_test_recipe
+  - popd
 
 script:
   - flake8 .
-  - py.test -v --cov conda_build --cov-report xml tests
+  - py.test -v -n 2 --cov conda_build --cov-report xml tests
   - conda build --help
 
 notifications:

@@ -3,13 +3,14 @@ package:
   version: {{ GIT_DESCRIBE_TAG }}
 
 source:
-  git_url: https://github.com/conda/conda-build
+  git_url: ../
 
 build:
   number: 0
   {% if GIT_DESCRIBE_NUMBER|int > 0 %}
   string: py{{ PY_VER }}_git_{{ GIT_BUILD_STR }}
   {% endif %}
+  preserve_egg_dir: True
 
 requirements:
   build:
@@ -21,9 +22,11 @@ requirements:
     - patchelf      [linux]
 
 test:
+  # more tests in run_test.py (runs the tests folder)
   requires:
     - pytest
     - pytest-cov
+    - pytest-env
     - mock
   commands:
     - conda-build -h
@@ -32,4 +35,4 @@ test:
 
 about:
   home: https://github.com/conda/conda-build
-  license: BSD
+  license: BSD 3-clause

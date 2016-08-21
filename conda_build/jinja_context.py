@@ -16,7 +16,6 @@ import jinja2
 from .conda_interface import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
-from .source import WORK_DIR
 
 log = logging.getLogger(__file__)
 
@@ -69,17 +68,18 @@ class FilteredLoader(jinja2.BaseLoader):
     filtered according to any metadata selectors in the source text.
     """
 
-    def __init__(self, unfiltered_loader):
+    def __init__(self, unfiltered_loader, config):
         self._unfiltered_loader = unfiltered_loader
         self.list_templates = unfiltered_loader.list_templates
+        self.config = config
 
     def get_source(self, environment, template):
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
-        return select_lines(contents, ns_cfg()), filename, uptodate
+        return select_lines(contents, ns_cfg(self.config)), filename, uptodate
 
 
-def load_setup_py_data(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     unload_modules=None, fail_on_error=False):
     _setuptools_data = {}
 
@@ -90,18 +90,19 @@ def load_setup_py_data(setup_file='setup.py', from_recipe_dir=False, recipe_dir=
     import distutils.core
 
     cd_to_work = False
+    path_backup = sys.path
 
     if from_recipe_dir and recipe_dir:
         setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
-    elif os.path.exists(WORK_DIR):
+    elif os.path.exists(config.work_dir):
         cd_to_work = True
         cwd = os.getcwd()
-        os.chdir(WORK_DIR)
+        os.chdir(config.work_dir)
         if not os.path.isabs(setup_file):
-            setup_file = os.path.join(WORK_DIR, setup_file)
+            setup_file = os.path.join(config.work_dir, setup_file)
         # this is very important - or else if versioneer or otherwise is in the start folder,
         # things will pick up the wrong versioneer/whatever!
-        sys.path.insert(0, WORK_DIR)
+        sys.path.insert(0, config.work_dir)
     else:
         log.debug("Did not find setup.py file in manually specified location, and source "
                   "not downloaded yet.")
@@ -116,26 +117,23 @@ def load_setup_py_data(setup_file='setup.py', from_recipe_dir=False, recipe_dir=
         '__doc__': None,
         '__file__': setup_file,
     }
-    try:
+    if os.path.isfile(setup_file):
         code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
         distutils.core.setup = distutils_setup
         setuptools.setup = setuptools_setup
-    # this happens if setup.py is used in load_setup_py_data, but source is not yet downloaded
-    except:
-        raise
-    finally:
-        if cd_to_work:
-            os.chdir(cwd)
-    del sys.path[-1]
-    return _setuptools_data
+    if cd_to_work:
+        os.chdir(cwd)
+    # remove our workdir from sys.path
+    sys.path = path_backup
+    return _setuptools_data if _setuptools_data else None
 
 
-def load_setuptools(setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     unload_modules=None, fail_on_error=False):
     log.warn("Deprecation notice: the load_setuptools function has been renamed to "
              "load_setup_py_data.  load_setuptools will be removed in a future release.")
-    return load_setup_py_data(setup_file=setup_file, from_recipe_dir=from_recipe_dir,
+    return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
                               recipe_dir=recipe_dir, unload_modules=unload_modules,
                               fail_on_error=fail_on_error)
 
@@ -147,21 +145,21 @@ def load_npm():
         return json.load(pkg)
 
 
-def context_processor(initial_metadata, recipe_dir):
+def context_processor(initial_metadata, recipe_dir, config):
     """
     Return a dictionary to use as context for jinja templates.
 
     initial_metadata: Augment the context with values from this MetaData object.
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
-    ctx = get_environ(m=initial_metadata)
+    ctx = get_environ(config=config, m=initial_metadata)
     environ = dict(os.environ)
-    environ.update(get_environ(m=initial_metadata))
+    environ.update(get_environ(config=config, m=initial_metadata))
 
     ctx.update(
-        load_setup_py_data=partial(load_setup_py_data, recipe_dir=recipe_dir),
+        load_setup_py_data=partial(load_setup_py_data, config=config, recipe_dir=recipe_dir),
         # maintain old alias for backwards compatibility:
-        load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
+        load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir),
         load_npm=load_npm,
         environ=environ)
     return ctx

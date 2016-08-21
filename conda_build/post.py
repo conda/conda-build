@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+from functools import partial
 from glob import glob
 import io
 import locale
@@ -18,20 +19,19 @@ try:
 except ImportError:
     readlink = False
 
+from conda_build.os_utils import external
 from .conda_interface import lchmod
 from .conda_interface import walk_prefix
 from .conda_interface import md5_file
 
-from conda_build.config import config
-from conda_build import external
 from conda_build import environ
 from conda_build import utils
 from conda_build import source
 
 if sys.platform.startswith('linux'):
-    from conda_build import elf
+    from conda_build.os_utils import elf
 elif sys.platform == 'darwin':
-    from conda_build import macho
+    from conda_build.os_utils import macho
 
 SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
@@ -42,8 +42,8 @@ def is_obj(path):
                 (sys.platform == 'darwin' and macho.is_macho(path)))
 
 
-def fix_shebang(f, osx_is_app=False):
-    path = join(config.build_prefix, f)
+def fix_shebang(f, prefix, build_python, osx_is_app=False):
+    path = join(prefix, f)
     if is_obj(path):
         return
     elif os.path.islink(path):
@@ -70,9 +70,9 @@ def fix_shebang(f, osx_is_app=False):
 
     encoding = sys.stdout.encoding or 'utf8'
 
-    py_exec = ('/bin/bash ' + config.build_prefix + '/bin/python.app'
+    py_exec = ('/bin/bash ' + prefix + '/bin/python.app'
                if sys.platform == 'darwin' and osx_is_app else
-               config.build_prefix + '/bin/' + basename(config.build_python))
+               prefix + '/bin/' + basename(build_python))
     new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
     if new_data == data:
         return
@@ -82,25 +82,25 @@ def fix_shebang(f, osx_is_app=False):
     os.chmod(path, int('755', 8))
 
 
-def write_pth(egg_path):
+def write_pth(egg_path, config):
     fn = basename(egg_path)
-    with open(join(environ.get_sp_dir(),
+    with open(join(environ.get_sp_dir(config),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
 
-def remove_easy_install_pth(files, preserve_egg_dir=False):
+def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
-    absfiles = [join(config.build_prefix, f) for f in files]
-    sp_dir = environ.get_sp_dir()
+    absfiles = [join(prefix, f) for f in files]
+    sp_dir = environ.get_sp_dir(config)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
                     in walk_prefix(egg_path, False, windows_forward_slashes=False)):
-                write_pth(egg_path)
+                write_pth(egg_path, config=config)
                 continue
 
             print('found egg dir:', egg_path)
@@ -118,7 +118,7 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
                     # so the package directory already exists
                     # from another installed dependency
                     if os.path.exists(join(sp_dir, fn)):
-                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn))
+                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config)
                         utils.rm_rf(join(egg_path, fn))
                     else:
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
@@ -127,14 +127,14 @@ def remove_easy_install_pth(files, preserve_egg_dir=False):
             if egg_path not in absfiles:
                 continue
             print('found egg:', egg_path)
-            write_pth(egg_path)
+            write_pth(egg_path, config=config)
 
     utils.rm_rf(join(sp_dir, 'easy-install.pth'))
 
 
-def rm_py_along_so():
+def rm_py_along_so(prefix):
     "remove .py (.pyc) files alongside .so or .pyd files"
-    for root, dirs, files in os.walk(config.build_prefix):
+    for root, dirs, files in os.walk(prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
                 name, unused_ext = splitext(fn)
@@ -169,7 +169,7 @@ def coerce_pycache_to_old_style(files, cwd):
             os.rmdir(root)
 
 
-def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_python):
+def compile_missing_pyc(files, cwd, python_exe):
     compile_files = []
     for fn in files:
         # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
@@ -180,7 +180,7 @@ def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_
         else:
             if fn.startswith('bin'):
                 continue
-        if fn.endswith(".py"):
+        if fn.endswith(".py") and fn + 'c' not in files:
             compile_files.append(fn)
 
     if compile_files:
@@ -190,17 +190,17 @@ def compile_missing_pyc(files, cwd=config.build_prefix, python_exe=config.build_
         coerce_pycache_to_old_style(compile_files, cwd=cwd)
 
 
-def post_process(files, preserve_egg_dir=False):
-    compile_missing_pyc(files)
-    remove_easy_install_pth(files, preserve_egg_dir=preserve_egg_dir)
-    rm_py_along_so()
+def post_process(files, prefix, config, preserve_egg_dir=False):
+    compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
+    remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
+    rm_py_along_so(prefix)
 
 
-def find_lib(link, path=None):
+def find_lib(link, prefix, path=None):
     from conda_build.build import prefix_files
-    files = prefix_files()
-    if link.startswith(config.build_prefix):
-        link = normpath(link[len(config.build_prefix) + 1:])
+    files = prefix_files(prefix)
+    if link.startswith(prefix):
+        link = normpath(link[len(prefix) + 1:])
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
@@ -225,7 +225,7 @@ def find_lib(link, path=None):
             # multiple places.
             md5s = set()
             for f in file_names[link]:
-                md5s.add(md5_file(join(config.build_prefix, f)))
+                md5s.add(md5_file(join(prefix, f)))
             if len(md5s) > 1:
                 sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
             else:
@@ -236,15 +236,15 @@ def find_lib(link, path=None):
     print("Don't know how to find %s, skipping" % link)
 
 
-def osx_ch_link(path, link_dict):
+def osx_ch_link(path, link_dict, prefix):
     link = link_dict['name']
     print("Fixing linking of %s in %s" % (link, path))
-    link_loc = find_lib(link, path)
+    link_loc = find_lib(link, prefix, path)
     if not link_loc:
         return
 
     lib_to_link = relpath(dirname(link_loc), 'lib')
-    # path_to_lib = utils.relative(path[len(config.build_prefix) + 1:])
+    # path_to_lib = utils.relative(path[len(prefix) + 1:])
 
     # e.g., if
     # path = '/build_prefix/lib/some/stuff/libstuff.dylib'
@@ -275,9 +275,9 @@ def osx_ch_link(path, link_dict):
     return ret
 
 
-def mk_relative_osx(path, build_prefix=None):
+def mk_relative_osx(path, prefix, build_prefix=None):
     '''
-    if build_prefix is None, then this is a standard conda build. The path
+    if build_prefix is None, the_n this is a standard conda build. The path
     and all dependencies are in the build_prefix.
 
     if package is built in develop mode, build_prefix is specified. Object
@@ -285,19 +285,19 @@ def mk_relative_osx(path, build_prefix=None):
     build_prefix/lib/. Also, in develop mode, 'path' is not in 'build_prefix'
     '''
     if build_prefix is None:
-        assert path.startswith(config.build_prefix + '/')
+        assert path.startswith(prefix + '/')
     else:
-        config.short_build_prefix = build_prefix
+        prefix = build_prefix
 
     assert sys.platform == 'darwin' and is_obj(path)
-    s = macho.install_name_change(path, osx_ch_link)
+    s = macho.install_name_change(path, partial(osx_ch_link, prefix=prefix))
 
     names = macho.otool(path)
     if names:
         # Add an rpath to every executable to increase the chances of it
         # being found.
         rpath = join('@loader_path',
-                     relpath(join(config.build_prefix, 'lib'),
+                     relpath(join(prefix, 'lib'),
                              dirname(path)), '').replace('/./', '/')
         macho.add_rpath(path, rpath, verbose=True)
 
@@ -309,50 +309,54 @@ def mk_relative_osx(path, build_prefix=None):
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
-        assert_relative_osx(path)
+        assert_relative_osx(path, prefix)
 
 
-def mk_relative_linux(f, rpaths=('lib',)):
-    path = join(config.build_prefix, f)
+def mk_relative_linux(f, prefix, build_prefix=None, rpaths=('lib',)):
+    path = join(prefix, f)
+    if build_prefix is None:
+        assert path.startswith(prefix + '/')
+    else:
+        prefix = build_prefix
     rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) if not
         d.startswith('/') else d for d in rpaths)
-    patchelf = external.find_executable('patchelf')
+    patchelf = external.find_executable('patchelf', prefix)
     print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
 
 
-def assert_relative_osx(path):
+def assert_relative_osx(path, prefix):
     for name in macho.get_dylibs(path):
-        assert not name.startswith(config.build_prefix), path
+        assert not name.startswith(prefix), path
 
 
-def mk_relative(m, f):
+def mk_relative(m, f, prefix):
     assert sys.platform != 'win32'
-    path = join(config.build_prefix, f)
+    path = join(prefix, f)
     if not is_obj(path):
         return
 
     if sys.platform.startswith('linux'):
-        mk_relative_linux(f, rpaths=m.get_value('build/rpaths', ['lib']))
+        mk_relative_linux(f, prefix=prefix, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
-        mk_relative_osx(path)
+        mk_relative_osx(path, prefix=prefix)
 
 
-def fix_permissions(files):
+def fix_permissions(files, prefix):
     print("Fixing permissions")
-    for root, dirs, unused_files in os.walk(config.build_prefix):
+    for root, dirs, unused_files in os.walk(prefix):
         for dn in dirs:
             lchmod(join(root, dn), int('755', 8))
 
     for f in files:
-        path = join(config.build_prefix, f)
+        path = join(prefix, f)
         st = os.lstat(path)
         lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
 
 
-def post_build(m, files):
+def post_build(m, files, prefix, build_python, croot):
     print('number of files:', len(files))
-    fix_permissions(files)
+    fix_permissions(files, prefix)
 
     if sys.platform == 'win32':
         return
@@ -364,19 +368,19 @@ def post_build(m, files):
 
     for f in files:
         if f.startswith('bin/'):
-            fix_shebang(f, osx_is_app=osx_is_app)
+            fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
         if binary_relocation:
-            mk_relative(m, f)
-        make_hardlink_copy(f)
+            mk_relative(m, f, prefix)
+        make_hardlink_copy(f, prefix)
 
-    check_symlinks(files)
+    check_symlinks(files, prefix, croot)
 
 
-def check_symlinks(files):
+def check_symlinks(files, prefix, croot):
     if readlink is False:
         return  # Not on Unix system
     msgs = []
-    real_build_prefix = realpath(config.build_prefix)
+    real_build_prefix = realpath(prefix)
     for f in files:
         path = join(real_build_prefix, f)
         if islink(path):
@@ -395,7 +399,7 @@ def check_symlinks(files):
                     os.symlink(relpath(real_link_path, dirname(path)), path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
-                if real_link_path.startswith(config.croot):
+                if real_link_path.startswith(croot):
                     msgs.append("%s is a symlink to a path that may not "
                         "exist after the build is completed (%s)" % (f, link_path))
 
@@ -405,11 +409,11 @@ def check_symlinks(files):
         sys.exit(1)
 
 
-def make_hardlink_copy(path):
+def make_hardlink_copy(path, prefix):
     """Hardlinks create invalid packages.  Copy files to break the link.
     Symlinks are OK, and unaffected here."""
     if not os.path.isabs(path) and not os.path.exists(path):
-        path = os.path.normpath(os.path.join(config.build_prefix, path))
+        path = os.path.normpath(os.path.join(prefix, path))
     nlinks = os.lstat(path).st_nlink
     if nlinks > 1:
         # copy file to new name
@@ -420,8 +424,8 @@ def make_hardlink_copy(path):
         os.rename("tmpfile", path)
 
 
-def get_build_metadata(m):
-    src_dir = source.get_dir()
+def get_build_metadata(m, config):
+    src_dir = source.get_dir(config)
 
     if "build" not in m.meta:
         m.meta["build"] = {}

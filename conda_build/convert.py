@@ -9,13 +9,20 @@ Tools for converting conda packages
 
 """
 from __future__ import absolute_import, division, print_function
-import re
-import tarfile
-import json
 
 from copy import deepcopy
+import json
+import os
+from os.path import abspath, expanduser, isdir, join, split
+import pprint
+import re
+import sys
+import tarfile
+import tempfile
 
 from .conda_interface import PY3
+from .utils import rm_rf
+
 if PY3:
     from io import StringIO, BytesIO
 else:
@@ -157,6 +164,19 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
     finally:
         t.close()
 
+
+def write_info(t, info):
+    tmp_dir = tempfile.mkdtemp()
+    with open(join(tmp_dir, 'files'), 'w') as fo:
+        for m in t.getmembers():
+            fo.write('%s\n' % m.path)
+    with open(join(tmp_dir, 'index.json'), 'w') as fo:
+        json.dump(info, fo, indent=2, sort_keys=True)
+    for fn in os.listdir(tmp_dir):
+        t.add(join(tmp_dir, fn), 'info/' + fn)
+    rm_rf(tmp_dir)
+
+
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
     (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
@@ -275,3 +295,97 @@ def get_pure_py_file_map(t, platform):
     file_map['info/files'] = filemember, BytesIO(files)
 
     return file_map
+
+
+path_mapping = [  # (unix, windows)
+                ('lib/python{pyver}', 'Lib'),
+                ('bin', 'Scripts')]
+
+
+pyver_re = re.compile(r'python\s+(\d.\d)')
+
+
+def conda_convert(file, output_dir=".", show_imports=False, platforms=None, force=False,
+                  dependencies=None, verbose=False, quiet=True, dry_run=False):
+    if not show_imports and platforms is None:
+        sys.exit('Error: --platform option required for conda package conversion')
+
+    with tarfile.open(file) as t:
+        if show_imports:
+            has_cext(t, show=True)
+            return
+
+        if not force and has_cext(t, show=show_imports):
+            print("WARNING: Package %s has C extensions, skipping. Use -f to "
+                  "force conversion." % file, file=sys.stderr)
+            return
+
+        file_dir, fn = split(file)
+
+        info = json.loads(t.extractfile('info/index.json')
+                          .read().decode('utf-8'))
+        source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
+
+        if dependencies:
+            info['depends'].extend(dependencies)
+
+        nonpy_unix = False
+        nonpy_win = False
+
+        if 'all' in platforms:
+            platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
+        base_output_dir = output_dir
+        for platform in platforms:
+            output_dir = join(base_output_dir, platform)
+            if abspath(expanduser(join(output_dir, fn))) == file:
+                if not quiet:
+                    print("Skipping %s/%s. Same as input file" % (platform, fn))
+                continue
+            if not PY3:
+                platform = platform.decode('utf-8')
+            dest_plat = platform.split('-')[0]
+            dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
+
+            if source_type == 'unix' and dest_type == 'win':
+                nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
+                    unix_to_win=True,
+                    show=verbose,
+                    quiet=quiet)
+            if source_type == 'win' and dest_type == 'unix':
+                nonpy_win = nonpy_win or has_nonpy_entry_points(t,
+                    unix_to_win=False,
+                    show=verbose,
+                    quiet=quiet)
+
+            if nonpy_unix and not force:
+                print(("WARNING: Package %s has non-Python entry points, "
+                       "skipping %s to %s conversion. Use -f to force.") %
+                      (file, info['platform'], platform), file=sys.stderr)
+                continue
+
+            if nonpy_win and not force:
+                print(("WARNING: Package %s has entry points, which are not "
+                       "supported yet. Skipping %s to %s conversion. Use -f to force.") %
+                      (file, info['platform'], platform), file=sys.stderr)
+                continue
+
+            file_map = get_pure_py_file_map(t, platform)
+
+            if dry_run:
+                if not quiet:
+                    print("Would convert %s from %s to %s" %
+                        (file, info['platform'], dest_plat))
+                if verbose:
+                    pprint.pprint(file_map)
+                continue
+            else:
+                if not quiet:
+                    print("Converting %s from %s to %s" %
+                        (file, info['platform'], platform))
+
+            if not isdir(output_dir):
+                os.makedirs(output_dir)
+            tar_update(t, join(output_dir, fn), file_map,
+                verbose=verbose, quiet=quiet)
+            with tarfile.open(join(output_dir, fn), 'w:bz2') as tf:
+                write_info(tf, info)

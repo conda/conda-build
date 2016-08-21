@@ -11,29 +11,28 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import subdir, bits
+from .conda_interface import root_dir, cc
 
-from conda_build import external
+from conda_build.os_utils import external
 from conda_build import source
 from conda_build import utils
-from conda_build.config import config
 from conda_build.features import feature_list
-from conda_build.scripts import prepend_bin_path
+from conda_build.utils import prepend_bin_path
 
 
-def get_perl_ver():
+def get_perl_ver(config):
     return str(config.CONDA_PERL)
 
 
-def get_lua_ver():
+def get_lua_ver(config):
     return str(config.CONDA_LUA)
 
 
-def get_py_ver():
+def get_py_ver(config):
     return '.'.join(str(config.CONDA_PY))
 
 
-def get_npy_ver():
+def get_npy_ver(config):
     if config.CONDA_NPY:
         # Convert int -> string, e.g.
         #   17 -> '1.7'
@@ -43,17 +42,17 @@ def get_npy_ver():
     return ''
 
 
-def get_stdlib_dir():
+def get_stdlib_dir(config):
     return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
-                'lib/python%s' % get_py_ver())
+                'lib/python%s' % get_py_ver(config))
 
 
-def get_lua_include_dir():
+def get_lua_include_dir(config):
     return join(config.build_prefix, "include")
 
 
-def get_sp_dir():
-    return join(get_stdlib_dir(), 'site-packages')
+def get_sp_dir(config):
+    return join(get_stdlib_dir(config), 'site-packages')
 
 
 def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
@@ -87,8 +86,16 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
             # On Windows, subprocess env can't handle unicode.
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-        remote_details = subprocess.check_output(["git", "--git-dir", cache_dir, "remote", "-v"],
-                                                 env=env, stderr=subprocess.STDOUT)
+        try:
+            remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
+                                                      "remote", "-v"],
+                                                     env=env, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            if sys.platform == 'win32' and cache_dir.startswith('/'):
+                cache_dir = utils.convert_unix_path_to_win(cache_dir)
+            remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
+                                                      "remote", "-v"],
+                                                     env=env, stderr=subprocess.STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
 
@@ -103,10 +110,10 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
 
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
-        if remote_url.lower() != git_url.lower():
-            logging.debug("\nremote does not match git_url\n")
-            logging.debug("Remote: " + remote_url.lower() + "\n")
-            logging.debug("git_url: " + git_url.lower() + "\n")
+        if not os.path.isdir(remote_url) and remote_url.lower() != git_url.lower():
+            logging.debug("remote does not match git_url")
+            logging.debug("Remote: " + remote_url.lower())
+            logging.debug("git_url: " + git_url.lower())
             return False
     except subprocess.CalledProcessError as error:
         logging.warn("Error obtaining git information.  Error was: ")
@@ -134,8 +141,8 @@ def get_git_info(repo):
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
     process = subprocess.Popen(["git", "describe", "--tags", "--long", "HEAD"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    env=env)
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               env=env, cwd=os.path.dirname(repo))
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
 
@@ -145,7 +152,8 @@ def get_git_info(repo):
 
     # get the _full_ hash of the current HEAD
     process = subprocess.Popen(["git", "rev-parse", "HEAD"],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                               cwd=os.path.dirname(repo))
     output = process.communicate()[0].strip()
     output = output.decode('utf-8')
 
@@ -158,23 +166,23 @@ def get_git_info(repo):
     return d
 
 
-def get_dict(m=None, prefix=None, dirty=False):
+def get_dict(config, m=None, prefix=None, dirty=False):
     if not prefix:
         prefix = config.build_prefix
 
     # conda-build specific vars
-    d = conda_build_vars(prefix, dirty)
+    d = conda_build_vars(prefix, config)
 
     # languages
-    d.update(python_vars())
-    d.update(perl_vars())
-    d.update(lua_vars())
+    d.update(python_vars(config))
+    d.update(perl_vars(config))
+    d.update(lua_vars(config))
 
     if m:
-        d.update(meta_vars(m))
+        d.update(meta_vars(m, config))
 
     # system
-    d.update(system_vars(d, prefix))
+    d.update(system_vars(d, prefix, config))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
@@ -183,59 +191,60 @@ def get_dict(m=None, prefix=None, dirty=False):
     return d
 
 
-def conda_build_vars(prefix, dirty):
+def conda_build_vars(prefix, config):
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
         'CONDA_DEFAULT_ENV': config.build_prefix,
-        'ARCH': str(bits),
+        'ARCH': str(config.bits),
         'PREFIX': prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
-        'SUBDIR': subdir,
-        'SRC_DIR': source.get_dir(),
+        'SUBDIR': config.subdir,
+        'SRC_DIR': source.get_dir(config),
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
-        'DIRTY': '1' if dirty else '',
+        'DIRTY': '1' if config.dirty else '',
+        'ROOT': root_dir,
     }
 
 
-def python_vars():
+def python_vars(config):
     vars = {
         'PYTHON': config.build_python,
         'PY3K': str(config.PY3K),
-        'STDLIB_DIR': get_stdlib_dir(),
-        'SP_DIR': get_sp_dir(),
-        'PY_VER': get_py_ver(),
+        'STDLIB_DIR': get_stdlib_dir(config),
+        'SP_DIR': get_sp_dir(config),
+        'PY_VER': get_py_ver(config),
         'CONDA_PY': str(config.CONDA_PY),
     }
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
-    if get_npy_ver():
-        vars['NPY_VER'] = get_npy_ver()
+    if get_npy_ver(config):
+        vars['NPY_VER'] = get_npy_ver(config)
         vars['CONDA_NPY'] = str(config.CONDA_NPY)
     return vars
 
 
-def perl_vars():
+def perl_vars(config):
     return {
-        'PERL_VER': get_perl_ver(),
+        'PERL_VER': get_perl_ver(config),
     }
 
 
-def lua_vars():
+def lua_vars(config):
     lua = config.build_lua
     if lua:
         return {
             'LUA': lua,
-            'LUA_INCLUDE_DIR': get_lua_include_dir(),
-            'LUA_VER': get_lua_ver(),
+            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+            'LUA_VER': get_lua_ver(config),
         }
     else:
         return {}
 
 
-def meta_vars(meta):
+def meta_vars(meta, config):
     d = {}
     for var_name in meta.get_value('build/script_env', []):
         value = os.getenv(var_name)
@@ -247,12 +256,12 @@ def meta_vars(meta):
         else:
             d[var_name] = value
 
-    git_dir = join(source.get_dir(), '.git')
+    git_dir = join(source.get_dir(config), '.git')
     if not isinstance(git_dir, str):
         # On Windows, subprocess env can't handle unicode.
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-    if external.find_executable('git') and os.path.exists(git_dir):
+    if external.find_executable('git', config.build_prefix) and os.path.exists(git_dir):
         git_url = meta.get_value('source/git_url')
 
         if os.path.exists(git_url):
@@ -316,8 +325,8 @@ def unix_vars(prefix):
     }
 
 
-def osx_vars(compiler_vars):
-    OSX_ARCH = 'i386' if bits == 32 else 'x86_64'
+def osx_vars(compiler_vars, config):
+    OSX_ARCH = 'i386' if config.bits == 32 else 'x86_64'
     compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
@@ -330,15 +339,15 @@ def osx_vars(compiler_vars):
     }
 
 
-def linux_vars(compiler_vars, prefix):
+def linux_vars(compiler_vars, prefix, config):
     compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
-    if bits == 32:
+    if config.bits == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
     return {}
 
 
-def system_vars(env_dict, prefix):
+def system_vars(env_dict, prefix, config):
     d = dict()
     compiler_vars = defaultdict(text_type)
 
@@ -352,8 +361,9 @@ def system_vars(env_dict, prefix):
 
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
-    d['PATH'] = os.environ['PATH']
-    d = prepend_bin_path(d, prefix)
+    d['PATH'] = os.environ.copy()['PATH']
+    if not config.activate:
+        d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
         d.update(windows_vars(prefix))
@@ -361,9 +371,9 @@ def system_vars(env_dict, prefix):
         d.update(unix_vars(prefix))
 
     if sys.platform == 'darwin':
-        d.update(osx_vars(compiler_vars))
+        d.update(osx_vars(compiler_vars, config))
     elif sys.platform.startswith('linux'):
-        d.update(linux_vars(compiler_vars, prefix))
+        d.update(linux_vars(compiler_vars, prefix, config))
 
     # make sure compiler_vars get appended to anything already set, including build/script_env
     for key in compiler_vars:
@@ -375,7 +385,7 @@ def system_vars(env_dict, prefix):
 
 
 if __name__ == '__main__':
-    e = get_dict()
+    e = get_dict(cc)
     for k in sorted(e):
         assert isinstance(e[k], str), k
         print('%s=%s' % (k, e[k]))

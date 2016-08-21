@@ -1,10 +1,10 @@
 # This recipe exercises the use of GIT_ variables in jinja template strings,
 # including use cases involving expressions such as FOO[:7] or FOO.replace(...)
 
-# it uses load_setup_py_data from conda_build.jinja_context to populate some fields
+# it uses functions from conda_build.jinja_context to populate some fields
 # with values fed from setuptools.
 
-# This is a legacy recipe - load_setuptools has been renamed to load_setup_py_data
+# This is a legacy recipe - load_setuptools has been renamed
 
 {% set data = load_setuptools() %}
 
@@ -13,8 +13,8 @@ package:
   version: {{ data.get('version') }}
 
 source:
-  git_url: ../../../../
-  git_tag: 1.21.5
+  git_url: ../../../../../conda_build_test_recipe
+  git_tag: 1.21.0
 
 requirements:
   build:
