@@ -18,7 +18,6 @@ import subprocess
 import yaml
 
 from .conda_interface import PY3
-from .conda_interface import move_to_trash, rm_rf
 from .conda_interface import Locked
 
 from conda_build import exceptions, utils
@@ -129,9 +128,9 @@ def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
         if not dirty:
             if sys.platform == 'win32':
                 if isdir(source.WORK_DIR):
-                    move_to_trash(source.WORK_DIR, '')
+                    utils.move_to_trash(source.WORK_DIR, '')
             else:
-                rm_rf(source.WORK_DIR)
+                utils.rm_rf(source.WORK_DIR)
 
             assert not isdir(source.WORK_DIR), ("Failed to clean work directory.  Please close open"
                                         " programs/terminals/folders and try again.")

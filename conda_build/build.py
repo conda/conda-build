@@ -24,7 +24,7 @@ from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import PY3
 from .conda_interface import fetch_index
-from .conda_interface import prefix_placeholder, linked, move_to_trash, symlink_conda
+from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import Locked
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound
@@ -42,6 +42,7 @@ from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
+from conda_build.utils import move_to_trash
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #    eventually.
@@ -399,6 +400,9 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
         plan.display_actions(actions, index)
 
         try:
+            if on_win:
+                for k, v in os.environ.items():
+                    os.environ[k] = str(v)
             plan.execute_actions(actions, index, verbose=debug)
         except SystemExit as exc:
             if "too short in" in str(exc) and config.prefix_length > 80:
@@ -841,7 +845,7 @@ def test(m, move_broken=True, activate=True, debug=False):
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
                                                                        test_file=test_file))
         if on_win:
-            cmd = [env["COMSPEC"], "/d", "/c", test_script]
+            cmd = ['cmd.exe', "/d", "/c", test_script]
         else:
             cmd = [shell_path, '-x', '-e', test_script]
         try:

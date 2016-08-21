@@ -1,27 +1,33 @@
 from __future__ import absolute_import, division, print_function
 
-import os
+import locale
 import logging
 import re
-import sys
+import os
 from os.path import join, isdir, isfile, abspath, expanduser, basename
 from shutil import copytree, copy2
 from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
-import locale
+import sys
 import time
 
-from .conda_interface import download
+from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build import external
 from conda_build.config import config
 from conda_build.utils import tar_xf, unzip, safe_print_unicode
 
+if sys.version_info[0] == 3:
+    from urllib.parse import urljoin
+else:
+    from urlparse import urljoin
+
 SRC_CACHE = join(config.croot, 'src_cache')
 GIT_CACHE = join(config.croot, 'git_cache')
 HG_CACHE = join(config.croot, 'hg_cache')
 SVN_CACHE = join(config.croot, 'svn_cache')
 WORK_DIR = join(config.croot, 'work')
+git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
 
 log = logging.getLogger(__file__)
 
@@ -90,40 +96,39 @@ def unpack(meta, verbose=False):
         copy2(src_path, WORK_DIR)
 
 
-def git_source(meta, recipe_dir, verbose=False):
-    ''' Download a source from Git repo. '''
+def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ref=None,
+                                  git_depth=-1, is_top_level=True, verbose=True):
+    """ Mirror (and checkout) a Git repository recursively.
+
+        It's not possible to use `git submodule` on a bare
+        repository, so the checkout must be done before we
+        know which submodules there are.
+
+        Worse, submodules can be identified by using either
+        absolute URLs or relative paths.  If relative paths
+        are used those need to be relocated upon mirroring,
+        but you could end up with `../../../../blah` and in
+        that case conda-build could be tricked into writing
+        to the root of the drive and overwriting the system
+        folders unless steps are taken to prevent that.
+    """
+
     if verbose:
         stdout = None
     else:
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
-
-    if not isdir(GIT_CACHE):
-        os.makedirs(GIT_CACHE)
-
-    git = external.find_executable('git')
-    if not git:
-        sys.exit("Error: git is not installed")
-    git_url = meta['git_url']
-    git_depth = int(meta.get('git_depth', -1))
-    if git_url.startswith('.'):
-        # It's a relative path from the conda recipe
-        os.chdir(recipe_dir)
-        git_dn = abspath(expanduser(git_url))
-        git_dn = "_".join(git_dn.split(os.path.sep)[1:])
-    else:
-        git_dn = git_url.split(':')[-1].replace('/', '_')
-    cache_repo = cache_repo_arg = join(GIT_CACHE, git_dn)
-    if sys.platform == 'win32':
-        is_cygwin = 'cygwin' in git.lower()
-        cache_repo_arg = cache_repo_arg.replace('\\', '/')
-        if is_cygwin:
-            cache_repo_arg = '/cygdrive/c/' + cache_repo_arg[3:]
-
-    # update (or create) the cache repo
-    if isdir(cache_repo):
-        if meta.get('git_rev', 'HEAD') != 'HEAD':
-            check_call([git, 'fetch'], cwd=cache_repo, stdout=stdout)
+    if not mirror_dir.startswith(GIT_CACHE + os.sep):
+        sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
+                 % (mirror_dir, GIT_CACHE))
+    if not isdir(os.path.dirname(mirror_dir)):
+        os.makedirs(os.path.dirname(mirror_dir))
+    mirror_dir_arg = mirror_dir
+    if sys.platform == 'win32' and 'cygwin' in git.lower():
+        mirror_dir_arg = '/cygdrive/c/' + mirror_dir[3:].replace('\\', '/')
+    if isdir(mirror_dir):
+        if git_ref != 'HEAD':
+            check_call([git, 'fetch'], cwd=mirror_dir, stdout=stdout)
         else:
             # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
             # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -132,42 +137,94 @@ def git_source(meta, recipe_dir, verbose=False):
             # but the user is working with a branch other than 'master' without
             # explicitly providing git_rev.
             check_call([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
-                       cwd=cache_repo, stdout=stdout)
+                       cwd=mirror_dir, stdout=stdout)
             check_call([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
-                       cwd=cache_repo, stdout=stdout)
+                       cwd=mirror_dir, stdout=stdout)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
+        check_call(args + [git_url, mirror_dir_arg], stdout=stdout)
+        assert isdir(mirror_dir)
 
-        check_call(args + [git_url, cache_repo_arg], stdout=stdout)
-        assert isdir(cache_repo)
+    # Now clone from mirror_dir into checkout_dir.
+    check_call([git, 'clone', mirror_dir_arg, checkout_dir], stdout=stdout)
+    if is_top_level:
+        checkout = git_ref
+        if git_url.startswith('.'):
+            process = Popen(["git", "rev-parse", checkout],
+                            stdout=PIPE, cwd=git_url)
+            output = process.communicate()[0].strip()
+            checkout = output.decode('utf-8')
+        if verbose:
+            print('checkout: %r' % checkout)
+        if checkout:
+            check_call([git, 'checkout', checkout],
+                       cwd=checkout_dir, stdout=stdout)
 
-    # now clone into the work directory
-    checkout = meta.get('git_rev')
-    # if rev is not specified, and the git_url is local,
-    # assume the user wants the current HEAD
-    if not checkout and git_url.startswith('.'):
-        process = Popen(["git", "rev-parse", "HEAD"],
-                    stdout=PIPE, cwd=git_url)
-        output = process.communicate()[0].strip()
-        checkout = output.decode('utf-8')
-    if checkout and verbose:
-        print('checkout: %r' % checkout)
+    # submodules may have been specified using relative paths.
+    # Those paths are relative to git_url, and will not exist
+    # relative to mirror_dir, unless we do some work to make
+    # it so.
+    try:
+        submodules = check_output([git, 'config', '--file', '.gitmodules', '--get-regexp',
+                                   'url'], stderr=stdout, cwd=checkout_dir)
+        submodules = submodules.decode('utf-8').splitlines()
+    except:
+        submodules = []
+    for submodule in submodules:
+        matches = git_submod_re.match(submodule)
+        if matches and matches.group(2)[0] == '.':
+            submod_name = matches.group(1)
+            submod_rel_path = matches.group(2)
+            submod_url = urljoin(git_url + '/', submod_rel_path)
+            submod_mirror_dir = os.path.normpath(
+                os.path.join(mirror_dir, submod_rel_path))
+            if verbose:
+                print('Relative submodule %s found: url is %s, submod_mirror_dir is %s' % (
+                      submod_name, submod_url, submod_mirror_dir))
+            with TemporaryDirectory() as temp_checkout_dir:
+                git_mirror_checkout_recursive(git, submod_mirror_dir, temp_checkout_dir, submod_url,
+                                              git_ref, git_depth, False, verbose)
 
-    check_call([git, 'clone', cache_repo_arg, WORK_DIR], stdout=stdout)
-    if checkout:
-        check_call([git, 'checkout', checkout], cwd=WORK_DIR, stdout=stdout)
-
-    # Submodules must be updated after checkout.
-    check_call([git, 'submodule', 'update', '--init', '--recursive'], cwd=WORK_DIR, stdout=stdout)
-
-    git_info(verbose=verbose)
-
+    if is_top_level:
+        # Now that all relative-URL-specified submodules are locally mirrored to
+        # relatively the same place we can go ahead and checkout the submodules.
+        check_call([git, 'submodule', 'update', '--init',
+                    '--recursive'], cwd=checkout_dir, stdout=stdout)
+        git_info(verbose=verbose)
     if not verbose:
         FNULL.close()
 
-    return WORK_DIR
+
+def git_source(meta, recipe_dir, verbose=False):
+    ''' Download a source from a Git repo (or submodule, recursively) '''
+    if not isdir(GIT_CACHE):
+        os.makedirs(GIT_CACHE)
+
+    git = external.find_executable('git')
+    if not git:
+        sys.exit("Error: git is not installed")
+
+    git_url = meta['git_url']
+    git_depth = int(meta.get('git_depth', -1))
+    git_ref = meta.get('git_rev', 'HEAD')
+
+    if git_url.startswith('.'):
+        # It's a relative path from the conda recipe
+        os.chdir(recipe_dir)
+        if sys.platform == 'win32':
+            git_dn = abspath(expanduser(git_url)).replace(':', '_')
+        else:
+            git_dn = abspath(expanduser(git_url))[1:]
+    else:
+        git_dn = git_url.split('://')[-1].replace('/', os.sep)
+        if git_dn.startswith(os.sep):
+            git_dn = git_dn[1:]
+    mirror_dir = join(GIT_CACHE, git_dn)
+    git_mirror_checkout_recursive(
+        git, mirror_dir, WORK_DIR, git_url, git_ref, git_depth, True, verbose)
+    return git
 
 
 def git_info(fo=None, verbose=False):
@@ -349,37 +406,58 @@ def _guess_patch_strip_level(filesstr, src_dir):
     return patchlevel
 
 
-def _source_files_from_patch_file(path):
+def _get_patch_file_details(path):
     re_files = re.compile('^(?:---|\+\+\+) ([^\n\t]+)')
     files = set()
     with open(path) as f:
-        files = {m.group(1) for l in f.readlines()
-                 for m in [re_files.search(l)]
-                 if m and m.group(1) != '/dev/null'}
-    return files
+        files = []
+        first_line = True
+        is_git_format = True
+        for l in f.readlines():
+            if first_line and not re.match('From [0-9a-f]{40}', l):
+                is_git_format = False
+            first_line = False
+            m = re_files.search(l)
+            if m and m.group(1) != '/dev/null':
+                files.append(m.group(1))
+            elif is_git_format and l.startswith('git') and not l.startswith('git --diff'):
+                is_git_format = False
+    return (files, is_git_format)
 
 
-def apply_patch(src_dir, path):
-    print('Applying patch: %r' % path)
+def apply_patch(src_dir, path, git=None):
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
 
-    patch = external.find_executable('patch')
-    if patch is None:
-        sys.exit("""\
-Error:
-    Did not find 'patch' in: %s
-    You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
-    or conda, m2-patch (Windows),
-""" % (os.pathsep.join(external.dir_paths)))
-    files = _source_files_from_patch_file(path)
-    patch_strip_level = _guess_patch_strip_level(files, src_dir)
-    patch_args = ['-p%d' % patch_strip_level, '-i', path]
-    if sys.platform == 'win32':
-        patch_args[-1] = _ensure_unix_line_endings(path)
-    check_call([patch] + patch_args, cwd=src_dir)
-    if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
-        os.remove(patch_args[-1])  # clean up .patch_unix file
+    files, is_git_format = _get_patch_file_details(path)
+    if git and is_git_format:
+        # Prevents git from asking interactive questions,
+        # also necessary to achieve sha1 reproducibility;
+        # as is --committer-date-is-author-date. By this,
+        # we mean a round-trip of git am/git format-patch
+        # gives the same file.
+        git_env = os.environ
+        git_env['GIT_COMMITTER_NAME'] = 'conda-build'
+        git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
+        check_call([git, 'am', '--committer-date-is-author-date', path],
+                   cwd=src_dir, stdout=None, env=git_env)
+    else:
+        print('Applying patch: %r' % path)
+        patch = external.find_executable('patch')
+        if patch is None:
+            sys.exit("""\
+        Error:
+            Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in: %s
+            You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
+            or conda, m2-patch (Windows),
+        """ % (os.pathsep.join(external.dir_paths)))
+        patch_strip_level = _guess_patch_strip_level(files, src_dir)
+        patch_args = ['-p%d' % patch_strip_level, '-i', path]
+        if sys.platform == 'win32':
+            patch_args[-1] = _ensure_unix_line_endings(path)
+        check_call([patch] + patch_args, cwd=src_dir)
+        if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
+            os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
 def provide(recipe_dir, meta, verbose=False, patch=True):
@@ -390,10 +468,11 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
       - apply patches (if any)
     """
 
+    git = None
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta, verbose=verbose)
     elif 'git_url' in meta:
-        git_source(meta, recipe_dir, verbose=verbose)
+        git = git_source(meta, recipe_dir, verbose=verbose)
     # build to make sure we have a work directory with source in it.  We want to make sure that
     #    whatever version that is does not interfere with the test we run next.
     elif 'hg_url' in meta:
@@ -411,7 +490,7 @@ def provide(recipe_dir, meta, verbose=False, patch=True):
     if patch:
         src_dir = get_dir()
         for patch in meta.get('patches', []):
-            apply_patch(src_dir, join(recipe_dir, patch))
+            apply_patch(src_dir, join(recipe_dir, patch), git)
 
 
 if __name__ == '__main__':

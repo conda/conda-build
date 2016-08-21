@@ -9,10 +9,10 @@ from conda.cli.common import (Completer, InstalledPackages, add_parser_channels,
                               specs_from_args, spec_from_line, specs_from_url)  # NOQA
 from conda.cli.conda_argparse import ArgumentParser  # NOQA
 from conda.compat import (PY3, StringIO, configparser, input, iteritems, lchmod, string_types,  # NOQA
-                          text_type)  # NOQA
+                          text_type, TemporaryDirectory)  # NOQA
 from conda.connection import CondaSession  # NOQA
 from conda.fetch import TmpDownload, download, fetch_index, handle_proxy_407  # NOQA
-from conda.install import (delete_trash, is_linked, linked, linked_data, move_to_trash,  # NOQA
+from conda.install import (delete_trash, is_linked, linked, linked_data, move_path_to_trash,  # NOQA
                            prefix_placeholder, rm_rf, symlink_conda)  # NOQA
 from conda.lock import Locked  # NOQA
 from conda.misc import untracked, walk_prefix  # NOQA

@@ -28,11 +28,12 @@ from .conda_interface import rm_rf
 from .conda_interface import normalized_version
 from .conda_interface import human_bytes, hashsum_file
 
-from conda_build.utils import tar_xf, unzip
+from conda_build.utils import tar_xf, unzip, guess_license_family
 from conda_build.source import SRC_CACHE, apply_patch
 from conda_build.build import create_env
 from conda_build.config import config
-from conda_build.metadata import MetaData
+from conda_build.metadata import (MetaData, allowed_license_families)
+
 
 if sys.version_info < (3,):
     from xmlrpclib import ServerProxy, Transport, ProtocolError
@@ -96,6 +97,7 @@ about:
   {home_comment}home: {homeurl}
   license: {license}
   {summary_comment}summary: {summary}
+  license_family: {license_family}
 
 # See
 # http://docs.continuum.io/conda/build.html for
@@ -674,6 +676,7 @@ def get_package_metadata(args, package, d, data):
     else:
         license = ' or '.join(licenses)
     d['license'] = license
+    d['license_family'] = guess_license_family(license, allowed_license_families)
 
 
 def valid(name):
