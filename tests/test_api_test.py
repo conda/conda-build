@@ -9,7 +9,7 @@ import pytest
 
 from conda_build import api
 from conda_build.source import download
-from .utils import subdir, testing_workdir, metadata_dir, test_config
+from .utils import testing_workdir, metadata_dir, test_config
 
 def test_package_test(testing_workdir, test_config):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""

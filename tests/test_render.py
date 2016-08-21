@@ -2,10 +2,6 @@ import os
 import subprocess
 import sys
 
-from conda_build.conda_interface import PY3
-
-from .utils import subdir
-
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 

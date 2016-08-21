@@ -10,7 +10,7 @@ import pytest
 
 from conda_build import api
 
-from .utils import testing_workdir, test_config, metadata_dir, subdir
+from .utils import testing_workdir, test_config, metadata_dir
 
 
 def test_render_need_download(testing_workdir, test_config):
@@ -49,11 +49,11 @@ def test_get_output_file_path(testing_workdir, test_config):
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "python_build"),
                                           config=test_config,
                                           no_download_source=True)
-    assert build_path == os.path.join(test_config.croot, subdir,
+    assert build_path == os.path.join(test_config.croot, test_config.subdir,
                                       "conda-build-test-python-build-1.0-0.tar.bz2")
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "python_build"),
                                           config=test_config)
-    assert build_path == os.path.join(test_config.croot, subdir,
+    assert build_path == os.path.join(test_config.croot, test_config.subdir,
                                       "conda-build-test-python-build-1.0-0.tar.bz2")
 
 
@@ -68,7 +68,7 @@ def test_get_output_file_path_jinja2(testing_workdir, test_config):
                                               no_download_source=True)
     build_path = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                           config=test_config)
-    assert build_path == os.path.join(test_config.croot, subdir,
+    assert build_path == os.path.join(test_config.croot, test_config.subdir,
                                       "conda-build-test-source-git-jinja2-1.20.2-"
                                       "py{0}_0_g262d444.tar.bz2".format(test_config.CONDA_PY))
 
