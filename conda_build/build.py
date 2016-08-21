@@ -4,9 +4,10 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import absolute_import, division, print_function
 
 from collections import deque
-import io
+import errno
 import fnmatch
 from glob import glob
+import io
 import json
 import logging
 import mmap
@@ -17,6 +18,7 @@ import stat
 import subprocess
 import sys
 import tarfile
+import time
 
 # this one is some strange error that requests raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
@@ -410,6 +412,10 @@ def create_env(prefix, specs, config, clear_cache=True):
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
                     plan.execute_actions(actions, index, verbose=config.debug)
+                except OSError as e:
+                    if e.errno == errno.ENOENT:
+                        time.sleep(5)
+                        plan.execute_actions(actions, index, verbose=config.debug)
                 except SystemExit as exc:
                     if "too short in" in str(exc) and config.prefix_length > 80:
                         log.warn("Build prefix failed with prefix length {0}."

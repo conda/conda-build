@@ -23,24 +23,25 @@ import conda.config as cc  # NOQA
 
 try:
     # conda 4.2.x
-    from conda.base.context import context, get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
+    import conda.base.context
+    from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
     from conda.base.constants import DEFAULT_CHANNELS  # NOQA
-    get_prefix = partial(context_get_prefix, context)
+    get_prefix = partial(context_get_prefix, conda.base.context.context)
     get_default_urls = lambda: DEFAULT_CHANNELS
 
-    arch_name = context.arch_name
-    binstar_upload = context.binstar_upload
-    bits = context.bits
-    default_prefix = context.default_prefix
-    default_python = context.default_python
-    envs_dirs = context.envs_dirs
-    pkgs_dirs = context.pkgs_dirs
-    platform = context.platform
-    root_dir = context.root_dir
-    root_writable = context.root_writable
-    subdir = context.subdir
+    arch_name = conda.base.context.context.arch_name
+    binstar_upload = conda.base.context.context.binstar_upload
+    bits = conda.base.context.context.bits
+    default_prefix = conda.base.context.context.default_prefix
+    default_python = conda.base.context.context.default_python
+    envs_dirs = conda.base.context.context.envs_dirs
+    pkgs_dirs = conda.base.context.context.pkgs_dirs
+    platform = conda.base.context.context.platform
+    root_dir = conda.base.context.context.root_dir
+    root_writable = conda.base.context.context.root_writable
+    subdir = conda.base.context.context.subdir
 
-    get_rc_urls = lambda: list(context.channels)
+    get_rc_urls = lambda: list(conda.base.context.context.channels)
     from conda.models.channel import get_conda_build_local_url
     get_local_urls = lambda: list(get_conda_build_local_url()) or []
 
