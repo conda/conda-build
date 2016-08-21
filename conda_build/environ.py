@@ -86,8 +86,16 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
             # On Windows, subprocess env can't handle unicode.
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-        remote_details = subprocess.check_output(["git", "--git-dir", cache_dir, "remote", "-v"],
-                                                 env=env, stderr=subprocess.STDOUT)
+        try:
+            remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
+                                                      "remote", "-v"],
+                                                     env=env, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            if sys.platform == 'win32' and cache_dir.startswith('/'):
+                cache_dir = utils.convert_unix_path_to_win(cache_dir)
+            remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
+                                                      "remote", "-v"],
+                                                     env=env, stderr=subprocess.STDOUT)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
 
