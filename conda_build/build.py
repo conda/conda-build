@@ -36,13 +36,17 @@ from conda_build.render import parse_or_try_download, output_yaml, bldpkg_path, 
 from conda_build.scripts import create_entry_points, prepend_bin_path
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.utils import rm_rf, _check_call, on_win, codec, move_to_trash
+from conda_build.utils import rm_rf, _check_call, on_win, codec
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
+from conda_build.utils import move_to_trash
 
+# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
+#    eventually.
+import encodings.idna  # NOQA
 
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
@@ -395,10 +399,28 @@ def create_env(prefix, specs, clear_cache=True, debug=False):
         actions = plan.install_actions(prefix, index, specs)
         plan.display_actions(actions, index)
 
-        if on_win:
-            for k, v in os.environ.items():
-                os.environ[k] = str(v)
-        plan.execute_actions(actions, index, verbose=debug)
+        try:
+            if on_win:
+                for k, v in os.environ.items():
+                    os.environ[k] = str(v)
+            plan.execute_actions(actions, index, verbose=debug)
+        except SystemExit as exc:
+            if "too short in" in str(exc) and config.prefix_length > 80:
+                log.warn("Build prefix failed with prefix length {0}."
+                         .format(config.prefix_length))
+                log.warn("Error was: ")
+                log.warn(str(exc))
+                log.warn("One or more of your package dependencies needs to be rebuilt with a "
+                         "longer prefix length.")
+                log.warn("Falling back to legacy prefix length of 80 characters.")
+                log.warn("Your package will not install into prefixes longer than 80 characters.")
+                config.prefix_length = 80
+                if on_win:
+                    os.environ = {k.encode(codec) if hasattr(k, 'encode') else k:
+                                    v.encode(codec) if hasattr(v, 'encode') else v
+                                    for k, v in os.environ.items()}
+                prefix = config.build_prefix
+                create_env(prefix, specs, clear_cache=clear_cache, debug=debug)
 
         os.environ['PATH'] = old_path
 
