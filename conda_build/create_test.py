@@ -6,9 +6,34 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
-from os.path import dirname, join, exists
+from os.path import join, exists
 
 from conda_build.utils import copy_into
+
+
+header = '''
+from __future__ import absolute_import, division, print_function
+
+import sys
+import subprocess
+from distutils.spawn import find_executable
+import shlex
+
+
+def call_args(string):
+    args = shlex.split(string)
+    arg0 = args[0]
+    args[0] = find_executable(arg0)
+    if not args[0]:
+        sys.exit("Command not found: '%s'" % arg0)
+
+    try:
+        subprocess.check_call(args)
+    except subprocess.CalledProcessError:
+        sys.exit('Error: command failed: %s' % ' '.join(args))
+
+# --- end header
+'''
 
 
 def create_files(dir_path, m, config):
@@ -54,8 +79,7 @@ def create_py_files(dir_path, m):
     has_tests = False
     with open(join(dir_path, 'run_test.py'), 'w') as fo:
         fo.write("# tests for %s (this is a generated file)\n" % m.dist())
-        with open(join(dirname(__file__), 'header_test.py')) as fi:
-            fo.write(fi.read() + '\n')
+        fo.write(header + '\n')
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
         for name in m.get_value('test/imports', []):
