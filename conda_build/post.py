@@ -20,12 +20,13 @@ except ImportError:
     readlink = False
 
 from conda_build.os_utils import external
-from conda_build import environ
-from conda_build import utils
-from conda_build import source
 from .conda_interface import lchmod
 from .conda_interface import walk_prefix
 from .conda_interface import md5_file
+
+from conda_build import environ
+from conda_build import utils
+from conda_build import source
 
 if sys.platform.startswith('linux'):
     from conda_build.os_utils import elf
@@ -190,9 +191,9 @@ def compile_missing_pyc(files, cwd, python_exe):
 
 
 def post_process(files, prefix, config, preserve_egg_dir=False):
+    compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
-    compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
 
 
 def find_lib(link, prefix, path=None):

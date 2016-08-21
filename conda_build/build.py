@@ -884,7 +884,8 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
         recipe_parent_dir = os.path.dirname(recipe)
         to_build_recursive.append(os.path.basename(recipe))
         try:
-            config.compute_build_id(os.path.basename(recipe), reset=True)
+            if config.set_build_id:
+                config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                                                                 config=config)
             with config:

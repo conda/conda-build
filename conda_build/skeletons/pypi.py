@@ -27,11 +27,11 @@ from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
 
-from conda_build.utils import tar_xf, unzip, rm_rf
+from conda_build.utils import tar_xf, unzip, rm_rf, guess_license_family
 from conda_build.source import apply_patch
 from conda_build.build import create_env
 from conda_build.config import Config
-from conda_build.metadata import MetaData
+from conda_build.metadata import MetaData, allowed_license_families
 
 if PY3:
     try:
@@ -207,6 +207,7 @@ about:
   {home_comment}home: {homeurl}
   license: {license}
   {summary_comment}summary: {summary}
+  license_family: {license_family}
 
 # See
 # http://docs.continuum.io/conda/build.html for
@@ -812,6 +813,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
     else:
         license = ' or '.join(licenses)
     d['license'] = license
+    d['license_family'] = guess_license_family(license, allowed_license_families)
 
 
 def valid(name):

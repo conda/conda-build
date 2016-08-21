@@ -140,6 +140,13 @@ different sets of packages."""
         help="do not activate the build and test envs; just prepend to PATH",
         dest='activate',
     )
+    p.add_argument(
+        "--no-build-id",
+        action="store_false",
+        help=("do not generate unique build folder names.  Use if having issues with "
+              "paths being too long."),
+        dest='set_build_id',
+    )
 
     add_parser_channels(p)
 

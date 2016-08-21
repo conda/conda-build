@@ -1,18 +1,65 @@
-XXXX-YY-ZZ 1.21.x:
+2016-08-18 1.21.14:
+
+Bug fixes:
+----------
+
+* fix pyc compilation when egg files/folders are present #1225
+
+Contributors:
+-------------
+
+* @msarahan
+
+
+2016-08-18 1.21.13:
+
+Enhancements:
+-------------
+
+* use git -am when applying git patches, so that patches better retain git history #1222
+* allow relatively pathed git submodules #1222
+* add guess_license_family to pypi skeleton generator #1222
+
+Bug fixes:
+----------
+
+* fix typo in convert.py
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
+2016-08-17 1.21.12:
 ------------------
 
 Enhancements:
 -------------
 
 * Whitelist the CPU_COUNT environment variable. #1149
+* Add tool for examining prefix length in existing packages #1195
+* Add a conda interface layer for better compatibility with conda 4.2 #1200 #1203 #1206
+* Document how to run tests #1205
+* Update default versions for R (3.3.1) and Perl (5.20.3) builds #1220
 
 Bug fixes:
 ----------
+
+* Don't compile .py files in executable locations.  Compile one at a time.  #1186
+* Don't force download if vcs is used as a source #1212
+* Break hardlinks as a post-install step.  Hard links can cause problems at package install time.  #1215
+* Make environment variables used by conda in environment creation always be bytestrings #1216 #1219
+
 
 Contributors:
 -------------
 
 * @jakirkham
+* @kalefranz
+* @msarahan
+
 
 2016-08-06 1.21.11:
 -------------------

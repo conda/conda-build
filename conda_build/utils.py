@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
 import contextlib
+from difflib import get_close_matches
 from distutils.dir_util import copy_tree
 import fnmatch
 from glob import glob
@@ -11,12 +12,12 @@ import operator
 import os
 from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
 import re
+import subprocess
 import sys
 import shutil
 import tarfile
 import tempfile
 import zipfile
-import subprocess
 
 import filelock
 
@@ -416,6 +417,10 @@ def create_entry_points(items, config):
         create_entry_point(join(bin_dir, cmd), module, func, config)
 
 
-def move_to_trash(path, placeholder=""):
-    from .conda_interface import move_path_to_trash as trash
-    return trash(path)
+def guess_license_family(license, allowed_license_families):
+    # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
+    if 'GPL (>= 2)' in license or license == 'GPL':
+        return 'GPL3'
+    else:
+        return get_close_matches(license,
+                                 allowed_license_families, 1, 0.0)[0]

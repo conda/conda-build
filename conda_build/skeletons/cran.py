@@ -4,7 +4,6 @@ Tools for converting Cran packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
-from difflib import get_close_matches
 from itertools import chain
 from os import makedirs, listdir
 from os.path import join, exists, isfile, basename, isdir
@@ -24,7 +23,7 @@ except ImportError:
 
 from conda_build import source, metadata
 from conda_build.config import Config
-from conda_build.utils import rm_rf
+from conda_build.utils import rm_rf, guess_license_family
 from conda_build.conda_interface import text_type, iteritems
 from conda_build.conda_interface import Completer
 
@@ -587,13 +586,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
+        d['license_family'] = guess_license_family(d['license'],
+                                                         metadata.allowed_license_families)
 
-        # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
-        if 'GPL (>= 2)' in d['license'] or d['license'] == 'GPL':
-            d['license_family'] = 'GPL3'
-        else:
-            d['license_family'] = get_close_matches(d['license'],
-                                                    metadata.allowed_license_families, 1, 0.0)[0]
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
         if cran_package.get('License_restricts_use', None) == 'yes':

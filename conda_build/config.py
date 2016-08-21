@@ -86,6 +86,7 @@ class Config(object):
                   Setting('subdir', subdir),
                   Setting('bits', bits),
                   Setting('platform', platform),
+                  Setting('set_build_id', True),
                   ]
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
