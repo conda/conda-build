@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import locale
 import logging
 import os
-from os.path import join, isdir, isfile, abspath, expanduser, basename, exists
+from os.path import join, isdir, isfile, abspath, basename, exists, normpath
 import re
 from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
 import sys
@@ -13,10 +13,10 @@ from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into  # , on_win
+from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into, on_win
 
-# if on_win:
-#     from conda_build.utils import convert_win_path_to_unix
+if on_win:
+    from conda_build.utils import convert_unix_path_to_win
 
 if sys.version_info[0] == 3:
     from urllib.parse import urljoin
@@ -118,11 +118,12 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
     if not mirror_dir.startswith(config.git_cache + os.sep):
         sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
                  % (mirror_dir, config.git_cache))
+    if on_win:
+        mirror_dir = mirror_dir.replace("\\", '/')
+        checkout_dir = checkout_dir.replace("\\", '/')
+
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
-    mirror_dir_arg = mirror_dir
-    if sys.platform == 'win32' and 'cygwin' in git.lower():
-        mirror_dir_arg = '/cygdrive/c/' + mirror_dir[3:].replace('\\', '/')
     if isdir(mirror_dir):
         if git_ref != 'HEAD':
             check_call([git, 'fetch'], cwd=mirror_dir, stdout=stdout)
@@ -141,11 +142,22 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
-        check_call(args + [git_url, mirror_dir_arg], stdout=stdout)
+        try:
+            check_call(args + [git_url, mirror_dir], stdout=stdout)
+        except CalledProcessError:
+            # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
+            # know how to normalize it.  Need to convert it to a windows path.
+            if sys.platform == 'win32' and git_url.startswith('/'):
+                git_url = convert_unix_path_to_win(git_url)
+
+            if os.path.exists(git_url):
+                # Local filepaths are allowed, but make sure we normalize them
+                git_url = normpath(git_url)
+            check_call(args + [git_url, mirror_dir], stdout=stdout)
         assert isdir(mirror_dir)
 
     # Now clone from mirror_dir into checkout_dir.
-    check_call([git, 'clone', mirror_dir_arg, checkout_dir], stdout=stdout)
+    check_call([git, 'clone', mirror_dir, checkout_dir], stdout=stdout)
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
@@ -209,11 +221,11 @@ def git_source(meta, recipe_dir, config):
 
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
-        os.chdir(recipe_dir)
+        git_url = abspath(normpath(os.path.join(recipe_dir, git_url)))
         if sys.platform == 'win32':
-            git_dn = abspath(expanduser(git_url)).replace(':', '_')
+            git_dn = git_url.replace(':', '_')
         else:
-            git_dn = abspath(expanduser(git_url))[1:]
+            git_dn = git_url[1:]
     else:
         git_dn = git_url.split('://')[-1].replace('/', os.sep)
         if git_dn.startswith(os.sep):
