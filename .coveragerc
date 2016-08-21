@@ -1,3 +1,4 @@
 [run]
 include=conda_build/*
 parallel=True
+omit=conda_build/skeletons/_example_skeleton.py
