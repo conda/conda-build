@@ -135,8 +135,8 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
     # Windows path conversion
     if ISWIN:
         for fns in (d['site-packages'], d['Examples']):
-            for i in range(len(fns)):
-                fns[i] = fns[i].replace('\\', '/')
+            for i, fn in enumerate(fns):
+                fns[i] = fn.replace('\\', '/')
 
     # Find our way to this directory
     this_dir = dirname(__file__)

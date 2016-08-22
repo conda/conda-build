@@ -127,7 +127,7 @@ def _get_matching_load_commands(lines, cb_filter):
                     value = listy[2]
                 try:
                     value = int(value)
-                except:
+                except ValueError:
                     pass
                 lcdict[key] = value
             result.append(lcdict)

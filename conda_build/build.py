@@ -20,9 +20,11 @@ import sys
 import tarfile
 import time
 
-# this one is some strange error that requests raises: "LookupError: unknown encoding: idna"
+# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
+#   eventually
+# exception is raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
-import encodings.idna  # noqa
+import encodings.idna  # NOQA
 
 import filelock
 
@@ -53,10 +55,6 @@ from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
-
-# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
-#    eventually.
-import encodings.idna  # NOQA
 
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'

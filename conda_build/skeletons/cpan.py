@@ -526,7 +526,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
     '''
     # First check if its already a distribution
     try:
-        with PerlTmpDownload('{}/v0/release/{}'.format(cpan_url,
+        with PerlTmpDownload('{0}/v0/release/{1}'.format(cpan_url,
                                                    module)) as json_path:
             with contextlib.closing(gzip.open(json_path)) as dist_json_file:
                 rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
@@ -539,7 +539,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
     # Check if it's a module instead
     if rel_dict is None:
         try:
-            with PerlTmpDownload('{}/v0/module/{}'.format(cpan_url,
+            with PerlTmpDownload('{0}/v0/module/{1}'.format(cpan_url,
                                                       module)) as json_path:
                 with contextlib.closing(gzip.open(json_path)) as dist_json_file:
                     mod_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
@@ -571,7 +571,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # Get latest info to find author, which is necessary for retrieving a
     # specific version
     try:
-        with PerlTmpDownload('{}/v0/release/{}'.format(cpan_url, package)) as json_path:
+        with PerlTmpDownload('{0}/v0/release/{1}'.format(cpan_url, package)) as json_path:
             with contextlib.closing(gzip.open(json_path)) as dist_json_file:
                 rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
                 rel_dict['version'] = rel_dict['version'].lstrip('v')
@@ -596,7 +596,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
             (rel_dict['version'] != version_str)):
         author = rel_dict['author']
         try:
-            with PerlTmpDownload('{}/v0/release/{}/{}-{}'.format(cpan_url,
+            with PerlTmpDownload('{0}/v0/release/{1}/{2}-{3}'.format(cpan_url,
                                                              author,
                                                              package,
                                                              version_str)) as json_path:
