@@ -386,15 +386,17 @@ def test_condarc_channel_available(testing_workdir, test_config):
 
 
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
+    info_message = "Starting new HTTPS connection"
+    debug_message = "GET /pkgs/free/noarch/repodata.json.bz2 HTTP/1.1"
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
     # this comes from an info message
-    assert 'Fetching package metadata ...' not in caplog.text()
+    assert info_message not in caplog.text()
     # this comes from a debug message
-    assert 'Checking satisfiability of current install' not in caplog.text()
+    assert debug_message not in caplog.text()
 
     test_config.debug = True
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
     # this comes from an info message
-    assert 'Fetching package metadata ...' in caplog.text()
+    assert info_message in caplog.text()
     # this comes from a debug message
-    assert 'Checking satisfiability of current install' in caplog.text()
+    assert debug_message in caplog.text()
