@@ -234,8 +234,8 @@ def get_pure_py_file_map(t, platform):
             i[1].format(pyver=pyver)) for i in mapping]
     else:
         # No python version dependency was specified
-        # Only a problem when converting from windows to unix, since 
-        # the python version is part of the folder structure on unix. 
+        # Only a problem when converting from windows to unix, since
+        # the python version is part of the folder structure on unix.
         if source_type == 'win' and dest_type == 'unix':
             raise RuntimeError("Python dependency must explicit when converting"
                                "from windows package to a linux packages")
