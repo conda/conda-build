@@ -24,10 +24,10 @@ from .conda_interface import PY3
 from .utils import rm_rf
 
 if PY3:
-    from io import StringIO, BytesIO
+    from io import StringIO, BytesIO as bytes_io
 else:
     from cStringIO import StringIO
-    BytesIO = StringIO
+    bytes_io = StringIO
 
 
 BAT_PROXY = """\
@@ -244,7 +244,7 @@ def get_pure_py_file_map(t, platform):
             else:
                 newbytes = json.dumps(newinfo)
             newmember.size = len(newbytes)
-            file_map['info/index.json'] = (newmember, BytesIO(newbytes))
+            file_map['info/index.json'] = (newmember, bytes_io(newbytes))
             continue
         elif member.path == 'info/files':
             # We have to do this at the end when we have all the files
@@ -284,7 +284,7 @@ def get_pure_py_file_map(t, platform):
                     else:
                         data = BAT_PROXY.replace('\n', '\r\n')
                     newmember.size = len(data)
-                    file_map[newpath] = newmember, BytesIO(data)
+                    file_map[newpath] = newmember, bytes_io(data)
                     batseen.add(oldpath)
                     files = files + newpath + "\n"
 
@@ -292,7 +292,7 @@ def get_pure_py_file_map(t, platform):
     if PY3:
         files = bytes(files, 'utf-8')
     filemember.size = len(files)
-    file_map['info/files'] = filemember, BytesIO(files)
+    file_map['info/files'] = filemember, bytes_io(files)
 
     return file_map
 

@@ -17,14 +17,14 @@ def find_executable(executable, prefix=None):
                      join(root_dir, 'Library\\usr\\bin'),
                      join(root_dir, 'Library\\bin'), ]
         if prefix:
-            dir_paths = [join(prefix, 'Scripts'),
+            dir_paths[0:0] = [join(prefix, 'Scripts'),
                          join(prefix, 'Library\\mingw-w64\\bin'),
                          join(prefix, 'Library\\usr\\bin'),
-                         join(prefix, 'Library\\bin'), ] + dir_paths
+                         join(prefix, 'Library\\bin'), ]
     else:
         dir_paths = [join(root_dir, 'bin'), ]
         if prefix:
-            dir_paths = [join(prefix, 'bin'), ] + dir_paths
+            dir_paths.insert(0, join(prefix, 'bin'))
 
     dir_paths.extend(os.environ['PATH'].split(os.pathsep))
 

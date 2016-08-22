@@ -107,6 +107,8 @@ def select_lines(data, namespace):
         if m:
             cond = m.group(3)
             try:
+                # TODO: is there a way to do this without eval?  Eval allows arbitrary
+                #    code execution.
                 if eval(cond, namespace, {}):
                     lines.append(m.group(1) + trailing_quote)
             except:

@@ -413,22 +413,18 @@ def get_latest_git_tag(config):
     return tags[-1]
 
 
-def get_session(output_dir, verbose=True, cache=[]):
-    if cache:
-        return cache[0]
+def get_session(output_dir, verbose=True):
     session = requests.Session()
     try:
         import cachecontrol
         import cachecontrol.caches
     except ImportError:
         if verbose:
-            print("Tip: install CacheControl to cache the CRAN metadata")
+            print("Tip: install CacheControl (conda package) to cache the CRAN metadata")
     else:
         session = cachecontrol.CacheControl(session,
             cache=cachecontrol.caches.FileCache(join(output_dir,
                 '.web_cache')))
-
-    cache.append(session)
     return session
 
 
@@ -591,7 +587,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
 
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
-        if cran_package.get('License_restricts_use', None) == 'yes':
+        if cran_package.get('License_restricts_use') == 'yes':
             d['license'] += ' (Restricts use)'
 
         if "URL" in cran_package:
