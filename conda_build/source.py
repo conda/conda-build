@@ -477,6 +477,8 @@ def provide(recipe_dir, meta, config, patch=True):
       - apply patches (if any)
     """
 
+    if not os.path.isdir(config.build_folder):
+        os.makedirs(config.build_folder)
     git = None
     if any(k in meta for k in ('fn', 'url')):
         unpack(meta, config=config)
