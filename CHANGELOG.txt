@@ -1,3 +1,44 @@
+2016-08-22 2.0.0beta2:
+
+This release includes all current (1.21.14) changes made to the 1.21.x series.
+
+Enhancements:
+-------------
+
+* Configuration is local, passed via config argument.  No more global config.  #953
+* Created Python API in conda_build/api.py #953
+* Separate build folders per-build to allow parallelism #953
+* Add locking to allow safe parallelism #953
+* Add build flag to turn off separate build folders (--no-build-id) #953
+* Much greater test coverage across all modules #953
+* Add CONDA_BUILD_STATE variable that reflects RENDER, BUILD, or TEST state of build #1232
+* Add support for HG_ variables in meta.yaml templates (for hg repos) #207 #1234
+* Add source_files test argument in meta.yaml to copy files from source into test #1237
+
+Bug fixes:
+----------
+
+* Fix error converting linux to win packages due to python version mismatch #481
+* Fix infinite loop that occurred with circular dependencies being built #953
+* Improve test data structures to allow profiling with pytest-profiling #953
+* Fix version sorting in pypi skeleton generator #1238
+
+Restructuring:
+--------------
+
+* CLI scripts have been gutted and moved to conda_build/cli.  Content from them is in
+  conda_build, in scripts without main_ prefix.  #953
+* Skeleton generators have been broken out of main_skeleton.py, and consolidated into
+  conda_build/skeletons.  The contents of this folder are examined at runtime for pluggability.  #953
+
+Contributors:
+-------------
+
+* @melund
+* @msarahan
+* @pigmej
+
+
 2016-08-18 1.21.14:
 
 Bug fixes:
