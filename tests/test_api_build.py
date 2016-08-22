@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tarfile
 
-from conda_build.conda_interface import PY3, cc, NoPackagesFound, url_path
+from conda_build.conda_interface import PY3, url_path, load_condarc, sys_rc_path
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -17,8 +17,7 @@ import pytest
 from conda_build import api
 from conda_build.utils import copy_into
 
-from .utils import (metadata_dir, fail_dir, is_valid_dir,
-                    testing_workdir, test_config)
+from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -110,17 +109,17 @@ def test_no_anaconda_upload_condarc(service_name, testing_workdir, capfd):
     assert "Automatic uploading is disabled" in output, error
 
 
-def test_git_describe_info_on_branch():
+def test_git_describe_info_on_branch(test_config):
     output = api.get_output_file_path(os.path.join(metadata_dir, "_git_describe_number_branch"))
-    test_path = os.path.join(sys.prefix, "conda-bld", cc.subdir,
+    test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                              "git_describe_number_branch-1.20.2-1_g82c6ba6.tar.bz2")
     assert test_path == output
 
 
-def test_no_include_recipe_cmd_line_arg():
+def test_no_include_recipe_cmd_line_arg(test_config):
     """Two ways to not include recipe: build/include_recipe: False in meta.yaml; or this.
     Former is tested with specific recipe."""
-    output_file = os.path.join(sys.prefix, "conda-bld", cc.subdir,
+    output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                "empty_sections-0.0-0.tar.bz2")
     api.build(empty_sections, anaconda_upload=False)
     assert package_has_file(output_file, "info/recipe/meta.yaml")
@@ -130,15 +129,15 @@ def test_no_include_recipe_cmd_line_arg():
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 
-def test_no_include_recipe_meta_yaml():
+def test_no_include_recipe_meta_yaml(test_config):
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
-    output_file = os.path.join(sys.prefix, "conda-bld", cc.subdir,
+    output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                "empty_sections-0.0-0.tar.bz2")
     api.build(empty_sections, anaconda_upload=False)
     assert package_has_file(output_file, "info/recipe/meta.yaml")
 
-    output_file = os.path.join(sys.prefix, "conda-bld", cc.subdir,
+    output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                "no_include_recipe-0.0-0.tar.bz2")
     api.build(os.path.join(metadata_dir, '_no_include_recipe'), anaconda_upload=False)
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
@@ -155,7 +154,7 @@ def test_early_abort(capfd):
 def test_output_build_path_git_source(testing_workdir, test_config):
     output = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                       config=test_config)
-    test_path = os.path.join(test_config.croot, cc.subdir,
+    test_path = os.path.join(test_config.croot, test_config.subdir,
                      "conda-build-test-source-git-jinja2-1.20.2-py{}{}_0_g262d444.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     assert output == test_path
@@ -308,9 +307,9 @@ def test_skip_existing(testing_workdir, test_config, capfd):
 def test_skip_existing_url(testing_workdir, test_config, capfd):
     # make sure that it is built
     api.build(empty_sections, config=test_config)
-    output_file = os.path.join(test_config.croot, cc.subdir, "empty_sections-0.0-0.tar.bz2")
+    output_file = os.path.join(test_config.croot, test_config.subdir, "empty_sections-0.0-0.tar.bz2")
 
-    platform = os.path.join(testing_workdir, cc.subdir)
+    platform = os.path.join(testing_workdir, test_config.subdir)
     copy_into(output_file, os.path.join(platform, os.path.basename(output_file)), test_config)
 
     # create the index so conda can find the file
@@ -346,7 +345,7 @@ def test_requirements_txt_for_run_reqs(testing_workdir, test_config):
 
 
 def test_compileall_compiles_all_good_files(testing_workdir, test_config):
-    output_file = os.path.join(test_config.croot, cc.subdir,
+    output_file = os.path.join(test_config.croot, test_config.subdir,
                                'test_compileall-1.0-py{0}{1}_0.tar.bz2'.format(
                                    sys.version_info.major, sys.version_info.minor))
     api.build(os.path.join(metadata_dir, "_compile-test"), config=test_config)
@@ -371,19 +370,19 @@ def test_condarc_channel_available(testing_workdir, test_config):
     with open(rcfile, 'w') as f:
         f.write("channels:\n")
         f.write("  - defaults\n")
-    cc.load_condarc(rcfile)
-    with pytest.raises(NoPackagesFound):
+    load_condarc(rcfile)
+    with pytest.raises(RuntimeError):
         api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
 
     with open(rcfile, 'w') as f:
         f.write("channels:\n")
         f.write("  - conda_build_test\n")
         f.write("  - defaults\n")
-    cc.load_condarc(rcfile)
+    load_condarc(rcfile)
     api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
 
     # clean up - remove this rcfile and go back to the system default rcfile
-    cc.load_condarc(cc.sys_rc_path)
+    load_condarc(sys_rc_path)
 
 
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):

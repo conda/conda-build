@@ -254,6 +254,9 @@ Include the output of the command 'conda info' in your report.
 def main():
     try:
         execute(sys.argv[1:])
+    except RuntimeError as e:
+        print(str(e))
+        sys.exit(1)
     except Exception as e:
         print_issue_message(str(e))
         sys.exit(1)
