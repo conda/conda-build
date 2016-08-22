@@ -197,6 +197,7 @@ def msvc_env_cmd(bits, config, override=None):
 
 def build(m, bld_bat, config):
     env = environ.get_dict(config=config, m=m, dirty=config.dirty)
+    env["CONDA_BUILD_STATE"] = "BUILD"
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]

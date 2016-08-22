@@ -411,13 +411,13 @@ class MetaData(object):
             return
 
         try:
-            os.environ["CONDA_BUILD_RENDERING"] = "True"
+            os.environ["CONDA_BUILD_STATE"] = "RENDER"
             self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
                               config=config, path=self.meta_path)
         except:
             raise
         finally:
-            del os.environ["CONDA_BUILD_RENDERING"]
+            del os.environ["CONDA_BUILD_STATE"]
 
         if (isfile(self.requirements_path) and
                    not self.meta['requirements']['run']):
