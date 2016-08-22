@@ -613,6 +613,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                     # There is no sense in trying to run an empty build script.
                     if isfile(build_file) or script:
                         env = environ.get_dict(config=config, m=m, dirty=config.dirty)
+                        env["CONDA_BUILD_STATE"] = "BUILD"
                         work_file = join(source.get_dir(config), 'conda_build.sh')
                         if script:
                             with open(work_file, 'w') as bf:
@@ -766,6 +767,7 @@ def test(m, config, move_broken=True):
 
         env = dict(os.environ.copy())
         env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
+        env["CONDA_BUILD_STATE"] = "TEST"
 
         if not config.activate:
             # prepend bin (or Scripts) directory
@@ -818,6 +820,7 @@ def test(m, config, move_broken=True):
                     # TODO: Run the test/commands here instead of in run_test.py
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
                                                                        test_file=test_file))
+
         if on_win:
             cmd = ['cmd.exe', "/d", "/c", test_script]
         else:

@@ -1,8 +1,5 @@
 from distutils.core import setup
-import os
 
-if "CONDA_BUILD_RENDERING" in os.environ:
-    print("Rendering environment variable set OK")
 
 setup(
     name="conda-build-test-project",
