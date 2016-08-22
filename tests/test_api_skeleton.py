@@ -11,7 +11,7 @@ thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', "8.1.2"),
                  ('r', 'cran', 'nmf', ""),
-                 ('perl', 'cpan', 'Struct-Path', ""),
+                 ('perl', 'cpan', 'Shell-Cmd', ""),
                  # ('lua', luarocks', 'LuaSocket'),
                  ]
 

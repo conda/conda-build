@@ -39,6 +39,7 @@ from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
+from .conda_interface import get_rc_urls, get_local_urls
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -1015,7 +1016,7 @@ def is_package_built(metadata, config):
         update_index(d, config)
     index = get_build_index(config=config, clear_cache=True)
 
-    urls = [url_path(config.croot)] + cc.get_rc_urls() + cc.get_local_urls() + ['local', ]
+    urls = [url_path(config.croot)] + get_rc_urls() + get_local_urls() + ['local', ]
     if config.channel_urls:
         urls.extend(config.channel_urls)
 

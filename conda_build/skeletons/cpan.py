@@ -4,7 +4,6 @@ Tools for converting CPAN packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
-import contextlib
 from distutils.version import LooseVersion
 from glob import glob
 import gzip
@@ -151,6 +150,20 @@ class PerlTmpDownload(TmpDownload):
             dst = join(self.tmp_dir, basename(self.url).replace('::', '-'))
             download(self.url, dst)
             return dst
+
+
+def get_cpan_api_url(url, colons):
+    if not colons:
+        url = url.replace("::", "-")
+    with PerlTmpDownload(url) as json_path:
+        try:
+            dist_json_file = gzip.open(json_path)
+            rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
+        except IOError:
+            dist_json_file = open(json_path)
+            rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
+        dist_json_file.close()
+    return rel_dict
 
 
 def package_exists(package_name):
@@ -526,10 +539,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
     '''
     # First check if its already a distribution
     try:
-        with PerlTmpDownload('{0}/v0/release/{1}'.format(cpan_url,
-                                                   module)) as json_path:
-            with contextlib.closing(gzip.open(json_path)) as dist_json_file:
-                rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
+        rel_dict = get_cpan_api_url('{0}/v0/release/{1}'.format(cpan_url, module), colons=False)
     # If there was an error, module may actually be a module
     except RuntimeError:
         rel_dict = None
@@ -539,10 +549,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
     # Check if it's a module instead
     if rel_dict is None:
         try:
-            with PerlTmpDownload('{0}/v0/module/{1}'.format(cpan_url,
-                                                      module)) as json_path:
-                with contextlib.closing(gzip.open(json_path)) as dist_json_file:
-                    mod_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
+            mod_dict = get_cpan_api_url('{0}/v0/module/{1}'.format(cpan_url, module), colons=True)
         # If there was an error, report it
         except RuntimeError as exc:
             core_version = core_module_version(module, perl_version, config=config)
@@ -571,10 +578,8 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # Get latest info to find author, which is necessary for retrieving a
     # specific version
     try:
-        with PerlTmpDownload('{0}/v0/release/{1}'.format(cpan_url, package)) as json_path:
-            with contextlib.closing(gzip.open(json_path)) as dist_json_file:
-                rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
-                rel_dict['version'] = rel_dict['version'].lstrip('v')
+        rel_dict = get_cpan_api_url('{0}/v0/release/{1}'.format(cpan_url, package), colons=False)
+        rel_dict['version'] = rel_dict['version'].lstrip('v')
     except RuntimeError:
         core_version = core_module_version(orig_package, perl_version, config=config)
         if core_version is not None and (version is None or
@@ -596,13 +601,9 @@ def get_release_info(cpan_url, package, version, perl_version, config,
             (rel_dict['version'] != version_str)):
         author = rel_dict['author']
         try:
-            with PerlTmpDownload('{0}/v0/release/{1}/{2}-{3}'.format(cpan_url,
-                                                             author,
-                                                             package,
-                                                             version_str)) as json_path:
-                with contextlib.closing(gzip.open(json_path)) as dist_json_file:
-                    new_rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
-                    new_rel_dict['version'] = new_rel_dict['version'].lstrip()
+            new_rel_dict = get_cpan_api_url('{0}/v0/release/{1}/{2}-{3}'.format(cpan_url,
+                                                author, package, version_str), colons=False)
+            new_rel_dict['version'] = new_rel_dict['version'].lstrip()
         # Check if this is a core module, and don't die if it is
         except RuntimeError:
             core_version = core_module_version(orig_package, perl_version, config=config)
