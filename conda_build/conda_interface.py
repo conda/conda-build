@@ -24,7 +24,7 @@ import conda.config as cc  # NOQA
 try:
     # conda 4.2.x
     import conda.base.context
-    from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
+    from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines, load_condarc  # NOQA
     from conda.base.constants import DEFAULT_CHANNELS  # NOQA
     get_prefix = partial(context_get_prefix, conda.base.context.context)
     get_default_urls = lambda: DEFAULT_CHANNELS
@@ -40,13 +40,14 @@ try:
     root_dir = conda.base.context.context.root_dir
     root_writable = conda.base.context.context.root_writable
     subdir = conda.base.context.context.subdir
+    sys_rc_path = conda.base.context.context.sys_rc_path
 
     get_rc_urls = lambda: list(conda.base.context.context.channels)
     from conda.models.channel import get_conda_build_local_url
     get_local_urls = lambda: list(get_conda_build_local_url()) or []
 
 except ImportError:
-    from conda.config import get_default_urls, non_x86_linux_machines  # NOQA
+    from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
     from conda.cli.common import get_prefix  # NOQA
 
     arch_name = cc.arch_name
@@ -60,6 +61,7 @@ except ImportError:
     root_dir = cc.root_dir
     root_writable = cc.root_writable
     subdir = cc.subdir
+    sys_rc_path = cc.sys_rc_path
 
     get_rc_urls = cc.get_rc_urls
     get_local_urls = cc.get_local_urls
