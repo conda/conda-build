@@ -4,11 +4,12 @@ Module to handle generating test files.
 
 from __future__ import absolute_import, division, print_function
 
+import glob
+from os.path import join, exists, isdir
 import sys
 
-from os.path import join, exists
-
 from conda_build.utils import copy_into
+from conda_build import source
 
 
 header = '''
@@ -49,6 +50,14 @@ def create_files(dir_path, m, config):
         has_files = True
         path = join(m.path, fn)
         copy_into(path, join(dir_path, fn), config)
+    # need to re-download source in order to do tests
+    if m.get_value('test/source_files') and not isdir(config.work_dir):
+        source.provide(m.path, m.get_section('source'), config=config)
+    for pattern in m.get_value('test/source_files', []):
+        has_files = True
+        files = glob.glob(join(config.work_dir, pattern))
+        for f in files:
+            copy_into(f, f.replace(config.work_dir, config.test_dir), config)
     return has_files
 
 
