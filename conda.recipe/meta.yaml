@@ -18,6 +18,7 @@ requirements:
   run:
     - python
     - conda  >=4.1
+    - filelock
     - jinja2
     - patchelf      [linux]
 
@@ -26,7 +27,9 @@ test:
   requires:
     - pytest
     - pytest-cov
-    - pytest-env
+    - pytest-env  # [win]
+    # Optional: you can use pytest-xdist to run the tests in parallel
+    # - pytest-xdist
     - mock
   commands:
     - conda-build -h

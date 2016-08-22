@@ -927,7 +927,8 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
                                 "{0} first").format(pkg))
                         add_recipes.append(recipe_dir)
                 else:
-                    raise
+                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
+                                       .format(recipe) + error_str)
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
