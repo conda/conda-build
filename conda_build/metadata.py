@@ -206,6 +206,7 @@ default_structs = {
     'requirements/conflicts': list,
     'test/requires': list,
     'test/files': list,
+    'test/source_files': list,
     'test/commands': list,
     'test/imports': list,
     'package/version': text_type,
