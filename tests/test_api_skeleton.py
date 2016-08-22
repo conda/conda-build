@@ -1,5 +1,6 @@
 import os
 
+from pkg_resources import parse_version
 import pytest
 import yaml
 
@@ -74,12 +75,11 @@ def test_pypi_pin_numpy(testing_workdir, test_config):
 def test_pypi_version_sorting(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize("conda_version_test", "pypi")
+    api.skeletonize("impyla", "pypi")
 
-    with open('conda_version_test/meta.yaml') as f:
+    with open('impyla/meta.yaml') as f:
         actual = yaml.load(f)
-        assert actual['package']['version'] != "0.1.0"
-        assert actual['package']['version'] >= "0.1.0-1"
+        assert parse_version(actual['package']['version']) >= parse_version("0.13.8")
 
 
 def test_list_skeletons():
