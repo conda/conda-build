@@ -9,6 +9,7 @@ import keyword
 import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
+from pkg_resources import parse_version
 import re
 from shutil import copy2
 import subprocess
@@ -356,7 +357,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         if is_url:
             d['version'] = 'UNKNOWN'
         else:
-            versions = sorted(client.package_releases(package, True))
+            versions = sorted(client.package_releases(package, True), key=parse_version)
             if version_compare:
                 version_compare(versions)
             if version:
