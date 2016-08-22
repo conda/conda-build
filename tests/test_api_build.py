@@ -360,17 +360,6 @@ def test_compileall_compiles_all_good_files(testing_workdir, test_config):
     assert not package_has_file(output_file, bad_file + 'c')
 
 
-def test_rendering_env_var(testing_workdir, test_config, capfd):
-    """
-    This environment variable is provided for users to selectively change what they do
-    during the rendering phase, regarding their recipe.  For example, only part of
-    setup.py might be processed.
-    """
-    api.build(os.path.join(metadata_dir, "_source_setuptools_env_var"), config=test_config)
-    output, error = capfd.readouterr()
-    assert "Rendering environment variable set OK" in output, error
-
-
 def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
