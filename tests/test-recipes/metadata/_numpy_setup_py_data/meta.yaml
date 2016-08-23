@@ -13,3 +13,6 @@ requirements:
   build:
     - numpy x.x
     - python
+  run:
+    - numpy x.x
+    - python

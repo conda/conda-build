@@ -360,6 +360,7 @@ def test_compileall_compiles_all_good_files(testing_workdir, test_config):
 
 
 def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
+    logging.basicConfig(level=logging.INFO)
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
 
@@ -386,6 +387,7 @@ def test_condarc_channel_available(testing_workdir, test_config):
 
 
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
+    logging.basicConfig(level=logging.INFO)
     info_message = "Starting new HTTPS connection"
     debug_message = "GET /pkgs/free/noarch/repodata.json.bz2 HTTP/1.1"
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
@@ -394,8 +396,7 @@ def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     # this comes from a debug message
     assert debug_message not in caplog.text()
 
-    test_config.debug = True
-    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config, debug=True)
     # this comes from an info message
     assert info_message in caplog.text()
     # this comes from a debug message
