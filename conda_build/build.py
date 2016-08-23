@@ -529,7 +529,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
                         log.warn("Your recipe depends on {} at build time (for templates), "
                                 "but you have not listed it as a build dependency.  Doing "
-                                "so for this build.")
+                                 "so for this build.".format(vcs_source))
                     else:
                         raise ValueError("Your recipe uses mercurial in build, but mercurial"
                                         " does not yet support Python 3.  Please handle all of "
