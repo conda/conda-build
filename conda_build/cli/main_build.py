@@ -24,7 +24,6 @@ from conda_build.utils import get_recipe_abspath, silence_loggers, rm_rf
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
-logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
@@ -216,6 +215,10 @@ def execute(args):
         action = check_action
 
     if action:
+        if action == output_action:
+            logging.basicConfig(level=logging.ERROR)
+        else:
+            logging.basicConfig(level=logging.INFO)
         for recipe in args.recipe:
             recipe_dir, need_cleanup = get_recipe_abspath(recipe)
 
