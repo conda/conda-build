@@ -158,11 +158,13 @@ def get_cpan_api_url(url, colons):
     with PerlTmpDownload(url) as json_path:
         try:
             dist_json_file = gzip.open(json_path)
-            rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
+            output = dist_json_file.read()
+            if hasattr(output, "decode"):
+                output = output.decode('utf-8-sig')
+            rel_dict = json.loads(output)
+            dist_json_file.close()
         except IOError:
-            dist_json_file = open(json_path)
-            rel_dict = json.loads(dist_json_file.read().decode('utf-8-sig'))
-        dist_json_file.close()
+            rel_dict = json.loads(open(json_path).read())
     return rel_dict
 
 
@@ -402,7 +404,9 @@ def core_module_version(module, version, config):
         cmd.insert(0, '/c')
         cmd.insert(0, 'cmd.exe')
     try:
-        output = subprocess.check_output(cmd, env=environ.copy()).decode('utf-8')
+        output = subprocess.check_output(cmd, env=environ.copy())
+        if hasattr(output, "decode"):
+            output = output.decode('utf-8')
     except subprocess.CalledProcessError:
         sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
                   'the perl conda package installed in your default ' +
@@ -415,7 +419,9 @@ def core_module_version(module, version, config):
         if on_win:
             cmd.insert(0, '/c')
             cmd.insert(0, 'cmd.exe')
-        output = subprocess.check_output(cmd).decode('utf-8')
+        output = subprocess.check_output(cmd)
+        if hasattr(output, "decode"):
+            output = output.decode('utf-8')
         # If it's in core...
         if 'perl v' in output:
             first_version = output.partition('perl v')[2].strip()
