@@ -7,9 +7,9 @@ matrix:
       os: linux
     - python: '3.5'
       os: linux
-    - python: '3.5'
-      env: CANARY=true
-      os: linux
+    # - python: '3.5'
+    #   env: CANARY=true
+    #   os: linux
     - python: '3.5'
       env: FLAKE8=true
       os: linux
