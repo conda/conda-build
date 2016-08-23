@@ -638,74 +638,74 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                             # this should raise if any problems occur while building
                             _check_call(cmd, env=env, cwd=src_dir)
 
-        if post in [True, None]:
-            if post:
-                with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                    files1 = set(f.read().splitlines())
+    if post in [True, None]:
+        if post:
+            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
+                files1 = set(f.read().splitlines())
 
-            get_build_metadata(m, config=config)
-            create_post_scripts(m, config=config)
-            create_entry_points(m.get_value('build/entry_points'), config=config)
-            assert not exists(config.info_dir)
-            files2 = prefix_files(prefix=config.build_prefix)
+        get_build_metadata(m, config=config)
+        create_post_scripts(m, config=config)
+        create_entry_points(m.get_value('build/entry_points'), config=config)
+        assert not exists(config.info_dir)
+        files2 = prefix_files(prefix=config.build_prefix)
 
-            post_process(sorted(files2 - files1),
-                         prefix=config.build_prefix,
-                         config=config,
-                         preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+        post_process(sorted(files2 - files1),
+                        prefix=config.build_prefix,
+                        config=config,
+                        preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
 
-            # The post processing may have deleted some files (like easy-install.pth)
-            files2 = prefix_files(prefix=config.build_prefix)
-            if any(config.meta_dir in join(config.build_prefix, f) for f in
-                    files2 - files1):
-                meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
-                        join(config.build_prefix, f)),)
-                sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
-    This error usually comes from using conda in the build script.  Avoid doing this, as it
-    can lead to packages that include their dependencies.""" % meta_files))
-            post_build(m, sorted(files2 - files1),
-                       prefix=config.build_prefix,
-                       build_python=config.build_python,
-                       croot=config.croot)
-            create_info_files(m, sorted(files2 - files1), config=config,
-                              prefix=config.build_prefix)
-            if m.get_value('build/noarch_python'):
-                import conda_build.noarch_python as noarch_python
-                noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
+        # The post processing may have deleted some files (like easy-install.pth)
+        files2 = prefix_files(prefix=config.build_prefix)
+        if any(config.meta_dir in join(config.build_prefix, f) for f in
+                files2 - files1):
+            meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
+                    join(config.build_prefix, f)),)
+            sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
+This error usually comes from using conda in the build script.  Avoid doing this, as it
+can lead to packages that include their dependencies.""" % meta_files))
+        post_build(m, sorted(files2 - files1),
+                    prefix=config.build_prefix,
+                    build_python=config.build_python,
+                    croot=config.croot)
+        create_info_files(m, sorted(files2 - files1), config=config,
+                            prefix=config.build_prefix)
+        if m.get_value('build/noarch_python'):
+            import conda_build.noarch_python as noarch_python
+            noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
 
-            files3 = prefix_files(prefix=config.build_prefix)
-            fix_permissions(files3 - files1, config.build_prefix)
+        files3 = prefix_files(prefix=config.build_prefix)
+        fix_permissions(files3 - files1, config.build_prefix)
 
-            path = bldpkg_path(m, config)
+        path = bldpkg_path(m, config)
 
-            # lock the output directory while we build this file
-            # create the tarball in a temporary directory to minimize lock time
-            with TemporaryDirectory() as tmp:
-                tmp_path = os.path.join(tmp, os.path.basename(path))
-                t = tarfile.open(tmp_path, 'w:bz2')
+        # lock the output directory while we build this file
+        # create the tarball in a temporary directory to minimize lock time
+        with TemporaryDirectory() as tmp:
+            tmp_path = os.path.join(tmp, os.path.basename(path))
+            t = tarfile.open(tmp_path, 'w:bz2')
 
-                def order(f):
-                    # we don't care about empty files so send them back via 100000
-                    fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
-                    # info/* records will be False == 0, others will be 1.
-                    info_order = int(os.path.dirname(f) != 'info')
-                    return info_order, fsize
+            def order(f):
+                # we don't care about empty files so send them back via 100000
+                fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
+                # info/* records will be False == 0, others will be 1.
+                info_order = int(os.path.dirname(f) != 'info')
+                return info_order, fsize
 
-                # add files in order of a) in info directory, b) increasing size so
-                # we can access small manifest or json files without decompressing
-                # possible large binary or data files
-                for f in sorted(files3 - files1, key=order):
-                    t.add(join(config.build_prefix, f), f)
-                t.close()
+            # add files in order of a) in info directory, b) increasing size so
+            # we can access small manifest or json files without decompressing
+            # possible large binary or data files
+            for f in sorted(files3 - files1, key=order):
+                t.add(join(config.build_prefix, f), f)
+            t.close()
 
-                # we're done building, perform some checks
-                tarcheck.check_all(tmp_path)
+            # we're done building, perform some checks
+            tarcheck.check_all(tmp_path)
 
-                copy_into(tmp_path, path, config=config)
-            update_index(config.bldpkgs_dir, config)
+            copy_into(tmp_path, path, config=config)
+        update_index(config.bldpkgs_dir, config)
 
-        else:
-            print("STOPPING BUILD BEFORE POST:", m.dist())
+    else:
+        print("STOPPING BUILD BEFORE POST:", m.dist())
 
     # returning true here says package is OK to test
     return True
