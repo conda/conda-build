@@ -573,7 +573,6 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # Transform module name to dist name if necessary
     orig_package = package
     package = dist_for_module(cpan_url, package, perl_version, config=config)
-    package = package.replace('::', '-')
 
     # Get latest info to find author, which is necessary for retrieving a
     # specific version
