@@ -83,6 +83,7 @@ test_script:
   - set PATH
   - mkdir C:\cbtmp
   - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 2
+  - conda build conda.recipe --no-anaconda-upload
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp
