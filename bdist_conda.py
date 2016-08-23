@@ -17,7 +17,7 @@ from conda.config import Config
 from conda.cli.common import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import build, pypi, render
-from conda_build.main_build import handle_binstar_upload
+from conda_build.build import handle_anaconda_upload
 
 # TODO: Add support for all the options that conda build has
 
@@ -268,7 +268,7 @@ class bdist_conda(install):
             if self.binstar_upload:
                 class args:
                     binstar_upload = self.binstar_upload
-                handle_binstar_upload(render.bldpkg_path(m), args)
+                handle_anaconda_upload(render.bldpkg_path(m), args)
             else:
                 no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:

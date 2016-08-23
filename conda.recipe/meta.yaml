@@ -8,16 +8,15 @@ source:
 build:
   number: 0
   entry_points:
-    - conda-build = conda_build.main_build:main
-    - conda-convert = conda_build.main_convert:main
-    - conda-develop = conda_build.main_develop:main
-    - conda-index = conda_build.main_index:main
-    - conda-inspect = conda_build.main_index:main
-    - conda-metapackage = conda_build.main_metapackage:main
-    - conda-pipbuild = conda_build.main_pipbuild:main
-    - conda-render = conda_build.main_render:main
-    - conda-sign = conda_build.main_sign:main
-    - conda-skeleton = conda_build.main_skeleton:main
+    - conda-build = conda_build.cli.main_build:main
+    - conda-convert = conda_build.cli.main_convert:main
+    - conda-develop = conda_build.cli.main_develop:main
+    - conda-index = conda_build.cli.main_index:main
+    - conda-inspect = conda_build.cli.main_index:main
+    - conda-metapackage = conda_build.cli.main_metapackage:main
+    - conda-render = conda_build.cli.main_render:main
+    - conda-sign = conda_build.cli.main_sign:main
+    - conda-skeleton = conda_build.cli.main_skeleton:main
 
 requirements:
   build:
@@ -54,6 +53,8 @@ test:
     - which conda-inspect  # [unix]
     - where conda-inspect  # [win]
     - conda inspect -h
+    - conda inspect linkages -h \| grep "--name ENVIRONMENT"  # [unix]
+    - conda inspect objects -h \| grep "--name ENVIRONMENT"   # [osx]
     - which conda-metapackage  # [unix]
     - where conda-metapackage  # [win]
     - conda metapackage -h
@@ -68,6 +69,8 @@ test:
     - conda skeleton -h
   imports:
     - conda_build
+  source_files:
+    - tests
 
 about:
   home: https://github.com/conda/conda-build
