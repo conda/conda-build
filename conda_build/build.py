@@ -511,32 +511,29 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             print("    (actual version deferred until further download or env creation)")
 
         specs = [ms.spec for ms in m.ms_depends('build')]
-        if config.activate:
-            # If we activate the build envrionment, we need to be sure that we
-            #    have the appropriate VCS available in the environment.  People
-            #    are not used to explicitly listing it in recipes, though.
-            #    We add it for them here, but warn them about it.
-            vcs_source = m.uses_vcs_in_build
-            if vcs_source and vcs_source not in specs:
-                vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
-                has_vcs_available = os.path.isfile(external.find_executable(vcs_executable,
-                                                                    config.build_prefix) or "")
-                if not has_vcs_available:
-                    if (vcs_source != "mercurial" or
-                            not any(spec.startswith('python') and "3." in spec
-                                    for spec in specs)):
-                        specs.append(vcs_source)
-
-                        log.warn("Your recipe depends on {} at build time (for templates), "
-                                "but you have not listed it as a build dependency.  Doing "
-                                 "so for this build.".format(vcs_source))
-                    else:
-                        raise ValueError("Your recipe uses mercurial in build, but mercurial"
-                                        " does not yet support Python 3.  Please handle all of "
-                                        "your mercurial actions outside of your build script.")
-        # Display the name only
-        # Version number could be missing due to dependency on source info.
         create_env(config.build_prefix, specs, config=config)
+        vcs_source = m.uses_vcs_in_build
+        if vcs_source and vcs_source not in specs:
+            vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
+            has_vcs_available = os.path.isfile(external.find_executable(vcs_executable,
+                                                                config.build_prefix) or "")
+            if not has_vcs_available:
+                if (vcs_source != "mercurial" or
+                        not any(spec.startswith('python') and "3." in spec
+                                for spec in specs)):
+                    specs.append(vcs_source)
+
+                    log.warn("Your recipe depends on {} at build time (for templates), "
+                            "but you have not listed it as a build dependency.  Doing "
+                                "so for this build.".format(vcs_source))
+
+                    # Display the name only
+                    # Version number could be missing due to dependency on source info.
+                    create_env(config.build_prefix, specs, config=config)
+                else:
+                    raise ValueError("Your recipe uses mercurial in build, but mercurial"
+                                    " does not yet support Python 3.  Please handle all of "
+                                    "your mercurial actions outside of your build script.")
 
         if need_source_download:
             # Execute any commands fetching the source (e.g., git) in the _build environment.
