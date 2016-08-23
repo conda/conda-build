@@ -200,7 +200,7 @@ class Config(object):
 
     @property
     def _short_build_prefix(self):
-        return join(self.build_folder, 'b_env')
+        return join(self.build_folder, '_b_env')
 
     @property
     def _long_build_prefix(self):
@@ -219,7 +219,7 @@ class Config(object):
     @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        return join(self.build_folder, 't_env')
+        return join(self.build_folder, '_t_env')
 
     @property
     def build_python(self):

@@ -21,7 +21,7 @@ def test_set_build_id(config):
         assert config.build_prefix == os.path.join(config.croot, build_id, "b_env")
     else:
         long_prefix = os.path.join(config.croot, build_id,
-                                   "b_env" + "_placehold" * 25)[:config.prefix_length]
+                                   "_b_env" + "_placehold" * 25)[:config.prefix_length]
         assert config.build_prefix == long_prefix
 
 
