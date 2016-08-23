@@ -15,7 +15,7 @@ from binstar_client.errors import NotFound
 import pytest
 
 from conda_build import api
-from conda_build.utils import copy_into
+from conda_build.utils import copy_into, on_win
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config)
 
@@ -400,3 +400,12 @@ def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     assert info_message in caplog.text()
     # this comes from a debug message
     assert debug_message in caplog.text()
+
+
+@pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
+def test_numpy_setup_py_data(test_config):
+    recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
+    assert os.path.basename(api.get_output_file_path(recipe_path,
+                            config=test_config, numpy="1.11")) == \
+                            "load_setup_py_test-1.0a1-np111py{0}{1}_1.tar.bz2".format(
+                                sys.version_info.major, sys.version_info.minor)

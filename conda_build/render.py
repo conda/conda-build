@@ -87,7 +87,7 @@ def parse_or_try_download(metadata, no_download_source, config,
                 need_source_download = False
             try:
                 metadata.parse_again(config=config, permit_undefined_jinja=False)
-            except exceptions.UnableToParseMissingSetuptoolsDependencies:
+            except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
                 need_reparse_in_env = True
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
@@ -104,10 +104,11 @@ def parse_or_try_download(metadata, no_download_source, config,
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
         need_source_download = not no_download_source
-    try:
-        metadata.parse_until_resolved(config=config)
-    except exceptions.UnableToParseMissingSetuptoolsDependencies:
-        need_reparse_in_env = True
+    if not need_reparse_in_env:
+        try:
+            metadata.parse_until_resolved(config=config)
+        except exceptions.UnableToParseMissingSetuptoolsDependencies:
+            need_reparse_in_env = True
     return metadata, need_source_download, need_reparse_in_env
 
 

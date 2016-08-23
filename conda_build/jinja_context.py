@@ -111,6 +111,14 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
     # Patch setuptools, distutils
     setuptools_setup = setuptools.setup
     distutils_setup = distutils.core.setup
+    numpy_setup = None
+    try:
+        import numpy.distutils.core
+        numpy_setup = numpy.distutils.core.setup
+        numpy.distutils.core.setup = setup
+    except ImportError:
+        log.debug("Failed to import numpy for setup patch.  Is numpy installed?")
+
     setuptools.setup = distutils.core.setup = setup
     ns = {
         '__name__': '__main__',
@@ -120,8 +128,10 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
     if os.path.isfile(setup_file):
         code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
-        distutils.core.setup = distutils_setup
-        setuptools.setup = setuptools_setup
+    distutils.core.setup = distutils_setup
+    setuptools.setup = setuptools_setup
+    if numpy_setup:
+        numpy.distutils.core.setup = numpy_setup
     if cd_to_work:
         os.chdir(cwd)
     # remove our workdir from sys.path
