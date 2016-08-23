@@ -111,9 +111,11 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
 
     if config.verbose:
         stdout = None
+        stderr = None
     else:
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
+        stderr = FNULL
 
     if not mirror_dir.startswith(config.git_cache + os.sep):
         sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
@@ -126,7 +128,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         os.makedirs(os.path.dirname(mirror_dir))
     if isdir(mirror_dir):
         if git_ref != 'HEAD':
-            check_call([git, 'fetch'], cwd=mirror_dir, stdout=stdout)
+            check_call([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
         else:
             # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
             # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -135,15 +137,15 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
             # but the user is working with a branch other than 'master' without
             # explicitly providing git_rev.
             check_call([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
-                       cwd=mirror_dir, stdout=stdout)
+                       cwd=mirror_dir, stdout=stdout, stderr=stderr)
             check_call([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
-                       cwd=mirror_dir, stdout=stdout)
+                       cwd=mirror_dir, stdout=stdout, stderr=stderr)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
         try:
-            check_call(args + [git_url, mirror_dir], stdout=stdout)
+            check_call(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
@@ -153,23 +155,23 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
             if os.path.exists(git_url):
                 # Local filepaths are allowed, but make sure we normalize them
                 git_url = normpath(git_url)
-            check_call(args + [git_url, mirror_dir], stdout=stdout)
+            check_call(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
         assert isdir(mirror_dir)
 
     # Now clone from mirror_dir into checkout_dir.
-    check_call([git, 'clone', mirror_dir, checkout_dir], stdout=stdout)
+    check_call([git, 'clone', mirror_dir, checkout_dir], stdout=stdout, stderr=stderr)
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
             process = Popen(["git", "rev-parse", checkout],
-                            stdout=PIPE, cwd=git_url)
+                            stdout=PIPE, stderr=PIPE, cwd=git_url)
             output = process.communicate()[0].strip()
             checkout = output.decode('utf-8')
         if config.verbose:
             print('checkout: %r' % checkout)
         if checkout:
             check_call([git, 'checkout', checkout],
-                       cwd=checkout_dir, stdout=stdout)
+                       cwd=checkout_dir, stdout=stdout, stderr=stderr)
 
     # submodules may have been specified using relative paths.
     # Those paths are relative to git_url, and will not exist
@@ -200,7 +202,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
         check_call([git, 'submodule', 'update', '--init',
-                    '--recursive'], cwd=checkout_dir, stdout=stdout)
+                    '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
         git_info(config)
     if not config.verbose:
         FNULL.close()
