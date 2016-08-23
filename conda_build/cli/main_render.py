@@ -20,8 +20,6 @@ from conda_build.utils import silence_loggers
 
 on_win = (sys.platform == 'win32')
 
-logging.basicConfig(level=logging.INFO)
-
 
 def get_render_parser():
     p = ArgumentParser(
@@ -131,9 +129,11 @@ def execute(args):
 
     metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source, config=config)
     if args.output:
+        logging.basicConfig(level=logging.ERROR)
         silence_loggers(show_warnings_and_errors=False)
         print(bldpkg_path(metadata, config=config))
     else:
+        logging.basicConfig(level=logging.INFO)
         print(output_yaml(metadata, args.file))
 
 

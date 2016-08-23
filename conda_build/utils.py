@@ -343,6 +343,8 @@ def silence_loggers(show_warnings_and_errors=True):
         log_level = logging.WARN
     else:
         log_level = logging.CRITICAL + 1
+    logging.disable(log_level)
+    logging.getLogger(os.path.dirname(__file__)).setLevel(log_level)
     # This squelches a ton of conda output that is not hugely relevant
     logging.getLogger("conda").setLevel(log_level)
     logging.getLogger("binstar").setLevel(log_level)

@@ -19,6 +19,8 @@ from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path
 
+log = logging.getLogger(__file__)
+
 
 def get_perl_ver(config):
     return str(config.CONDA_PERL)
