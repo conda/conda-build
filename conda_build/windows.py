@@ -2,8 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-import shutil
-from os.path import dirname, isdir, isfile, join
+from os.path import isdir, join
 
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
