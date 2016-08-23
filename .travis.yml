@@ -34,6 +34,11 @@ script:
   - flake8 .
   - py.test -v -n 2 --cov conda_build --cov-report xml tests
   - conda build --help
+  # Create a new environment (with underscore, so that conda can be installed), to test entry points
+  - conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION
+  - source activate _cbtest
+  - conda install $(conda render --output conda.recipe)
+  - pip install filelock
   - conda build conda.recipe --no-anaconda-upload
 
 notifications:
