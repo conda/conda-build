@@ -12,6 +12,8 @@ from os.path import isdir
 import sys
 import warnings
 
+import filelock
+
 import conda_build.api as api
 import conda_build.build as build
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
@@ -259,6 +261,9 @@ def main():
     except RuntimeError as e:
         print(str(e))
         sys.exit(1)
+    except filelock.TimeoutError as e:
+        print("File lock could not be obtained.  You might need to try fewer builds at once."
+              "  Otherwise, run conda clean --lock")
     except Exception as e:
         print_issue_message(str(e))
         sys.exit(1)
