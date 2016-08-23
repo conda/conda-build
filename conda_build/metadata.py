@@ -468,6 +468,7 @@ class MetaData(object):
             config = Config()
 
         m.config = config
+        m.undefined_jinja_vars = []
 
         return m
 
