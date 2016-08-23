@@ -88,7 +88,10 @@ test_script:
   # Create a new environment (with underscore, so that conda can be installed), to test entry points
   - conda create -n _cbtest python=%PYTHON_VERSION%
   - activate _cbtest
-  - conda render --output conda.recipe | conda install
+  - conda render --output conda.recipe > tmpFile
+  - SET /p fn= < tmpFile
+  - DEL tmpFile
+  - conda install %fn%
   - pip install filelock
   # this build should be done using actual entry points from the package we built above.
   - conda build conda.recipe --no-anaconda-upload
