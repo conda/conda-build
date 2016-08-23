@@ -28,13 +28,14 @@ requirements:
     - patchelf      [linux]
     - pycrypto
     - python
+    - pyyaml
 
 test:
   requires:
     - pytest
     - pytest-cov
-    - pytest-env  # [win]
     # Optional: you can use pytest-xdist to run the tests in parallel
+    # - pytest-env  # [win]
     # - pytest-xdist
     - mock
   commands:
