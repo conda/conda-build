@@ -25,6 +25,8 @@ from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
 
+logging.basicConfig(level=logging.INFO)
+
 
 def parse_args(args):
     p = get_render_parser()
@@ -205,6 +207,7 @@ def execute(args):
     action = None
     if args.output:
         action = output_action
+        logging.basicConfig(level=logging.ERROR)
         config.verbose = False
         config.quiet = True
     elif args.test:
@@ -215,10 +218,6 @@ def execute(args):
         action = check_action
 
     if action:
-        if action == output_action:
-            logging.basicConfig(level=logging.ERROR)
-        else:
-            logging.basicConfig(level=logging.INFO)
         for recipe in args.recipe:
             recipe_dir, need_cleanup = get_recipe_abspath(recipe)
 

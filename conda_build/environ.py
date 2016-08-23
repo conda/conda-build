@@ -57,21 +57,29 @@ def get_sp_dir(config):
     return join(get_stdlib_dir(config), 'site-packages')
 
 
-def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
+def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     env = os.environ.copy()
+    if config.verbose:
+        stderr = None
+    else:
+        FNULL = open(os.devnull, 'w')
+        stderr = FNULL
+        log.setLevel(logging.ERROR)
 
     if not expected_rev:
         return False
+
+    OK = True
 
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
         current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"],
-                                      env=env, stderr=subprocess.STDOUT)
+                                      env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
         expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H",
                                             expected_rev],
-                                           env=env, stderr=subprocess.STDOUT)
+                                            env=env, stderr=stderr)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
         if current_commit != expected_tag_commit:
@@ -80,7 +88,7 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         # Verify correct remote url. Need to find the git cache directory,
         # and check the remote from there.
         cache_details = subprocess.check_output(["git", "remote", "-v"], env=env,
-                                     stderr=subprocess.STDOUT)
+                                     stderr=stderr)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
 
@@ -91,13 +99,13 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         try:
             remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
                                                       "remote", "-v"],
-                                                     env=env, stderr=subprocess.STDOUT)
+                                                     env=env, stderr=stderr)
         except subprocess.CalledProcessError:
             if sys.platform == 'win32' and cache_dir.startswith('/'):
                 cache_dir = utils.convert_unix_path_to_win(cache_dir)
             remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
                                                       "remote", "-v"],
-                                                     env=env, stderr=subprocess.STDOUT)
+                                                     env=env, stderr=stderr)
         remote_details = remote_details.decode('utf-8')
         remote_url = remote_details.split('\n')[0].split()[1]
 
@@ -113,18 +121,21 @@ def verify_git_repo(git_dir, git_url, expected_rev='HEAD'):
         # If the current source directory in conda-bld/work doesn't match the user's
         # metadata git_url or git_rev, then we aren't looking at the right source.
         if not os.path.isdir(remote_url) and remote_url.lower() != git_url.lower():
-            logging.debug("remote does not match git_url")
-            logging.debug("Remote: " + remote_url.lower())
-            logging.debug("git_url: " + git_url.lower())
-            return False
+            log.debug("remote does not match git_url")
+            log.debug("Remote: " + remote_url.lower())
+            log.debug("git_url: " + git_url.lower())
+            OK = False
     except subprocess.CalledProcessError as error:
-        logging.warn("Error obtaining git information.  Error was: ")
-        logging.warn(error)
-        return False
-    return True
+        log.warn("Error obtaining git information in verify_git_repo.  Error was: ")
+        log.warn(str(error))
+        OK = False
+    finally:
+        if not config.verbose:
+            FNULL.close()
+    return OK
 
 
-def get_git_info(repo):
+def get_git_info(repo, config):
     """
     Given a repo to a git repo, return a dictionary of:
       GIT_DESCRIBE_TAG
@@ -137,30 +148,40 @@ def get_git_info(repo):
     """
     d = {}
 
+    if config.verbose:
+        stderr = None
+    else:
+        FNULL = open(os.devnull, 'w')
+        stderr = FNULL
+        log.setLevel(logging.ERROR)
+
     # grab information from describe
     env = os.environ.copy()
     env['GIT_DIR'] = repo
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
-    output = subprocess.check_output(["git", "describe", "--tags", "--long", "HEAD"],
-                               env=env, cwd=os.path.dirname(repo))
-    output = output.decode('utf-8')
+    try:
+        output = subprocess.check_output(["git", "describe", "--tags", "--long", "HEAD"],
+                                         env=env, cwd=os.path.dirname(repo), stderr=stderr)
+        output = output.decode('utf-8')
 
-    parts = output.rsplit('-', 2)
-    if len(parts) == 3:
-        d.update(dict(zip(keys, parts)))
+        parts = output.rsplit('-', 2)
+        if len(parts) == 3:
+            d.update(dict(zip(keys, parts)))
 
-    # get the _full_ hash of the current HEAD
-    output = subprocess.check_output(["git", "rev-parse", "HEAD"],
-                                     env=env, cwd=os.path.dirname(repo))
-    output = output.decode('utf-8')
+        # get the _full_ hash of the current HEAD
+        output = subprocess.check_output(["git", "rev-parse", "HEAD"],
+                                         env=env, cwd=os.path.dirname(repo), stderr=stderr)
+        output = output.decode('utf-8')
 
-    d['GIT_FULL_HASH'] = output
-    # set up the build string
-    if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
-        d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
-                                            d["GIT_DESCRIBE_HASH"])
-
+        d['GIT_FULL_HASH'] = output
+        # set up the build string
+        if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
+            d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
+                                                d["GIT_DESCRIBE_HASH"])
+    except subprocess.CalledProcessError as error:
+        log.warn("Error obtaining git information in get_git_info.  Error was: ")
+        log.warn(str(error))
     return d
 
 
@@ -299,10 +320,11 @@ def meta_vars(meta, config):
         if git_url:
             _x = verify_git_repo(git_dir,
                                  git_url,
+                                 config,
                                  meta.get_value('source/git_rev', 'HEAD'))
 
         if _x or meta.get_value('source/path'):
-            d.update(get_git_info(git_dir))
+            d.update(get_git_info(git_dir, config))
 
     elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):
         d.update(get_hg_build_info(hg_dir))

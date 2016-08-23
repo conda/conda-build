@@ -15,7 +15,7 @@ from binstar_client.errors import NotFound
 import pytest
 
 from conda_build import api
-from conda_build.utils import copy_into
+from conda_build.utils import copy_into, on_win
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config)
 
@@ -360,6 +360,7 @@ def test_compileall_compiles_all_good_files(testing_workdir, test_config):
 
 
 def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
+    logging.basicConfig(level=logging.INFO)
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
 
@@ -386,6 +387,7 @@ def test_condarc_channel_available(testing_workdir, test_config):
 
 
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
+    logging.basicConfig(level=logging.INFO)
     info_message = "Starting new HTTPS connection"
     debug_message = "GET /pkgs/free/noarch/repodata.json.bz2 HTTP/1.1"
     api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
@@ -394,9 +396,17 @@ def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     # this comes from a debug message
     assert debug_message not in caplog.text()
 
-    test_config.debug = True
-    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config, debug=True)
     # this comes from an info message
     assert info_message in caplog.text()
     # this comes from a debug message
     assert debug_message in caplog.text()
+
+
+@pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
+def test_numpy_setup_py_data(test_config):
+    recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
+    assert os.path.basename(api.get_output_file_path(recipe_path,
+                            config=test_config, numpy="1.11")) == \
+                            "load_setup_py_test-1.0a1-np111py{0}{1}_1.tar.bz2".format(
+                                sys.version_info.major, sys.version_info.minor)
