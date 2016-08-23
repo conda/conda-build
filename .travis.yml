@@ -1,4 +1,3 @@
-language: python
 matrix:
   include:
     - python: '2.7'
@@ -49,6 +48,7 @@ script:
   # flake8 and bdist_conda test together
   - if [[ "$FLAKE8" == "true" ]]; then
       flake8 .;
+      cp bdist_conda.py $HOME/miniconda/lib/python${TRAVIS_PYTHON_VERSION}/distutils/command;
       pushd tests/bdist-recipe;
       python setup.py bdist_conda;
       popd;
