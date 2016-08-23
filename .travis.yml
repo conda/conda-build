@@ -1,11 +1,19 @@
 language: python
-python:
-  # We don't actually use the system Python but this keeps it organized.
-  - "2.7"
-  - "3.4"
-  - "3.5"
-env:
-  -
+matrix:
+  include:
+    - python: '2.7'
+      os: linux
+    - python: '3.4'
+      os: linux
+    - python: '3.5'
+      os: linux
+    - python: '3.5'
+      env: CANARY=true
+      os: linux
+    - python: '3.5'
+      env: FLAKE8=true
+      os: linux
+
 install:
   # TODO: Use a "latest" url
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -23,6 +31,10 @@ install:
   - conda install -q anaconda-client pip pytest-cov
   - conda install -c conda-forge -q perl
   - pip install pytest-cov pytest-xdist pytest-capturelog filelock
+  - if [[ "$CANARY" == "true" ]]; then
+      conda install -y -q -c conda-canary conda;
+    fi
+  - conda config --set always_yes yes
   - pip install --no-deps .
   - conda info -a
   # This is an extra repo that we clone for relative path entries
@@ -31,8 +43,16 @@ install:
   - popd
 
 script:
-  - flake8 .
-  - py.test -v -n 2 --cov conda_build --cov-report xml tests
+  # flake8 and bdist_conda test together
+  - if [[ "$FLAKE8" == "true" ]]; then
+      flake8 .;
+      cp bdist_conda.py $HOME/miniconda/lib/python${TRAVIS_PYTHON_VERSION}/distutils/command;
+      pushd tests/bdist-recipe;
+      python setup.py bdist_conda;
+      popd;
+    else
+      py.test -v -n 2 --cov conda_build --cov-report xml tests;
+    fi
   - conda build --help
   # Create a new environment (with underscore, so that conda can be installed), to test entry points
   - conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION
