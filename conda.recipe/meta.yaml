@@ -7,23 +7,30 @@ source:
 
 build:
   number: 0
-  {% if GIT_DESCRIBE_NUMBER|int > 0 %}
-  string: py{{ PY_VER }}_git_{{ GIT_BUILD_STR }}
-  {% endif %}
-  preserve_egg_dir: True
+  entry_points:
+    - conda-build = conda_build.main_build:main
+    - conda-convert = conda_build.main_convert:main
+    - conda-develop = conda_build.main_develop:main
+    - conda-index = conda_build.main_index:main
+    - conda-inspect = conda_build.main_index:main
+    - conda-metapackage = conda_build.main_metapackage:main
+    - conda-pipbuild = conda_build.main_pipbuild:main
+    - conda-render = conda_build.main_render:main
+    - conda-sign = conda_build.main_sign:main
+    - conda-skeleton = conda_build.main_skeleton:main
 
 requirements:
   build:
     - python
   run:
-    - python
     - conda  >=4.1
     - filelock
     - jinja2
     - patchelf      [linux]
+    - pycrypto
+    - python
 
 test:
-  # more tests in run_test.py (runs the tests folder)
   requires:
     - pytest
     - pytest-cov
@@ -32,7 +39,33 @@ test:
     # - pytest-xdist
     - mock
   commands:
-    - conda-build -h
+    - which conda-build  # [unix]
+    - where conda-build  # [win]
+    - conda build -h
+    - which conda-convert  # [unix]
+    - where conda-convert  # [win]
+    - conda convert -h
+    - which conda-develop  # [unix]
+    - where conda-develop  # [win]
+    - conda develop -h
+    - which conda-index  # [unix]
+    - where conda-index  # [win]
+    - conda index -h
+    - which conda-inspect  # [unix]
+    - where conda-inspect  # [win]
+    - conda inspect -h
+    - which conda-metapackage  # [unix]
+    - where conda-metapackage  # [win]
+    - conda metapackage -h
+    - which conda-render  # [unix]
+    - where conda-render  # [win]
+    - conda render -h
+    - which conda-sign  # [unix]
+    - where conda-sign  # [win]
+    - conda sign -h
+    - which conda-skeleton  # [unix]
+    - where conda-skeleton  # [win]
+    - conda skeleton -h
   imports:
     - conda_build
 
