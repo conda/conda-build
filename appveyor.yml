@@ -83,6 +83,18 @@ test_script:
   - set PATH
   - mkdir C:\cbtmp
   - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 2
+  # create a package (this build is done with conda-build from source, and does not test entry points)
+  - conda build conda.recipe --no-anaconda-upload
+  # Create a new environment (with underscore, so that conda can be installed), to test entry points
+  - conda create -n _cbtest python=%PYTHON_VERSION%
+  - activate _cbtest
+  - conda render --output conda.recipe > tmpFile
+  - SET /p fn= < tmpFile
+  - DEL tmpFile
+  - conda install %fn%
+  - pip install filelock
+  # this build should be done using actual entry points from the package we built above.
+  - conda build conda.recipe --no-anaconda-upload
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp

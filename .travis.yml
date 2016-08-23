@@ -54,6 +54,15 @@ script:
       py.test -v -n 2 --cov conda_build --cov-report xml tests;
     fi
   - conda build --help
+  # create a package (this build is done with conda-build from source, and does not test entry points)
+  - conda build conda.recipe --no-anaconda-upload
+  # Create a new environment (with underscore, so that conda can be installed), to test entry points
+  - conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION
+  - source activate _cbtest
+  - conda install $(conda render --output conda.recipe)
+  - pip install filelock
+  # this build should be done using actual entry points from the package we built above.
+  - conda build conda.recipe --no-anaconda-upload
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb

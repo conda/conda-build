@@ -2,8 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-import shutil
-from os.path import dirname, isdir, isfile, join
+from os.path import isdir, join
 
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
@@ -28,37 +27,6 @@ VS_VERSION_STRING = {
     '12.0': 'Visual Studio 12 2013',
     '14.0': 'Visual Studio 14 2015'
 }
-
-
-def fix_staged_scripts(config):
-    """
-    Fixes scripts which have been installed unix-style to have a .bat
-    helper
-    """
-    scripts_dir = join(config.build_prefix, 'Scripts')
-    if not isdir(scripts_dir):
-        return
-    for fn in os.listdir(scripts_dir):
-        # process all the extensionless files
-        if not isfile(join(scripts_dir, fn)) or '.' in fn:
-            continue
-
-        with open(join(scripts_dir, fn)) as f:
-            line = f.readline().lower()
-            # If it's a #!python script
-            if not (line.startswith('#!') and 'python' in line.lower()):
-                continue
-            print('Adjusting unix-style #! script %s, '
-                  'and adding a .bat file for it' % fn)
-            # copy it with a .py extension (skipping that first #! line)
-            with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
-                fo.write(f.read())
-            # now create the .exe file
-            shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % bits),
-                            join(scripts_dir, fn + '.exe'))
-
-        # remove the original script
-        os.remove(join(scripts_dir, fn))
 
 
 def build_vcvarsall_vs_path(version):
@@ -226,4 +194,3 @@ def build(m, bld_bat, config):
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
-        fix_staged_scripts(config=config)
