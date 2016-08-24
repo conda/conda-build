@@ -183,7 +183,7 @@ def compile_missing_pyc(files, cwd, python_exe):
         if fn.endswith(".py") and fn + 'c' not in files:
             compile_files.append(fn)
 
-    if compile_files:
+    if compile_files and os.path.isfile(python_exe):
         print('compiling .pyc files...')
         for f in compile_files:
             call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
