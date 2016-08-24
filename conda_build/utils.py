@@ -438,3 +438,19 @@ def get_ext_files(start_path, pattern):
         for f in files:
             if f.endswith(pattern):
                 yield os.path.join(dirname, f)
+
+
+def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
+    if 'env' not in kwargs:
+        kwargs = kwargs.copy()
+        env_copy = os.environ.copy()
+        kwargs.update({'env': env_copy})
+    return func(*popenargs, **kwargs)
+
+
+def check_call_env(*popenargs, **kwargs):
+    return _func_defaulting_env_to_os_environ(subprocess.check_call, *popenargs, **kwargs)
+
+
+def check_output_env(*popenargs, **kwargs):
+    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)

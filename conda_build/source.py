@@ -5,7 +5,7 @@ import logging
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath
 import re
-from subprocess import check_call, Popen, PIPE, check_output, CalledProcessError
+from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import time
 
@@ -13,7 +13,8 @@ from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into, on_win
+from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win,
+                               check_output_env, check_call_env)
 
 # legacy exports for conda
 from .config import Config as _Config
@@ -135,7 +136,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         os.makedirs(os.path.dirname(mirror_dir))
     if isdir(mirror_dir):
         if git_ref != 'HEAD':
-            check_call([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
+            check_call_env([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
         else:
             # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
             # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -143,16 +144,16 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
             # This is important when the git repo is a local path like "git_url: ../",
             # but the user is working with a branch other than 'master' without
             # explicitly providing git_rev.
-            check_call([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
+            check_call_env([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
                        cwd=mirror_dir, stdout=stdout, stderr=stderr)
-            check_call([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
+            check_call_env([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
                        cwd=mirror_dir, stdout=stdout, stderr=stderr)
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
         try:
-            check_call(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
+            check_call_env(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
@@ -162,30 +163,28 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
             if os.path.exists(git_url):
                 # Local filepaths are allowed, but make sure we normalize them
                 git_url = normpath(git_url)
-            check_call(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
+            check_call_env(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
         assert isdir(mirror_dir)
 
     # Now clone from mirror_dir into checkout_dir.
-    check_call([git, 'clone', mirror_dir, checkout_dir], stdout=stdout, stderr=stderr)
+    check_call_env([git, 'clone', mirror_dir, checkout_dir], stdout=stdout, stderr=stderr)
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
-            process = Popen(["git", "rev-parse", checkout],
-                            stdout=PIPE, stderr=PIPE, cwd=git_url)
-            output = process.communicate()[0].strip()
+            output = check_output_env([git, "rev-parse", checkout], stdout=stdout, stderr=stderr)
             checkout = output.decode('utf-8')
         if config.verbose:
             print('checkout: %r' % checkout)
         if checkout:
-            check_call([git, 'checkout', checkout],
-                       cwd=checkout_dir, stdout=stdout, stderr=stderr)
+            check_call_env([git, 'checkout', checkout],
+                           cwd=checkout_dir, stdout=stdout, stderr=stderr)
 
     # submodules may have been specified using relative paths.
     # Those paths are relative to git_url, and will not exist
     # relative to mirror_dir, unless we do some work to make
     # it so.
     try:
-        submodules = check_output([git, 'config', '--file', '.gitmodules', '--get-regexp',
+        submodules = check_output_env([git, 'config', '--file', '.gitmodules', '--get-regexp',
                                    'url'], stderr=stdout, cwd=checkout_dir)
         submodules = submodules.decode('utf-8').splitlines()
     except:
@@ -208,7 +207,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
     if is_top_level:
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
-        check_call([git, 'submodule', 'update', '--init',
+        check_call_env([git, 'submodule', 'update', '--init',
                     '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
         git_info(config)
     if not config.verbose:
@@ -297,9 +296,9 @@ def hg_source(meta, config):
     hg_dn = hg_url.split(':')[-1].replace('/', '_')
     cache_repo = join(config.hg_cache, hg_dn)
     if isdir(cache_repo):
-        check_call([hg, 'pull'], cwd=cache_repo, stdout=stdout, stderr=stderr)
+        check_call_env([hg, 'pull'], cwd=cache_repo, stdout=stdout, stderr=stderr)
     else:
-        check_call([hg, 'clone', hg_url, cache_repo], stdout=stdout, stderr=stderr)
+        check_call_env([hg, 'clone', hg_url, cache_repo], stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now clone in to work directory
@@ -307,8 +306,8 @@ def hg_source(meta, config):
     if config.verbose:
         print('checkout: %r' % update)
 
-    check_call([hg, 'clone', cache_repo, config.work_dir], stdout=stdout, stderr=stderr)
-    check_call([hg, 'update', '-C', update], cwd=get_dir(config), stdout=stdout, stderr=stderr)
+    check_call_env([hg, 'clone', cache_repo, config.work_dir], stdout=stdout, stderr=stderr)
+    check_call_env([hg, 'update', '-C', update], cwd=get_dir(config), stdout=stdout, stderr=stderr)
 
     if not config.verbose:
         FNULL.close()
@@ -344,11 +343,11 @@ def svn_source(meta, config):
     else:
         extra_args = []
     if isdir(cache_repo):
-        check_call([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo,
-                   stdout=stdout, stderr=stderr)
+        check_call_env([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo,
+                       stdout=stdout, stderr=stderr)
     else:
-        check_call([svn, 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo],
-                   stdout=stdout, stderr=stderr)
+        check_call_env([svn, 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo],
+                       stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now copy into work directory
@@ -365,15 +364,16 @@ def get_repository_info(recipe_path):
     from the source - you can have a recipe in svn that gets source via git."""
     try:
         if exists(join(recipe_path, ".git")):
-            origin = check_output(["git", "config", "--get", "remote.origin.url"], cwd=recipe_path)
-            rev = check_output(["git", "rev-parse", "HEAD"], cwd=recipe_path)
+            origin = check_output_env(["git", "config", "--get", "remote.origin.url"],
+                                      cwd=recipe_path)
+            rev = check_output_env(["git", "rev-parse", "HEAD"], cwd=recipe_path)
             return "Origin {}, commit {}".format(origin, rev)
         elif isdir(join(recipe_path, ".hg")):
-            origin = check_output(["hg", "paths", "default"], cwd=recipe_path)
-            rev = check_output(["hg", "id"], cwd=recipe_path).split()[0]
+            origin = check_output_env(["hg", "paths", "default"], cwd=recipe_path)
+            rev = check_output_env(["hg", "id"], cwd=recipe_path).split()[0]
             return "Origin {}, commit {}".format(origin, rev)
         elif isdir(join(recipe_path, ".svn")):
-            info = check_output(["svn", "info"], cwd=recipe_path)
+            info = check_output_env(["svn", "info"], cwd=recipe_path)
             server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
             revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
             return "{}, Revision {}".format(server, revision)
@@ -457,8 +457,8 @@ def apply_patch(src_dir, path, config, git=None):
         git_env = os.environ
         git_env['GIT_COMMITTER_NAME'] = 'conda-build'
         git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
-        check_call([git, 'am', '--committer-date-is-author-date', path],
-                   cwd=src_dir, stdout=None, env=git_env)
+        check_call_env([git, 'am', '--committer-date-is-author-date', path],
+                       cwd=src_dir, stdout=None, env=git_env)
     else:
         print('Applying patch: %r' % path)
         patch = external.find_executable('patch', config.build_prefix)
@@ -473,7 +473,7 @@ def apply_patch(src_dir, path, config, git=None):
         patch_args = ['-p%d' % patch_strip_level, '-i', path]
         if sys.platform == 'win32':
             patch_args[-1] = _ensure_unix_line_endings(path)
-        check_call([patch] + patch_args, cwd=src_dir)
+        check_call_env([patch] + patch_args, cwd=src_dir)
         if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
             os.remove(patch_args[-1])  # clean up .patch_unix file
 
