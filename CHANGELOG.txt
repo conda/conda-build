@@ -1,3 +1,30 @@
+2016-08-23 2.0.0beta3:
+
+Enhancements:
+-------------
+
+* add a numpy.distutils patch to jinja templating, so that fortran projects using numpy can also use jinja2 (thanks @bladwig1) #1252
+
+Bug fixes:
+----------
+
+* prefix build and test envs with _, so that conda can be installed in them #1242
+* fix bdist_conda; add smoke test for it to Travis #1243
+* fix windows entry points (duplicate bad logic) #1246
+* fix inspect entry point in embedded conda.recipe #1251
+* create build environment before looking for VCS in it.  #1253
+* fix a deadlock with recursive environment creation on encountering packages with short prefixes #1257
+
+Contributors:
+-------------
+
+* @bladwig1
+* @ericdill (testing)
+* @jakirkham
+* @mingwandroid (testing)
+* @msarahan
+
+
 2016-08-22 2.0.0beta2:
 
 This release includes all current (1.21.14) changes made to the 1.21.x series.
