@@ -13,7 +13,7 @@ from .conda_interface import bits
 
 from conda_build import environ
 from conda_build import source
-from conda_build.utils import _check_call, root_script_dir
+from conda_build.utils import _check_call, root_script_dir, path_prepended
 
 
 assert sys.platform == 'win32'
@@ -164,7 +164,8 @@ def msvc_env_cmd(bits, config, override=None):
 
 
 def build(m, bld_bat, config):
-    env = environ.get_dict(config=config, m=m, dirty=config.dirty)
+    with path_prepended(config.build_prefix):
+        env = environ.get_dict(config=config, m=m, dirty=config.dirty)
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     for name in 'BIN', 'INC', 'LIB':

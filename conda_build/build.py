@@ -403,42 +403,43 @@ def create_env(prefix, specs, config, clear_cache=True):
             lock = filelock.SoftFileLock(lock_file)
             lock.acquire(timeout=config.timeout)
 
-            try:
-                actions = plan.install_actions(prefix, index, specs)
-                plan.display_actions(actions, index)
-                if on_win:
-                    for k, v in os.environ.items():
-                        os.environ[k] = str(v)
-                plan.execute_actions(actions, index, verbose=config.debug)
-            except SystemExit as exc:
-                if "too short in" in str(exc) and config.prefix_length > 80:
-                    log.warn("Build prefix failed with prefix length {0}."
-                            .format(config.prefix_length))
-                    log.warn("Error was: ")
-                    log.warn(str(exc))
-                    log.warn("One or more of your package dependencies needs to be rebuilt "
-                            "with a longer prefix length.")
-                    log.warn("Falling back to legacy prefix length of 80 characters.")
-                    log.warn("Your package will not install into prefixes > 80 characters.")
-                    config.prefix_length = 80
+            with path_prepended(prefix):
+                try:
+                    actions = plan.install_actions(prefix, index, specs)
+                    plan.display_actions(actions, index)
+                    if on_win:
+                        for k, v in os.environ.items():
+                            os.environ[k] = str(v)
+                    plan.execute_actions(actions, index, verbose=config.debug)
+                except SystemExit as exc:
+                    if "too short in" in str(exc) and config.prefix_length > 80:
+                        log.warn("Build prefix failed with prefix length {0}."
+                                .format(config.prefix_length))
+                        log.warn("Error was: ")
+                        log.warn(str(exc))
+                        log.warn("One or more of your package dependencies needs to be rebuilt "
+                                "with a longer prefix length.")
+                        log.warn("Falling back to legacy prefix length of 80 characters.")
+                        log.warn("Your package will not install into prefixes > 80 characters.")
+                        config.prefix_length = 80
 
-                    # Set this here and use to create environ
-                    #   Setting this here is important because we use it below (symlink)
-                    prefix = config.build_prefix
+                        # Set this here and use to create environ
+                        #   Setting this here is important because we use it below (symlink)
+                        prefix = config.build_prefix
+                        lock.release()
+                        if os.path.isfile(lock_file):
+                            os.remove(lock_file)
+                        create_env(prefix, specs, config=config,
+                                    clear_cache=clear_cache)
+                    else:
+                        lock.release()
+                        if os.path.isfile(lock_file):
+                            os.remove(lock_file)
+                        raise
+                finally:
                     lock.release()
                     if os.path.isfile(lock_file):
                         os.remove(lock_file)
-                    create_env(prefix, specs, config=config,
-                                clear_cache=clear_cache)
-                else:
-                    lock.release()
-                    if os.path.isfile(lock_file):
-                        os.remove(lock_file)
-                    raise
-            finally:
-                lock.release()
-                if os.path.isfile(lock_file):
-                    os.remove(lock_file)
         warn_on_old_conda_build(index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
@@ -615,7 +616,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
                     # There is no sense in trying to run an empty build script.
                     if isfile(build_file) or script:
-                        env = environ.get_dict(config=config, m=m, dirty=config.dirty)
+                        with path_prepended(config.build_prefix):
+                            env = environ.get_dict(config=config, m=m, dirty=config.dirty)
                         env["CONDA_BUILD_STATE"] = "BUILD"
                         work_file = join(source.get_dir(config), 'conda_build.sh')
                         if script:
@@ -769,9 +771,10 @@ def test(m, config, move_broken=True):
 
         create_env(config.test_prefix, specs, config=config)
 
-        env = dict(os.environ.copy())
-        env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
-        env["CONDA_BUILD_STATE"] = "TEST"
+        with path_prepended(config.test_prefix):
+            env = dict(os.environ.copy())
+            env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
+            env["CONDA_BUILD_STATE"] = "TEST"
 
         if not config.activate:
             # prepend bin (or Scripts) directory
