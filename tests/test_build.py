@@ -10,7 +10,7 @@ import pytest
 
 from conda_build import build, api
 from conda_build.metadata import MetaData
-from conda_build.utils import rm_rf
+from conda_build.utils import rm_rf, on_win
 
 from .utils import testing_workdir, test_config, metadata_dir
 
@@ -55,6 +55,8 @@ def test_build_preserves_PATH(testing_workdir, test_config):
 
 
 @pytest.mark.timeout(60)
+@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
+                                    " not length dependent"))
 def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     test_base = os.path.expanduser("~/cbtmp")
     config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
