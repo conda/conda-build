@@ -28,9 +28,9 @@ install:
   - conda update -q --all
   - conda install -q --force --no-deps conda requests
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
-  - conda install -q anaconda-client pip pytest-cov numpy pytest-timeout
+  - conda install -q anaconda-client pip pytest-cov numpy
   - conda install -c conda-forge -q perl
-  - pip install pytest-cov pytest-xdist pytest-capturelog filelock
+  - pip install pytest-cov pytest-xdist pytest-capturelog filelock pytest-timeout
   - if [[ "$CANARY" == "true" ]]; then
       conda install -y -q -c conda-canary conda;
     fi
