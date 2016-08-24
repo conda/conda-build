@@ -330,5 +330,8 @@ def show(config):
     print('build packages directory:', config.bldpkgs_dir)
 
 
+# legacy exports for conda
+croot = Config().croot
+
 if __name__ == '__main__':
     show(Config())
