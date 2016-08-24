@@ -15,6 +15,13 @@ from .conda_interface import hashsum_file
 from conda_build.os_utils import external
 from conda_build.utils import tar_xf, unzip, safe_print_unicode, copy_into, on_win
 
+# legacy exports for conda
+from .config import Config as _Config
+SRC_CACHE = _Config().src_cache
+GIT_CACHE = _Config().git_cache
+SVN_CACHE = _Config().svn_cache
+HG_CACHE = _Config().hg_cache
+
 if on_win:
     from conda_build.utils import convert_unix_path_to_win
 
