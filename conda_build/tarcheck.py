@@ -4,6 +4,8 @@ import json
 from os.path import basename
 import tarfile
 
+from conda_build.utils import codec
+
 
 def dist_fn(fn):
     if fn.endswith('.tar'):
@@ -63,6 +65,8 @@ class TarCheck(object):
                 # lines not conforming to the split
                 except ValueError:
                     continue
+                if hasattr(file_type, 'decode'):
+                    file_type = file_type.decode(codec)
                 if file_type == 'binary':
                     prefix_length = len(prefix)
                     break
