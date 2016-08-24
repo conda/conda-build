@@ -4,7 +4,6 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import absolute_import, division, print_function
 
 from collections import deque
-import errno
 import fnmatch
 from glob import glob
 import io
@@ -18,7 +17,6 @@ import stat
 import subprocess
 import sys
 import tarfile
-import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -390,15 +388,13 @@ def create_env(prefix, specs, config, clear_cache=True):
         if value:
             specs.append('%s@' % feature)
 
-    for d in config.bldpkgs_dirs:
-        if not isdir(d):
-            os.makedirs(d)
-        update_index(d, config)
     if specs:  # Don't waste time if there is nothing to do
+        for d in config.bldpkgs_dirs:
+            if not isdir(d):
+                os.makedirs(d)
+            update_index(d, config)
         with path_prepended(prefix):
             index = get_build_index(config=config, clear_cache=True)
-
-            warn_on_old_conda_build(index)
 
             cc.pkgs_dirs = cc.pkgs_dirs[:1]
             dirname = os.path.join(cc.root_dir, 'pkgs')
@@ -443,7 +439,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                 lock.release()
                 if os.path.isfile(lock_file):
                     os.remove(lock_file)
-    warn_on_old_conda_build(index)
+        warn_on_old_conda_build(index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):

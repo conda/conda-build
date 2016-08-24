@@ -6,8 +6,11 @@ and is more unit-test oriented.
 import os
 import sys
 
-from conda_build import build
+import pytest
+
+from conda_build import build, api
 from conda_build.metadata import MetaData
+from conda_build.utils import rm_rf
 
 from .utils import testing_workdir, test_config, metadata_dir
 
@@ -49,3 +52,23 @@ def test_build_preserves_PATH(testing_workdir, test_config):
     ref_path = os.environ['PATH']
     build.build(m, test_config)
     assert os.environ['PATH'] == ref_path
+
+
+@pytest.mark.timeout(60)
+def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
+    test_base = os.path.expanduser("~/cbtmp")
+    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
+    recipe_path = os.path.join(metadata_dir, "has_prefix_files")
+    fn = api.get_output_file_path(recipe_path, config=config)
+    config.prefix_length = 80
+    try:
+        api.build(recipe_path, config=config)
+        pkg_name = os.path.basename(fn).replace("-1.0-0.tar.bz2", "")
+        assert not api.inspect_prefix_length(fn, 255)
+        config.prefix_length = 255
+        build.create_env(config.build_prefix, specs=["python", pkg_name], config=config)
+    except:
+        raise
+    finally:
+        rm_rf(test_base)
+    assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text()

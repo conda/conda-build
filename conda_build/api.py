@@ -19,7 +19,7 @@ but only use those kwargs in config.  Config must change to support new features
 import sys as _sys
 
 # make the Config class available in the api namespace
-from conda_build.config import Config, get_or_merge_config
+from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
 
 
 def _ensure_list(recipe_arg):
@@ -223,6 +223,21 @@ def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):
     from .inspect import inspect_objects
     packages = _ensure_list(packages)
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
+
+
+def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
+    from conda_build.tarcheck import check_prefix_lengths
+    packages = _ensure_list(packages)
+    prefix_lengths = check_prefix_lengths(packages, min_prefix_length)
+    if prefix_lengths:
+        print("Packages with binary prefixes shorter than %d characters:"
+                % min_prefix_length)
+        for fn, length in prefix_lengths.items():
+            print("{0} ({1} chars)".format(fn, length))
+    else:
+        print("No packages found with binary prefixes shorter than %d characters."
+                % min_prefix_length)
+    return len(prefix_lengths) == 0
 
 
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
