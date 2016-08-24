@@ -60,6 +60,8 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     fn = api.get_output_file_path(recipe_path, config=config)
+    if os.path.isfile(fn):
+        os.remove(fn)
     config.prefix_length = 80
     try:
         api.build(recipe_path, config=config)
