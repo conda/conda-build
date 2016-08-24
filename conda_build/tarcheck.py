@@ -1,10 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
-import glob
 import json
-import os
 from os.path import basename
 import tarfile
+
+from conda_build.utils import codec
 
 
 def dist_fn(fn):
@@ -65,6 +65,8 @@ class TarCheck(object):
                 # lines not conforming to the split
                 except ValueError:
                     continue
+                if hasattr(file_type, 'decode'):
+                    file_type = file_type.decode(codec)
                 if file_type == 'binary':
                     prefix_length = len(prefix)
                     break
@@ -78,8 +80,7 @@ def check_all(path):
     x.t.close()
 
 
-def check_prefix_lengths(folder, min_prefix_length=255):
-    files = glob.glob(os.path.join(folder, "*.tar.bz2"))
+def check_prefix_lengths(files, min_prefix_length=255):
     lengths = {}
     for f in files:
         length = TarCheck(f).prefix_length()

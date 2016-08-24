@@ -107,6 +107,8 @@ def copy_into(src, dst, config, symlinks=False):
                 dst_fn = dst
 
             try:
+                if not os.path.isdir(os.path.dirname(dst_fn)):
+                    os.makedirs(os.path.dirname(dst_fn))
                 shutil.copy2(src, dst_fn)
             except shutil.Error:
                 log.debug("skipping {0} - already exists in {1}".format(os.path.basename(src), dst))

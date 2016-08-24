@@ -34,6 +34,7 @@ test:
   requires:
     - pytest
     - pytest-cov
+    - pytest-timeout
     # Optional: you can use pytest-xdist to run the tests in parallel
     # - pytest-env  # [win]
     # - pytest-xdist

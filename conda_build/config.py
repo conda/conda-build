@@ -23,6 +23,8 @@ on_win = (sys.platform == 'win32')
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
 
+DEFAULT_PREFIX_LENGTH = 255
+
 
 class Config(object):
     __file__ = __path__ = __file__
@@ -63,7 +65,8 @@ class Config(object):
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
-        self._prefix_length = kwargs.get("prefix_length", getattr(self, '_prefix_length', 255))
+        self._prefix_length = kwargs.get("prefix_length", getattr(self, '_prefix_length',
+                                                                  DEFAULT_PREFIX_LENGTH))
         # set default value (not actually None)
         self._croot = kwargs.get('croot', getattr(self, '_croot', None))
 

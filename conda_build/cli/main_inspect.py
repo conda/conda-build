@@ -138,6 +138,23 @@ Tools for investigating conda channels.
         help="The channel to test. The default is %(default)s."
     )
 
+    prefix_lengths = subcommand.add_parser(
+        "prefix-lengths",
+        help="""Inspect packages in given path, finding those with binary
+            prefixes shorter than specified""",
+        description=linkages_help,
+    )
+    prefix_lengths.add_argument(
+        'folder',
+        help='folder containing packages to inspect.',
+    )
+    prefix_lengths.add_argument(
+        '--min-prefix-length', '-m',
+        help='Minimum length.  Only packages with prefixes below this are shown.',
+        default=api.Config().prefix_length,
+        type=int,
+    )
+
     args = p.parse_args(args)
     return p, args
 
