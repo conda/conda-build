@@ -804,13 +804,13 @@ def test(m, config, move_broken=True):
 
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
-                    python=config.test_perl,
+                    perl=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.pl')))
                 tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
-                    python=config.test_perl,
+                    lua=config.test_lua,
                     test_file=join(tmp_dir, 'run_test.lua')))
                 tf.write("if errorlevel 1 exit 1\n") if on_win else None
 
@@ -942,7 +942,6 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
 
 
 def handle_anaconda_upload(path, config):
-    import subprocess
     from conda_build.os_utils.external import find_executable
 
     upload = False
