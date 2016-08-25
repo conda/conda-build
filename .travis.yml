@@ -30,7 +30,7 @@ install:
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - conda install -q anaconda-client pip pytest-cov numpy
   - conda install -c conda-forge -q perl
-  - pip install pytest-cov pytest-xdist pytest-capturelog filelock pytest-timeout
+  - pip install pytest-cov pytest-xdist pytest-catchlog filelock pytest-timeout
   - if [[ "$CANARY" == "true" ]]; then
       conda install -y -q -c conda-canary conda;
     fi
@@ -50,7 +50,7 @@ script:
       pushd tests/bdist-recipe;
       python setup.py bdist_conda;
       popd;
-      conda build conda.recipe --no-anaconda-upload;
+      conda build conda.recipe --no-anaconda-upload -c conda-canary;
     else
       py.test -v -n 2 --cov conda_build --cov-report xml tests;
     fi

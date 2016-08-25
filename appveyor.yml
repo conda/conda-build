@@ -64,7 +64,7 @@ install:
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
   - pip install --no-deps .
-  - pip install pytest-xdist pytest-capturelog pytest-env filelock pytest-timeout
+  - pip install pytest-xdist pytest-catchlog pytest-env filelock pytest-timeout
   - set PATH
   - conda build --version
   - call appveyor\setup_x64.bat
@@ -83,7 +83,7 @@ test_script:
        mkdir C:\cbtmp
        py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 2
     ) else (
-       conda build conda.recipe --no-anaconda-upload
+       conda build conda.recipe --no-anaconda-upload -c conda-canary
     )
 
 on_failure:
