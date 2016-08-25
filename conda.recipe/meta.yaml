@@ -71,6 +71,8 @@ test:
     - conda skeleton -h
     # test that conda sees entry points appropriately in help
     - conda --help
+    # run the full test suite
+    - py.test tests -v
   imports:
     - conda_build
   source_files:
