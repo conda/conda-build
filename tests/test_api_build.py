@@ -2,6 +2,7 @@
 This module tests the build API.  These are high-level integration tests.
 """
 
+from collections import OrderedDict
 import logging
 import os
 import subprocess
@@ -13,6 +14,7 @@ from conda_build.conda_interface import PY3, url_path, load_condarc, sys_rc_path
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
+import yaml
 
 from conda_build import api
 from conda_build.utils import copy_into, on_win
@@ -21,6 +23,21 @@ from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
+
+
+def represent_ordereddict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+
+yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 class AnacondaClientArgs(object):
@@ -410,3 +427,72 @@ def test_numpy_setup_py_data(test_config):
                             config=test_config, numpy="1.11")) == \
                             "load_setup_py_test-1.0a1-np111py{0}{1}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor)
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="Windows permission errors w/ git when removing repo files on cleanup.")
+def test_relative_git_url_submodule_clone(testing_workdir):
+    """Test git submodules identified with relative URLs can be mirrored then cloned. Also tests
+       pushing changes and new tags and making sure those are reflected with GIT_DESCRIBE_TAG"""
+    toplevel = os.path.join(testing_workdir, 'toplevel')
+    os.mkdir(toplevel)
+    relative_sub = os.path.join(testing_workdir, 'relative_sub')
+    os.mkdir(relative_sub)
+    absolute_sub = os.path.join(testing_workdir, 'absolute_sub')
+    os.mkdir(absolute_sub)
+
+    git_env = os.environ
+    git_env['GIT_AUTHOR_NAME'] = 'conda-build'
+    git_env['GIT_COMMITTER_NAME'] = 'conda-build'
+    git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
+
+    for tag in range(2):
+        os.chdir(absolute_sub)
+        if tag == 0:
+            subprocess.check_call(['git', 'init'], env=git_env)
+        with open('absolute', 'w') as f:
+            f.write(str(tag))
+        subprocess.check_call(['git', 'add', 'absolute'], env=git_env)
+        subprocess.check_call(['git', 'commit', '-m', 'absolute {}'.format(tag)],
+                                env=git_env)
+
+        os.chdir(relative_sub)
+        if tag == 0:
+            subprocess.check_call(['git', 'init'])
+        with open('relative', 'w') as f:
+            f.write(str(tag))
+        subprocess.check_call(['git', 'add', 'relative'], env=git_env)
+        subprocess.check_call(['git', 'commit', '-m', 'relative {}'.format(tag)],
+                                env=git_env)
+
+        os.chdir(toplevel)
+        if tag == 0:
+            subprocess.check_call(['git', 'init'], env=git_env)
+        with open('toplevel', 'w') as f:
+            f.write(str(tag))
+        subprocess.check_call(['git', 'add', 'toplevel'], env=git_env)
+        subprocess.check_call(['git', 'commit', '-m', 'toplevel {}'.format(tag)],
+                                env=git_env)
+        if tag == 0:
+            subprocess.check_call(['git', 'submodule', 'add', absolute_sub, 'absolute'],
+                                    env=git_env)
+            subprocess.check_call(['git', 'submodule', 'add',
+                                    os.path.join('..', 'relative_sub'), 'relative'],
+                                    env=git_env)
+        subprocess.check_call(['git', 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
+                                env=git_env)
+
+        filename = os.path.join(testing_workdir, 'meta.yaml')
+        data = OrderedDict([
+            ('package', OrderedDict([
+                ('name', 'relative_submodules'),
+                ('version', '{{ GIT_DESCRIBE_TAG }}')])),
+            ('source', OrderedDict([
+                ('git_url', toplevel),
+                ('git_tag', str(tag))]))
+        ])
+
+        with open(filename, 'w') as outfile:
+            outfile.write(yaml.dump(data, default_flow_style=False))
+        output = api.get_output_file_path(testing_workdir)
+        assert ("relative_submodules-{}-0".format(tag) in output)
