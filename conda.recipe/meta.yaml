@@ -69,6 +69,8 @@ test:
     - which conda-skeleton  # [unix]
     - where conda-skeleton  # [win]
     - conda skeleton -h
+    # test that conda sees entry points appropriately in help
+    - conda --help
   imports:
     - conda_build
   source_files:
