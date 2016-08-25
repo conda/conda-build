@@ -367,6 +367,7 @@ def prepend_bin_path(env, prefix, prepend_prefix=False):
         env['PATH'] = join(prefix, "Library", "mingw-w64", "bin") + os.pathsep + \
                       join(prefix, "Library", "usr", "bin") + os.pathsep + os.pathsep + \
                       join(prefix, "Library", "bin") + os.pathsep + \
+                      join(prefix, "Scripts") + os.pathsep + \
                       env['PATH']
         prepend_prefix = True  # windows has Python in the prefix.  Use it.
     if prepend_prefix:
