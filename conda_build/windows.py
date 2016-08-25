@@ -13,7 +13,7 @@ from .conda_interface import bits
 
 from conda_build import environ
 from conda_build import source
-from conda_build.utils import _check_call
+from conda_build.utils import _check_call, root_script_dir
 
 
 assert sys.platform == 'win32'
@@ -188,7 +188,9 @@ def build(m, bld_bat, config):
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
             fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
             if config.activate:
-                fo.write("call activate.bat {0}\n".format(config.build_prefix))
+                fo.write("call {conda_root}\\activate.bat {prefix}\n".format(
+                    conda_root=root_script_dir,
+                    prefix=config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 

@@ -24,7 +24,7 @@ import filelock
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import linked
-from .conda_interface import bits
+from .conda_interface import bits, root_dir
 
 from conda_build.os_utils import external
 
@@ -51,6 +51,7 @@ on_win = (sys.platform == 'win32')
 codec = getpreferredencoding() or 'utf-8'
 on_win = sys.platform == "win32"
 log = logging.getLogger(__file__)
+root_script_dir = os.path.join(root_dir, 'Scripts' if on_win else 'bin')
 
 
 PY_TMPL = """\

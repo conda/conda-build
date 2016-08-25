@@ -48,7 +48,7 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
-                               prepend_bin_path, codec)
+                               prepend_bin_path, codec, root_script_dir)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -627,8 +627,9 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                             else:
                                 data = open(work_file).read()
                             with open(work_file, 'w') as bf:
-                                bf.write("source activate {build_prefix} &> /dev/null\n".format(
-                                    build_prefix=config.build_prefix))
+                                bf.write("source {conda_root}activate {build_prefix} &> "
+                                    "/dev/null\n".format(conda_root=root_script_dir + os.path.sep,
+                                                         build_prefix=config.build_prefix))
                                 bf.write(data)
                         else:
                             if not isfile(work_file):
@@ -790,7 +791,8 @@ def test(m, config, move_broken=True):
         with open(test_script, 'w') as tf:
             if config.activate:
                 ext = ".bat" if on_win else ""
-                tf.write("{source} activate{ext} {test_env} {squelch}\n".format(
+                tf.write("{source} {conda_root}activate{ext} {test_env} {squelch}\n".format(
+                    conda_root=root_script_dir + os.path.sep,
                     source="call" if on_win else "source",
                     ext=ext,
                     test_env=config.test_prefix,
