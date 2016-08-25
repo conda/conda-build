@@ -33,11 +33,12 @@ requirements:
 test:
   requires:
     - pytest
-    - pytest-cov
+    - pytest-catchlog
     - pytest-timeout
     # Optional: you can use pytest-xdist to run the tests in parallel
-    # - pytest-env  # [win]
     # - pytest-xdist
+    #   If running tests in parallel on Win, this helps ensure reliable test discovery
+    # - pytest-env  # [win]
     - mock
   commands:
     - which conda-build  # [unix]
