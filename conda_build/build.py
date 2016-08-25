@@ -93,7 +93,7 @@ def create_post_scripts(m, config):
         if not isdir(dst_dir):
             os.makedirs(dst_dir, int('755', 8))
         dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
-        copy_into(src, dst, config)
+        copy_into(src, dst, config.timeout)
         os.chmod(dst, int('755', 8))
 
 
@@ -195,7 +195,7 @@ def create_info_files(m, files, config, prefix):
                 continue
             src_path = join(m.path, fn)
             dst_path = join(recipe_dir, fn)
-            copy_into(src_path, dst_path, config=config)
+            copy_into(src_path, dst_path, timeout=config.timeout)
 
         # store the rendered meta.yaml file, plus information about where it came from
         #    and what version of conda-build created it
@@ -209,12 +209,12 @@ def create_info_files(m, files, config, prefix):
                 f.write("# ------------------------------------------------\n\n")
                 f.write(rendered)
             copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
-                      config=config)
+                      timeout=config.timeout)
 
     license_file = m.get_value('about/license_file')
     if license_file:
         copy_into(join(source.get_dir(config), license_file),
-                        join(config.info_dir, 'LICENSE.txt'), config)
+                        join(config.info_dir, 'LICENSE.txt'), config.timeout)
 
     readme = m.get_value('about/readme')
     if readme:
@@ -222,7 +222,7 @@ def create_info_files(m, files, config, prefix):
         if not isfile(src):
             sys.exit("Error: no readme file: %s" % readme)
         dst = join(config.info_dir, readme)
-        copy_into(src, dst, config)
+        copy_into(src, dst, config.timeout)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
             print("WARNING: anaconda.org only recognizes about/readme "
                   "as README.md and README.rst", file=sys.stderr)
@@ -330,7 +330,7 @@ def create_info_files(m, files, config, prefix):
     if m.get_value('app/icon'):
         copy_into(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'),
-                  config)
+                  config.timeout)
 
 
 def get_build_index(config, clear_cache=True, arg_channels=None):
@@ -633,7 +633,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                 bf.write(data)
                         else:
                             if not isfile(work_file):
-                                copy_into(build_file, work_file, config)
+                                copy_into(build_file, work_file, config.timeout)
                         os.chmod(work_file, 0o766)
 
                         if isfile(work_file):
@@ -704,7 +704,7 @@ can lead to packages that include their dependencies.""" % meta_files))
             # we're done building, perform some checks
             tarcheck.check_all(tmp_path)
 
-            copy_into(tmp_path, path, config=config)
+            copy_into(tmp_path, path, config.timeout)
         update_index(config.bldpkgs_dir, config)
 
     else:

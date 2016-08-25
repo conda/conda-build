@@ -89,13 +89,12 @@ def get_recipe_abspath(recipe):
     return recipe_dir, need_cleanup
 
 
-def copy_into(src, dst, config, symlinks=False):
+def copy_into(src, dst, timeout=90, symlinks=False):
     "Copy all the files and directories in src to the directory dst"
     lock = None
     if isdir(dst):
-        lock = filelock.SoftFileLock(join(dst, ".conda_lock"),
-                                     timeout=config.timeout)
-        lock.acquire()
+        lock = filelock.SoftFileLock(join(dst, ".conda_lock"))
+        lock.acquire(timeout=timeout)
 
     try:
         if isdir(src):
@@ -108,7 +107,7 @@ def copy_into(src, dst, config, symlinks=False):
                 dst_fn = dst
 
             try:
-                if not os.path.isdir(os.path.dirname(dst_fn)):
+                if os.path.sep in dst_fn and not os.path.isdir(os.path.dirname(dst_fn)):
                     os.makedirs(os.path.dirname(dst_fn))
                 shutil.copy2(src, dst_fn)
             except shutil.Error:
@@ -406,7 +405,7 @@ def create_entry_point(path, module, func, config):
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config)
+        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config.timeout)
     else:
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % config.build_python)

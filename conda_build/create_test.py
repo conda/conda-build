@@ -49,7 +49,7 @@ def create_files(dir_path, m, config):
     for fn in m.get_value('test/files', []):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(dir_path, fn), config)
+        copy_into(path, join(dir_path, fn), config.timeout)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(config.work_dir):
         source.provide(m.path, m.get_section('source'), config=config)
@@ -57,7 +57,7 @@ def create_files(dir_path, m, config):
         has_files = True
         files = glob.glob(join(config.work_dir, pattern))
         for f in files:
-            copy_into(f, f.replace(config.work_dir, config.test_dir), config)
+            copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout)
     return has_files
 
 
@@ -69,7 +69,7 @@ def create_shell_files(dir_path, m, config):
         name = 'run_test.sh'
 
     if exists(join(m.path, name)):
-        copy_into(join(m.path, name), dir_path, config)
+        copy_into(join(m.path, name), dir_path, config.timeout)
         has_tests = True
 
     with open(join(dir_path, name), 'a') as f:
