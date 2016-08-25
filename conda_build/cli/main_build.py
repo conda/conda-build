@@ -241,20 +241,6 @@ def execute(args):
         build.print_build_intermediate_warning(config)
 
 
-def print_issue_message(e):
-    if e.__class__.__name__ not in ('ScannerError', 'ParserError'):
-        message = """\
-An unexpected error has occurred, please consider sending the
-following traceback to the conda GitHub issue tracker at:
-
-    https://github.com/conda/conda-build/issues
-
-Include the output of the command 'conda info' in your report.
-
-"""
-        print(message, file=sys.stderr)
-
-
 def main():
     try:
         execute(sys.argv[1:])
@@ -264,8 +250,5 @@ def main():
     except filelock.Timeout as e:
         print("File lock could on {0} not be obtained.  You might need to try fewer builds at once."
               "  Otherwise, run conda clean --lock".format(e.lock_file))
-        sys.exit(1)
-    except Exception as e:
-        print_issue_message(str(e))
         sys.exit(1)
     return
