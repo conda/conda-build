@@ -44,7 +44,6 @@ setup(
                             'conda-index = conda_build.cli.main_index:main',
                             'conda-inspect = conda_build.cli.main_inspect:main',
                             'conda-metapackage = conda_build.cli.main_metapackage:main',
-                            'conda-pipbuild = conda_build.cli.main_pipbuild:main',
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-sign = conda_build.cli.main_sign:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
