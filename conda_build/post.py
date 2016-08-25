@@ -421,7 +421,8 @@ def make_hardlink_copy(path, prefix):
         # remove old file
         os.remove(path)
         # rename copy to original filename
-        os.rename("tmpfile", path)
+        shutil.copy2("tmpfile", path)
+        os.remove("tmpfile")
 
 
 def get_build_metadata(m, config):
