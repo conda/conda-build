@@ -14,6 +14,10 @@ conda-build
   
 .. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/conda/conda-build
+  
+.. image:: https://landscape.io/github/conda/conda-build/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/conda/conda-build/master
+   :alt: Code Health
 
 
 Installation
