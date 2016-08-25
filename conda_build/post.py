@@ -118,7 +118,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                     # so the package directory already exists
                     # from another installed dependency
                     if os.path.exists(join(sp_dir, fn)):
-                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config)
+                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout)
                         utils.rm_rf(join(egg_path, fn))
                     else:
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
@@ -415,14 +415,17 @@ def make_hardlink_copy(path, prefix):
     if not os.path.isabs(path) and not os.path.exists(path):
         path = os.path.normpath(os.path.join(prefix, path))
     nlinks = os.lstat(path).st_nlink
+    dest = 'tmpfile'
+    if os.path.isabs(path):
+        dest = os.path.join(os.getcwd(), dest)
     if nlinks > 1:
         # copy file to new name
-        shutil.copy2(path, "tmpfile")
+        utils.copy_into(path, dest)
         # remove old file
-        os.remove(path)
+        utils.rm_rf(path)
         # rename copy to original filename
-        shutil.copy2("tmpfile", path)
-        os.remove("tmpfile")
+        utils.copy_into(dest, path)
+        utils.rm_rf(dest)
 
 
 def get_build_metadata(m, config):
