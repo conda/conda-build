@@ -384,7 +384,7 @@ def osx_vars(compiler_vars, config):
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     return {
         'OSX_ARCH': OSX_ARCH,
-        'MACOSX_DEPLOYMENT_TARGET': '10.6',
+        'MACOSX_DEPLOYMENT_TARGET': '10.7',
     }
 
 
