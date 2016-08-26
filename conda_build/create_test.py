@@ -5,10 +5,11 @@ Module to handle generating test files.
 from __future__ import absolute_import, division, print_function
 
 import glob
+import os
 from os.path import join, exists, isdir
 import sys
 
-from conda_build.utils import copy_into
+from conda_build.utils import copy_into, get_ext_files
 from conda_build import source
 
 
@@ -58,6 +59,8 @@ def create_files(dir_path, m, config):
         files = glob.glob(join(config.work_dir, pattern))
         for f in files:
             copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout)
+        for f in get_ext_files(config.test_dir, '.pyc'):
+            os.remove(f)
     return has_files
 
 
