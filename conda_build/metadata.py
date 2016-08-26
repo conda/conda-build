@@ -222,6 +222,7 @@ default_structs = {
     'build/osx_is_app': bool,
     'build/preserve_egg_dir': bool,
     'build/binary_relocation': bool,
+    'build/noarch': bool,
     'build/noarch_python': bool,
     'build/detect_binary_files_with_prefix': bool,
     'build/skip': bool,
@@ -291,7 +292,7 @@ FIELDS = {
                ],
     'build': ['number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'noarch_python',
+              'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'rpaths', 'script_env',
               'always_include_files', 'skip', 'msvc_compiler',
@@ -567,7 +568,7 @@ class MetaData(object):
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if self.get_value('build/noarch_python'):
+                    if self.get_value('build/noarch_python') or self.get_value('build/noarch'):
                         continue
                     ms = handle_config_version(ms, ver, typ)
 
@@ -669,7 +670,7 @@ class MetaData(object):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch_python'):
+        if self.get_value('build/noarch_python') or self.get_value('build/noarch'):
             d['platform'] = d['arch'] = None
             d['subdir'] = 'noarch'
         if self.is_app():

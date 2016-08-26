@@ -600,3 +600,20 @@ def test_relative_git_url_submodule_clone(testing_workdir):
         output = api.get_output_file_path(testing_workdir)
         assert ("relative_submodules-{}-0".format(tag) in output)
         api.build(testing_workdir)
+
+
+def test_noarch(testing_workdir):
+    filename = os.path.join(testing_workdir, 'meta.yaml')
+    for noarch in (False, True):
+        data = OrderedDict([
+            ('package', OrderedDict([
+                ('name', 'test'),
+                ('version', '0.0.0')])),
+            ('build', OrderedDict([
+                 ('noarch', str(noarch))]))
+            ])
+        with open(filename, 'w') as outfile:
+            outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
+        output = api.get_output_file_path(testing_workdir)
+        assert ("noarch" in output or not noarch)
+        assert ("noarch" not in output or noarch)
