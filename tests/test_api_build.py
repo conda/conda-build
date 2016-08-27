@@ -423,6 +423,8 @@ def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
 def test_backslash_in_always_include_files_path(test_config):
     api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
+    with pytest.raises(RuntimeError):
+        api.build(os.path.join(fail_dir, 'backslash_in_include_files'))
 
 
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")

@@ -1,0 +1,16 @@
+package:
+  name: backslash_in_include_files
+  version: 1.0
+
+build:
+  always_include_files:
+    - include\abstract.h
+    - include\\abstract.h
+
+requirements:
+  build:
+    - python
+
+test:
+  commands:
+    - IF NOT EXIST "%PREFIX%\include\abstract.h" exit 1
