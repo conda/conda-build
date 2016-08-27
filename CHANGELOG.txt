@@ -1,3 +1,30 @@
+2016-08-26 2.0.0beta4:
+
+Bug fixes:
+----------
+
+* improve backwards compatibility with conda commands #1259
+* only compile pyc files if python is in the build prefix # 1261
+* remove exception catch-all in build CLI, to show actual errors more #1262
+* specify full paths to activate scripts to avoid PATH conflicts with virtualenv #1266
+* clean up remnants of pipbuild #1267
+* remove pyc files from any source_files arguments to test in meta.yaml (avoid __file__ errors) #1272
+* copy files and folders when breaking hardlinks (rather than renaming) to avoid cross-filesystem errors #1273
+* add Scripts folder to prepended binary paths searched on Windows #1276
+* update MACOSX_DEPLOYMENT_TARGET hard-coded value to 10.7 (better fix soon) #1278
+
+Contributors:
+-------------
+
+* @dludwig1 (testing)
+* @ericdill (testing)
+* @jakirkham (testing)
+* @mingwandroid (testing)
+* @msarahan
+* @pitrou (testing)
+* @srossross (testing)
+
+
 2016-08-23 2.0.0beta3:
 
 Enhancements:
