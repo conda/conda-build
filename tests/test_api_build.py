@@ -420,6 +420,11 @@ def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     assert debug_message in caplog.text()
 
 
+@pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
+def test_backslash_in_always_include_files_path(test_config):
+    api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
+
+
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
 def test_numpy_setup_py_data(test_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')

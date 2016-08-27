@@ -9,7 +9,7 @@ import os
 from os.path import join, exists, isdir
 import sys
 
-from conda_build.utils import copy_into, get_ext_files
+from conda_build.utils import copy_into, get_ext_files, on_win
 from conda_build import source
 
 
@@ -55,6 +55,9 @@ def create_files(dir_path, m, config):
     if m.get_value('test/source_files') and not isdir(config.work_dir):
         source.provide(m.path, m.get_section('source'), config=config)
     for pattern in m.get_value('test/source_files', []):
+        if on_win and '\\' in pattern:
+            raise RuntimeError("test/source_files paths must use / "
+                                "as the path delimiter on Windows")
         has_files = True
         files = glob.glob(join(config.work_dir, pattern))
         for f in files:
