@@ -367,13 +367,13 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
             if nonpy_unix and not force:
                 print(("WARNING: Package %s has non-Python entry points, "
                        "skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform), file=sys.stderr)
+                      (file_path, info['platform'], platform), file=sys.stderr)
                 continue
 
             if nonpy_win and not force:
                 print(("WARNING: Package %s has entry points, which are not "
                        "supported yet. Skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform), file=sys.stderr)
+                      (file_path, info['platform'], platform), file=sys.stderr)
                 continue
 
             file_map = get_pure_py_file_map(t, platform)
@@ -381,14 +381,14 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
             if dry_run:
                 if not quiet:
                     print("Would convert %s from %s to %s" %
-                        (file, info['platform'], dest_plat))
+                        (file_path, info['platform'], dest_plat))
                 if verbose:
                     pprint.pprint(file_map)
                 continue
             else:
                 if not quiet:
                     print("Converting %s from %s to %s" %
-                        (file, info['platform'], platform))
+                        (file_path, info['platform'], platform))
 
             if not isdir(output_dir):
                 os.makedirs(output_dir)
