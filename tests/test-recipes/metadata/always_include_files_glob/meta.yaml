@@ -7,7 +7,7 @@ build:
   always_include_files:
     - lib/libpng*.dylib  [osx]
     - lib/libpng*.so*     [linux]
-    - Library\lib\libpng*.lib [win]
+    - Library/lib/libpng*.lib [win]
 
 requirements:
     build:

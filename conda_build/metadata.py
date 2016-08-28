@@ -697,7 +697,13 @@ class MetaData(object):
         return ret
 
     def always_include_files(self):
-        return self.get_value('build/always_include_files', [])
+        files = self.get_value('build/always_include_files', [])
+        if any('\\' in i for i in files):
+            raise RuntimeError("build/always_include_files paths must use / "
+                                "as the path delimiter on Windows")
+        if on_win:
+            files = [f.replace("/", "\\") for f in files]
+        return files
 
     def include_recipe(self):
         return self.get_value('build/include_recipe', True)
