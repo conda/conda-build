@@ -82,38 +82,32 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
                       need_source_download=need_source_download, config=config)
 
 
-def test(package_path, move_broken=True, config=None, **kwargs):
+def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
     import os
-    from .conda_interface import TemporaryDirectory
     from conda_build.build import test
     from conda_build.render import render_recipe
-    from conda_build.utils import tar_xf
-    # Note: internal test function depends on metadata already having been populated.
-    # This may cause problems if post-build version stuff is used, as we have no way to pass
-    # metadata out of build.  This is read from an existing package input here.
 
     config = get_or_merge_config(config, **kwargs)
-    with TemporaryDirectory() as tmp:
-        tar_xf(package_path, tmp)
-        recipe_dir = os.path.join(tmp, 'info', 'recipe')
-        package_fn = os.path.basename(package_path)
-        package_name = package_fn.rsplit('-', 2)[0]
 
+    if hasattr(recipedir_or_package_or_metadata, 'config'):
+        metadata = recipedir_or_package_or_metadata
+    elif os.path.isdir(recipedir_or_package_or_metadata):
+        # This will create a new local build folder if and only if config doesn't already have one.
+        #   What this means is that if we're running a test immediately after build, we use the one
+        #   that the build already provided
+        config.compute_build_id(recipedir_or_package_or_metadata)
+        metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, config=config)
+    else:
+        # fall back to old way (use recipe, rather than package)
+        package_name = os.path.basename(recipedir_or_package_or_metadata).rsplit('-', 2)[0]
         # This will create a new local build folder if and only if config doesn't already have one.
         #   What this means is that if we're running a test immediately after build, we use the one
         #   that the build already provided
         config.compute_build_id(package_name)
-
-        # try to extract the static meta.yaml and load metadata from it
-        if os.path.isdir(recipe_dir):
-            metadata, _, _ = render_recipe(recipe_dir, config=config)
-        else:
-            # fall back to old way (use recipe, rather than package)
-            metadata, _, _ = render_recipe(package_path, no_download_source=False,
-                                        config=config, **kwargs)
-
-        with config:
-            test_result = test(metadata, config=config, move_broken=move_broken)
+        metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, no_download_source=False,
+                                    config=config, **kwargs)
+    with config:
+        test_result = test(metadata, config=config, move_broken=move_broken)
     return test_result
 
 
@@ -191,22 +185,22 @@ This works by creating a conda.pth file in site-packages."""
     return execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
-def convert(package_files, output_dir=".", show_imports=False, platforms=None, force=False,
+def convert(package_file, output_dir=".", show_imports=False, platforms=None, force=False,
                   dependencies=None, verbose=False, quiet=True, dry_run=False):
     """Convert changes a package from one platform to another.  It applies only to things that are
     portable, such as pure python, or header-only C/C++ libraries."""
     from .convert import conda_convert
     if not platforms:
         platforms = []
-    if package_files.endswith('tar.bz2'):
-        return conda_convert(package_files, output_dir=output_dir, show_imports=show_imports,
+    if package_file.endswith('tar.bz2'):
+        return conda_convert(package_file, output_dir=output_dir, show_imports=show_imports,
                              platforms=platforms, force=force, verbose=verbose, quiet=quiet,
                              dry_run=dry_run, dependencies=dependencies)
-    elif package_files.endswith('.whl'):
+    elif package_file.endswith('.whl'):
         raise RuntimeError('Conversion from wheel packages is not '
                             'implemented yet, stay tuned.')
     else:
-        raise RuntimeError("cannot convert: %s" % package_files)
+        raise RuntimeError("cannot convert: %s" % package_file)
 
 
 def test_installable(channel='defaults'):

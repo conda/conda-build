@@ -2,7 +2,7 @@
 This module tests the build API.  These are high-level integration tests.
 """
 
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 import logging
 import os
 import subprocess
@@ -17,11 +17,11 @@ import pytest
 import yaml
 
 from conda_build import api
-from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2)
+from conda_build.utils import copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2
 from conda_build.os_utils.external import find_executable
-from conda_build.metadata import MetaData
 
-from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config)
+from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
+                    test_metadata)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -445,21 +445,7 @@ def test_backslash_in_always_include_files_path(test_config):
 
 
 def test_build_metadata_object(test_config):
-    d = defaultdict(dict)
-    d['package']['name'] = 'test_package'
-    d['package']['version'] = '1.0'
-    d['build']['number'] = '1'
-    d['build']['entry_points'] = []
-    # MetaData does the auto stuff if the build string is None
-    d['build']['string'] = None
-    d['requirements']['build'] = ['python']
-    d['requirements']['run'] = ['python']
-    d['about']['home'] = "sweet home"
-    d['about']['license'] = "contract in blood"
-    d['about']['summary'] = "a test package"
-
-    metadata = MetaData.fromdict(d)
-    api.build(metadata)
+    api.build(test_metadata)
 
 
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")

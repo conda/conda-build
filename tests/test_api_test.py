@@ -9,7 +9,7 @@ import pytest
 
 from conda_build import api
 from conda_build.source import download
-from .utils import testing_workdir, metadata_dir, test_config
+from .utils import testing_workdir, metadata_dir, test_config, test_metadata
 
 def test_package_test(testing_workdir, test_config):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
@@ -23,5 +23,17 @@ def test_package_test(testing_workdir, test_config):
     api.test(output_file, config=test_config)
 
 
-def test_recipe_test(testing_workdir):
-    pass
+def test_recipe_test(testing_workdir, test_config):
+    # temporarily necessary because we have custom rebuilt svn for longer prefix here
+    test_config.channel_urls = ('conda_build_test', )
+
+    recipe = os.path.join(metadata_dir, 'has_prefix_files')
+    api.build(recipe, config=test_config, notest=True)
+    api.test(recipe, config=test_config)
+
+
+def test_metadata_test(testing_workdir, test_config):
+    recipe = os.path.join(metadata_dir, 'has_prefix_files')
+    api.build(recipe, config=test_config, notest=True)
+    metadata, _, _ = api.render(recipe)
+    api.test(metadata, config=test_config)
