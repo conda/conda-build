@@ -158,12 +158,12 @@ class bdist_conda(install):
         d = defaultdict(dict)
         # PyPI allows uppercase letters but conda does not, so we fix the
         # name here.
-        d['package']['name'] = metadata.name.lower()
-        d['package']['version'] = metadata.version
-        d['build']['number'] = metadata.conda_buildnum
+        d['package']['name'] = metadata.name().lower()
+        d['package']['version'] = metadata.version()
+        d['build']['number'] = metadata.conda_buildnum()
 
         # MetaData does the auto stuff if the build string is None
-        d['build']['string'] = metadata.conda_buildstr
+        d['build']['string'] = metadata.conda_buildstr()
 
         d['build']['binary_relocation'] = metadata.conda_binary_relocation
         d['build']['preserve_egg_dir'] = metadata.conda_preserve_egg_dir

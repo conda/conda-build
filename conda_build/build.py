@@ -887,13 +887,23 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
             post = None
 
         recipe = recipe_list.popleft()
-        recipe_parent_dir = os.path.dirname(recipe)
-        to_build_recursive.append(os.path.basename(recipe))
-        try:
+        if hasattr(recipe, 'config'):
+            metadata = recipe
+            need_source_download = True
+            need_reparse_in_env = False
+            if config.set_build_id:
+                config.compute_build_id(metadata.name(), reset=True)
+            recipe_parent_dir = ""
+            to_build_recursive.append(metadata.name())
+        else:
+            recipe_parent_dir = os.path.dirname(recipe)
+            to_build_recursive.append(os.path.basename(recipe))
+
             if config.set_build_id:
                 config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                                                                 config=config)
+        try:
             with config:
                 ok_to_test = build(metadata, post=post,
                                    need_source_download=need_source_download,

@@ -35,8 +35,11 @@ def read_index_tar(tar_path, config):
                                "File probably corrupt." % tar_path)
 
 
-def write_repodata(repodata, dir_path, config):
+def write_repodata(repodata, dir_path, config=None):
     """ Write updated repodata.json and repodata.json.bz2 """
+    if not config:
+        import conda_build.config
+        config = conda_build.config.config
     with filelock.SoftFileLock(join(dir_path, ".conda_lock"), timeout=config.timeout):
         data = json.dumps(repodata, indent=2, sort_keys=True)
         # strip trailing whitespace
