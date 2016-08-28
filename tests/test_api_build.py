@@ -2,7 +2,7 @@
 This module tests the build API.  These are high-level integration tests.
 """
 
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import logging
 import os
 import subprocess
@@ -18,6 +18,7 @@ import yaml
 
 from conda_build import api
 from conda_build.utils import copy_into, on_win
+from conda_build.metadata import MetaData
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config)
 
@@ -418,6 +419,24 @@ def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     assert info_message in caplog.text()
     # this comes from a debug message
     assert debug_message in caplog.text()
+
+
+def test_build_metadata_object(test_config):
+    d = defaultdict(dict)
+    d['package']['name'] = 'test_package'
+    d['package']['version'] = '1.0'
+    d['build']['number'] = '1'
+    d['build']['entry_points'] = []
+    # MetaData does the auto stuff if the build string is None
+    d['build']['string'] = None
+    d['requirements']['build'] = ['python']
+    d['requirements']['run'] = ['python']
+    d['about']['home'] = "sweet home"
+    d['about']['license'] = "contract in blood"
+    d['about']['summary'] = "a test package"
+
+    metadata = MetaData.fromdict(d)
+    api.build(metadata)
 
 
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
