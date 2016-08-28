@@ -14,7 +14,7 @@ from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
 from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win,
-                               check_output_env, check_call_env)
+                               check_output_env, check_call_env, convert_path_for_cygwin_or_msys2)
 
 # legacy exports for conda
 from .config import Config as _Config
@@ -128,9 +128,10 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
     if not mirror_dir.startswith(config.git_cache + os.sep):
         sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
                  % (mirror_dir, config.git_cache))
-    if on_win:
-        mirror_dir = mirror_dir.replace("\\", '/')
-        checkout_dir = checkout_dir.replace("\\", '/')
+
+    # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
+    git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir)
+    git_checkout_dir = convert_path_for_cygwin_or_msys2(git, checkout_dir)
 
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
@@ -153,7 +154,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
         try:
-            check_call_env(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
+            check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
@@ -163,11 +164,11 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
             if os.path.exists(git_url):
                 # Local filepaths are allowed, but make sure we normalize them
                 git_url = normpath(git_url)
-            check_call_env(args + [git_url, mirror_dir], stdout=stdout, stderr=stderr)
+            check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
         assert isdir(mirror_dir)
 
     # Now clone from mirror_dir into checkout_dir.
-    check_call_env([git, 'clone', mirror_dir, checkout_dir], stdout=stdout, stderr=stderr)
+    check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
@@ -238,6 +239,8 @@ def git_source(meta, recipe_dir, config):
         git_dn = git_url.split('://')[-1].replace('/', os.sep)
         if git_dn.startswith(os.sep):
             git_dn = git_dn[1:]
+        elif git_dn[1] == ':':
+            git_dn = git_dn.replace(':', '_')
     mirror_dir = join(config.git_cache, git_dn)
     git_mirror_checkout_recursive(
         git, mirror_dir, config.work_dir, git_url, config, git_ref, git_depth, True)
