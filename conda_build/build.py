@@ -38,6 +38,7 @@ from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
+from conda.install import PaddingError
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -411,7 +412,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
                     plan.execute_actions(actions, index, verbose=config.debug)
-                except SystemExit as exc:
+                except (PaddingError, SystemExit) as exc:
                     if "too short in" in str(exc) and config.prefix_length > 80:
                         log.warn("Build prefix failed with prefix length {0}."
                                 .format(config.prefix_length))

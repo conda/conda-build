@@ -454,3 +454,18 @@ def check_call_env(*popenargs, **kwargs):
 
 def check_output_env(*popenargs, **kwargs):
     return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)
+
+
+_posix_exes_cache = {}
+def convert_path_for_cygwin_or_msys2(exe, path):
+    "If exe is a Cygwin or MSYS2 executable then filters it through `cygpath -u`"
+    if sys.platform != 'win32':
+        return path
+    if not exe in _posix_exes_cache:
+        with open(exe, "rb") as exe_file:
+            exe_binary = exe_file.read()
+            msys2_cygwin = re.findall('(cygwin1.dll|msys-2.0.dll)', exe_binary)
+            _posix_exes_cache[exe] = True if msys2_cygwin else False
+    if _posix_exes_cache[exe] == True:
+        return check_output_env(['cygpath', '-u', path])
+    return path
