@@ -80,7 +80,7 @@ class FilteredLoader(jinja2.BaseLoader):
 
 
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
-                    unload_modules=None, fail_on_error=False):
+                       unload_modules=None, fail_on_error=False, permit_undefined_jinja=True):
     _setuptools_data = {}
 
     def setup(**kw):
@@ -104,9 +104,13 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
         # things will pick up the wrong versioneer/whatever!
         sys.path.insert(0, config.work_dir)
     else:
-        log.debug("Did not find setup.py file in manually specified location, and source "
+        message = ("Did not find setup.py file in manually specified location, and source "
                   "not downloaded yet.")
-        return {}
+        if permit_undefined_jinja:
+            log.debug(message)
+            return {}
+        else:
+            raise RuntimeError(message)
 
     # Patch setuptools, distutils
     setuptools_setup = setuptools.setup
@@ -140,12 +144,13 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
 
 
 def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
-                    unload_modules=None, fail_on_error=False):
+                    unload_modules=None, fail_on_error=False, permit_undefined_jinja=True):
     log.warn("Deprecation notice: the load_setuptools function has been renamed to "
              "load_setup_py_data.  load_setuptools will be removed in a future release.")
     return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
                               recipe_dir=recipe_dir, unload_modules=unload_modules,
-                              fail_on_error=fail_on_error)
+                              fail_on_error=fail_on_error,
+                              permit_undefined_jinja=permit_undefined_jinja)
 
 
 def load_npm():
@@ -155,7 +160,7 @@ def load_npm():
         return json.load(pkg)
 
 
-def context_processor(initial_metadata, recipe_dir, config):
+def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -167,9 +172,11 @@ def context_processor(initial_metadata, recipe_dir, config):
     environ.update(get_environ(config=config, m=initial_metadata))
 
     ctx.update(
-        load_setup_py_data=partial(load_setup_py_data, config=config, recipe_dir=recipe_dir),
+        load_setup_py_data=partial(load_setup_py_data, config=config, recipe_dir=recipe_dir,
+                                   permit_undefined_jinja=permit_undefined_jinja),
         # maintain old alias for backwards compatibility:
-        load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir),
+        load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir,
+                                permit_undefined_jinja=permit_undefined_jinja),
         load_npm=load_npm,
         environ=environ)
     return ctx

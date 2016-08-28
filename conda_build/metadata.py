@@ -362,7 +362,7 @@ def find_recipe(path):
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
-            return os.path.dirname(base_recipe)
+            return base_recipe
         else:
             raise IOError("More than one meta.yaml files found in %s" % path)
     elif not results:
@@ -379,8 +379,6 @@ class MetaData(object):
             config = Config()
 
         self.config = config
-
-        assert isdir(path)
 
         if isfile(path):
             self.meta_path = path
@@ -403,15 +401,21 @@ class MetaData(object):
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(config=config, permit_undefined_jinja=True)
 
-    def parse_again(self, config, permit_undefined_jinja=False):
+    def parse_again(self, config=None, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
+
+        config: a conda-build Config object.  If None, the config object passed at creation
+                time is used.
 
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
         if not self.meta_path:
             return
+
+        if not config:
+            config = self.config
 
         try:
             os.environ["CONDA_BUILD_STATE"] = "RENDER"
@@ -756,7 +760,8 @@ class MetaData(object):
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         env.globals.update(ns_cfg(config))
-        env.globals.update(context_processor(self, path, config=config))
+        env.globals.update(context_processor(self, path, config=config,
+                                             permit_undefined_jinja=permit_undefined_jinja))
 
         try:
             template = env.get_or_select_template(filename)
@@ -769,8 +774,10 @@ class MetaData(object):
 
             return rendered
         except jinja2.TemplateError as ex:
+            if "'None' has not attribute" in str(ex):
+                ex = "Failed to run jinja context function"
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
-                     .format(self.meta_path, ex.message))
+                     .format(self.meta_path, str(ex)))
 
     def __unicode__(self):
         '''

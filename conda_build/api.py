@@ -24,7 +24,7 @@ from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGT
 
 def _ensure_list(recipe_arg):
     from .conda_interface import string_types
-    if isinstance(recipe_arg, string_types):
+    if isinstance(recipe_arg, string_types) or not hasattr(recipe_arg, '__iter__'):
         recipe_arg = [recipe_arg]
     return recipe_arg
 
@@ -40,12 +40,15 @@ def output_yaml(metadata, file_path=None):
     return output_yaml(metadata, file_path)
 
 
-def get_output_file_path(recipe_path, no_download_source=False, config=None, **kwargs):
+def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe, bldpkg_path
     config = get_or_merge_config(config, **kwargs)
-    metadata, _, _ = render_recipe(recipe_path,
-                                   no_download_source=no_download_source,
-                                   config=config)
+    if hasattr(recipe_path_or_metadata, 'config'):
+        metadata = recipe_path_or_metadata
+    else:
+        metadata, _, _ = render_recipe(recipe_path_or_metadata,
+                                    no_download_source=no_download_source,
+                                    config=config)
     return bldpkg_path(metadata, config)
 
 
@@ -57,7 +60,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
     return metadata.check_fields()
 
 
-def build(recipe_path, post=None, need_source_download=True,
+def build(recipe_paths_or_metadata, post=None, need_source_download=True,
           already_built=None, build_only=False, notest=False,
           config=None, **kwargs):
     import os
@@ -65,15 +68,17 @@ def build(recipe_path, post=None, need_source_download=True,
 
     config = get_or_merge_config(config, **kwargs)
 
-    recipe_path = _ensure_list(recipe_path)
-    absolute_paths = []
-    for recipe in recipe_path:
-        if os.path.isabs(recipe):
-            absolute_paths.append(recipe)
+    recipes = _ensure_list(recipe_paths_or_metadata)
+    absolute_recipes = []
+    for recipe in recipes:
+        if hasattr(recipe, "config"):
+            absolute_recipes.append(recipe)
+        elif os.path.isabs(recipe):
+            absolute_recipes.append(recipe)
         else:
-            absolute_paths.append(os.path.join(os.getcwd(), recipe))
+            absolute_recipes.append(os.path.join(os.getcwd(), recipe))
 
-    return build_tree(absolute_paths, build_only=build_only, post=post, notest=notest,
+    return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
                       need_source_download=need_source_download, config=config)
 
 
