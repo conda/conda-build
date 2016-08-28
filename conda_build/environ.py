@@ -179,6 +179,10 @@ def get_git_info(repo, config):
         if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
             d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
                                                 d["GIT_DESCRIBE_HASH"])
+
+        # There have been issues on Windows with the next line of the command prompt being recorded here.
+        assert not any("\n" in value for value in d.values())
+
     except subprocess.CalledProcessError as error:
         log.warn("Error obtaining git information in get_git_info.  Error was: ")
         log.warn(str(error))
