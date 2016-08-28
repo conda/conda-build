@@ -17,7 +17,8 @@ import pytest
 import yaml
 
 from conda_build import api
-from conda_build.utils import copy_into, on_win
+from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2)
+from conda_build.os_utils.external import find_executable
 from conda_build.metadata import MetaData
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config)
@@ -217,30 +218,40 @@ def test_dirty_variable_available_in_build_scripts(testing_workdir, test_config)
         api.build(recipe, config=test_config)
 
 
+def dummy_executable(folder, exename):
+    # empty prefix by default - extra bit at beginning of file
+    if sys.platform == "win32":
+        exename = exename + ".bat"
+    dummyfile = os.path.join(folder, exename)
+    if sys.platform == "win32":
+        prefix = "@echo off\n"
+    else:
+        prefix = "#!/bin/bash\nexec 1>&2\n"
+    with open(dummyfile, 'w') as f:
+        f.write(prefix + """
+    echo ******* You have reached the dummy {}. It is likely there is a bug in
+    echo ******* conda that makes it not add the _build/bin directory onto the
+    echo ******* PATH before running the source checkout tool
+    exit -1
+    """.format(exename))
+    if sys.platform != "win32":
+        import stat
+        st = os.stat(dummyfile)
+        os.chmod(dummyfile, st.st_mode | stat.S_IEXEC)
+    return exename
+
+
 def test_checkout_tool_as_dependency(testing_workdir, test_config):
     # temporarily necessary because we have custom rebuilt svn for longer prefix here
     test_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
-    dummyfile = os.path.join(testing_workdir, "svn")
-    # empty prefix by default - extra bit at beginning of file
-    prefix = ""
-    if sys.platform != "win32":
-        prefix = "#!/bin/bash\nexec 1>&2\n"
-    with open(dummyfile, 'w') as f:
-        f.write(prefix + """
-echo
-echo " ******* You've reached the dummy svn. It's likely there's a bug in conda  *******"
-echo " ******* that makes it not add the _build/bin directory onto the PATH      *******"
-echo " ******* before running the source checkout tool                           *******"
-echo
-exit -1
-""")
-    if sys.platform == "win32":
-        os.rename(dummyfile, dummyfile + ".bat")
-    else:
-        import stat
-        st = os.stat(dummyfile)
-        os.chmod(dummyfile, st.st_mode | stat.S_IEXEC)
+    exename = dummy_executable(testing_workdir, "svn")
+    old_path = os.environ["PATH"]
+    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+    FNULL = open(os.devnull, 'w')
+    with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
+        check_call_env([exename, '--version'], stderr=FNULL)
+    FNULL.close()
     env = dict(os.environ)
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
     api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=test_config)
@@ -460,11 +471,19 @@ def test_numpy_setup_py_data(test_config):
                                 sys.version_info.major, sys.version_info.minor)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="Windows permission errors w/ git when removing repo files on cleanup.")
 def test_relative_git_url_submodule_clone(testing_workdir):
-    """Test git submodules identified with relative URLs can be mirrored then cloned. Also tests
-       pushing changes and new tags and making sure those are reflected with GIT_DESCRIBE_TAG"""
+    """
+    A multi-part test encompassing the following checks:
+
+    1. That git submodules identified with both relative and absolute URLs can be mirrored
+       and cloned.
+
+    2. That changes pushed to the original repository are updated in the mirror and finally
+       reflected in the package version and filename via `GIT_DESCRIBE_TAG`.
+
+    3. That `source.py` is using `check_call_env` and `check_output_env` and that those
+       functions are using tools from the build env.
+    """
     toplevel = os.path.join(testing_workdir, 'toplevel')
     os.mkdir(toplevel)
     relative_sub = os.path.join(testing_workdir, 'relative_sub')
@@ -472,46 +491,81 @@ def test_relative_git_url_submodule_clone(testing_workdir):
     absolute_sub = os.path.join(testing_workdir, 'absolute_sub')
     os.mkdir(absolute_sub)
 
-    git_env = os.environ
-    git_env['GIT_AUTHOR_NAME'] = 'conda-build'
-    git_env['GIT_COMMITTER_NAME'] = 'conda-build'
-    git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
+    sys_git_env = os.environ.copy()
+    sys_git_env['GIT_AUTHOR_NAME'] = 'conda-build'
+    sys_git_env['GIT_AUTHOR_EMAIL'] = 'conda@conda-build.org'
+    sys_git_env['GIT_COMMITTER_NAME'] = 'conda-build'
+    sys_git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
+
+    # Find the git executable before putting our dummy one on PATH.
+    git = find_executable('git')
+
+    # Put the broken git on os.environ["PATH"]
+    exename = dummy_executable(testing_workdir, 'git')
+    old_path = os.environ["PATH"]
+    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+    # .. and ensure it gets run (and fails).
+    FNULL = open(os.devnull, 'w')
+    # Strangely ..
+    #   stderr=FNULL suppresses the output from echo on OS X whereas
+    #   stdout=FNULL suppresses the output from echo on Windows
+    with pytest.raises(subprocess.CalledProcessError, message="Dummy git was not executed"):
+        check_call_env([exename, '--version'], stdout=FNULL, stderr=FNULL)
+    FNULL.close()
 
     for tag in range(2):
         os.chdir(absolute_sub)
         if tag == 0:
-            subprocess.check_call(['git', 'init'], env=git_env)
+            subprocess.check_call([git, 'init'], env=sys_git_env)
         with open('absolute', 'w') as f:
             f.write(str(tag))
-        subprocess.check_call(['git', 'add', 'absolute'], env=git_env)
-        subprocess.check_call(['git', 'commit', '-m', 'absolute {}'.format(tag)],
-                                env=git_env)
+        subprocess.check_call([git, 'add', 'absolute'], env=sys_git_env)
+        subprocess.check_call([git, 'commit', '-m', 'absolute{}'.format(tag)],
+                                env=sys_git_env)
 
         os.chdir(relative_sub)
         if tag == 0:
-            subprocess.check_call(['git', 'init'])
+            subprocess.check_call([git, 'init'], env=sys_git_env)
         with open('relative', 'w') as f:
             f.write(str(tag))
-        subprocess.check_call(['git', 'add', 'relative'], env=git_env)
-        subprocess.check_call(['git', 'commit', '-m', 'relative {}'.format(tag)],
-                                env=git_env)
+        subprocess.check_call([git, 'add', 'relative'], env=sys_git_env)
+        subprocess.check_call([git, 'commit', '-m', 'relative{}'.format(tag)],
+                                env=sys_git_env)
 
         os.chdir(toplevel)
         if tag == 0:
-            subprocess.check_call(['git', 'init'], env=git_env)
+            subprocess.check_call([git, 'init'], env=sys_git_env)
         with open('toplevel', 'w') as f:
             f.write(str(tag))
-        subprocess.check_call(['git', 'add', 'toplevel'], env=git_env)
-        subprocess.check_call(['git', 'commit', '-m', 'toplevel {}'.format(tag)],
-                                env=git_env)
+        subprocess.check_call([git, 'add', 'toplevel'], env=sys_git_env)
+        subprocess.check_call([git, 'commit', '-m', 'toplevel{}'.format(tag)],
+                                env=sys_git_env)
         if tag == 0:
-            subprocess.check_call(['git', 'submodule', 'add', absolute_sub, 'absolute'],
-                                    env=git_env)
-            subprocess.check_call(['git', 'submodule', 'add',
-                                    os.path.join('..', 'relative_sub'), 'relative'],
-                                    env=git_env)
-        subprocess.check_call(['git', 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
-                                env=git_env)
+            subprocess.check_call([git, 'submodule', 'add',
+                                    convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
+                                    env=sys_git_env)
+            subprocess.check_call([git, 'submodule', 'add', '../relative_sub', 'relative'],
+                                    env=sys_git_env)
+        else:
+            # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
+            # can change this to `git submodule update --recursive`.
+            subprocess.check_call([git, 'submodule', 'foreach', git, 'pull'], env=sys_git_env)
+        subprocess.check_call([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
+                              env=sys_git_env)
+        subprocess.check_call([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
+                                env=sys_git_env)
+
+        # It is possible to use `Git for Windows` here too, though you *must* not use a different
+        # (type of) git than the one used above to add the absolute submodule, because .gitmodules
+        # stores the absolute path and that is not interchangeable between MSYS2 and native Win32.
+        #
+        # Also, git is set to False here because it needs to be rebuilt with the longer prefix. As
+        # things stand, my _b_env folder for this test contains more than 80 characters.
+        requirements = ('requirements', OrderedDict([
+                        ('build',
+                         ['git            # [False]',
+                          'm2-git         # [win]',
+                          'm2-filesystem  # [win]'])]))
 
         filename = os.path.join(testing_workdir, 'meta.yaml')
         data = OrderedDict([
@@ -520,10 +574,29 @@ def test_relative_git_url_submodule_clone(testing_workdir):
                 ('version', '{{ GIT_DESCRIBE_TAG }}')])),
             ('source', OrderedDict([
                 ('git_url', toplevel),
-                ('git_tag', str(tag))]))
+                ('git_tag', str(tag))])),
+             requirements,
+            ('build', OrderedDict([
+                ('script',
+                 ['git submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',    # NOQA
+                  'git submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]']) # NOQA
+            ])),
+            ('test', OrderedDict([
+                ('commands',
+                 ['echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt        # [win]'.format(tag, tag),
+                  'fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt  # [win]',
+                  'echo absolute{}relative{} > $PREFIX/expected_summaries.txt          # [not win]'.format(tag, tag),
+                  'diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt  # [not win]']),
+            ]))
         ])
 
         with open(filename, 'w') as outfile:
-            outfile.write(yaml.dump(data, default_flow_style=False))
+            outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
+        # Reset the path because our broken, dummy `git` would cause `render_recipe`
+        # to fail, while no `git` will cause the build_dependencies to be installed.
+        os.environ["PATH"] = old_path
+        # This will (after one spin round the loop) install and run 'git' with the
+        # build env prepended to os.environ[]
         output = api.get_output_file_path(testing_workdir)
         assert ("relative_submodules-{}-0".format(tag) in output)
+        api.build(testing_workdir)

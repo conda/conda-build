@@ -438,3 +438,34 @@ def get_ext_files(start_path, pattern):
         for f in files:
             if f.endswith(pattern):
                 yield os.path.join(dirname, f)
+
+
+def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
+    if 'env' not in kwargs:
+        kwargs = kwargs.copy()
+        env_copy = os.environ.copy()
+        kwargs.update({'env': env_copy})
+    return func(*popenargs, **kwargs)
+
+
+def check_call_env(*popenargs, **kwargs):
+    return _func_defaulting_env_to_os_environ(subprocess.check_call, *popenargs, **kwargs)
+
+
+def check_output_env(*popenargs, **kwargs):
+    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)
+
+
+_posix_exes_cache = {}
+def convert_path_for_cygwin_or_msys2(exe, path):
+    "If exe is a Cygwin or MSYS2 executable then filters it through `cygpath -u`"
+    if sys.platform != 'win32':
+        return path
+    if not exe in _posix_exes_cache:
+        with open(exe, "rb") as exe_file:
+            exe_binary = exe_file.read()
+            msys2_cygwin = re.findall(b'(cygwin1.dll|msys-2.0.dll)', exe_binary)
+            _posix_exes_cache[exe] = True if msys2_cygwin else False
+    if _posix_exes_cache[exe] == True:
+        return check_output_env(['cygpath', '-u', path]).splitlines()[0].decode(getpreferredencoding())
+    return path
