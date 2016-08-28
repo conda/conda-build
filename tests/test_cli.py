@@ -166,6 +166,33 @@ def test_inspect_objects(testing_workdir, capfd):
         output, error = capfd.readouterr()
         assert 'rpath: @loader_path' in output
 
+def test_inspect_prefix_length(testing_workdir, capfd):
+    from conda_build import api
+    # build our own known-length package here
+    test_base = os.path.expanduser("~/cbtmp")
+    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
+    recipe_path = os.path.join(metadata_dir, "has_prefix_files")
+    fn = api.get_output_file_path(recipe_path, config=config)
+    if os.path.isfile(fn):
+        os.remove(fn)
+    config.prefix_length = 80
+    api.build(recipe_path, config=config)
+
+    args = ['prefix-lengths', fn]
+    with pytest.raises(SystemExit):
+        main_inspect.execute(args)
+        output, error = capfd.readouterr()
+        assert 'Packages with binary prefixes shorter than' in output
+        assert fn in output
+
+    config.prefix_length = 255
+    api.build(recipe_path, config=config)
+    main_inspect.execute(args)
+    output, error = capfd.readouterr()
+    assert 'No packages found with binary prefixes shorter' in output
+
+
+
 
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
