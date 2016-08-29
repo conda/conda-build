@@ -203,7 +203,7 @@ def delete_rpath(path, rpath, verbose=False):
     if verbose:
         print(' '.join(args))
     p = Popen(args, stderr=PIPE)
-    stdout, stderr = p.communicate()
+    _, stderr = p.communicate()
     stderr = stderr.decode('utf-8')
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
@@ -245,7 +245,7 @@ def install_name_change(path, cb_func, verbose=False):
         if verbose:
             print(' '.join(args))
         p = Popen(args, stderr=PIPE)
-        stdout, stderr = p.communicate()
+        _, stderr = p.communicate()
         stderr = stderr.decode('utf-8')
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)

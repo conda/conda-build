@@ -61,8 +61,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
 
 
 def build(recipe_paths_or_metadata, post=None, need_source_download=True,
-          already_built=None, build_only=False, notest=False,
-          config=None, **kwargs):
+          build_only=False, notest=False, config=None, **kwargs):
     import os
     from conda_build.build import build_tree
 
@@ -210,12 +209,12 @@ def test_installable(channel='defaults'):
     return test_installable(channel)
 
 
-def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all=False,
+def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all_packages=False,
                      show_files=False, groupby='package'):
     from .inspect import inspect_linkages
     packages = _ensure_list(packages)
-    return inspect_linkages(packages, prefix=prefix, untracked=untracked,
-                            all=all, show_files=show_files, groupby=groupby)
+    return inspect_linkages(packages, prefix=prefix, untracked=untracked, all_packages=all_packages,
+                            show_files=show_files, groupby=groupby)
 
 
 def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):
@@ -240,7 +239,7 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
 
 
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
-                       dependencies=(), home=None, license=None, summary=None,
+                       dependencies=(), home=None, license_name=None, summary=None,
                        config=None):
     from .metapackage import create_metapackage
     if not config:
@@ -248,7 +247,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
     return create_metapackage(name=name, version=version, entry_points=entry_points,
                               build_string=build_string, build_number=build_number,
                               dependencies=dependencies, home=home,
-                              license=license, summary=summary, config=config)
+                              license_name=license_name, summary=summary, config=config)
 
 
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False):

@@ -138,7 +138,8 @@ def have_prefix_files(files, prefix):
                 # to minimize the occurrences of usernames appearing in built
                 # packages.
                 rewrite_file_with_new_prefix(path, mm[:], prefix_bytes, prefix_placeholder_bytes)
-                mm.close() and fi.close()
+                mm.close()
+                fi.close()
                 fi = open(path, 'rb+')
                 mm = mmap.mmap(fi.fileno(), 0)
         if mm.find(prefix_bytes) != -1:
@@ -151,7 +152,8 @@ def have_prefix_files(files, prefix):
             yield (double_backslash_prefix, mode, f)
         if mm.find(prefix_placeholder_bytes) != -1:
             yield (prefix_placeholder, mode, f)
-        mm.close() and fi.close()
+        mm.close()
+        fi.close()
 
 
 def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
@@ -173,19 +175,7 @@ def get_run_dists(m, config):
     return sorted(linked(prefix))
 
 
-def create_info_files(m, files, config, prefix):
-    '''
-    Creates the metadata files that will be stored in the built package.
-
-    :param m: Package metadata
-    :type m: Metadata
-    :param files: Paths to files to include in package
-    :type files: list of str
-    :param include_recipe: Whether or not to include the recipe (True by default)
-    :type include_recipe: bool
-    '''
-    if not isdir(config.info_dir):
-        os.makedirs(config.info_dir)
+def copy_recipe(m, config):
     if config.include_recipe and m.include_recipe() and bool(m.path):
         recipe_dir = join(config.info_dir, 'recipe')
         os.makedirs(recipe_dir)
@@ -211,11 +201,8 @@ def create_info_files(m, files, config, prefix):
             copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
                       timeout=config.timeout)
 
-    license_file = m.get_value('about/license_file')
-    if license_file:
-        copy_into(join(source.get_dir(config), license_file),
-                        join(config.info_dir, 'LICENSE.txt'), config.timeout)
 
+def copy_readme(m, config):
     readme = m.get_value('about/readme')
     if readme:
         src = join(config.work_dir, readme)
@@ -227,50 +214,15 @@ def create_info_files(m, files, config, prefix):
             print("WARNING: anaconda.org only recognizes about/readme "
                   "as README.md and README.rst", file=sys.stderr)
 
-    info_index = m.info_index()
-    pin_depends = m.get_value('build/pin_depends')
-    if pin_depends:
-        dists = get_run_dists(m, config=config)
-        with open(join(config.info_dir, 'requires'), 'w') as fo:
-            fo.write("""\
-# This file as created when building:
-#
-#     %s.tar.bz2  (on '%s')
-#
-# It can be used to create the runtime environment of this package using:
-# $ conda create --name <env> --file <this file>
-""" % (m.dist(), config.subdir))
-            for dist in sorted(dists + [m.dist()]):
-                fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
-        if pin_depends == 'strict':
-            info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
-                                     for dist in dists]
 
-    # Deal with Python 2 and 3's different json module type reqs
-    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
-    with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
-        json.dump(info_index, fo, indent=2, sort_keys=True)
+def copy_license(m, config):
+    license_file = m.get_value('about/license_file')
+    if license_file:
+        copy_into(join(source.get_dir(config), license_file),
+                        join(config.info_dir, 'LICENSE.txt'), config.timeout)
 
-    with open(join(config.info_dir, 'about.json'), 'w') as fo:
-        d = {}
-        for key in ('home', 'dev_url', 'doc_url', 'license_url',
-                    'license', 'summary', 'description', 'license_family'):
-            value = m.get_value('about/%s' % key)
-            if value:
-                d[key] = value
-        json.dump(d, fo, indent=2, sort_keys=True)
 
-    if on_win:
-        # make sure we use '/' path separators in metadata
-        files = [_f.replace('\\', '/') for _f in files]
-
-    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
-        if m.get_value('build/noarch_python'):
-            fo.write('\n')
-        else:
-            for f in files:
-                fo.write(f + '\n')
-
+def detect_and_record_prefix_files(m, files, prefix, config):
     files_with_prefix = sorted(have_prefix_files(files, prefix))
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
@@ -314,6 +266,44 @@ def create_info_files(m, files, config, prefix):
     if errstr:
         raise RuntimeError(errstr)
 
+
+def write_about_json(m, config):
+    with open(join(config.info_dir, 'about.json'), 'w') as fo:
+        d = {}
+        for key in ('home', 'dev_url', 'doc_url', 'license_url',
+                    'license', 'summary', 'description', 'license_family'):
+            value = m.get_value('about/%s' % key)
+            if value:
+                d[key] = value
+        json.dump(d, fo, indent=2, sort_keys=True)
+
+
+def write_info_json(m, config, mode_dict):
+    info_index = m.info_index()
+    pin_depends = m.get_value('build/pin_depends')
+    if pin_depends:
+        dists = get_run_dists(m, config=config)
+        with open(join(config.info_dir, 'requires'), 'w') as fo:
+            fo.write("""\
+# This file as created when building:
+#
+#     %s.tar.bz2  (on '%s')
+#
+# It can be used to create the runtime environment of this package using:
+# $ conda create --name <env> --file <this file>
+""" % (m.dist(), config.subdir))
+            for dist in sorted(dists + [m.dist()]):
+                fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
+        if pin_depends == 'strict':
+            info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
+                                     for dist in dists]
+
+    # Deal with Python 2 and 3's different json module type reqs
+    with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
+        json.dump(info_index, fo, indent=2, sort_keys=True)
+
+
+def write_no_link(m, config, files):
     no_link = m.get_value('build/no_link')
     if no_link:
         if not isinstance(no_link, list):
@@ -322,6 +312,43 @@ def create_info_files(m, files, config, prefix):
             for f in files:
                 if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
+
+def create_info_files(m, files, config, prefix):
+    '''
+    Creates the metadata files that will be stored in the built package.
+
+    :param m: Package metadata
+    :type m: Metadata
+    :param files: Paths to files to include in package
+    :type files: list of str
+    :param include_recipe: Whether or not to include the recipe (True by default)
+    :type include_recipe: bool
+    '''
+    if not isdir(config.info_dir):
+        os.makedirs(config.info_dir)
+
+    copy_recipe(m, config)
+    copy_readme(m, config)
+    copy_license(m, config)
+
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+
+    write_info_json(m, config, mode_dict)
+    write_about_json(m, config)
+
+    if on_win:
+        # make sure we use '/' path separators in metadata
+        files = [_f.replace('\\', '/') for _f in files]
+
+    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
+        if m.get_value('build/noarch_python'):
+            fo.write('\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
+
+    detect_and_record_prefix_files(m, files, prefix, config)
+    write_no_link(m, config, files)
 
     if m.get_value('source/git_url'):
         with io.open(join(config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
@@ -357,7 +384,7 @@ def _get_build_index(config, clear_cache, arg_channels):
     index = get_index(channel_urls=arg_channels + list(config.channel_urls),
                       prepend=not config.override_channels)
     # bump priority down on these remotes - local should be top priority
-    for key, pkg in index.items():
+    for pkg in index.values():
         pkg['priority'] += 1
     return index
 
@@ -413,8 +440,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     plan.execute_actions(actions, index, verbose=config.debug)
                 except SystemExit as exc:
                     if "too short in" in str(exc) and config.prefix_length > 80:
-                        log.warn("Build prefix failed with prefix length {0}."
-                                .format(config.prefix_length))
+                        log.warn("Build prefix failed with prefix length %d", config.prefix_length)
                         log.warn("Error was: ")
                         log.warn(str(exc))
                         log.warn("One or more of your package dependencies needs to be rebuilt "
@@ -529,9 +555,9 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                 for spec in specs)):
                     specs.append(vcs_source)
 
-                    log.warn("Your recipe depends on {} at build time (for templates), "
+                    log.warn("Your recipe depends on %s at build time (for templates), "
                             "but you have not listed it as a build dependency.  Doing "
-                                "so for this build.".format(vcs_source))
+                                "so for this build.", vcs_source)
 
                     # Display the name only
                     # Version number could be missing due to dependency on source info.
@@ -590,7 +616,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                         files1.discard(f)
                         has_matches = True
                 if not has_matches:
-                    log.warn("Glob %s from always_include_files does not match any files" % pat)
+                    log.warn("Glob %s from always_include_files does not match any files", pat)
             # Save this for later
             with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
                 f.write(u'\n'.join(sorted(list(files1))))
@@ -617,7 +643,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                     # There is no sense in trying to run an empty build script.
                     if isfile(build_file) or script:
                         with path_prepended(config.build_prefix):
-                            env = environ.get_dict(config=config, m=m, dirty=config.dirty)
+                            env = environ.get_dict(config=config, m=m)
                         env["CONDA_BUILD_STATE"] = "BUILD"
                         work_file = join(source.get_dir(config), 'conda_build.sh')
                         if script:
@@ -800,30 +826,32 @@ def test(m, config, move_broken=True):
                     ext=ext,
                     test_env=config.test_prefix,
                     squelch=">nul 2>&1" if on_win else "&> /dev/null"))
-                tf.write("if errorlevel 1 exit 1\n") if on_win else None
+                if on_win:
+                    tf.write("if errorlevel 1 exit 1\n")
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
                     python=config.test_python,
                     test_file=join(tmp_dir, 'run_test.py')))
-                tf.write("if errorlevel 1 exit 1\n") if on_win else None
-
+                if on_win:
+                    tf.write("if errorlevel 1 exit 1\n")
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
                     perl=config.test_perl,
                     test_file=join(tmp_dir, 'run_test.pl')))
-                tf.write("if errorlevel 1 exit 1\n") if on_win else None
-
+                if on_win:
+                    tf.write("if errorlevel 1 exit 1\n")
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
                     lua=config.test_lua,
                     test_file=join(tmp_dir, 'run_test.lua')))
-                tf.write("if errorlevel 1 exit 1\n") if on_win else None
-
+                if on_win:
+                    tf.write("if errorlevel 1 exit 1\n")
             if shell_files:
                 test_file = join(tmp_dir, 'run_test.' + suffix)
                 if on_win:
                     tf.write("call {test_file}\n".format(test_file=test_file))
-                    tf.write("if errorlevel 1 exit 1\n")
+                    if on_win:
+                        tf.write("if errorlevel 1 exit 1\n")
                 else:
                     # TODO: Run the test/commands here instead of in run_test.py
                     tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
@@ -856,7 +884,7 @@ def tests_failed(m, move_broken, broken_dir, config):
     sys.exit("TESTS FAILED: " + m.dist())
 
 
-def check_external(config):
+def check_external():
     if sys.platform.startswith('linux'):
         patchelf = external.find_executable('patchelf')
         if patchelf is None:
@@ -869,7 +897,7 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def build_tree(recipe_list, config, check=False, build_only=False, post=False, notest=False,
+def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                need_source_download=True):
 
     to_build_recursive = []
@@ -910,6 +938,7 @@ def build_tree(recipe_list, config, check=False, build_only=False, post=False, n
             with config:
                 ok_to_test = build(metadata, post=post,
                                    need_source_download=need_source_download,
+                                   need_reparse_in_env=need_reparse_in_env,
                                    config=config)
                 if not notest and ok_to_test:
                     test(metadata, config=config)

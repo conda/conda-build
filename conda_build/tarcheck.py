@@ -61,7 +61,7 @@ class TarCheck(object):
             prefix_files = self.t.extractfile('info/has_prefix').readlines()
             for line in prefix_files:
                 try:
-                    prefix, file_type, containing_file = line.split()
+                    prefix, file_type, _ = line.split()
                 # lines not conforming to the split
                 except ValueError:
                     continue

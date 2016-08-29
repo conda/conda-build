@@ -54,7 +54,7 @@ def parse_args(args):
 
 
 def execute(args):
-    p, args = parse_args(args)
+    _, args = parse_args(args)
     config = Config(**args.__dict__)
     config.verbose = not args.quiet
 

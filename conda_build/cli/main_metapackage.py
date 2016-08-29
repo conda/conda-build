@@ -108,11 +108,11 @@ command line with the conda metapackage command.
 
 
 def execute(args):
-    parser, args = parse_args(args)
+    _, args = parse_args(args)
     api.create_metapackage(name=args.name, version=args.version, entry_points=args.entry_points,
                            build_string=args.build_string, build_number=args.build_number,
-                           dependencies=args.dependencies, home=args.home, license=args.license,
-                           summary=args.summary)
+                           dependencies=args.dependencies, home=args.home,
+                           license_name=args.license, summary=args.summary)
 
 
 def main():

@@ -105,14 +105,14 @@ def verify(path):
     """
     sig_path = path + '.sig'
     if not isfile(sig_path):
-        log.error("signature does not exist: %s" % sig_path)
+        log.error("signature does not exist: %s", sig_path)
         return False
     with open(sig_path) as fi:
         key_name, sig = fi.read().split()
     if key_name not in KEYS:
         key_path = join(KEYS_DIR, '%s.pub' % key_name)
         if not isfile(key_path):
-            log.error("public key does not exist: %s" % key_path)
+            log.error("public key does not exist: %s", key_path)
             return False
         KEYS[key_name] = RSA.importKey(open(key_path).read())
     key = KEYS[key_name]

@@ -6,7 +6,7 @@ You can have structure beyond this, but this is a minimum of what conda-build wi
 def package_exists(package_name):
     """This is a simple function returning True/False for if a requested package string exists
     in the add-on repository."""
-    pass
+    return package_name == "frank"
 
 
 def skeletonize(packages, output_dir="."):
@@ -14,7 +14,8 @@ def skeletonize(packages, output_dir="."):
     the conda recipe skeleton.
 
     Arguments here should match the arguments for the parser below."""
-    pass
+    print(packages)
+    print(output_dir)
 
 
 def add_parser(repos):
@@ -33,4 +34,7 @@ def add_parser(repos):
         "packages",
         nargs='+',
         help="my-repo packages to create recipe skeletons for.",)
-    """Add any additional parser arguments here"""
+
+    # Add any additional parser arguments here
+
+    return None

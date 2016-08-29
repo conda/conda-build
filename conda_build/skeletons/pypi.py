@@ -573,7 +573,7 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
         else:
             print("Using the one with the least source size")
             print("use --manual-url to override this behavior")
-            min_siz, n = min([(url['size'], i)
+            _, n = min([(url['size'], i)
                                 for (i, url) in enumerate(urls)])
     else:
         n = 0
@@ -787,34 +787,34 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         licenses = []
     if not licenses:
         if pkginfo['license']:
-            license = pkginfo['license']
+            license_name = pkginfo['license']
         elif data and 'license' in data:
-            license = data['license']
+            license_name = data['license']
         else:
-            license = None
-        if license:
+            license_name = None
+        if license_name:
             if noprompt:
                 pass
-            elif '\n' not in license:
-                print('Using "%s" for the license' % license)
+            elif '\n' not in license_name:
+                print('Using "%s" for the license' % license_name)
             else:
                 # Some projects put the whole license text in this field
                 print("This is the license for %s" % package)
                 print()
-                print(license)
+                print(license_name)
                 print()
-                license = input("What license string should I use? ")
+                license_name = input("What license string should I use? ")
         else:
             if noprompt:
-                license = "UNKNOWN"
+                license_name = "UNKNOWN"
             else:
-                license = input(("No license could be found for %s on " +
+                license_name = input(("No license could be found for %s on " +
                                     "PyPI or in the source. What license should I use? ") %
                                 package)
     else:
-        license = ' or '.join(licenses)
-    d['license'] = license
-    d['license_family'] = guess_license_family(license, allowed_license_families)
+        license_name = ' or '.join(licenses)
+    d['license'] = license_name
+    d['license_family'] = guess_license_family(license_name, allowed_license_families)
 
 
 def valid(name):

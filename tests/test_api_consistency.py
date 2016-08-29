@@ -45,8 +45,8 @@ def test_api_check():
 def test_api_build():
     argspec = getargspec(api.build)
     assert argspec.args == ['recipe_paths_or_metadata', 'post', 'need_source_download',
-                            'already_built', 'build_only', 'notest', 'config']
-    assert argspec.defaults == (None, True, None, False, False, None)
+                            'build_only', 'notest', 'config']
+    assert argspec.defaults == (None, True, False, False, None)
 
 
 def test_api_test():
@@ -113,7 +113,8 @@ def test_api_installable():
 
 def test_api_inspect_linkages():
     argspec = getargspec(api.inspect_linkages)
-    assert argspec.args == ['packages', 'prefix', 'untracked', 'all', 'show_files', 'groupby']
+    assert argspec.args == ['packages', 'prefix', 'untracked', 'all_packages',
+                            'show_files', 'groupby']
     assert argspec.defaults == (sys.prefix, False, False, False, 'package')
 
 
@@ -133,7 +134,7 @@ def test_api_inspect_prefix_length():
 def test_api_create_metapackage():
     argspec = getargspec(api.create_metapackage)
     assert argspec.args == ['name', 'version', 'entry_points', 'build_string', 'build_number',
-                            'dependencies', 'home', 'license', 'summary', 'config']
+                            'dependencies', 'home', 'license_name', 'summary', 'config']
     assert argspec.defaults == ((), None, 0, (), None, None, None, None)
 
 

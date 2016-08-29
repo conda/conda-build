@@ -188,7 +188,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         submodules = check_output_env([git, 'config', '--file', '.gitmodules', '--get-regexp',
                                    'url'], stderr=stdout, cwd=checkout_dir)
         submodules = submodules.decode('utf-8').splitlines()
-    except:
+    except CalledProcessError:
         submodules = []
     for submodule in submodules:
         matches = git_submod_re.match(submodule)
@@ -522,7 +522,8 @@ def provide(recipe_dir, meta, config, patch=True):
 
 
 if __name__ == '__main__':
+    from conda_build.config import Config
     print(provide('.',
                   {'url': 'http://pypi.python.org/packages/source/b/bitarray/bitarray-0.8.0.tar.gz',
                    'git_url': 'git@github.com:ilanschnell/bitarray.git',
-                   'git_tag': '0.5.2'}))
+                   'git_tag': '0.5.2'}), Config())

@@ -10,7 +10,6 @@ import re
 import os
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath, normpath)
-import shutil
 import stat
 from subprocess import call
 import sys
@@ -134,10 +133,10 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 
 def rm_py_along_so(prefix):
     "remove .py (.pyc) files alongside .so or .pyd files"
-    for root, dirs, files in os.walk(prefix):
+    for root, _, files in os.walk(prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
-                name, unused_ext = splitext(fn)
+                name, _ = splitext(fn)
                 for ext in '.py', '.pyc':
                     if name + ext in files:
                         os.unlink(join(root, name + ext))
@@ -164,7 +163,7 @@ def coerce_pycache_to_old_style(files, cwd):
                                               sys.version_info.minor))
         if os.path.isfile(fname):
             os.rename(fname, f + 'c')
-    for root, folders, files in os.walk(cwd):
+    for root, _, files in os.walk(cwd):
         if root.endswith("__pycache__") and not files:
             os.rmdir(root)
 
@@ -344,7 +343,7 @@ def mk_relative(m, f, prefix):
 
 def fix_permissions(files, prefix):
     print("Fixing permissions")
-    for root, dirs, unused_files in os.walk(prefix):
+    for root, dirs, _ in os.walk(prefix):
         for dn in dirs:
             lchmod(join(root, dn), int('755', 8))
 

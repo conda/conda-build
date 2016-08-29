@@ -116,7 +116,7 @@ all.""",
 
 
 def execute(args):
-    parser, args = parse_args(args)
+    _, args = parse_args(args)
     files = args.files
     del args.__dict__['files']
 

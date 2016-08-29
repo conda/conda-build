@@ -111,7 +111,7 @@ def copy_into(src, dst, timeout=90, symlinks=False):
                     os.makedirs(os.path.dirname(dst_fn))
                 shutil.copy2(src, dst_fn)
             except shutil.Error:
-                log.debug("skipping {0} - already exists in {1}".format(os.path.basename(src), dst))
+                log.debug("skipping %s - already exists in %s", os.path.basename(src), dst)
     finally:
         if lock:
             lock.release()
@@ -423,18 +423,18 @@ def create_entry_points(items, config):
         create_entry_point(join(bin_dir, cmd), module, func, config)
 
 
-def guess_license_family(license, allowed_license_families):
+def guess_license_family(license_name, allowed_license_families):
     # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
-    if 'GPL (>= 2)' in license or license == 'GPL':
+    if 'GPL (>= 2)' in license_name or license_name == 'GPL':
         return 'GPL3'
     else:
-        return get_close_matches(license,
+        return get_close_matches(license_name,
                                  allowed_license_families, 1, 0.0)[0]
 
 
 # Return all files in dir, and all its subdirectories, ending in pattern
 def get_ext_files(start_path, pattern):
-    for _, subdirs, files in os.walk(start_path):
+    for _, _, files in os.walk(start_path):
         for f in files:
             if f.endswith(pattern):
                 yield os.path.join(dirname, f)

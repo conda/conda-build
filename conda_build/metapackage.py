@@ -4,7 +4,7 @@ from conda_build.metadata import MetaData
 
 
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
-                       dependencies=(), home=None, license=None, summary=None, config=None):
+                       dependencies=(), home=None, license_name=None, summary=None, config=None):
     # local import to avoid circular import, we provid create_metapackage in api
     from conda_build.build import build
 
@@ -20,7 +20,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
     d['build']['string'] = build_string
     d['requirements']['run'] = dependencies
     d['about']['home'] = home
-    d['about']['license'] = license
+    d['about']['license'] = license_name
     d['about']['summary'] = summary
     d = dict(d)
     m = MetaData.fromdict(d, config=config)

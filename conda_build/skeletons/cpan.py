@@ -201,7 +201,7 @@ def skeletonize(packages, output_dir=".", version=None,
         # If we're passed version in the same format as `PACKAGE=VERSION`
         # update version
         if '=' in package:
-            package, __, version = package.partition('=')
+            package, _, version = package.partition('=')
         else:
             version = orig_version
 
@@ -298,8 +298,8 @@ def skeletonize(packages, output_dir=".", version=None,
         else:
             build_deps, run_deps, packages_to_append = deps_for_package(
                 package, release_data=release_data, perl_version=perl_version,
-                output_dir=output_dir, processed_packages=processed_packages,
-                meta_cpan_url=meta_cpan_url, recursive=recursive, config=config)
+                output_dir=output_dir, meta_cpan_url=meta_cpan_url,
+                recursive=recursive, config=config)
             d['build_depends'] += indent.join([''] + list(build_deps |
                                                             run_deps))
             d['run_depends'] += indent.join([''] + list(run_deps))
@@ -441,7 +441,7 @@ def core_module_version(module, version, config):
 
 
 def deps_for_package(package, release_data, perl_version, output_dir,
-                     processed_packages, meta_cpan_url, recursive, config):
+                     meta_cpan_url, recursive, config):
     '''
     Build the sets of dependencies and packages we need recipes for. This should
     only be called for non-core modules/distributions, as dependencies are
@@ -458,7 +458,6 @@ def deps_for_package(package, release_data, perl_version, output_dir,
     :type output_dir: str
     :param processed_packages: The set of packages we have built recipes for
                                already.
-    :type processed_packages: set of str
 
     :returns: Build dependencies, runtime dependencies, and set of packages to
               add to list of recipes to create.

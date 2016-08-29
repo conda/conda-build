@@ -62,7 +62,7 @@ This works by creating a conda.pth file in site-packages."""
 
 
 def execute(args):
-    parser, args = parse_args(args)
+    _, args = parse_args(args)
     prefix = get_prefix(args)
     api.develop(args.source, prefix=prefix, no_pth_file=args.no_pth_file,
                 build_ext=args.build_ext, clean=args.clean, uninstall=args.uninstall)
