@@ -1,3 +1,85 @@
+2016-08-29 2.0.0:
+-----------------
+
+Notes here are a consolidation of all changes between 1.21.14 and 2.0.0.
+
+Enhancements:
+-------------
+
+* Increase placeholder path to 255 bytes (affects only Linux/Mac. Packages need to be rebuilt to support longer embedded paths) #877
+* Configuration is local, passed via config argument.  No more global config.  #953
+* Created Python API in conda_build/api.py #953
+* Separate build folders per-build to allow parallelism #953
+* Add locking to allow safe parallelism #953
+* Add build flag to turn off separate build folders (--no-build-id) #953
+* Much greater test coverage across all modules #953
+* Add CONDA_BUILD_STATE variable that reflects RENDER, BUILD, or TEST state of build #1232
+* Add support for HG_ variables in meta.yaml templates (for hg repos) #207 #1234
+* Add source_files test argument in meta.yaml to copy files from source into test #1237
+* add a numpy.distutils patch to jinja templating, so that fortran projects using numpy can also use jinja2 (thanks @bladwig1) #1252
+* Ensure that the build environment is on PATH during all tooling and testing #1256
+* Make failure due to pip requirements in meta.yaml clearer #1279
+* Allow API to accept either paths to meta.yaml files or MetaData objects, for better compatibility #1281
+* Implement tests to verify api stability #1283
+* Add build/noarch to recipe metadata.  Use for truly platform independent packages - same folder in every install. #1285
+
+Bug fixes:
+----------
+
+* Fix error converting linux to win packages due to python version mismatch #481
+* Fix infinite loop that occurred with circular dependencies being built #953
+* Improve test data structures to allow profiling with pytest-profiling #953
+* Fix version sorting in pypi skeleton generator #1238
+* improve backwards compatibility* prefix build and test envs with _, so that conda can be installed in them #1242
+* fix bdist_conda; add smoke test for it to Travis #1243
+* fix windows entry points (duplicate bad logic) #1246
+* fix inspect entry point in embedded conda.recipe #1251
+* create build environment before looking for VCS in it.  #1253
+* fix a deadlock with recursive environment creation on encountering packages with short prefixes #1257
+ with conda commands #1259
+* only compile pyc files if python is in the build prefix # 1261
+* remove exception catch-all in build CLI, to show actual errors more #1262
+* specify full paths to activate scripts to avoid PATH conflicts with virtualenv #1266
+* clean up remnants of pipbuild #1267
+* remove pyc files from any source_files arguments to test in meta.yaml (avoid __file__ errors) #1272
+* copy files and folders when breaking hardlinks (rather than renaming) to avoid cross-filesystem errors #1273
+* add Scripts folder to prepended binary paths searched on Windows #1276
+* update MACOSX_DEPLOYMENT_TARGET hard-coded value to 10.7 (better fix soon) #1278
+* disallow backslashes in meta.yaml fields describing paths (e.g. always_include_files) #1280
+* prevent GIT_* env vars from containing newlines #1282
+* restore prefix-lengths inspect command (lost in merging) #1283
+
+Restructuring:
+--------------
+
+* CLI scripts have been gutted and moved to conda_build/cli.  Content from them is in
+  conda_build, in scripts without main_ prefix.  #953
+* Skeleton generators have been broken out of main_skeleton.py, and consolidated into
+  conda_build/skeletons.  The contents of this folder are examined at runtime for pluggability.  #953
+
+Contributors:
+-------------
+
+* @bladwig1
+* @brentp
+* @heather999
+* @jakirkham
+* @mingwandroid
+* @msarahan
+* @melund
+* @pigmej
+
+Testers:
+--------
+
+* @dsludwig
+* @ericdill
+* @jakirkham
+* @mingwandroid
+* @pitrou
+* @srossross
+
+
 2016-08-26 2.0.0beta4:
 
 Bug fixes:
@@ -16,7 +98,7 @@ Bug fixes:
 Contributors:
 -------------
 
-* @dludwig1 (testing)
+* @dsludwig (testing)
 * @ericdill (testing)
 * @jakirkham (testing)
 * @mingwandroid (testing)
@@ -438,6 +520,49 @@ Contributors:
  * @pelson
  * @stuarteberg
  * @whitequark
+
+
+2016-06-05 2.0.0beta:
+---------------------
+
+Compatibility breaks:
+---------------------
+* Increase placeholder path to 255 bytes (affects only Linux/Mac.  Packages need to be rebuilt to support longer embedded paths) #877
+
+Bug fixes/Improvements:
+-----------------------
+* Respect proxy variables more appropriately #989
+* Fix post-build variables when no build section existed in original meta.yaml #999
+* Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
+* improve logic handling "dirty" downloading.  Always download when not dirty.  #995
+* Search packages on PyPI, rather than listing them all.  Should avoid some timeout errors there. #991
+* Lightened requirement that x.x be defined in both build and runtime sections.  #650
+* Search for single and double backslashes when finding files that need prefix replacement #962
+* Fix missing encoding argument #987
+* Don't use long prefixes on windows #985
+* only set os.environ for non-None variables #981
+* Track undefined jinja variables and use them to decide whether to download source #964
+* handle patches with p0 or p1 #969
+
+New stuff:
+----------
+* Add FEATURE_ environment variables for MKL, opt and debugging #978
+* add new x86 and x86_64 selectors for Intel platforms #986
+* add info/about.json file that contains the "about" section of meta.yaml #941
+* Add msys2 paths to build and test environments #979
+* allow ```--dirty``` flag to be passed to ```conda build``` command.  Skips download, and provides DIRTY environment variable in build scripts.  #973
+
+Contributors:
+-------------
+* @filmor
+* @heather999
+* @ilanschnell
+* @jschueller
+* @mingwandroid
+* @msarahan
+* @pelson
+* @stuarteberg
+* @whitequark
 
 
 2016-05-13 1.20.3:
