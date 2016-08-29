@@ -16,7 +16,7 @@ from conda_build.conda_interface import (StringIO, string_types, configparser, P
                                          text_type as unicode)
 from conda_build.conda_interface import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import build, render
+from conda_build import api
 from conda_build.skeletons import pypi
 from conda_build.build import handle_anaconda_upload
 from conda_build.config import Config
@@ -257,16 +257,16 @@ class bdist_conda(install):
         m = MetaData.fromdict(d)
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
-        build.build(m, config=self.config, post=False)
+        api.build(m, config=self.config, post=False)
         # Do the install
         if not PY3:
             # Command is an old-style class in Python 2
             install.run(self)
         else:
             super().run()
-        build.build(m, config=self.config, post=True)
-        build.test(m, config=self.config)
-        output_file = render.bldpkg_path(m, self.config)
+        api.build(m, config=self.config, post=True)
+        api.test(m, config=self.config)
+        output_file = api.get_output_file_path(m, self.config)
         if self.anaconda_upload:
             class args:
                 anaconda_upload = self.anaconda_upload

@@ -33,7 +33,7 @@ files as FILE.sig.""")
                  metavar="BITS")
     p.add_argument('-v', '--verify',
                    action="store_true",
-                   help="Verify FILE(s)."),
+                   help="Verify FILE(s).")
     p.add_argument('-i', '--input-key',
                    default="",
                    help="Name of or path to private key to use for signing")

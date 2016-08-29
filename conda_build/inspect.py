@@ -146,10 +146,10 @@ def test_installable(channel='defaults'):
     success = True
     has_py = re.compile(r'py(\d)(\d)')
     for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
-        log.info("######## Testing platform %s ########" % platform)
+        log.info("######## Testing platform %s ########", platform)
         channels = [channel]
         index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for package, rec in iteritems(index):
+        for _, rec in iteritems(index):
             # If we give channels at the command line, only look at
             # packages from those channels (not defaults).
             if channel != 'defaults' and rec.get('schannel', 'defaults') == 'defaults':
@@ -170,7 +170,7 @@ def test_installable(channel='defaults'):
                 additional_packages = []
 
             version = rec['version']
-            log.info('Testing %s=%s' % (name, version))
+            log.info('Testing %s=%s', name, version)
 
             try:
                 install_steps = check_install([name + '=' + version] + additional_packages,
@@ -182,9 +182,8 @@ def test_installable(channel='defaults'):
             # sys.exit raises an exception that doesn't subclass from Exception
             except BaseException as e:
                 success = False
-                log.error("FAIL: %s %s on %s with %s (%s)" % (name, version,
-                                                                platform, additional_packages,
-                                                                e))
+                log.error("FAIL: %s %s on %s with %s (%s)", name, version,
+                          platform, additional_packages, e)
     return success
 
 
@@ -199,15 +198,15 @@ def _underlined_text(text):
 
 
 def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
-                     all=False, show_files=False, groupby="package"):
+                     all_packages=False, show_files=False, groupby="package"):
     pkgmap = {}
 
     installed = _installed(prefix)
 
-    if not packages and not untracked and not all:
+    if not packages and not untracked and not all_packages:
         raise ValueError("At least one package or --untracked or --all must be provided")
 
-    if all:
+    if all_packages:
         packages = sorted(installed.keys())
 
     if untracked:
@@ -239,8 +238,8 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 if path.startswith(prefix):
                     deps = list(which_package(path))
                     if len(deps) > 1:
-                        log.warn("Warning: %s comes from multiple packages: %s" %
-                                (path, comma_join(deps)), file=sys.stderr)
+                        log.warn("Warning: %s comes from multiple packages: %s", path,
+                                 comma_join(deps), file=sys.stderr)
                     if not deps:
                         if exists(path):
                             depmap['untracked'].append((lib, path.split(prefix +

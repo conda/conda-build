@@ -213,7 +213,7 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(config, m=None, prefix=None, dirty=False):
+def get_dict(config, m=None, prefix=None):
     if not prefix:
         prefix = config.build_prefix
 
@@ -257,7 +257,7 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config):
-    vars = {
+    d = {
         'PYTHON': config.build_python,
         'PY3K': str(config.PY3K),
         'STDLIB_DIR': get_stdlib_dir(config),
@@ -268,9 +268,9 @@ def python_vars(config):
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
     if get_npy_ver(config):
-        vars['NPY_VER'] = get_npy_ver(config)
-        vars['CONDA_NPY'] = str(config.CONDA_NPY)
-    return vars
+        d['NPY_VER'] = get_npy_ver(config)
+        d['CONDA_NPY'] = str(config.CONDA_NPY)
+    return d
 
 
 def perl_vars(config):
@@ -345,7 +345,7 @@ def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
-        out, err = subprocess.Popen('sysctl -n hw.logicalcpu', shell=True,
+        out, _ = subprocess.Popen('sysctl -n hw.logicalcpu', shell=True,
                          stdout=subprocess.PIPE).communicate()
         return out.decode('utf-8').strip()
     else:

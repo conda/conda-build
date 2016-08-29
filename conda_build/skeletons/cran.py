@@ -195,7 +195,7 @@ VERSION_DEPENDENCY_REGEX = re.compile(
 
 
 class CRANPackagesCompleter(Completer):
-    def __init__(self, prefix, parsed_args, **kwargs):
+    def __init__(self, prefix, parsed_args):
         self.prefix = prefix
         self.parsed_args = parsed_args
 
@@ -441,7 +441,7 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
         package_list)}
 
 
-def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=False,
+def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                 cran_url="http://cran.r-project.org/", recursive=False, archive=True,
                 version_compare=False, update_outdated=False, config=None):
 
@@ -470,7 +470,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
 
         if is_github_url:
             rm_rf(config.work_dir)
-            source.git_source({'git_url': package}, '.')
+            source.git_source({'git_url': package}, '.', config=config)
             git_tag = git_tag[0] if git_tag else get_latest_git_tag(config)
             p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, cwd=config.work_dir)
@@ -559,8 +559,8 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None, all_urls=F
             d['git_tag'] = ''
 
         if version:
-            raise NotImplementedError("Package versions from CRAN are not yet implemented")
             d['version'] = version
+            raise NotImplementedError("Package versions from CRAN are not yet implemented")
 
         d['cran_version'] = cran_package['Version']
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .

@@ -80,7 +80,7 @@ class FilteredLoader(jinja2.BaseLoader):
 
 
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
-                       unload_modules=None, fail_on_error=False, permit_undefined_jinja=True):
+                       permit_undefined_jinja=True):
     _setuptools_data = {}
 
     def setup(**kw):
@@ -144,13 +144,11 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
 
 
 def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
-                    unload_modules=None, fail_on_error=False, permit_undefined_jinja=True):
+                    permit_undefined_jinja=True):
     log.warn("Deprecation notice: the load_setuptools function has been renamed to "
              "load_setup_py_data.  load_setuptools will be removed in a future release.")
     return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
-                              recipe_dir=recipe_dir, unload_modules=unload_modules,
-                              fail_on_error=fail_on_error,
-                              permit_undefined_jinja=permit_undefined_jinja)
+                              recipe_dir=recipe_dir, permit_undefined_jinja=permit_undefined_jinja)
 
 
 def load_npm():

@@ -4,7 +4,7 @@ import logging
 import os
 import re
 import sys
-from os.path import isdir, isfile, join
+from os.path import isfile, join
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import memoized, md5_file

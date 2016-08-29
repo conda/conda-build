@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function
 from copy import deepcopy
 import json
 import os
-from os.path import abspath, expanduser, isdir, join, split
+from os.path import abspath, expanduser, isdir, join
 import pprint
 import re
 import sys
@@ -327,7 +327,7 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
                   "force conversion." % file_path, file=sys.stderr)
             return
 
-        file_dir, fn = split(file_path)
+        fn = os.path.basename(file_path)
 
         info = json.loads(t.extractfile('info/index.json')
                           .read().decode('utf-8'))

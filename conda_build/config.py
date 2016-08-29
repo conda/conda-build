@@ -31,7 +31,7 @@ class Config(object):
     __package__ = __package__
     __doc__ = __doc__
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         super(Config, self).__init__()
         self.set_keys(**kwargs)
 

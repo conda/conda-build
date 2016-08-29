@@ -10,7 +10,6 @@ import argparse
 import logging
 from os.path import isdir
 import sys
-import warnings
 
 import filelock
 
@@ -173,13 +172,13 @@ def test_action(metadata, config):
 
 
 def check_action(metadata, config):
-    return api.check(metadata.path)
+    return api.check(metadata.path, config=config)
 
 
 def execute(args):
     parser, args = parse_args(args)
     config = Config(**args.__dict__)
-    build.check_external(config)
+    build.check_external()
 
     # change globals in build module, see comment there as well
     config.channel_urls = args.channel or ()
@@ -191,18 +190,7 @@ def execute(args):
         return
 
     if on_win:
-        try:
-            # needs to happen before any c extensions are imported that might be
-            # hard-linked by files in the trash. one of those is markupsafe,
-            # used by jinja2. see https://github.com/conda/conda-build/pull/520
-            delete_trash(None)
-        except:
-            # when we can't delete the trash, don't crash on AssertionError,
-            # instead inform the user and try again next time.
-            # see https://github.com/conda/conda-build/pull/744
-            warnings.warn("Cannot delete trash; some c extension has been "
-                          "imported that is hard-linked by files in the trash. "
-                          "Will try again on next run.")
+        delete_trash(None)
 
     set_language_env_vars(args, parser, config=config, execute=execute)
 

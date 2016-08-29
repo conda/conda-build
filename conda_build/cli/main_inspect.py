@@ -175,7 +175,7 @@ def execute(args):
             print(api.test_installable(args.channel))
     elif args.subcommand == 'linkages':
         print(api.inspect_linkages(args.packages, prefix=get_prefix(args),
-                                   untracked=args.untracked, all=args.all,
+                                   untracked=args.untracked, all_packages=args.all,
                                    show_files=args.show_files, groupby=args.groupby))
     elif args.subcommand == 'objects':
         print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
