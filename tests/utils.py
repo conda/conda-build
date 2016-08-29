@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 import subprocess
 import sys
@@ -6,11 +7,28 @@ import tarfile
 import pytest
 
 from conda_build.config import Config
+from conda_build.metadata import MetaData
 from conda_build.utils import on_win, prepend_bin_path
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
+
+
+d = defaultdict(dict)
+d['package']['name'] = 'test_package'
+d['package']['version'] = '1.0'
+d['build']['number'] = '1'
+d['build']['entry_points'] = []
+# MetaData does the auto stuff if the build string is None
+d['build']['string'] = None
+d['requirements']['build'] = ['python']
+d['requirements']['run'] = ['python']
+d['about']['home'] = "sweet home"
+d['about']['license'] = "contract in blood"
+d['about']['summary'] = "a test package"
+
+test_metadata = MetaData.fromdict(d)
 
 
 def is_valid_dir(parent_dir, dirname):

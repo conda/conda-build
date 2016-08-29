@@ -312,22 +312,22 @@ path_mapping = [  # (unix, windows)
 pyver_re = re.compile(r'python\s+(\d.\d)')
 
 
-def conda_convert(file, output_dir=".", show_imports=False, platforms=None, force=False,
+def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
                   dependencies=None, verbose=False, quiet=True, dry_run=False):
     if not show_imports and platforms is None:
         sys.exit('Error: --platform option required for conda package conversion')
 
-    with tarfile.open(file) as t:
+    with tarfile.open(file_path) as t:
         if show_imports:
             has_cext(t, show=True)
             return
 
         if not force and has_cext(t, show=show_imports):
             print("WARNING: Package %s has C extensions, skipping. Use -f to "
-                  "force conversion." % file, file=sys.stderr)
+                  "force conversion." % file_path, file=sys.stderr)
             return
 
-        file_dir, fn = split(file)
+        file_dir, fn = split(file_path)
 
         info = json.loads(t.extractfile('info/index.json')
                           .read().decode('utf-8'))
@@ -344,7 +344,7 @@ def conda_convert(file, output_dir=".", show_imports=False, platforms=None, forc
         base_output_dir = output_dir
         for platform in platforms:
             output_dir = join(base_output_dir, platform)
-            if abspath(expanduser(join(output_dir, fn))) == file:
+            if abspath(expanduser(join(output_dir, fn))) == file_path:
                 if not quiet:
                     print("Skipping %s/%s. Same as input file" % (platform, fn))
                 continue
@@ -367,13 +367,13 @@ def conda_convert(file, output_dir=".", show_imports=False, platforms=None, forc
             if nonpy_unix and not force:
                 print(("WARNING: Package %s has non-Python entry points, "
                        "skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform), file=sys.stderr)
+                      (file_path, info['platform'], platform), file=sys.stderr)
                 continue
 
             if nonpy_win and not force:
                 print(("WARNING: Package %s has entry points, which are not "
                        "supported yet. Skipping %s to %s conversion. Use -f to force.") %
-                      (file, info['platform'], platform), file=sys.stderr)
+                      (file_path, info['platform'], platform), file=sys.stderr)
                 continue
 
             file_map = get_pure_py_file_map(t, platform)
@@ -381,14 +381,14 @@ def conda_convert(file, output_dir=".", show_imports=False, platforms=None, forc
             if dry_run:
                 if not quiet:
                     print("Would convert %s from %s to %s" %
-                        (file, info['platform'], dest_plat))
+                        (file_path, info['platform'], dest_plat))
                 if verbose:
                     pprint.pprint(file_map)
                 continue
             else:
                 if not quiet:
                     print("Converting %s from %s to %s" %
-                        (file, info['platform'], platform))
+                        (file_path, info['platform'], platform))
 
             if not isdir(output_dir):
                 os.makedirs(output_dir)
