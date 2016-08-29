@@ -145,8 +145,10 @@ Tools for investigating conda channels.
         description=linkages_help,
     )
     prefix_lengths.add_argument(
-        'folder',
-        help='folder containing packages to inspect.',
+        'packages',
+        action='store',
+        nargs='+',
+        help='Conda packages to inspect.',
     )
     prefix_lengths.add_argument(
         '--min-prefix-length', '-m',
@@ -177,6 +179,9 @@ def execute(args):
                                    show_files=args.show_files, groupby=args.groupby))
     elif args.subcommand == 'objects':
         print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
+    elif args.subcommand == 'prefix-lengths':
+        if not api.inspect_prefix_length(args.packages, min_prefix_length=args.min_prefix_length):
+            sys.exit(1)
     else:
         raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))
 
