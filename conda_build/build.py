@@ -38,6 +38,7 @@ from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
+from .conda_interface import VersionOrder
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -487,7 +488,10 @@ def warn_on_old_conda_build(index):
         return
     r = Resolve(index)
     try:
-        pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
+        pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')), key=VersionOrder)
+        # cuts out packages wth rc/alpha/beta.  VersionOrder described in conda/version.py
+        # this breaks up the version into pieces, and depends on version formats like x.y.z[alpha/beta]  # noqa
+        pkgs = [pkg for pkg in pkgs if len(VersionOrder(pkg).version[3]) == 1]
     except NoPackagesFound:
         print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)  # noqa
         return
