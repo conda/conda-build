@@ -425,6 +425,8 @@ def create_env(prefix, specs, config, clear_cache=True):
 
             cc.pkgs_dirs = cc.pkgs_dirs[:1]
             dirname = os.path.join(cc.root_dir, 'pkgs')
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
             lock_file = os.path.join(dirname, ".conda_lock")
 
             lock = filelock.SoftFileLock(lock_file)
