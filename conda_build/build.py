@@ -493,7 +493,7 @@ def warn_on_old_conda_build(index):
         pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')), key=VersionOrder)
         # cuts out packages wth rc/alpha/beta.  VersionOrder described in conda/version.py
         # this breaks up the version into pieces, and depends on version formats like x.y.z[alpha/beta]  # noqa
-        pkgs = [pkg for pkg in pkgs if len(VersionOrder(pkg).version[3]) == 1]
+        pkgs = [pkg for pkg in pkgs if len(VersionOrder(pkg.version).version[3]) == 1]
     except NoPackagesFound:
         print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)  # noqa
         return
