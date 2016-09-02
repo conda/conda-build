@@ -98,3 +98,42 @@ with open(fn, 'wb') as f:
 
     api.build(metadata, config=config)
     assert "Falling back to legacy prefix" in caplog.text()
+
+
+def test_warn_on_old_conda_build(test_config, capfd):
+    installed_version = "1.21.14"
+
+    # test with a conda-generated index first.  This is a list of Package objects,
+    #    from which we just take the versions.
+    build.update_index(test_config.croot, test_config)
+    build.update_index(os.path.join(test_config.croot, test_config.subdir), test_config)
+    build.update_index(os.path.join(test_config.croot, 'noarch'), test_config)
+    index = build.get_build_index(test_config)
+    # exercise the index code path, but this test is not at all deterministic.
+    build.warn_on_old_conda_build(index=index)
+    output, error = capfd.readouterr()
+
+    # should see output here
+    build.warn_on_old_conda_build(installed_version=installed_version,
+                                  available_packages=['1.21.10', '2.0.0'])
+    output, error = capfd.readouterr()
+    assert "conda-build appears to be out of date. You have version " in error
+
+    # should not see output here, because newer version has a beta tag
+    build.warn_on_old_conda_build(installed_version=installed_version,
+                                  available_packages=['1.21.10', '2.0.0beta2'])
+    output, error = capfd.readouterr()
+    assert "conda-build appears to be out of date. You have version " not in error
+
+    # should not see output here, because newer version has a beta tag
+    build.warn_on_old_conda_build(installed_version=installed_version,
+                                  available_packages=['1.21.10', '2.0.0beta2'])
+    output, error = capfd.readouterr()
+    assert "conda-build appears to be out of date. You have version " not in error
+
+    # should not barf on empty lists of packages; just not show anything
+    #     entries with beta will be filtered out, leaving an empty list
+    build.warn_on_old_conda_build(installed_version=installed_version,
+                                  available_packages=['1.0.0beta'])
+    output, error = capfd.readouterr()
+    assert "conda-build appears to be out of date. You have version " not in error
