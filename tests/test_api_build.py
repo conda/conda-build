@@ -603,3 +603,16 @@ def test_noarch(testing_workdir):
         output = api.get_output_file_path(testing_workdir)
         assert ("noarch" in output or not noarch)
         assert ("noarch" not in output or noarch)
+
+
+def test_disable_pip(test_config):
+    recipe_path = os.path.join(metadata_dir, '_disable_pip')
+    metadata, _, _ = api.render(recipe_path, config=test_config)
+
+    metadata.meta['build']['script'] = 'python -c "import pip"'
+    with pytest.raises(SystemExit):
+        api.build(metadata)
+
+    metadata.meta['build']['script'] = 'python -c "import setuptools"'
+    with pytest.raises(SystemExit):
+        api.build(metadata)

@@ -313,6 +313,7 @@ def write_no_link(m, config, files):
                 if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
 
+
 def create_info_files(m, files, config, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -901,7 +902,7 @@ Error:
 
 
 def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
-               need_source_download=True):
+               need_source_download=True, need_reparse_in_env=False):
 
     to_build_recursive = []
     recipe_list = deque(recipe_list)
@@ -923,28 +924,28 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         recipe = recipe_list.popleft()
         if hasattr(recipe, 'config'):
             metadata = recipe
-            need_source_download = True
-            need_reparse_in_env = False
+            recipe_config = metadata.config
             if config.set_build_id:
                 config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
             recipe_parent_dir = os.path.dirname(recipe)
+            recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
             if config.set_build_id:
                 config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
-                                                                                config=config)
+                                                                    config=recipe_config)
         try:
-            with config:
+            with recipe_config:
                 ok_to_test = build(metadata, post=post,
                                    need_source_download=need_source_download,
                                    need_reparse_in_env=need_reparse_in_env,
-                                   config=config)
+                                   config=recipe_config)
                 if not notest and ok_to_test:
-                    test(metadata, config=config)
+                    test(metadata, config=recipe_config)
         except (NoPackagesFound, Unsatisfiable) as e:
             error_str = str(e)
             # Typically if a conflict is with one of these
