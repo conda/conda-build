@@ -443,7 +443,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                             os.environ[k] = str(v)
                     plan.execute_actions(actions, index, verbose=config.debug)
                 except SystemExit as exc:
-                    if "too short in" in str(exc) and config.prefix_length > 80:
+                    if (("too short in" in str(exc) or
+                         'post-link failed for: openssl' in str(exc)) and
+                            config.prefix_length > 80):
                         log.warn("Build prefix failed with prefix length %d", config.prefix_length)
                         log.warn("Error was: ")
                         log.warn(str(exc))

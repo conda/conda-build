@@ -3,6 +3,7 @@ This file tests the build.py module.  It sits lower in the stack than the API te
 and is more unit-test oriented.
 """
 
+import copy
 import os
 import sys
 
@@ -12,7 +13,7 @@ from conda_build import build, api
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
 
-from .utils import testing_workdir, test_config, metadata_dir
+from .utils import testing_workdir, test_config, metadata_dir, test_metadata
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -78,6 +79,27 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text()
 
 
+@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
+                                    " not length dependent"))
+def test_catch_openssl_legacy_short_prefix_error(caplog):
+    config = api.Config(anaconda_upload=False, verbose=True, python="2.6")
+    from .utils import d
+    metadata = MetaData.fromdict(d, config=config)
+    cmd = """
+import os
+
+prefix = os.environ['PREFIX']
+fn = os.path.join(prefix, 'binary-has-prefix')
+
+with open(fn, 'wb') as f:
+    f.write(prefix.encode('utf-8') + b'\x00\x00')
+ """
+    metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
+
+    api.build(metadata, config=config)
+    assert "Falling back to legacy prefix" in caplog.text()
+
+
 def test_warn_on_old_conda_build(test_config, capfd):
     installed_version = "1.21.14"
 
@@ -108,7 +130,6 @@ def test_warn_on_old_conda_build(test_config, capfd):
                                   available_packages=['1.21.10', '2.0.0beta2'])
     output, error = capfd.readouterr()
     assert "conda-build appears to be out of date. You have version " not in error
-
 
     # should not barf on empty lists of packages; just not show anything
     #     entries with beta will be filtered out, leaving an empty list
