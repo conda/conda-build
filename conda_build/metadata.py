@@ -401,6 +401,11 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(config=config, permit_undefined_jinja=True)
+        self.config.disable_pip = self.disable_pip
+
+    @property
+    def disable_pip(self):
+        return 'build' in self.meta and 'disable_pip' in self.meta['build']
 
     def parse_again(self, config=None, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
@@ -562,8 +567,8 @@ class MetaData(object):
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
             except AttributeError:
-                raise RuntimeError("Received dictionary as spec.  Note that pip requirements are not "
-                                   "supported in conda-build meta.yaml.")
+                raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
+                                   "not supported in conda-build meta.yaml.")
             if ms.name == self.name():
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:

@@ -433,6 +433,9 @@ def create_env(prefix, specs, config, clear_cache=True):
             with path_prepended(prefix):
                 try:
                     actions = plan.install_actions(prefix, index, specs)
+                    if config.disable_pip:
+                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
+                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
                     plan.display_actions(actions, index)
                     if on_win:
                         for k, v in os.environ.items():
