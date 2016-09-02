@@ -6,6 +6,7 @@ import tarfile
 
 import pytest
 
+from conda_build.conda_interface import PY3
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.utils import on_win, prepend_bin_path
@@ -101,3 +102,12 @@ def package_has_file(package_path, file_path):
     except tarfile.ReadError:
         raise RuntimeError("Could not extract metadata from %s. "
                            "File probably corrupt." % package_path)
+
+
+def add_mangling(filename):
+    if PY3:
+        filename = os.path.splitext(filename)[0] + '.cpython-{0}{1}.py'.format(
+            sys.version_info.major, sys.version_info.minor)
+        filename = os.path.join(os.path.dirname(filename), '__pycache__',
+                                os.path.basename(filename))
+    return filename + 'c'
