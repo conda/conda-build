@@ -162,7 +162,8 @@ def get_git_info(repo, config):
 
     try:
         output = subprocess.check_output(["git", "describe", "--tags", "--long", "HEAD"],
-                                         env=env, cwd=os.path.dirname(repo), stderr=stderr).splitlines()[0]
+                                         env=env, cwd=os.path.dirname(repo),
+                                         stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
 
         parts = output.rsplit('-', 2)
@@ -171,7 +172,8 @@ def get_git_info(repo, config):
 
         # get the _full_ hash of the current HEAD
         output = subprocess.check_output(["git", "rev-parse", "HEAD"],
-                                         env=env, cwd=os.path.dirname(repo), stderr=stderr).splitlines()[0]
+                                         env=env, cwd=os.path.dirname(repo),
+                                         stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
 
         d['GIT_FULL_HASH'] = output
@@ -180,7 +182,7 @@ def get_git_info(repo, config):
             d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
                                                 d["GIT_DESCRIBE_HASH"])
 
-        # There have been issues on Windows with the next line of the command prompt being recorded here.
+        # issues on Windows with the next line of the command prompt being recorded here.
         assert not any("\n" in value for value in d.values())
 
     except subprocess.CalledProcessError as error:
