@@ -343,6 +343,7 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
             platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
         base_output_dir = output_dir
         for platform in platforms:
+            info['subdir'] = platform
             output_dir = join(base_output_dir, platform)
             if abspath(expanduser(join(output_dir, fn))) == file_path:
                 if not quiet:

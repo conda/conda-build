@@ -314,6 +314,7 @@ def write_no_link(m, config, files):
                 if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
 
+
 def create_info_files(m, files, config, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
