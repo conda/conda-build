@@ -22,6 +22,7 @@ from conda_build.os_utils import external
 from .conda_interface import lchmod
 from .conda_interface import walk_prefix
 from .conda_interface import md5_file
+from .conda_interface import PY3
 
 from conda_build import environ
 from conda_build import utils
@@ -142,32 +143,6 @@ def rm_py_along_so(prefix):
                         os.unlink(join(root, name + ext))
 
 
-def coerce_pycache_to_old_style(files, cwd):
-    """
-    For the sake of simplicity, remove the filename additions, like .cpython-35.pyc
-
-    Since Conda allows only one Python install in a given prefix, there is no reason
-    for these additional suffixes.  Newer Python will find these pyc files without issue.
-    """
-    for f in files:
-        if not os.path.exists(f):
-            f = os.path.join(cwd, f)
-        if not os.path.isfile(f) or not f.endswith('.py'):
-            continue
-        if '/' in f or '\\' in f:
-            folder = os.path.join(cwd, os.path.dirname(f), '__pycache__')
-        else:
-            folder = os.path.join(cwd, '__pycache__')
-        fname = os.path.join(folder, os.path.splitext(os.path.basename(f))[0] +
-                 '.cpython-{0}{1}.pyc'.format(sys.version_info.major,
-                                              sys.version_info.minor))
-        if os.path.isfile(fname):
-            os.rename(fname, f + 'c')
-    for root, _, files in os.walk(cwd):
-        if root.endswith("__pycache__") and not files:
-            os.rmdir(root)
-
-
 def compile_missing_pyc(files, cwd, python_exe):
     compile_files = []
     for fn in files:
@@ -179,14 +154,15 @@ def compile_missing_pyc(files, cwd, python_exe):
         else:
             if fn.startswith('bin'):
                 continue
-        if fn.endswith(".py") and fn + 'c' not in files:
+        cache_prefix = "__pycache__/" if PY3 else ""
+        if (fn.endswith(".py") and
+                os.path.dirname(fn) + cache_prefix + os.path.basename(fn) + 'c' not in files):
             compile_files.append(fn)
 
     if compile_files and os.path.isfile(python_exe):
         print('compiling .pyc files...')
         for f in compile_files:
             call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
-        coerce_pycache_to_old_style(compile_files, cwd=cwd)
 
 
 def post_process(files, prefix, config, preserve_egg_dir=False):
@@ -433,26 +409,26 @@ def get_build_metadata(m, config):
     if "build" not in m.meta:
         m.meta["build"] = {}
     if exists(join(src_dir, '__conda_version__.txt')):
-        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 2.0."  # noqa
+        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 3.0."  # noqa
               "Try Jinja templates instead: "
-              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
+              "http://conda.pydata.org/docs/building/meta-yaml.html#templating-with-jinja")
         with open(join(src_dir, '__conda_version__.txt')) as f:
             version = f.read().strip()
             print("Setting version from __conda_version__.txt: %s" % version)
             m.meta['package']['version'] = version
     if exists(join(src_dir, '__conda_buildnum__.txt')):
-        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 2.0."  # noqa
+        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 3.0."  # noqa
               "Try Jinja templates instead: "
-              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
+              "http://conda.pydata.org/docs/building/meta-yaml.html#templating-with-jinja")
         with open(join(src_dir, '__conda_buildnum__.txt')) as f:
             build_number = f.read().strip()
             print("Setting build number from __conda_buildnum__.txt: %s" %
                   build_number)
             m.meta['build']['number'] = build_number
     if exists(join(src_dir, '__conda_buildstr__.txt')):
-        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 2.0."  # noqa
+        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 3.0."  # noqa
               "Try Jinja templates instead: "
-              "http://conda.pydata.org/docs/building/environment-vars.html#git-environment-variables")  # noqa
+              "http://conda.pydata.org/docs/building/meta-yaml.html#templating-with-jinja")
         with open(join(src_dir, '__conda_buildstr__.txt')) as f:
             buildstr = f.read().strip()
             print("Setting version from __conda_buildstr__.txt: %s" % buildstr)

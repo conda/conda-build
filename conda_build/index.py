@@ -69,6 +69,8 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True):
     if config.verbose:
         print("updating index in:", dir_path)
     index_path = join(dir_path, '.index.json')
+    if not os.path.isdir(dir_path):
+        os.makedirs(dir_path)
     if force:
         index = {}
     else:
