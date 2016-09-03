@@ -66,7 +66,7 @@ def package_has_file(package_path, file_path):
     try:
         with tarfile.open(package_path) as t:
             try:
-                t.getmember(file_path)
+                t.getmember(file_path.replace('\\', '/'))
                 return True
             except KeyError:
                 return False
