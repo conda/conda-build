@@ -38,6 +38,8 @@ class Config(object):
     def _set_attribute_from_kwargs(self, kwargs, attr, default):
         value = kwargs.get(attr, getattr(self, attr) if hasattr(self, attr) else default)
         setattr(self, attr, value)
+        if attr in kwargs:
+            del kwargs[attr]
 
     def set_keys(self, **kwargs):
         def env(lang, default):
@@ -90,9 +92,16 @@ class Config(object):
                   Setting('bits', bits),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
+                  Setting('disable_pip', False)
                   ]
+
+        # handle known values better than unknown (allow defaults)
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
+
+        # dangle remaining keyword arguments as attributes on this class
+        for name, value in kwargs.items():
+            setattr(self, name, value)
 
     @property
     def croot(self):

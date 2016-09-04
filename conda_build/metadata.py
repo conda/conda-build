@@ -401,6 +401,11 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         self.parse_again(config=config, permit_undefined_jinja=True)
+        self.config.disable_pip = self.disable_pip
+
+    @property
+    def disable_pip(self):
+        return 'build' in self.meta and 'disable_pip' in self.meta['build']
 
     def parse_again(self, config=None, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
