@@ -17,43 +17,50 @@ from conda_build.utils import file_info
 from .conda_interface import PY3, md5_file
 
 
-def read_index_tar(tar_path, config):
+def read_index_tar(tar_path, config, lock=None):
     """ Returns the index.json dict inside the given package tarball. """
-    with filelock.SoftFileLock(join(os.path.dirname(tar_path), ".conda_lock"),
-                               timeout=config.timeout):
-        try:
-            with tarfile.open(tar_path) as t:
-                try:
-                    return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
-                except EOFError:
-                    raise RuntimeError("Could not extract %s. File probably corrupt."
-                        % tar_path)
-                except OSError as e:
-                    raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
-        except tarfile.ReadError:
-            raise RuntimeError("Could not extract metadata from %s. "
-                               "File probably corrupt." % tar_path)
+
+    if not lock:
+        lock = filelock.SoftFileLock(join(os.path.dirname(tar_path), ".conda_lock"))
+    lock.acquire(timeout=config.timeout)
+    try:
+        with tarfile.open(tar_path) as t:
+            try:
+                return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+            except EOFError:
+                raise RuntimeError("Could not extract %s. File probably corrupt."
+                    % tar_path)
+            except OSError as e:
+                raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
+    except tarfile.ReadError:
+        raise RuntimeError("Could not extract metadata from %s. "
+                            "File probably corrupt." % tar_path)
+    finally:
+        lock.release()
 
 
-def write_repodata(repodata, dir_path, config=None):
+def write_repodata(repodata, dir_path, config=None, lock=None):
     """ Write updated repodata.json and repodata.json.bz2 """
     if not config:
         import conda_build.config
         config = conda_build.config.config
-    with filelock.SoftFileLock(join(dir_path, ".conda_lock"), timeout=config.timeout):
-        data = json.dumps(repodata, indent=2, sort_keys=True)
-        # strip trailing whitespace
-        data = '\n'.join(line.rstrip() for line in data.splitlines())
-        # make sure we have newline at the end
-        if not data.endswith('\n'):
-            data += '\n'
-        with open(join(dir_path, 'repodata.json'), 'w') as fo:
-            fo.write(data)
-        with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
-            fo.write(bz2.compress(data.encode('utf-8')))
+    if not lock:
+        lock = filelock.SoftFileLock(join(dir_path, ".conda_lock"))
+    lock.acquire(timeout=config.timeout)
+    data = json.dumps(repodata, indent=2, sort_keys=True)
+    # strip trailing whitespace
+    data = '\n'.join(line.rstrip() for line in data.splitlines())
+    # make sure we have newline at the end
+    if not data.endswith('\n'):
+        data += '\n'
+    with open(join(dir_path, 'repodata.json'), 'w') as fo:
+        fo.write(data)
+    with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
+        fo.write(bz2.compress(data.encode('utf-8')))
+    lock.release()
 
 
-def update_index(dir_path, config, force=False, check_md5=False, remove=True):
+def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None):
     """
     Update all index files in dir_path with changed packages.
 
@@ -66,11 +73,17 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True):
                       if a package changed.
     :type check_md5: bool
     """
+
     if config.verbose:
         print("updating index in:", dir_path)
     index_path = join(dir_path, '.index.json')
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
+
+    if not lock:
+        lock = filelock.SoftFileLock(join(dir_path, ".conda_lock"))
+    lock.acquire(timeout=config.timeout)
+
     if force:
         index = {}
     else:
@@ -99,7 +112,7 @@ Error:
                 continue
         if config.verbose:
             print('updating:', fn)
-        d = read_index_tar(path, config)
+        d = read_index_tar(path, config, lock=lock)
         d.update(file_info(path))
         index[fn] = d
 
@@ -131,4 +144,7 @@ Error:
             info['depends'] = info['requires']
 
     repodata = {'packages': index, 'info': {}}
-    write_repodata(repodata, dir_path, config)
+    write_repodata(repodata, dir_path, config, lock=lock)
+    lock.release()
+    if os.path.isfile(join(dir_path, ".conda_lock")):
+        os.remove(join(dir_path, ".conda_lock"))

@@ -402,63 +402,64 @@ def create_env(prefix, specs, config, clear_cache=True):
             specs.append('%s@' % feature)
 
     if specs:  # Don't waste time if there is nothing to do
-        for d in config.bldpkgs_dirs:
-            if not isdir(d):
-                os.makedirs(d)
-            update_index(d, config)
         with path_prepended(prefix):
-            index = get_build_index(config=config, clear_cache=True)
+            locks = []
+            try:
+                cc.pkgs_dirs = cc.pkgs_dirs[:1]
+                locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+                for folder in locked_folders:
+                    if not os.path.isdir(folder):
+                        print(folder)
+                        os.makedirs(folder)
+                        update_index(folder, config=config)
+                    locks.append(filelock.SoftFileLock(join(folder, '.conda_lock')))
+                for lock in locks:
+                    lock.acquire(timeout=config.timeout)
 
-            cc.pkgs_dirs = cc.pkgs_dirs[:1]
-            dirname = os.path.join(cc.root_dir, 'pkgs')
-            if not os.path.isdir(dirname):
-                os.makedirs(dirname)
-            lock_file = os.path.join(dirname, ".conda_lock")
+                index = get_build_index(config=config, clear_cache=True)
 
-            lock = filelock.SoftFileLock(lock_file)
-            lock.acquire(timeout=config.timeout)
+                actions = plan.install_actions(prefix, index, specs)
+                if config.disable_pip:
+                    actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
+                    actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
+                plan.display_actions(actions, index)
+                if on_win:
+                    for k, v in os.environ.items():
+                        os.environ[k] = str(v)
+                plan.execute_actions(actions, index, verbose=config.debug)
+            except SystemExit as exc:
+                if (("too short in" in str(exc) or
+                        'post-link failed for: openssl' in str(exc)) and
+                        config.prefix_length > 80):
+                    log.warn("Build prefix failed with prefix length %d", config.prefix_length)
+                    log.warn("Error was: ")
+                    log.warn(str(exc))
+                    log.warn("One or more of your package dependencies needs to be rebuilt "
+                            "with a longer prefix length.")
+                    log.warn("Falling back to legacy prefix length of 80 characters.")
+                    log.warn("Your package will not install into prefixes > 80 characters.")
+                    config.prefix_length = 80
 
-            with path_prepended(prefix):
-                try:
-                    actions = plan.install_actions(prefix, index, specs)
-                    if config.disable_pip:
-                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
-                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
-                    plan.display_actions(actions, index)
-                    if on_win:
-                        for k, v in os.environ.items():
-                            os.environ[k] = str(v)
-                    plan.execute_actions(actions, index, verbose=config.debug)
-                except SystemExit as exc:
-                    if (("too short in" in str(exc) or
-                         'post-link failed for: openssl' in str(exc)) and
-                            config.prefix_length > 80):
-                        log.warn("Build prefix failed with prefix length %d", config.prefix_length)
-                        log.warn("Error was: ")
-                        log.warn(str(exc))
-                        log.warn("One or more of your package dependencies needs to be rebuilt "
-                                "with a longer prefix length.")
-                        log.warn("Falling back to legacy prefix length of 80 characters.")
-                        log.warn("Your package will not install into prefixes > 80 characters.")
-                        config.prefix_length = 80
-
-                        # Set this here and use to create environ
-                        #   Setting this here is important because we use it below (symlink)
-                        prefix = config.build_prefix
+                    # Set this here and use to create environ
+                    #   Setting this here is important because we use it below (symlink)
+                    prefix = config.build_prefix
+                    for lock in locks:
                         lock.release()
-                        if os.path.isfile(lock_file):
-                            os.remove(lock_file)
-                        create_env(prefix, specs, config=config,
-                                    clear_cache=clear_cache)
-                    else:
+                        if os.path.isfile(lock._lock_file):
+                            os.remove(lock._lock_file)
+                    create_env(prefix, specs, config=config,
+                                clear_cache=clear_cache)
+                else:
+                    for lock in locks:
                         lock.release()
-                        if os.path.isfile(lock_file):
-                            os.remove(lock_file)
-                        raise
-                finally:
+                        if os.path.isfile(lock._lock_file):
+                            os.remove(lock._lock_file)
+                    raise
+            finally:
+                for lock in locks:
                     lock.release()
-                    if os.path.isfile(lock_file):
-                        os.remove(lock_file)
+                    if os.path.isfile(lock._lock_file):
+                        os.remove(lock._lock_file)
         warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
