@@ -6,4 +6,4 @@ requirements:
   build:
     - python
     # package that does not exist on defaults, but only on our test channel
-    - blinker
+    - conda_build_test_requirement

@@ -1,0 +1,6 @@
+# this file is manually built and uploaded to the conda_build_test anaconda.org account.
+#   Its purpose is to provide a package dependency that is only available on our test account.
+
+package:
+  name: conda_build_test_requirement
+  version: 1.0
