@@ -51,7 +51,8 @@ script:
       python setup.py bdist_conda;
       popd;
     else
-      py.test -v -n 2 --cov conda_build --cov-report xml tests;
+      mkdir /tmp/cb
+      py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-report xml tests;
     fi
   - conda build --help
   # create a package (this build is done with conda-build from source, and does not test entry points)
