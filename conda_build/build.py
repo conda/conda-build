@@ -949,8 +949,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         if hasattr(recipe, 'config'):
             metadata = recipe
             recipe_config = metadata.config
-            if config.set_build_id:
-                config.compute_build_id(metadata.name(), reset=True)
+            if recipe.config.set_build_id:
+                recipe_config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
@@ -958,8 +958,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
-            if config.set_build_id:
-                config.compute_build_id(os.path.basename(recipe), reset=True)
+            if recipe_config.set_build_id:
+                recipe_config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                                                     config=recipe_config)
         try:
@@ -1007,8 +1007,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
-        output_file = bldpkg_path(metadata, config=config)
-        handle_anaconda_upload(output_file, config=config)
+        output_file = bldpkg_path(metadata, config=recipe_config)
+        handle_anaconda_upload(output_file, config=recipe_config)
 
         already_built.add(output_file)
 
