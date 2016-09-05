@@ -368,9 +368,9 @@ def get_build_index(config, clear_cache=True):
         fetch_index.cache = {}
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
-    urls = [url_path(config.croot)] + list(config.channel_urls) + get_rc_urls()
+    urls = [url_path(config.croot)] + list(config.channel_urls)
     index = get_index(channel_urls=urls,
-                      prepend=False,
+                      prepend=not config.override_channels,
                       use_local=False)
     return index
 
