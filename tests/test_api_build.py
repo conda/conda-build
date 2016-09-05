@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tarfile
 
-from conda_build.conda_interface import PY3, url_path, load_condarc, sys_rc_path
+from conda_build.conda_interface import PY3, url_path
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -21,7 +21,7 @@ from conda_build.utils import copy_into, on_win, check_call_env, convert_path_fo
 from conda_build.os_utils.external import find_executable
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
-                    test_metadata, add_mangling)
+                    add_mangling, test_metadata)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -399,27 +399,6 @@ def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
 
 
-def test_condarc_channel_available(testing_workdir, test_config):
-    rcfile = os.path.join(testing_workdir, ".condarc")
-    # ensure that the test fails without the channel
-    with open(rcfile, 'w') as f:
-        f.write("channels:\n")
-        f.write("  - defaults\n")
-    load_condarc(rcfile)
-    with pytest.raises(RuntimeError):
-        api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
-
-    with open(rcfile, 'w') as f:
-        f.write("channels:\n")
-        f.write("  - conda_build_test\n")
-        f.write("  - defaults\n")
-    load_condarc(rcfile)
-    api.build("{}/_condarc_channel".format(metadata_dir), config=test_config)
-
-    # clean up - remove this rcfile and go back to the system default rcfile
-    load_condarc(sys_rc_path)
-
-
 def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
     logging.basicConfig(level=logging.INFO)
     info_message = "Starting new HTTPS connection"
@@ -444,7 +423,7 @@ def test_backslash_in_always_include_files_path(test_config):
         api.build(os.path.join(fail_dir, 'backslash_in_include_files'))
 
 
-def test_build_metadata_object(test_config):
+def test_build_metadata_object(test_metadata):
     api.build(test_metadata)
 
 

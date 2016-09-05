@@ -13,7 +13,7 @@ from conda_build import build, api
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
 
-from .utils import testing_workdir, test_config, metadata_dir
+from .utils import testing_workdir, test_config, test_metadata, metadata_dir
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
