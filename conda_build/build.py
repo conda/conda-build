@@ -30,10 +30,9 @@ from .conda_interface import cc
 from .conda_interface import envs_dirs, root_dir
 from .conda_interface import plan
 from .conda_interface import get_index
-from .conda_interface import memoized
 from .conda_interface import PY3
 from .conda_interface import fetch_index
-from .conda_interface import prefix_placeholder, linked, symlink_conda
+from .conda_interface import prefix_placeholder, linked, symlink_conda, rm_fetched
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
@@ -540,16 +539,6 @@ to get the latest version.
 """ % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
-def rm_pkgs_cache(dist):
-    '''
-    Removes dist from the package cache.
-    '''
-    cc.pkgs_dirs = cc.pkgs_dirs[:1]
-    rmplan = ['RM_FETCHED %s' % dist,
-              'RM_EXTRACTED %s' % dist]
-    plan.execute_plan(rmplan)
-
-
 def build(m, config, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
@@ -790,10 +779,11 @@ def test(m, config, move_broken=True):
 
     if not os.path.isdir(config.build_folder):
         os.makedirs(config.build_folder)
-    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
-        # remove from package cache
-        rm_pkgs_cache(m.dist())
 
+    # remove from package cache
+    rm_fetched(m.dist())
+
+    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
         tmp_dir = config.test_dir
         if not isdir(tmp_dir):
             os.makedirs(tmp_dir)
