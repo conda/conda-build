@@ -74,6 +74,7 @@ else:
     class PaddingError(Exception):
         pass
 
+
 class SignatureError(Exception):
     pass
 
