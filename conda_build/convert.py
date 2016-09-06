@@ -165,18 +165,6 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
         t.close()
 
 
-def write_info(t, info):
-    tmp_dir = tempfile.mkdtemp()
-    with open(join(tmp_dir, 'files'), 'w') as fo:
-        for m in t.getmembers():
-            fo.write('%s\n' % m.path)
-    with open(join(tmp_dir, 'index.json'), 'w') as fo:
-        json.dump(info, fo, indent=2, sort_keys=True)
-    for fn in os.listdir(tmp_dir):
-        t.add(join(tmp_dir, fn), 'info/' + fn)
-    rm_rf(tmp_dir)
-
-
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
     (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
@@ -196,6 +184,13 @@ path_mapping_windows_unix = [
     (r'Scripts/', r'bin/'),  # Not supported right now anyway
 ]
 
+path_mapping_identity = [
+    (r'Lib/', r'Lib/'),
+    (r'lib/python{pyver}/', r'lib/python{pyver}/'),
+    (r'Scripts/', r'Scripts/'),
+    (r'bin/', 'bin/'),  # Not supported right now anyway
+]
+
 pyver_re = re.compile(r'python(?:(?:\s+[<>=]*)(\d.\d))?')
 
 
@@ -213,7 +208,7 @@ def get_pure_py_file_map(t, platform):
     elif source_type == 'win' and dest_type == 'unix':
         mapping = path_mapping_windows_unix
     else:
-        mapping = []
+        mapping = path_mapping_identity
 
     newinfo = info.copy()
     newinfo['platform'] = dest_plat
@@ -276,6 +271,8 @@ def get_pure_py_file_map(t, platform):
                 file_map[oldpath] = None
                 file_map[newpath] = newmember
                 files = files.replace(oldpath, newpath)
+            else:
+                file_map[oldpath] = member
 
         # Make Windows compatible entry-points
         batseen = set()
@@ -302,14 +299,6 @@ def get_pure_py_file_map(t, platform):
     file_map['info/files'] = filemember, bytes_io(files)
 
     return file_map
-
-
-path_mapping = [  # (unix, windows)
-                ('lib/python{pyver}', 'Lib'),
-                ('bin', 'Scripts')]
-
-
-pyver_re = re.compile(r'python\s+(\d.\d)')
 
 
 def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
@@ -395,5 +384,3 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
                 os.makedirs(output_dir)
             tar_update(t, join(output_dir, fn), file_map,
                 verbose=verbose, quiet=quiet)
-            with tarfile.open(join(output_dir, fn), 'w:bz2') as tf:
-                write_info(tf, info)
