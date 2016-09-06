@@ -4,7 +4,7 @@ package:
 
 source:
   fn: sympy-0.7.5.tar.gz
-  url: https://pypi.io/packages/source/s/sympy/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9
+  url: https://pypi.python.org/packages/source/s/sympy/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9
   md5: 7de1adb49972a15a3dd975e879a2bea9
 #  patches:
    # List any patch files here
@@ -155,6 +155,7 @@ test:
 about:
   home: http://code.google.com/p/sympy
   license: BSD License
+  license_family: BSD
   summary: 'Computer algebra system (CAS) in Python'
 
 # See

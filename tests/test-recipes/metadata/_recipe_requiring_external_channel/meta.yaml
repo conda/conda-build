@@ -1,0 +1,9 @@
+package:
+  name: requires_external_channel
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    # package that does not exist on defaults, but only on our test channel
+    - blinker

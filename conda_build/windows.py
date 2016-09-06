@@ -2,20 +2,20 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-import shutil
-from os.path import dirname, isdir, isfile, join
+from os.path import isdir, join
 
+# importing setuptools patches distutils so that it knows how to find VC for python 2.7
+import setuptools  # noqa
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
 from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 from distutils.msvc9compiler import Reg, WINSDK_BASE
 
-import conda.config as cc
+from .conda_interface import bits
 
-from conda_build.config import config
 from conda_build import environ
 from conda_build import source
-from conda_build.utils import _check_call
+from conda_build.utils import _check_call, root_script_dir, path_prepended
 
 
 assert sys.platform == 'win32'
@@ -31,42 +31,11 @@ VS_VERSION_STRING = {
 }
 
 
-def fix_staged_scripts():
-    """
-    Fixes scripts which have been installed unix-style to have a .bat
-    helper
-    """
-    scripts_dir = join(config.build_prefix, 'Scripts')
-    if not isdir(scripts_dir):
-        return
-    for fn in os.listdir(scripts_dir):
-        # process all the extensionless files
-        if not isfile(join(scripts_dir, fn)) or '.' in fn:
-            continue
-
-        with open(join(scripts_dir, fn)) as f:
-            line = f.readline().lower()
-            # If it's a #!python script
-            if not (line.startswith('#!') and 'python' in line.lower()):
-                continue
-            print('Adjusting unix-style #! script %s, '
-                  'and adding a .bat file for it' % fn)
-            # copy it with a .py extension (skipping that first #! line)
-            with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
-                fo.write(f.read())
-            # now create the .exe file
-            shutil.copyfile(join(dirname(__file__), 'cli-%d.exe' % cc.bits),
-                            join(scripts_dir, fn + '.exe'))
-
-        # remove the original script
-        os.remove(join(scripts_dir, fn))
-
-
 def build_vcvarsall_vs_path(version):
     """
     Given the Visual Studio version, returns the default path to the
     Microsoft Visual Studio vcvarsall.bat file.
-    Expected versions are of the form {9, 10, 12, 14}
+    Expected versions are of the form {9.0, 10.0, 12.0, 14.0}
     """
     # Set up a load of paths that can be imported from the tests
     if 'ProgramFiles(x86)' in os.environ:
@@ -74,7 +43,9 @@ def build_vcvarsall_vs_path(version):
     else:
         PROGRAM_FILES_PATH = os.environ['ProgramFiles']
 
-    vstools = "VS{0}0COMNTOOLS".format(version)
+    flatversion = str(version).replace('.', '')
+    vstools = "VS{0}COMNTOOLS".format(flatversion)
+
     if vstools in os.environ:
         return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
     else:
@@ -84,7 +55,7 @@ def build_vcvarsall_vs_path(version):
                             'vcvarsall.bat')
 
 
-def msvc_env_cmd(bits, override=None):
+def msvc_env_cmd(bits, config, override=None):
     arch_selector = 'x86' if bits == 32 else 'amd64'
 
     msvc_env_lines = []
@@ -110,6 +81,12 @@ def msvc_env_cmd(bits, override=None):
             version = '10.0'
         else:
             version = '9.0'
+
+    if float(version) >= 14.0:
+        # For Python 3.5+, ensure that we link with the dynamic runtime.  See
+        # http://stevedower.id.au/blog/building-for-python-3-5-part-two/ for more info
+        msvc_env_lines.append('set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{0}.dll'.format(
+            version.replace('.', '')))
 
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
@@ -168,8 +145,7 @@ def msvc_env_cmd(bits, override=None):
 
         error1 = 'if errorlevel 1 {}'
 
-        # Setuptools captures the logic of preferring the Microsoft Visual C++
-        # Compiler for Python 2.7 - falls back to VS2008 if necessary
+        # Prefer VS9 proper over Microsoft Visual C++ Compiler for Python 2.7
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
         # The Visual Studio 2008 Express edition does not properly contain
         # the amd64 build files, so we call the vcvars64.bat manually,
@@ -178,6 +154,10 @@ def msvc_env_cmd(bits, override=None):
         if arch_selector == 'amd64' and VCVARS64_VS9_BAT_PATH:
             msvc_env_lines.append(error1.format(
                 build_vcvarsall_cmd(VCVARS64_VS9_BAT_PATH)))
+        # Otherwise, fall back to icrosoft Visual C++ Compiler for Python 2.7+
+        # by using the logic provided by setuptools
+        msvc_env_lines.append(error1.format(
+            build_vcvarsall_cmd(distutils_find_vcvarsall(9))))
     else:
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
@@ -185,15 +165,17 @@ def msvc_env_cmd(bits, override=None):
     return '\n'.join(msvc_env_lines) + '\n'
 
 
-def build(m, bld_bat, dirty=False, activate=True):
-    env = environ.get_dict(m, dirty=dirty)
+def build(m, bld_bat, config):
+    with path_prepended(config.build_prefix):
+        env = environ.get_dict(config=config, m=m)
+    env["CONDA_BUILD_STATE"] = "BUILD"
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
         if not isdir(path):
             os.makedirs(path)
 
-    src_dir = source.get_dir()
+    src_dir = source.get_dir(config)
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
@@ -202,14 +184,18 @@ def build(m, bld_bat, dirty=False, activate=True):
             fo.write('@echo on\n')
             for key, value in env.items():
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write("set INCLUDE={};%INCLUDE%\n".format(env["LIBRARY_INC"]))
-            fo.write("set LIB={};%LIB%\n".format(env["LIBRARY_LIB"]))
-            fo.write(msvc_env_cmd(bits=cc.bits, override=m.get_value('build/msvc_compiler', None)))
-            if activate:
-                fo.write("call activate _build\n")
+            fo.write(msvc_env_cmd(bits=bits, config=config,
+                                  override=m.get_value('build/msvc_compiler', None)))
+            # Reset echo on, because MSVC scripts might have turned it off
+            fo.write('@echo on\n')
+            fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
+            fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
+            if config.activate:
+                fo.write("call {conda_root}\\activate.bat {prefix}\n".format(
+                    conda_root=root_script_dir,
+                    prefix=config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
-        cmd = [os.environ['COMSPEC'], '/c', 'bld.bat']
+        cmd = ['cmd.exe', '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
-        fix_staged_scripts()

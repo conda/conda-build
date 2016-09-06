@@ -3,7 +3,7 @@ package:
   version: 1.0
 
 source:
-  path: ../../../../
+  path: ../../test-package
 
 build:
   entry_points:

@@ -1,3 +1,3 @@
-cd tests\test-recipes\test-package
-python setup.py install
+cd %RECIPE_DIR%\..\..\test-package
+pip install --no-deps .
 if errorlevel 1 exit 1

@@ -1,0 +1,9 @@
+package:
+  name: pip_reqs_fail_informatively
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    - pip:
+      - setuptools

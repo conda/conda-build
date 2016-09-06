@@ -5,17 +5,19 @@ Created on Jan 16, 2014
 '''
 from __future__ import absolute_import, division, print_function
 
-import json
-import os
 from functools import partial
+import json
+import logging
+import os
+import sys
 
 import jinja2
 
-from conda.compat import PY3
+from .conda_interface import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
 
-_setuptools_data = None
+log = logging.getLogger(__file__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -66,51 +68,87 @@ class FilteredLoader(jinja2.BaseLoader):
     filtered according to any metadata selectors in the source text.
     """
 
-    def __init__(self, unfiltered_loader):
+    def __init__(self, unfiltered_loader, config):
         self._unfiltered_loader = unfiltered_loader
         self.list_templates = unfiltered_loader.list_templates
+        self.config = config
 
     def get_source(self, environment, template):
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
-        return select_lines(contents, ns_cfg()), filename, uptodate
+        return select_lines(contents, ns_cfg(self.config)), filename, uptodate
 
 
-def load_setuptools(setup_file='setup.py', from_recipe_dir=False,
-                    recipe_dir=None):
-    global _setuptools_data
+def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+                       permit_undefined_jinja=True):
+    _setuptools_data = {}
 
-    if _setuptools_data is None:
-        _setuptools_data = {}
+    def setup(**kw):
+        _setuptools_data.update(kw)
 
-        def setup(**kw):
-            _setuptools_data.update(kw)
+    import setuptools
+    import distutils.core
 
-        import setuptools
-        import distutils.core
-        # Add current directory to path
-        import sys
-        sys.path.append('.')
+    cd_to_work = False
+    path_backup = sys.path
 
-        if from_recipe_dir and recipe_dir:
-            setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
+    if from_recipe_dir and recipe_dir:
+        setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
+    elif os.path.exists(config.work_dir):
+        cd_to_work = True
+        cwd = os.getcwd()
+        os.chdir(config.work_dir)
+        if not os.path.isabs(setup_file):
+            setup_file = os.path.join(config.work_dir, setup_file)
+        # this is very important - or else if versioneer or otherwise is in the start folder,
+        # things will pick up the wrong versioneer/whatever!
+        sys.path.insert(0, config.work_dir)
+    else:
+        message = ("Did not find setup.py file in manually specified location, and source "
+                  "not downloaded yet.")
+        if permit_undefined_jinja:
+            log.debug(message)
+            return {}
+        else:
+            raise RuntimeError(message)
 
-        # Patch setuptools, distutils
-        setuptools_setup = setuptools.setup
-        distutils_setup = distutils.core.setup
-        setuptools.setup = distutils.core.setup = setup
-        ns = {
-            '__name__': '__main__',
-            '__doc__': None,
-            '__file__': setup_file,
-        }
-        code = compile(open(setup_file).read(), setup_file, 'exec',
-                       dont_inherit=1)
+    # Patch setuptools, distutils
+    setuptools_setup = setuptools.setup
+    distutils_setup = distutils.core.setup
+    numpy_setup = None
+    try:
+        import numpy.distutils.core
+        numpy_setup = numpy.distutils.core.setup
+        numpy.distutils.core.setup = setup
+    except ImportError:
+        log.debug("Failed to import numpy for setup patch.  Is numpy installed?")
+
+    setuptools.setup = distutils.core.setup = setup
+    ns = {
+        '__name__': '__main__',
+        '__doc__': None,
+        '__file__': setup_file,
+    }
+    if os.path.isfile(setup_file):
+        code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
-        distutils.core.setup = distutils_setup
-        setuptools.setup = setuptools_setup
-        del sys.path[-1]
-    return _setuptools_data
+    distutils.core.setup = distutils_setup
+    setuptools.setup = setuptools_setup
+    if numpy_setup:
+        numpy.distutils.core.setup = numpy_setup
+    if cd_to_work:
+        os.chdir(cwd)
+    # remove our workdir from sys.path
+    sys.path = path_backup
+    return _setuptools_data if _setuptools_data else None
+
+
+def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+                    permit_undefined_jinja=True):
+    log.warn("Deprecation notice: the load_setuptools function has been renamed to "
+             "load_setup_py_data.  load_setuptools will be removed in a future release.")
+    return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
+                              recipe_dir=recipe_dir, permit_undefined_jinja=permit_undefined_jinja)
 
 
 def load_npm():
@@ -120,18 +158,23 @@ def load_npm():
         return json.load(pkg)
 
 
-def context_processor(initial_metadata, recipe_dir):
+def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
     """
     Return a dictionary to use as context for jinja templates.
 
     initial_metadata: Augment the context with values from this MetaData object.
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
-    ctx = get_environ(m=initial_metadata)
+    ctx = get_environ(config=config, m=initial_metadata)
     environ = dict(os.environ)
-    environ.update(get_environ(m=initial_metadata))
+    environ.update(get_environ(config=config, m=initial_metadata))
 
-    ctx.update(load_setuptools=partial(load_setuptools, recipe_dir=recipe_dir),
-               load_npm=load_npm,
-               environ=environ)
+    ctx.update(
+        load_setup_py_data=partial(load_setup_py_data, config=config, recipe_dir=recipe_dir,
+                                   permit_undefined_jinja=permit_undefined_jinja),
+        # maintain old alias for backwards compatibility:
+        load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir,
+                                permit_undefined_jinja=permit_undefined_jinja),
+        load_npm=load_npm,
+        environ=environ)
     return ctx

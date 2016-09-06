@@ -1,5 +1,6 @@
 from distutils.core import setup
 
+
 setup(
     name="conda-build-test-project",
     version='1.0',

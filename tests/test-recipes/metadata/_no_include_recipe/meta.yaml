@@ -3,4 +3,4 @@ package:
   version: 0.0
 
 build:
-  include-recipe: False
+  include_recipe: False

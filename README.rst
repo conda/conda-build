@@ -14,6 +14,10 @@ conda-build
   
 .. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/conda/conda-build
+  
+.. image:: https://landscape.io/github/conda/conda-build/master/landscape.svg?style=flat
+   :target: https://landscape.io/github/conda/conda-build/master
+   :alt: Code Health
 
 
 Installation
@@ -75,5 +79,41 @@ code and issue tracker for conda are on `GitHub <https://github.com/pydata/conda
 Contributing
 ------------
 
-Contributions to conda-build are always welcome!  Please fork the conda/conda-build repository, and submit a PR.  If a PR is a work in progress, please put [WIP] in the title.  Contributions are expected to pass flake8 and test suites run on Travis CI (linux) and AppVeyor (windows).  Contributors also need to have signed our `Contributor License Agreement <https://www.clahub.com/agreements/conda/conda-build>`_
+Contributions to conda-build are always welcome! Please fork the
+conda/conda-build repository, and submit a PR. If a PR is a work in progress,
+please put [WIP] in the title. Contributions are expected to pass flake8 and
+test suites run on Travis CI (linux) and AppVeyor (windows). Contributors also
+need to have signed our `Contributor License Agreement
+<https://www.clahub.com/agreements/conda/conda-build>`_
 
+Testing
+-------
+
+Running our test suite requires cloning one other repo at the same level as conda-build:
+https://github.com/conda/conda_build_test_repo - this is necessary for relative path tests
+outside of conda build's build tree.
+
+The test suite runs with py.test. Some useful commands to run select tests,
+assuming you are in the conda-build root folder:
+
+Run all tests:
+==============
+
+    py.test tests
+
+Run one test function:
+======================
+
+    py.test tests/test_api_build.py::test_early_abort
+
+Run one parameter of one parametrized test function:
+====================================================
+
+Several tests are parametrized, to run some small change, or build several
+recipe folders. To choose only one of them:
+
+    py.test tests/test_api_build.py::test_recipe_builds.py[entry_points]
+
+Note that our tests use py.test fixtures extensively. These sometimes trip up IDE
+style checkers about unused or redefined variables. These warnings are safe to
+ignore.

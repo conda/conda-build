@@ -1,0 +1,10 @@
+package:
+  name: disable_pip
+  version: 1.0
+
+build:
+  disable_pip: True
+
+requirements:
+  build:
+    - python

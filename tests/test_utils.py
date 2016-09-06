@@ -1,6 +1,55 @@
 import unittest
+import tempfile
+import shutil
+import os
+
+import pytest
 
 import conda_build.utils as utils
+from .utils import test_config, testing_workdir
+
+
+def makefile(name, contents=""):
+    name = os.path.abspath(name)
+    path = os.path.dirname(name)
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    with open(name, 'w') as f:
+        f.write(contents)
+
+
+@pytest.fixture(scope='function')
+def namespace_setup(testing_workdir, request):
+    namespace = os.path.join(testing_workdir, 'namespace')
+    package = os.path.join(namespace, 'package')
+    makefile(os.path.join(package, "module.py"))
+    return testing_workdir
+
+
+def test_copy_source_tree(namespace_setup):
+    dst = os.path.join(namespace_setup, 'dest')
+    utils.copy_into(namespace_setup, dst)
+    assert os.path.isfile(os.path.join(dst, 'namespace', 'package', 'module.py'))
+
+
+def test_merge_namespace_trees(namespace_setup):
+    dep = os.path.join(namespace_setup, 'other_tree', 'namespace', 'package', 'dependency.py')
+    makefile(dep)
+
+    utils.copy_into(os.path.join(namespace_setup, 'other_tree'), namespace_setup)
+    assert os.path.isfile(os.path.join(namespace_setup, 'namespace', 'package',
+                                                'module.py'))
+    assert os.path.isfile(dep)
+
+
+def test_disallow_merge_conflicts(namespace_setup, test_config):
+    duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
+    makefile(duplicate)
+    with pytest.raises(IOError):
+        utils.merge_tree(os.path.dirname(duplicate), os.path.join(namespace_setup, 'namespace',
+                                                 'package'))
 
 
 class TestUtils(unittest.TestCase):

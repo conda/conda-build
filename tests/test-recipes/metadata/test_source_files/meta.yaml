@@ -1,0 +1,21 @@
+package:
+  name: test_source_files
+  version: 1.0
+
+source:
+  path: ../../test-package
+
+test:
+  source_files:
+    - conda_build_test
+    - setup.py
+  commands:
+    - test -e setup.py  # [unix]
+    - test -e conda_build_test  # [unix]
+    - test -e conda_build_test/__init__.py  # [unix]
+    - test -e conda_build_test/empty.py  # [unix]
+    - test -e conda_build_test/manual_entry.py  # [unix]
+    - if not exist conda_build_test exit 1  # [win]
+    - if not exist conda_build_test\\__init__.py exit 1  # [win]
+    - if not exist conda_build_test\\empty.py exit 1  # [win]
+    - if not exist conda_build_test\\manual_entry.py exit 1  # [win]

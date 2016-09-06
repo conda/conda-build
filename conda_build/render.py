@@ -7,27 +7,25 @@
 from __future__ import absolute_import, division, print_function
 
 from locale import getpreferredencoding
-import shutil
-import sys
-import tarfile
-import tempfile
 import os
 from os.path import isdir, isfile, abspath
 import subprocess
+import sys
+import tarfile
+import tempfile
 
 import yaml
 
-from conda.compat import PY3
-from conda.lock import Locked
+from .conda_interface import PY3
 
-from conda_build import exceptions
-from conda_build.config import config
+from conda_build import exceptions, utils
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
+from conda_build.utils import rm_rf
 
 
-def set_language_env_vars(args, parser, execute=None):
+def set_language_env_vars(args, parser, config, execute=None):
     """Given args passed into conda command, set language env vars"""
     for lang in all_versions:
         versions = getattr(args, lang)
@@ -42,7 +40,7 @@ def set_language_env_vars(args, parser, execute=None):
             for ver in versions[:]:
                 setattr(args, lang, [str(ver)])
                 if execute:
-                    execute(args, parser)
+                    execute(args, parser, config)
                 # This is necessary to make all combinations build.
                 setattr(args, lang, versions)
             return
@@ -67,77 +65,100 @@ def set_language_env_vars(args, parser, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def bldpkg_path(m):
+def bldpkg_path(m, config):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
 
 
-def parse_or_try_download(metadata, no_download_source, verbose,
-                          force_download=False, dirty=False):
+def parse_or_try_download(metadata, no_download_source, config,
+                          force_download=False):
 
-    if (force_download or (not no_download_source and metadata.uses_vcs_in_meta())):
+    need_reparse_in_env = False
+    if (force_download or (not no_download_source and (metadata.uses_vcs_in_meta or
+                                                       metadata.uses_setup_py_in_meta))):
+
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not dirty:
-                source.provide(metadata.path, metadata.get_section('source'),
-                               verbose=verbose)
-            metadata.parse_again(permit_undefined_jinja=False)
-            need_source_download = False
+            if not config.dirty:
+                source.provide(metadata.path, metadata.get_section('source'), config=config)
+                need_source_download = False
+            try:
+                metadata.parse_again(config=config, permit_undefined_jinja=False)
+            except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
+                need_reparse_in_env = True
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
             print("Error was: ")
             print(error)
             need_source_download = True
+
     elif not metadata.get_section('source'):
         need_source_download = False
+        if not os.path.isdir(config.work_dir):
+            os.makedirs(config.work_dir)
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase
-        need_source_download = True
-    metadata.parse_again(permit_undefined_jinja=False)
-    return metadata, need_source_download
-
-
-def render_recipe(recipe_path, no_download_source, verbose, dirty=False):
-    with Locked(config.croot):
-        arg = recipe_path
-        # Don't use byte literals for paths in Python 2
-        if not PY3:
-            arg = arg.decode(getpreferredencoding() or 'utf-8')
-        if isfile(arg):
-            if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
-                recipe_dir = tempfile.mkdtemp()
-                t = tarfile.open(arg, 'r:*')
-                t.extractall(path=recipe_dir)
-                t.close()
-                need_cleanup = True
-            else:
-                print("Ignoring non-recipe: %s" % arg)
-                return
-        else:
-            recipe_dir = abspath(arg)
-            need_cleanup = False
-
-        if not isdir(recipe_dir):
-            sys.exit("Error: no such directory: %s" % recipe_dir)
-
+        need_source_download = not no_download_source
+    if not need_reparse_in_env:
         try:
-            m = MetaData(recipe_dir)
-        except exceptions.YamlParsingError as e:
-            sys.stderr.write(e.error_msg())
-            sys.exit(1)
+            metadata.parse_until_resolved(config=config)
+        except exceptions.UnableToParseMissingSetuptoolsDependencies:
+            need_reparse_in_env = True
+    return metadata, need_source_download, need_reparse_in_env
 
-        m, need_download = parse_or_try_download(m, no_download_source=no_download_source,
-                                  verbose=verbose, dirty=dirty)
 
-        if need_cleanup:
-            shutil.rmtree(recipe_dir)
+def reparse(metadata, config):
+    """Some things need to be parsed again after the build environment has been created
+    and activated."""
+    sys.path.insert(0, config.build_prefix)
+    sys.path.insert(0, utils.get_site_packages(config.build_prefix))
+    metadata.parse_again(config=config, permit_undefined_jinja=False)
 
-    return m, need_download
+
+def render_recipe(recipe_path, config, no_download_source=False):
+    arg = recipe_path
+    # Don't use byte literals for paths in Python 2
+    if not PY3:
+        arg = arg.decode(getpreferredencoding() or 'utf-8')
+    if isfile(arg):
+        if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+            recipe_dir = tempfile.mkdtemp()
+            t = tarfile.open(arg, 'r:*')
+            t.extractall(path=recipe_dir)
+            t.close()
+            need_cleanup = True
+        else:
+            print("Ignoring non-recipe: %s" % arg)
+            return
+    else:
+        recipe_dir = abspath(arg)
+        need_cleanup = False
+
+    if not isdir(recipe_dir):
+        sys.exit("Error: no such directory: %s" % recipe_dir)
+
+    # updates a unique build id if not already computed
+    config.compute_build_id(os.path.basename(recipe_dir))
+    try:
+        m = MetaData(recipe_dir, config=config)
+    except exceptions.YamlParsingError as e:
+        sys.stderr.write(e.error_msg())
+        sys.exit(1)
+
+    config.noarch = m.get_value('build/noarch')
+    m, need_download, need_reparse_in_env = parse_or_try_download(m,
+                                                no_download_source=no_download_source,
+                                                config=config)
+
+    if need_cleanup:
+        rm_rf(recipe_dir)
+
+    return m, need_download, need_reparse_in_env
 
 
 # Next bit of stuff is to support YAML output in the order we expect.
@@ -176,6 +197,6 @@ def output_yaml(metadata, filename=None):
     if filename:
         with open(filename, "w") as f:
             f.write(output)
-        return("Wrote yaml to %s" % filename)
+        return "Wrote yaml to %s" % filename
     else:
-        return(output)
+        return output

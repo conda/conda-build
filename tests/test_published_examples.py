@@ -1,20 +1,11 @@
 import os
 import subprocess
 
-from conda.compat import TemporaryDirectory
+from .utils import testing_workdir
 
-
-def test_skeleton_pypi():
+def test_skeleton_pypi(testing_workdir):
     """published in docs at http://conda.pydata.org/docs/build_tutorials/pkgs.html"""
-    cwd = os.getcwd()
-    with TemporaryDirectory() as tmp:
-        os.chdir(tmp)
-        try:
-            cmd = 'conda skeleton pypi pyinstrument'
-            subprocess.check_call(cmd.split())
-            cmd = 'conda build pyinstrument'
-            subprocess.check_call(cmd.split())
-        except:
-            raise
-        finally:
-            os.chdir(cwd)
+    cmd = 'conda skeleton pypi pyinstrument'
+    subprocess.check_call(cmd.split())
+    cmd = 'conda build pyinstrument'
+    subprocess.check_call(cmd.split())

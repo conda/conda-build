@@ -1,11 +1,19 @@
 language: python
-python:
-  # We don't actually use the system Python but this keeps it organized.
-  - "2.7"
-  - "3.4"
-  - "3.5"
-env:
-  -
+matrix:
+  include:
+    - python: '2.7'
+      os: linux
+    - python: '3.4'
+      os: linux
+    - python: '3.5'
+      os: linux
+    # - python: '3.5'
+    #   env: CANARY=true
+    #   os: linux
+    - python: '3.5'
+      env: FLAKE8=true
+      os: linux
+
 install:
   # TODO: Use a "latest" url
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
@@ -20,15 +28,41 @@ install:
   - conda update -q --all
   - conda install -q --force --no-deps conda requests
   - conda install -q pip pytest requests jinja2 patchelf flake8 mock python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
-  - conda install -q anaconda-client conda-build
-  - pip install pytest-cov
-  - python setup.py install
+  - conda install -q anaconda-client pip pytest-cov numpy
+  - conda install -c conda-forge -q perl
+  - pip install pytest-cov pytest-xdist pytest-capturelog filelock pytest-timeout
+  - if [[ "$CANARY" == "true" ]]; then
+      conda install -y -q -c conda-canary conda;
+    fi
+  - conda config --set always_yes yes
+  - pip install --no-deps .
   - conda info -a
+  # This is an extra repo that we clone for relative path entries
+  - pushd ..
+  - git clone https://github.com/conda/conda_build_test_recipe
+  - popd
 
 script:
-  - flake8 .
-  - py.test -v --cov conda_build --cov-report xml tests
+  # flake8 and bdist_conda test together
+  - if [[ "$FLAKE8" == "true" ]]; then
+      flake8 .;
+      cp bdist_conda.py $HOME/miniconda/lib/python${TRAVIS_PYTHON_VERSION}/distutils/command;
+      pushd tests/bdist-recipe;
+      python setup.py bdist_conda;
+      popd;
+    else
+      py.test -v -n 2 --cov conda_build --cov-report xml tests;
+    fi
   - conda build --help
+  # create a package (this build is done with conda-build from source, and does not test entry points)
+  - conda build conda.recipe --no-anaconda-upload
+  # Create a new environment (with underscore, so that conda can be installed), to test entry points
+  - conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION
+  - source activate _cbtest
+  - conda install $(conda render --output conda.recipe)
+  - pip install filelock
+  # this build should be done using actual entry points from the package we built above.
+  - conda build conda.recipe --no-anaconda-upload
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb
