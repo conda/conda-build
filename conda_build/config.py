@@ -90,7 +90,7 @@ class Config(object):
                   Setting('bits', bits),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
-                  Setting('apply_selectors', True),
+                  Setting('selectors', 'rendered'),
                   ]
         for value in values:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
