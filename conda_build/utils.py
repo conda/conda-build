@@ -427,6 +427,8 @@ def guess_license_family(license_name, allowed_license_families):
     # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
     if 'GPL (>= 2)' in license_name or license_name == 'GPL':
         return 'GPL3'
+    elif 'LGPL' in license_name:
+        return 'LGPL'
     else:
         return get_close_matches(license_name,
                                  allowed_license_families, 1, 0.0)[0]
