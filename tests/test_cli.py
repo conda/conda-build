@@ -11,8 +11,9 @@ import pytest
 from conda_build.conda_interface import download
 from conda_build.tarcheck import TarCheck
 
-from conda_build.utils import get_site_packages, on_win
-from .utils import testing_workdir, metadata_dir, package_has_file, testing_env, test_config
+from conda_build import api
+from conda_build.utils import get_site_packages, on_win, get_build_folders
+from .utils import testing_workdir, metadata_dir, package_has_file, testing_env, test_config, test_metadata
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -250,3 +251,32 @@ def test_sign(testing_workdir):
     main_sign.execute(args)
     os.remove(keypath)
     os.remove(keypath + '.pub')
+
+
+def test_purge(testing_workdir, test_metadata):
+    """
+    purge clears out build folders - things like some_pkg_12048309850135
+
+    It does not clear out build packages from folders like osx-64 or linux-64.
+    """
+    api.build(test_metadata)
+    fn = api.get_output_file_path(test_metadata)
+    args = ['purge']
+    main_build.execute(args)
+    assert not get_build_folders(test_metadata.config.croot)
+    assert os.path.isfile(fn)
+
+
+def test_purge_all(test_metadata):
+    """
+    purge-all clears out build folders as well as build packages in the osx-64 folders and such
+    """
+    # override config to be default, so that output path lines up with default
+    #    config used by main_build
+    test_metadata.config = api.Config()
+    api.build(test_metadata)
+    fn = api.get_output_file_path(test_metadata)
+    args = ['purge-all']
+    main_build.execute(args)
+    assert not get_build_folders(test_metadata.config.croot)
+    assert not os.path.isfile(fn)

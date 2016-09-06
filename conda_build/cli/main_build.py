@@ -189,6 +189,11 @@ def execute(args):
         build.clean_build(config)
         return
 
+    if 'purge-all' in args.recipe:
+        build.clean_build(config)
+        config.clean_pkgs()
+        return
+
     if on_win:
         delete_trash(None)
 
