@@ -32,7 +32,7 @@ from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import PY3
 from .conda_interface import fetch_index
-from .conda_interface import prefix_placeholder, linked, symlink_conda, rm_fetched
+from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
@@ -550,7 +550,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         return False
 
     if post in [False, None]:
-        print("Removing old build environment")
         print("BUILD START:", m.dist())
         if m.uses_jinja and (need_source_download or need_reparse_in_env):
             print("    (actual version deferred until further download or env creation)")
@@ -590,12 +589,12 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                                                 force_download=True,
                                                                 config=config)
             assert not need_source_download, "Source download failed.  Please investigate."
-            print("BUILD START:", m.dist())
+            if m.uses_jinja:
+                print("BUILD START (revised):", m.dist())
 
         if need_reparse_in_env:
             reparse(m, config=config)
-
-        print("BUILD START:", m.dist())
+            print("BUILD START (revised):", m.dist())
 
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
@@ -755,6 +754,45 @@ can lead to packages that include their dependencies.""" % meta_files))
     return True
 
 
+def clean_pkg_cache(dist, timeout):
+    import conda.install
+
+    cc.pkgs_dirs = cc.pkgs_dirs[:1]
+    locks = []
+    for folder in cc.pkgs_dirs:
+        locks.append(filelock.SoftFileLock(join(folder, ".conda_lock")))
+
+    for lock in locks:
+        lock.acquire(timeout=timeout)
+
+    try:
+        rmplan = ['RM_FETCHED %s' % dist,
+                'RM_EXTRACTED %s' % dist]
+        plan.execute_plan(rmplan)
+
+        # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
+        #   Conda's cleanup is still necessary - it keeps track of its own in-memory
+        #   list of downloaded things.
+        for folder in cc.pkgs_dirs:
+            try:
+                assert not os.path.exists(os.path.join(folder, dist))
+                assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
+                assert dist not in conda.install.package_cache()
+            except AssertionError:
+                log.debug("Conda caching error: %s package remains in cache after removal", dist)
+                log.debug("Clearing package cache to compensate")
+                conda.install.package_cache_ = {}
+                for entry in glob(os.path.join(folder, dist + '*')):
+                    rm_rf(entry)
+    except:
+        raise
+    finally:
+        for lock in locks:
+            lock.release()
+            if os.path.isfile(lock._lock_file):
+                os.remove(lock._lock_file)
+
+
 def test(m, config, move_broken=True):
     '''
     Execute any test scripts for the given package.
@@ -766,8 +804,7 @@ def test(m, config, move_broken=True):
     if not os.path.isdir(config.build_folder):
         os.makedirs(config.build_folder)
 
-    # remove from package cache
-    rm_fetched(m.dist())
+    clean_pkg_cache(m.dist(), config.timeout)
 
     with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
         tmp_dir = config.test_dir

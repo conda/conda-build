@@ -15,7 +15,7 @@ from conda.compat import (PY3, StringIO, configparser, input, iteritems, lchmod,
 from conda.connection import CondaSession  # NOQA
 from conda.fetch import TmpDownload, download, fetch_index, handle_proxy_407  # NOQA
 from conda.install import (delete_trash, is_linked, linked, linked_data, move_to_trash,  # NOQA
-                           prefix_placeholder, rm_rf, symlink_conda, rm_fetched)  # NOQA
+                           prefix_placeholder, rm_rf, symlink_conda, rm_fetched, package_cache)  # NOQA
 from conda.lock import Locked  # NOQA
 from conda.misc import untracked, walk_prefix  # NOQA
 from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
