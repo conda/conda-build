@@ -4,6 +4,8 @@ import os
 import sys
 from os.path import isdir, join
 
+# importing setuptools patches distutils so that it knows how to find VC for python 2.7
+import setuptools  # noqa
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
 from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall

@@ -9,6 +9,7 @@ import sys
 import pytest
 
 from conda_build.conda_interface import download
+from conda_build.tarcheck import TarCheck
 
 from conda_build.utils import get_site_packages, on_win
 from .utils import testing_workdir, metadata_dir, package_has_file, testing_env, test_config
@@ -220,8 +221,11 @@ def test_convert(testing_workdir):
     main_convert.execute(args)
     platforms = ['osx-64', 'win-32', 'win-64', 'linux-64', 'linux-32']
     for platform in platforms:
-        assert os.path.isdir(os.path.join('converted', platform))
-        assert pkg_name in os.listdir(os.path.join('converted', platform))
+        dirname = os.path.join('converted', platform)
+        assert os.path.isdir(dirname)
+        assert pkg_name in os.listdir(dirname)
+        with TarCheck(os.path.join(dirname, pkg_name)) as tar:
+            tar.correct_subdir(platform)
 
 
 def test_sign(testing_workdir):

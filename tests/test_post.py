@@ -8,7 +8,7 @@ import pytest
 from conda_build import post
 from conda_build.utils import on_win
 
-from .utils import test_config, testing_workdir
+from .utils import test_config, testing_workdir, add_mangling
 
 
 def test_compile_missing_pyc(testing_workdir):
@@ -19,36 +19,9 @@ def test_compile_missing_pyc(testing_workdir):
                                  'metadata', '_compile-test'), tmp)
     post.compile_missing_pyc(os.listdir(tmp), cwd=tmp,
                                 python_exe=sys.executable)
-    files = os.listdir(tmp)
     for f in good_files:
-        assert f + 'c' in files
-    assert bad_file + 'c' not in files
-
-
-@pytest.mark.skipif(not PY3, reason="test applies to py3 only")
-def test_coerce_pycache_to_old_style(testing_workdir):
-    os.makedirs(os.path.join(testing_workdir, '__pycache__'))
-    os.makedirs(os.path.join(testing_workdir, 'testdir', '__pycache__'))
-    with open(os.path.join(testing_workdir, 'test.py'), 'w') as f:
-        f.write("\n")
-    with open(os.path.join(testing_workdir, '__pycache__', 'test.cpython-{0}{1}.pyc'.format(
-            sys.version_info.major, sys.version_info.minor)), 'w') as f:
-        f.write("\n")
-    with open(os.path.join(testing_workdir, 'testdir', 'test.py'), 'w') as f:
-        f.write("\n")
-    with open(os.path.join(testing_workdir, 'testdir', '__pycache__',
-                           'test.cpython-{0}{1}.pyc'.format(
-                               sys.version_info.major, sys.version_info.minor)), 'w') as f:
-        f.write("\n")
-
-    for root, dirs, files in os.walk(testing_workdir):
-        fs = [os.path.join(root, _) for _ in files]
-        post.coerce_pycache_to_old_style(fs, cwd=testing_workdir)
-    assert os.path.isfile(os.path.join(testing_workdir, 'test.pyc')), os.listdir(testing_workdir)
-    assert os.path.isfile(os.path.join(testing_workdir, 'testdir', 'test.pyc')), \
-        os.listdir(os.path.join(testing_workdir, 'testdir'))
-    for root, dirs, files in os.walk(testing_workdir):
-        assert '__pycache__' not in dirs
+        assert os.path.isfile(os.path.join(tmp, add_mangling(f)))
+    assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
 
 
 @pytest.mark.skipif(on_win, reason="no linking on win")

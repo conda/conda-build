@@ -38,6 +38,8 @@ from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
+from .conda_interface import VersionOrder
+from .conda_interface import PaddingError
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -313,6 +315,7 @@ def write_no_link(m, config, files):
                 if any(fnmatch.fnmatch(f, p) for p in no_link):
                     fo.write(f + '\n')
 
+
 def create_info_files(m, files, config, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -425,6 +428,8 @@ def create_env(prefix, specs, config, clear_cache=True):
 
             cc.pkgs_dirs = cc.pkgs_dirs[:1]
             dirname = os.path.join(cc.root_dir, 'pkgs')
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
             lock_file = os.path.join(dirname, ".conda_lock")
 
             lock = filelock.SoftFileLock(lock_file)
@@ -433,13 +438,22 @@ def create_env(prefix, specs, config, clear_cache=True):
             with path_prepended(prefix):
                 try:
                     actions = plan.install_actions(prefix, index, specs)
+                    if config.disable_pip:
+                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
+                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
                     plan.display_actions(actions, index)
                     if on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
                     plan.execute_actions(actions, index, verbose=config.debug)
-                except SystemExit as exc:
-                    if "too short in" in str(exc) and config.prefix_length > 80:
+
+                # isinstance(exc, PaddingError) is for Python 2.7 where exc is the PaddingError
+                # which doesn't contain 'too short in' and not one raised when that gets caught.
+                except (SystemExit, PaddingError) as exc:
+                    if (("too short in" in str(exc) or
+                         'post-link failed for: openssl' in str(exc) or
+                         isinstance(exc, PaddingError)) and
+                            config.prefix_length > 80):
                         log.warn("Build prefix failed with prefix length %d", config.prefix_length)
                         log.warn("Error was: ")
                         log.warn(str(exc))
@@ -466,7 +480,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     lock.release()
                     if os.path.isfile(lock_file):
                         os.remove(lock_file)
-        warn_on_old_conda_build(index)
+        warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
@@ -478,20 +492,49 @@ def create_env(prefix, specs, config, clear_cache=True):
     symlink_conda(prefix, sys.prefix, shell)
 
 
-def warn_on_old_conda_build(index):
+def get_installed_conda_build_version():
     root_linked = linked(root_dir)
     vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
         if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
-        print("WARNING: Could not detect installed version of conda-build", file=sys.stderr)
-        return
+        log.warn("Could not detect installed version of conda-build")
+        return None
+    return vers_inst[0]
+
+
+def get_conda_build_index_versions(index):
     r = Resolve(index)
+    pkgs = []
     try:
-        pkgs = sorted(r.get_pkgs(MatchSpec('conda-build')))
+        pkgs = r.get_pkgs(MatchSpec('conda-build'))
     except NoPackagesFound:
-        print("WARNING: Could not find any versions of conda-build in the channels", file=sys.stderr)  # noqa
-        return
-    if pkgs[-1].version != vers_inst[0]:
+        log.warn("Could not find any versions of conda-build in the channels")
+    return [pkg.version for pkg in pkgs]
+
+
+def filter_non_final_releases(pkg_list):
+    """cuts out packages wth rc/alpha/beta.
+
+    VersionOrder described in conda/version.py
+
+    Basically, it breaks up the version into pieces, and depends on version
+    formats like x.y.z[alpha/beta]
+    """
+    return [pkg for pkg in pkg_list if len(VersionOrder(pkg).version[3]) == 1]
+
+
+def warn_on_old_conda_build(index=None, installed_version=None, available_packages=None):
+    if not installed_version:
+        installed_version = get_installed_conda_build_version() or "0.0.0"
+    if not available_packages:
+        if index:
+            available_packages = get_conda_build_index_versions(index)
+        else:
+            raise ValueError("Must provide either available packages or"
+                             " index to warn_on_old_conda_build")
+    available_packages = sorted(filter_non_final_releases(available_packages), key=VersionOrder)
+    if (len(available_packages) > 0 and installed_version and
+            VersionOrder(installed_version) < VersionOrder(available_packages[-1])):
         print("""
 WARNING: conda-build appears to be out of date. You have version %s but the
 latest version is %s. Run
@@ -499,7 +542,7 @@ latest version is %s. Run
 conda update -n root conda-build
 
 to get the latest version.
-""" % (vers_inst[0], pkgs[-1].version), file=sys.stderr)
+""" % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
 def rm_pkgs_cache(dist):
@@ -898,7 +941,7 @@ Error:
 
 
 def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
-               need_source_download=True):
+               need_source_download=True, need_reparse_in_env=False):
 
     to_build_recursive = []
     recipe_list = deque(recipe_list)
@@ -920,28 +963,28 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         recipe = recipe_list.popleft()
         if hasattr(recipe, 'config'):
             metadata = recipe
-            need_source_download = True
-            need_reparse_in_env = False
+            recipe_config = metadata.config
             if config.set_build_id:
                 config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
             recipe_parent_dir = os.path.dirname(recipe)
+            recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
             if config.set_build_id:
                 config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
-                                                                                config=config)
+                                                                    config=recipe_config)
         try:
-            with config:
+            with recipe_config:
                 ok_to_test = build(metadata, post=post,
                                    need_source_download=need_source_download,
                                    need_reparse_in_env=need_reparse_in_env,
-                                   config=config)
+                                   config=recipe_config)
                 if not notest and ok_to_test:
-                    test(metadata, config=config)
+                    test(metadata, config=recipe_config)
         except (NoPackagesFound, Unsatisfiable) as e:
             error_str = str(e)
             # Typically if a conflict is with one of these

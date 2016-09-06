@@ -919,13 +919,17 @@ def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
     :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
     :type temp_dir: str
     '''
+    specs = ['python %s*' % python_version, 'pyyaml', 'setuptools']
+    with open(os.path.join(src_dir, "setup.py")) as setup:
+        text = setup.read()
+        if 'import numpy' in text or 'from numpy' in text:
+            specs.append('numpy')
     # Do everything in the build env in case the setup.py install goes
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
 
-    create_env(config.build_prefix, specs=['python %s*' % python_version, 'pyyaml',
-                                           'setuptools'],
+    create_env(config.build_prefix, specs=specs,
                clear_cache=False,
                config=config)
     stdlib_dir = join(config.build_prefix,

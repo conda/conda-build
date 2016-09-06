@@ -45,11 +45,13 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
     config = get_or_merge_config(config, **kwargs)
     if hasattr(recipe_path_or_metadata, 'config'):
         metadata = recipe_path_or_metadata
+        recipe_config = metadata.config
     else:
         metadata, _, _ = render_recipe(recipe_path_or_metadata,
                                     no_download_source=no_download_source,
                                     config=config)
-    return bldpkg_path(metadata, config)
+        recipe_config = config
+    return bldpkg_path(metadata, recipe_config)
 
 
 def check(recipe_path, no_download_source=False, config=None, **kwargs):
@@ -90,12 +92,14 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
+        recipe_config = metadata.config
     elif os.path.isdir(recipedir_or_package_or_metadata):
         # This will create a new local build folder if and only if config doesn't already have one.
         #   What this means is that if we're running a test immediately after build, we use the one
         #   that the build already provided
         config.compute_build_id(recipedir_or_package_or_metadata)
         metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, config=config)
+        recipe_config = config
     else:
         # fall back to old way (use recipe, rather than package)
         package_name = os.path.basename(recipedir_or_package_or_metadata).rsplit('-', 2)[0]
@@ -105,8 +109,10 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
         config.compute_build_id(package_name)
         metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, no_download_source=False,
                                     config=config, **kwargs)
-    with config:
-        test_result = test(metadata, config=config, move_broken=move_broken)
+        recipe_config = config
+
+    with recipe_config:
+        test_result = test(metadata, config=recipe_config, move_broken=move_broken)
     return test_result
 
 

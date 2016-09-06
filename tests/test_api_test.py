@@ -34,6 +34,6 @@ def test_recipe_test(testing_workdir, test_config):
 
 def test_metadata_test(testing_workdir, test_config):
     recipe = os.path.join(metadata_dir, 'has_prefix_files')
-    api.build(recipe, config=test_config, notest=True)
-    metadata, _, _ = api.render(recipe)
+    metadata, _, _ = api.render(recipe, config=test_config)
+    api.build(metadata, notest=True)
     api.test(metadata, config=test_config)

@@ -21,7 +21,7 @@ from conda_build.utils import copy_into, on_win, check_call_env, convert_path_fo
 from conda_build.os_utils.external import find_executable
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
-                    test_metadata)
+                    test_metadata, add_mangling)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -66,7 +66,7 @@ def package_has_file(package_path, file_path):
     try:
         with tarfile.open(package_path) as t:
             try:
-                t.getmember(file_path)
+                t.getmember(file_path.replace('\\', '/'))
                 return True
             except KeyError:
                 return False
@@ -388,9 +388,9 @@ def test_compileall_compiles_all_good_files(testing_workdir, test_config):
     for f in good_files:
         assert package_has_file(output_file, f)
         # look for the compiled file also
-        assert package_has_file(output_file, f + 'c')
+        assert package_has_file(output_file, add_mangling(f))
     assert package_has_file(output_file, bad_file)
-    assert not package_has_file(output_file, bad_file + 'c')
+    assert not package_has_file(output_file, add_mangling(bad_file))
 
 
 def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
@@ -603,3 +603,16 @@ def test_noarch(testing_workdir):
         output = api.get_output_file_path(testing_workdir)
         assert ("noarch" in output or not noarch)
         assert ("noarch" not in output or noarch)
+
+
+def test_disable_pip(test_config):
+    recipe_path = os.path.join(metadata_dir, '_disable_pip')
+    metadata, _, _ = api.render(recipe_path, config=test_config)
+
+    metadata.meta['build']['script'] = 'python -c "import pip"'
+    with pytest.raises(SystemExit):
+        api.build(metadata)
+
+    metadata.meta['build']['script'] = 'python -c "import setuptools"'
+    with pytest.raises(SystemExit):
+        api.build(metadata)
