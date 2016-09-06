@@ -172,7 +172,8 @@ def ensure_valid_fields(meta):
 
 
 def parse(data, config, path=None):
-    data = select_lines(data, ns_cfg(config))
+    if config.apply_selectors:
+        data = select_lines(data, ns_cfg(config))
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:
@@ -763,7 +764,10 @@ class MetaData(object):
             UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
-        loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=config)
+        if config.apply_selectors:
+            loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=config)
+        else:
+            loader = jinja2.ChoiceLoader(loaders)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         env.globals.update(ns_cfg(config))
