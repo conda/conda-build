@@ -10,7 +10,7 @@ import pytest
 
 from conda_build import api
 
-from .utils import testing_workdir, test_config, metadata_dir, d, MetaData
+from .utils import testing_workdir, test_config, metadata_dir, test_metadata
 
 
 def test_render_need_download(testing_workdir, test_config):
@@ -57,11 +57,10 @@ def test_get_output_file_path(testing_workdir, test_config):
                                       "conda-build-test-python-build-1.0-0.tar.bz2")
 
 
-def test_get_output_file_path_metadata_object(test_config):
-    metadata = MetaData.fromdict(d, config=test_config)
-    build_path = api.get_output_file_path(metadata)
+def test_get_output_file_path_metadata_object(test_config, test_metadata):
+    build_path = api.get_output_file_path(test_metadata)
     assert build_path == os.path.join(test_config.croot, test_config.subdir,
-                                      "test_package-1.0-py{}_1.tar.bz2".format(test_config.CONDA_PY))
+        "test_get_output_file_path_metadata_object-1.0-py{}_1.tar.bz2".format(test_config.CONDA_PY))
 
 
 def test_get_output_file_path_jinja2(testing_workdir, test_config):

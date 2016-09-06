@@ -30,9 +30,8 @@ from .conda_interface import cc
 from .conda_interface import envs_dirs, root_dir
 from .conda_interface import plan
 from .conda_interface import get_index
-from .conda_interface import memoized
 from .conda_interface import PY3
-from .conda_interface import fetch_index
+from .conda_interface import package_cache
 from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
@@ -363,32 +362,14 @@ def create_info_files(m, files, config, prefix):
                   config.timeout)
 
 
-def get_build_index(config, clear_cache=True, arg_channels=None):
-    # first, get the memoized remote index
-    index = _get_build_index(config, clear_cache, arg_channels)
-
-    # tack on the local index
-    index.update(get_index(channel_urls=[url_path(config.croot)],
-                           prepend=not config.override_channels,
-                           # do not use local because we have that above with config.croot
-                           use_local=False))
-    return index
-
-
-@memoized
-def _get_build_index(config, clear_cache, arg_channels):
-    if clear_cache:
-        # remove the cache such that a refetch is made,
-        # this is necessary because we add the local build repo URL
-        fetch_index.cache = {}
-    arg_channels = [] if not arg_channels else arg_channels
+def get_build_index(config, clear_cache=True):
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
-    index = get_index(channel_urls=arg_channels + list(config.channel_urls),
-                      prepend=not config.override_channels)
-    # bump priority down on these remotes - local should be top priority
-    for pkg in index.values():
-        pkg['priority'] += 1
+    urls = [url_path(config.croot)] + list(config.channel_urls)
+    index = get_index(channel_urls=urls,
+                      prepend=not config.override_channels,
+                      use_local=False,
+                      use_cache=not clear_cache)
     return index
 
 
@@ -419,67 +400,66 @@ def create_env(prefix, specs, config, clear_cache=True):
             specs.append('%s@' % feature)
 
     if specs:  # Don't waste time if there is nothing to do
-        for d in config.bldpkgs_dirs:
-            if not isdir(d):
-                os.makedirs(d)
-            update_index(d, config)
         with path_prepended(prefix):
-            index = get_build_index(config=config, clear_cache=True)
+            locks = []
+            try:
+                cc.pkgs_dirs = cc.pkgs_dirs[:1]
+                locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+                for folder in locked_folders:
+                    if not os.path.isdir(folder):
+                        os.makedirs(folder)
+                    lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
+                    update_index(folder, config=config, lock=lock)
+                    locks.append(lock)
+                for lock in locks:
+                    lock.acquire(timeout=config.timeout)
 
-            cc.pkgs_dirs = cc.pkgs_dirs[:1]
-            dirname = os.path.join(cc.root_dir, 'pkgs')
-            if not os.path.isdir(dirname):
-                os.makedirs(dirname)
-            lock_file = os.path.join(dirname, ".conda_lock")
+                index = get_build_index(config=config, clear_cache=True)
 
-            lock = filelock.SoftFileLock(lock_file)
-            lock.acquire(timeout=config.timeout)
+                actions = plan.install_actions(prefix, index, specs)
+                if config.disable_pip:
+                    actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
+                    actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
+                plan.display_actions(actions, index)
+                if on_win:
+                    for k, v in os.environ.items():
+                        os.environ[k] = str(v)
+                plan.execute_actions(actions, index, verbose=config.debug)
+            except (SystemExit, PaddingError) as exc:
+                if (("too short in" in str(exc) or
+                        'post-link failed for: openssl' in str(exc) or
+                        isinstance(exc, PaddingError)) and
+                        config.prefix_length > 80):
+                    log.warn("Build prefix failed with prefix length %d", config.prefix_length)
+                    log.warn("Error was: ")
+                    log.warn(str(exc))
+                    log.warn("One or more of your package dependencies needs to be rebuilt "
+                            "with a longer prefix length.")
+                    log.warn("Falling back to legacy prefix length of 80 characters.")
+                    log.warn("Your package will not install into prefixes > 80 characters.")
+                    config.prefix_length = 80
 
-            with path_prepended(prefix):
-                try:
-                    actions = plan.install_actions(prefix, index, specs)
-                    if config.disable_pip:
-                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
-                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
-                    plan.display_actions(actions, index)
-                    if on_win:
-                        for k, v in os.environ.items():
-                            os.environ[k] = str(v)
-                    plan.execute_actions(actions, index, verbose=config.debug)
+                    # Set this here and use to create environ
+                    #   Setting this here is important because we use it below (symlink)
+                    prefix = config.build_prefix
 
-                # isinstance(exc, PaddingError) is for Python 2.7 where exc is the PaddingError
-                # which doesn't contain 'too short in' and not one raised when that gets caught.
-                except (SystemExit, PaddingError) as exc:
-                    if (("too short in" in str(exc) or
-                         'post-link failed for: openssl' in str(exc) or
-                         isinstance(exc, PaddingError)) and
-                            config.prefix_length > 80):
-                        log.warn("Build prefix failed with prefix length %d", config.prefix_length)
-                        log.warn("Error was: ")
-                        log.warn(str(exc))
-                        log.warn("One or more of your package dependencies needs to be rebuilt "
-                                "with a longer prefix length.")
-                        log.warn("Falling back to legacy prefix length of 80 characters.")
-                        log.warn("Your package will not install into prefixes > 80 characters.")
-                        config.prefix_length = 80
-
-                        # Set this here and use to create environ
-                        #   Setting this here is important because we use it below (symlink)
-                        prefix = config.build_prefix
+                    for lock in locks:
                         lock.release()
-                        if os.path.isfile(lock_file):
-                            os.remove(lock_file)
-                        create_env(prefix, specs, config=config,
-                                    clear_cache=clear_cache)
-                    else:
+                        if os.path.isfile(lock._lock_file):
+                            os.remove(lock._lock_file)
+                    create_env(prefix, specs, config=config,
+                                clear_cache=clear_cache)
+                else:
+                    for lock in locks:
                         lock.release()
-                        if os.path.isfile(lock_file):
-                            os.remove(lock_file)
-                        raise
-                finally:
+                        if os.path.isfile(lock._lock_file):
+                            os.remove(lock._lock_file)
+                    raise
+            finally:
+                for lock in locks:
                     lock.release()
-                    if os.path.isfile(lock_file):
-                        os.remove(lock_file)
+                    if os.path.isfile(lock._lock_file):
+                        os.remove(lock._lock_file)
         warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
@@ -545,16 +525,6 @@ to get the latest version.
 """ % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
-def rm_pkgs_cache(dist):
-    '''
-    Removes dist from the package cache.
-    '''
-    cc.pkgs_dirs = cc.pkgs_dirs[:1]
-    rmplan = ['RM_FETCHED %s' % dist,
-              'RM_EXTRACTED %s' % dist]
-    plan.execute_plan(rmplan)
-
-
 def build(m, config, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
@@ -580,7 +550,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         return False
 
     if post in [False, None]:
-        print("Removing old build environment")
         print("BUILD START:", m.dist())
         if m.uses_jinja and (need_source_download or need_reparse_in_env):
             print("    (actual version deferred until further download or env creation)")
@@ -620,12 +589,12 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                                                 force_download=True,
                                                                 config=config)
             assert not need_source_download, "Source download failed.  Please investigate."
-            print("BUILD START:", m.dist())
+            if m.uses_jinja:
+                print("BUILD START (revised):", m.dist())
 
         if need_reparse_in_env:
             reparse(m, config=config)
-
-        print("BUILD START:", m.dist())
+            print("BUILD START (revised):", m.dist())
 
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
@@ -785,6 +754,50 @@ can lead to packages that include their dependencies.""" % meta_files))
     return True
 
 
+def clean_pkg_cache(dist, timeout):
+    cc.pkgs_dirs = cc.pkgs_dirs[:1]
+    locks = []
+    for folder in cc.pkgs_dirs:
+        locks.append(filelock.SoftFileLock(join(folder, ".conda_lock")))
+
+    for lock in locks:
+        lock.acquire(timeout=timeout)
+
+    try:
+        rmplan = [
+            'RM_EXTRACTED {0} local::{0}'.format(dist),
+            'RM_FETCHED {0} local::{0}'.format(dist),
+        ]
+        plan.execute_plan(rmplan)
+
+        # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
+        #   Conda's cleanup is still necessary - it keeps track of its own in-memory
+        #   list of downloaded things.
+        for folder in cc.pkgs_dirs:
+            try:
+                assert not os.path.exists(os.path.join(folder, dist))
+                assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
+                for pkg_id in [dist, 'local::' + dist]:
+                    assert pkg_id not in package_cache()
+            except AssertionError:
+                log.debug("Conda caching error: %s package remains in cache after removal", dist)
+                log.debug("Clearing package cache to compensate")
+                cache = package_cache()
+                keys = [key for key in cache.keys() if dist in key]
+                for pkg_id in keys:
+                    if pkg_id in cache:
+                        del cache[pkg_id]
+                for entry in glob(os.path.join(folder, dist + '*')):
+                    rm_rf(entry)
+    except:
+        raise
+    finally:
+        for lock in locks:
+            lock.release()
+            if os.path.isfile(lock._lock_file):
+                os.remove(lock._lock_file)
+
+
 def test(m, config, move_broken=True):
     '''
     Execute any test scripts for the given package.
@@ -795,10 +808,10 @@ def test(m, config, move_broken=True):
 
     if not os.path.isdir(config.build_folder):
         os.makedirs(config.build_folder)
-    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
-        # remove from package cache
-        rm_pkgs_cache(m.dist())
 
+    clean_pkg_cache(m.dist(), config.timeout)
+
+    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
         tmp_dir = config.test_dir
         if not isdir(tmp_dir):
             os.makedirs(tmp_dir)
@@ -964,8 +977,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         if hasattr(recipe, 'config'):
             metadata = recipe
             recipe_config = metadata.config
-            if config.set_build_id:
-                config.compute_build_id(metadata.name(), reset=True)
+            if recipe.config.set_build_id:
+                recipe_config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
@@ -973,8 +986,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
-            if config.set_build_id:
-                config.compute_build_id(os.path.basename(recipe), reset=True)
+            if recipe_config.set_build_id:
+                recipe_config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                                                     config=recipe_config)
         try:
@@ -1022,10 +1035,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
-        output_file = bldpkg_path(metadata, config=config)
-        handle_anaconda_upload(output_file, config=config)
-
-        already_built.add(output_file)
+        if post in [True, None]:
+            output_file = bldpkg_path(metadata, config=recipe_config)
+            handle_anaconda_upload(output_file, config=recipe_config)
+            already_built.add(output_file)
 
 
 def handle_anaconda_upload(path, config):

@@ -13,7 +13,7 @@ from conda_build import build, api
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
 
-from .utils import testing_workdir, test_config, metadata_dir
+from .utils import testing_workdir, test_config, test_metadata, metadata_dir
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -62,12 +62,14 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     test_base = os.path.expanduser("~/cbtmp")
     config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
-    fn = api.get_output_file_path(recipe_path, config=config)
+    metadata, _, _ = api.render(recipe_path, config=config)
+    metadata.meta['package']['name'] = 'test_env_creation_with_short_prefix'
+    fn = api.get_output_file_path(metadata)
     if os.path.isfile(fn):
         os.remove(fn)
     config.prefix_length = 80
     try:
-        api.build(recipe_path, config=config)
+        api.build(metadata)
         pkg_name = os.path.basename(fn).replace("-1.0-0.tar.bz2", "")
         assert not api.inspect_prefix_length(fn, 255)
         config.prefix_length = 255
@@ -81,10 +83,9 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
 
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
-def test_catch_openssl_legacy_short_prefix_error(caplog):
+def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):
     config = api.Config(anaconda_upload=False, verbose=True, python="2.6")
-    from .utils import d
-    metadata = MetaData.fromdict(d, config=config)
+    test_metadata.config = api.get_or_merge_config(test_metadata.config, python='2.6')
     cmd = """
 import os
 
@@ -94,9 +95,9 @@ fn = os.path.join(prefix, 'binary-has-prefix')
 with open(fn, 'wb') as f:
     f.write(prefix.encode('utf-8') + b'\x00\x00')
  """
-    metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
+    test_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
 
-    api.build(metadata, config=config)
+    api.build(test_metadata)
     assert "Falling back to legacy prefix" in caplog.text()
 
 
