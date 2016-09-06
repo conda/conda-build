@@ -28,6 +28,7 @@ from conda.version import VersionOrder  # NOQA
 if parse_version(conda.__version__) >= parse_version("4.2"):
     # conda 4.2.x
     import conda.base.context
+    import conda.exceptions
     from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
 
     from conda.base.constants import DEFAULT_CHANNELS  # NOQA
@@ -49,6 +50,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     get_rc_urls = lambda: list(conda.base.context.context.channels)
     get_local_urls = lambda: list(get_conda_build_local_url()) or []
     load_condarc = lambda fn: conda.base.context.reset_context([fn])
+    PaddingError = conda.exceptions.PaddingError
 
 else:
     from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
@@ -69,6 +71,8 @@ else:
     get_rc_urls = cc.get_rc_urls
     get_local_urls = cc.get_local_urls
 
+    class PaddingError(Exception):
+        pass
 
 class SignatureError(Exception):
     pass

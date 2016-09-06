@@ -38,6 +38,7 @@ from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
+from .conda_interface import PaddingError
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -440,6 +441,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     # Set this here and use to create environ
                     #   Setting this here is important because we use it below (symlink)
                     prefix = config.build_prefix
+
                     for lock in locks:
                         lock.release()
                         if os.path.isfile(lock._lock_file):
@@ -780,7 +782,8 @@ def clean_pkg_cache(dist, timeout):
                 log.debug("Conda caching error: %s package remains in cache after removal", dist)
                 log.debug("Clearing package cache to compensate")
                 cache = package_cache()
-                for pkg_id in [dist, 'local::' + dist]:
+                keys = [key for key in cache.keys() if dist in key]
+                for pkg_id in keys:
                     if pkg_id in cache:
                         del cache[pkg_id]
                 for entry in glob(os.path.join(folder, dist + '*')):

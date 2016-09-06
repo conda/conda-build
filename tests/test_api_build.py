@@ -399,17 +399,18 @@ def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
 
 
-def test_debug_build_option(testing_workdir, test_config, caplog, capfd):
+def test_debug_build_option(test_metadata, caplog, capfd):
     logging.basicConfig(level=logging.INFO)
     info_message = "Starting new HTTPS connection"
     debug_message = "GET /pkgs/free/noarch/repodata.json.bz2 HTTP/1.1"
-    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config)
+    api.build(test_metadata)
     # this comes from an info message
     assert info_message not in caplog.text()
     # this comes from a debug message
     assert debug_message not in caplog.text()
 
-    api.build(os.path.join(metadata_dir, "jinja2"), config=test_config, debug=True)
+    test_metadata.config.debug = True
+    api.build(test_metadata)
     # this comes from an info message
     assert info_message in caplog.text()
     # this comes from a debug message

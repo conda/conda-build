@@ -239,8 +239,7 @@ def git_source(meta, recipe_dir, config):
         git_dn = git_url.split('://')[-1].replace('/', os.sep)
         if git_dn.startswith(os.sep):
             git_dn = git_dn[1:]
-        elif git_dn[1] == ':':
-            git_dn = git_dn.replace(':', '_')
+        git_dn = git_dn.replace(':', '_')
     mirror_dir = join(config.git_cache, git_dn)
     git_mirror_checkout_recursive(
         git, mirror_dir, config.work_dir, git_url, config, git_ref, git_depth, True)
