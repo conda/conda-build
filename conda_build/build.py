@@ -993,10 +993,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
-        output_file = bldpkg_path(metadata, config=recipe_config)
-        handle_anaconda_upload(output_file, config=recipe_config)
-
-        already_built.add(output_file)
+        if post in [True, None]:
+            output_file = bldpkg_path(metadata, config=recipe_config)
+            handle_anaconda_upload(output_file, config=recipe_config)
+            already_built.add(output_file)
 
 
 def handle_anaconda_upload(path, config):

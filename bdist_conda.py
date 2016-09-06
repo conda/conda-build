@@ -254,19 +254,23 @@ class bdist_conda(install):
             d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
         d = dict(d)
-        m = MetaData.fromdict(d)
+        m = MetaData.fromdict(d, config=self.config)
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
-        api.build(m, config=self.config, post=False)
+        m.config.set_build_id = False
+        m.config.keep_old_work = True
+        api.build(m, build_only=True)
+        # prevent changes in the build ID from here, so that we're working in the same prefix
         # Do the install
         if not PY3:
             # Command is an old-style class in Python 2
             install.run(self)
         else:
             super().run()
-        api.build(m, config=self.config, post=True)
-        api.test(m, config=self.config)
-        output_file = api.get_output_file_path(m, self.config)
+        m.config.keep_old_work = False
+        api.build(m, post=True)
+        api.test(m)
+        output_file = api.get_output_file_path(m)
         if self.anaconda_upload:
             class args:
                 anaconda_upload = self.anaconda_upload
