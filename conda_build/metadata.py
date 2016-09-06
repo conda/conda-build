@@ -171,6 +171,15 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
+def ensure_valid_noarch_value(meta):
+    try:
+        build_noarch = meta['build']['noarch']
+    except KeyError:
+        return
+    if build_noarch.lower() == 'none':
+        raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
+
+
 def parse(data, config, path=None):
     data = select_lines(data, ns_cfg(config))
     res = yamlize(data)
@@ -189,6 +198,7 @@ def parse(data, config, path=None):
 
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
+    ensure_valid_noarch_value(res)
     return sanitize(res)
 
 
@@ -222,7 +232,7 @@ default_structs = {
     'build/osx_is_app': bool,
     'build/preserve_egg_dir': bool,
     'build/binary_relocation': bool,
-    'build/noarch': bool,
+    'build/noarch': text_type,
     'build/noarch_python': bool,
     'build/detect_binary_files_with_prefix': bool,
     'build/skip': bool,
@@ -671,13 +681,16 @@ class MetaData(object):
             if value:
                 d[key] = value
 
+        build_noarch = self.get_value('build/noarch')
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch_python') or self.get_value('build/noarch'):
+        if self.get_value('build/noarch_python') or build_noarch:
             d['platform'] = d['arch'] = None
             d['subdir'] = 'noarch'
+            if build_noarch:
+                d['noarch'] = build_noarch
         if self.is_app():
             d.update(self.app_meta())
         return d
