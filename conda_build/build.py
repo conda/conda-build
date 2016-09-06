@@ -407,10 +407,10 @@ def create_env(prefix, specs, config, clear_cache=True):
                 locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
                 for folder in locked_folders:
                     if not os.path.isdir(folder):
-                        print(folder)
                         os.makedirs(folder)
-                    update_index(folder, config=config)
-                    locks.append(filelock.SoftFileLock(join(folder, '.conda_lock')))
+                    lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
+                    update_index(folder, config=config, lock=lock)
+                    locks.append(lock)
                 for lock in locks:
                     lock.acquire(timeout=config.timeout)
 
