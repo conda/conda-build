@@ -31,7 +31,7 @@ from .conda_interface import envs_dirs, root_dir
 from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import PY3
-from .conda_interface import fetch_index
+from .conda_interface import fetch_index, package_cache
 from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
 from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
@@ -362,16 +362,13 @@ def create_info_files(m, files, config, prefix):
 
 
 def get_build_index(config, clear_cache=True):
-    if clear_cache:
-        # remove the cache such that a refetch is made,
-        # this is necessary because we add the local build repo URL
-        fetch_index.cache = {}
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
     urls = [url_path(config.croot)] + list(config.channel_urls)
     index = get_index(channel_urls=urls,
                       prepend=not config.override_channels,
-                      use_local=False)
+                      use_local=False,
+                      use_cache=not clear_cache)
     return index
 
 
@@ -411,7 +408,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         print(folder)
                         os.makedirs(folder)
-                        update_index(folder, config=config)
+                    update_index(folder, config=config)
                     locks.append(filelock.SoftFileLock(join(folder, '.conda_lock')))
                 for lock in locks:
                     lock.acquire(timeout=config.timeout)
@@ -755,8 +752,6 @@ can lead to packages that include their dependencies.""" % meta_files))
 
 
 def clean_pkg_cache(dist, timeout):
-    import conda.install
-
     cc.pkgs_dirs = cc.pkgs_dirs[:1]
     locks = []
     for folder in cc.pkgs_dirs:
@@ -766,8 +761,10 @@ def clean_pkg_cache(dist, timeout):
         lock.acquire(timeout=timeout)
 
     try:
-        rmplan = ['RM_FETCHED %s' % dist,
-                'RM_EXTRACTED %s' % dist]
+        rmplan = [
+            'RM_EXTRACTED {0} local::{0}'.format(dist),
+            'RM_FETCHED {0} local::{0}'.format(dist),
+        ]
         plan.execute_plan(rmplan)
 
         # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
@@ -777,11 +774,15 @@ def clean_pkg_cache(dist, timeout):
             try:
                 assert not os.path.exists(os.path.join(folder, dist))
                 assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
-                assert dist not in conda.install.package_cache()
+                for pkg_id in [dist, 'local::' + dist]:
+                    assert pkg_id not in package_cache()
             except AssertionError:
                 log.debug("Conda caching error: %s package remains in cache after removal", dist)
                 log.debug("Clearing package cache to compensate")
-                conda.install.package_cache_ = {}
+                cache = package_cache()
+                for pkg_id in [dist, 'local::' + dist]:
+                    if pkg_id in cache:
+                        del cache[pkg_id]
                 for entry in glob(os.path.join(folder, dist + '*')):
                     rm_rf(entry)
     except:
