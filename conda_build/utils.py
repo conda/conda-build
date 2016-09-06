@@ -337,7 +337,7 @@ def get_site_packages(prefix):
 
 def get_build_folders(croot):
     # remember, glob is not a regex.
-    return glob(os.path.join(croot, "*" + "[0-9]" * 6 + "*"))
+    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
 
 
 def silence_loggers(show_warnings_and_errors=True):
