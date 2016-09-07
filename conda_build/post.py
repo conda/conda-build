@@ -169,7 +169,7 @@ def compile_missing_pyc(files, cwd, python_exe):
         else:
             if fn.startswith('bin'):
                 continue
-        cache_prefix = "__pycache__/" if PY3 else ""
+        cache_prefix = ("__pycache__" + os.sep) if PY3 else ""
         if (fn.endswith(".py") and
                 os.path.dirname(fn) + cache_prefix + os.path.basename(fn) + 'c' not in files):
             compile_files.append(fn)
