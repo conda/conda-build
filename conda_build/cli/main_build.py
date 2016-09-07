@@ -159,7 +159,6 @@ different sets of packages."""
 def output_action(metadata, config):
     silence_loggers(show_warnings_and_errors=False)
     print(bldpkg_path(metadata, config))
-    sys.exit(0)
 
 
 def source_action(metadata, config):
@@ -225,7 +224,7 @@ def execute(args):
                    notest=args.notest, keep_old_work=args.keep_old_work,
                    already_built=None, config=config)
 
-    if len(build.get_build_folders(config.croot)) > 0:
+    if not args.output and len(build.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
 
 
