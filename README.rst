@@ -67,6 +67,11 @@ install`` will find and install their packages, run
 (replacing ``username`` with the user name of the person whose channel you want
 to add).
 
+Gotchas/FAQ
+-----------
+
+* ```OSError: [Errno 36] File name too long:``` - This error has been seen on Linux computers with encrypted folders.  The solution is to install miniconda or anaconda to a location that is not encrypted.  This error occurs because the encrypted form of the path that conda-build creates can be too long.
+
 Getting Help
 ------------
 
