@@ -2,24 +2,5 @@ package:
   name: noarch_foo_test_package
   version: "1.0"
 
-source:
-  path: ./noarch_test_package
-
 build:
-  script: pip install --no-deps .
   noarch: foo
-
-requirements:
-  build:
-    - python
-    - setuptools
-
-  run:
-    - python
-
-test:
-  # Python imports
-  imports:
-    - noarch_test_package
-  commands:
-    - noarch_test_package_script
