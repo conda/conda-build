@@ -16,22 +16,6 @@ metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
 
 
-d = defaultdict(dict)
-d['package']['name'] = 'test_package'
-d['package']['version'] = '1.0'
-d['build']['number'] = '1'
-d['build']['entry_points'] = []
-# MetaData does the auto stuff if the build string is None
-d['build']['string'] = None
-d['requirements']['build'] = ['python']
-d['requirements']['run'] = ['python']
-d['about']['home'] = "sweet home"
-d['about']['license'] = "contract in blood"
-d['about']['summary'] = "a test package"
-
-test_metadata = MetaData.fromdict(d)
-
-
 def is_valid_dir(parent_dir, dirname):
     valid = os.path.isdir(os.path.join(parent_dir, dirname))
     valid &= not dirname.startswith("_")
@@ -70,6 +54,25 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True)
+
+
+@pytest.fixture(scope='function')
+def test_metadata(request, test_config):
+    d = defaultdict(dict)
+    d['package']['name'] = request.function.__name__
+    d['package']['version'] = '1.0'
+    d['build']['number'] = '1'
+    d['build']['entry_points'] = []
+    # MetaData does the auto stuff if the build string is None
+    d['build']['string'] = None
+    d['requirements']['build'] = ['python']
+    d['requirements']['run'] = ['python']
+    d['test']['commands'] = ['echo "A-OK"', 'exit 0']
+    d['about']['home'] = "sweet home"
+    d['about']['license'] = "contract in blood"
+    d['about']['summary'] = "a test package"
+
+    return MetaData.fromdict(d, config=test_config)
 
 
 @pytest.fixture(scope='function')

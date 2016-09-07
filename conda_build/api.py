@@ -102,16 +102,16 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
         recipe_config = config
     else:
         # fall back to old way (use recipe, rather than package)
-        package_name = os.path.basename(recipedir_or_package_or_metadata).rsplit('-', 2)[0]
-        # This will create a new local build folder if and only if config doesn't already have one.
-        #   What this means is that if we're running a test immediately after build, we use the one
-        #   that the build already provided
-        config.compute_build_id(package_name)
         metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, no_download_source=False,
                                     config=config, **kwargs)
         recipe_config = config
 
     with recipe_config:
+        # This will create a new local build folder if and only if config doesn't already have one.
+        #   What this means is that if we're running a test immediately after build, we use the one
+        #   that the build already provided
+
+        config.compute_build_id(metadata.name())
         test_result = test(metadata, config=recipe_config, move_broken=move_broken)
     return test_result
 

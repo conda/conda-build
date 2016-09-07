@@ -1,4 +1,5 @@
 from distutils.core import setup
+import setuptools
 import distutils.command.bdist_conda
 
 setup(

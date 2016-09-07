@@ -1,3 +1,41 @@
+2016-09-06 2.0.1:
+-----------------
+
+Enhancements:
+-------------
+
+* Add disable_pip build option to disable conda's automatic add of pip/setuptools #1311
+* Add numpy to pypi env creation if it is imported in setup.py #1289
+* Improve compatibility with conda >=4.2 regarding prefixes that are too short #1323
+* Delete .pyo files prior to compiling pyc files.  They are considered harmful.  #1328
+* Add ```conda build purge-all``` command that cleans out built packages and build folders #1329
+
+Bug fixes:
+----------
+
+* Use source.get_dir instead of config.workdir for source_files (was one level too low) #1288
+* Import setuptools in windows.py to apply vc9-finding monkeypatch #1290
+* Fix convert not updating subdir in index.json #1297
+* Update post-build deprecation warning to state 3.0 as release for removal #1298
+* Create pkgs folder if it does not exist #1299
+* Fix warn_on_old_conda_build to ignore non-final release versions (alpha/beta/rc) #1303 #1315
+* Remove coercion of pycache folder into flat pyc files #1304
+* Fix metadata retrieval in bdist_conda #1308
+* Add supplemental removal of cached packages when conda does not fully remove them #1309
+* Simplify updating the package index #1309
+* Straighten out when metadata member config is used, relative to config argument #1311
+* Catch prefix length errors with OpenSSL's custom prefix replacement program #1312
+* Replace all colons with _ in git mirror folders to avoid Windows path errors #1322
+* Fix missing file contents in converted packages.  Test.  #1325
+
+Contributors:
+-------------
+
+* jakirkham
+* mingwandroid
+* msarahan
+
+
 2016-08-29 2.0.0:
 -----------------
 

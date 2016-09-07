@@ -5,5 +5,5 @@ package:
 requirements:
   build:
     - python
-    # this is only available at conda-forge, and is a test of whether that channel is available.
-    - blinker
+    # this is only available at conda_build_test, and is a test of whether that channel is available.
+    - conda_build_test_requirement

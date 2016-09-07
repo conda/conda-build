@@ -62,7 +62,7 @@ def handle_file(f, d, prefix):
     path = join(prefix, f)
 
     # Ignore egg-info and pyc files.
-    if f.endswith(('.egg-info', '.pyc')):
+    if f.endswith(('.egg-info', '.pyc', '.pyo')):
         os.unlink(path)
 
     # The presence of .so indicated this is not a noarch package

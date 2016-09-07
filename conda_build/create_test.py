@@ -64,8 +64,9 @@ def create_files(dir_path, m, config):
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
             copy_into(f, f.replace(source.get_dir(config), config.test_dir), config.timeout)
-        for f in get_ext_files(config.test_dir, '.pyc'):
-            os.remove(f)
+        for ext in '.pyc', '.pyo':
+            for f in get_ext_files(config.test_dir, ext):
+                os.remove(f)
     return has_files
 
 

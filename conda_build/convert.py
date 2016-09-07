@@ -18,10 +18,8 @@ import pprint
 import re
 import sys
 import tarfile
-import tempfile
 
 from .conda_interface import PY3
-from .utils import rm_rf
 
 if PY3:
     from io import StringIO, BytesIO as bytes_io

@@ -313,6 +313,10 @@ class Config(object):
         if os.path.isdir(self.build_folder):
             rm_rf(self.build_folder)
 
+    def clean_pkgs(self):
+        for folder in self.bldpkgs_dirs:
+            rm_rf(folder)
+
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):
         pass

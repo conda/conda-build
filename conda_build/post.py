@@ -138,9 +138,16 @@ def rm_py_along_so(prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
                 name, _ = splitext(fn)
-                for ext in '.py', '.pyc':
+                for ext in '.py', '.pyc', '.pyo':
                     if name + ext in files:
                         os.unlink(join(root, name + ext))
+
+
+def rm_pyo(files, prefix):
+    "pyo considered harmful: https://www.python.org/dev/peps/pep-0488/"
+    for fn in files:
+        if fn.endswith('.pyo'):
+            os.unlink(os.path.join(prefix, fn))
 
 
 def compile_missing_pyc(files, cwd, python_exe):
@@ -166,6 +173,7 @@ def compile_missing_pyc(files, cwd, python_exe):
 
 
 def post_process(files, prefix, config, preserve_egg_dir=False):
+    rm_pyo(files, prefix)
     compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
