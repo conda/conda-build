@@ -158,7 +158,10 @@ different sets of packages."""
 
 def output_action(metadata, config):
     silence_loggers(show_warnings_and_errors=False)
-    print(bldpkg_path(metadata, config))
+    if metadata.skip():
+        print("skipped")
+    else:
+        print(bldpkg_path(metadata, config))
 
 
 def source_action(metadata, config):
