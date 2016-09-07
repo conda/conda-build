@@ -1,0 +1,25 @@
+package:
+  name: noarch_none_test_package
+  version: "1.0"
+
+source:
+  path: ./noarch_test_package
+
+build:
+  script: pip install --no-deps .
+  noarch: none
+
+requirements:
+  build:
+    - python
+    - setuptools
+
+  run:
+    - python
+
+test:
+  # Python imports
+  imports:
+    - noarch_test_package
+  commands:
+    - noarch_test_package_script
