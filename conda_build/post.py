@@ -11,7 +11,7 @@ import os
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath, normpath)
 import stat
-from subprocess import call
+from subprocess import call, check_output
 import sys
 try:
     from os import readlink
@@ -295,17 +295,42 @@ def mk_relative_osx(path, prefix, build_prefix=None):
         assert_relative_osx(path, prefix)
 
 
-def mk_relative_linux(f, prefix, build_prefix=None, rpaths=('lib',)):
-    path = join(prefix, f)
-    if build_prefix is None:
-        assert path.startswith(prefix + '/')
-    else:
-        prefix = build_prefix
-    rpath = ':'.join('$ORIGIN/' + utils.relative(f, d) if not
-        d.startswith('/') else d for d in rpaths)
+def mk_relative_linux(f, prefix, rpaths=('lib',)):
+    'Respects the original values and converts abs to $ORIGIN-relative'
+
+    elf = join(prefix, f)
+    origin = dirname(elf)
+
     patchelf = external.find_executable('patchelf', prefix)
-    print('patchelf: file: %s\n    setting rpath to: %s' % (path, rpath))
-    call([patchelf, '--force-rpath', '--set-rpath', rpath, path])
+    existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    existing = existing.split(os.pathsep)
+    new = []
+    for old in existing:
+        if old.startswith('$ORIGIN/'):
+            new.append(old)
+        elif old.startswith('/'):
+            # Test if this absolute path is outside of prefix. That is fatal.
+            relpath = os.path.relpath(old, prefix)
+            assert not relpath.startswith('..' + os.sep), 'rpath {0} is outside prefix {1}'.format(old, prefix)
+            relpath = '$ORIGIN/' + os.path.relpath(old, origin)
+            if not relpath in new:
+                new.append(relpath)
+    # Ensure that the asked-for paths are also in new.
+    for rpath in rpaths:
+        if not rpath.startswith('/'):
+            # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
+            # it, so instead, make sure that what I think it should be replaced by
+            # gives the same result and assert if not. Yeah, I am a chicken.
+            rel_ours = utils.relative(f, rpath)
+            rel_stdlib = os.path.relpath(rpath, os.path.dirname(f))
+            assert rel_ours == rel_stdlib, 'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
+                rel_ours, rel_stdlib, f, rpath)
+            rpath = '$ORIGIN/' + rel_stdlib
+        if not rpath in new:
+            new.append(rpath)
+    rpath = ':'.join(new)
+    print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))
+    call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
 
 
 def assert_relative_osx(path, prefix):
