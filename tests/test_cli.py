@@ -70,21 +70,6 @@ def test_build_output_build_path(testing_workdir, test_config, capfd):
     assert output.rstrip() == test_path, error
 
 
-def test_render_output_build_path_set_python(testing_workdir, capfd):
-    # build the other major thing, whatever it is
-    if sys.version_info.major == 3:
-        version = "2.7"
-    else:
-        version = "3.5"
-
-    args = ['--output', os.path.join(metadata_dir, "python_run"), '--python', version]
-    main_render.execute(args)
-    test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
-                                      version.split('.')[0], version.split('.')[1])
-    output, error = capfd.readouterr()
-    assert os.path.basename(output.rstrip()) == test_path, error
-
-
 def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, capfd):
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     args = ['--output', os.path.join(metadata_dir, "python_run"), skip_recipe]
@@ -101,6 +86,21 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
     output, error = capfd.readouterr()
     assert error == ""
     assert output.rstrip().splitlines() == test_paths, error
+
+
+def test_render_output_build_path_set_python(testing_workdir, capfd):
+    # build the other major thing, whatever it is
+    if sys.version_info.major == 3:
+        version = "2.7"
+    else:
+        version = "3.5"
+
+    args = ['--output', os.path.join(metadata_dir, "python_run"), '--python', version]
+    main_render.execute(args)
+    test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+                                      version.split('.')[0], version.split('.')[1])
+    output, error = capfd.readouterr()
+    assert os.path.basename(output.rstrip()) == test_path, error
 
 
 def test_skeleton_pypi(testing_workdir):
