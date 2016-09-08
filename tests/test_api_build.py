@@ -586,6 +586,7 @@ def test_disable_pip(test_config):
 def test_rpath_linux(test_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=test_config)
 
+
 def test_noarch_none_value(testing_workdir, test_config):
     recipe = os.path.join(metadata_dir, "_noarch_none")
     with pytest.raises(exceptions.CondaBuildException):
@@ -596,7 +597,6 @@ def test_noarch_foo_value():
     recipe = os.path.join(metadata_dir, "noarch_foo")
     fn = api.get_output_file_path(recipe)
     api.build(recipe)
-    metadata = json.loads(package_has_file(fn, 'info/index.json'))
+    metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
     assert 'noarch' in metadata
     assert metadata['noarch'] == "foo"
-
