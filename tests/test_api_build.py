@@ -590,3 +590,13 @@ def test_noarch_none_value(testing_workdir, test_config):
     recipe = os.path.join(metadata_dir, "_noarch_none")
     with pytest.raises(exceptions.CondaBuildException):
         api.build(recipe, config=test_config)
+
+
+def test_noarch_foo_value():
+    recipe = os.path.join(metadata_dir, "noarch_foo")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    metadata = json.loads(package_has_file(fn, 'info/index.json'))
+    assert 'noarch' in metadata
+    assert metadata['noarch'] == "foo"
+
