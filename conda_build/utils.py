@@ -474,3 +474,8 @@ def convert_path_for_cygwin_or_msys2(exe, path):
         return check_output_env(['cygpath', '-u',
                                  path]).splitlines()[0].decode(getpreferredencoding())
     return path
+
+
+def print_skip_message(metadata):
+    print("Skipped: {} defines build/skip for this "
+          "configuration.".format(metadata.path))
