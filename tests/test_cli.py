@@ -61,7 +61,7 @@ def test_render_output_build_path(testing_workdir, capfd):
 
 def test_build_output_build_path(testing_workdir, test_config, capfd):
     args = ['--output', os.path.join(metadata_dir, "python_run")]
-    main_render.execute(args)
+    main_build.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                   "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
@@ -78,7 +78,7 @@ def test_render_output_build_path_set_python(testing_workdir, capfd):
         version = "3.5"
 
     args = ['--output', os.path.join(metadata_dir, "python_run"), '--python', version]
-    main_build.execute(args)
+    main_render.execute(args)
     test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       version.split('.')[0], version.split('.')[1])
     output, error = capfd.readouterr()
@@ -89,7 +89,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     args = ['--output', os.path.join(metadata_dir, "python_run"), skip_recipe]
 
-    main_render.execute(args)
+    main_build.execute(args)
 
     test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", test_config.subdir, pkg)
     test_paths = [test_path(
