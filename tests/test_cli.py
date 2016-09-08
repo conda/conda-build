@@ -96,11 +96,11 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
         "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
         sys.version_info.major, sys.version_info.minor)),
         "Skipped: {} defines build/skip for this "
-        "configuration.".format(skip_recipe)]
+        "configuration.".format(os.path.abspath(skip_recipe))]
 
     output, error = capfd.readouterr()
     assert error == ""
-    assert output.rstrip() == test_path, error
+    assert output.rstrip().splitlines() == test_path, error
 
 
 def test_skeleton_pypi(testing_workdir):
