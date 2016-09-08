@@ -596,3 +596,7 @@ def test_disable_pip(test_config):
     metadata.meta['build']['script'] = 'python -c "import setuptools"'
     with pytest.raises(SystemExit):
         api.build(metadata)
+
+@pytest.mark.skipif(not sys.platform.startswith('linux'), reason="rpath fixup only done on Linux so far.")
+def test_rpath_linux(test_config):
+    api.build(os.path.join(metadata_dir, "_rpath"), config=test_config)
