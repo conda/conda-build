@@ -78,7 +78,7 @@ def test_render_output_build_path_set_python(testing_workdir, capfd):
         version = "3.5"
 
     args = ['--output', os.path.join(metadata_dir, "python_run"), '--python', version]
-    main_render.execute(args)
+    main_build.execute(args)
     test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       version.split('.')[0], version.split('.')[1])
     output, error = capfd.readouterr()
