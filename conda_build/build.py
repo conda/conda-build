@@ -49,7 +49,7 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
-                               prepend_bin_path, codec, root_script_dir)
+                               prepend_bin_path, codec, root_script_dir, print_skip_message)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -539,8 +539,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
     '''
 
     if m.skip():
-        print("Skipped: The %s recipe defines build/skip for this "
-              "configuration." % m.dist())
+        print_skip_message(m)
         return False
 
     if config.skip_existing:

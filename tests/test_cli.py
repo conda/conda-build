@@ -85,6 +85,24 @@ def test_render_output_build_path_set_python(testing_workdir, capfd):
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
+def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, capfd):
+    skip_recipe = os.path.join(metadata_dir, "build_skip")
+    args = ['--output', os.path.join(metadata_dir, "python_run"), skip_recipe]
+
+    main_render.execute(args)
+
+    test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", test_config.subdir, pkg)
+    test_paths = [test_path(
+        "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+        sys.version_info.major, sys.version_info.minor)),
+        "Skipped: The {} recipe defines build/skip for this "
+        "configuration.".format(skip_recipe)]
+
+    output, error = capfd.readouterr()
+    assert error == ""
+    assert output.rstrip() == test_path, error
+
+
 def test_skeleton_pypi(testing_workdir):
     args = ['pypi', 'click']
     main_skeleton.execute(args)

@@ -21,7 +21,7 @@ from conda_build.conda_interface import cc
 from conda_build.conda_interface import delete_trash
 from conda_build.conda_interface import add_parser_channels
 import conda_build.source as source
-from conda_build.utils import get_recipe_abspath, silence_loggers, rm_rf
+from conda_build.utils import get_recipe_abspath, silence_loggers, rm_rf, print_skip_message
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -159,7 +159,7 @@ different sets of packages."""
 def output_action(metadata, config):
     silence_loggers(show_warnings_and_errors=False)
     if metadata.skip():
-        print("skipped")
+        print_skip_message(metadata)
     else:
         print(bldpkg_path(metadata, config))
 
