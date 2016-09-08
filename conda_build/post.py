@@ -144,9 +144,17 @@ def rm_py_along_so(prefix):
 
 
 def rm_pyo(files, prefix):
-    "pyo considered harmful: https://www.python.org/dev/peps/pep-0488/"
+    """pyo considered harmful: https://www.python.org/dev/peps/pep-0488/
+
+    The build may have proceeded with:
+        [install]
+        optimize = 1
+    .. in setup.cfg in which case we can end up with some stdlib __pycache__
+    files ending in .opt-N.pyc on Python 3, as well as .pyo files for the
+    package's own python. """
+    re_pyo = re.compile(r'.*(?:\.pyo$|\.opt-[0-9]\.pyc)')
     for fn in files:
-        if fn.endswith('.pyo'):
+        if re_pyo.match(fn):
             os.unlink(os.path.join(prefix, fn))
 
 
@@ -161,7 +169,7 @@ def compile_missing_pyc(files, cwd, python_exe):
         else:
             if fn.startswith('bin'):
                 continue
-        cache_prefix = "__pycache__/" if PY3 else ""
+        cache_prefix = ("__pycache__" + os.sep) if PY3 else ""
         if (fn.endswith(".py") and
                 os.path.dirname(fn) + cache_prefix + os.path.basename(fn) + 'c' not in files):
             compile_files.append(fn)
