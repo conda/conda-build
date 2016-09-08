@@ -7,7 +7,7 @@ import logging
 import os
 import subprocess
 import sys
-import tarfile
+import json
 
 from conda_build.conda_interface import PY3, url_path
 
@@ -16,12 +16,12 @@ from binstar_client.errors import NotFound
 import pytest
 import yaml
 
-from conda_build import api
+from conda_build import api, exceptions
 from conda_build.utils import copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2
 from conda_build.os_utils.external import find_executable
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
-                    add_mangling, test_metadata)
+                    add_mangling, test_metadata, package_has_file)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -60,21 +60,6 @@ def describe_root(cwd=None):
     if PY3:
         tag = tag.decode("utf-8")
     return tag
-
-
-def package_has_file(package_path, file_path):
-    try:
-        with tarfile.open(package_path) as t:
-            try:
-                t.getmember(file_path.replace('\\', '/'))
-                return True
-            except KeyError:
-                return False
-            except OSError as e:
-                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
-    except tarfile.ReadError:
-        raise RuntimeError("Could not extract metadata from %s. "
-                           "File probably corrupt." % package_path)
 
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
@@ -600,3 +585,18 @@ def test_disable_pip(test_config):
 @pytest.mark.skipif(not sys.platform.startswith('linux'), reason="rpath fixup only done on Linux so far.")
 def test_rpath_linux(test_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=test_config)
+
+
+def test_noarch_none_value(testing_workdir, test_config):
+    recipe = os.path.join(metadata_dir, "_noarch_none")
+    with pytest.raises(exceptions.CondaBuildException):
+        api.build(recipe, config=test_config)
+
+
+def test_noarch_foo_value():
+    recipe = os.path.join(metadata_dir, "noarch_foo")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
+    assert 'noarch' in metadata
+    assert metadata['noarch'] == "foo"
