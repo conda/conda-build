@@ -100,7 +100,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
 
     output, error = capfd.readouterr()
     assert error == ""
-    assert output.rstrip().splitlines() == test_path, error
+    assert output.rstrip().splitlines() == test_paths, error
 
 
 def test_skeleton_pypi(testing_workdir):
