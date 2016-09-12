@@ -140,6 +140,7 @@ allowed_license_families = set("""
 AGPL
 Apache
 BSD
+GPL
 GPL2
 GPL3
 LGPL
