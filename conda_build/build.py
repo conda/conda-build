@@ -56,6 +56,13 @@ from conda_build.create_test import (create_files, create_shell_files,
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
+
+try:
+    basestring
+except NameError:
+    basestring = str
+
+
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
@@ -217,10 +224,20 @@ def copy_readme(m, config):
 
 
 def copy_license(m, config):
-    license_file = m.get_value('about/license_file')
-    if license_file:
-        copy_into(join(source.get_dir(config), license_file),
-                        join(config.info_dir, 'LICENSE.txt'), config.timeout)
+    license_filenames = m.get_value('about/license_file')
+
+    if isinstance(license_filenames, basestring):
+        if license_filenames:
+            license_filenames = [license_filenames]
+        else:
+            license_filenames = []
+
+    if license_files:
+        with io.open(join(config.info_dir, 'LICENSE.txt'), "w") as pkg_license_file:
+            for each_license_filename in license_filenames:
+                with io.open(join(source.get_dir(config), each_license_file), "r") as each_license_file:
+                    for each_license_file_line in each_license_file:
+                        pkg_license_file.write(each_license_file_line)
 
 
 def detect_and_record_prefix_files(m, files, prefix, config):
