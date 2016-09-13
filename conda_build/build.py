@@ -714,9 +714,15 @@ can lead to packages that include their dependencies.""" % meta_files))
                     croot=config.croot)
         create_info_files(m, sorted(files2 - files1), config=config,
                             prefix=config.build_prefix)
+
         if m.get_value('build/noarch_python'):
             import conda_build.noarch_python as noarch_python
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
+        elif str(m.get_value('build/noarch')).lower() == "python":
+
+
+            import conda_build.noarch_python as noarch_python
+            noarch_python.populate_files(m, sorted(files2 - files1), config.build_prefix)
 
         files3 = prefix_files(prefix=config.build_prefix)
         fix_permissions(files3 - files1, config.build_prefix)
