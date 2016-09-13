@@ -269,8 +269,9 @@ def get_pure_py_file_map(t, platform):
                 file_map[oldpath] = None
                 file_map[newpath] = newmember
                 files = files.replace(oldpath, newpath)
-            else:
-                file_map[oldpath] = member
+                break
+        else:
+            file_map[oldpath] = member
 
         # Make Windows compatible entry-points
         batseen = set()
