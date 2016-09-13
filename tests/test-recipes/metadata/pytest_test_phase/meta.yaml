@@ -1,0 +1,16 @@
+# Test that pytest works in the test environment
+#     https://github.com/pytest-dev/pytest/issues/1235
+#     https://github.com/conda/conda-build/issues/1007
+
+package:
+  name: pytest_explodes
+  version: 1.0
+
+test:
+  requires:
+    - python
+    - pytest
+  files:
+    - explodes.py
+  commands:
+    - py.test explodes.py
