@@ -239,7 +239,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                     deps = list(which_package(path))
                     if len(deps) > 1:
                         log.warn("Warning: %s comes from multiple packages: %s", path,
-                                 comma_join(deps), file=sys.stderr)
+                                 comma_join(deps))
                     if not deps:
                         if exists(path):
                             depmap['untracked'].append((lib, path.split(prefix +
