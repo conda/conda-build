@@ -1,2 +1,2 @@
 import pytest
-pytest.main('explodes.py')
+pytest.main(['-s', 'explodes.py'])

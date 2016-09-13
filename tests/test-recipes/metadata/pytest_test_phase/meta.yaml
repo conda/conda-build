@@ -13,4 +13,4 @@ test:
   files:
     - explodes.py
   commands:
-    - py.test explodes.py
+    - py.test -s explodes.py
