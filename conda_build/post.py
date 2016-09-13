@@ -135,7 +135,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 
 
 def rm_py_along_so(prefix):
-    "remove .py (.pyc) files alongside .so or .pyd files"
+    """remove .py (.pyc) files alongside .so or .pyd files"""
     for root, _, files in os.walk(prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
@@ -157,6 +157,13 @@ def rm_pyo(files, prefix):
     re_pyo = re.compile(r'.*(?:\.pyo$|\.opt-[0-9]\.pyc)')
     for fn in files:
         if re_pyo.match(fn):
+            os.unlink(os.path.join(prefix, fn))
+
+
+def rm_pyc(files, prefix):
+    re_pyc = re.compile(r'.*(?:\.pyc$)')
+    for fn in files:
+        if re_pyc.match(fn):
             os.unlink(os.path.join(prefix, fn))
 
 
@@ -182,9 +189,14 @@ def compile_missing_pyc(files, cwd, python_exe):
             call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
 
 
-def post_process(files, prefix, config, preserve_egg_dir=False):
+def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False):
+    # TODO: verify that files isn't changing
+    # eg - does `files` reflect the true state of the filesystem?
     rm_pyo(files, prefix)
-    compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
+    if not noarch:
+        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
+    else:
+        rm_pyc(files, prefix)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
 
