@@ -352,6 +352,12 @@ def mk_relative(m, f, prefix):
     if not is_obj(path):
         return
 
+    # skip over this file
+    if (m.ignore_prefix_files() and (type(m.ignore_prefix_files()) is bool or
+                                     f in m.ignore_prefix_files())):
+        print("Skipping relocation path patch for " + f)
+        return
+
     if sys.platform.startswith('linux'):
         mk_relative_linux(f, prefix=prefix, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
