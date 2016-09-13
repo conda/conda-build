@@ -189,7 +189,7 @@ path_mapping_identity = [
     (r'bin/', 'bin/'),  # Not supported right now anyway
 ]
 
-pyver_re = re.compile(r'python(?:(?:\s+[<>=]*)(\d.\d))?')
+pyver_re = re.compile(r'python\s+(?:(?:[<>=]*)(\d.\d))?')
 
 
 def get_pure_py_file_map(t, platform):
