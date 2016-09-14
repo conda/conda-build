@@ -55,7 +55,6 @@ def test_build_preserves_PATH(testing_workdir, test_config):
     assert os.environ['PATH'] == ref_path
 
 
-@pytest.mark.timeout(60)
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
