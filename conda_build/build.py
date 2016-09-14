@@ -326,8 +326,6 @@ def create_info_files(m, files, config, prefix):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
-    if not isdir(config.info_dir):
-        os.makedirs(config.info_dir)
 
     copy_recipe(m, config)
     copy_readme(m, config)
@@ -688,7 +686,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         get_build_metadata(m, config=config)
         create_post_scripts(m, config=config)
         create_entry_points(m.get_value('build/entry_points'), config=config)
-        assert not exists(config.info_dir)
         files2 = prefix_files(prefix=config.build_prefix)
 
         post_process(sorted(files2 - files1),
