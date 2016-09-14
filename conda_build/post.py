@@ -190,8 +190,6 @@ def compile_missing_pyc(files, cwd, python_exe):
 
 
 def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False):
-    # TODO: verify that files isn't changing
-    # eg - does `files` reflect the true state of the filesystem?
     rm_pyo(files, prefix)
     if not noarch:
         compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
