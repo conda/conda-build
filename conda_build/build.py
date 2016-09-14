@@ -350,7 +350,9 @@ def create_info_files(m, files, config, prefix):
         files = [_f.replace('\\', '/') for _f in files]
 
     with open(join(config.info_dir, 'files'), **mode_dict) as fo:
-        if m.get_value('build/noarch_python'):
+        is_noarch = m.get_value('build/noarch_python') or \
+            (str(m.get_value('build/noarch')).lower() == "python")
+        if is_noarch:
             fo.write('\n')
         else:
             for f in files:
