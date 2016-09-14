@@ -242,7 +242,10 @@ def detect_and_record_prefix_files(m, files, prefix, config):
         else:
             files_with_prefix = []
 
-    if files_with_prefix and not m.get_value('build/noarch_python'):
+    is_noarch = m.get_value('build/noarch_python') or \
+        str(m.get_value('build/noarch')).lower() == "python"
+
+    if files_with_prefix and not is_noarch:
         if on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -719,8 +722,6 @@ can lead to packages that include their dependencies.""" % meta_files))
             import conda_build.noarch_python as noarch_python
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
         elif str(m.get_value('build/noarch')).lower() == "python":
-
-
             import conda_build.noarch_python as noarch_python
             noarch_python.populate_files(m, sorted(files2 - files1), config.build_prefix)
 
