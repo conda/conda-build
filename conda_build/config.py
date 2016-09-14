@@ -60,7 +60,10 @@ class Config(object):
         self.CONDA_PY = int(env('python', "%s%s" % (sys.version_info.major, sys.version_info.minor))
                         .replace('.', ''))
 
-        self.CONDA_NPY = kwargs.get('numpy', os.getenv("CONDA_NPY"))
+        self.CONDA_NPY = kwargs.get('numpy')
+        # if keyword argument is not present get numpy version from environment variable
+        if not self.CONDA_NPY:
+            self.CONDA_NPY = os.getenv("CONDA_NPY")
         if self.CONDA_NPY:
             if not isinstance(self.CONDA_NPY, string_types):
                 self.CONDA_NPY = self.CONDA_NPY[0]
