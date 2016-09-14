@@ -31,12 +31,13 @@ install:
     fi
   - conda install -q --force --no-deps conda requests
   - conda install -q anaconda-client requests filelock jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
+  - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
     else
       conda install -q pytest pip pytest-cov numpy mock;
       conda install -c conda-forge -q perl;
-      $HOME/miniconda/bin/pip install pytest-xdist pytest-capturelog pkginfo;
+      $HOME/miniconda/bin/pip install pytest-xdist pytest-capturelog;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
     fi
   - pip install --no-deps .

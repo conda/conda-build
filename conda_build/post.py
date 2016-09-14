@@ -319,9 +319,10 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
             relpath = os.path.relpath(old, prefix)
-            assert not relpath.startswith('..' + os.sep), 'rpath {0} is outside prefix {1}'.format(old, prefix)
+            assert not relpath.startswith('..' + os.sep), \
+                'rpath {0} is outside prefix {1}'.format(old, prefix)
             relpath = '$ORIGIN/' + os.path.relpath(old, origin)
-            if not relpath in new:
+            if relpath not in new:
                 new.append(relpath)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
@@ -331,10 +332,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
             # gives the same result and assert if not. Yeah, I am a chicken.
             rel_ours = utils.relative(f, rpath)
             rel_stdlib = os.path.relpath(rpath, os.path.dirname(f))
-            assert rel_ours == rel_stdlib, 'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
+            assert rel_ours == rel_stdlib, \
+                'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
                 rel_ours, rel_stdlib, f, rpath)
             rpath = '$ORIGIN/' + rel_stdlib
-        if not rpath in new:
+        if rpath not in new:
             new.append(rpath)
     rpath = ':'.join(new)
     print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))

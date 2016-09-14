@@ -11,7 +11,7 @@ import json
 import logging
 import mmap
 import os
-from os.path import exists, isdir, isfile, islink, join
+from os.path import isdir, isfile, islink, join
 import shutil
 import stat
 import subprocess
