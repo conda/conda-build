@@ -97,42 +97,7 @@ def handle_file(f, d, prefix):
         _error_exit("Error: Don't know how to handle file: %s" % f)
 
 
-def setup_bin_dir(prefix):
-    bin_dir = join(prefix, 'bin')
-    _force_dir(bin_dir)
-    return bin_dir
-
-
-def setup_scripts_dir(prefix):
-    scripts_dir = join(prefix, 'Scripts')
-    _force_dir(scripts_dir)
-    return scripts_dir
-
-
 def populate_files(m, files, prefix):
-    setup_bin_dir(prefix)
-    setup_scripts_dir(prefix)
-
-    name = m.name()
-
-    bin_dir = setup_bin_dir(prefix)
-    scripts_dir = setup_scripts_dir(prefix)
-
-    # Create *nix prelink script
-    # Note: it's important to use LF newlines or it wont work if we build on Win
-    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
-        fo.write('''\
-    #!/bin/bash
-    $PREFIX/bin/python $SOURCE_DIR/link.py
-    '''.encode('utf-8'))
-
-    # Create windows prelink script (be nice and use Windows newlines)
-    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:
-        fo.write('''\
-    @echo off
-    "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
-    '''.replace('\n', '\r\n').encode('utf-8'))
-
     d = {'dist': m.dist(),
          'site-packages': [],
          'python-scripts': [],
@@ -153,25 +118,34 @@ def populate_files(m, files, prefix):
         for fn in 'cli-32.exe', 'cli-64.exe':
             shutil.copyfile(join(dirname(__file__), fn), join(prefix, fn))
 
-    # Find our way to this directory
-    this_dir = dirname(__file__)
-
-    # Read the local _link.py
-    with open(join(this_dir, '_link.py')) as fi:
-        link_code = fi.read()
-
-    # Write the package metadata, and bumper with code for linking
-    with open(join(prefix, 'link.py'), 'w') as fo:
-        fo.write('DATA = ')
-        json.dump(d, fo, indent=2, sort_keys=True)
-        fo.write('\n## END DATA\n\n')
-        fo.write(link_code)
-
     return d
 
 
 def transform(m, files, prefix):
     assert 'py_' in m.dist()
+
+    bin_dir = join(prefix, 'bin')
+    _force_dir(bin_dir)
+
+    scripts_dir = join(prefix, 'Scripts')
+    _force_dir(scripts_dir)
+
+    name = m.name()
+
+    # Create *nix prelink script
+    # Note: it's important to use LF newlines or it wont work if we build on Win
+    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
+        fo.write('''\
+    #!/bin/bash
+    $PREFIX/bin/python $SOURCE_DIR/link.py
+    '''.encode('utf-8'))
+
+    # Create windows prelink script (be nice and use Windows newlines)
+    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:
+        fo.write('''\
+    @echo off
+    "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
+    '''.replace('\n', '\r\n').encode('utf-8'))
 
     d = populate_files(m, files, prefix)
 
