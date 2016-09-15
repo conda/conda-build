@@ -85,13 +85,13 @@ def test_render_output_build_path_set_python(testing_workdir, capfd):
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_skeleton_pypi(testing_workdir):
+def test_skeleton_pypi(testing_workdir, test_config):
     args = ['pypi', 'click']
     main_skeleton.execute(args)
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload']
+    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot]
     main_build.execute(args)
 
 
@@ -271,12 +271,9 @@ def test_purge_all(test_metadata):
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
-    # override config to be default, so that output path lines up with default
-    #    config used by main_build
-    test_metadata.config = api.Config()
     api.build(test_metadata)
     fn = api.get_output_file_path(test_metadata)
-    args = ['purge-all']
+    args = ['purge-all', '--croot', test_metadata.config.croot]
     main_build.execute(args)
     assert not get_build_folders(test_metadata.config.croot)
     assert not os.path.isfile(fn)

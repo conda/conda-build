@@ -26,6 +26,16 @@ on_win = (sys.platform == 'win32')
 DEFAULT_PREFIX_LENGTH = 255
 
 
+def _ensure_dir(path):
+    # this can fail in parallel operation, depending on timing.  Just try to make the dir,
+    #    but don't bail if fail.
+    if not os.path.isdir(path):
+        try:
+            os.makedirs(path)
+        except OSError:
+            pass
+
+
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
@@ -69,8 +79,12 @@ class Config(object):
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         self._prefix_length = kwargs.get("prefix_length", getattr(self, '_prefix_length',
                                                                   DEFAULT_PREFIX_LENGTH))
-        # set default value (not actually None)
-        self._croot = kwargs.get('croot', getattr(self, '_croot', None))
+        croot = kwargs.get('croot')
+        if croot:
+            self._croot = croot
+        else:
+            # set default value (not actually None)
+            self._croot = getattr(self, '_croot', None)
 
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
