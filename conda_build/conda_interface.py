@@ -51,6 +51,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     get_local_urls = lambda: list(get_conda_build_local_url()) or []
     load_condarc = lambda fn: conda.base.context.reset_context([fn])
     PaddingError = conda.exceptions.PaddingError
+    LinkError = conda.exceptions.PaddingError
 
 else:
     from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
@@ -72,6 +73,9 @@ else:
     get_local_urls = cc.get_local_urls
 
     class PaddingError(Exception):
+        pass
+
+    class LinkError(Exception):
         pass
 
 
