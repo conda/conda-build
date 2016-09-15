@@ -38,7 +38,7 @@ from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
-from .conda_interface import PaddingError
+from .conda_interface import PaddingError, LinkError
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -423,7 +423,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     for k, v in os.environ.items():
                         os.environ[k] = str(v)
                 plan.execute_actions(actions, index, verbose=config.debug)
-            except (SystemExit, PaddingError) as exc:
+            except (SystemExit, PaddingError, LinkError) as exc:
                 if (("too short in" in str(exc) or
                         'post-link failed for: openssl' in str(exc) or
                         isinstance(exc, PaddingError)) and
