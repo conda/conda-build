@@ -26,6 +26,11 @@ on_win = (sys.platform == 'win32')
 DEFAULT_PREFIX_LENGTH = 255
 
 
+def _ensure_dir(path):
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
@@ -259,23 +264,31 @@ class Config(object):
 
     @property
     def info_dir(self):
-        return join(self.build_prefix, 'info')
+        path = join(self.build_prefix, 'info')
+        _ensure_dir(path)
+        return path
 
     @property
     def meta_dir(self):
-        return join(self.build_prefix, 'conda-meta')
+        path = join(self.build_prefix, 'conda-meta')
+        _ensure_dir(path)
+        return path
 
     @property
     def broken_dir(self):
-        return join(self.croot, "broken")
+        path = join(self.croot, "broken")
+        _ensure_dir(path)
+        return path
 
     @property
     def bldpkgs_dir(self):
         """ Dir where the package is saved. """
         if self.noarch:
-            return join(self.croot, "noarch")
+            path = join(self.croot, "noarch")
         else:
-            return join(self.croot, self.subdir)
+            path = join(self.croot, self.subdir)
+        _ensure_dir(path)
+        return path
 
     @property
     def bldpkgs_dirs(self):
@@ -284,28 +297,40 @@ class Config(object):
 
     @property
     def src_cache(self):
-        return join(self.croot, 'src_cache')
+        path = join(self.croot, 'src_cache')
+        _ensure_dir(path)
+        return path
 
     @property
     def git_cache(self):
-        return join(self.croot, 'git_cache')
+        path = join(self.croot, 'git_cache')
+        _ensure_dir(path)
+        return path
 
     @property
     def hg_cache(self):
-        return join(self.croot, 'hg_cache')
+        path = join(self.croot, 'hg_cache')
+        _ensure_dir(path)
+        return path
 
     @property
     def svn_cache(self):
-        return join(self.croot, 'svn_cache')
+        path = join(self.croot, 'svn_cache')
+        _ensure_dir(path)
+        return path
 
     @property
     def work_dir(self):
-        return join(self.build_folder, 'work')
+        path = join(self.build_folder, 'work')
+        _ensure_dir(path)
+        return path
 
     @property
     def test_dir(self):
         """The temporary folder where test files are copied to, and where tests start execution"""
-        return join(self.build_folder, 'test_tmp')
+        path = join(self.build_folder, 'test_tmp')
+        _ensure_dir(path)
+        return path
 
     def clean(self):
         # build folder is the whole burrito containing envs and source folders

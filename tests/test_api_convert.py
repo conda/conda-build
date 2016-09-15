@@ -4,8 +4,9 @@ import pytest
 
 from conda_build.conda_interface import download
 from conda_build import api
+from conda_build.utils import package_has_file
 
-from .utils import testing_workdir, package_has_file, test_config, on_win, metadata_dir
+from .utils import testing_workdir, test_config, on_win, metadata_dir
 
 def test_convert_wheel_raises():
     with pytest.raises(RuntimeError) as exc:

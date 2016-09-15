@@ -474,3 +474,18 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 def print_skip_message(metadata):
     print("Skipped: {} defines build/skip for this "
           "configuration.".format(metadata.path))
+
+
+def package_has_file(package_path, file_path):
+    try:
+        with tarfile.open(package_path) as t:
+            try:
+                text = t.extractfile(file_path).read()
+                return text
+            except KeyError:
+                return False
+            except OSError as e:
+                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
+    except tarfile.ReadError:
+        raise RuntimeError("Could not extract metadata from %s. "
+                           "File probably corrupt." % package_path)
