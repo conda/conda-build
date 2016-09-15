@@ -11,7 +11,7 @@ import json
 import logging
 import mmap
 import os
-from os.path import exists, isdir, isfile, islink, join
+from os.path import isdir, isfile, islink, join
 import shutil
 import stat
 import subprocess
@@ -49,7 +49,7 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
-                               prepend_bin_path, codec, root_script_dir)
+                               prepend_bin_path, codec, root_script_dir, print_skip_message)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -326,8 +326,6 @@ def create_info_files(m, files, config, prefix):
     :param include_recipe: Whether or not to include the recipe (True by default)
     :type include_recipe: bool
     '''
-    if not isdir(config.info_dir):
-        os.makedirs(config.info_dir)
 
     copy_recipe(m, config)
     copy_readme(m, config)
@@ -539,8 +537,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
     '''
 
     if m.skip():
-        print("Skipped: The %s recipe defines build/skip for this "
-              "configuration." % m.dist())
+        print_skip_message(m)
         return False
 
     if config.skip_existing:
@@ -689,7 +686,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         get_build_metadata(m, config=config)
         create_post_scripts(m, config=config)
         create_entry_points(m.get_value('build/entry_points'), config=config)
-        assert not exists(config.info_dir)
         files2 = prefix_files(prefix=config.build_prefix)
 
         post_process(sorted(files2 - files1),

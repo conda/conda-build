@@ -17,11 +17,12 @@ import pytest
 import yaml
 
 from conda_build import api, exceptions
-from conda_build.utils import copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2
+from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
+                               package_has_file)
 from conda_build.os_utils.external import find_executable
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
-                    add_mangling, test_metadata, package_has_file)
+                    add_mangling, test_metadata)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")

@@ -140,6 +140,7 @@ allowed_license_families = set("""
 AGPL
 Apache
 BSD
+GPL
 GPL2
 GPL3
 LGPL
@@ -796,8 +797,8 @@ class MetaData(object):
                 self.undefined_jinja_vars = UndefinedNeverFail.all_undefined_names
             else:
                 self.undefined_jinja_vars = []
-
             return rendered
+
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
@@ -842,7 +843,8 @@ class MetaData(object):
     @property
     def uses_setup_py_in_meta(self):
         with open(self.meta_path) as f:
-            return ("load_setup_py_data" in f.read()) or ("load_setuptools" in f.read())
+            meta_text = f.read()
+        return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
     def uses_jinja(self):

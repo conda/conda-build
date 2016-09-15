@@ -16,6 +16,7 @@ import subprocess
 import sys
 from tempfile import mkdtemp
 
+import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
 import yaml
@@ -643,12 +644,12 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           setup_options=setup_options,
                           config=config)
 
-    setuptools_build = pkginfo['setuptools']
+    setuptools_build = pkginfo.get('setuptools', False)
     setuptools_run = False
 
     # Look at the entry_points and construct console_script and
     #  gui_scripts entry_points for conda
-    entry_points = pkginfo['entry_points']
+    entry_points = pkginfo.get('entry_points', [])
     if entry_points:
         if isinstance(entry_points, str):
             # makes sure it is left-shifted
@@ -741,7 +742,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
     if d['version'] == 'UNKNOWN':
         d['version'] = pkginfo['version']
 
-    if pkginfo['packages']:
+    if pkginfo.get('packages'):
         deps = set(pkginfo['packages'])
         if d['import_tests']:
             if not d['import_tests'] or d['import_tests'] == 'PLACEHOLDER':
@@ -756,7 +757,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['tests_require'] = INDENT.join(sorted([spec_from_line(pkg) for pkg
                                                     in pkginfo['tests_require']]))
 
-    if pkginfo['homeurl'] is not None:
+    if pkginfo.get('homeurl'):
         d['homeurl'] = pkginfo['homeurl']
     else:
         if data and 'homeurl' in data:
@@ -765,7 +766,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             d['homeurl'] = "The package home page"
             d['home_comment'] = '#'
 
-    if pkginfo['summary']:
+    if pkginfo.get('summary'):
         d['summary'] = repr(pkginfo['summary'])
     else:
         if data:
@@ -777,7 +778,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['summary'] = d['summary'][1:]
 
     license_classifier = "License :: OSI Approved :: "
-    if pkginfo['classifiers']:
+    if pkginfo.get('classifiers'):
         licenses = [classifier.split(license_classifier, 1)[1] for
             classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
     elif data and 'classifiers' in data:
@@ -786,7 +787,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
     else:
         licenses = []
     if not licenses:
-        if pkginfo['license']:
+        if pkginfo.get('license'):
             license_name = pkginfo['license']
         elif data and 'license' in data:
             license_name = data['license']
@@ -865,7 +866,7 @@ def get_requirements(package, pkginfo, all_extras=True):
 
     # ... and collect all needed requirement specs in a single list:
     requires = []
-    for specs in [pkginfo['install_requires']] + extras_require:
+    for specs in [pkginfo.get('install_requires', "")] + extras_require:
         if isinstance(specs, string_types):
             requires.append(specs)
         else:
@@ -902,12 +903,15 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_o
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
         run_setuppy(src_dir, tempdir, python_version, config=config, setup_options=setup_options)
-        with open(join(tempdir, 'pkginfo.yaml')) as fn:
-            pkginfo = yaml.load(fn)
+        try:
+            with open(join(tempdir, 'pkginfo.yaml')) as fn:
+                pkg_info = yaml.load(fn)
+        except IOError:
+            pkg_info = pkginfo.SDist(download_path).__dict__
     finally:
         rm_rf(tempdir)
 
-    return pkginfo
+    return pkg_info
 
 
 def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):

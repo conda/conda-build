@@ -12,8 +12,8 @@ from conda_build.conda_interface import download
 from conda_build.tarcheck import TarCheck
 
 from conda_build import api
-from conda_build.utils import get_site_packages, on_win, get_build_folders
-from .utils import testing_workdir, metadata_dir, package_has_file, testing_env, test_config, test_metadata
+from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file
+from .utils import testing_workdir, metadata_dir, testing_env, test_config, test_metadata
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -61,13 +61,31 @@ def test_render_output_build_path(testing_workdir, capfd):
 
 def test_build_output_build_path(testing_workdir, test_config, capfd):
     args = ['--output', os.path.join(metadata_dir, "python_run")]
-    main_render.execute(args)
+    main_build.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                   "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     output, error = capfd.readouterr()
     assert error == ""
     assert output.rstrip() == test_path, error
+
+
+def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, capfd):
+    skip_recipe = os.path.join(metadata_dir, "build_skip")
+    args = ['--output', os.path.join(metadata_dir, "python_run"), skip_recipe]
+
+    main_build.execute(args)
+
+    test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", test_config.subdir, pkg)
+    test_paths = [test_path(
+        "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+        sys.version_info.major, sys.version_info.minor)),
+        "Skipped: {} defines build/skip for this "
+        "configuration.".format(os.path.abspath(skip_recipe))]
+
+    output, error = capfd.readouterr()
+    assert error == ""
+    assert output.rstrip().splitlines() == test_paths, error
 
 
 def test_render_output_build_path_set_python(testing_workdir, capfd):
