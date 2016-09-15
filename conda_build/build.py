@@ -407,8 +407,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
                     lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
-                    update_index(folder, config=config, lock=lock)
                     locks.append(lock)
+                for folder in config.bldpkgs_dirs:
+                    update_index(folder, config=config, lock=lock)
                 for lock in locks:
                     lock.acquire(timeout=config.timeout)
 
