@@ -149,6 +149,11 @@ different sets of packages."""
               "paths being too long."),
         dest='set_build_id',
     )
+    p.add_argument(
+        "--croot",
+        help=("Build root folder.  Equivalent to CONDA_BLD_PATH, but applies only "
+              "to this call of conda-build.")
+    )
 
     add_parser_channels(p)
 
