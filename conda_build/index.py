@@ -146,5 +146,3 @@ Error:
     repodata = {'packages': index, 'info': {}}
     write_repodata(repodata, dir_path, config, lock=lock)
     lock.release()
-    if os.path.isfile(join(dir_path, ".conda_lock")):
-        os.remove(join(dir_path, ".conda_lock"))
