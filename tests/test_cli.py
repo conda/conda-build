@@ -87,6 +87,32 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
     assert error == ""
     assert output.rstrip().splitlines() == test_paths, error
 
+def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
+    recipe_path = os.path.join(metadata_dir, "has_prefix_files" + os.path.sep)
+    fn = api.get_output_file_path(recipe_path, config=test_config)
+    args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', test_config.croot]
+    main_build.execute(args)
+    fn = api.get_output_file_path(recipe_path,
+                                  config=test_config)
+    assert package_has_file(fn, 'info/has_prefix')
+    data = package_has_file(fn, 'info/has_prefix')
+    if hasattr(data, 'decode'):
+        data = data.decode('UTF-8')
+    assert 'has_prefix_files_1' in data
+
+
+def test_build_no_build_id(testing_workdir, test_config, capfd):
+    args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
+            '--croot', test_config.croot]
+    main_build.execute(args)
+    fn = api.get_output_file_path(os.path.join(metadata_dir, "has_prefix_files"),
+                                  config=test_config)
+    assert package_has_file(fn, 'info/has_prefix')
+    data = package_has_file(fn, 'info/has_prefix')
+    if hasattr(data, 'decode'):
+        data = data.decode('UTF-8')
+    assert 'has_prefix_files_1' not in data
+
 
 def test_render_output_build_path_set_python(testing_workdir, capfd):
     # build the other major thing, whatever it is
@@ -103,13 +129,13 @@ def test_render_output_build_path_set_python(testing_workdir, capfd):
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_skeleton_pypi(testing_workdir):
+def test_skeleton_pypi(testing_workdir, test_config):
     args = ['pypi', 'click']
     main_skeleton.execute(args)
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload']
+    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot]
     main_build.execute(args)
 
 
@@ -289,12 +315,9 @@ def test_purge_all(test_metadata):
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
-    # override config to be default, so that output path lines up with default
-    #    config used by main_build
-    test_metadata.config = api.Config()
     api.build(test_metadata)
     fn = api.get_output_file_path(test_metadata)
-    args = ['purge-all']
+    args = ['purge-all', '--croot', test_metadata.config.croot]
     main_build.execute(args)
     assert not get_build_folders(test_metadata.config.croot)
     assert not os.path.isfile(fn)

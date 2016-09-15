@@ -27,8 +27,13 @@ DEFAULT_PREFIX_LENGTH = 255
 
 
 def _ensure_dir(path):
+    # this can fail in parallel operation, depending on timing.  Just try to make the dir,
+    #    but don't bail if fail.
     if not os.path.isdir(path):
-        os.makedirs(path)
+        try:
+            os.makedirs(path)
+        except OSError:
+            pass
 
 
 class Config(object):
@@ -77,8 +82,12 @@ class Config(object):
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         self._prefix_length = kwargs.get("prefix_length", getattr(self, '_prefix_length',
                                                                   DEFAULT_PREFIX_LENGTH))
-        # set default value (not actually None)
-        self._croot = kwargs.get('croot', getattr(self, '_croot', None))
+        croot = kwargs.get('croot')
+        if croot:
+            self._croot = croot
+        else:
+            # set default value (not actually None)
+            self._croot = getattr(self, '_croot', None)
 
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
@@ -206,6 +215,7 @@ class Config(object):
 
     @build_id.setter
     def build_id(self, _build_id):
+        _build_id = _build_id.rstrip("/").rstrip("\\")
         assert not os.path.isabs(_build_id), ("build_id should not be a absolute path, "
                                               "to preserve croot during path joins")
         self._build_id = _build_id
@@ -338,8 +348,13 @@ class Config(object):
     def clean(self):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if os.path.isdir(self.build_folder):
-            rm_rf(self.build_folder)
+        if self.build_id:
+            if os.path.isdir(self.build_folder):
+                rm_rf(self.build_folder)
+        else:
+            for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
+                if os.path.isdir(path):
+                    rm_rf(path)
 
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:

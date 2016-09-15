@@ -38,7 +38,7 @@ from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
-from .conda_interface import PaddingError
+from .conda_interface import PaddingError, LinkError
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -423,7 +423,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     for k, v in os.environ.items():
                         os.environ[k] = str(v)
                 plan.execute_actions(actions, index, verbose=config.debug)
-            except (SystemExit, PaddingError) as exc:
+            except (SystemExit, PaddingError, LinkError) as exc:
                 if (("too short in" in str(exc) or
                         'post-link failed for: openssl' in str(exc) or
                         isinstance(exc, PaddingError)) and
@@ -973,15 +973,19 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         if hasattr(recipe, 'config'):
             metadata = recipe
             recipe_config = metadata.config
-            if recipe.config.set_build_id:
+            # this code is duplicated below because we need to be sure that the build id is set
+            #    before downloading happens - or else we lose where downloads are
+            if recipe_config.set_build_id:
                 recipe_config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
             recipe_parent_dir = os.path.dirname(recipe)
+            recipe = recipe.rstrip("/").rstrip("\\")
             recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
+            #    before downloading happens - or else we lose where downloads are
             if recipe_config.set_build_id:
                 recipe_config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
