@@ -97,7 +97,8 @@ class Config(object):
                   Setting('bits', bits),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
-                  Setting('disable_pip', False)
+                  Setting('disable_pip', False),
+                  Setting('wheel', False)
                   ]
 
         # handle known values better than unknown (allow defaults)

@@ -743,6 +743,26 @@ can lead to packages that include their dependencies.""" % meta_files))
             copy_into(tmp_path, path, config.timeout)
         update_index(config.bldpkgs_dir, config)
 
+    elif config.wheel:
+        # copy whl file to the build output directory
+        src_dir = source.get_dir(config)
+        whl_files = glob(os.path.join(src_dir, 'dist', '*.whl'))
+        if len(whl_files) == 0:
+            sys.exit(indent("Error: No whl files found in dist directory"))
+        if len(whl_files) != 1:
+            sys.exit(indent("Error: Multiple whl files found in dist directory"))
+        whl_path = whl_files[0]
+        _, whl_filename = os.path.split(whl_path)
+
+        tarbz2_path = bldpkg_path(m, config)
+        dir_, tarbz2 = os.path.split(tarbz2_path)
+        path = os.path.join(dir_, whl_filename)
+
+        copy_into(whl_path, path, config.timeout)
+        # kludge, use the config object to pass the path to the wheel file
+        # back to the calling function
+        config.whl_path = path
+
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
@@ -830,6 +850,8 @@ def test(m, config, move_broken=True):
 
         get_build_metadata(m, config=config)
         specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+        if config.wheel:
+            specs = []
 
         # add packages listed in the run environment and test/requires
         specs.extend(ms.spec for ms in m.ms_depends('run'))
@@ -878,6 +900,12 @@ def test(m, config, move_broken=True):
                     ext=ext,
                     test_env=config.test_prefix,
                     squelch=">nul 2>&1" if on_win else "&> /dev/null"))
+                if on_win:
+                    tf.write("if errorlevel 1 exit 1\n")
+            if config.wheel:
+                tf.write("{python} -m wheel install {whl_path}\n".format(
+                    python=config.test_python,
+                    whl_path=config.whl_path))
                 if on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
@@ -962,6 +990,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             post = False
             notest = True
             config.anaconda_upload = False
+        elif config.wheel:
+            post = False
         elif post:
             post = True
             notest = True
@@ -1031,8 +1061,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
-        if post in [True, None]:
+        if post in [True, None] or config.wheel:
             output_file = bldpkg_path(metadata, config=recipe_config)
+            if config.wheel:
+                output_file = config.whl_path
             handle_anaconda_upload(output_file, config=recipe_config)
             already_built.add(output_file)
 

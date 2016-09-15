@@ -42,6 +42,7 @@ def ns_cfg(config):
     np = config.CONDA_NPY
     pl = config.CONDA_PERL
     lua = config.CONDA_LUA
+    wheel = config.wheel
     assert isinstance(py, int), py
     d = dict(
         linux=plat.startswith('linux-'),
@@ -69,6 +70,7 @@ def ns_cfg(config):
         np=np,
         os=os,
         environ=os.environ,
+        wheel=wheel,
     )
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)

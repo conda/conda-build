@@ -149,6 +149,12 @@ different sets of packages."""
               "paths being too long."),
         dest='set_build_id',
     )
+    p.add_argument(
+        "--wheel",
+        action="store_true",
+        help=("build and test a Python wheel file. The dist directory is"
+              "searched for a whl file.")
+    )
 
     add_parser_channels(p)
 
