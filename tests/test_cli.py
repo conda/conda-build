@@ -95,7 +95,10 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     fn = api.get_output_file_path(recipe_path,
                                   config=test_config)
     assert package_has_file(fn, 'info/has_prefix')
-    assert 'has_prefix_files_1' in package_has_file(fn, 'info/has_prefix')
+    data = package_has_file(fn, 'info/has_prefix')
+    if hasattr(data, 'decode'):
+        data = data.decode('UTF-8')
+    assert 'has_prefix_files_1' in data
 
 
 def test_render_output_build_path_set_python(testing_workdir, capfd):
