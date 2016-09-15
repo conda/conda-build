@@ -544,7 +544,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         package_exists = is_package_built(m, config)
         if package_exists:
             print(m.dist(), "is already built in {0}, skipping.".format(package_exists))
-        return False
+            return False
 
     if post in [False, None]:
         print("BUILD START:", m.dist())
