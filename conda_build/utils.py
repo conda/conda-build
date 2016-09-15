@@ -39,12 +39,7 @@ else:
 log = logging.getLogger(__file__)
 
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
-if sys.platform == 'win32':
-    from .conda_interface import move_to_trash  # NOQA
-    import functools
-    rm_rf = functools.partial(move_to_trash, f=None)  # NOQA
-else:
-    from .conda_interface import rm_rf  # NOQA
+from .conda_interface import rm_rf  # NOQA
 
 on_win = (sys.platform == 'win32')
 
