@@ -347,8 +347,13 @@ class Config(object):
     def clean(self):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if os.path.isdir(self.build_folder):
-            rm_rf(self.build_folder)
+        if self.build_id:
+            if os.path.isdir(self.build_folder):
+                rm_rf(self.build_folder)
+        else:
+            for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
+                if os.path.isdir(path):
+                    rm_rf(path)
 
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:

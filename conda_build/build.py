@@ -973,7 +973,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         if hasattr(recipe, 'config'):
             metadata = recipe
             recipe_config = metadata.config
-            if recipe.config.set_build_id:
+            # this code is duplicated below because we need to be sure that the build id is set
+            #    before downloading happens - or else we lose where downloads are
+            if recipe_config.set_build_id:
                 recipe_config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
@@ -982,6 +984,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
+            #    before downloading happens - or else we lose where downloads are
             if recipe_config.set_build_id:
                 recipe_config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
