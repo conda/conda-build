@@ -95,8 +95,10 @@ def test_build_no_build_id(testing_workdir, test_config, capfd):
     fn = api.get_output_file_path(os.path.join(metadata_dir, "has_prefix_files"),
                                   config=test_config)
     assert package_has_file(fn, 'info/has_prefix')
-    assert 'has_prefix_files_1' not in package_has_file(fn, 'info/has_prefix')
-
+    data = package_has_file(fn, 'info/has_prefix')
+    if hasattr(data, 'decode'):
+        data = data.decode('UTF-8')
+    assert 'has_prefix_files_1' not in data
 
 
 def test_render_output_build_path_set_python(testing_workdir, capfd):
