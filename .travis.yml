@@ -36,7 +36,7 @@ install:
       conda install -q flake8;
     else
       conda install -q pytest pip pytest-cov numpy mock;
-      conda install -c conda-forge -q perl;
+      conda install -c conda-forge -q --no-deps --no-update-dependencies perl;
       $HOME/miniconda/bin/pip install pytest-xdist pytest-capturelog;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
     fi
