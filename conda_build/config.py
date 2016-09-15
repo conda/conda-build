@@ -215,6 +215,7 @@ class Config(object):
 
     @build_id.setter
     def build_id(self, _build_id):
+        _build_id = _build_id.rstrip("/").rstrip("\\")
         assert not os.path.isabs(_build_id), ("build_id should not be a absolute path, "
                                               "to preserve croot during path joins")
         self._build_id = _build_id

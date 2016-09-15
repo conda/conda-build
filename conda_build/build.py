@@ -979,6 +979,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             to_build_recursive.append(metadata.name())
         else:
             recipe_parent_dir = os.path.dirname(recipe)
+            recipe = recipe.rstrip("/").rstrip("\\")
             recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
