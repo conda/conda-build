@@ -142,8 +142,9 @@ def render_recipe(recipe_path, config, no_download_source=False):
     if not isdir(recipe_dir):
         sys.exit("Error: no such directory: %s" % recipe_dir)
 
-    # updates a unique build id if not already computed
-    config.compute_build_id(os.path.basename(recipe_dir))
+    if config.set_build_id:
+        # updates a unique build id if not already computed
+        config.compute_build_id(os.path.basename(recipe_dir))
     try:
         m = MetaData(recipe_dir, config=config)
     except exceptions.YamlParsingError as e:
