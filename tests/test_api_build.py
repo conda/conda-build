@@ -374,9 +374,11 @@ def test_compileall_compiles_all_good_files(testing_workdir, test_config):
     for f in good_files:
         assert package_has_file(output_file, f)
         # look for the compiled file also
-        assert package_has_file(output_file, add_mangling(f))
+        compiled_file = add_mangling(f).replace('\\', '/')
+        assert package_has_file(output_file, compiled_file)
     assert package_has_file(output_file, bad_file)
-    assert not package_has_file(output_file, add_mangling(bad_file))
+    compiled_file = add_mangling(output_file).replace('\\', '/')
+    assert not package_has_file(output_file, compiled_file)
 
 
 def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
