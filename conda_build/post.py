@@ -319,11 +319,12 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
             relpath = os.path.relpath(old, prefix)
-            assert not relpath.startswith('..' + os.sep), \
-                'rpath {0} is outside prefix {1}'.format(old, prefix)
-            relpath = '$ORIGIN/' + os.path.relpath(old, origin)
-            if relpath not in new:
-                new.append(relpath)
+            if relpath.startswith('..' + os.sep):
+                print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
+            else:
+                relpath = '$ORIGIN/' + os.path.relpath(old, origin)
+                if relpath not in new:
+                    new.append(relpath)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
         if not rpath.startswith('/'):
