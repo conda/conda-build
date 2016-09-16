@@ -352,9 +352,6 @@ def create_info_files(m, files, config, prefix):
     with open(join(config.info_dir, 'files'), **mode_dict) as fo:
         if m.get_value('build/noarch_python'):
             fo.write('\n')
-        elif str(m.get_value('build/noarch')).lower() == "python":
-            for f in files:
-                fo.write(f[f.find("site-packages"):] + '\n')
         else:
             for f in files:
                 fo.write(f + '\n')
