@@ -1,0 +1,28 @@
+package:
+  name: noarch_python_test_package
+  version: "1.0"
+
+source:
+  path: ./noarch_python_test_package
+
+build:
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+  noarch: python
+  entry_points:
+    - noarch_python_test_package_script = noarch_python_test_package:main
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python
+
+# Tests are commented out because they should fail since conda does not yet know how to install
+# noarch: python packages. Once it is implemented then this should be uncommented.
+
+#test:
+#  imports:
+#    - noarch_python_test_package
+#  commands:
+#    - noarch_python_test_package_script

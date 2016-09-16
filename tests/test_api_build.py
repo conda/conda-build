@@ -608,3 +608,10 @@ def test_noarch_foo_value():
     metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
     assert 'noarch' in metadata
     assert metadata['noarch'] == "foo"
+
+
+def test_noarch_python():
+    recipe = os.path.join(metadata_dir, "noarch_python")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    assert package_has_file(fn, 'info/files') is not ''
