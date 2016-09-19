@@ -345,6 +345,12 @@ def create_info_files(m, files, config, prefix):
     write_info_json(m, config, mode_dict)
     write_about_json(m, config)
 
+    if str(m.get_value('build/noarch')).lower() == "python":
+        import conda_build.noarch_python as noarch_python
+        noarch_python.create_entry_point_information(
+            "python", m.get_value('build/entry_points'), config
+        )
+
     if on_win:
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
@@ -694,7 +700,9 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
         get_build_metadata(m, config=config)
         create_post_scripts(m, config=config)
-        create_entry_points(m.get_value('build/entry_points'), config=config)
+
+        if str(m.get_value('build/noarch')).lower() != "python":
+            create_entry_points(m.get_value('build/entry_points'), config=config)
         files2 = prefix_files(prefix=config.build_prefix)
 
         post_process(sorted(files2 - files1),

@@ -56,6 +56,15 @@ def rewrite_script(fn, prefix):
     return fn
 
 
+def create_entry_point_information(noarch_type, entry_points, config):
+    entry_point_information = {}
+    entry_point_information['type'] = noarch_type
+    entry_point_information['entry_points'] = entry_points
+    file = os.path.join(config.info_dir, "noarch.json")
+    with io.open(file, 'w', encoding='utf-8') as entry_point_file:
+        json.dump(entry_point_information, entry_point_file, indent=4)
+
+
 def handle_file(f, d, prefix):
     """Process a file for inclusion in a noarch python package.
     """

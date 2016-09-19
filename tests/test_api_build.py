@@ -615,3 +615,6 @@ def test_noarch_python():
     fn = api.get_output_file_path(recipe)
     api.build(recipe)
     assert package_has_file(fn, 'info/files') is not ''
+    noarch = json.loads(package_has_file(fn, 'info/noarch.json').decode())
+    assert 'entry_points' in noarch
+    assert 'type' in noarch
