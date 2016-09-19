@@ -407,8 +407,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
                     lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
-                    update_index(folder, config=config, lock=lock)
                     locks.append(lock)
+                for folder in config.bldpkgs_dirs:
+                    update_index(folder, config=config, lock=lock)
                 for lock in locks:
                     lock.acquire(timeout=config.timeout)
 
@@ -443,21 +444,15 @@ def create_env(prefix, specs, config, clear_cache=True):
 
                     for lock in locks:
                         lock.release()
-                        if os.path.isfile(lock._lock_file):
-                            os.remove(lock._lock_file)
                     create_env(prefix, specs, config=config,
                                 clear_cache=clear_cache)
                 else:
                     for lock in locks:
                         lock.release()
-                        if os.path.isfile(lock._lock_file):
-                            os.remove(lock._lock_file)
                     raise
             finally:
                 for lock in locks:
                     lock.release()
-                    if os.path.isfile(lock._lock_file):
-                        os.remove(lock._lock_file)
         warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
@@ -790,8 +785,6 @@ def clean_pkg_cache(dist, timeout):
     finally:
         for lock in locks:
             lock.release()
-            if os.path.isfile(lock._lock_file):
-                os.remove(lock._lock_file)
 
 
 def test(m, config, move_broken=True):

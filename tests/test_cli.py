@@ -129,14 +129,14 @@ def test_render_output_build_path_set_python(testing_workdir, capfd):
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_skeleton_pypi(testing_workdir, test_config):
-    args = ['pypi', 'click']
-    main_skeleton.execute(args)
-    assert os.path.isdir('click')
+# def test_skeleton_pypi(testing_workdir, test_config):
+#     args = ['pypi', 'click']
+#     main_skeleton.execute(args)
+#     assert os.path.isdir('click')
 
-    # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot]
-    main_build.execute(args)
+#     # ensure that recipe generated is buildable
+#     args = ['click', '--no-anaconda-upload', '--croot', test_config.croot]
+#     main_build.execute(args)
 
 
 def test_metapackage(test_config, testing_workdir):
