@@ -57,12 +57,10 @@ def rewrite_script(fn, prefix):
 
 
 def create_entry_point_information(noarch_type, entry_points, config):
-    entry_point_information = {}
-    entry_point_information['type'] = noarch_type
-    entry_point_information['entry_points'] = entry_points
+    entry_point_information = {"type": noarch_type, "entry_points": entry_points}
     file = os.path.join(config.info_dir, "noarch.json")
-    with io.open(file, 'w', encoding='utf-8') as entry_point_file:
-        json.dump(entry_point_information, entry_point_file, indent=4)
+    with open(file, 'w') as entry_point_file:
+        entry_point_file.write(json.dumps(entry_point_information))
 
 
 def handle_file(f, d, prefix):
