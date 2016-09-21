@@ -509,7 +509,8 @@ def create_info_files(m, files, prefix):
 
     if m.get_value('source/git_url'):
         with io.open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
-            source.git_info(m.config, fo)
+            with utils.path_prepended(m.config.build_prefix):
+                source.git_info(m.config, fo)
 
     if m.get_value('app/icon'):
         utils.copy_into(join(m.path, m.get_value('app/icon')),
@@ -1210,12 +1211,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             specs += ['lua']
 
         with utils.path_prepended(metadata.config.test_prefix):
-            env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=metadata.config, m=metadata,
-                                        prefix=config.test_prefix))
-            env["CONDA_BUILD_STATE"] = "TEST"
-            if env_path_backup_var_exists:
-                env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
+            with utils.path_prepended(metadata.config.build_prefix):
+                env = dict(os.environ.copy())
+                env.update(environ.get_dict(config=metadata.config, m=metadata,
+                                            prefix=config.test_prefix))
+                env["CONDA_BUILD_STATE"] = "TEST"
+                if env_path_backup_var_exists:
+                    env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
         if not metadata.config.activate:
             # prepend bin (or Scripts) directory
