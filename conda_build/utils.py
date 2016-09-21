@@ -442,6 +442,10 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
         kwargs = kwargs.copy()
         env_copy = os.environ.copy()
         kwargs.update({'env': env_copy})
+    if on_win:
+        kwargs['env'] = {k.encode(codec) if hasattr(k, 'encode') else k:
+                           v.encode(codec) if hasattr(v, 'encode') else v
+                           for k, v in kwargs['env'].items()}
     return func(*popenargs, **kwargs)
 
 
