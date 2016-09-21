@@ -13,7 +13,7 @@ from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win,
+from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, codec,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2)
 
 # legacy exports for conda
@@ -446,6 +446,9 @@ def _get_patch_file_details(path):
 
 
 def apply_patch(src_dir, path, config, git=None):
+    if on_win:
+        src_dir = src_dir.encode(codec)
+
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
 
