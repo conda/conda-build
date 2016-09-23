@@ -160,8 +160,7 @@ def list_skeletons():
     return files
 
 
-def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
-                config=None, **kwargs):
+def skeletonize(packages, repo, config=None, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
@@ -174,9 +173,11 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
                      repo)
     func_args = module.skeletonize.__code__.co_varnames
     kwargs = {name: value for name, value in kwargs.items() if name in func_args}
-    with config:
-        skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                                recursive=recursive, config=config, **kwargs)
+
+    skeleton_return = module.skeletonize(packages, output_dir=config.output_dir,
+                                         version=config.version, recursive=config.recursive,
+                                         config=config, **kwargs)
+
     return skeleton_return
 
 
