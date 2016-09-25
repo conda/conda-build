@@ -18,7 +18,11 @@ repo_packages = [('', 'pypi', 'pip', "8.1.2"),
 
 @pytest.mark.parametrize("prefix,repo,package, version", repo_packages)
 def test_repo(prefix, repo, package, version, testing_workdir, test_config):
-    api.skeletonize(package, output_dir=testing_workdir, repo=repo, config=test_config)
+    test_config.packages = package
+    test_config.output_dir = testing_workdir
+    test_config.version = version
+    test_config.repo = repo
+    api.skeletonize(config=test_config)
     try:
         package_name = "-".join([prefix, package]) if prefix else package
         assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))

@@ -160,11 +160,11 @@ def list_skeletons():
     return files
 
 
-def skeletonize(config):
+def skeletonize(config, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
-    config = get_or_merge_config(config, **kwargs)
+    config = get_or_merge_config(config)
     config.compute_build_id('skeleton')
     config.packages = _ensure_list(config.packages)
 
@@ -175,11 +175,11 @@ def skeletonize(config):
 
     for arg in func_args:
         try:
-            kwargs[arg] = getattr(config, arg)
+            skeleton_args[arg] = getattr(config, arg)
         except AttributeError:
             pass
 
-    skeleton_return = module.skeletonize(config=config, **kwargs)
+    skeleton_return = module.skeletonize(config=config, **skeleton_args)
 
     return skeleton_return
 
