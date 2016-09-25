@@ -172,11 +172,14 @@ def skeletonize(packages, repo, config=None, **kwargs):
                                 fromlist=[repo]),
                      repo)
     func_args = module.skeletonize.__code__.co_varnames
-    kwargs = {name: value for name, value in kwargs.items() if name in func_args}
 
-    skeleton_return = module.skeletonize(packages, output_dir=config.output_dir,
-                                         version=config.version, recursive=config.recursive,
-                                         config=config, **kwargs)
+    for arg in func_args:
+        try:
+            kwargs[arg] = getattr(config, arg)
+        except AttributeError:
+            pass
+
+    skeleton_return = module.skeletonize(config=config, **kwargs)
 
     return skeleton_return
 
