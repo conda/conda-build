@@ -87,8 +87,8 @@ def test_api_list_skeletons():
 
 def test_api_skeletonize():
     argspec = getargspec(api.skeletonize)
-    assert argspec.args == ['packages', 'repo', 'output_dir', 'version', 'recursive', 'config']
-    assert argspec.defaults == ('.', None, False, None)
+    assert argspec.args == ['config']
+    assert argspec.defaults == ()
 
 
 def test_api_develop():
