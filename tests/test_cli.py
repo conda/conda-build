@@ -139,6 +139,21 @@ def test_skeleton_pypi(testing_workdir, test_config):
     main_build.execute(args)
 
 
+def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
+    """
+    These checks only test whether skeleton executes without error when these
+    options are specified on the command line. Separate unit tests check
+    whether the underlying functionality works.
+    """
+    args = ['pypi', 'msumastro', '--pin-numpy']
+    main_skeleton.execute(args)
+    assert os.path.isdir('msumastro')
+
+    args = ['pypi', 'photutils', '--setup-options="--offline"']
+    main_skeleton.execute(args)
+    assert os.path.isdir('photutils')
+
+
 def test_metapackage(test_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2']
