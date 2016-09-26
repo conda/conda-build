@@ -33,8 +33,9 @@ install:
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
     else
-      conda install -q pytest pip pytest-cov numpy mock;
       conda install -c conda-forge -q perl;
+      conda install -q pytest pip pytest-cov numpy mock;
+      conda update -q --all;
       $HOME/miniconda/bin/pip install pytest-xdist pytest-capturelog;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
     fi
