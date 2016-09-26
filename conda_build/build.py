@@ -407,10 +407,10 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
                     lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
-                    update_index(folder, config=config, lock=lock, could_be_mirror=False)
-                    locks.append(lock)
-                for lock in locks:
                     lock.acquire(timeout=config.timeout)
+                    if not folder.endswith('pkgs'):
+                        update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                    locks.append(lock)
 
                 index = get_build_index(config=config, clear_cache=True)
 
