@@ -533,6 +533,25 @@ def add_parser(repos):
         help="Creates recipe as noarch python"
     )
 
+    pypi.add_argument(
+        "--setup-options",
+        action='append',
+        default=[],
+        help='Options to be added to setup.py install in the recipe. '
+             'The same options are passed to setup.py install in both '
+             'the construction of the recipe and in the recipe itself.'
+             'For options that include a double-hypen or to pass multiple '
+             'options, use the syntax '
+             '--setup-options="--option1 --option-with-arg arg"'
+    )
+
+    pypi.add_argument(
+        "--pin-numpy",
+        action='store_true',
+        help="Ensure that the generated recipe pins the version of numpy"
+             "to CONDA_NPY."
+    )
+
 
 def get_xmlrpc_client(pypi_url):
     return ServerProxy(pypi_url, transport=RequestsTransport())
