@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import json
+import uuid
 
 from conda_build.conda_interface import PY3, url_path
 
@@ -81,20 +82,22 @@ def test_recipe_builds(recipe, test_config, testing_workdir):
 
 
 def test_token_upload(testing_workdir):
+    folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
-    args = AnacondaClientArgs(specs="conda_test_account/empty_sections",
+    args = AnacondaClientArgs(specs="conda_test_account/empty_sections_" + folder_uuid,
                               token="co-79de533f-926f-4e5e-a766-d393e33ae98f",
                               force=True)
-
-    # clean up - we don't actually want this package to exist yet
-    remove.main(args)
 
     with pytest.raises(NotFound):
         show.main(args)
 
+    metadata, _, _ = api.render(empty_sections)
+    metadata.meta['package']['name'] = '_'.join([metadata.name(), folder_uuid])
+    metadata.config.token = args.token
+
     # the folder with the test recipe to upload
-    api.build(empty_sections, token=args.token)
+    api.build(metadata)
 
     # make sure that the package is available (should raise if it doesn't)
     show.main(args)
