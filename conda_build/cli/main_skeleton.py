@@ -57,8 +57,7 @@ def execute(args):
         parser.print_help()
         sys.exit()
 
-    for package in args.packages:
-        api.skeletonize(package, repo=args.repo, config=config)
+    api.skeletonize(config=config)
 
 
 def main():
