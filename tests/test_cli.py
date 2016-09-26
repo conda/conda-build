@@ -160,7 +160,7 @@ def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
     assert 'numpy x.x' in actual['requirements']['run']
     assert 'numpy x.x' in actual['requirements']['build']
 
-    args = ['pypi', 'photutils', '--version=0.2', '--setup-options=--offline']
+    args = ['pypi', 'photutils', '--version=0.2.2', '--setup-options=--offline']
     main_skeleton.execute(args)
     assert os.path.isdir('photutils')
     # Check that the setup option occurs in bld.bat and build.sh.
@@ -171,7 +171,7 @@ def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
 
     with open(os.path.join('photutils', 'meta.yaml')) as f:
         content = f.read()
-        assert 'version: "0.2"' in content
+        assert 'version: "0.2.2"' in content
 
 
 
