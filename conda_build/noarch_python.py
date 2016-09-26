@@ -120,11 +120,6 @@ def populate_files(m, files, prefix):
             for i, fn in enumerate(fns):
                 fns[i] = fn.replace('\\', '/')
 
-    # copy in windows exe shims if there are any python-scripts
-    if d['python-scripts']:
-        for fn in 'cli-32.exe', 'cli-64.exe':
-            shutil.copyfile(join(dirname(__file__), fn), join(prefix, fn))
-
     return d
 
 
@@ -158,6 +153,11 @@ def transform(m, files, prefix):
 
     # Find our way to this directory
     this_dir = dirname(__file__)
+
+    # copy in windows exe shims if there are any python-scripts
+    if d['python-scripts']:
+        for fn in 'cli-32.exe', 'cli-64.exe':
+            shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
     # Read the local _link.py
     with open(join(this_dir, '_link.py')) as fi:
