@@ -120,6 +120,9 @@ def merge_tree(src, dst, symlinks=False):
     Like copy_tree(src, dst), but raises an error if merging the two trees
     would overwrite any files.
     """
+    assert src not in dst, ("Can't merge/copy source into subdirectory of itself.  Please create "
+                            "separate spaces for these things.")
+
     new_files = copy_tree(src, dst, preserve_symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
 

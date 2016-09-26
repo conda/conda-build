@@ -30,8 +30,8 @@ def namespace_setup(testing_workdir, request):
 
 def test_copy_source_tree(namespace_setup):
     dst = os.path.join(namespace_setup, 'dest')
-    utils.copy_into(namespace_setup, dst)
-    assert os.path.isfile(os.path.join(dst, 'namespace', 'package', 'module.py'))
+    utils.copy_into(os.path.join(namespace_setup, 'namespace'), dst)
+    assert os.path.isfile(os.path.join(dst, 'package', 'module.py'))
 
 
 def test_merge_namespace_trees(namespace_setup):
@@ -50,6 +50,13 @@ def test_disallow_merge_conflicts(namespace_setup, test_config):
     with pytest.raises(IOError):
         utils.merge_tree(os.path.dirname(duplicate), os.path.join(namespace_setup, 'namespace',
                                                  'package'))
+
+
+def test_disallow_in_tree_merge(testing_workdir):
+    with open('testfile', 'w') as f:
+        f.write("test")
+    with pytest.raises(AssertionError):
+        utils.merge_tree(testing_workdir, os.path.join(testing_workdir, 'subdir'))
 
 
 class TestUtils(unittest.TestCase):
