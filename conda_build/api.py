@@ -169,8 +169,8 @@ def skeletonize(config, **kwargs):
     config.packages = _ensure_list(config.packages)
 
     module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
-                                fromlist=[repo]),
-                     repo)
+                                fromlist=[config.repo]),
+                     config.repo)
     func_args = module.skeletonize.__code__.co_varnames
 
     for arg in func_args:
