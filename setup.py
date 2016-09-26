@@ -48,7 +48,7 @@ setup(
                             'conda-sign = conda_build.cli.main_sign:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             ]},
-    install_requires=['conda', 'requests'],
+    install_requires=['conda', 'requests', 'filelock'],
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
     zip_safe=False,
 )
