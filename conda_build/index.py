@@ -60,7 +60,7 @@ def write_repodata(repodata, dir_path, config=None, lock=None):
     lock.release()
 
 
-def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None):
+def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None, could_be_mirror=True):
     """
     Update all index files in dir_path with changed packages.
 
@@ -95,7 +95,7 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
             index = {}
 
     files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-    if any(fn.startswith('_license-') for fn in files):
+    if could_be_mirror and any(fn.startswith('_license-') for fn in files):
         sys.exit("""\
 Error:
     Indexing a copy of the Anaconda conda package channel is neither

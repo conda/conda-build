@@ -407,7 +407,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
                     lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
-                    update_index(folder, config=config, lock=lock)
+                    update_index(folder, config=config, lock=lock, could_be_mirror=False)
                     locks.append(lock)
                 for lock in locks:
                     lock.acquire(timeout=config.timeout)
@@ -741,7 +741,7 @@ can lead to packages that include their dependencies.""" % meta_files))
             tarcheck.check_all(tmp_path)
 
             copy_into(tmp_path, path, config.timeout)
-        update_index(config.bldpkgs_dir, config)
+        update_index(config.bldpkgs_dir, config, could_be_mirror=False)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -1114,7 +1114,7 @@ def is_package_built(metadata, config):
     for d in config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, config)
+        update_index(d, config, could_be_mirror=False)
     index = get_build_index(config=config, clear_cache=True)
 
     urls = [url_path(config.croot)] + get_rc_urls() + get_local_urls() + ['local', ]
