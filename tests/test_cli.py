@@ -5,6 +5,7 @@
 import json
 import os
 import sys
+import yaml
 
 import pytest
 
@@ -141,17 +142,37 @@ def test_skeleton_pypi(testing_workdir, test_config):
 
 def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
     """
-    These checks only test whether skeleton executes without error when these
-    options are specified on the command line. Separate unit tests check
-    whether the underlying functionality works.
+    These checks whether skeleton executes without error when these
+    options are specified on the command line AND whether the underlying
+    functionality works as a regression test for:
+
+    https://github.com/conda/conda-build/pull/1384
     """
     args = ['pypi', 'msumastro', '--pin-numpy']
     main_skeleton.execute(args)
     assert os.path.isdir('msumastro')
 
-    args = ['pypi', 'photutils', '--setup-options="--offline"']
+    # Deliberately bypass metadata reading in conda build to get as
+    # close to the "ground truth" as possible.
+    with open('msumastro/meta.yaml') as f:
+        actual = yaml.load(f)
+
+    assert 'numpy x.x' in actual['requirements']['run']
+    assert 'numpy x.x' in actual['requirements']['build']
+
+    args = ['pypi', 'photutils', '--version=0.2', '--setup-options=--offline']
     main_skeleton.execute(args)
     assert os.path.isdir('photutils')
+    # Check that the setup option occurs in bld.bat and build.sh.
+    for script in ['bld.bat', 'build.sh']:
+        with open('photutils/{}'.format(script)) as f:
+            content = f.read()
+            assert '--offline' in content
+
+    with open(os.path.join('photutils', 'meta.yaml')) as f:
+        content = f.read()
+        assert 'version: "0.2"' in content
+
 
 
 def test_metapackage(test_config, testing_workdir):
