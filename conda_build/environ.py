@@ -335,7 +335,8 @@ def meta_vars(meta, config):
     elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):
         d.update(get_hg_build_info(hg_dir))
 
-    d['PKG_NAME'] = meta.name()
+    # use `get_value` to prevent early exit while name is still unresolved during rendering
+    d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
     d['PKG_BUILDNUM'] = str(meta.build_number())
     d['PKG_BUILD_STRING'] = str(meta.build_id())
