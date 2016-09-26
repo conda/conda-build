@@ -77,7 +77,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
         elif os.path.isabs(recipe):
             absolute_recipes.append(recipe)
         else:
-            absolute_recipes.append(os.path.join(os.getcwd(), recipe))
+            absolute_recipes.append(os.path.normpath(os.path.join(os.getcwd(), recipe)))
 
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
                       need_source_download=need_source_download, config=config)
