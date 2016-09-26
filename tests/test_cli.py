@@ -174,7 +174,6 @@ def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
         assert 'version: "0.2.2"' in content
 
 
-
 def test_metapackage(test_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2']

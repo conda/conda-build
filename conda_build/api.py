@@ -171,6 +171,12 @@ def skeletonize(config, **kwargs):
     module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
                                 fromlist=[config.repo]),
                      config.repo)
+
+    # This is a little bit of black magic.  The idea is that for any keyword argument that
+    #    we inspect from the given module's skeletonize funtion, we should hoist the argument
+    #    off of the config object, and pass it as a keyword argument.  This is sort of the
+    #    inverse of what we do in the CLI code - there we take CLI arguments and dangle them
+    #    all on the config object as attributes.
     func_args = module.skeletonize.__code__.co_varnames
     skeleton_args = {}
     for arg in func_args:
