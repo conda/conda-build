@@ -88,7 +88,7 @@ def test_api_list_skeletons():
 def test_api_skeletonize():
     argspec = getargspec(api.skeletonize)
     assert argspec.args == ['config']
-    assert argspec.defaults == ()
+    assert argspec.defaults is None
 
 
 def test_api_develop():

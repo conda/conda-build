@@ -32,7 +32,7 @@ def test_repo(prefix, repo, package, version, testing_workdir, test_config):
 
 def test_name_with_version_specified(testing_workdir, test_config):
     test_config.packages = 'sympy'
-    test_config.repos = 'pypi'
+    test_config.repo = 'pypi'
     test_config.version = '0.7.5'
     api.skeletonize(config=test_config)
     with open('{}/test-skeleton/sympy-0.7.5/meta.yaml'.format(thisdir)) as f:
@@ -44,7 +44,7 @@ def test_name_with_version_specified(testing_workdir, test_config):
 
 def test_pypi_url(testing_workdir, test_config):
     test_config.packages = 'https://pypi.python.org/packages/source/s/sympy/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9'
-    test_config.repos = 'pypi'
+    test_config.repo = 'pypi'
     api.skeletonize(config=test_config)
     with open('{}/test-skeleton/sympy-0.7.5-url/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
@@ -59,7 +59,7 @@ def test_pypi_with_setup_options(testing_workdir, test_config):
 
     # Test that the setup option is used in constructing the skeleton.
     test_config.packages = 'photutils'
-    test_config.repos = 'pypi'
+    test_config.repo = 'pypi'
     test_config.version = '0.2.2'
     test_config.setup_options = "--offline"
     api.skeletonize(config=test_config)
@@ -75,7 +75,7 @@ def test_pypi_pin_numpy(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     test_config.packages = 'msumastro'
-    test_config.repos = 'pypi'
+    test_config.repo = 'pypi'
     test_config.version = '0.9.0'
     test_config.pin_numpy = True
     api.skeletonize(config=test_config)
@@ -91,7 +91,7 @@ def test_pypi_version_sorting(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     test_config.packages = 'impyla'
-    test_config.repos = 'pypi'
+    test_config.repo = 'pypi'
     api.skeletonize(config=test_config)
 
     with open('impyla/meta.yaml') as f:
