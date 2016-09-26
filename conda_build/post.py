@@ -191,10 +191,10 @@ def compile_missing_pyc(files, cwd, python_exe):
 
 def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False):
     rm_pyo(files, prefix)
-    if not noarch:
-        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
-    else:
+    if noarch:
         rm_pyc(files, prefix)
+    else:
+        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
 

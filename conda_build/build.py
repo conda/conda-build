@@ -56,6 +56,8 @@ from conda_build.create_test import (create_files, create_shell_files,
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
+import conda_build.noarch_python as noarch_python
+
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
@@ -242,8 +244,7 @@ def detect_and_record_prefix_files(m, files, prefix, config):
         else:
             files_with_prefix = []
 
-    is_noarch = m.get_value('build/noarch_python') or \
-        str(m.get_value('build/noarch')).lower() == "python"
+    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m.get_value('build/noarch'))
 
     if files_with_prefix and not is_noarch:
         if on_win:
@@ -345,8 +346,7 @@ def create_info_files(m, files, config, prefix):
     write_info_json(m, config, mode_dict)
     write_about_json(m, config)
 
-    if str(m.get_value('build/noarch')).lower() == "python":
-        import conda_build.noarch_python as noarch_python
+    if is_noarch_python(m.get_value('build/noarch')):
         noarch_python.create_entry_point_information(
             "python", m.get_value('build/entry_points'), config
         )
@@ -701,7 +701,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         get_build_metadata(m, config=config)
         create_post_scripts(m, config=config)
 
-        if str(m.get_value('build/noarch')).lower() != "python":
+        if not is_noarch_python(m.get_value('build/noarch')):
             create_entry_points(m.get_value('build/entry_points'), config=config)
         files2 = prefix_files(prefix=config.build_prefix)
 
@@ -709,7 +709,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                      prefix=config.build_prefix,
                      config=config,
                      preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                     noarch= m.get_value('build/noarch'))
+                     noarch=m.get_value('build/noarch'))
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files(prefix=config.build_prefix)
@@ -728,10 +728,8 @@ can lead to packages that include their dependencies.""" % meta_files))
                             prefix=config.build_prefix)
 
         if m.get_value('build/noarch_python'):
-            import conda_build.noarch_python as noarch_python
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
-        elif str(m.get_value('build/noarch')).lower() == "python":
-            import conda_build.noarch_python as noarch_python
+        elif is_noarch_python(m.get_value('build/noarch')):
             noarch_python.populate_files(m, sorted(files2 - files1), config.build_prefix)
 
         files3 = prefix_files(prefix=config.build_prefix)
@@ -1146,3 +1144,7 @@ def is_package_built(metadata, config):
     # will be empty if none found, and evalute to False
     package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
     return package_exists or metadata.pkg_fn() in index
+
+
+def is_noarch_python(build_noarch):
+    return str(build_noarch).lower() == "python"
