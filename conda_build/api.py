@@ -160,23 +160,27 @@ def list_skeletons():
     return files
 
 
-def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
-                config=None, **kwargs):
+def skeletonize(config, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
-    config = get_or_merge_config(config, **kwargs)
+    config = get_or_merge_config(config)
     config.compute_build_id('skeleton')
-    packages = _ensure_list(packages)
+    config.packages = _ensure_list(config.packages)
 
     module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
-                                fromlist=[repo]),
-                     repo)
+                                fromlist=[config.repo]),
+                     config.repo)
     func_args = module.skeletonize.__code__.co_varnames
-    kwargs = {name: value for name, value in kwargs.items() if name in func_args}
-    with config:
-        skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                                recursive=recursive, config=config, **kwargs)
+    skeleton_args = {}
+    for arg in func_args:
+        try:
+            skeleton_args[arg] = getattr(config, arg)
+        except AttributeError:
+            pass
+
+    skeleton_return = module.skeletonize(config=config, **skeleton_args)
+
     return skeleton_return
 
 

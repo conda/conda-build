@@ -18,7 +18,11 @@ repo_packages = [('', 'pypi', 'pip', "8.1.2"),
 
 @pytest.mark.parametrize("prefix,repo,package, version", repo_packages)
 def test_repo(prefix, repo, package, version, testing_workdir, test_config):
-    api.skeletonize(package, output_dir=testing_workdir, repo=repo, config=test_config)
+    test_config.packages = package
+    test_config.output_dir = testing_workdir
+    test_config.version = version
+    test_config.repo = repo
+    api.skeletonize(config=test_config)
     try:
         package_name = "-".join([prefix, package]) if prefix else package
         assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))
@@ -27,7 +31,10 @@ def test_repo(prefix, repo, package, version, testing_workdir, test_config):
         raise
 
 def test_name_with_version_specified(testing_workdir, test_config):
-    api.skeletonize('sympy', 'pypi', version='0.7.5', config=test_config)
+    test_config.packages = 'sympy'
+    test_config.repo = 'pypi'
+    test_config.version = '0.7.5'
+    api.skeletonize(config=test_config)
     with open('{}/test-skeleton/sympy-0.7.5/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
     with open('sympy/meta.yaml') as f:
@@ -36,9 +43,9 @@ def test_name_with_version_specified(testing_workdir, test_config):
 
 
 def test_pypi_url(testing_workdir, test_config):
-    api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
-                    'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
-                    repo='pypi', config=test_config)
+    test_config.packages = 'https://pypi.python.org/packages/source/s/sympy/sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9'
+    test_config.repo = 'pypi'
+    api.skeletonize(config=test_config)
     with open('{}/test-skeleton/sympy-0.7.5-url/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
     with open('sympy/meta.yaml') as f:
@@ -51,7 +58,11 @@ def test_pypi_with_setup_options(testing_workdir, test_config):
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
-    api.skeletonize('photutils', 'pypi', version="0.2.2", setup_options="--offline")
+    test_config.packages = 'photutils'
+    test_config.repo = 'pypi'
+    test_config.version = '0.2.2'
+    test_config.setup_options = "--offline"
+    api.skeletonize(config=test_config)
 
     # Check that the setup option occurs in bld.bat and build.sh.
     for script in ['bld.bat', 'build.sh']:
@@ -63,7 +74,11 @@ def test_pypi_with_setup_options(testing_workdir, test_config):
 def test_pypi_pin_numpy(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize("msumastro", "pypi", version='0.9.0', pin_numpy=True)
+    test_config.packages = 'msumastro'
+    test_config.repo = 'pypi'
+    test_config.version = '0.9.0'
+    test_config.pin_numpy = True
+    api.skeletonize(config=test_config)
 
     with open('msumastro/meta.yaml') as f:
         actual = yaml.load(f)
@@ -75,7 +90,9 @@ def test_pypi_pin_numpy(testing_workdir, test_config):
 def test_pypi_version_sorting(testing_workdir, test_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize("impyla", "pypi")
+    test_config.packages = 'impyla'
+    test_config.repo = 'pypi'
+    api.skeletonize(config=test_config)
 
     with open('impyla/meta.yaml') as f:
         actual = yaml.load(f)

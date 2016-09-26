@@ -249,10 +249,10 @@ def skeletonize(packages, output_dir=".", version=None,
         core_version = core_module_version(package, perl_version, config=config)
         release_data = get_release_info(meta_cpan_url, package,
                                         (LooseVersion(version) if
-                                            version is not None else
-                                            core_version),
-                                        perl_version,
-                                        config=config)
+                                         version not in [None, ''] else
+                                         core_version),
+                                         perl_version,
+                                         config=config)
         # Check if recipe directory already exists
         dir_path = join(output_dir, packagename)
         if exists(dir_path):
@@ -287,7 +287,7 @@ def skeletonize(packages, output_dir=".", version=None,
 
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
-        if core_version is not None and ((version is None) or
+        if core_version is not None and ((version in [None, '']) or
                                             (core_version >=
                                             LooseVersion(version))):
             d['useurl'] = '#'
@@ -394,7 +394,7 @@ def core_module_version(module, version, config):
     '''
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
-    if version is None:
+    if version in [None, '']:
         version = LooseVersion(config.CONDA_PERL)
     else:
         version = LooseVersion(version)
