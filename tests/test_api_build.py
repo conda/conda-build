@@ -124,16 +124,18 @@ def test_git_describe_info_on_branch(test_config):
     assert test_path == output
 
 
-def test_no_include_recipe_cmd_line_arg(test_config):
+def test_no_include_recipe_config_arg(test_metadata):
     """Two ways to not include recipe: build/include_recipe: False in meta.yaml; or this.
     Former is tested with specific recipe."""
-    output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
-                               "empty_sections-0.0-0.tar.bz2")
-    api.build(empty_sections, anaconda_upload=False)
+    output_file = api.get_output_file_path(test_metadata)
+    api.build(test_metadata)
     assert package_has_file(output_file, "info/recipe/meta.yaml")
 
     # make sure that it is not there when the command line flag is passed
-    api.build(empty_sections, anaconda_upload=False, include_recipe=False)
+    test_metadata.config.include_recipe = False
+    test_metadata.meta['build_number'] = 2
+    output_file = api.get_output_file_path(test_metadata)
+    api.build(test_metadata)
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 

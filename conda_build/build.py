@@ -177,30 +177,36 @@ def get_run_dists(m, config):
 
 
 def copy_recipe(m, config):
-    if config.include_recipe and m.include_recipe() and bool(m.path):
+    if config.include_recipe and m.include_recipe():
         recipe_dir = join(config.info_dir, 'recipe')
         os.makedirs(recipe_dir)
 
-        for fn in os.listdir(m.path):
-            if fn.startswith('.'):
-                continue
-            src_path = join(m.path, fn)
-            dst_path = join(recipe_dir, fn)
-            copy_into(src_path, dst_path, timeout=config.timeout)
+        if os.path.isdir(m.path):
+            for fn in os.listdir(m.path):
+                if fn.startswith('.'):
+                    continue
+                src_path = join(m.path, fn)
+                dst_path = join(recipe_dir, fn)
+                copy_into(src_path, dst_path, timeout=config.timeout)
 
-        # store the rendered meta.yaml file, plus information about where it came from
-        #    and what version of conda-build created it
-        original_recipe = os.path.join(m.path, 'meta.yaml')
+            # store the rendered meta.yaml file, plus information about where it came from
+            #    and what version of conda-build created it
+            original_recipe = os.path.join(m.path, 'meta.yaml')
+        else:
+            original_recipe = ""
+
         rendered = output_yaml(m)
-        if not open(original_recipe).read() == rendered:
+        if not original_recipe or not open(original_recipe).read() == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
                 f.write("# This file created by conda-build {}\n".format(__version__))
-                f.write("# meta.yaml template originally from:\n")
-                f.write("# " + source.get_repository_info(m.path) + "\n")
+                if original_recipe:
+                    f.write("# meta.yaml template originally from:\n")
+                    f.write("# " + source.get_repository_info(m.path) + "\n")
                 f.write("# ------------------------------------------------\n\n")
                 f.write(rendered)
-            copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
-                      timeout=config.timeout)
+            if original_recipe:
+                copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
+                          timeout=config.timeout)
 
 
 def copy_readme(m, config):
