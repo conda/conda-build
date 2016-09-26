@@ -172,7 +172,7 @@ def skeletonize(config, **kwargs):
                                 fromlist=[config.repo]),
                      config.repo)
     func_args = module.skeletonize.__code__.co_varnames
-
+    skeleton_args = {}
     for arg in func_args:
         try:
             skeleton_args[arg] = getattr(config, arg)
