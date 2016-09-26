@@ -118,7 +118,7 @@ def have_prefix_files(files, prefix):
         if f.endswith(('.pyc', '.pyo', '.a')):
             continue
         path = join(prefix, f)
-        if isdir(path):
+        if not isfile(path):
             continue
         if sys.platform != 'darwin' and islink(path):
             # OSX does not allow hard-linking symbolic links, so we cannot

@@ -48,6 +48,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         return
     elif os.path.islink(path):
         return
+    elif not os.path.isfile(path):
+        return
 
     if os.stat(path).st_size == 0:
         return
