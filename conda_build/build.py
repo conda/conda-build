@@ -244,7 +244,7 @@ def detect_and_record_prefix_files(m, files, prefix, config):
         else:
             files_with_prefix = []
 
-    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m.get_value('build/noarch'))
+    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m)
 
     if files_with_prefix and not is_noarch:
         if on_win:
@@ -346,7 +346,7 @@ def create_info_files(m, files, config, prefix):
     write_info_json(m, config, mode_dict)
     write_about_json(m, config)
 
-    if is_noarch_python(m.get_value('build/noarch')):
+    if is_noarch_python(m):
         noarch_python.create_entry_point_information(
             "python", m.get_value('build/entry_points'), config
         )
@@ -701,7 +701,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         get_build_metadata(m, config=config)
         create_post_scripts(m, config=config)
 
-        if not is_noarch_python(m.get_value('build/noarch')):
+        if not is_noarch_python(m):
             create_entry_points(m.get_value('build/entry_points'), config=config)
         files2 = prefix_files(prefix=config.build_prefix)
 
@@ -729,7 +729,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 
         if m.get_value('build/noarch_python'):
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
-        elif is_noarch_python(m.get_value('build/noarch')):
+        elif is_noarch_python(m):
             noarch_python.populate_files(m, sorted(files2 - files1), config.build_prefix)
 
         files3 = prefix_files(prefix=config.build_prefix)
@@ -1146,5 +1146,5 @@ def is_package_built(metadata, config):
     return package_exists or metadata.pkg_fn() in index
 
 
-def is_noarch_python(build_noarch):
-    return str(build_noarch).lower() == "python"
+def is_noarch_python(meta):
+    return str(meta.get_value('build/noarch')).lower() == "python"
