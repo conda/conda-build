@@ -171,7 +171,7 @@ def output_action(metadata, config):
 
 def source_action(metadata, config):
     source.provide(metadata.path, metadata.get_section('source'), config=config)
-    print('Source tree in:', source.get_dir(config))
+    print('Source tree in:', config.work_dir)
 
 
 def test_action(metadata, config):

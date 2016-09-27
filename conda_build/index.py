@@ -60,7 +60,8 @@ def write_repodata(repodata, dir_path, config=None, lock=None):
     lock.release()
 
 
-def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None, could_be_mirror=True):
+def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None,
+                 could_be_mirror=True):
     """
     Update all index files in dir_path with changed packages.
 

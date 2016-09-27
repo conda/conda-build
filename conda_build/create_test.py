@@ -59,11 +59,11 @@ def create_files(dir_path, m, config):
             raise RuntimeError("test/source_files paths must use / "
                                 "as the path delimiter on Windows")
         has_files = True
-        files = glob.glob(join(source.get_dir(config), pattern))
+        files = glob.glob(join(config.work_dir, pattern))
         if not files:
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
-            copy_into(f, f.replace(source.get_dir(config), config.test_dir), config.timeout)
+            copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout)
         for ext in '.pyc', '.pyo':
             for f in get_ext_files(config.test_dir, ext):
                 os.remove(f)

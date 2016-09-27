@@ -69,7 +69,8 @@ def bldpkg_path(m, config):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
-    return os.path.join(config.bldpkgs_dir, '%s.tar.bz2' % m.dist())
+    output_dir = m.info_index()['subdir']
+    return os.path.join(os.path.dirname(config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
 
 
 def parse_or_try_download(metadata, no_download_source, config,

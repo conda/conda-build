@@ -118,7 +118,7 @@ def have_prefix_files(files, prefix):
         if f.endswith(('.pyc', '.pyo', '.a')):
             continue
         path = join(prefix, f)
-        if isdir(path):
+        if not isfile(path):
             continue
         if sys.platform != 'darwin' and islink(path):
             # OSX does not allow hard-linking symbolic links, so we cannot
@@ -225,7 +225,7 @@ def copy_readme(m, config):
 def copy_license(m, config):
     license_file = m.get_value('about/license_file')
     if license_file:
-        copy_into(join(source.get_dir(config), license_file),
+        copy_into(join(config.work_dir, license_file),
                         join(config.info_dir, 'LICENSE.txt'), config.timeout)
 
 
@@ -413,9 +413,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
                     lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
-                    lock.acquire(timeout=config.timeout)
                     if not folder.endswith('pkgs'):
                         update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                    lock.acquire(timeout=config.timeout)
                     locks.append(lock)
 
                 index = get_build_index(config=config, clear_cache=True)
@@ -614,7 +614,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                    timeout=config.timeout):
             # get_dir here might be just work, or it might be one level deeper,
             #    dependening on the source.
-            src_dir = source.get_dir(config)
+            src_dir = config.work_dir
             if isdir(src_dir):
                 print("source tree in:", src_dir)
             else:
@@ -660,7 +660,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                         with path_prepended(config.build_prefix):
                             env = environ.get_dict(config=config, m=m)
                         env["CONDA_BUILD_STATE"] = "BUILD"
-                        work_file = join(source.get_dir(config), 'conda_build.sh')
+                        work_file = join(config.work_dir, 'conda_build.sh')
                         if script:
                             with open(work_file, 'w') as bf:
                                 bf.write(script)

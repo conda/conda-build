@@ -175,7 +175,7 @@ def build(m, bld_bat, config):
         if not isdir(path):
             os.makedirs(path)
 
-    src_dir = source.get_dir(config)
+    src_dir = config.work_dir
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()

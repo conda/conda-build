@@ -1,0 +1,13 @@
+package:
+  name: mypkg
+  version: {{ GIT_DESCRIBE_TAG }}
+
+build:
+  number: {{ GIT_DESCRIBE_NUMBER }}
+
+  # Note that this will override the default build string with the Python
+  # and NumPy versions
+  string: {{ GIT_BUILD_STR }}
+
+source:
+  git_url: ../../../../../conda_build_test_recipe

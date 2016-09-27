@@ -179,8 +179,14 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
                                 fromlist=[repo]),
                      repo)
+
     func_args = module.skeletonize.__code__.co_varnames
-    kwargs = {name: value for name, value in kwargs.items() if name in func_args}
+    kwargs = {name: getattr(config, name) for name in dir(config) if name in func_args}
+    kwargs.update({name: value for name, value in kwargs.items() if name in func_args})
+    # strip out local arguments that we pass directly
+    for arg in skeletonize.__code__.co_varnames:
+        if arg in kwargs:
+            del kwargs[arg]
     with config:
         skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
                                                 recursive=recursive, config=config, **kwargs)
