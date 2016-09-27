@@ -250,7 +250,7 @@ def conda_build_vars(prefix, config):
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
         'SUBDIR': config.subdir,
-        'SRC_DIR': source.get_dir(config),
+        'SRC_DIR': config.work_dir,
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
         'DIRTY': '1' if config.dirty else '',
@@ -305,8 +305,8 @@ def meta_vars(meta, config):
         else:
             d[var_name] = value
 
-    git_dir = join(source.get_dir(config), '.git')
-    hg_dir = join(source.get_dir(config), '.hg')
+    git_dir = join(config.work_dir, '.git')
+    hg_dir = join(config.work_dir, '.hg')
 
     if not isinstance(git_dir, str):
         # On Windows, subprocess env can't handle unicode.
