@@ -86,16 +86,23 @@ def get_recipe_abspath(recipe):
 
 def copy_into(src, dst, timeout=90, symlinks=False):
     "Copy all the files and directories in src to the directory dst"
-    lock = None
+    locks = []
     if isdir(dst):
         lock = filelock.SoftFileLock(join(dst, ".conda_lock"))
         lock.acquire(timeout=timeout)
+        locks.append(lock)
 
     try:
         if isdir(src):
+            lock = filelock.SoftFileLock(join(src, ".conda_lock"))
+            lock.acquire(timeout=timeout)
+            locks.append(lock)
             merge_tree(src, dst, symlinks)
 
         else:
+            lock = filelock.SoftFileLock(join(os.path.dirname(src), ".conda_lock"))
+            lock.acquire(timeout=timeout)
+            locks.append(lock)
             if isdir(dst):
                 dst_fn = os.path.join(dst, os.path.basename(src))
             else:
@@ -108,8 +115,13 @@ def copy_into(src, dst, timeout=90, symlinks=False):
             except shutil.Error:
                 log.debug("skipping %s - already exists in %s", os.path.basename(src), dst)
     finally:
-        if lock:
+        for lock in locks:
             lock.release()
+        # this should handle the situation where when src folder is copied into dst folder,
+        #   a second lock exists
+        for path in src, dst:
+            if os.path.exists(os.path.join(path, '.conda_lock')):
+                rm_rf(os.path.join(path, '.conda_lock'))
 
 
 def merge_tree(src, dst, symlinks=False):
@@ -121,7 +133,7 @@ def merge_tree(src, dst, symlinks=False):
     would overwrite any files.
     """
     new_files = copy_tree(src, dst, preserve_symlinks=symlinks, dry_run=True)
-    existing = [f for f in new_files if isfile(f)]
+    existing = [f for f in new_files if isfile(f) and not f.endswith('.conda_lock')]
 
     if existing:
         raise IOError("Can't merge {0} into {1}: file exists: "

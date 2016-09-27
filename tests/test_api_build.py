@@ -329,23 +329,25 @@ def test_skip_existing(testing_workdir, test_config, capfd):
     output, error = capfd.readouterr()
     assert "is already built" in output
 
-def test_skip_existing_url(testing_workdir, test_config, capfd):
+def test_skip_existing_url(test_metadata, testing_workdir, capfd):
     # make sure that it is built
-    api.build(empty_sections, config=test_config)
-    output_file = os.path.join(test_config.croot, test_config.subdir, "empty_sections-0.0-0.tar.bz2")
+    output_file = api.get_output_file_path(test_metadata)
+    api.build(test_metadata)
 
-    platform = os.path.join(testing_workdir, test_config.subdir)
+    # Copy our package into some new folder
+    platform = os.path.join(testing_workdir, test_metadata.config.subdir)
     copy_into(output_file, os.path.join(platform, os.path.basename(output_file)))
 
     # create the index so conda can find the file
-    api.update_index(platform, config=test_config)
+    api.update_index(platform, config=test_metadata.config)
 
-    api.build(os.path.join(metadata_dir, "empty_sections"), skip_existing=True,
-              config=test_config, channel_urls=[url_path(testing_workdir)])
+    test_metadata.config.skip_existing = True
+    test_metadata.config.channel_urls = [url_path(testing_workdir)]
+    api.build(test_metadata)
 
     output, error = capfd.readouterr()
     assert "is already built" in output
-    assert url_path(test_config.croot) in output
+    assert url_path(test_metadata.config.croot) in output
 
 
 def test_failed_tests_exit_build(testing_workdir, test_config):
