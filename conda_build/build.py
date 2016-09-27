@@ -26,6 +26,8 @@ import encodings.idna  # NOQA
 
 import filelock
 
+# used to get version
+import conda
 from .conda_interface import cc
 from .conda_interface import envs_dirs, root_dir
 from .conda_interface import plan
@@ -352,6 +354,10 @@ def create_info_files(m, files, config, prefix):
         else:
             for f in files:
                 fo.write(f + '\n')
+
+    with open(join(config.info_dir, 'conda_versions'), **mode_dict) as fo:
+        fo.write("Conda version at build time: {0}\n".format(conda.__version__))
+        fo.write("Conda-build version at build time: {0}\n".format(__version__))
 
     detect_and_record_prefix_files(m, files, prefix, config)
     write_no_link(m, config, files)
