@@ -483,6 +483,8 @@ def package_has_file(package_path, file_path):
     try:
         with tarfile.open(package_path) as t:
             try:
+                # internal paths are always forward slashed on all platforms
+                file_path = file_path.replace('\\', '/')
                 text = t.extractfile(file_path).read()
                 return text
             except KeyError:
