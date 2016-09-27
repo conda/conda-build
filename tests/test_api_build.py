@@ -70,7 +70,7 @@ def recipe(request):
     return os.path.join(metadata_dir, request.param)
 
 
-# This tests any of the folders in the test-recipes/metadata forlder that don't start with _
+# This tests any of the folders in the test-recipes/metadata folder that don't start with _
 def test_recipe_builds(recipe, test_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

@@ -116,6 +116,12 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
     setuptools_setup = setuptools.setup
     distutils_setup = distutils.core.setup
     numpy_setup = None
+
+    versioneer = None
+    if 'versioneer' in sys.modules:
+        versioneer = sys.modules['versioneer']
+        del sys.modules['versioneer']
+
     try:
         import numpy.distutils.core
         numpy_setup = numpy.distutils.core.setup
@@ -132,6 +138,9 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
     if os.path.isfile(setup_file):
         code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
+
+    sys.modules['versioneer'] = versioneer
+
     distutils.core.setup = distutils_setup
     setuptools.setup = setuptools_setup
     if numpy_setup:

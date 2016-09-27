@@ -36,16 +36,6 @@ git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
 log = logging.getLogger(__file__)
 
 
-def get_dir(config):
-    if os.path.isdir(config.work_dir):
-        lst = [fn for fn in os.listdir(config.work_dir) if not fn.startswith('.')]
-        if len(lst) == 1:
-            dir_path = join(config.work_dir, lst[0])
-            if isdir(dir_path):
-                return dir_path
-    return config.work_dir
-
-
 def download_to_cache(meta, config):
     ''' Download a source to the local cache. '''
     print('Source cache directory is: %s' % config.src_cache)
@@ -91,13 +81,13 @@ def unpack(meta, config):
         print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
             '.tar', 'tar.z')):
-        tar_xf(src_path, get_dir(config))
+        tar_xf(src_path, config.work_dir)
     elif src_path.lower().endswith('.zip'):
-        unzip(src_path, get_dir(config))
+        unzip(src_path, config.work_dir)
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-        copy_into(src_path, get_dir(config), config.timeout)
+        copy_into(src_path, config.work_dir, config.timeout)
 
 
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config, git_ref=None,
@@ -253,13 +243,13 @@ def git_info(config, fo=None):
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
     # properly execute without it.
     env = os.environ.copy()
-    env['GIT_DIR'] = join(get_dir(config), '.git')
+    env['GIT_DIR'] = join(config.work_dir, '.git')
     env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
             ('git log -n1', True),
             ('git describe --tags --dirty', False),
             ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=get_dir(config), env=env)
+        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=config.work_dir, env=env)
         stdout, stderr = p.communicate()
         encoding = locale.getpreferredencoding()
         if not fo:
@@ -309,7 +299,7 @@ def hg_source(meta, config):
         print('checkout: %r' % update)
 
     check_call_env([hg, 'clone', cache_repo, config.work_dir], stdout=stdout, stderr=stderr)
-    check_call_env([hg, 'update', '-C', update], cwd=get_dir(config), stdout=stdout, stderr=stderr)
+    check_call_env([hg, 'update', '-C', update], cwd=config.work_dir, stdout=stdout, stderr=stderr)
 
     if not config.verbose:
         FNULL.close()
@@ -514,7 +504,7 @@ def provide(recipe_dir, meta, config, patch=True):
             os.makedirs(config.work_dir)
 
     if patch:
-        src_dir = get_dir(config)
+        src_dir = config.work_dir
         for patch in meta.get('patches', []):
             apply_patch(src_dir, join(recipe_dir, patch), config, git)
     return config.work_dir
