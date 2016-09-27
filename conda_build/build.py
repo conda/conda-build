@@ -413,9 +413,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
                     lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
-                    lock.acquire(timeout=config.timeout)
                     if not folder.endswith('pkgs'):
                         update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                    lock.acquire(timeout=config.timeout)
                     locks.append(lock)
 
                 index = get_build_index(config=config, clear_cache=True)
