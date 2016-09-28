@@ -1,0 +1,20 @@
+# this test is to make sure that we raise an error when more than one subpackage
+#   contains the same file.  This is important to avoid, as conda does nothing smart
+#   about keeping files that are installed by two packages when one is removed.
+
+package:
+  name: split_packages_script_overlapping_files
+  version: 1.0
+
+requirements:
+  run:
+    - my_script_subpackage
+    - my_script_subpackage_2
+
+outputs:
+  - name: my_script_subpackage
+    script: subpackage1.py
+    script_interpreter: python
+  - name: my_script_subpackage_2
+    script: subpackage1.py
+    script_interpreter: python
