@@ -1,0 +1,19 @@
+package:
+  name: split_packages_autodetect_interpreter
+  version: 1.0
+
+requirements:
+  run:
+    - my_script_subpackage
+    - my_script_subpackage_shell
+    - my_script_subpackage_unrecognized
+
+outputs:
+  - name: my_script_subpackage
+    script: subpackage1.py
+  # Assume that on Windows, we have bash available here
+  - name: my_script_subpackage_shell
+    script: subpackage2.sh
+  # what happens when we have an unrecognized script type?
+  - name: my_script_subpackage_unrecognized
+    script: subpackage3.unrecognized

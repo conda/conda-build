@@ -1,0 +1,21 @@
+# Test that our composite run requirements for the parent package are the union of subpackage
+#    requirements
+
+package:
+  name: split_packages_compose_run_requirements_from_subpackages
+  version: 1.0
+
+requirements:
+  run:
+    - my_script_subpackage
+    - my_script_subpackage_2
+
+outputs:
+  - name: my_script_subpackage
+    requirements:
+      - cython
+  - name: my_script_subpackage_2
+    requirements:
+      - click
+
+# tests are in run_test.py, and they check that the packages above are both installed
