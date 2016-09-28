@@ -1,0 +1,14 @@
+package:
+  name: split_packages_jinja2_subpackage_name
+  version: 1.0
+
+requirements:
+  run:
+    - pkg_subpackage
+    - pkg_subpackage_python_noarch
+
+outputs:
+  - name: pkg_subpackage
+    noarch: True
+  - name: pkg_subpackage_python_noarch
+    noarch: python

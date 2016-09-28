@@ -1,0 +1,33 @@
+package:
+  name: split_packages_file_list
+  version: 1.0
+
+build:
+  script:
+    # test copying filename
+    - echo weee > $PREFIX/subpackage_file1  # [unix]
+    - echo weee > %PREFIX%/subpackage_file1  # [win]
+    # test copying by folder name
+    - mkdir $PREFIX/somedir  # [unix]
+    - mkdir %PREFIX%/somedir  # [win]
+    - echo weee > $PREFIX/somedir/subpackage_file1  # [unix]
+    - echo weee > %PREFIX%/somedir/subpackage_file1  # [win]
+    # test glob patterns
+    - echo weee > $PREFIX/subpackage_file1.ext  # [unix]
+    - echo weee > $PREFIX/subpackage_file2.ext  # [unix]
+    - echo weee > %PREFIX%/subpackage_file1.ext  # [win]
+    - echo weee > %PREFIX%/subpackage_file2.ext  # [win]
+
+requirements:
+  run:
+    - my_script_subpackage
+
+outputs:
+  - name: my_script_subpackage
+    files:
+      - subpackage_file1
+      - somedir
+      - *.ext
+    test:
+      script: test_subpackage1.py
+      script_interpreter: python
