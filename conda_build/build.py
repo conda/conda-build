@@ -57,6 +57,8 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
+from conda_build import jinja_context
+
 
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
@@ -325,6 +327,34 @@ def write_no_link(m, config, files):
                     fo.write(f + '\n')
 
 
+def get_entry_points_from_setup_py(setup_py_data):
+    entry_points = setup_py_data.get("entry_points")
+    if isinstance(entry_points, dict):
+        return entry_points.get("console_scripts")
+    else:
+        import configparser
+        config = configparser.ConfigParser()
+        config.read_string(entry_points)
+        keys = []
+        if config.sections().index("console_scripts") >= 0:
+            for key in config['console_scripts']:
+                keys.append("{0} = {1}".format(key, config["console_scripts"].get(key)))
+        return keys
+
+
+def get_entry_points(config, m):
+    entry_point_scripts = []
+    entry_point_scripts.extend(m.get_value('build/entry_points'))
+    setup_py_data = jinja_context.load_setup_py_data(config)
+    setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
+
+    for ep in setup_py_entry_points:
+        if ep not in entry_point_scripts:
+            entry_point_scripts.append(ep)
+
+    return entry_point_scripts
+
+
 def create_info_files(m, files, config, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -333,8 +363,6 @@ def create_info_files(m, files, config, prefix):
     :type m: Metadata
     :param files: Paths to files to include in package
     :type files: list of str
-    :param include_recipe: Whether or not to include the recipe (True by default)
-    :type include_recipe: bool
     '''
 
     copy_recipe(m, config)
@@ -346,9 +374,11 @@ def create_info_files(m, files, config, prefix):
     write_info_json(m, config, mode_dict)
     write_about_json(m, config)
 
+    entry_point_scripts = get_entry_points(config, m)
+
     if is_noarch_python(m):
         noarch_python.create_entry_point_information(
-            "python", m.get_value('build/entry_points'), config
+            "python", entry_point_scripts, config
         )
 
     if on_win:
