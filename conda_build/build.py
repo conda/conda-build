@@ -332,13 +332,17 @@ def get_entry_points_from_setup_py(setup_py_data):
     if isinstance(entry_points, dict):
         return entry_points.get("console_scripts")
     else:
-        import configparser
+        from conda_build.conda_interface import configparser
         config = configparser.ConfigParser()
-        config.read_string(entry_points)
+        # ConfigParser (for python2) does not support read_string method
+        try:
+            config.read_string(entry_points)
+        except AttributeError:
+            config.read(unicode(entry_points))
         keys = []
         if "console_scripts" in config.sections():
-            for key in config.get('console_scripts'):
-                keys.append("{0} = {1}".format(key, config.get("console_scripts").get(key)))
+            for key in config['console_scripts']:
+                keys.append("{0} = {1}".format(key, config["console_scripts"].get(key)))
         return keys
 
 
@@ -361,7 +365,7 @@ def get_entry_point_script_names(entry_point_scripts):
     for entry_point in entry_point_scripts:
         cmd = entry_point[:entry_point.find("= ")].strip()
         if on_win:
-            scripts.append("Scripts\\%s-scripts.py" % cmd)
+            scripts.append("Scripts\\%s-script.py" % cmd)
             scripts.append("Scripts\\%s.exe" % cmd)
         else:
             scripts.append("bin/%s" % cmd)
