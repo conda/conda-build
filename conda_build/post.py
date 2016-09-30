@@ -312,7 +312,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     origin = dirname(elf)
 
     patchelf = external.find_executable('patchelf', prefix)
-    existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    try:
+        existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    except:
+        print('patchelf: --print-rpath failed for %s\n' % (elf))
+        return
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
@@ -321,11 +325,12 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
             relpath = os.path.relpath(old, prefix)
-            assert not relpath.startswith('..' + os.sep), \
-                'rpath {0} is outside prefix {1}'.format(old, prefix)
-            relpath = '$ORIGIN/' + os.path.relpath(old, origin)
-            if relpath not in new:
-                new.append(relpath)
+            if relpath.startswith('..' + os.sep):
+                print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
+            else:
+                relpath = '$ORIGIN/' + os.path.relpath(old, origin)
+                if relpath not in new:
+                    new.append(relpath)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
         if not rpath.startswith('/'):
