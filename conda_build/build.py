@@ -336,9 +336,9 @@ def get_entry_points_from_setup_py(setup_py_data):
         config = configparser.ConfigParser()
         config.read_string(entry_points)
         keys = []
-        if config.sections().index("console_scripts") >= 0:
-            for key in config['console_scripts']:
-                keys.append("{0} = {1}".format(key, config["console_scripts"].get(key)))
+        if "console_scripts" in config.sections():
+            for key in config.get('console_scripts'):
+                keys.append("{0} = {1}".format(key, config.get("console_scripts").get(key)))
         return keys
 
 
@@ -346,11 +346,12 @@ def get_entry_points(config, m):
     entry_point_scripts = []
     entry_point_scripts.extend(m.get_value('build/entry_points'))
     setup_py_data = jinja_context.load_setup_py_data(config)
-    setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
+    if setup_py_data:
+        setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
 
-    for ep in setup_py_entry_points:
-        if ep not in entry_point_scripts:
-            entry_point_scripts.append(ep)
+        for ep in setup_py_entry_points:
+            if ep not in entry_point_scripts:
+                entry_point_scripts.append(ep)
 
     return entry_point_scripts
 
@@ -765,8 +766,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files(prefix=config.build_prefix)
-        if any(config.meta_dir in join(config.build_prefix, f) for f in
-                files2 - files1):
+        if any(config.meta_dir in join(config.build_prefix, f) for f in files2 - files1):
             meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
                     join(config.build_prefix, f)),)
             sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
@@ -776,13 +776,20 @@ can lead to packages that include their dependencies.""" % meta_files))
                     prefix=config.build_prefix,
                     build_python=config.build_python,
                     croot=config.croot)
-        create_info_files(m, sorted(files2 - files1), config=config,
-                            prefix=config.build_prefix)
+
+        entry_point_script_names = get_entry_point_script_names(get_entry_points(config, m))
+        if is_noarch_python(m):
+            pkg_files = [f for f in sorted(files2 - files1) if f not in entry_point_script_names]
+        else:
+            pkg_files = sorted(files2 - files1)
+
+        create_info_files(m, pkg_files, config=config, prefix=config.build_prefix)
 
         if m.get_value('build/noarch_python'):
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
         elif is_noarch_python(m):
-            noarch_python.populate_files(m, sorted(files2 - files1), config.build_prefix)
+            noarch_python.populate_files(
+                m, pkg_files, config.build_prefix, entry_point_script_names)
 
         files3 = prefix_files(prefix=config.build_prefix)
         fix_permissions(files3 - files1, config.build_prefix)

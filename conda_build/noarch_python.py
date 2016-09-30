@@ -104,7 +104,7 @@ def handle_file(f, d, prefix):
         _error_exit("Error: Don't know how to handle file: %s" % f)
 
 
-def populate_files(m, files, prefix):
+def populate_files(m, files, prefix, entry_point_scripts=None):
     d = {'dist': m.dist(),
          'site-packages': [],
          'python-scripts': [],
@@ -119,6 +119,11 @@ def populate_files(m, files, prefix):
         for fns in (d['site-packages'], d['Examples']):
             for i, fn in enumerate(fns):
                 fns[i] = fn.replace('\\', '/')
+
+    if entry_point_scripts:
+        for entry_point in entry_point_scripts:
+            src = join(prefix, entry_point)
+            os.unlink(src)
 
     return d
 
