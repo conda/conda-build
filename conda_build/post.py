@@ -310,7 +310,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     origin = dirname(elf)
 
     patchelf = external.find_executable('patchelf', prefix)
-    existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    try:
+        existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    except:
+        print('patchelf: --print-rpath failed for %s\n' % (elf))
+        return
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
