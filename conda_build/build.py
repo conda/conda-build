@@ -355,6 +355,18 @@ def get_entry_points(config, m):
     return entry_point_scripts
 
 
+def get_entry_point_script_names(entry_point_scripts):
+    scripts = []
+    for entry_point in entry_point_scripts:
+        cmd = entry_point[:entry_point.find("= ")].strip()
+        if on_win:
+            scripts.append("Scripts\\%s-scripts.py" % cmd)
+            scripts.append("Scripts\\%s.exe" % cmd)
+        else:
+            scripts.append("bin/%s" % cmd)
+    return scripts
+
+
 def create_info_files(m, files, config, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -381,6 +393,8 @@ def create_info_files(m, files, config, prefix):
             "python", entry_point_scripts, config
         )
 
+    entry_point_script_names = get_entry_point_script_names(entry_point_scripts)
+
     if on_win:
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
@@ -392,9 +406,9 @@ def create_info_files(m, files, config, prefix):
             for f in files:
                 if f.find("site-packages") > 0:
                     fo.write(f[f.find("site-packages"):] + '\n')
-                elif f.startswith("bin"):
+                elif f.startswith("bin") and (f not in entry_point_script_names):
                     fo.write(f.replace("bin", "python-scripts") + '\n')
-                elif f.startswith("Scripts"):
+                elif f.startswith("Scripts") and (f not in entry_point_script_names):
                     fo.write(f.replace("Scripts", "python-scripts") + '\n')
         else:
             for f in files:
