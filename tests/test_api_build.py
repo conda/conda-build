@@ -611,7 +611,7 @@ def test_noarch_foo_value():
     assert metadata['noarch'] == "foo"
 
 
-@pytest.mark.xfail
+@pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
 def test_noarch_python_with_tests():
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     fn = api.get_output_file_path(recipe)
