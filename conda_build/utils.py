@@ -444,10 +444,10 @@ def guess_license_family(license_name, allowed_license_families):
 
 # Return all files in dir, and all its subdirectories, ending in pattern
 def get_ext_files(start_path, pattern):
-    for _, _, files in os.walk(start_path):
+    for root, _, files in os.walk(start_path):
         for f in files:
             if f.endswith(pattern):
-                yield os.path.join(dirname, f)
+                yield os.path.join(root, f)
 
 
 def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
