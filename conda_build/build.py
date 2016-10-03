@@ -56,6 +56,10 @@ from conda_build.create_test import (create_files, create_shell_files,
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
+import conda_build.noarch_python as noarch_python
+from conda_build import jinja_context
+
+
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
@@ -242,7 +246,9 @@ def detect_and_record_prefix_files(m, files, prefix, config):
         else:
             files_with_prefix = []
 
-    if files_with_prefix and not m.get_value('build/noarch_python'):
+    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m)
+
+    if files_with_prefix and not is_noarch:
         if on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -321,6 +327,51 @@ def write_no_link(m, config, files):
                     fo.write(f + '\n')
 
 
+def get_entry_points_from_setup_py(setup_py_data):
+    entry_points = setup_py_data.get("entry_points")
+    if isinstance(entry_points, dict):
+        return entry_points.get("console_scripts")
+    else:
+        from conda_build.conda_interface import configparser
+        config = configparser.ConfigParser()
+        # ConfigParser (for python2) does not support read_string method
+        try:
+            config.read_string(entry_points)
+        except AttributeError:
+            config.read(unicode(entry_points))
+        keys = []
+        if "console_scripts" in config.sections():
+            for key in config['console_scripts']:
+                keys.append("{0} = {1}".format(key, config["console_scripts"].get(key)))
+        return keys
+
+
+def get_entry_points(config, m):
+    entry_point_scripts = []
+    entry_point_scripts.extend(m.get_value('build/entry_points'))
+    setup_py_data = jinja_context.load_setup_py_data(config)
+    if setup_py_data:
+        setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
+
+        for ep in setup_py_entry_points:
+            if ep not in entry_point_scripts:
+                entry_point_scripts.append(ep)
+
+    return entry_point_scripts
+
+
+def get_entry_point_script_names(entry_point_scripts):
+    scripts = []
+    for entry_point in entry_point_scripts:
+        cmd = entry_point[:entry_point.find("= ")].strip()
+        if on_win:
+            scripts.append("Scripts\\%s-script.py" % cmd)
+            scripts.append("Scripts\\%s.exe" % cmd)
+        else:
+            scripts.append("bin/%s" % cmd)
+    return scripts
+
+
 def create_info_files(m, files, config, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -329,8 +380,6 @@ def create_info_files(m, files, config, prefix):
     :type m: Metadata
     :param files: Paths to files to include in package
     :type files: list of str
-    :param include_recipe: Whether or not to include the recipe (True by default)
-    :type include_recipe: bool
     '''
 
     copy_recipe(m, config)
@@ -342,6 +391,15 @@ def create_info_files(m, files, config, prefix):
     write_info_json(m, config, mode_dict)
     write_about_json(m, config)
 
+    entry_point_scripts = get_entry_points(config, m)
+
+    if is_noarch_python(m):
+        noarch_python.create_entry_point_information(
+            "python", entry_point_scripts, config
+        )
+
+    entry_point_script_names = get_entry_point_script_names(entry_point_scripts)
+
     if on_win:
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
@@ -349,6 +407,14 @@ def create_info_files(m, files, config, prefix):
     with open(join(config.info_dir, 'files'), **mode_dict) as fo:
         if m.get_value('build/noarch_python'):
             fo.write('\n')
+        elif is_noarch_python(m):
+            for f in files:
+                if f.find("site-packages") > 0:
+                    fo.write(f[f.find("site-packages"):] + '\n')
+                elif f.startswith("bin") and (f not in entry_point_script_names):
+                    fo.write(f.replace("bin", "python-scripts") + '\n')
+                elif f.startswith("Scripts") and (f not in entry_point_script_names):
+                    fo.write(f.replace("Scripts", "python-scripts") + '\n')
         else:
             for f in files:
                 fo.write(f + '\n')
@@ -691,18 +757,20 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
         get_build_metadata(m, config=config)
         create_post_scripts(m, config=config)
-        create_entry_points(m.get_value('build/entry_points'), config=config)
+
+        if not is_noarch_python(m):
+            create_entry_points(m.get_value('build/entry_points'), config=config)
         files2 = prefix_files(prefix=config.build_prefix)
 
         post_process(sorted(files2 - files1),
-                        prefix=config.build_prefix,
-                        config=config,
-                        preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')))
+                     prefix=config.build_prefix,
+                     config=config,
+                     preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
+                     noarch=m.get_value('build/noarch'))
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files(prefix=config.build_prefix)
-        if any(config.meta_dir in join(config.build_prefix, f) for f in
-                files2 - files1):
+        if any(config.meta_dir in join(config.build_prefix, f) for f in files2 - files1):
             meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
                     join(config.build_prefix, f)),)
             sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
@@ -712,11 +780,20 @@ can lead to packages that include their dependencies.""" % meta_files))
                     prefix=config.build_prefix,
                     build_python=config.build_python,
                     croot=config.croot)
-        create_info_files(m, sorted(files2 - files1), config=config,
-                            prefix=config.build_prefix)
+
+        entry_point_script_names = get_entry_point_script_names(get_entry_points(config, m))
+        if is_noarch_python(m):
+            pkg_files = [f for f in sorted(files2 - files1) if f not in entry_point_script_names]
+        else:
+            pkg_files = sorted(files2 - files1)
+
+        create_info_files(m, pkg_files, config=config, prefix=config.build_prefix)
+
         if m.get_value('build/noarch_python'):
-            import conda_build.noarch_python as noarch_python
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
+        elif is_noarch_python(m):
+            noarch_python.populate_files(
+                m, pkg_files, config.build_prefix, entry_point_script_names)
 
         files3 = prefix_files(prefix=config.build_prefix)
         fix_permissions(files3 - files1, config.build_prefix)
@@ -1130,3 +1207,7 @@ def is_package_built(metadata, config):
     # will be empty if none found, and evalute to False
     package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
     return package_exists or metadata.pkg_fn() in index
+
+
+def is_noarch_python(meta):
+    return str(meta.get_value('build/noarch')).lower() == "python"

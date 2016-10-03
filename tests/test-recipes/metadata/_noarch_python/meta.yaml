@@ -1,0 +1,19 @@
+package:
+  name: noarch_python_test_package
+  version: "1.0"
+
+source:
+  path: ./noarch_python_test_package
+
+build:
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+  noarch: python
+  entry_points:
+    - noarch_python_test_package_script = noarch_python_test_package:main
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python

@@ -590,6 +590,7 @@ def test_disable_pip(test_config):
     with pytest.raises(SystemExit):
         api.build(metadata)
 
+
 @pytest.mark.skipif(not sys.platform.startswith('linux'), reason="rpath fixup only done on Linux so far.")
 def test_rpath_linux(test_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=test_config)
@@ -608,3 +609,20 @@ def test_noarch_foo_value():
     metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
     assert 'noarch' in metadata
     assert metadata['noarch'] == "foo"
+
+
+@pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
+def test_noarch_python_with_tests():
+    recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+
+
+def test_noarch_python():
+    recipe = os.path.join(metadata_dir, "_noarch_python")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    assert package_has_file(fn, 'info/files') is not ''
+    noarch = json.loads(package_has_file(fn, 'info/noarch.json').decode())
+    assert 'entry_points' in noarch
+    assert 'type' in noarch
