@@ -1,3 +1,26 @@
+2016-09-27 2.0.3:
+-----------------
+
+Enhancements:
+-------------
+
+* add support for noarch: python #1366
+
+Bug fixes:
+----------
+
+* convert popen args to bytestrings if unicode #1413
+* Fix perl file access error on win skeleton cpan #1414
+* Catch patchelf failures in post #1418
+* fix path walking in get_ext_files #1422
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @soapy1
+
 2016-09-27 2.0.2:
 -----------------
 
