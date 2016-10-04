@@ -39,3 +39,37 @@ def test_build_id_at_end_of_long_build_prefix(config):
     build_id = 'test123'
     config.build_id = build_id
     assert build_id in config.build_prefix
+
+
+def test_create_config_with_subdir():
+    config = Config(subdir='steve-128')
+    assert config.platform == 'steve'
+    assert config.subdir == 'steve-128'
+
+    config = Config(subdir='noarch')
+    assert config.platform == 'noarch'
+    assert config.subdir == 'noarch'
+
+
+def test_set_platform(config):
+    config.platform = 'steve'
+    bits = config.bits
+    assert config.subdir == 'steve-' + str(bits)
+
+
+def test_set_subdir(config):
+    config.subdir = 'steve'
+    bits = config.bits
+    assert config.subdir == 'steve-' + str(bits)
+    assert config.platform == 'steve'
+
+    config.subdir = 'steve-128'
+    assert config.subdir == 'steve-128'
+    assert config.platform == 'steve'
+    assert config.bits == '128'
+
+
+def test_set_bits(config):
+    config.bits = 128
+    assert config.subdir == config.platform + '-' + str(128)
+    assert config.bits == 128
