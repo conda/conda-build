@@ -88,3 +88,8 @@ def test_pypi_version_sorting(testing_workdir, test_config):
 def test_list_skeletons():
     skeletons = api.list_skeletons()
     assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks'])
+
+
+def test_pypi_with_entry_points(testing_workdir):
+    api.skeletonize('planemo', repo='pypi', python_version="2.7")
+    assert os.path.isdir('planemo')
