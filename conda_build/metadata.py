@@ -237,6 +237,7 @@ default_structs = {
     'build/noarch_python': bool,
     'build/detect_binary_files_with_prefix': bool,
     'build/skip': bool,
+    'build/skip_compile_pyc': list,
     'app/own_environment': bool
 }
 
@@ -305,8 +306,8 @@ FIELDS = {
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
-              'detect_binary_files_with_prefix', 'rpaths', 'script_env',
-              'always_include_files', 'skip', 'msvc_compiler',
+              'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
+              'script_env', 'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends', 'include_recipe'  # pin_depends is experimental still
               ],
     'requirements': ['build', 'run', 'conflicts'],

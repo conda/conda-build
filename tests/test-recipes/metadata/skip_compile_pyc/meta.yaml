@@ -1,0 +1,20 @@
+package:
+  name: skip_compile_pyc
+  version: "1.0"
+
+source:
+  path: .
+
+requirements:
+  build:
+    - python
+
+build:
+  script:
+    - cp -rf "${SRC_DIR}"/* "${PREFIX}"/  # [unix]
+    - xcopy /s %SRC_DIR% %PREFIX%         # [win]
+  skip_compile_pyc:
+    # rec_glob is used to find files:
+    - sub/skip*
+    # test that path normalization happens:
+    - ./sub/../skip_compile_pyc.py
