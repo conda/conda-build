@@ -12,7 +12,6 @@ import logging
 import mmap
 import os
 from os.path import isdir, isfile, islink, join
-import re
 import shutil
 import stat
 import subprocess
@@ -329,50 +328,6 @@ def write_no_link(m, config, files):
                     fo.write(f + '\n')
 
 
-def get_entry_points_from_setup_py(setup_py_data):
-    entry_points = setup_py_data.get("entry_points")
-    if isinstance(entry_points, dict):
-        return entry_points.get("console_scripts")
-    else:
-        from conda_build.conda_interface import configparser
-        config = configparser.ConfigParser()
-        # ConfigParser (for python2) does not support read_string method
-        try:
-            config.read_string(entry_points)
-        except AttributeError:
-            config.read(unicode(entry_points))
-        keys = []
-        if "console_scripts" in config.sections():
-            for key in config['console_scripts']:
-                keys.append("{0} = {1}".format(key, config["console_scripts"].get(key)))
-        return keys
-
-
-def setup_py_has_entry_points(config):
-    has_entry_points = False
-    if os.path.isfile(os.path.join(config.work_dir, 'setup.py')):
-        with open(os.path.join(config.work_dir, 'setup.py')) as f:
-            match = re.search('entry_points', f.read())
-        has_entry_points = (match is not None)
-    return has_entry_points
-
-
-def get_entry_points(config, m):
-    entry_point_scripts = []
-    entry_point_scripts.extend(m.get_value('build/entry_points'))
-    if not entry_point_scripts and setup_py_has_entry_points(config):
-        with sys_path_prepended(config):
-            setup_py_data = jinja_context.load_setup_py_data(config)
-        if setup_py_data:
-            setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
-
-            for ep in setup_py_entry_points:
-                if ep not in entry_point_scripts:
-                    entry_point_scripts.append(ep)
-
-    return entry_point_scripts
-
-
 def get_entry_point_script_names(entry_point_scripts):
     scripts = []
     for entry_point in entry_point_scripts:
@@ -404,7 +359,7 @@ def create_info_files(m, files, config, prefix):
     write_info_json(m, config, mode_dict)
     write_about_json(m, config)
 
-    entry_point_scripts = get_entry_points(config, m)
+    entry_point_scripts = m.get_value('build/entry_points')
 
     if is_noarch_python(m):
         noarch_python.create_entry_point_information(
@@ -794,7 +749,7 @@ can lead to packages that include their dependencies.""" % meta_files))
                     build_python=config.build_python,
                     croot=config.croot)
 
-        entry_point_script_names = get_entry_point_script_names(get_entry_points(config, m))
+        entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
         if is_noarch_python(m):
             pkg_files = [f for f in sorted(files2 - files1) if f not in entry_point_script_names]
         else:
