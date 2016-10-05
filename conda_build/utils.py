@@ -383,6 +383,23 @@ def prepend_bin_path(env, prefix, prepend_prefix=False):
 
 
 @contextlib.contextmanager
+def sys_path_prepended(config):
+    path_backup = sys.path[:]
+    if on_win:
+        sys.path.insert(1, os.path.join(config.build_prefix, 'lib', 'site-packages'))
+    else:
+        lib_dir = os.path.join(config.build_prefix, 'lib')
+        python_dir = glob(os.path.join(lib_dir, 'python[0-9\.]*'))
+        if python_dir:
+            python_dir = python_dir[0]
+            sys.path.insert(1, os.path.join(python_dir, 'site-packages'))
+        try:
+            yield
+        finally:
+            sys.path = path_backup
+
+
+@contextlib.contextmanager
 def path_prepended(prefix):
     old_path = os.environ['PATH']
     os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']

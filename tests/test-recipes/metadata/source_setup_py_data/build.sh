@@ -3,6 +3,6 @@
 # Ensure we are in a git repo
 [ -d .git ]
 git describe
-[ "$(git describe)" = 1.21.0 ]
+[ "$(git describe)" = 1.21.5 ]
 echo "\$PKG_VERSION = $PKG_VERSION"
-[ "${PKG_VERSION}" = 1.21.0 ]
+[ "${PKG_VERSION}" = 1.21.5 ]

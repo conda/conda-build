@@ -12,6 +12,7 @@ import logging
 import mmap
 import os
 from os.path import isdir, isfile, islink, join
+import re
 import shutil
 import stat
 import subprocess
@@ -49,7 +50,8 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
-                               prepend_bin_path, codec, root_script_dir, print_skip_message)
+                               prepend_bin_path, codec, root_script_dir, print_skip_message,
+                               sys_path_prepended)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -346,16 +348,27 @@ def get_entry_points_from_setup_py(setup_py_data):
         return keys
 
 
+def setup_py_has_entry_points(config):
+    has_entry_points = False
+    if os.path.isfile(os.path.join(config.work_dir, 'setup.py')):
+        with open(os.path.join(config.work_dir, 'setup.py')) as f:
+            match = re.search('entry_points', f.read())
+        has_entry_points = (match is not None)
+    return has_entry_points
+
+
 def get_entry_points(config, m):
     entry_point_scripts = []
     entry_point_scripts.extend(m.get_value('build/entry_points'))
-    setup_py_data = jinja_context.load_setup_py_data(config)
-    if setup_py_data:
-        setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
+    if not entry_point_scripts and setup_py_has_entry_points(config):
+        with sys_path_prepended(config):
+            setup_py_data = jinja_context.load_setup_py_data(config)
+        if setup_py_data:
+            setup_py_entry_points = get_entry_points_from_setup_py(setup_py_data)
 
-        for ep in setup_py_entry_points:
-            if ep not in entry_point_scripts:
-                entry_point_scripts.append(ep)
+            for ep in setup_py_entry_points:
+                if ep not in entry_point_scripts:
+                    entry_point_scripts.append(ep)
 
     return entry_point_scripts
 
