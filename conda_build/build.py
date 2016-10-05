@@ -766,7 +766,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                      prefix=config.build_prefix,
                      config=config,
                      preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                     noarch=m.get_value('build/noarch'))
+                     noarch=m.get_value('build/noarch'),
+                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files(prefix=config.build_prefix)
