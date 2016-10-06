@@ -82,7 +82,7 @@ def create_script(fn):
         with open(dst, 'w') as fo:
             fo.write('#!%s\n' % normpath(sys.executable))
             fo.write(data)
-        os.chmod(dst, 0o755)
+        os.chmod(dst, 0o775)
         FILES.append('bin/%s' % fn)
 
 

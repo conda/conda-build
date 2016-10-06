@@ -1,0 +1,11 @@
+package:
+  name: fix_permissions
+  version: "1.0"
+
+source:
+  path: .
+
+build:
+  script:
+    - cp -rf "${SRC_DIR}"/* "${PREFIX}"/  # [unix]
+    - xcopy /s %SRC_DIR% %PREFIX%         # [win]
