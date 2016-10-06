@@ -104,7 +104,16 @@ def copy_into(src, dst, timeout=90, symlinks=False):
                 os.makedirs(os.path.dirname(dst_fn))
             if lock:
                 lock.acquire(timeout=timeout)
-            shutil.copy2(src, dst_fn)
+            # with each of these, we are copying less metadata.  This seems to be necessary
+            #   to cope with some shared filesystems with some virtual machine setups.
+            #  See https://github.com/conda/conda-build/issues/1426
+            try:
+                shutil.copy2(src, dst_fn)
+            except OSError:
+                try:
+                    shutil.copy(src, dst_fn)
+                except OSError:
+                    shutil.copyfile(src, dst_fn)
         except shutil.Error:
             log.debug("skipping %s - already exists in %s", os.path.basename(src), dst)
         finally:
