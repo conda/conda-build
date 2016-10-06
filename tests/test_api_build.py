@@ -10,6 +10,8 @@ import sys
 import json
 import uuid
 
+# for version
+import conda
 from conda_build.conda_interface import PY3, url_path
 
 from binstar_client.commands import remove, show
@@ -17,7 +19,7 @@ from binstar_client.errors import NotFound
 import pytest
 import yaml
 
-from conda_build import api, exceptions
+from conda_build import api, exceptions, __version__
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file)
 from conda_build.os_utils.external import find_executable
@@ -608,3 +610,14 @@ def test_noarch_foo_value():
     metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
     assert 'noarch' in metadata
     assert metadata['noarch'] == "foo"
+
+
+def test_about_json_content(test_metadata):
+    api.build(test_metadata)
+    fn = api.get_output_file_path(test_metadata)
+    about = json.loads(package_has_file(fn, 'info/about.json').decode())
+    assert 'conda_version' in about and about['conda_version'] == conda.__version__
+    assert 'conda_build_version' in about and about['conda_build_version'] == __version__
+    assert 'channels' in about and about['channels']
+    assert 'env_vars' in about and about['env_vars']
+    assert 'root_pkgs' in about and about['root_pkgs']

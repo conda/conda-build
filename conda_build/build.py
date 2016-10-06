@@ -284,6 +284,16 @@ def write_about_json(m, config):
             value = m.get_value('about/%s' % key)
             if value:
                 d[key] = value
+        # for sake of reproducibility, record some conda info
+        conda_info = json.loads(subprocess.check_output(['conda', 'info', '--json']))
+        d['conda_version'] = conda_info['conda_version']
+        d['conda_build_version'] = conda_info['conda_build_version']
+        d['conda_env_version'] = conda_info['conda_env_version']
+        d['conda_private'] = conda_info['conda_private']
+        d['offline'] = conda_info['offline']
+        d['channels'] = conda_info['channels']
+        d['env_vars'] = conda_info['env_vars']
+        d['root_pkgs'] = json.loads(subprocess.check_output(['conda', 'list', '-n', 'root', '--json']))
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
@@ -354,10 +364,6 @@ def create_info_files(m, files, config, prefix):
         else:
             for f in files:
                 fo.write(f + '\n')
-
-    with open(join(config.info_dir, 'conda_versions'), **mode_dict) as fo:
-        fo.write("Conda version at build time: {0}\n".format(conda.__version__))
-        fo.write("Conda-build version at build time: {0}\n".format(__version__))
 
     detect_and_record_prefix_files(m, files, prefix, config)
     write_no_link(m, config, files)
