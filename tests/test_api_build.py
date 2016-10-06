@@ -18,6 +18,7 @@ from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
 import yaml
+import tarfile
 
 from conda_build import api, exceptions, __version__
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
@@ -592,6 +593,7 @@ def test_disable_pip(test_config):
     with pytest.raises(SystemExit):
         api.build(metadata)
 
+
 @pytest.mark.skipif(not sys.platform.startswith('linux'), reason="rpath fixup only done on Linux so far.")
 def test_rpath_linux(test_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=test_config)
@@ -621,3 +623,37 @@ def test_about_json_content(test_metadata):
     assert 'channels' in about and about['channels']
     assert 'env_vars' in about and about['env_vars']
     assert 'root_pkgs' in about and about['root_pkgs']
+
+
+@pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
+def test_noarch_python_with_tests():
+    recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
+    api.build(recipe)
+
+
+def test_noarch_python():
+    recipe = os.path.join(metadata_dir, "_noarch_python")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    assert package_has_file(fn, 'info/files') is not ''
+    noarch = json.loads(package_has_file(fn, 'info/noarch.json').decode())
+    assert 'entry_points' in noarch
+    assert 'type' in noarch
+
+
+def test_skip_compile_pyc():
+    recipe = os.path.join(metadata_dir, "skip_compile_pyc")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    tf = tarfile.open(fn)
+    pyc_count = 0
+    for f in tf.getmembers():
+        filename = os.path.basename(f.name)
+        _, ext = os.path.splitext(filename)
+        basename = filename.split('.', 1)[0]
+        if basename == 'skip_compile_pyc':
+            assert not ext == '.pyc', "a skip_compile_pyc .pyc was compiled: {}".format(filename)
+        if ext == '.pyc':
+            assert basename == 'compile_pyc', "an unexpected .pyc was compiled: {}".format(filename)
+            pyc_count = pyc_count + 1
+    assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)

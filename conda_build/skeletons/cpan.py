@@ -157,12 +157,11 @@ def get_cpan_api_url(url, colons):
         url = url.replace("::", "-")
     with PerlTmpDownload(url) as json_path:
         try:
-            dist_json_file = gzip.open(json_path)
-            output = dist_json_file.read()
+            with gzip.open(json_path) as dist_json_file:
+                output = dist_json_file.read()
             if hasattr(output, "decode"):
                 output = output.decode('utf-8-sig')
             rel_dict = json.loads(output)
-            dist_json_file.close()
         except IOError:
             rel_dict = json.loads(open(json_path).read())
     return rel_dict

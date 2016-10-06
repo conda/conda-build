@@ -12,7 +12,7 @@ import sys
 import time
 
 from .conda_interface import string_types, binstar_upload
-from .conda_interface import subdir, root_dir, root_writable, cc, bits, platform
+from .conda_interface import root_dir, root_writable, cc, bits, platform
 
 from .utils import get_build_folders, rm_rf
 
@@ -105,7 +105,6 @@ class Config(object):
                   Setting('verbose', False),
                   Setting('debug', False),
                   Setting('timeout', 90),
-                  Setting('subdir', subdir),
                   Setting('bits', bits),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
@@ -119,6 +118,20 @@ class Config(object):
         # dangle remaining keyword arguments as attributes on this class
         for name, value in kwargs.items():
             setattr(self, name, value)
+
+    @property
+    def subdir(self):
+        if self.platform == 'noarch':
+            return self.platform
+        else:
+            return "-".join([self.platform, str(self.bits)])
+
+    @subdir.setter
+    def subdir(self, value):
+        values = value.split('-')
+        self.platform = values[0]
+        if len(values) > 1:
+            self.bits = values[1]
 
     @property
     def croot(self):

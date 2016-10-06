@@ -160,33 +160,36 @@ def list_skeletons():
     return files
 
 
-def skeletonize(config, **kwargs):
+def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
+                config=None, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
-    config = get_or_merge_config(config)
+    # here we're dumping all extra kwargs as attributes on the config object.  We'll extract
+    #    only relevant ones below
+    config = get_or_merge_config(config, **kwargs)
     config.compute_build_id('skeleton')
-    config.packages = _ensure_list(config.packages)
-
-    module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
-                                fromlist=[config.repo]),
-                     config.repo)
+    packages = _ensure_list(packages)
 
     # This is a little bit of black magic.  The idea is that for any keyword argument that
     #    we inspect from the given module's skeletonize funtion, we should hoist the argument
     #    off of the config object, and pass it as a keyword argument.  This is sort of the
     #    inverse of what we do in the CLI code - there we take CLI arguments and dangle them
     #    all on the config object as attributes.
+    module = getattr(__import__("conda_build.skeletons", globals=globals(), locals=locals(),
+                                fromlist=[repo]),
+                     repo)
+
     func_args = module.skeletonize.__code__.co_varnames
-    skeleton_args = {}
-    for arg in func_args:
-        try:
-            skeleton_args[arg] = getattr(config, arg)
-        except AttributeError:
-            pass
-
-    skeleton_return = module.skeletonize(config=config, **skeleton_args)
-
+    kwargs = {name: getattr(config, name) for name in dir(config) if name in func_args}
+    kwargs.update({name: value for name, value in kwargs.items() if name in func_args})
+    # strip out local arguments that we pass directly
+    for arg in skeletonize.__code__.co_varnames:
+        if arg in kwargs:
+            del kwargs[arg]
+    with config:
+        skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
+                                                recursive=recursive, config=config, **kwargs)
     return skeleton_return
 
 

@@ -56,6 +56,13 @@ def rewrite_script(fn, prefix):
     return fn
 
 
+def create_entry_point_information(noarch_type, entry_points, config):
+    entry_point_information = {"type": noarch_type, "entry_points": entry_points}
+    file = os.path.join(config.info_dir, "noarch.json")
+    with open(file, 'w') as entry_point_file:
+        entry_point_file.write(json.dumps(entry_point_information))
+
+
 def handle_file(f, d, prefix):
     """Process a file for inclusion in a noarch python package.
     """
@@ -97,32 +104,7 @@ def handle_file(f, d, prefix):
         _error_exit("Error: Don't know how to handle file: %s" % f)
 
 
-def transform(m, files, prefix):
-    assert 'py_' in m.dist()
-
-    name = m.name()
-
-    bin_dir = join(prefix, 'bin')
-    _force_dir(bin_dir)
-
-    # Create *nix prelink script
-    # Note: it's important to use LF newlines or it wont work if we build on Win
-    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
-        fo.write('''\
-#!/bin/bash
-$PREFIX/bin/python $SOURCE_DIR/link.py
-'''.encode('utf-8'))
-
-    scripts_dir = join(prefix, 'Scripts')
-    _force_dir(scripts_dir)
-
-    # Create windows prelink script (be nice and use Windows newlines)
-    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:
-        fo.write('''\
-@echo off
-"%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
-'''.replace('\n', '\r\n').encode('utf-8'))
-
+def populate_files(m, files, prefix, entry_point_scripts=None):
     d = {'dist': m.dist(),
          'site-packages': [],
          'python-scripts': [],
@@ -137,6 +119,42 @@ $PREFIX/bin/python $SOURCE_DIR/link.py
         for fns in (d['site-packages'], d['Examples']):
             for i, fn in enumerate(fns):
                 fns[i] = fn.replace('\\', '/')
+
+    if entry_point_scripts:
+        for entry_point in entry_point_scripts:
+            src = join(prefix, entry_point)
+            os.unlink(src)
+
+    return d
+
+
+def transform(m, files, prefix):
+    assert 'py_' in m.dist()
+
+    bin_dir = join(prefix, 'bin')
+    _force_dir(bin_dir)
+
+    scripts_dir = join(prefix, 'Scripts')
+    _force_dir(scripts_dir)
+
+    name = m.name()
+
+    # Create *nix prelink script
+    # Note: it's important to use LF newlines or it wont work if we build on Win
+    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
+        fo.write('''\
+    #!/bin/bash
+    $PREFIX/bin/python $SOURCE_DIR/link.py
+    '''.encode('utf-8'))
+
+    # Create windows prelink script (be nice and use Windows newlines)
+    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:
+        fo.write('''\
+    @echo off
+    "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
+    '''.replace('\n', '\r\n').encode('utf-8'))
+
+    d = populate_files(m, files, prefix)
 
     # Find our way to this directory
     this_dir = dirname(__file__)

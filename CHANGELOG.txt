@@ -1,3 +1,79 @@
+2016-09-27 2.0.3:
+-----------------
+
+Enhancements:
+-------------
+
+* add support for noarch: python #1366
+
+Bug fixes:
+----------
+
+* convert popen args to bytestrings if unicode #1413
+* Fix perl file access error on win skeleton cpan #1414
+* Catch patchelf failures in post #1418
+* fix path walking in get_ext_files #1422
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @soapy1
+
+2016-09-27 2.0.2:
+-----------------
+
+Enhancements:
+-------------
+
+* Consider all recipes when printing output paths with --output #1332
+* Lay groundwork for noarch packages with different types allowed (not just noarch_python) #1334
+* Improve setting RPATH on Linux - handle relative paths better #1336
+* Add GPL as a license family #1340
+* Skip fixing rpath for files listed in ignore_prefix_files #1345
+* Uniformly use conda's rm_rf function, not move_to_trash #1355
+* Add support for alternate PKGINFO files.  Adds pkginfo dependency.  #1353
+* Add --croot argument to conda build CLI, to specify build root folder #1358
+* Do not index pkgs folder #1381 #1388
+* Assert that merge destination is not a subdir of source, to avoid recursion problems #1396
+* add UUID to token upload test to avoid race condition that caused intermittent CI failure #1392
+* Roll source.get_dir into config.work_dir, to avoid confusion.  #1400
+* Improve locking in several places #1405 #1408
+
+Bug fixes:
+----------
+
+* Fix guess_license_family to have LGPL -> LGPL, not public domain #1336
+* Restore standard behavior with ```__pycache__``` folder and pyc files #1333
+* Fix pyver_re to not catch python-* packages #1342
+* Fix erroneous file argument to logging call #1344
+* Fix convert unix -> win  not creating entry point py scripts #1348
+* Remove pytest timeout for tests.  It is responsible for intermittent CI test crashes.  #1351
+* Fix retrieval of CONDA_NPY setting (only --numpy flag was being respected) #1356
+* Fix --no-build-id argument to conda build that was note being respected #1359
+* Fix handling of recipe folder specifications coming out blank or . #1360 #1391
+* Handle conda 4.2 exceptions better for LinkErrors and PaddingErrors, better support OpenSSL custom prefix replacement #1362
+* Fix indentation error leading to skip-existing not working #1364
+* Fix skeletonize not passing arguments from CLI #1384 #1387 #1406
+* Check if file exists before trying to use stat on it.  Might avoid mmap errors.  #1389
+* Fix no include recipe option when input is metadata (as opposed to recipe file path) #1398
+* Normalize slashes in examining files in tarfiles (always forward slashes) #1404
+
+Contributors:
+-------------
+
+* @gabm
+* @jakirkham
+* @johanneskoester
+* @mingwandroid
+* @msarahan
+* @mwcraig
+* @soapy1
+* @sooneecheah
+* @yoavram
+
+
 2016-09-06 2.0.1:
 -----------------
 

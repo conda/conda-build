@@ -8,6 +8,7 @@ import locale
 import mmap
 import re
 import os
+import fnmatch
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath, normpath)
 import stat
@@ -135,7 +136,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 
 
 def rm_py_along_so(prefix):
-    "remove .py (.pyc) files alongside .so or .pyd files"
+    """remove .py (.pyc) files alongside .so or .pyd files"""
     for root, _, files in os.walk(prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
@@ -160,9 +161,21 @@ def rm_pyo(files, prefix):
             os.unlink(os.path.join(prefix, fn))
 
 
-def compile_missing_pyc(files, cwd, python_exe):
-    compile_files = []
+def rm_pyc(files, prefix):
+    re_pyc = re.compile(r'.*(?:\.pyc$)')
     for fn in files:
+        if re_pyc.match(fn):
+            os.unlink(os.path.join(prefix, fn))
+
+
+def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
+    compile_files = []
+    skip_compile_pyc_n = [os.path.normpath(skip) for skip in skip_compile_pyc]
+    skipped_files = set()
+    for skip in skip_compile_pyc_n:
+        skipped_files.update(set(fnmatch.filter(files, skip)))
+    unskipped_files = set(files) - skipped_files
+    for fn in unskipped_files:
         # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
         if sys.platform == 'win32':
             if any([fn.lower().startswith(start) for start in ['library/bin', 'library\\bin',
@@ -176,15 +189,20 @@ def compile_missing_pyc(files, cwd, python_exe):
                 os.path.dirname(fn) + cache_prefix + os.path.basename(fn) + 'c' not in files):
             compile_files.append(fn)
 
-    if compile_files and os.path.isfile(python_exe):
-        print('compiling .pyc files...')
-        for f in compile_files:
-            call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
+    if compile_files:
+        if not os.path.isfile(python_exe):
+            print('compiling .pyc files... failed as no python interpreter was found')
+        else:
+            print('compiling .pyc files...')
+            for f in compile_files:
+                call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
 
-
-def post_process(files, prefix, config, preserve_egg_dir=False):
+def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
     rm_pyo(files, prefix)
-    compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
+    if noarch:
+        rm_pyc(files, prefix)
+    else:
+        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python, skip_compile_pyc=skip_compile_pyc)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
 
@@ -312,7 +330,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     origin = dirname(elf)
 
     patchelf = external.find_executable('patchelf', prefix)
-    existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    try:
+        existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+    except:
+        print('patchelf: --print-rpath failed for %s\n' % (elf))
+        return
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
@@ -321,11 +343,12 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
             relpath = os.path.relpath(old, prefix)
-            assert not relpath.startswith('..' + os.sep), \
-                'rpath {0} is outside prefix {1}'.format(old, prefix)
-            relpath = '$ORIGIN/' + os.path.relpath(old, origin)
-            if relpath not in new:
-                new.append(relpath)
+            if relpath.startswith('..' + os.sep):
+                print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
+            else:
+                relpath = '$ORIGIN/' + os.path.relpath(old, origin)
+                if relpath not in new:
+                    new.append(relpath)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
         if not rpath.startswith('/'):
