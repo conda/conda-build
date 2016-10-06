@@ -14,7 +14,6 @@ from distutils.msvc9compiler import Reg, WINSDK_BASE
 from .conda_interface import bits
 
 from conda_build import environ
-from conda_build import source
 from conda_build.utils import _check_call, root_script_dir, path_prepended
 
 

@@ -49,8 +49,7 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
-                               prepend_bin_path, codec, root_script_dir, print_skip_message,
-                               sys_path_prepended)
+                               prepend_bin_path, codec, root_script_dir, print_skip_message)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -58,7 +57,6 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
-from conda_build import jinja_context
 
 
 if 'bsd' in sys.platform:
@@ -751,7 +749,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 
         entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
         if is_noarch_python(m):
-            pkg_files = [f for f in sorted(files2 - files1) if f not in entry_point_script_names]
+            pkg_files = [fi for fi in sorted(files2 - files1) if fi not in entry_point_script_names]
         else:
             pkg_files = sorted(files2 - files1)
 

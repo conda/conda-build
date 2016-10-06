@@ -382,13 +382,16 @@ def prepend_bin_path(env, prefix, prepend_prefix=False):
     return env
 
 
+# not currently used.  Leaving in because it may be useful for when we do things
+#   like load setup.py data, and we need the modules from some prefix other than
+#   the root prefix, which is what conda-build runs from.
 @contextlib.contextmanager
-def sys_path_prepended(config):
+def sys_path_prepended(prefix):
     path_backup = sys.path[:]
     if on_win:
-        sys.path.insert(1, os.path.join(config.build_prefix, 'lib', 'site-packages'))
+        sys.path.insert(1, os.path.join(prefix, 'lib', 'site-packages'))
     else:
-        lib_dir = os.path.join(config.build_prefix, 'lib')
+        lib_dir = os.path.join(prefix, 'lib')
         python_dir = glob(os.path.join(lib_dir, 'python[0-9\.]*'))
         if python_dir:
             python_dir = python_dir[0]
