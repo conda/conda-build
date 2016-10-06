@@ -8,6 +8,7 @@ import locale
 import mmap
 import re
 import os
+import fnmatch
 from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
                      islink, realpath, relpath, normpath)
 import stat
@@ -80,7 +81,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
         fo.write(new_data.decode(encoding))
-    os.chmod(path, int('755', 8))
+    os.chmod(path, 0o775)
 
 
 def write_pth(egg_path, config):
@@ -166,9 +167,14 @@ def rm_pyc(files, prefix):
             os.unlink(os.path.join(prefix, fn))
 
 
-def compile_missing_pyc(files, cwd, python_exe):
+def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
     compile_files = []
-    for fn in files:
+    skip_compile_pyc_n = [os.path.normpath(skip) for skip in skip_compile_pyc]
+    skipped_files = set()
+    for skip in skip_compile_pyc_n:
+        skipped_files.update(set(fnmatch.filter(files, skip)))
+    unskipped_files = set(files) - skipped_files
+    for fn in unskipped_files:
         # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
         if sys.platform == 'win32':
             if any([fn.lower().startswith(start) for start in ['library/bin', 'library\\bin',
@@ -182,18 +188,21 @@ def compile_missing_pyc(files, cwd, python_exe):
                 os.path.dirname(fn) + cache_prefix + os.path.basename(fn) + 'c' not in files):
             compile_files.append(fn)
 
-    if compile_files and os.path.isfile(python_exe):
-        print('compiling .pyc files...')
-        for f in compile_files:
-            call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
+    if compile_files:
+        if not os.path.isfile(python_exe):
+            print('compiling .pyc files... failed as no python interpreter was found')
+        else:
+            print('compiling .pyc files...')
+            for f in compile_files:
+                call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
 
 
-def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False):
+def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
     rm_pyo(files, prefix)
     if noarch:
         rm_pyc(files, prefix)
     else:
-        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python)
+        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python, skip_compile_pyc=skip_compile_pyc)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
 
@@ -386,12 +395,20 @@ def fix_permissions(files, prefix):
     print("Fixing permissions")
     for root, dirs, _ in os.walk(prefix):
         for dn in dirs:
-            lchmod(join(root, dn), int('755', 8))
+            lchmod(join(root, dn), 0o775)
 
     for f in files:
         path = join(prefix, f)
         st = os.lstat(path)
-        lchmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
+        old_mode = stat.S_IMODE(st.st_mode)
+        new_mode = old_mode
+        # broadcast execute
+        if old_mode & stat.S_IXUSR:
+            new_mode = new_mode | stat.S_IXGRP | stat.S_IXOTH
+        # ensure user and group can write and all can read
+        new_mode = new_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        if old_mode != new_mode:
+            lchmod(path, new_mode)
 
 
 def post_build(m, files, prefix, build_python, croot):

@@ -685,10 +685,10 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 entry_points = pkginfo['entry_points']
             else:
                 setuptools_run = True
-                for section in config.sections():
+                for section in _config.sections():
                     if section in ['console_scripts', 'gui_scripts']:
                         value = ['%s=%s' % (option, _config.get(section, option))
-                                    for option in config.options(section)]
+                                    for option in _config.options(section)]
                         entry_points[section] = value
         if not isinstance(entry_points, dict):
             print("WARNING: Could not add entry points. They were:")

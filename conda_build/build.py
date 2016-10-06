@@ -95,10 +95,10 @@ def create_post_scripts(m, config):
         dst_dir = join(config.build_prefix,
                        'Scripts' if on_win else 'bin')
         if not isdir(dst_dir):
-            os.makedirs(dst_dir, int('755', 8))
+            os.makedirs(dst_dir, 0o775)
         dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
         copy_into(src, dst, config.timeout)
-        os.chmod(dst, int('755', 8))
+        os.chmod(dst, 0o775)
 
 
 def have_prefix_files(files, prefix):
@@ -732,7 +732,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                      prefix=config.build_prefix,
                      config=config,
                      preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                     noarch=m.get_value('build/noarch'))
+                     noarch=m.get_value('build/noarch'),
+                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
         # The post processing may have deleted some files (like easy-install.pth)
         files2 = prefix_files(prefix=config.build_prefix)
