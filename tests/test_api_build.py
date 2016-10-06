@@ -21,6 +21,7 @@ import yaml
 import tarfile
 
 from conda_build import api, exceptions, __version__
+from conda_build.build import VersionOrder
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file)
 from conda_build.os_utils.external import find_executable
@@ -621,7 +622,15 @@ def test_about_json_content(test_metadata):
     assert 'conda_version' in about and about['conda_version'] == conda.__version__
     assert 'conda_build_version' in about and about['conda_build_version'] == __version__
     assert 'channels' in about and about['channels']
-    assert 'env_vars' in about and about['env_vars']
+    try:
+        assert 'env_vars' in about and about['env_vars']
+    except AssertionError:
+        # new versions of conda support this, so we should raise errors.
+        if VersionOrder(conda.__version__) >= VersionOrder('4.2.10'):
+            raise
+        else:
+            pass
+
     assert 'root_pkgs' in about and about['root_pkgs']
 
 

@@ -291,15 +291,20 @@ def write_about_json(m, config):
             if value:
                 d[key] = value
         # for sake of reproducibility, record some conda info
-        conda_info = json.loads(subprocess.check_output(['conda', 'info', '--json']))
+        conda_info = json.loads(subprocess.check_output(['conda', 'info', '--json', '-s']))
         d['conda_version'] = conda_info['conda_version']
         d['conda_build_version'] = conda_info['conda_build_version']
         d['conda_env_version'] = conda_info['conda_env_version']
-        d['conda_private'] = conda_info['conda_private']
         d['offline'] = conda_info['offline']
         d['channels'] = conda_info['channels']
-        d['env_vars'] = conda_info['env_vars']
-        d['root_pkgs'] = json.loads(subprocess.check_output(['conda', 'list', '-n', 'root', '--json']))
+        # this information will only be present in conda 4.2.10+
+        try:
+            d['conda_private'] = conda_info['conda_private']
+            d['env_vars'] = conda_info['env_vars']
+        except KeyError:
+            pass
+        d['root_pkgs'] = json.loads(subprocess.check_output(['conda', 'list', '-n',
+                                                             'root', '--json']))
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
