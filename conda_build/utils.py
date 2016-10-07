@@ -405,10 +405,10 @@ def sys_path_prepended(prefix):
         if python_dir:
             python_dir = python_dir[0]
             sys.path.insert(1, os.path.join(python_dir, 'site-packages'))
-        try:
-            yield
-        finally:
-            sys.path = path_backup
+    try:
+        yield
+    finally:
+        sys.path = path_backup
 
 
 @contextlib.contextmanager
