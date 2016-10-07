@@ -19,6 +19,16 @@ def makefile(name, contents=""):
         f.write(contents)
 
 
+@pytest.mark.skipif(utils.on_win, reason="only unix has python version in site-packages path")
+def test_get_site_packages(testing_workdir):
+    # https://github.com/conda/conda-build/issues/1055#issuecomment-250961576
+
+    # crazy unreal python version that should show up in a second
+    crazy_path = os.path.join(testing_workdir, 'lib', 'python8.2', 'site-packages')
+    os.makedirs(crazy_path)
+    site_packages = utils.get_site_packages(testing_workdir)
+    assert site_packages == crazy_path
+
 
 @pytest.fixture(scope='function')
 def namespace_setup(testing_workdir, request):

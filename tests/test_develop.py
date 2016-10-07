@@ -7,6 +7,8 @@ from os.path import dirname, join, exists
 from conda_build.develop import _uninstall, write_to_conda_pth
 from conda_build.utils import rm_rf
 
+from .utils import testing_workdir
+
 import pytest
 
 

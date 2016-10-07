@@ -28,7 +28,7 @@ import conda_build.cli.main_index as main_index
 
 
 def test_build():
-    args = ['--no-anaconda-upload', os.path.join(metadata_dir, "python_run")]
+    args = ['--no-anaconda-upload', os.path.join(metadata_dir, "empty_sections"), '--no-activate']
     main_build.execute(args)
 
 
@@ -36,7 +36,7 @@ def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
 
-    args = ['--no-anaconda-upload', '-c', 'conda_build_test',
+    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
@@ -45,7 +45,7 @@ def test_build_add_channel():
 def test_build_without_channel_fails(testing_workdir):
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
     #    we probably have channels in condarc, and this is not a good test.
-    args = ['--no-anaconda-upload',
+    args = ['--no-anaconda-upload', '--no-activate',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
@@ -104,7 +104,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
 
 def test_build_no_build_id(testing_workdir, test_config, capfd):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
-            '--croot', test_config.croot]
+            '--croot', test_config.croot, '--no-activate',]
     main_build.execute(args)
     fn = api.get_output_file_path(os.path.join(metadata_dir, "has_prefix_files"),
                                   config=test_config)
@@ -136,7 +136,7 @@ def test_skeleton_pypi(testing_workdir, test_config):
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot]
+    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot, '--no-activate',]
     main_build.execute(args)
 
 

@@ -43,17 +43,8 @@ def get_npy_ver(config):
     return ''
 
 
-def get_stdlib_dir(config):
-    return join(config.build_prefix, 'Lib' if sys.platform == 'win32' else
-                'lib/python%s' % get_py_ver(config))
-
-
 def get_lua_include_dir(config):
     return join(config.build_prefix, "include")
-
-
-def get_sp_dir(config):
-    return join(get_stdlib_dir(config), 'site-packages')
 
 
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
@@ -261,8 +252,8 @@ def python_vars(config):
     d = {
         'PYTHON': config.build_python,
         'PY3K': str(config.PY3K),
-        'STDLIB_DIR': get_stdlib_dir(config),
-        'SP_DIR': get_sp_dir(config),
+        'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
+        'SP_DIR': utils.get_site_packages(config.build_prefix),
         'PY_VER': get_py_ver(config),
         'CONDA_PY': str(config.CONDA_PY),
     }

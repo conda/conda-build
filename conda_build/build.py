@@ -1036,6 +1036,14 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     to_build_recursive = []
     recipe_list = deque(recipe_list)
 
+    if on_win:
+        trash_dir = os.path.join(os.path.dirname(sys.executable), 'pkgs', '.trash')
+        if os.path.isdir(trash_dir):
+            # We don't really care if this does a complete job.
+            #    Cleaning up some files is better than none.
+            subprocess.call('del /s /q "{0}\\*.*" >nul 2>&1'.format(trash_dir), shell=True)
+        # delete_trash(None)
+
     already_built = set()
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
