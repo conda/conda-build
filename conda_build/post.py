@@ -27,7 +27,6 @@ from .conda_interface import PY3
 
 from conda_build import environ
 from conda_build import utils
-from conda_build import source
 
 if sys.platform.startswith('linux'):
     from conda_build.os_utils import elf

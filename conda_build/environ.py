@@ -14,7 +14,6 @@ from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import root_dir, cc
 
 from conda_build.os_utils import external
-from conda_build import source
 from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path
