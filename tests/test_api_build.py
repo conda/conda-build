@@ -140,16 +140,15 @@ def test_no_include_recipe_config_arg(test_metadata):
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 
-def test_no_include_recipe_meta_yaml(test_config):
+def test_no_include_recipe_meta_yaml(test_metadata, test_config):
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
-    output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
-                               "empty_sections-0.0-0.tar.bz2")
-    api.build(empty_sections, config=test_config)
+    output_file = api.get_output_file_path(test_metadata)
+    api.build(test_metadata)
     assert package_has_file(output_file, "info/recipe/meta.yaml")
 
-    output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
-                               "no_include_recipe-0.0-0.tar.bz2")
+    output_file = api.get_output_file_path(os.path.join(metadata_dir, '_no_include_recipe'),
+                                           config=test_config)
     api.build(os.path.join(metadata_dir, '_no_include_recipe'), config=test_config)
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
