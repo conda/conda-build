@@ -666,3 +666,12 @@ def test_skip_compile_pyc():
             assert basename == 'compile_pyc', "an unexpected .pyc was compiled: {}".format(filename)
             pyc_count = pyc_count + 1
     assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
+
+
+def test_fix_permissions():
+    recipe = os.path.join(metadata_dir, "fix_permissions")
+    fn = api.get_output_file_path(recipe)
+    api.build(recipe)
+    tf = tarfile.open(fn)
+    for f in tf.getmembers():
+        assert f.mode & 0o444 == 0o444, "tar member '{}' has invalid (read) mode".format(f.name)
