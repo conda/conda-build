@@ -12,6 +12,7 @@ import logging
 import mmap
 import os
 from os.path import isdir, isfile, islink, join
+import re
 import shutil
 import stat
 import subprocess
@@ -281,6 +282,10 @@ def detect_and_record_prefix_files(m, files, prefix, config):
         raise RuntimeError(errstr)
 
 
+def sanitize_channel(channel):
+    return re.sub('\/t\/[a-zA-Z0-9\-]*\/', '/t/<TOKEN>/', channel)
+
+
 def write_about_json(m, config):
     with open(join(config.info_dir, 'about.json'), 'w') as fo:
         d = {}
@@ -298,7 +303,11 @@ def write_about_json(m, config):
         d['conda_build_version'] = conda_info['conda_build_version']
         d['conda_env_version'] = conda_info['conda_env_version']
         d['offline'] = conda_info['offline']
-        d['channels'] = conda_info['channels']
+        channels = conda_info['channels']
+        stripped_channels = []
+        for channel in channels:
+            stripped_channels.append(sanitize_channel(channel))
+        d['channels'] = stripped_channels
         # this information will only be present in conda 4.2.10+
         try:
             d['conda_private'] = conda_info['conda_private']

@@ -137,3 +137,8 @@ def test_warn_on_old_conda_build(test_config, capfd):
                                   available_packages=['1.0.0beta'])
     output, error = capfd.readouterr()
     assert "conda-build appears to be out of date. You have version " not in error
+
+
+def test_sanitize_channel():
+    test_url = 'https://conda.anaconda.org/t/ms-534991f2-4123-473a-b512-42025291b927/somechannel'
+    assert build.sanitize_channel(test_url) == 'https://conda.anaconda.org/t/<TOKEN>/somechannel'
