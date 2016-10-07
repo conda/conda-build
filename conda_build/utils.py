@@ -346,7 +346,7 @@ def path2url(path):
 
 def get_stdlib_dir(prefix):
     if sys.platform == 'win32':
-        stdlib_dir = os.path.join(prefix, 'Lib', 'site-packages')
+        stdlib_dir = os.path.join(prefix, 'Lib')
     else:
         lib_dir = os.path.join(prefix, 'lib')
         stdlib_dir = glob(os.path.join(lib_dir, 'python[0-9\.]*'))
