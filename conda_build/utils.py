@@ -344,11 +344,24 @@ def path2url(path):
     return urlparse.urljoin('file:', urllib.pathname2url(path))
 
 
-def get_site_packages(prefix):
+def get_stdlib_dir(prefix):
     if sys.platform == 'win32':
-        sp = os.path.join(prefix, 'Lib', 'site-packages')
+        stdlib_dir = os.path.join(prefix, 'Lib', 'site-packages')
     else:
-        sp = os.path.join(prefix, 'lib', 'python%s' % sys.version[:3], 'site-packages')
+        lib_dir = os.path.join(prefix, 'lib')
+        stdlib_dir = glob(os.path.join(lib_dir, 'python[0-9\.]*'))
+        if not stdlib_dir:
+            stdlib_dir = ''
+        else:
+            stdlib_dir = stdlib_dir[0]
+    return stdlib_dir
+
+
+def get_site_packages(prefix):
+    stdlib_dir = get_stdlib_dir(prefix)
+    sp = ''
+    if stdlib_dir:
+        sp = os.path.join(stdlib_dir, 'site-packages')
     return sp
 
 
