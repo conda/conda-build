@@ -290,7 +290,10 @@ def write_about_json(m, config):
             if value:
                 d[key] = value
         # for sake of reproducibility, record some conda info
-        conda_info = json.loads(subprocess.check_output(['conda', 'info', '--json', '-s']))
+        conda_info = subprocess.check_output(['conda', 'info', '--json', '-s'])
+        if hasattr(conda_info, 'decode'):
+            conda_info = conda_info.decode(codec)
+        conda_info = json.loads(conda_info)
         d['conda_version'] = conda_info['conda_version']
         d['conda_build_version'] = conda_info['conda_build_version']
         d['conda_env_version'] = conda_info['conda_env_version']
@@ -302,8 +305,10 @@ def write_about_json(m, config):
             d['env_vars'] = conda_info['env_vars']
         except KeyError:
             pass
-        d['root_pkgs'] = json.loads(subprocess.check_output(['conda', 'list', '-n',
-                                                             'root', '--json']))
+        pkgs = subprocess.check_output(['conda', 'list', '-n', 'root', '--json'])
+        if hasattr(pkgs, 'decode'):
+            pkgs = pkgs.decode(codec)
+        d['root_pkgs'] = json.loads(pkgs)
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
