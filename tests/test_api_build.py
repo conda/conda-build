@@ -93,7 +93,7 @@ def test_token_upload(testing_workdir):
     with pytest.raises(NotFound):
         show.main(args)
 
-    metadata, _, _ = api.render(empty_sections)
+    metadata, _, _ = api.render(empty_sections, activate=False)
     metadata.meta['package']['name'] = '_'.join([metadata.name(), folder_uuid])
     metadata.config.token = args.token
 
@@ -112,8 +112,8 @@ def test_token_upload(testing_workdir):
 
 
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_no_anaconda_upload_condarc(service_name, testing_workdir, capfd):
-    api.build(empty_sections, anaconda_upload=False)
+def test_no_anaconda_upload_condarc(service_name, testing_workdir, test_config, capfd):
+    api.build(empty_sections, config=test_config)
     output, error = capfd.readouterr()
     assert "Automatic uploading is disabled" in output, error
 
@@ -145,19 +145,19 @@ def test_no_include_recipe_meta_yaml(test_config):
     # as a sanity check here.
     output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                "empty_sections-0.0-0.tar.bz2")
-    api.build(empty_sections, anaconda_upload=False)
+    api.build(empty_sections, config=test_config)
     assert package_has_file(output_file, "info/recipe/meta.yaml")
 
     output_file = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
                                "no_include_recipe-0.0-0.tar.bz2")
-    api.build(os.path.join(metadata_dir, '_no_include_recipe'), anaconda_upload=False)
+    api.build(os.path.join(metadata_dir, '_no_include_recipe'), config=test_config)
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 
-def test_early_abort(capfd):
+def test_early_abort(test_config, capfd):
     """There have been some problems with conda-build dropping out early.
     Make sure we aren't causing them"""
-    api.build(os.path.join(metadata_dir, '_test_early_abort'), anaconda_upload=False)
+    api.build(os.path.join(metadata_dir, '_test_early_abort'), config=test_config)
     output, error = capfd.readouterr()
     assert "Hello World" in output
 
@@ -173,6 +173,11 @@ def test_output_build_path_git_source(testing_workdir, test_config):
 
 def test_build_with_no_activate_does_not_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False)
+
+
+def test_build_with_activate_does_activate():
+    api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True)
+
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="no binary prefix manipulation done on windows.")

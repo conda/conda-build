@@ -201,9 +201,6 @@ def execute(args):
         config.clean_pkgs()
         return
 
-    if on_win:
-        delete_trash(None)
-
     set_language_env_vars(args, parser, config=config, execute=execute)
 
     action = None
