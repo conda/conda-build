@@ -25,7 +25,6 @@ from .conda_interface import walk_prefix
 from .conda_interface import md5_file
 from .conda_interface import PY3
 
-from conda_build import environ
 from conda_build import utils
 
 if sys.platform.startswith('linux'):
@@ -86,7 +85,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
 def write_pth(egg_path, config):
     fn = basename(egg_path)
-    with open(join(environ.get_sp_dir(config),
+    with open(join(utils.get_site_packages(config.build_prefix),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
@@ -97,7 +96,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     itself
     """
     absfiles = [join(prefix, f) for f in files]
-    sp_dir = environ.get_sp_dir(config)
+    sp_dir = utils.get_site_packages(prefix)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
@@ -202,7 +201,8 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
     if noarch:
         rm_pyc(files, prefix)
     else:
-        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python, skip_compile_pyc=skip_compile_pyc)
+        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python,
+                            skip_compile_pyc=skip_compile_pyc)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
 
@@ -406,7 +406,7 @@ def fix_permissions(files, prefix):
         if old_mode & stat.S_IXUSR:
             new_mode = new_mode | stat.S_IXGRP | stat.S_IXOTH
         # ensure user and group can write and all can read
-        new_mode = new_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+        new_mode = new_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH  # noqa
         if old_mode != new_mode:
             lchmod(path, new_mode)
 

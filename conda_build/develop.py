@@ -13,7 +13,7 @@ import sys
 from .conda_interface import string_types
 
 from conda_build.post import mk_relative_osx
-from conda_build.utils import _check_call, rec_glob
+from conda_build.utils import _check_call, rec_glob, get_site_packages
 from conda_build.os_utils.external import find_executable
 
 
@@ -60,22 +60,6 @@ def write_to_conda_pth(sp_dir, pkg_path):
         else:
             f.write(pkg_path + '\n')
             print("added " + pkg_path)
-
-
-def get_site_pkg(prefix, py_ver):
-    '''
-    Given the path to conda environment, find the site-packages directory
-
-    :param prefix: path to conda environment. Look here for current
-        environment's site-packages
-    :returns: absolute path to site-packages directory
-    '''
-    # get site-packages directory
-    stdlib_dir = join(prefix, 'Lib' if sys.platform == 'win32' else
-                      'lib/python%s' % py_ver)
-    sp_dir = join(stdlib_dir, 'site-packages')
-
-    return sp_dir
 
 
 def get_setup_py(path_):
@@ -162,8 +146,7 @@ Error: environment does not exist: %s
     assert find_executable('python', prefix=prefix)
 
     # current environment's site-packages directory
-    py_ver = '%d.%d' % (sys.version_info.major, sys.version_info.minor)
-    sp_dir = get_site_pkg(prefix, py_ver)
+    sp_dir = get_site_packages(prefix)
 
     if type(recipe_dirs) == string_types:
         recipe_dirs = [recipe_dirs]
