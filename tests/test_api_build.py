@@ -10,6 +10,8 @@ import sys
 import json
 import uuid
 
+# for version
+import conda
 from conda_build.conda_interface import PY3, url_path
 
 from binstar_client.commands import remove, show
@@ -18,7 +20,8 @@ import pytest
 import yaml
 import tarfile
 
-from conda_build import api, exceptions
+from conda_build import api, exceptions, __version__
+from conda_build.build import VersionOrder
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file)
 from conda_build.os_utils.external import find_executable
@@ -616,10 +619,28 @@ def test_noarch_foo_value():
     assert metadata['noarch'] == "foo"
 
 
+def test_about_json_content(test_metadata):
+    api.build(test_metadata)
+    fn = api.get_output_file_path(test_metadata)
+    about = json.loads(package_has_file(fn, 'info/about.json').decode())
+    assert 'conda_version' in about and about['conda_version'] == conda.__version__
+    assert 'conda_build_version' in about and about['conda_build_version'] == __version__
+    assert 'channels' in about and about['channels']
+    try:
+        assert 'env_vars' in about and about['env_vars']
+    except AssertionError:
+        # new versions of conda support this, so we should raise errors.
+        if VersionOrder(conda.__version__) >= VersionOrder('4.2.10'):
+            raise
+        else:
+            pass
+
+    assert 'root_pkgs' in about and about['root_pkgs']
+
+
 @pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
 def test_noarch_python_with_tests():
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
-    fn = api.get_output_file_path(recipe)
     api.build(recipe)
 
 
@@ -642,12 +663,12 @@ def test_skip_compile_pyc():
     for f in tf.getmembers():
         filename = os.path.basename(f.name)
         _, ext = os.path.splitext(filename)
-        basename = filename.split('.',1)[0]
+        basename = filename.split('.', 1)[0]
         if basename == 'skip_compile_pyc':
             assert not ext == '.pyc', "a skip_compile_pyc .pyc was compiled: {}".format(filename)
         if ext == '.pyc':
             assert basename == 'compile_pyc', "an unexpected .pyc was compiled: {}".format(filename)
-            pyc_count = pyc_count+1
+            pyc_count = pyc_count + 1
     assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
 
 
