@@ -1,7 +1,6 @@
 import unittest
-import tempfile
-import shutil
 import os
+import sys
 
 import pytest
 
@@ -20,12 +19,20 @@ def makefile(name, contents=""):
         f.write(contents)
 
 
+
 @pytest.fixture(scope='function')
 def namespace_setup(testing_workdir, request):
     namespace = os.path.join(testing_workdir, 'namespace')
     package = os.path.join(namespace, 'package')
     makefile(os.path.join(package, "module.py"))
     return testing_workdir
+
+
+def test_prepend_sys_path():
+    path = sys.path[:]
+    with utils.sys_path_prepended(sys.prefix):
+        assert sys.path != path
+        assert sys.path[1].startswith(sys.prefix)
 
 
 def test_copy_source_tree(namespace_setup):

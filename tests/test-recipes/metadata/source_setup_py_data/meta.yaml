@@ -14,6 +14,13 @@ source:
   git_url: ../../../../../conda_build_test_recipe
   git_tag: 1.21.0
 
+build:
+  entry_points:
+    - entry = conda_version_test.manual_entry:main
+
 requirements:
   build:
     - python {{ PY_VER }}*
+    # cython inclusion here is to test https://github.com/conda/conda-build/issues/149
+    # cython chosen because it is implicated somehow in setup.py complications.  Numpy would also work.
+    - cython
