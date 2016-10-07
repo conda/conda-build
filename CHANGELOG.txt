@@ -1,3 +1,30 @@
+2016-10-07 2.0.4:
+-----------------
+
+Enhancements:
+-------------
+
+* Add build/skip_compile_pyc meta.yaml option.  Use to skip compilation on pyc files listed therein.  #1169
+* Add build environment metadata to about.json (conda, conda-build versions, channels, root pkgs) #1407
+* Make subdir member of config a derived property, so that setting platform or bits is more direct #1427
+* Use subprocess call to windows del function to clear .trash folder, rather than conda.  Big speedup. #1438
+
+Bug fixes:
+----------
+
+* fix regression regarding 'config' in pypi skeleton for recipes with entry points #1430
+* don't load setup.py data when considering entry points (use only info from meta.yaml) #1431
+* fall back to trying to copy files without attributes or metadata if those fail #1436
+* Fix permissions on packaged files to be user and group writable, and other readable. #1437
+* fix conda develop not respecting python version of target environment #1440
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2016-09-27 2.0.3:
 -----------------
 
