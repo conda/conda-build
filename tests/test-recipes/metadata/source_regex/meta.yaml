@@ -1,0 +1,26 @@
+# This recipe exercises the use of GIT_ variables in jinja template strings,
+# including use cases involving expressions such as FOO[:7] or FOO.replace(...)
+
+# it uses load_setup_py_data from conda_build.jinja_context to populate some fields
+# with values fed from setuptools.
+
+{% set data = load_file_regex(load_file='meta.yaml', regex_pattern='git_tag: ([\\d.]+)', from_recipe_dir=True) %}
+
+package:
+  name: conda-build-test-get-regex-data
+  version: {{ data.group(1) }}
+
+source:
+  git_url: ../../../../../conda_build_test_recipe
+  git_tag: 1.21.0
+
+build:
+  entry_points:
+    - entry = conda_version_test.manual_entry:main
+
+requirements:
+  build:
+    - python {{ PY_VER }}*
+    # cython inclusion here is to test https://github.com/conda/conda-build/issues/149
+    # cython chosen because it is implicated somehow in setup.py complications.  Numpy would also work.
+    - cython
