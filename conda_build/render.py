@@ -78,7 +78,8 @@ def parse_or_try_download(metadata, no_download_source, config,
 
     need_reparse_in_env = False
     if (force_download or (not no_download_source and (metadata.uses_vcs_in_meta or
-                                                       metadata.uses_setup_py_in_meta))):
+                                                       metadata.uses_setup_py_in_meta or
+                                                       metadata.uses_regex_in_meta))):
 
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.

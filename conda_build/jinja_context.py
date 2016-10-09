@@ -167,6 +167,43 @@ def load_npm():
         return json.load(pkg)
 
 
+def load_file_regex(config, load_file=None, regex_pattern=None, from_recipe_dir=False,
+                    recipe_dir=None, permit_undefined_jinja=True):
+    import re
+    match = False
+
+    cd_to_work = False
+
+    if load_file is None:
+        raise RuntimeError('File to be searched is not specified.')
+
+    if from_recipe_dir and recipe_dir:
+        load_file = os.path.abspath(os.path.join(recipe_dir, load_file))
+    elif os.path.exists(config.work_dir):
+        cd_to_work = True
+        cwd = os.getcwd()
+        os.chdir(config.work_dir)
+        if not os.path.isabs(load_file):
+            load_file = os.path.join(config.work_dir, load_file)
+    else:
+        message = ("Did not find {} file in manually specified location, and source "
+                  "not downloaded yet.".format(load_file))
+        if permit_undefined_jinja:
+            log.debug(message)
+            return {}
+        else:
+            raise RuntimeError(message)
+
+    if os.path.isfile(load_file):
+        match = re.search(regex_pattern, open(load_file, 'r').read())
+
+    # Reset the working directory
+    if cd_to_work:
+        os.chdir(cwd)
+
+    return match if match else None
+
+
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
     """
     Return a dictionary to use as context for jinja templates.
@@ -185,5 +222,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
         load_npm=load_npm,
+        load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
+                                permit_undefined_jinja=permit_undefined_jinja),
         environ=environ)
     return ctx
