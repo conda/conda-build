@@ -193,6 +193,8 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
 
     if os.path.isfile(load_file):
         match = re.search(regex_pattern, open(load_file, 'r').read())
+    else:
+        raise TypeError('{} is not a file that can be read'.format(load_file))
 
     # Reset the working directory
     if cd_to_work:
