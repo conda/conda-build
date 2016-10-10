@@ -167,15 +167,12 @@ def load_npm():
         return json.load(pkg)
 
 
-def load_file_regex(config, load_file=None, regex_pattern=None, from_recipe_dir=False,
+def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
                     recipe_dir=None, permit_undefined_jinja=True):
     import re
     match = False
 
     cd_to_work = False
-
-    if load_file is None:
-        raise RuntimeError('File to be searched is not specified.')
 
     if from_recipe_dir and recipe_dir:
         load_file = os.path.abspath(os.path.join(recipe_dir, load_file))
