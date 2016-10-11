@@ -190,7 +190,7 @@ def build(m, bld_bat, config):
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
             fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
             if config.activate:
-                fo.write("call {conda_root}\\activate.bat {prefix}\n".format(
+                fo.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
                     conda_root=root_script_dir,
                     prefix=config.build_prefix))
             fo.write("REM ===== end generated header =====\n")

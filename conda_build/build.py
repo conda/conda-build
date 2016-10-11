@@ -733,8 +733,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                             else:
                                 data = open(work_file).read()
                             with open(work_file, 'w') as bf:
-                                bf.write("source {conda_root}activate {build_prefix} &> "
-                                    "/dev/null\n".format(conda_root=root_script_dir + os.path.sep,
+                                bf.write('source "{conda_root}activate" "{build_prefix}" &> '
+                                         '/dev/null\n'.format(conda_root=root_script_dir + os.path.sep,
                                                          build_prefix=config.build_prefix))
                                 bf.write(data)
                         else:
@@ -953,7 +953,7 @@ def test(m, config, move_broken=True):
         with open(test_script, 'w') as tf:
             if config.activate:
                 ext = ".bat" if on_win else ""
-                tf.write("{source} {conda_root}activate{ext} {test_env} {squelch}\n".format(
+                tf.write('{source} "{conda_root}activate{ext}" "{test_env}" {squelch}\n'.format(
                     conda_root=root_script_dir + os.path.sep,
                     source="call" if on_win else "source",
                     ext=ext,
