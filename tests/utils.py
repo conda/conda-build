@@ -1,8 +1,10 @@
 from collections import defaultdict
+import contextlib
 import os
+import stat
 import subprocess
 import sys
-import tarfile
+
 
 import pytest
 
@@ -99,3 +101,23 @@ def add_mangling(filename):
         filename = os.path.join(os.path.dirname(filename), '__pycache__',
                                 os.path.basename(filename))
     return filename + 'c'
+
+
+@contextlib.contextmanager
+def put_bad_conda_on_path(testing_workdir):
+    path_backup = os.environ['PATH']
+    # it is easier to add an intentionally bad path than it is to try to scrub any existing path
+    os.environ['PATH'] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+
+    exe_name = 'conda.bat' if on_win else 'conda'
+    out_exe = os.path.join(testing_workdir, exe_name)
+    with open(out_exe, 'w') as f:
+        f.write("exit 1")
+    st = os.stat(out_exe)
+    os.chmod(out_exe, st.st_mode | 0o111)
+    try:
+        yield
+    except:
+        raise
+    finally:
+        os.environ['PATH'] = path_backup

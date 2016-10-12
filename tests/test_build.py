@@ -3,17 +3,19 @@ This file tests the build.py module.  It sits lower in the stack than the API te
 and is more unit-test oriented.
 """
 
-import copy
+import json
 import os
+import subprocess
 import sys
 
 import pytest
 
-from conda_build import build, api
+import conda
+from conda_build import build, api, __version__
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
 
-from .utils import testing_workdir, test_config, test_metadata, metadata_dir
+from .utils import testing_workdir, test_config, test_metadata, metadata_dir, put_bad_conda_on_path
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -142,3 +144,20 @@ def test_warn_on_old_conda_build(test_config, capfd):
 def test_sanitize_channel():
     test_url = 'https://conda.anaconda.org/t/ms-534991f2-4123-473a-b512-42025291b927/somechannel'
     assert build.sanitize_channel(test_url) == 'https://conda.anaconda.org/t/<TOKEN>/somechannel'
+
+
+def test_write_about_json_without_conda_on_path(testing_workdir, test_metadata):
+    with put_bad_conda_on_path(testing_workdir):
+        # verify that the correct (bad) conda is the one we call
+        with pytest.raises(subprocess.CalledProcessError):
+            subprocess.check_output('conda -h', env=os.environ, shell=True)
+        build.write_about_json(test_metadata, test_metadata.config)
+
+    output_file = os.path.join(test_metadata.config.info_dir, 'about.json')
+    assert os.path.isfile(output_file)
+    with open(output_file) as f:
+        about = json.load(f)
+    assert 'conda_version' in about
+    assert about['conda_version'] == conda.__version__
+    assert 'conda_build_version' in about
+    assert about['conda_build_version'] == __version__
