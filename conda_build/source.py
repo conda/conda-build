@@ -492,13 +492,12 @@ def provide(recipe_dir, meta, config, patch=True):
     elif 'svn_url' in meta:
         svn_source(meta, config=config)
     elif 'path' in meta:
+        path = normpath(abspath(join(recipe_dir, meta.get('path'))))
         if config.verbose:
-            print("Copying %s to %s" % (abspath(join(recipe_dir,
-                                                     meta.get('path'))),
-                                        config.work_dir))
+            print("Copying %s to %s" % (path, config.work_dir))
         # careful here: we set test path to be outside of conda-build root in setup.cfg.
         #    If you don't do that, this is a recursive function
-        copy_into(abspath(join(recipe_dir, meta.get('path'))), config.work_dir, config.timeout)
+        copy_into(path, config.work_dir, config.timeout)
     else:  # no source
         if not isdir(config.work_dir):
             os.makedirs(config.work_dir)
@@ -507,6 +506,7 @@ def provide(recipe_dir, meta, config, patch=True):
         src_dir = config.work_dir
         for patch in meta.get('patches', []):
             apply_patch(src_dir, join(recipe_dir, patch), config, git)
+
     return config.work_dir
 
 
