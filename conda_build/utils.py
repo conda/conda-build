@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 from collections import defaultdict
 import contextlib
 from difflib import get_close_matches
-from distutils.dir_util import copy_tree
 import fnmatch
 from glob import glob
 from locale import getpreferredencoding
@@ -12,7 +11,9 @@ import operator
 import os
 from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
 import re
+import stat
 import subprocess
+
 import sys
 import shutil
 import tarfile
@@ -121,18 +122,57 @@ def copy_into(src, dst, timeout=90, symlinks=False):
                 lock.release()
 
 
+# http://stackoverflow.com/a/22331852/1170370
+def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
+    if not os.path.exists(dst):
+        os.makedirs(dst)
+        shutil.copystat(src, dst)
+    lst = os.listdir(src)
+    if ignore:
+        excl = ignore(src, lst)
+        lst = [x for x in lst if x not in excl]
+
+    dst_lst = [os.path.join(dst, item) for item in lst]
+
+    if not dry_run:
+        for idx, item in enumerate(lst):
+            s = os.path.join(src, item)
+            d = dst_lst[idx]
+            if symlinks and os.path.islink(s):
+                if os.path.lexists(d):
+                    os.remove(d)
+                os.symlink(os.readlink(s), d)
+                try:
+                    st = os.lstat(s)
+                    mode = stat.S_IMODE(st.st_mode)
+                    os.lchmod(d, mode)
+                except:
+                    pass # lchmod not available
+            elif os.path.isdir(s):
+                copytree(s, d, symlinks, ignore)
+            else:
+                try:
+                    shutil.copy2(s, d)
+                except IOError:
+                    try:
+                        shutil.copy(s, d)
+                    except IOError:
+                        shutil.copyfile(s, d)
+    return dst_lst
+
+
 def merge_tree(src, dst, symlinks=False, timeout=90):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
 
-    Like copy_tree(src, dst), but raises an error if merging the two trees
+    Like copytree(src, dst), but raises an error if merging the two trees
     would overwrite any files.
     """
     assert src not in dst, ("Can't merge/copy source into subdirectory of itself.  Please create "
                             "separate spaces for these things.")
 
-    new_files = copy_tree(src, dst, preserve_symlinks=symlinks, dry_run=True)
+    new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
     # do not copy lock files
     new_files = [f for f in new_files if not f.endswith('.conda_lock')]
     existing = [f for f in new_files if isfile(f)]
@@ -144,7 +184,7 @@ def merge_tree(src, dst, symlinks=False, timeout=90):
     lock = filelock.SoftFileLock(join(src, ".conda_lock"))
     lock.acquire(timeout=timeout)
     try:
-        copy_tree(src, dst, preserve_symlinks=symlinks)
+        copytree(src, dst, symlinks=symlinks)
     except:
         raise
     finally:
