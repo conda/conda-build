@@ -245,7 +245,7 @@ def main():
         print(str(e))
         sys.exit(1)
     except filelock.Timeout as e:
-        print("File lock could on {0} not be obtained.  You might need to try fewer builds at once."
+        print("File lock on {0} could not be obtained.  You might need to try fewer builds at once."
               "  Otherwise, run conda clean --lock".format(e.lock_file))
         sys.exit(1)
     return
