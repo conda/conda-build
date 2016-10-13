@@ -147,7 +147,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
                     mode = stat.S_IMODE(st.st_mode)
                     os.lchmod(d, mode)
                 except:
-                    pass # lchmod not available
+                    pass  # lchmod not available
             elif os.path.isdir(s):
                 copytree(s, d, symlinks, ignore)
             else:

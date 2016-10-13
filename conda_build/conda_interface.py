@@ -18,7 +18,7 @@ from conda.install import (delete_trash, is_linked, linked, linked_data, prefix_
                            rm_rf, symlink_conda, rm_fetched, package_cache)  # NOQA
 from conda.lock import Locked  # NOQA
 from conda.misc import untracked, walk_prefix  # NOQA
-from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
+from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version, CondaValueError  # NOQA
 from conda.signature import KEYS, KEYS_DIR, hash_file, verify  # NOQA
 from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
 import conda.config as cc  # NOQA
@@ -52,6 +52,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     load_condarc = lambda fn: conda.base.context.reset_context([fn])
     PaddingError = conda.exceptions.PaddingError
     LinkError = conda.exceptions.LinkError
+    NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
 
 else:
     from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
@@ -76,6 +77,9 @@ else:
         pass
 
     class LinkError(Exception):
+        pass
+
+    class NoPackagesFoundError(Exception):
         pass
 
 

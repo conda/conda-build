@@ -36,7 +36,8 @@ from .conda_interface import PY3
 from .conda_interface import package_cache
 from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
-from .conda_interface import Resolve, MatchSpec, NoPackagesFound, Unsatisfiable
+from .conda_interface import (Resolve, MatchSpec, NoPackagesFound, Unsatisfiable,
+                              CondaValueError, NoPackagesFoundError)
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
@@ -559,7 +560,7 @@ def get_conda_build_index_versions(index):
     pkgs = []
     try:
         pkgs = r.get_pkgs(MatchSpec('conda-build'))
-    except NoPackagesFound:
+    except (NoPackagesFound, NoPackagesFoundError):
         log.warn("Could not find any versions of conda-build in the channels")
     return [pkg.version for pkg in pkgs]
 
@@ -739,8 +740,9 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                 data = open(work_file).read()
                             with open(work_file, 'w') as bf:
                                 bf.write('source "{conda_root}activate" "{build_prefix}" &> '
-                                         '/dev/null\n'.format(conda_root=root_script_dir + os.path.sep,
-                                                         build_prefix=config.build_prefix))
+                                         '/dev/null\n'.format(conda_root=root_script_dir +
+                                                              os.path.sep,
+                                                              build_prefix=config.build_prefix))
                                 bf.write(data)
                         else:
                             if not isfile(work_file):
@@ -1050,6 +1052,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         # delete_trash(None)
 
     already_built = set()
+    extra_help = ""
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -1092,13 +1095,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                    config=recipe_config)
                 if not notest and ok_to_test:
                     test(metadata, config=recipe_config)
-        except (NoPackagesFound, Unsatisfiable) as e:
+        except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaValueError) as e:
             error_str = str(e)
-            # Typically if a conflict is with one of these
-            # packages, the other package needs to be rebuilt
-            # (e.g., a conflict with 'python 3.5*' and 'x' means
-            # 'x' isn't build for Python 3.5 and needs to be
-            # rebuilt).
             skip_names = ['python', 'r']
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
@@ -1108,12 +1106,17 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     continue
                 pkg = line.lstrip('  - ').split(' -> ')[-1]
                 pkg = pkg.strip().split(' ')[0]
-                if pkg in skip_names:
-                    continue
 
                 if pkg in to_build_recursive:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
-                                       .format(recipe) + error_str)
+                                       .format(recipe) + error_str + "\n" + extra_help)
+
+                if pkg in skip_names:
+                    to_build_recursive.append(pkg)
+                    extra_help = """Typically if a conflict is with the Python or R
+packages, the other package needs to be rebuilt
+(e.g., a conflict with 'python 3.5*' and 'x' means
+'x' isn't build for Python 3.5 and needs to be rebuilt."""
 
                 recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
                 if recipe_glob:
@@ -1125,7 +1128,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                         add_recipes.append(recipe_dir)
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
-                                       .format(recipe) + error_str)
+                                       .format(recipe) + error_str + "\n\n" + extra_help)
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
