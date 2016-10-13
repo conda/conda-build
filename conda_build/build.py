@@ -36,12 +36,12 @@ from .conda_interface import PY3
 from .conda_interface import package_cache
 from .conda_interface import prefix_placeholder, linked, symlink_conda
 from .conda_interface import url_path
-from .conda_interface import (Resolve, MatchSpec, NoPackagesFound, Unsatisfiable,
-                              CondaValueError, NoPackagesFoundError)
+from .conda_interface import Resolve, MatchSpec, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
-from .conda_interface import PaddingError, LinkError
+from .conda_interface import (PaddingError, LinkError, CondaValueError,
+                              NoPackagesFoundError, NoPackagesFound)
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck

@@ -9,7 +9,11 @@ matrix:
     #   env: CANARY=true
     #   os: linux
     - python: '3.5'
-      env: FLAKE8=true
+      env: CONDA=4.1
+      os: linux
+    - python: '3.5'
+      env:
+        - FLAKE8=true
       os: linux
 
 install:
@@ -22,12 +26,17 @@ install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
+  - conda config --set auto_update_conda False
   - conda update -q --all
   - if [[ "$CANARY" == "true" ]]; then
       conda install -y -q -c conda-canary conda;
       conda config --set always_yes yes;
+    else
+      if [ -n "$CONDA" ]; then
+        conda install -y --no-deps conda=${CONDA} requests;
+      fi
     fi
-  - conda install -q --force --no-deps conda requests
+
   - conda install -q anaconda-client requests filelock jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
