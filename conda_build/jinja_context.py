@@ -1,8 +1,3 @@
-'''
-Created on Jan 16, 2014
-
-@author: sean
-'''
 from __future__ import absolute_import, division, print_function
 
 from functools import partial
@@ -138,6 +133,9 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
     if os.path.isfile(setup_file):
         code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
+    else:
+        if not permit_undefined_jinja:
+            raise TypeError('{} is not a file that can be read'.format(setup_file))
 
     sys.modules['versioneer'] = versioneer
 
@@ -194,7 +192,8 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     if os.path.isfile(load_file):
         match = re.search(regex_pattern, open(load_file, 'r').read())
     else:
-        raise TypeError('{} is not a file that can be read'.format(load_file))
+        if not permit_undefined_jinja:
+            raise TypeError('{} is not a file that can be read'.format(load_file))
 
     # Reset the working directory
     if cd_to_work:

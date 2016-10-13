@@ -854,6 +854,10 @@ class MetaData(object):
         return "load_file_regex" in meta_text
 
     @property
+    def needs_source_for_render(self):
+        return self.uses_vcs_in_meta or self.uses_setup_py_in_meta or self.uses_regex_in_meta
+
+    @property
     def uses_jinja(self):
         if not self.meta_path:
             return False

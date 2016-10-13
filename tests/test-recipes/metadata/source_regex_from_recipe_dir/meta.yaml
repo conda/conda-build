@@ -3,7 +3,7 @@
 # it uses load_file_regex from conda_build.jinja_context to populate some fields
 # with values fed from meta.yaml files.
 
-{% set data = load_file_regex(load_file='meta.yaml', regex_pattern='git_tag: ([\\d.]+)') %}
+{% set data = load_file_regex(load_file='meta.yaml', regex_pattern='git_tag: ([\\d.]+)', from_recipe_dir=True) %}
 
 package:
   name: conda-build-test-get-regex-data
