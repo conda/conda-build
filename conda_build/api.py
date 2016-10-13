@@ -165,6 +165,13 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
+    if version:
+        kwargs.update({'version': version})
+    if recursive:
+        kwargs.update({'version': version})
+    if output_dir != ".":
+        kwargs.update({'output_dir': output_dir})
+
     # here we're dumping all extra kwargs as attributes on the config object.  We'll extract
     #    only relevant ones below
     config = get_or_merge_config(config, **kwargs)

@@ -93,3 +93,11 @@ def test_list_skeletons():
 def test_pypi_with_entry_points(testing_workdir):
     api.skeletonize('planemo', repo='pypi', python_version="2.7")
     assert os.path.isdir('planemo')
+
+
+def test_pypi_with_version_arg(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/1442
+    api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
+    with open('prettytable/meta.yaml') as f:
+        actual = yaml.load(f)
+        assert parse_version(actual['package']['version']) == parse_version("0.7.2")
