@@ -1,3 +1,27 @@
+2016-10-13 2.0.5:
+-----------------
+
+Enhancements:
+-------------
+
+* Add new jinja function for extracting information from files with regular expressions #1443
+
+Bug fixes:
+----------
+
+* Quote paths in activation of build and test envs #1448
+* Fix source re-copy (leading to IOError) with test as a separate step #1452
+* Call conda with an absolute path when gathering metadata for package about.json #1455
+* Don't strictly require conda-env to be present for about.json data #1455
+* Fix version argument to skeletons not being respected #1456
+* Fix infinite recursion when missing dependency is either r or python #1458
+
+Contributors:
+-------------
+
+* @bryanwweber
+* @msarahan
+
 2016-10-07 2.0.4:
 -----------------
 
