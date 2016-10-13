@@ -95,7 +95,7 @@ Testing
 -------
 
 Running our test suite requires cloning one other repo at the same level as conda-build:
-https://github.com/conda/conda_build_test_repo - this is necessary for relative path tests
+https://github.com/conda/conda_build_test_recipe - this is necessary for relative path tests
 outside of conda build's build tree.
 
 The test suite runs with py.test. Some useful commands to run select tests,

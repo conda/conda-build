@@ -848,6 +848,16 @@ class MetaData(object):
         return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
+    def uses_regex_in_meta(self):
+        with open(self.meta_path) as f:
+            meta_text = f.read()
+        return "load_file_regex" in meta_text
+
+    @property
+    def needs_source_for_render(self):
+        return self.uses_vcs_in_meta or self.uses_setup_py_in_meta or self.uses_regex_in_meta
+
+    @property
     def uses_jinja(self):
         if not self.meta_path:
             return False
