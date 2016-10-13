@@ -4,6 +4,7 @@
 
 import json
 import os
+import subprocess
 import sys
 import yaml
 
@@ -14,7 +15,8 @@ from conda_build.tarcheck import TarCheck
 
 from conda_build import api
 from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file
-from .utils import testing_workdir, metadata_dir, testing_env, test_config, test_metadata
+from .utils import (testing_workdir, metadata_dir, testing_env, test_config, test_metadata,
+                    put_bad_conda_on_path)
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -31,6 +33,14 @@ def test_build():
     args = ['--no-anaconda-upload', os.path.join(metadata_dir, "empty_sections"), '--no-activate']
     main_build.execute(args)
 
+
+# regression test for https://github.com/conda/conda-build/issues/1450
+def test_build_with_conda_not_on_path(testing_workdir):
+    with put_bad_conda_on_path(testing_workdir):
+        # using subprocess is not ideal, but it is the easiest way to ensure that PATH
+        #    is altered the way we want here.
+        subprocess.check_call('conda-build {0}'.format(os.path.join(metadata_dir, "python_run")),
+                              env=os.environ, shell=True)
 
 def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
