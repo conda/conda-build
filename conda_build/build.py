@@ -293,38 +293,36 @@ def write_about_json(m, config):
             value = m.get_value('about/%s' % key)
             if value:
                 d[key] = value
+
+        bin_path = os.path.join(sys.prefix, "Scripts" if on_win else "bin", 'conda')
+
         # for sake of reproducibility, record some conda info
-        with path_prepended(sys.prefix):
-            # on *nix, changed env is not actually respected without shell=True:
-            #    http://stackoverflow.com/a/5659249/1170370
-            conda_info = subprocess.check_output('conda info --json -s',
-                                                 env=os.environ, shell=True)
-            if hasattr(conda_info, 'decode'):
-                conda_info = conda_info.decode(codec)
-            conda_info = json.loads(conda_info)
-            d['conda_version'] = conda_info['conda_version']
-            d['conda_build_version'] = conda_info['conda_build_version']
-            # conda env will be in most, but not necessarily all installations.
-            #    Don't die if we don't see it.
-            if 'conda_env_version' in conda_info:
-                d['conda_env_version'] = conda_info['conda_env_version']
-            d['offline'] = conda_info['offline']
-            channels = conda_info['channels']
-            stripped_channels = []
-            for channel in channels:
-                stripped_channels.append(sanitize_channel(channel))
-            d['channels'] = stripped_channels
-            # this information will only be present in conda 4.2.10+
-            try:
-                d['conda_private'] = conda_info['conda_private']
-                d['env_vars'] = conda_info['env_vars']
-            except KeyError:
-                pass
-            pkgs = subprocess.check_output('conda list -n root --json',
-                                           env=os.environ, shell=True)
-            if hasattr(pkgs, 'decode'):
-                pkgs = pkgs.decode(codec)
-            d['root_pkgs'] = json.loads(pkgs)
+        conda_info = subprocess.check_output([bin_path, 'info', '--json', '-s'])
+        if hasattr(conda_info, 'decode'):
+            conda_info = conda_info.decode(codec)
+        conda_info = json.loads(conda_info)
+        d['conda_version'] = conda_info['conda_version']
+        d['conda_build_version'] = conda_info['conda_build_version']
+        # conda env will be in most, but not necessarily all installations.
+        #    Don't die if we don't see it.
+        if 'conda_env_version' in conda_info:
+            d['conda_env_version'] = conda_info['conda_env_version']
+        d['offline'] = conda_info['offline']
+        channels = conda_info['channels']
+        stripped_channels = []
+        for channel in channels:
+            stripped_channels.append(sanitize_channel(channel))
+        d['channels'] = stripped_channels
+        # this information will only be present in conda 4.2.10+
+        try:
+            d['conda_private'] = conda_info['conda_private']
+            d['env_vars'] = conda_info['env_vars']
+        except KeyError:
+            pass
+        pkgs = subprocess.check_output([bin_path, 'list', '-n', 'root', '--json'])
+        if hasattr(pkgs, 'decode'):
+            pkgs = pkgs.decode(codec)
+        d['root_pkgs'] = json.loads(pkgs)
         json.dump(d, fo, indent=2, sort_keys=True)
 
 

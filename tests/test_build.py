@@ -158,6 +158,4 @@ def test_write_about_json_without_conda_on_path(testing_workdir, test_metadata):
     with open(output_file) as f:
         about = json.load(f)
     assert 'conda_version' in about
-    assert about['conda_version'] == conda.__version__
     assert 'conda_build_version' in about
-    assert about['conda_build_version'] == __version__

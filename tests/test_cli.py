@@ -15,7 +15,8 @@ from conda_build.tarcheck import TarCheck
 
 from conda_build import api
 from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file
-from .utils import testing_workdir, metadata_dir, testing_env, test_config, test_metadata, put_bad_conda_on_path
+from .utils import (testing_workdir, metadata_dir, testing_env, test_config, test_metadata,
+                    put_bad_conda_on_path)
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
