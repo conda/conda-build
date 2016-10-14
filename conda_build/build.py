@@ -1026,6 +1026,16 @@ def tests_failed(m, move_broken, broken_dir, config):
 
 def check_external():
     if sys.platform.startswith('linux'):
+        ldd = external.find_executable('ldd')
+        if ldd is None:
+            sys.exit("""\
+Error:
+    Did not find 'ldd' in: %s
+    'ldd' is necessary for building conda packages on Linux with
+    relocatable ELF libraries.  Please install with your system package
+    manager.
+""" % (os.pathsep.join(external.dir_paths)))
+
         patchelf = external.find_executable('patchelf')
         if patchelf is None:
             sys.exit("""\

@@ -329,6 +329,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     elf = join(prefix, f)
     origin = dirname(elf)
 
+    ldd = external.find_executable('ldd')
     patchelf = external.find_executable('patchelf', prefix)
     try:
         existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
@@ -366,6 +367,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     rpath = ':'.join(new)
     print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
+    print('ldd: file: %s' % (elf,))
+    call([ldd, elf])
 
 
 def assert_relative_osx(path, prefix):
