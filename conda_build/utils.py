@@ -540,8 +540,10 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
     _args = []
     for arg in popenargs:
         # arguments to subprocess need to be bytestrings
-        if hasattr(arg, 'encode'):
+        if sys.version_info.major < 3 and hasattr(arg, 'encode'):
             arg = arg.encode(codec)
+        elif sys.version_info.major >= 3 and hasattr(arg, 'decode'):
+            arg = arg.decode(codec)
         _args.append(str(arg))
     return func(_args, **kwargs)
 
