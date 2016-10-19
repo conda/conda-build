@@ -248,7 +248,7 @@ def detect_and_record_prefix_files(m, files, prefix, config):
         else:
             files_with_prefix = []
 
-    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m)
+    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m) or m.get_value('build/noarch')
 
     if files_with_prefix and not is_noarch:
         if on_win:
