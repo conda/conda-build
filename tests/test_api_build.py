@@ -610,10 +610,10 @@ def test_noarch_none_value(testing_workdir, test_config):
         api.build(recipe, config=test_config)
 
 
-def test_noarch_foo_value():
+def test_noarch_foo_value(test_config):
     recipe = os.path.join(metadata_dir, "noarch_foo")
-    fn = api.get_output_file_path(recipe)
-    api.build(recipe)
+    fn = api.get_output_file_path(recipe, test_config)
+    api.build(recipe, config=test_config)
     metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
     assert 'noarch' in metadata
     assert metadata['noarch'] == "foo"
@@ -639,25 +639,25 @@ def test_about_json_content(test_metadata):
 
 
 @pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
-def test_noarch_python_with_tests():
+def test_noarch_python_with_tests(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
-    api.build(recipe)
+    api.build(recipe, config=test_config)
 
 
-def test_noarch_python():
+def test_noarch_python(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python")
-    fn = api.get_output_file_path(recipe)
-    api.build(recipe)
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
     assert package_has_file(fn, 'info/files') is not ''
     noarch = json.loads(package_has_file(fn, 'info/noarch.json').decode())
     assert 'entry_points' in noarch
     assert 'type' in noarch
 
 
-def test_skip_compile_pyc():
+def test_skip_compile_pyc(test_config):
     recipe = os.path.join(metadata_dir, "skip_compile_pyc")
-    fn = api.get_output_file_path(recipe)
-    api.build(recipe)
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
     tf = tarfile.open(fn)
     pyc_count = 0
     for f in tf.getmembers():
@@ -672,10 +672,19 @@ def test_skip_compile_pyc():
     assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
 
 
-def test_fix_permissions():
+def test_fix_permissions(test_config):
     recipe = os.path.join(metadata_dir, "fix_permissions")
-    fn = api.get_output_file_path(recipe)
-    api.build(recipe)
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
     tf = tarfile.open(fn)
     for f in tf.getmembers():
         assert f.mode & 0o444 == 0o444, "tar member '{}' has invalid (read) mode".format(f.name)
+
+
+@pytest.mark.skipif(not on_win, reason="windows-only functionality")
+def test_script_win_creates_exe(test_config):
+    recipe = os.path.join(metadata_dir, "_script_win_creates_exe")
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
+    assert package_has_file(fn, 'Scripts/test-script.exe')
+    assert package_has_file(fn, 'Scripts/test-script-script.py')

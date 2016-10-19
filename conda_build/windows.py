@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import sys
-from os.path import isdir, join
+from os.path import isdir, join, dirname, isfile
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa
@@ -14,7 +14,7 @@ from distutils.msvc9compiler import Reg, WINSDK_BASE
 from .conda_interface import bits
 
 from conda_build import environ
-from conda_build.utils import _check_call, root_script_dir, path_prepended
+from conda_build.utils import _check_call, root_script_dir, path_prepended, copy_into
 
 
 assert sys.platform == 'win32'
@@ -28,6 +28,36 @@ VS_VERSION_STRING = {
     '12.0': 'Visual Studio 12 2013',
     '14.0': 'Visual Studio 14 2015'
 }
+
+
+def fix_staged_scripts(scripts_dir):
+    """
+    Fixes scripts which have been installed unix-style to have a .bat
+    helper
+    """
+    if not isdir(scripts_dir):
+        return
+    for fn in os.listdir(scripts_dir):
+        # process all the extensionless files
+        if not isfile(join(scripts_dir, fn)) or '.' in fn:
+            continue
+
+        with open(join(scripts_dir, fn)) as f:
+            line = f.readline().lower()
+            # If it's a #!python script
+            if not (line.startswith('#!') and 'python' in line.lower()):
+                continue
+            print('Adjusting unix-style #! script %s, '
+                  'and adding a .bat file for it' % fn)
+            # copy it with a .py extension (skipping that first #! line)
+            with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
+                fo.write(f.read())
+            # now create the .exe file
+            copy_into(join(dirname(__file__), 'cli-%d.exe' % bits),
+                            join(scripts_dir, fn + '.exe'))
+
+        # remove the original script
+        os.remove(join(scripts_dir, fn))
 
 
 def build_vcvarsall_vs_path(version):
@@ -198,3 +228,5 @@ def build(m, bld_bat, config):
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
         _check_call(cmd, cwd=src_dir)
+
+    fix_staged_scripts(join(config.build_prefix, 'Scripts'))
