@@ -612,7 +612,7 @@ def test_noarch_none_value(testing_workdir, test_config):
 
 def test_noarch_foo_value(test_config):
     recipe = os.path.join(metadata_dir, "noarch_foo")
-    fn = api.get_output_file_path(recipe, test_config)
+    fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
     metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
     assert 'noarch' in metadata

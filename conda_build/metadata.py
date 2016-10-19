@@ -15,7 +15,7 @@ from .conda_interface import specs_from_url
 from conda_build import exceptions
 from conda_build.features import feature_list
 from conda_build.config import Config
-from conda_build.utils import rec_glob
+from conda_build.utils import rec_glob, ensure_list
 
 try:
     import yaml
@@ -209,6 +209,7 @@ falses = {'n', 'no', 'false', 'off'}
 default_structs = {
     'source/patches': list,
     'build/entry_points': list,
+    'build/script': list,
     'build/script_env': list,
     'build/features': list,
     'build/track_features': list,
@@ -633,7 +634,7 @@ class MetaData(object):
                         res.append(s + v.strip('*'))
                     break
 
-        features = self.get_value('build/features', [])
+        features = ensure_list(self.get_value('build/features', []))
         if res:
             res.append('_')
         if features:
@@ -698,7 +699,7 @@ class MetaData(object):
         return d
 
     def has_prefix_files(self):
-        ret = self.get_value('build/has_prefix_files', [])
+        ret = ensure_list(self.get_value('build/has_prefix_files', []))
         if not isinstance(ret, list):
             raise RuntimeError('build/has_prefix_files should be a list of paths')
         if sys.platform == 'win32':
@@ -718,7 +719,7 @@ class MetaData(object):
         return ret
 
     def always_include_files(self):
-        files = self.get_value('build/always_include_files', [])
+        files = ensure_list(self.get_value('build/always_include_files', []))
         if any('\\' in i for i in files):
             raise RuntimeError("build/always_include_files paths must use / "
                                 "as the path delimiter on Windows")
@@ -730,7 +731,7 @@ class MetaData(object):
         return self.get_value('build/include_recipe', True)
 
     def binary_has_prefix_files(self):
-        ret = self.get_value('build/binary_has_prefix_files', [])
+        ret = ensure_list(self.get_value('build/binary_has_prefix_files', []))
         if not isinstance(ret, list):
             raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
         if sys.platform == 'win32':

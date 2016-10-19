@@ -13,7 +13,7 @@ from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win,
+from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2)
 
 # legacy exports for conda
@@ -504,7 +504,8 @@ def provide(recipe_dir, meta, config, patch=True):
 
     if patch:
         src_dir = config.work_dir
-        for patch in meta.get('patches', []):
+        patches = ensure_list(meta.get('patches', []))
+        for patch in patches:
             apply_patch(src_dir, join(recipe_dir, patch), config, git)
 
     return config.work_dir

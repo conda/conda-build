@@ -20,13 +20,7 @@ import sys as _sys
 
 # make the Config class available in the api namespace
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
-
-
-def _ensure_list(recipe_arg):
-    from .conda_interface import string_types
-    if isinstance(recipe_arg, string_types) or not hasattr(recipe_arg, '__iter__'):
-        recipe_arg = [recipe_arg]
-    return recipe_arg
+from conda_build.utils import ensure_list as _ensure_list
 
 
 def render(recipe_path, config=None, **kwargs):
