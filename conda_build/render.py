@@ -109,6 +109,8 @@ def parse_or_try_download(metadata, no_download_source, config,
             metadata.parse_until_resolved(config=config)
         except exceptions.UnableToParseMissingSetuptoolsDependencies:
             need_reparse_in_env = True
+    if metadata.get_value('build/noarch'):
+        config.noarch = True
     return metadata, need_source_download, need_reparse_in_env
 
 
