@@ -537,20 +537,20 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
         kwargs = kwargs.copy()
         env_copy = os.environ.copy()
         kwargs.update({'env': env_copy})
-    args = []
+    _args = []
     for arg in popenargs:
         # arguments to subprocess need to be bytestrings
         if hasattr(arg, 'encode'):
             arg = arg.encode(codec)
-        args.append(arg)
-    return func(*args, **kwargs)
+        _args.append(str(arg))
+    return func(_args, **kwargs)
 
 
-def check_call_env(*popenargs, **kwargs):
+def check_call_env(popenargs, **kwargs):
     return _func_defaulting_env_to_os_environ(subprocess.check_call, *popenargs, **kwargs)
 
 
-def check_output_env(*popenargs, **kwargs):
+def check_output_env(popenargs, **kwargs):
     return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)
 
 

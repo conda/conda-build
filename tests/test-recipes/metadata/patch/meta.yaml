@@ -1,0 +1,7 @@
+package:
+  name: test_patch
+  version: 1.0
+
+source:
+  path: .
+  patches: test.patch
