@@ -4,4 +4,5 @@ package:
 
 source:
   path: .
-  patches: test.patch
+  patches:
+    - test.patch

@@ -52,7 +52,8 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
-                               prepend_bin_path, codec, root_script_dir, print_skip_message)
+                               prepend_bin_path, codec, root_script_dir, print_skip_message,
+                               ensure_list)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -921,7 +922,7 @@ def test(m, config, move_broken=True):
 
         # add packages listed in the run environment and test/requires
         specs.extend(ms.spec for ms in m.ms_depends('run'))
-        specs += m.get_value('test/requires', [])
+        specs += ensure_list(m.get_value('test/requires', []))
 
         if py_files:
             # as the tests are run by python, ensure that python is installed.

@@ -16,7 +16,7 @@ from .conda_interface import root_dir, cc
 from conda_build.os_utils import external
 from conda_build import utils
 from conda_build.features import feature_list
-from conda_build.utils import prepend_bin_path
+from conda_build.utils import prepend_bin_path, ensure_list
 
 log = logging.getLogger(__file__)
 
@@ -285,7 +285,7 @@ def lua_vars(config):
 
 def meta_vars(meta, config):
     d = {}
-    for var_name in meta.get_value('build/script_env', []):
+    for var_name in ensure_list(meta.get_value('build/script_env', [])):
         value = os.getenv(var_name)
         if value is None:
             warnings.warn(

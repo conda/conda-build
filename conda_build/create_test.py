@@ -9,7 +9,7 @@ import os
 from os.path import join, exists, isdir
 import sys
 
-from conda_build.utils import copy_into, get_ext_files, on_win
+from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list
 from conda_build import source
 
 
@@ -47,14 +47,14 @@ def create_files(dir_path, m, config):
     True if it has.
     """
     has_files = False
-    for fn in m.get_value('test/files', []):
+    for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
         copy_into(path, join(dir_path, fn), config.timeout)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(config.work_dir):
         source.provide(m.path, m.get_section('source'), config=config)
-    for pattern in m.get_value('test/source_files', []):
+    for pattern in ensure_list(m.get_value('test/source_files', [])):
         if on_win and '\\' in pattern:
             raise RuntimeError("test/source_files paths must use / "
                                 "as the path delimiter on Windows")
@@ -83,7 +83,7 @@ def create_shell_files(dir_path, m, config):
 
     with open(join(dir_path, name), 'a') as f:
         f.write('\n\n')
-        for cmd in m.get_value('test/commands', []):
+        for cmd in ensure_list(m.get_value('test/commands', [])):
             f.write(cmd)
             f.write('\n')
             if sys.platform == 'win32':
@@ -100,7 +100,7 @@ def create_py_files(dir_path, m):
         fo.write(header + '\n')
         fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
-        for name in m.get_value('test/imports', []):
+        for name in ensure_list(m.get_value('test/imports', [])):
             fo.write('print("import: %r")\n' % name)
             fo.write('import %s\n' % name)
             fo.write('\n')
