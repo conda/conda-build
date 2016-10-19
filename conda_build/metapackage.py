@@ -6,7 +6,7 @@ from conda_build.metadata import MetaData
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
                        dependencies=(), home=None, license_name=None, summary=None, config=None):
     # local import to avoid circular import, we provid create_metapackage in api
-    from conda_build.build import build
+    from conda_build.api import build
 
     if not config:
         config = Config()
