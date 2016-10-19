@@ -153,10 +153,10 @@ def render_recipe(recipe_path, config, no_download_source=False):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    config.noarch = m.get_value('build/noarch')
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,
                                                 config=config)
+    config.noarch = bool(m.get_value('build/noarch'))
 
     if need_cleanup:
         rm_rf(recipe_dir)
