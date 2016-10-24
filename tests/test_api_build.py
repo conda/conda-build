@@ -672,6 +672,41 @@ def test_skip_compile_pyc(test_config):
     assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
 
 
+#@pytest.mark.skipif(on_win, reason="binary prefixes not supported on Windows")
+def test_detect_binary_files_with_prefix(test_config):
+    recipe = os.path.join(metadata_dir, "_detect_binary_files_with_prefix")
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
+    matches = []
+    with tarfile.open(fn) as tf:
+        with tf.extractfile('info/has_prefix') as has_prefix:
+            contents = [p.strip().decode('utf-8') for p in
+                        has_prefix.readlines()]
+        matches = [entry for entry in contents if entry.endswith('binary-has-prefix')
+                                               or entry.endswith('"binary-has-prefix"')]
+    assert len(matches) == 1, "binary-has-prefix not recorded in info/has_prefix"
+    assert ' binary ' in matches[0], "binary-has-prefix not recorded as binary in info/has_prefix"
+
+
+@pytest.mark.xfail(reason="https://github.com/conda/conda-build/issues/1475")
+def test_skip_detect_binary_files_with_prefix(test_config):
+    recipe = os.path.join(metadata_dir, "_skip_detect_binary_files_with_prefix")
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
+    matches = []
+    with tarfile.open(fn) as tf:
+        try:
+            with tf.extractfile('info/has_prefix') as has_prefix:
+                contents = [p.strip().decode('utf-8') for p in
+                            has_prefix.readlines()]
+            matches = [entry for entry in contents if entry.endswith('binary-has-prefix')
+                                                   or entry.endswith('"binary-has-prefix"')]
+        except:
+            pass
+    assert len(matches) == 0, "binary-has-prefix recorded in info/has_prefix despite:" \
+                              "build/detect_binary_files_with_prefix: false"
+
+
 def test_fix_permissions(test_config):
     recipe = os.path.join(metadata_dir, "fix_permissions")
     fn = api.get_output_file_path(recipe, config=test_config)
