@@ -688,7 +688,6 @@ def test_detect_binary_files_with_prefix(test_config):
     assert ' binary ' in matches[0], "binary-has-prefix not recorded as binary in info/has_prefix"
 
 
-@pytest.mark.xfail(reason="https://github.com/conda/conda-build/issues/1475")
 def test_skip_detect_binary_files_with_prefix(test_config):
     recipe = os.path.join(metadata_dir, "_skip_detect_binary_files_with_prefix")
     fn = api.get_output_file_path(recipe, config=test_config)
