@@ -242,12 +242,15 @@ def detect_and_record_prefix_files(m, files, prefix, config):
     text_has_prefix_files = m.has_prefix_files()
 
     ignore_files = m.ignore_prefix_files()
-    if ignore_files:
-        # do we have a list of files, or just ignore everything?
-        if hasattr(ignore_files, "__iter__"):
-            files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
-        else:
-            files_with_prefix = []
+    ignore_types = set()
+    if not hasattr(ignore_files, "__iter__"):
+        if  ignore_files == True:
+            ignore_types.update(('text', 'binary'))
+        ignore_files = []
+    if not m.get_value('build/detect_binary_files_with_prefix', True):
+        ignore_types.update(('binary',))
+    ignore_files.extend([f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files])
+    files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
 
     is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m) or m.get_value('build/noarch')
 

@@ -1,0 +1,6 @@
+package:
+  name: conda-build-test-skip-detect-binary-files-with-prefix
+  version: 1.0
+
+build:
+  detect_binary_files_with_prefix: false
