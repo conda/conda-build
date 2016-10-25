@@ -679,11 +679,12 @@ def test_detect_binary_files_with_prefix(test_config):
     api.build(recipe, config=test_config)
     matches = []
     with tarfile.open(fn) as tf:
-        with tf.extractfile('info/has_prefix') as has_prefix:
-            contents = [p.strip().decode('utf-8') for p in
-                        has_prefix.readlines()]
-        matches = [entry for entry in contents if entry.endswith('binary-has-prefix')
-                                               or entry.endswith('"binary-has-prefix"')]
+        has_prefix = tf.extractfile('info/has_prefix')
+        contents = [p.strip().decode('utf-8') for p in
+                    has_prefix.readlines()]
+        has_prefix.close()
+        matches = [entry for entry in contents if entry.endswith('binary-has-prefix') or
+                                                  entry.endswith('"binary-has-prefix"')]
     assert len(matches) == 1, "binary-has-prefix not recorded in info/has_prefix"
     assert ' binary ' in matches[0], "binary-has-prefix not recorded as binary in info/has_prefix"
 
@@ -695,11 +696,12 @@ def test_skip_detect_binary_files_with_prefix(test_config):
     matches = []
     with tarfile.open(fn) as tf:
         try:
-            with tf.extractfile('info/has_prefix') as has_prefix:
-                contents = [p.strip().decode('utf-8') for p in
-                            has_prefix.readlines()]
-            matches = [entry for entry in contents if entry.endswith('binary-has-prefix')
-                                                   or entry.endswith('"binary-has-prefix"')]
+            has_prefix = tf.extractfile('info/has_prefix')
+            contents = [p.strip().decode('utf-8') for p in
+                        has_prefix.readlines()]
+            has_prefix.close()
+            matches = [entry for entry in contents if entry.endswith('binary-has-prefix') or
+                                                      entry.endswith('"binary-has-prefix"')]
         except:
             pass
     assert len(matches) == 0, "binary-has-prefix recorded in info/has_prefix despite:" \
