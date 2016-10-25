@@ -348,6 +348,17 @@ def get_cpu_count():
             return "1"
 
 
+def get_shlib_ext():
+    # Return the shared library extension.
+    if sys.platform == 'win32':
+        return '.dll'
+    elif sys.platform == 'darwin':
+        return '.dylib'
+    elif sys.platform.startswith('linux'):
+        return '.so'
+    else:
+        raise NotImplementedError(sys.platform)
+
 def windows_vars(prefix):
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
@@ -404,6 +415,8 @@ def system_vars(env_dict, prefix, config):
         d['CPU_COUNT'] = os.environ['CPU_COUNT']
     else:
         d['CPU_COUNT'] = get_cpu_count()
+
+    d['SHLIB_EXT'] = get_shlib_ext()
 
     if "LANG" in os.environ:
         d['LANG'] = os.environ['LANG']
