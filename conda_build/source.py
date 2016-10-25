@@ -5,6 +5,7 @@ import logging
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath
 import re
+import shutil
 from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import time
@@ -122,6 +123,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
     # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
     git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir)
     git_checkout_dir = convert_path_for_cygwin_or_msys2(git, checkout_dir)
+    if os.path.exists(git_checkout_dir):
+        raise IOError('clone target %s exists!' % git_checkout_dir)
 
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
@@ -158,7 +161,17 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         assert isdir(mirror_dir)
 
     # Now clone from mirror_dir into checkout_dir.
-    check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
+    try:
+        check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
+    except CalledProcessError:
+        if os.path.exists(git_checkout_dir):
+            shutil.rmtree(git_checkout_dir)
+        # Mirror clone may fail if repo has files in LFS,
+        # but we can still benefit from the cache by using
+        # the local mirror as a reference.
+        if config.verbose:
+            print('Clone from mirror failed, trying again using mirror only as --reference', file=sys.__stderr__)
+        check_call_env([git, 'clone', '--reference', git_mirror_dir, git_url, git_checkout_dir], stdout=stdout, stderr=stderr)
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
