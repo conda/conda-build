@@ -1,3 +1,28 @@
+2016-10-24 2.0.7:
+-----------------
+
+Enhancements:
+-------------
+
+* populate SHLIB_EXT environment variable.  For example, .so, .dll, .dylib file extensions use this for their native ending.  #1478
+
+Bug fixes:
+----------
+
+* fix metapackage not going through api, thus not showing output file path.  #1470
+* restore script exe creation on Windows.  These are for standalone scripts installed by distutils or setuptools in setup.py.  #1471
+* fix noarch value propagation from meta.yaml to config.  Was causing noarch to not be respected in some cases.  #1472
+* fix calls to subprocess not converting unicode to str  #1473
+* restore detect_binary_files_with_prefix behavior - in particular, respect it when false.  # 1477
+
+Contributors:
+-------------
+
+* @jschueller
+* @mingwandroid
+* @msarahan
+
+
 2016-10-13 2.0.6:
 -----------------
 
