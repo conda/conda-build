@@ -46,8 +46,14 @@ def is_dylib(path):
 
 
 def human_filetype(path):
-    lines = check_output(['otool', '-h', path]).decode('utf-8').splitlines()
-    assert lines[0].startswith(path), path
+    output = check_output(['otool', '-h', path]).decode('utf-8')
+    lines = output.splitlines()
+    if not lines[0].startswith((path, 'Mach header')):
+        raise ValueError(
+            'Expected `otool -h` output to start with'
+            ' Mach header or {0}, got:\n{1}'.format(path, output)
+        )
+    assert lines[0].startswith((path, 'Mach header')), path
 
     for line in lines:
         if line.strip().startswith('0x'):
