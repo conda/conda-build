@@ -26,6 +26,7 @@ from conda_build.config import Config
 from conda_build.utils import rm_rf, guess_license_family
 from conda_build.conda_interface import text_type, iteritems
 from conda_build.conda_interface import Completer
+from conda_build.license_family import allowed_license_families
 
 CRAN_META = """\
 {{% set posix = 'm2-' if win else '' %}}
@@ -582,8 +583,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
-        d['license_family'] = guess_license_family(d['license'],
-                                                         metadata.allowed_license_families)
+        d['license_family'] = guess_license_family(d['license'], allowed_license_families)
 
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'

@@ -136,22 +136,6 @@ def yamlize(data):
         raise exceptions.UnableToParse(original=e)
 
 
-allowed_license_families = set("""
-AGPL
-Apache
-BSD
-GPL
-GPL2
-GPL3
-LGPL
-MIT
-Other
-PSF
-Proprietary
-Public-Domain
-""".split())
-
-
 def ensure_valid_license_family(meta):
     try:
         license_family = meta['about']['license_family']

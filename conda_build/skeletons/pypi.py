@@ -33,7 +33,8 @@ from conda_build.utils import tar_xf, unzip, rm_rf, guess_license_family
 from conda_build.source import apply_patch
 from conda_build.build import create_env
 from conda_build.config import Config
-from conda_build.metadata import MetaData, allowed_license_families
+from conda_build.metadata import MetaData
+from conda_build.license_family import allowed_license_families
 
 if PY3:
     try:
