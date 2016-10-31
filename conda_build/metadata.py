@@ -16,6 +16,7 @@ from conda_build import exceptions
 from conda_build.features import feature_list
 from conda_build.config import Config
 from conda_build.utils import rec_glob, ensure_list
+from conda_build.license_family import allowed_license_families
 
 try:
     import yaml
@@ -134,22 +135,6 @@ def yamlize(data):
             except ImportError:
                 raise exceptions.UnableToParseMissingJinja2(original=e)
         raise exceptions.UnableToParse(original=e)
-
-
-allowed_license_families = set("""
-AGPL
-Apache
-BSD
-GPL
-GPL2
-GPL3
-LGPL
-MIT
-Other
-PSF
-Proprietary
-Public-Domain
-""".split())
 
 
 def ensure_valid_license_family(meta):
