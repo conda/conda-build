@@ -112,7 +112,8 @@ class Config(object):
                   Setting('arch', subdir.split('-')[-1]),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
-                  Setting('disable_pip', False)
+                  Setting('disable_pip', False),
+                  Setting('default_verify_scripts_path', DEFAULT_VERIFY_SCRIPTS_PATH)
                   ]
 
         # handle known values better than unknown (allow defaults)
@@ -375,7 +376,7 @@ class Config(object):
                 condarc = yaml.load(f)
             if condarc.get("conda_build_verify_scripts"):
                 return condarc.get("conda_build_verify_scripts")
-        return DEFAULT_VERIFY_SCRIPTS_PATH
+        return self.default_verify_scripts_path
 
     def clean(self):
         # build folder is the whole burrito containing envs and source folders

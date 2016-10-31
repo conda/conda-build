@@ -20,7 +20,7 @@ def list_verify_script(path_to_script):
     verify_modules = pkgutil.iter_modules([path_to_script])
     files = []
     for loader, name, _ in verify_modules:
-        files.append(os.path.join(loader.path, name))
+        files.append("%s.py" % os.path.join(loader.path, name))
     return files
 
 
@@ -28,16 +28,15 @@ def verify(verify_path, *args):
     verify_scripts = list_verify_script(verify_path)
 
     for verify_script in verify_scripts:
-        script = "%s.py"%verify_script
-        print("Running script %s" % script)
+        print("Running script %s" % verify_script)
         if can_import_importlib():
             mod = SourceFileLoader("test", verify_script).load_module()
         else:
-            mod = imp.load_source("test", script)
+            mod = imp.load_source("test", verify_script)
         try:
             mod.verify(*args)
         except AttributeError as e:
-            raise VerifyError(e, script)
+            raise VerifyError(e, verify_script)
     print("All scripts passed")
 
 

@@ -1,6 +1,7 @@
 from collections import defaultdict
 import contextlib
 import os
+from os.path import join, dirname
 import stat
 import subprocess
 import sys
@@ -56,7 +57,8 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True, activate=False,
-                  noverify=True)
+                  noverify=False,
+                  default_verify_scripts_path=join(dirname(__file__), "test-verify-scripts"))
 
 
 @pytest.fixture(scope='function')
