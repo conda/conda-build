@@ -1,0 +1,9 @@
+package:
+  name: patch_section_empty
+  version: 1.0
+
+source:
+  path: .
+  # the test here is that selectors can make this field empty.  Make it empty here no matter what.
+  #    https://github.com/conda/conda-build/issues/1490
+  patches:

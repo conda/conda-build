@@ -598,6 +598,9 @@ def package_has_file(package_path, file_path):
 
 def ensure_list(arg):
     from .conda_interface import string_types
-    if isinstance(arg, string_types) or not hasattr(arg, '__iter__'):
-        arg = [arg]
+    if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
+        if arg:
+            arg = [arg]
+        else:
+            arg = []
     return arg
