@@ -32,9 +32,13 @@ from conda_build.os_utils import external
 if PY3:
     import urllib.parse as urlparse
     import urllib.request as urllib
+    # NOQA because it is not used in this file.
+    from contextlib import ExitStack  # NOQA
 else:
     import urlparse
     import urllib
+    # NOQA because it is not used in this file.
+    from contextlib2 import ExitStack  # NOQA
 
 
 log = logging.getLogger(__file__)

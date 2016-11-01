@@ -4,7 +4,6 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import absolute_import, division, print_function
 
 from collections import deque
-from contextlib import nested
 import fnmatch
 from glob import glob
 import io
@@ -25,8 +24,6 @@ import tarfile
 # exception is raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
-
-import filelock
 
 # used to get version
 from .conda_interface import cc
@@ -54,7 +51,7 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
-                               ensure_list, get_lock)
+                               ensure_list, get_lock, ExitStack)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -492,7 +489,9 @@ def create_env(prefix, specs, config, clear_cache=True):
                         update_index(folder, config=config, lock=lock, could_be_mirror=False)
                     locks.append(lock)
 
-                with nested(*locks):
+                with ExitStack() as stack:
+                    for lock in locks:
+                        stack.enter_context(lock)
                     index = get_build_index(config=config, clear_cache=True)
 
                     actions = plan.install_actions(prefix, index, specs)
@@ -832,7 +831,9 @@ can lead to packages that include their dependencies.""" % meta_files))
 def clean_pkg_cache(dist, timeout):
     cc.pkgs_dirs = cc.pkgs_dirs[:1]
     locks = [get_lock(join(folder, ".conda_lock"), timeout=timeout) for folder in cc.pkgs_dirs]
-    with nested(*locks):
+    with ExitStack() as stack:
+        for lock in locks:
+            stack.enter_context(lock)
         rmplan = [
             'RM_EXTRACTED {0} local::{0}'.format(dist),
             'RM_FETCHED {0} local::{0}'.format(dist),

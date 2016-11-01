@@ -4,7 +4,6 @@ Functions related to creating repodata index files.
 
 from __future__ import absolute_import, division, print_function
 
-from contextlib import nested
 import os
 import bz2
 import sys
@@ -12,7 +11,7 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info, get_lock
+from conda_build.utils import file_info, get_lock, ExitStack
 from .conda_interface import PY3, md5_file
 
 
@@ -22,7 +21,10 @@ def read_index_tar(tar_path, config, lock=None):
     if not lock:
         lock = get_lock(join(os.path.dirname(tar_path), ".conda_lock"),
                                      timeout=config.timeout)
-    with nested(lock, tarfile.open(tar_path)) as (_, t):
+    with ExitStack() as stack:
+        stack.enter_context(lock)
+        t = tarfile.open(tar_path)
+        stack.enter_context(t)
         try:
             return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
         except EOFError:

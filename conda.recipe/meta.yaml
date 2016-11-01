@@ -23,6 +23,7 @@ requirements:
     - python
   run:
     - conda  >=4.1
+    - contextlib2   [py2]
     - filelock
     - jinja2
     - patchelf      [linux]
