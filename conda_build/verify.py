@@ -35,7 +35,7 @@ def verify(verify_path, *args):
             mod = imp.load_source("test", verify_script)
         try:
             mod.verify(*args)
-        except AttributeError as e:
+        except TypeError as e:
             raise VerifyError(e, verify_script)
     print("All scripts passed")
 
