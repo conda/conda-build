@@ -85,10 +85,10 @@ def get_recipe_abspath(recipe):
     return recipe_dir, need_cleanup
 
 
-def copy_into(src, dst, timeout=90, symlinks=False):
+def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
     "Copy all the files and directories in src to the directory dst"
     if isdir(src):
-        merge_tree(src, dst, symlinks, timeout=timeout)
+        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock)
 
     else:
         if isdir(dst):
@@ -96,15 +96,19 @@ def copy_into(src, dst, timeout=90, symlinks=False):
         else:
             dst_fn = dst
 
-        lock = None
         if os.path.isabs(src):
             src_folder = os.path.dirname(src)
-            lock = filelock.SoftFileLock(join(src_folder, ".conda_lock"))
-        try:
-            if os.path.sep in dst_fn and not os.path.isdir(os.path.dirname(dst_fn)):
-                os.makedirs(os.path.dirname(dst_fn))
-            if lock:
-                lock.acquire(timeout=timeout)
+        else:
+            if os.path.sep in dst_fn:
+                src_folder = os.path.dirname(dst_fn)
+                if not os.path.isdir(src_folder):
+                    os.makedirs(src_folder)
+            else:
+                src_folder = os.getcwd()
+
+        if not lock:
+            lock = get_lock(join(src_folder, ".conda_lock"), timeout=timeout)
+        with lock:
             # with each of these, we are copying less metadata.  This seems to be necessary
             #   to cope with some shared filesystems with some virtual machine setups.
             #  See https://github.com/conda/conda-build/issues/1426
@@ -115,11 +119,9 @@ def copy_into(src, dst, timeout=90, symlinks=False):
                     shutil.copy(src, dst_fn)
                 except OSError:
                     shutil.copyfile(src, dst_fn)
-        except shutil.Error:
-            log.debug("skipping %s - already exists in %s", os.path.basename(src), dst)
-        finally:
-            if lock:
-                lock.release()
+            except shutil.Error:
+                log.debug("skipping %s - already exists in %s",
+                            os.path.basename(src), dst)
 
 
 # http://stackoverflow.com/a/22331852/1170370
@@ -131,6 +133,10 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     if ignore:
         excl = ignore(src, lst)
         lst = [x for x in lst if x not in excl]
+
+    # do not copy lock files
+    if '.conda_lock' in lst:
+        lst.remove('.conda_lock')
 
     dst_lst = [os.path.join(dst, item) for item in lst]
 
@@ -161,7 +167,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
-def merge_tree(src, dst, symlinks=False, timeout=90):
+def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -173,23 +179,32 @@ def merge_tree(src, dst, symlinks=False, timeout=90):
                             "separate spaces for these things.")
 
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
-    # do not copy lock files
-    new_files = [f for f in new_files if not f.endswith('.conda_lock')]
     existing = [f for f in new_files if isfile(f)]
 
     if existing:
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
-    lock = filelock.SoftFileLock(join(src, ".conda_lock"))
-    lock.acquire(timeout=timeout)
-    try:
+    if not lock:
+        lock = get_lock(join(src, ".conda_lock"), timeout=timeout)
+    with lock:
         copytree(src, dst, symlinks=symlinks)
-    except:
-        raise
-    finally:
-        lock.release()
-        rm_rf(os.path.join(dst, '.conda_lock'))
+
+
+# purpose here is that we want *one* lock per location on disk.  It can be locked or unlocked
+#    at any time, but the lock within this process should all be tied to the same tracking
+#    mechanism.
+_locations = {}
+
+
+def get_lock(lock_file, timeout=90):
+    global _locations
+    location = os.path.abspath(os.path.normpath(lock_file))
+    if not os.path.isdir(os.path.dirname(location)):
+        os.makedirs(os.path.dirname(location))
+    if location not in _locations:
+        _locations[location] = filelock.SoftFileLock(location, timeout)
+    return _locations[location]
 
 
 def relative(f, d='lib'):
