@@ -1,8 +1,30 @@
+import os
 import unittest
 
 from conda_build.conda_interface import MatchSpec
 
 from conda_build.metadata import select_lines, handle_config_version
+from .utils import testing_workdir, test_config, test_metadata
+
+
+def test_uses_vcs_in_metadata(testing_workdir, test_metadata):
+    test_metadata.meta_path = os.path.join(testing_workdir, 'meta.yaml')
+    with open(test_metadata.meta_path, 'w') as f:
+        f.write('http://hg.something.com')
+    assert not test_metadata.uses_vcs_in_meta
+    assert not test_metadata.uses_vcs_in_build
+    with open(test_metadata.meta_path, 'w') as f:
+        f.write('hg something something')
+    assert not test_metadata.uses_vcs_in_meta
+    assert test_metadata.uses_vcs_in_build
+    with open(test_metadata.meta_path, 'w') as f:
+        f.write('hg.exe something something')
+    assert not test_metadata.uses_vcs_in_meta
+    assert test_metadata.uses_vcs_in_build
+    with open(test_metadata.meta_path, 'w') as f:
+        f.write('HG_WEEEEE')
+    assert test_metadata.uses_vcs_in_meta
+    assert not test_metadata.uses_vcs_in_build
 
 
 def test_select_lines():
