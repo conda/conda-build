@@ -119,8 +119,17 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                     # so the package directory already exists
                     # from another installed dependency
                     if os.path.exists(join(sp_dir, fn)):
-                        utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout)
-                        utils.rm_rf(join(egg_path, fn))
+                        try:
+                            utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout)
+                            utils.rm_rf(join(egg_path, fn))
+                        except IOError as e:
+                            fn = os.path.basename(str(e).split()[-1])
+                            raise IOError("Tried to merge folder {egg_path} into {sp_dir}, but {fn}"
+                                          " exists in both locations.  Please either add "
+                                          "build/preserve_egg_dir: True to meta.yaml, or manually "
+                                          "remove the file during your install process to avoid "
+                                          "this conflict."
+                                          .format(egg_path=egg_path, sp_dir=sp_dir, fn=fn))
                     else:
                         os.rename(join(egg_path, fn), join(sp_dir, fn))
 
