@@ -826,23 +826,6 @@ class MetaData(object):
         return self.__str__()
 
     @property
-    def uses_vcs_in_meta(self):
-        """returns name of vcs used if recipe contains metadata associated with version control systems.
-        If this metadata is present, a download/copy will be forced in parse_or_try_download.
-        """
-        vcs_types = ["git", "svn", "hg"]
-        # We would get here if we use Jinja2 templating, but specify source with path.
-        with open(self.meta_path) as f:
-            metayaml = f.read()
-            for vcs in vcs_types:
-                matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
-                if len(matches) > 0:
-                    if vcs == "hg":
-                        vcs = "mercurial"
-                    return vcs
-        return None
-
-    @property
     def uses_setup_py_in_meta(self):
         with open(self.meta_path) as f:
             meta_text = f.read()
@@ -868,17 +851,40 @@ class MetaData(object):
         return len(matches) > 0
 
     @property
+    def uses_vcs_in_meta(self):
+        """returns name of vcs used if recipe contains metadata associated with version control systems.
+        If this metadata is present, a download/copy will be forced in parse_or_try_download.
+        """
+        vcs_types = ["git", "svn", "hg"]
+        # We would get here if we use Jinja2 templating, but specify source with path.
+        with open(self.meta_path) as f:
+            metayaml = f.read()
+            for vcs in vcs_types:
+                matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
+                if len(matches) > 0:
+                    if vcs == "hg":
+                        vcs = "mercurial"
+                    return vcs
+        return None
+
+    @property
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(os.path.dirname(self.meta_path), build_script)
-        if os.path.isfile(build_script):
-            vcs_types = ["git", "svn", "hg"]
-            with open(self.meta_path) as f:
-                build_script = f.read()
-                for vcs in vcs_types:
-                    matches = re.findall(r"{}(?:\.exe)?".format(vcs), build_script)
-                    if len(matches) > 0:
-                        if vcs == "hg":
-                            vcs = "mercurial"
-                        return vcs
+        for recipe_file in (build_script, self.meta_path):
+            if os.path.isfile(recipe_file):
+                vcs_types = ["git", "svn", "hg"]
+                with open(recipe_file) as f:
+                    build_script = f.read()
+                    for vcs in vcs_types:
+                        # commands are assumed to have 3 parts:
+                        #   1. the vcs command, optionally with an exe extension
+                        #   2. a subcommand - for example, "clone"
+                        #   3. a target url or other argument
+                        matches = re.findall(r"{}(?:\.exe)?(?:\s+\w+\s+[\w\/\.:@]+)".format(vcs),
+                                            build_script, flags=re.IGNORECASE)
+                        if len(matches) > 0:
+                            if vcs == "hg":
+                                vcs = "mercurial"
+                            return vcs
         return None
