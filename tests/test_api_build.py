@@ -337,20 +337,23 @@ def test_skip_existing(testing_workdir, test_config, capfd):
     output, error = capfd.readouterr()
     assert "is already built" in output
 
+
 def test_skip_existing_url(test_metadata, testing_workdir, capfd):
     # make sure that it is built
     output_file = api.get_output_file_path(test_metadata)
     api.build(test_metadata)
 
     # Copy our package into some new folder
-    platform = os.path.join(testing_workdir, test_metadata.config.subdir)
+    output_dir = os.path.join(testing_workdir, 'someoutput')
+    platform = os.path.join(output_dir, test_metadata.config.subdir)
+    os.makedirs(platform)
     copy_into(output_file, os.path.join(platform, os.path.basename(output_file)))
 
     # create the index so conda can find the file
     api.update_index(platform, config=test_metadata.config)
 
     test_metadata.config.skip_existing = True
-    test_metadata.config.channel_urls = [url_path(testing_workdir)]
+    test_metadata.config.channel_urls = [url_path(output_dir)]
     api.build(test_metadata)
 
     output, error = capfd.readouterr()
