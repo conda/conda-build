@@ -28,7 +28,7 @@ punk_regex = re.compile('[%s]' % re.escape(string.punctuation))  # removes punks
 
 
 def match_gpl3(family):
-    """True if family matches GPL3 and GPL >= 2, else False"""
+    """True if family matches GPL3 or GPL >= 2, else False"""
     return (gpl23_regex.search(family) or
             gpl3_regex.search(family))
 
@@ -88,7 +88,7 @@ def guess_license_family(license_name=None,
     for family in recognized:
         if family in license_name:
             return family
-    for family in recognized:  # TODO - Necessary? What cases does this catch?
+    for family in recognized:
         if license_name in family:
             return family
     return 'OTHER'
@@ -97,7 +97,7 @@ def guess_license_family(license_name=None,
 def deprecated_guess_license_family(license_name, recognized=allowed_license_families):
     """Deprecated guess of license_family from license
 
-    Use fuzzy_license_family instead
+    Use guess_license_family instead
     """
     # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
     if 'GPL (>= 2)' in license_name or license_name == 'GPL':
