@@ -23,7 +23,7 @@ NONE
 # regular expressions
 gpl2_regex = re.compile('GPL[^3]*2')  # match GPL2
 gpl3_regex = re.compile('GPL[^2]*3')  # match GPL3
-gpl23_regex = re.compile('GPL *>= *2')  # match GPL >= 2
+gpl23_regex = re.compile('GPL[^2]*>= *2')  # match GPL >= 2
 punk_regex = re.compile('[%s]' % re.escape(string.punctuation))  # removes punks
 
 
