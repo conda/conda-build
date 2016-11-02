@@ -86,8 +86,8 @@ def test_old_warnings_no_longer_fail():
 
 
 def test_gpl2():
-    licenses = {u'GPL (>= 2)', u'GNU General Public License v2 or later (GPLv2+)'
-                u'GPL-2', u'GPL-2 | file LICENSE'}
+    licenses = {u'GPL-2', u'GPL-2 | file LICENSE',
+                u'GNU General Public License v2 or later (GPLv2+)'  }
     for cens in licenses:
         fam = guess_license_family(cens)
         assert fam == u'GPL2'
@@ -146,8 +146,9 @@ def test_other():
         assert fam == u'OTHER'
 
 if __name__ == '__main__':
-    test_new_vs_previous_guesses_match()
+    #test_new_vs_previous_guesses_match()
     #test_old_warnings_no_longer_fail()
     #test_not_gpl2()
     #test_other()
     #test_gpl3()
+    test_gpl2()
