@@ -19,8 +19,7 @@ def read_index_tar(tar_path, config, lock=None):
     """ Returns the index.json dict inside the given package tarball. """
 
     if not lock:
-        lock = get_lock(join(os.path.dirname(tar_path), ".conda_lock"),
-                                     timeout=config.timeout)
+        lock = get_lock(os.path.dirname(tar_path), timeout=config.timeout)
     with ExitStack() as stack:
         stack.enter_context(lock)
         t = tarfile.open(tar_path)
@@ -77,7 +76,7 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         os.makedirs(dir_path)
 
     if not lock:
-        lock = get_lock(join(dir_path, ".conda_lock"))
+        lock = get_lock(dir_path)
 
     with lock:
         if force:

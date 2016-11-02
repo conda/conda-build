@@ -111,7 +111,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
                 src_folder = os.getcwd()
 
         if not lock:
-            lock = get_lock(join(src_folder, ".conda_lock"), timeout=timeout)
+            lock = get_lock(src_folder, timeout=timeout)
         with lock:
             # with each of these, we are copying less metadata.  This seems to be necessary
             #   to cope with some shared filesystems with some virtual machine setups.
@@ -190,7 +190,7 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
                       "{2}".format(src, dst, existing[0]))
 
     if not lock:
-        lock = get_lock(join(src, ".conda_lock"), timeout=timeout)
+        lock = get_lock(src, timeout=timeout)
     with lock:
         copytree(src, dst, symlinks=symlinks)
 
@@ -201,13 +201,14 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
 _locations = {}
 
 
-def get_lock(lock_file, timeout=90):
+def get_lock(folder, timeout=90, filename=".conda_lock"):
     global _locations
-    location = os.path.abspath(os.path.normpath(lock_file))
-    if not os.path.isdir(os.path.dirname(location)):
-        os.makedirs(os.path.dirname(location))
+    location = os.path.abspath(os.path.normpath(folder))
+    if not os.path.isdir(location):
+        os.makedirs(location)
     if location not in _locations:
-        _locations[location] = filelock.SoftFileLock(location, timeout)
+        _locations[location] = filelock.SoftFileLock(os.path.join(location, filename),
+                                                     timeout)
     return _locations[location]
 
 
