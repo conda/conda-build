@@ -41,10 +41,10 @@ def verify(verify_path, *args):
 
 
 def verify_package(path_to_package, config):
-    verify_path = os.path.join(config.verify_scripts_path, "package")
+    verify_path = ""
     verify(verify_path, path_to_package)
 
 
 def verify_recipe(recipe, config):
-    verify_path = os.path.join(config.verify_scripts_path, "recipe")
+    verify_path = ""
     verify(verify_path, recipe.meta, recipe.path)

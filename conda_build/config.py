@@ -15,7 +15,9 @@ import yaml
 from .conda_interface import string_types, binstar_upload
 from .conda_interface import root_dir, root_writable, cc, subdir, platform
 from .conda_interface import string_types, binstar_upload, rc_path
-from .conda_interface import root_dir, root_writable, cc, subdir, bits, platform,
+from .conda_interface import root_dir, root_writable, cc, subdir, bits, platform
+from .conda_interface import SEARCH_PATH
+from .conda_interface import Configuration, SequenceParameter
 
 from .utils import get_build_folders, rm_rf
 
@@ -27,7 +29,7 @@ on_win = (sys.platform == 'win32')
 # changes.
 
 DEFAULT_PREFIX_LENGTH = 255
-DEFAULT_VERIFY_SCRIPTS_PATH = os.path.join(sys.prefix, 'verify')
+conda_build = "conda-build"
 
 
 def _ensure_dir(path):
@@ -112,8 +114,7 @@ class Config(object):
                   Setting('arch', subdir.split('-')[-1]),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
-                  Setting('disable_pip', False),
-                  Setting('default_verify_scripts_path', DEFAULT_VERIFY_SCRIPTS_PATH)
+                  Setting('disable_pip', False)
                   ]
 
         # handle known values better than unknown (allow defaults)
@@ -369,15 +370,6 @@ class Config(object):
         _ensure_dir(path)
         return path
 
-    @property
-    def verify_scripts_path(self):
-        if os.path.isfile(rc_path):
-            with open(rc_path, 'r') as f:
-                condarc = yaml.load(f)
-            if condarc.get("conda_build_verify_scripts"):
-                return condarc.get("conda_build_verify_scripts")
-        return self.default_verify_scripts_path
-
     def clean(self):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
@@ -421,6 +413,20 @@ def show(config):
 
 # legacy exports for conda
 croot = Config().croot
+
+
+class Context(Configuration):
+    ignore_recipe_verify_scripts = SequenceParameter(string_types)
+    ignore_package_verify_scripts = SequenceParameter(string_types)
+
+
+def reset_context(search_path=SEARCH_PATH, argparse_args=None):
+    context.__init__(search_path, conda_build, argparse_args)
+    return context
+
+
+context = Context(SEARCH_PATH, conda_build, None)
+
 
 if __name__ == '__main__':
     show(Config())
