@@ -12,32 +12,30 @@ def list_verify_script(path_to_script):
     return files
 
 
-def verify_package(path_to_package):
-    pass
-    # try:
-    #     verify_module = __import__("verify.package")
-    # except ImportError as e:
-    #     print("can't find verify.package module, skipping verification")
-    #     return False
-    # package_dir = join(verify_module.__path__[0], "package")
-    # verify(package_dir, context.ignore_package_verify_scripts, path_to_package)
-
-
-def verify_recipe(recipe):
+def verify(verify_type, ignore_scripts, **kargs):
+    import_type = "verify.%s" % verify_type
     try:
-        verify_module = __import__("verify.recipe")
+        verify_module = __import__(import_type)
     except ImportError as e:
         print("can't find verify.recipe module, skipping verification")
         return False
-    recipe_dir = join(verify_module.__path__[0], "recipe")
-
-    verify_scripts = list_verify_script(recipe_dir)
+    script_dir = join(verify_module.__path__[0], verify_type)
+    verify_scripts = list_verify_script(script_dir)
     for verify_script in verify_scripts:
-        if verify_script not in context.ignore_recipe_verify_scripts:
-            mod = getattr(__import__("verify.recipe", fromlist=[verify_script]), verify_script)
+        if verify_script not in ignore_scripts:
+            mod = getattr(__import__(import_type, fromlist=[verify_script]), verify_script)
             print("Running script %s.py" % verify_script)
             try:
-                mod.verify(recipe.meta, recipe.path)
+                mod.verify(**kargs)
             except TypeError as e:
                 raise VerifyError(e, verify_script)
     print("All scripts passed")
+
+
+def verify_recipe(recipe):
+    verify("recipe", context.ignore_recipe_verify_scripts, rendered_meta=recipe.meta,
+           recipe_dir=recipe.path)
+
+
+def verify_package(path_to_package):
+    verify("package", context.ignore_package_verify_scripts, path_to_package=path_to_package)
