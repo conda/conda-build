@@ -98,8 +98,6 @@ def parse_or_try_download(metadata, no_download_source, config,
 
     elif not metadata.get_section('source'):
         need_source_download = False
-        if not os.path.isdir(config.work_dir):
-            os.makedirs(config.work_dir)
     else:
         # we have not downloaded source in the render phase.  Download it in
         #     the build phase

@@ -25,8 +25,6 @@ import tarfile
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
-import filelock
-
 # used to get version
 from .conda_interface import cc
 from .conda_interface import envs_dirs, root_dir
@@ -53,7 +51,7 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
-                               ensure_list)
+                               ensure_list, get_lock, ExitStack)
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -485,23 +483,26 @@ def create_env(prefix, specs, config, clear_cache=True):
                 for folder in locked_folders:
                     if not os.path.isdir(folder):
                         os.makedirs(folder)
-                    lock = filelock.SoftFileLock(join(folder, '.conda_lock'))
+                    lock = get_lock(join(folder, '.conda_lock'),
+                                                 timeout=config.timeout)
                     if not folder.endswith('pkgs'):
                         update_index(folder, config=config, lock=lock, could_be_mirror=False)
-                    lock.acquire(timeout=config.timeout)
                     locks.append(lock)
 
-                index = get_build_index(config=config, clear_cache=True)
+                with ExitStack() as stack:
+                    for lock in locks:
+                        stack.enter_context(lock)
+                    index = get_build_index(config=config, clear_cache=True)
 
-                actions = plan.install_actions(prefix, index, specs)
-                if config.disable_pip:
-                    actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
-                    actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
-                plan.display_actions(actions, index)
-                if on_win:
-                    for k, v in os.environ.items():
-                        os.environ[k] = str(v)
-                plan.execute_actions(actions, index, verbose=config.debug)
+                    actions = plan.install_actions(prefix, index, specs)
+                    if config.disable_pip:
+                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
+                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
+                    plan.display_actions(actions, index)
+                    if on_win:
+                        for k, v in os.environ.items():
+                            os.environ[k] = str(v)
+                    plan.execute_actions(actions, index, verbose=config.debug)
             except (SystemExit, PaddingError, LinkError) as exc:
                 if (("too short in" in str(exc) or
                         'post-link failed for: openssl' in str(exc) or
@@ -520,23 +521,8 @@ def create_env(prefix, specs, config, clear_cache=True):
                     #   Setting this here is important because we use it below (symlink)
                     prefix = config.build_prefix
 
-                    for lock in locks:
-                        lock.release()
-                        if os.path.isfile(lock._lock_file):
-                            os.remove(lock._lock_file)
                     create_env(prefix, specs, config=config,
                                 clear_cache=clear_cache)
-                else:
-                    for lock in locks:
-                        lock.release()
-                        if os.path.isfile(lock._lock_file):
-                            os.remove(lock._lock_file)
-                    raise
-            finally:
-                for lock in locks:
-                    lock.release()
-                    if os.path.isfile(lock._lock_file):
-                        os.remove(lock._lock_file)
         warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
@@ -683,7 +669,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
         print("Package:", m.dist())
 
-        with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"),
+        with get_lock(join(config.build_folder, ".conda_lock"),
                                    timeout=config.timeout):
             # get_dir here might be just work, or it might be one level deeper,
             #    dependening on the source.
@@ -844,14 +830,10 @@ can lead to packages that include their dependencies.""" % meta_files))
 
 def clean_pkg_cache(dist, timeout):
     cc.pkgs_dirs = cc.pkgs_dirs[:1]
-    locks = []
-    for folder in cc.pkgs_dirs:
-        locks.append(filelock.SoftFileLock(join(folder, ".conda_lock")))
-
-    for lock in locks:
-        lock.acquire(timeout=timeout)
-
-    try:
+    locks = [get_lock(join(folder, ".conda_lock"), timeout=timeout) for folder in cc.pkgs_dirs]
+    with ExitStack() as stack:
+        for lock in locks:
+            stack.enter_context(lock)
         rmplan = [
             'RM_EXTRACTED {0} local::{0}'.format(dist),
             'RM_FETCHED {0} local::{0}'.format(dist),
@@ -877,13 +859,6 @@ def clean_pkg_cache(dist, timeout):
                         del cache[pkg_id]
                 for entry in glob(os.path.join(folder, dist + '*')):
                     rm_rf(entry)
-    except:
-        raise
-    finally:
-        for lock in locks:
-            lock.release()
-            if os.path.isfile(lock._lock_file):
-                os.remove(lock._lock_file)
 
 
 def test(m, config, move_broken=True):
@@ -899,7 +874,7 @@ def test(m, config, move_broken=True):
 
     clean_pkg_cache(m.dist(), config.timeout)
 
-    with filelock.SoftFileLock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
+    with get_lock(join(config.build_folder, ".conda_lock"), timeout=config.timeout):
         tmp_dir = config.test_dir
         if not isdir(tmp_dir):
             os.makedirs(tmp_dir)

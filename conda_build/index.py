@@ -11,9 +11,7 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-import filelock
-
-from conda_build.utils import file_info
+from conda_build.utils import file_info, get_lock, ExitStack
 from .conda_interface import PY3, md5_file
 
 
@@ -21,43 +19,40 @@ def read_index_tar(tar_path, config, lock=None):
     """ Returns the index.json dict inside the given package tarball. """
 
     if not lock:
-        lock = filelock.SoftFileLock(join(os.path.dirname(tar_path), ".conda_lock"))
-    lock.acquire(timeout=config.timeout)
-    try:
-        with tarfile.open(tar_path) as t:
-            try:
-                return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
-            except EOFError:
-                raise RuntimeError("Could not extract %s. File probably corrupt."
-                    % tar_path)
-            except OSError as e:
-                raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
-    except tarfile.ReadError:
-        raise RuntimeError("Could not extract metadata from %s. "
+        lock = get_lock(join(os.path.dirname(tar_path), ".conda_lock"),
+                                     timeout=config.timeout)
+    with ExitStack() as stack:
+        stack.enter_context(lock)
+        t = tarfile.open(tar_path)
+        stack.enter_context(t)
+        try:
+            return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+        except EOFError:
+            raise RuntimeError("Could not extract %s. File probably corrupt."
+                % tar_path)
+        except OSError as e:
+            raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
+        except tarfile.ReadError:
+            raise RuntimeError("Could not extract metadata from %s. "
                             "File probably corrupt." % tar_path)
-    finally:
-        lock.release()
 
 
-def write_repodata(repodata, dir_path, config=None, lock=None):
+def write_repodata(repodata, dir_path, lock, config=None):
     """ Write updated repodata.json and repodata.json.bz2 """
     if not config:
         import conda_build.config
         config = conda_build.config.config
-    if not lock:
-        lock = filelock.SoftFileLock(join(dir_path, ".conda_lock"))
-    lock.acquire(timeout=config.timeout)
-    data = json.dumps(repodata, indent=2, sort_keys=True)
-    # strip trailing whitespace
-    data = '\n'.join(line.rstrip() for line in data.splitlines())
-    # make sure we have newline at the end
-    if not data.endswith('\n'):
-        data += '\n'
-    with open(join(dir_path, 'repodata.json'), 'w') as fo:
-        fo.write(data)
-    with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
-        fo.write(bz2.compress(data.encode('utf-8')))
-    lock.release()
+    with lock:
+        data = json.dumps(repodata, indent=2, sort_keys=True)
+        # strip trailing whitespace
+        data = '\n'.join(line.rstrip() for line in data.splitlines())
+        # make sure we have newline at the end
+        if not data.endswith('\n'):
+            data += '\n'
+        with open(join(dir_path, 'repodata.json'), 'w') as fo:
+            fo.write(data)
+        with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
+            fo.write(bz2.compress(data.encode('utf-8')))
 
 
 def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None,
@@ -82,68 +77,67 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         os.makedirs(dir_path)
 
     if not lock:
-        lock = filelock.SoftFileLock(join(dir_path, ".conda_lock"))
-    lock.acquire(timeout=config.timeout)
+        lock = get_lock(join(dir_path, ".conda_lock"))
 
-    if force:
-        index = {}
-    else:
-        try:
-            mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
-            with open(index_path, **mode_dict) as fi:
-                index = json.load(fi)
-        except (IOError, ValueError):
+    with lock:
+        if force:
             index = {}
-
-    files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-    if could_be_mirror and any(fn.startswith('_license-') for fn in files):
-        sys.exit("""\
-Error:
-    Indexing a copy of the Anaconda conda package channel is neither
-    necessary nor supported.  If you wish to add your own packages,
-    you can do so by adding them to a separate channel.
-""")
-    for fn in files:
-        path = join(dir_path, fn)
-        if fn in index:
-            if check_md5:
-                if index[fn]['md5'] == md5_file(path):
-                    continue
-            elif index[fn]['mtime'] == getmtime(path):
-                continue
-        if config.verbose:
-            print('updating:', fn)
-        d = read_index_tar(path, config, lock=lock)
-        d.update(file_info(path))
-        index[fn] = d
-
-    for fn in files:
-        index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
-
-    if remove:
-        # remove files from the index which are not on disk
-        for fn in set(index) - files:
-            if config.verbose:
-                print("removing:", fn)
-            del index[fn]
-
-    # Deal with Python 2 and 3's different json module type reqs
-    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
-    with open(index_path, **mode_dict) as fo:
-        json.dump(index, fo, indent=2, sort_keys=True, default=str)
-
-    # --- new repodata
-    for fn in index:
-        info = index[fn]
-        for varname in 'arch', 'platform', 'mtime', 'ucs':
+        else:
             try:
-                del info[varname]
-            except KeyError:
-                pass
+                mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+                with open(index_path, **mode_dict) as fi:
+                    index = json.load(fi)
+            except (IOError, ValueError):
+                index = {}
 
-        if 'requires' in info and 'depends' not in info:
-            info['depends'] = info['requires']
+        files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
+        if could_be_mirror and any(fn.startswith('_license-') for fn in files):
+            sys.exit("""\
+    Error:
+        Indexing a copy of the Anaconda conda package channel is neither
+        necessary nor supported.  If you wish to add your own packages,
+        you can do so by adding them to a separate channel.
+    """)
+        for fn in files:
+            path = join(dir_path, fn)
+            if fn in index:
+                if check_md5:
+                    if index[fn]['md5'] == md5_file(path):
+                        continue
+                elif index[fn]['mtime'] == getmtime(path):
+                    continue
+            if config.verbose:
+                print('updating:', fn)
+            d = read_index_tar(path, config, lock=lock)
+            d.update(file_info(path))
+            index[fn] = d
 
-    repodata = {'packages': index, 'info': {}}
-    write_repodata(repodata, dir_path, config, lock=lock)
-    lock.release()
+        for fn in files:
+            index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
+
+        if remove:
+            # remove files from the index which are not on disk
+            for fn in set(index) - files:
+                if config.verbose:
+                    print("removing:", fn)
+                del index[fn]
+
+        # Deal with Python 2 and 3's different json module type reqs
+        mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+        with open(index_path, **mode_dict) as fo:
+            json.dump(index, fo, indent=2, sort_keys=True, default=str)
+
+        # --- new repodata
+        for fn in index:
+            info = index[fn]
+            for varname in 'arch', 'platform', 'mtime', 'ucs':
+                try:
+                    del info[varname]
+                except KeyError:
+                    pass
+
+            if 'requires' in info and 'depends' not in info:
+                info['depends'] = info['requires']
+
+        repodata = {'packages': index, 'info': {}}
+        write_repodata(repodata, dir_path, lock=lock, config=config)
