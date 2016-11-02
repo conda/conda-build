@@ -16,7 +16,7 @@ from conda_build import exceptions
 from conda_build.features import feature_list
 from conda_build.config import Config
 from conda_build.utils import rec_glob, ensure_list
-from conda_build.license_family import allowed_license_families
+from conda_build.license_family import ensure_valid_license_family
 
 try:
     import yaml
@@ -29,8 +29,6 @@ try:
 except ImportError:
     sys.exit('Error: could not import yaml (required to read meta.yaml '
              'files of conda recipes)')
-
-from conda_build.utils import comma_join
 
 on_win = (sys.platform == 'win32')
 log = logging.getLogger(__file__)
@@ -135,17 +133,6 @@ def yamlize(data):
             except ImportError:
                 raise exceptions.UnableToParseMissingJinja2(original=e)
         raise exceptions.UnableToParse(original=e)
-
-
-def ensure_valid_license_family(meta):
-    try:
-        license_family = meta['about']['license_family']
-    except KeyError:
-        return
-    if license_family not in allowed_license_families:
-        raise RuntimeError(exceptions.indent(
-            "about/license_family '%s' not allowed. Allowed families are %s." %
-            (license_family, comma_join(sorted(allowed_license_families)))))
 
 
 def ensure_valid_fields(meta):

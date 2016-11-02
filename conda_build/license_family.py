@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 from difflib import get_close_matches
 import re
 import string
+from conda_build import exceptions
+from conda_build.utils import comma_join
 
 allowed_license_families = """
 AGPL
@@ -92,6 +94,18 @@ def guess_license_family(license_name=None,
         if license_name in family:
             return family
     return 'OTHER'
+
+
+def ensure_valid_license_family(meta):
+    try:
+        license_family = meta['about']['license_family']
+    except KeyError:
+        return
+    if (remove_special_characters(normalize(license_family))
+        not in allowed_license_families):
+        raise RuntimeError(exceptions.indent(
+            "about/license_family '%s' not allowed. Allowed families are %s." %
+            (license_family, comma_join(sorted(allowed_license_families)))))
 
 
 def deprecated_guess_license_family(license_name, recognized=allowed_license_families):
