@@ -235,7 +235,7 @@ def conda_build_vars(prefix, config):
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
         'CONDA_DEFAULT_ENV': config.build_prefix,
-        'ARCH': str(config.bits),
+        'ARCH': str(config.arch),
         'PREFIX': prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
@@ -383,7 +383,7 @@ def unix_vars(prefix):
 
 
 def osx_vars(compiler_vars, config):
-    OSX_ARCH = 'i386' if config.bits == 32 else 'x86_64'
+    OSX_ARCH = 'i386' if config.arch == 32 else 'x86_64'
     compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
@@ -398,7 +398,7 @@ def osx_vars(compiler_vars, config):
 
 def linux_vars(compiler_vars, prefix, config):
     compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
-    if config.bits == 32:
+    if config.arch == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
     return {}

@@ -25,7 +25,7 @@ import filelock
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import linked
-from .conda_interface import bits, root_dir
+from .conda_interface import root_dir
 
 from conda_build.os_utils import external
 
@@ -515,7 +515,8 @@ def create_entry_point(path, module, func, config):
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config.timeout)
+        copy_into(join(dirname(__file__), 'cli-%d.exe' % config.arch),
+                  path + '.exe', config.timeout)
     else:
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % config.build_python)

@@ -12,7 +12,7 @@ import sys
 import time
 
 from .conda_interface import string_types, binstar_upload
-from .conda_interface import root_dir, root_writable, cc, bits, platform
+from .conda_interface import root_dir, root_writable, cc, subdir, platform
 
 from .utils import get_build_folders, rm_rf
 
@@ -105,7 +105,7 @@ class Config(object):
                   Setting('verbose', False),
                   Setting('debug', False),
                   Setting('timeout', 90),
-                  Setting('bits', bits),
+                  Setting('arch', subdir.split('-')[-1]),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
                   Setting('disable_pip', False)
@@ -124,14 +124,14 @@ class Config(object):
         if self.platform == 'noarch':
             return self.platform
         else:
-            return "-".join([self.platform, str(self.bits)])
+            return "-".join([self.platform, str(self.arch)])
 
     @subdir.setter
     def subdir(self, value):
         values = value.split('-')
         self.platform = values[0]
         if len(values) > 1:
-            self.bits = values[1]
+            self.arch = values[1]
 
     @property
     def croot(self):
