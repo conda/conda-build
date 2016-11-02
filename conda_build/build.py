@@ -820,7 +820,7 @@ can lead to packages that include their dependencies.""" % meta_files))
         update_index(config.bldpkgs_dir, config, could_be_mirror=False)
 
         if not getattr(config, "noverify", False):
-            verify_package(path, config)
+            verify_package(path)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -1067,7 +1067,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                                                     config=recipe_config)
         if not getattr(config, "noverify", False):
-            verify_recipe(metadata, config)
+            verify_recipe(metadata)
         try:
             with recipe_config:
                 ok_to_test = build(metadata, post=post,
