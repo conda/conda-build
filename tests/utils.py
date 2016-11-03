@@ -57,8 +57,7 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True, activate=False,
-                  noverify=False,
-                  default_verify_scripts_path=join(dirname(__file__), "test-verify-scripts"))
+                  noverify=False)
 
 
 @pytest.fixture(scope='function')

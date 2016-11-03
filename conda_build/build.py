@@ -59,7 +59,8 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
-from .verify import verify_package, verify_recipe
+from .config import context
+from anaconda_verify.verify import Verify
 
 
 if 'bsd' in sys.platform:
@@ -820,7 +821,8 @@ can lead to packages that include their dependencies.""" % meta_files))
         update_index(config.bldpkgs_dir, config, could_be_mirror=False)
 
         if not getattr(config, "noverify", False):
-            verify_package(path)
+            verifier = Verify()
+            verifier.verify_package(context.ignore_package_verify_scripts, path_to_package=path)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -1067,7 +1069,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
                                                                     config=recipe_config)
         if not getattr(config, "noverify", False):
-            verify_recipe(metadata)
+            verifier = Verify()
+            verifier.verify_recipe(context.ignore_recipe_verify_scripts,
+                                   rendered_meta=metadata.meta, recipe_dir=metadata.path)
         try:
             with recipe_config:
                 ok_to_test = build(metadata, post=post,
