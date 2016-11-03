@@ -1,11 +1,21 @@
-2016-11-01 2.0.8:
+2016-11-03 2.0.8:
 -----------------
 
 Enhancements:
 -------------
 
-* Improved logic to guess the appropriate license_family to add to package's index. This improves filtering.
-* Logic for the license_family is now shared between open-source conda-build, and proprietary cas-mirror packages.
+* Support otool -h changes in MacOS 10.12 #1479
+* Fix lists of empty strings created by ensure_list (patches failing due to empty patch list) #1493
+* Improved logic to guess the appropriate license_family to add to package's index. This improves filtering. #1495 #1503
+* Logic for the license_family is now shared between open-source conda-build, and proprietary cas-mirror packages. #1495 #1503
+
+Bug fixes:
+----------
+
+* Centralize locks in memory to avoid lock timeouts within a single process #1496
+* fix overly broad regex in detecting whether a recipe uses version control systems #1498
+* clarify error message when extracting egg fails due to overlapping file names #1500
+* fix regression where subdir was not respecting non-x86 arch (values other than 32 or 64) #1506
 
 Contributors:
 -------------
@@ -13,6 +23,7 @@ Contributors:
 * @caseyclements
 * @minrk
 * @msarahan
+
 
 2016-10-24 2.0.7:
 -----------------
