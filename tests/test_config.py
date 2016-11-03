@@ -53,23 +53,23 @@ def test_create_config_with_subdir():
 
 def test_set_platform(config):
     config.platform = 'steve'
-    bits = config.bits
-    assert config.subdir == 'steve-' + str(bits)
+    arch = config.arch
+    assert config.subdir == 'steve-' + str(arch)
 
 
 def test_set_subdir(config):
     config.subdir = 'steve'
-    bits = config.bits
-    assert config.subdir == 'steve-' + str(bits)
+    arch = config.arch
+    assert config.subdir == 'steve-' + str(arch)
     assert config.platform == 'steve'
 
     config.subdir = 'steve-128'
     assert config.subdir == 'steve-128'
     assert config.platform == 'steve'
-    assert config.bits == '128'
+    assert config.arch == '128'
 
 
 def test_set_bits(config):
-    config.bits = 128
+    config.arch = 128
     assert config.subdir == config.platform + '-' + str(128)
-    assert config.bits == 128
+    assert config.arch == 128

@@ -25,7 +25,7 @@ import filelock
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import linked
-from .conda_interface import bits, root_dir
+from .conda_interface import root_dir
 
 from conda_build.os_utils import external
 
@@ -111,7 +111,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
                 src_folder = os.getcwd()
 
         if not lock:
-            lock = get_lock(join(src_folder, ".conda_lock"), timeout=timeout)
+            lock = get_lock(src_folder, timeout=timeout)
         with lock:
             # with each of these, we are copying less metadata.  This seems to be necessary
             #   to cope with some shared filesystems with some virtual machine setups.
@@ -190,7 +190,7 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
                       "{2}".format(src, dst, existing[0]))
 
     if not lock:
-        lock = get_lock(join(src, ".conda_lock"), timeout=timeout)
+        lock = get_lock(src, timeout=timeout)
     with lock:
         copytree(src, dst, symlinks=symlinks)
 
@@ -201,13 +201,14 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
 _locations = {}
 
 
-def get_lock(lock_file, timeout=90):
+def get_lock(folder, timeout=90, filename=".conda_lock"):
     global _locations
-    location = os.path.abspath(os.path.normpath(lock_file))
-    if not os.path.isdir(os.path.dirname(location)):
-        os.makedirs(os.path.dirname(location))
+    location = os.path.abspath(os.path.normpath(folder))
+    if not os.path.isdir(location):
+        os.makedirs(location)
     if location not in _locations:
-        _locations[location] = filelock.SoftFileLock(location, timeout)
+        _locations[location] = filelock.SoftFileLock(os.path.join(location, filename),
+                                                     timeout)
     return _locations[location]
 
 
@@ -514,7 +515,8 @@ def create_entry_point(path, module, func, config):
             if 'debug' in packages_names:
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-%d.exe' % bits), path + '.exe', config.timeout)
+        copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
+                  path + '.exe', config.timeout)
     else:
         with open(path, 'w') as fo:
             fo.write('#!%s\n' % config.build_python)
