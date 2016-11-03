@@ -22,6 +22,7 @@ requirements:
   build:
     - python
   run:
+    - anaconda-verify
     - conda  >=4.1
     - contextlib2   [py<3]
     - filelock
