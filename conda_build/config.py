@@ -418,6 +418,8 @@ croot = Config().croot
 class Context(Configuration):
     ignore_recipe_verify_scripts = SequenceParameter(string_types)
     ignore_package_verify_scripts = SequenceParameter(string_types)
+    run_recipe_verify_scripts = SequenceParameter(string_types)
+    run_package_verify_scripts = SequenceParameter(string_types)
 
 
 def reset_context(search_path=SEARCH_PATH, argparse_args=None):

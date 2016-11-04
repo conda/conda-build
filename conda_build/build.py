@@ -822,7 +822,12 @@ can lead to packages that include their dependencies.""" % meta_files))
 
         if not getattr(config, "noverify", False):
             verifier = Verify()
-            verifier.verify_package(context.ignore_package_verify_scripts, path_to_package=path)
+            ignore_scripts = context.ignore_package_verify_scripts if \
+                context.ignore_package_verify_scripts else None
+            run_scripts = context.run_package_verify_scripts if \
+                context.run_package_verify_scripts else None
+            verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
+                                    path_to_package=path)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -1070,7 +1075,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                                                     config=recipe_config)
         if not getattr(config, "noverify", False):
             verifier = Verify()
-            verifier.verify_recipe(context.ignore_recipe_verify_scripts,
+            ignore_scripts = context.ignore_recipe_verify_scripts if \
+                context.ignore_recipe_verify_scripts else None
+            run_scripts = context.run_recipe_verify_scripts if \
+                context.run_recipe_verify_scripts else None
+            verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                    rendered_meta=metadata.meta, recipe_dir=metadata.path)
         try:
             with recipe_config:
