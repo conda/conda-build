@@ -424,21 +424,20 @@ def create_info_files(m, files, config, prefix):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    short_paths = files
-    if is_noarch_python(m):
-        for index, short_path in enumerate(short_paths):
-            if short_path.find("site-packages") > 0:
-                short_paths[index] = short_path[short_path.find("site-packages"):]
-            elif short_path.startswith("bin") and (short_path not in entry_point_script_names):
-                short_paths[index] = short_path.replace("bin", "python-scripts")
-            elif short_path.startswith("Scripts") and (short_path not in entry_point_script_names):
-                short_paths[index] = short_path.replace("Scripts", "python-scripts")
-    elif m.get_value('build/noarch_python'):
-        short_paths = []
-
     with open(join(config.info_dir, 'files'), **mode_dict) as fo:
-        for f in short_paths:
-            fo.write(f + "\n")
+        if m.get_value('build/noarch_python'):
+            fo.write('\n')
+        elif is_noarch_python(m):
+            for f in files:
+                if f.find("site-packages") > 0:
+                    fo.write(f[f.find("site-packages"):] + '\n')
+                elif f.startswith("bin") and (f not in entry_point_script_names):
+                    fo.write(f.replace("bin", "python-scripts") + '\n')
+                elif f.startswith("Scripts") and (f not in entry_point_script_names):
+                    fo.write(f.replace("Scripts", "python-scripts") + '\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
 
     no_link = m.get_value('build/no_link')
     if no_link:
@@ -452,7 +451,6 @@ def create_info_files(m, files, config, prefix):
             no_link = [no_link]
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     create_info_files_json(m, config.info_dir, prefix, files, files_with_prefix)
-
 
     detect_and_record_prefix_files(m, files, prefix, config)
     write_no_link(m, config, files)
