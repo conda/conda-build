@@ -115,8 +115,11 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
         with lock:
             # if intermediate folders not not exist create them
             dst_folder = os.path.dirname(dst)
-            if not os.path.exists(dst_folder):
-                os.makedirs(dst_folder)
+            if dst_folder and not os.path.exists(dst_folder):
+                try:
+                    os.makedirs(dst_folder)
+                except OSError:
+                    pass
 
             # with each of these, we are copying less metadata.  This seems to be necessary
             #   to cope with some shared filesystems with some virtual machine setups.
