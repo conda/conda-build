@@ -338,6 +338,39 @@ def handle_config_version(ms, ver, dep_type='run'):
     return MatchSpec('%s %s*' % (ms.name, ver))
 
 
+def build_string_from_metadata(metadata):
+    res = []
+    version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
+    for name, s in (('numpy', 'np'), ('python', 'py'),
+                    ('perl', 'pl'), ('lua', 'lua'),
+                    ('r', 'r'), ('r-base', 'r')):
+        for ms in metadata.ms_depends():
+            if ms.name == name:
+                try:
+                    v = ms.spec.split()[1]
+                except IndexError:
+                    if name not in ['numpy']:
+                        res.append(s)
+                    break
+                if any(i in v for i in ',|>!<'):
+                    break
+                if name not in ['perl', 'lua', 'r', 'r-base']:
+                    match = version_pat.match(v)
+                    if match:
+                        res.append(s + match.group(1) + match.group(2))
+                else:
+                    res.append(s + v.strip('*'))
+                break
+
+    features = ensure_list(metadata.get_value('build/features', []))
+    if res:
+        res.append('_')
+    if features:
+        res.extend(('_'.join(features), '_'))
+    res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
+    return "".join(res)
+
+
 def find_recipe(path):
     """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
 
@@ -582,37 +615,9 @@ class MetaData(object):
         ret = self.get_value('build/string')
         if ret:
             check_bad_chrs(ret, 'build/string')
-            return ret
-        res = []
-        version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
-        for name, s in (('numpy', 'np'), ('python', 'py'),
-                        ('perl', 'pl'), ('lua', 'lua'),
-                        ('r', 'r'), ('r-base', 'r')):
-            for ms in self.ms_depends():
-                if ms.name == name:
-                    try:
-                        v = ms.spec.split()[1]
-                    except IndexError:
-                        if name not in ['numpy']:
-                            res.append(s)
-                        break
-                    if any(i in v for i in ',|>!<'):
-                        break
-                    if name not in ['perl', 'lua', 'r', 'r-base']:
-                        match = version_pat.match(v)
-                        if match:
-                            res.append(s + match.group(1) + match.group(2))
-                    else:
-                        res.append(s + v.strip('*'))
-                    break
-
-        features = ensure_list(self.get_value('build/features', []))
-        if res:
-            res.append('_')
-        if features:
-            res.extend(('_'.join(features), '_'))
-        res.append('{0}'.format(self.build_number() if self.build_number() else 0))
-        return ''.join(res)
+        else:
+            ret = build_string_from_metadata(self)
+        return ret
 
     def dist(self):
         return '%s-%s-%s' % (self.name(), self.version(), self.build_id())
