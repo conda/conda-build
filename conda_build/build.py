@@ -60,7 +60,7 @@ from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
 from .config import context
-from anaconda_verify.verify import Verify
+from conda_verify.verify import Verify
 
 
 if 'bsd' in sys.platform:
