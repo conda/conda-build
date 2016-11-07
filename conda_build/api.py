@@ -159,6 +159,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
+    version = getattr(config, "version", version)
     if version:
         kwargs.update({'version': version})
     if recursive:
