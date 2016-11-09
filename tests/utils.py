@@ -1,6 +1,7 @@
 from collections import defaultdict
 import contextlib
 import os
+from os.path import join, dirname
 import stat
 import subprocess
 import sys

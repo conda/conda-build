@@ -153,6 +153,11 @@ different sets of packages."""
         help=("Build root folder.  Equivalent to CONDA_BLD_PATH, but applies only "
               "to this call of conda-build.")
     )
+    p.add_argument(
+        "--no-verify",
+        action="store_true",
+        help=("do not run verification on recipes or packages when building")
+    )
 
     add_parser_channels(p)
 
@@ -231,7 +236,7 @@ def execute(args):
     else:
         api.build(args.recipe, post=args.post, build_only=args.build_only,
                    notest=args.notest, keep_old_work=args.keep_old_work,
-                   already_built=None, config=config)
+                   already_built=None, config=config, noverify=args.no_verify)
 
     if not args.output and len(build.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)

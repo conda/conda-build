@@ -48,3 +48,11 @@ class UnableToParseMissingJinja2(UnableToParse):
 
 class UnableToParseMissingSetuptoolsDependencies(CondaBuildException):
     pass
+
+
+class VerifyError(CondaBuildException):
+    def __init__(self, error, script, *args):
+        self.error = error
+        self.script = script
+        self.msg = "%s failed to verify\n%s" % (script, error)
+        super(VerifyError, self).__init__(self.msg)

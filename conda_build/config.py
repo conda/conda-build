@@ -10,9 +10,14 @@ import os
 from os.path import abspath, expanduser, join
 import sys
 import time
+import yaml
 
 from .conda_interface import string_types, binstar_upload
 from .conda_interface import root_dir, root_writable, cc, subdir, platform
+from .conda_interface import string_types, binstar_upload, rc_path
+from .conda_interface import root_dir, root_writable, cc, subdir, bits, platform
+from .conda_interface import SEARCH_PATH
+from .conda_interface import Configuration, SequenceParameter
 
 from .utils import get_build_folders, rm_rf
 
@@ -24,6 +29,7 @@ on_win = (sys.platform == 'win32')
 # changes.
 
 DEFAULT_PREFIX_LENGTH = 255
+conda_build = "conda-build"
 
 
 def _ensure_dir(path):
@@ -407,6 +413,22 @@ def show(config):
 
 # legacy exports for conda
 croot = Config().croot
+
+
+class Context(Configuration):
+    ignore_recipe_verify_scripts = SequenceParameter(string_types)
+    ignore_package_verify_scripts = SequenceParameter(string_types)
+    run_recipe_verify_scripts = SequenceParameter(string_types)
+    run_package_verify_scripts = SequenceParameter(string_types)
+
+
+def reset_context(search_path=SEARCH_PATH, argparse_args=None):
+    context.__init__(search_path, conda_build, argparse_args)
+    return context
+
+
+context = Context(SEARCH_PATH, conda_build, None)
+
 
 if __name__ == '__main__':
     show(Config())

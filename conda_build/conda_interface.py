@@ -22,8 +22,10 @@ from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, no
 from conda.signature import KEYS, KEYS_DIR, hash_file, verify  # NOQA
 from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
 import conda.config as cc  # NOQA
-from conda.config import sys_rc_path  # NOQA
+from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
+from conda.base.constants import SEARCH_PATH
+from conda.common.configuration import Configuration, SequenceParameter
 
 if parse_version(conda.__version__) >= parse_version("4.2"):
     # conda 4.2.x
