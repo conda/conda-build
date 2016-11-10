@@ -89,7 +89,7 @@ def ns_cfg(config):
 sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 
-def select_lines(data, namespace):
+def select_lines(data, namespace, selectors):
     lines = []
 
     for i, line in enumerate(data.splitlines()):
@@ -105,19 +105,24 @@ def select_lines(data, namespace):
         m = sel_pat.match(line)
         if m:
             cond = m.group(3)
-            try:
-                # TODO: is there a way to do this without eval?  Eval allows arbitrary
-                #    code execution.
-                if eval(cond, namespace, {}):
-                    lines.append(m.group(1) + trailing_quote)
-            except:
-                sys.exit('''\
-Error: Invalid selector in meta.yaml line %d:
-%s
-''' % (i + 1, line))
-                sys.exit(1)
-            continue
-        lines.append(line)
+            if selectors.startswith('r'):
+                try:
+                    # TODO: is there a way to do this without eval?  Eval allows arbitrary
+                    #    code execution.
+                    if eval(cond, namespace, {}):
+                        lines.append(m.group(1) + trailing_quote)
+                except:
+                    sys.exit('''\
+    Error: Invalid selector in meta.yaml line %d:
+    %s
+    ''' % (i + 1, line))
+                    sys.exit(1)
+            elif selectors.startswith('c'):
+                lines.append(m.group(1) + '  # [{}]'.format(m.group(3)) + trailing_quote)
+            else:
+                lines.append(m.group(1) + '  [{}]'.format(m.group(3)) + trailing_quote)
+        else:
+            lines.append(line)
     return '\n'.join(lines) + '\n'
 
 
@@ -154,7 +159,7 @@ def ensure_valid_noarch_value(meta):
 
 
 def parse(data, config, path=None):
-    data = select_lines(data, ns_cfg(config))
+    data = select_lines(data, ns_cfg(config), config.selectors)
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:

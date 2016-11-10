@@ -114,7 +114,8 @@ class Config(object):
                   Setting('arch', subdir.split('-')[-1]),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
-                  Setting('disable_pip', False)
+                  Setting('selectors', 'rendered'),
+                  Setting('disable_pip', False),
                   ]
 
         # handle known values better than unknown (allow defaults)

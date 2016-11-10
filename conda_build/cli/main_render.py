@@ -93,6 +93,14 @@ source to try fill in related template variables.",
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )
+    p.add_argument(
+        '--selectors',
+        choices=['r', 'rendered',
+                 'c', 'commented',
+                 'u', 'uncommented'],
+        help='Keep selectors in rendered output, rather than applying them',
+        default='rendered',
+    )
     add_parser_channels(p)
     return p
 
@@ -124,7 +132,7 @@ def parse_args(args):
 def execute(args):
     p, args = parse_args(args)
 
-    config = Config()
+    config = Config(selectors=args.selectors)
     set_language_env_vars(args, p, config)
 
     metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source, config=config)
