@@ -729,7 +729,7 @@ def test_script_win_creates_exe(test_config):
     assert package_has_file(fn, 'Scripts/test-script-script.py')
 
 
-def test_info_json(test_config):
+def test_info_files_json(test_config):
     recipe = os.path.join(metadata_dir, "ignore_some_prefix_files")
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)

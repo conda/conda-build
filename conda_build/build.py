@@ -500,9 +500,10 @@ def is_no_link(no_link, short_path):
         return True
 
 
-def get_sorted_inode_first_path(short_paths, target_short_path, prefix):
+def get_sorted_inode_first_path(files, target_short_path, prefix):
+    ensure_list(files)
     target_short_path_inode = os.stat(join(prefix, target_short_path)).st_ino
-    hardlinked_files = [sp for sp in short_paths
+    hardlinked_files = [sp for sp in files
                         if os.stat(join(prefix, sp)).st_ino == target_short_path_inode]
     return sorted(hardlinked_files)
 
@@ -533,7 +534,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
             "no_link": is_no_link(no_link, fi),
         }
         if file_info.get("file_type") == "hardlink":
-            inode_first_path = get_sorted_inode_first_path(fi, fi, prefix)
+            inode_first_path = get_sorted_inode_first_path(files, fi, prefix)
             file_info["inode_first_path"] = inode_first_path[0]
         files_json.append(file_info)
     return files_json
