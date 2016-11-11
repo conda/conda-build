@@ -218,14 +218,12 @@ def test_create_info_files_json(testing_workdir, test_metadata):
     build.create_info_files_json(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
     files_json_path = os.path.join(info_dir, "files.json")
     expected_output = {
-        "files": [{"file_mode": None, "no_link": None, "file_type": "regular", "short_path": "one",
-                   "prefix_placeholder": None,
+        "files": [{"file_type": "hardlink", "short_path": "one",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"file_mode": None, "no_link": None, "file_type": "regular", "short_path": "two",
-                   "prefix_placeholder": None, "size_in_bytes": 0,
+                  {"file_type": "hardlink", "short_path": "two", "size_in_bytes": 0,
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
-                  {"file_mode": "text", "no_link": None, "file_type": "regular",
+                  {"file_mode": "text", "file_type": "hardlink",
                    "short_path": "foo", "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
@@ -256,19 +254,17 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
     build.create_info_files_json(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
     files_json_path = os.path.join(info_dir, "files.json")
     expected_output = {
-        "files": [{"inode_first_path": "one", "file_mode": None, "no_link": None,
-                   "file_type": "hardlink", "short_path": "one", "prefix_placeholder": None,
+        "files": [{"inode_paths": ["one", "one_hl"], "file_type": "hardlink", "short_path": "one",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"file_mode": None, "no_link": None, "file_type": "regular", "short_path": "two",
-                   "prefix_placeholder": None, "size_in_bytes": 0,
+                  {"file_type": "hardlink", "short_path": "two", "size_in_bytes": 0,
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
-                  {"inode_first_path": "one", "file_mode": None, "no_link": None,
-                   "file_type": "hardlink", "short_path": "one_hl", "prefix_placeholder": None,
+                  {"inode_paths": ["one", "one_hl"], "file_type": "hardlink",
+                   "short_path": "one_hl",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"file_mode": "text", "no_link": None, "file_type": "regular",
-                   "short_path": "foo", "prefix_placeholder": "prefix/path",
+                  {"file_mode": "text", "file_type": "hardlink", "short_path": "foo",
+                   "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
         "fields": ["short_path", "sha256", "size_in_bytes", "file_type", "file_mode",

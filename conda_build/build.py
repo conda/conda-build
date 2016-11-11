@@ -65,7 +65,6 @@ from enum import Enum
 
 
 class FileType(Enum):
-    regular = "regular"
     softlink = "softlink"
     hardlink = "hardlink"
     directory = "directory"
@@ -500,7 +499,7 @@ def is_no_link(no_link, short_path):
         return True
 
 
-def get_sorted_inode_first_path(files, target_short_path, prefix):
+def get_inode_paths(files, target_short_path, prefix):
     ensure_list(files)
     target_short_path_inode = os.stat(join(prefix, target_short_path)).st_ino
     hardlinked_files = [sp for sp in files
@@ -513,9 +512,7 @@ def file_type(path):
         return FileType.directory
     elif islink(path):
         return FileType.softlink
-    elif os.stat(path).st_nlink >= 2:
-        return FileType.hardlink
-    return FileType.regular
+    return FileType.hardlink
 
 
 def build_info_files_json(m, prefix, files, files_with_prefix):
@@ -529,13 +526,16 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
             "file_type": getattr(file_type(path), "name"),
-            "prefix_placeholder": prefix_placeholder,
-            "file_mode": file_mode,
-            "no_link": is_no_link(no_link, fi),
         }
-        if file_info.get("file_type") == "hardlink":
-            inode_first_path = get_sorted_inode_first_path(files, fi, prefix)
-            file_info["inode_first_path"] = inode_first_path[0]
+        no_link = is_no_link(no_link, fi)
+        if no_link:
+            file_info["no_link"] = no_link
+        if prefix_placeholder and file_mode:
+            file_info["prefix_placeholder"] = prefix_placeholder
+            file_info["file_mode"] = file_mode
+        if file_info.get("file_type") == "hardlink" and os.stat(fi).st_nlink > 1:
+            inode_paths = get_inode_paths(files, fi, prefix)
+            file_info["inode_paths"] = inode_paths
         files_json.append(file_info)
     return files_json
 
