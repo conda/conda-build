@@ -452,7 +452,13 @@ def check_symlinks(files, prefix, croot):
         if islink(path):
             link_path = readlink(path)
             real_link_path = realpath(path)
-            if real_link_path.startswith(real_build_prefix):
+            # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused.
+            #    If condition exists, then copy the file rather than symlink it.
+            if (not os.path.dirname(link_path) == os.path.dirname(real_link_path) and
+                    is_obj(f)):
+                os.remove(path)
+                utils.copy_into(real_link_path, path)
+            elif real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
                 if not link_path.startswith('.'):
