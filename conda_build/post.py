@@ -452,7 +452,8 @@ def check_symlinks(files, prefix, croot):
         if islink(path):
             link_path = readlink(path)
             real_link_path = realpath(path)
-            # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused.
+            # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
+            #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
             if (not os.path.dirname(link_path) == os.path.dirname(real_link_path) and
                     is_obj(f)):
