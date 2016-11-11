@@ -110,6 +110,10 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
             else:
                 src_folder = os.getcwd()
 
+        if os.path.islink(src) and not os.path.exists(os.path.realpath(src)):
+            log.warn('path %s is a broken symlink - ignoring copy', src)
+            return
+
         if not lock:
             lock = get_lock(src_folder, timeout=timeout)
         with lock:
