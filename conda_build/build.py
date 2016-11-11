@@ -297,7 +297,7 @@ def write_about_json(m, config):
             if value:
                 d[key] = value
 
-        bin_path = os.path.join(sys.prefix, "Scripts" if on_win else "bin", 'conda')
+        bin_path = os.path.join(sys.prefix, "Scripts\\conda.exe" if on_win else "bin/conda")
 
         # for sake of reproducibility, record some conda info
         conda_info = subprocess.check_output([bin_path, 'info', '--json', '-s'])
