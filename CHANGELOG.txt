@@ -1,3 +1,29 @@
+2016-11-11 2.0.9:
+-----------------
+
+Enhancements:
+-------------
+
+* break build string construction out into standalone function for external usage (Concourse CI project) #1513
+* add conda-verify support.  Defaults to enabled.  Adds conda-verify as runtime requirement.
+*
+
+Bug fixes:
+----------
+
+* handle creation of intermediate folders when filenames provided as build/source_files arguments #1511
+* Fix passing of version argument to pypi skeleton arguments #1516
+* break symlinks and copy files if symlinks point to executable outside of same path (fix RPATH misbehavior on linux/mac, because ld.so follows symlinks) #1521
+* specify conda executable name more specifically when getting about.json info.  It was not being found in some cases without the file extension.  #1525
+
+Contributors:
+-------------
+
+* @jhprinz
+* @msarahan
+* @soapy1
+
+
 2016-11-03 2.0.8:
 -----------------
 
