@@ -432,14 +432,14 @@ def post_build(m, files, prefix, build_python, croot):
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
 
+    check_symlinks(files, prefix, croot)
+
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
         if binary_relocation:
             mk_relative(m, f, prefix)
         make_hardlink_copy(f, prefix)
-
-    check_symlinks(files, prefix, croot)
 
 
 def check_symlinks(files, prefix, croot):
