@@ -432,14 +432,14 @@ def post_build(m, files, prefix, build_python, croot):
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
 
+    check_symlinks(files, prefix, croot)
+
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
         if binary_relocation:
             mk_relative(m, f, prefix)
         make_hardlink_copy(f, prefix)
-
-    check_symlinks(files, prefix, croot)
 
 
 def check_symlinks(files, prefix, croot):
@@ -452,7 +452,14 @@ def check_symlinks(files, prefix, croot):
         if islink(path):
             link_path = readlink(path)
             real_link_path = realpath(path)
-            if real_link_path.startswith(real_build_prefix):
+            # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
+            #    because ld.so follows symlinks in RPATHS
+            #    If condition exists, then copy the file rather than symlink it.
+            if (not os.path.dirname(link_path) == os.path.dirname(real_link_path) and
+                    is_obj(f)):
+                os.remove(path)
+                utils.copy_into(real_link_path, path)
+            elif real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
                 if not link_path.startswith('.'):
