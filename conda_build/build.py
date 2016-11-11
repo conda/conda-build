@@ -438,16 +438,6 @@ def create_info_files(m, files, config, prefix):
             for f in files:
                 fo.write(f + '\n')
 
-    no_link = m.get_value('build/no_link')
-    if no_link:
-        if not isinstance(no_link, list):
-            no_link = [no_link]
-    files_with_prefix = get_files_with_prefix(m, files, prefix)
-
-    no_link = m.get_value('build/no_link')
-    if no_link:
-        if not isinstance(no_link, list):
-            no_link = [no_link]
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     create_info_files_json(m, config.info_dir, prefix, files, files_with_prefix)
 
@@ -533,7 +523,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
         if prefix_placeholder and file_mode:
             file_info["prefix_placeholder"] = prefix_placeholder
             file_info["file_mode"] = file_mode
-        if file_info.get("file_type") == "hardlink" and os.stat(fi).st_nlink > 1:
+        if file_info.get("file_type") == "hardlink" and os.stat(join(prefix, fi)).st_nlink > 1:
             inode_paths = get_inode_paths(files, fi, prefix)
             file_info["inode_paths"] = inode_paths
         files_json.append(file_info)

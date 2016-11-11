@@ -198,9 +198,9 @@ def test_sorted_inode_first_path(testing_workdir):
     os.link(path_one, path_one_hardlink)
 
     files = ["one", "two", "one_hl"]
-    assert build.get_sorted_inode_first_path(files, "one", testing_workdir) == ["one", "one_hl"]
-    assert build.get_sorted_inode_first_path(files, "one_hl", testing_workdir) == ["one", "one_hl"]
-    assert build.get_sorted_inode_first_path(files, "two", testing_workdir) == ["two"]
+    assert build.get_inode_paths(files, "one", testing_workdir) == ["one", "one_hl"]
+    assert build.get_inode_paths(files, "one_hl", testing_workdir) == ["one", "one_hl"]
+    assert build.get_inode_paths(files, "two", testing_workdir) == ["two"]
 
 
 def test_create_info_files_json(testing_workdir, test_metadata):
