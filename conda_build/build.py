@@ -59,7 +59,6 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
-from .config import context
 from conda_verify.verify import Verify
 
 
@@ -822,10 +821,10 @@ can lead to packages that include their dependencies.""" % meta_files))
 
         if not getattr(config, "noverify", False):
             verifier = Verify()
-            ignore_scripts = context.ignore_package_verify_scripts if \
-                context.ignore_package_verify_scripts else None
-            run_scripts = context.run_package_verify_scripts if \
-                context.run_package_verify_scripts else None
+            ignore_scripts = config.ignore_package_verify_scripts if \
+                config.ignore_package_verify_scripts else None
+            run_scripts = config.run_package_verify_scripts if \
+                config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=path)
 
@@ -1075,10 +1074,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                                                     config=recipe_config)
         if not getattr(config, "noverify", False):
             verifier = Verify()
-            ignore_scripts = context.ignore_recipe_verify_scripts if \
-                context.ignore_recipe_verify_scripts else None
-            run_scripts = context.run_recipe_verify_scripts if \
-                context.run_recipe_verify_scripts else None
+            ignore_scripts = config.ignore_recipe_verify_scripts if \
+                config.ignore_recipe_verify_scripts else None
+            run_scripts = config.run_recipe_verify_scripts if \
+                config.run_recipe_verify_scripts else None
             verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                    rendered_meta=metadata.meta, recipe_dir=metadata.path)
         try:
