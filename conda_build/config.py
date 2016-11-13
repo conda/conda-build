@@ -10,14 +10,9 @@ import os
 from os.path import abspath, expanduser, join
 import sys
 import time
-import yaml
 
-from .conda_interface import string_types, binstar_upload
 from .conda_interface import root_dir, root_writable, cc, subdir, platform
-from .conda_interface import string_types, binstar_upload, rc_path
-from .conda_interface import root_dir, root_writable, cc, subdir, bits, platform
-from .conda_interface import SEARCH_PATH
-from .conda_interface import Configuration, SequenceParameter
+from .conda_interface import string_types, binstar_upload
 
 from .utils import get_build_folders, rm_rf
 
@@ -114,7 +109,15 @@ class Config(object):
                   Setting('arch', subdir.split('-')[-1]),
                   Setting('platform', platform),
                   Setting('set_build_id', True),
-                  Setting('disable_pip', False)
+                  Setting('disable_pip', False),
+                  Setting('ignore_recipe_verify_scripts',
+                          cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
+                  Setting('ignore_package_verify_scripts',
+                          cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
+                  Setting('run_recipe_verify_scripts',
+                          cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                  Setting('run_package_verify_scripts',
+                          cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
                   ]
 
         # handle known values better than unknown (allow defaults)
@@ -413,21 +416,6 @@ def show(config):
 
 # legacy exports for conda
 croot = Config().croot
-
-
-class Context(Configuration):
-    ignore_recipe_verify_scripts = SequenceParameter(string_types)
-    ignore_package_verify_scripts = SequenceParameter(string_types)
-    run_recipe_verify_scripts = SequenceParameter(string_types)
-    run_package_verify_scripts = SequenceParameter(string_types)
-
-
-def reset_context(search_path=SEARCH_PATH, argparse_args=None):
-    context.__init__(search_path, conda_build, argparse_args)
-    return context
-
-
-context = Context(SEARCH_PATH, conda_build, None)
 
 
 if __name__ == '__main__':
