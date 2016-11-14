@@ -32,6 +32,7 @@ requirements:
     - python
     - pyyaml
     - pkginfo
+    - enum34        [py<34]
 
 test:
   requires:
