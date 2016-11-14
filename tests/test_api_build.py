@@ -736,7 +736,7 @@ def test_info_files_json(test_config):
     assert package_has_file(fn, "info/files.json")
     with tarfile.open(fn) as tf:
         data = json.loads(tf.extractfile('info/files.json').read().decode('utf-8'))
-    fields = ["short_path", "sha256", "size_in_bytes", "file_type", "file_mode", "no_link",
+    fields = ["path", "sha256", "size_in_bytes", "file_type", "file_mode", "no_link",
               "prefix_placeholder", "inode_first_path"]
     for key in data.keys():
         assert key in ['files', 'fields', 'version']
@@ -746,7 +746,7 @@ def test_info_files_json(test_config):
     for file in data.get('files'):
         for key in file.keys():
             assert key in fields
-        short_path = file.get("short_path")
+        short_path = file.get("path")
         if short_path == "test.sh" or short_path == "test.bat":
             assert file.get("prefix_placeholder") is not None
             assert file.get("file_mode") is not None
