@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import deque
 import copy
-from enum import Enum
 import fnmatch
 from glob import glob
 import io
@@ -28,7 +27,6 @@ import hashlib
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
-from conda_verify.verify import Verify
 
 # used to get version
 from .conda_interface import cc

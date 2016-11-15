@@ -293,4 +293,3 @@ else:
                 cls.GetFileInformationByHandle.restype = BOOL
 
                 cls._st_nlink = cls._windows_st_nlink
-
