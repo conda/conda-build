@@ -285,11 +285,9 @@ else:
                                 ("nFileIndexLow", DWORD)]
 
                 cls.BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION
-
                 # http://msdn.microsoft.com/en-us/library/windows/desktop/aa364952
                 cls.GetFileInformationByHandle = ctypes.windll.kernel32.GetFileInformationByHandle
                 cls.GetFileInformationByHandle.argtypes = [HANDLE,
                                                            POINTER(BY_HANDLE_FILE_INFORMATION)]
                 cls.GetFileInformationByHandle.restype = BOOL
-
                 cls._st_nlink = cls._windows_st_nlink
