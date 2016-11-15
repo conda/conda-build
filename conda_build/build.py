@@ -45,6 +45,7 @@ from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
 from .conda_interface import (PaddingError, LinkError, CondaValueError,
                               NoPackagesFoundError, NoPackagesFound)
+from .conda_interface import CrossPlatformStLink
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -281,8 +282,9 @@ def get_files_with_prefix(m, files, prefix):
         ignore_files = []
     if not m.get_value('build/detect_binary_files_with_prefix', True):
         ignore_types.update(('binary',))
+    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_mode)
     ignore_files.extend(
-        [f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files])
+        f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files)
     files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
     return files_with_prefix
 
@@ -466,7 +468,7 @@ def create_info_files(m, files, config, prefix):
                 fo.write(f + '\n')
 
     files_with_prefix = get_files_with_prefix(m, files, prefix)
-    create_info_files_json(m, config.info_dir, prefix, files, files_with_prefix)
+    create_info_files_json_v1(m, config.info_dir, prefix, files, files_with_prefix)
 
     detect_and_record_prefix_files(m, files, prefix, config)
     write_no_link(m, config, files)
@@ -519,10 +521,9 @@ def is_no_link(no_link, short_path):
 
 
 def get_inode_paths(files, target_short_path, prefix):
-    ensure_list(files)
-    target_short_path_inode = os.stat(join(prefix, target_short_path)).st_ino
+    target_short_path_inode = os.lstat(join(prefix, target_short_path)).st_ino
     hardlinked_files = [sp for sp in files
-                        if os.stat(join(prefix, sp)).st_ino == target_short_path_inode]
+                        if os.lstat(join(prefix, sp)).st_ino == target_short_path_inode]
     return sorted(hardlinked_files)
 
 
@@ -537,7 +538,7 @@ def file_type(path):
 def build_info_files_json(m, prefix, files, files_with_prefix):
     no_link = m.get_value('build/no_link')
     files_json = []
-    for fi in files:
+    for fi in sorted(files):
         prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
         path = os.path.join(prefix, fi)
         file_info = {
@@ -552,7 +553,8 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
         if prefix_placeholder and file_mode:
             file_info["prefix_placeholder"] = prefix_placeholder
             file_info["file_mode"] = file_mode
-        if file_info.get("file_type") == "hardlink" and os.stat(join(prefix, fi)).st_nlink > 1:
+        if file_info.get("file_type") == FileType.hardlink and CrossPlatformStLink.st_nlink(
+                join(prefix, fi)) > 1:
             inode_paths = get_inode_paths(files, fi, prefix)
             file_info["inode_paths"] = inode_paths
         files_json.append(file_info)
@@ -563,17 +565,17 @@ def get_files_version():
     return 1
 
 
-def create_info_files_json(m, info_dir, prefix, files, files_with_prefix):
+def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     files_json_fields = ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
                          "prefix_placeholder", "no_link", "inode_first_path"]
     files_json_files = build_info_files_json(m, prefix, files, files_with_prefix)
     files_json_info = {
-        "version": get_files_version(),
+        "version": 1,
         "fields": files_json_fields,
         "files": files_json_files,
     }
     with open(join(info_dir, 'files.json'), "w") as files_json:
-        json.dump(files_json_info, files_json)
+        json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '))
 
 
 def get_build_index(config, clear_cache=True):
