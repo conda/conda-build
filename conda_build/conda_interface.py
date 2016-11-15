@@ -140,6 +140,10 @@ def which_prefix(path):
 
 
 class NodeType(Enum):
+    """
+    Refers to if the file in question is hard linked or soft linked. Originally designed to be used
+    in files.json
+    """
     hard_link = 1
     soft_link = 2
 
@@ -164,6 +168,10 @@ class NodeType(Enum):
 
 
 class FileMode(Enum):
+    """
+    Refers to the mode of the file. Originally referring to the has_prefix file, but adopted for
+    files.json
+    """
     text = 'text'
     binary = 'binary'
 
