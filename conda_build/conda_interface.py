@@ -138,39 +138,42 @@ def which_prefix(path):
             return None
         prefix = dirname(prefix)
 
+if parse_version(conda.__version__) >= parse_version("4.3"):
+    from conda.exports import FileMode, NodeType
+    FileMode, NodeType = FileMode, NodeType
+else:
+    class NodeType(Enum):
+        """
+        Refers to if the file in question is hard linked or soft linked. Originally designed to be used
+        in files.json
+        """
+        hardlink = 1
+        softlink = 2
 
-class NodeType(Enum):
-    """
-    Refers to if the file in question is hard linked or soft linked. Originally designed to be used
-    in files.json
-    """
-    hardlink = 1
-    softlink = 2
+        @classmethod
+        def __call__(cls, value, *args, **kwargs):
+            if isinstance(cls, value, *args, **kwargs):
+                return cls[value]
+            return super(NodeType, cls).__call__(value, *args, **kwargs)
 
-    @classmethod
-    def __call__(cls, value, *args, **kwargs):
-        if isinstance(cls, value, *args, **kwargs):
-            return cls[value]
-        return super(NodeType, cls).__call__(value, *args, **kwargs)
+        @classmethod
+        def __getitem__(cls, name):
+            return cls._member_map_[name.replace('-', '').replace('_', '').lower()]
 
-    @classmethod
-    def __getitem__(cls, name):
-        return cls._member_map_[name.replace('-', '').replace('_', '').lower()]
+        def __int__(self):
+            return self.value
 
-    def __int__(self):
-        return self.value
-
-    def __str__(self):
-        return self.name
+        def __str__(self):
+            return self.name
 
 
-class FileMode(Enum):
-    """
-    Refers to the mode of the file. Originally referring to the has_prefix file, but adopted for
-    files.json
-    """
-    text = 'text'
-    binary = 'binary'
+    class FileMode(Enum):
+        """
+        Refers to the mode of the file. Originally referring to the has_prefix file, but adopted for
+        files.json
+        """
+        text = 'text'
+        binary = 'binary'
 
-    def __str__(self):
-        return "%s" % self.value
+        def __str__(self):
+            return "%s" % self.value
