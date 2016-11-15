@@ -177,6 +177,7 @@ else:
         def __json__(self):
             return self.name
 
+
     class FileMode(Enum):
         """
         Refers to the mode of the file. Originally referring to the has_prefix file, but adopted for
