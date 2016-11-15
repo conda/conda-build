@@ -47,6 +47,7 @@ from .conda_interface import (PaddingError, LinkError, CondaValueError,
                               NoPackagesFoundError, NoPackagesFound)
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import NodeType, FileMode
+from .conda_interface import EntityEncoder
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -565,7 +566,8 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
         "files": files_json_files,
     }
     with open(join(info_dir, 'files.json'), "w") as files_json:
-        json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '))
+        json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
+                  cls=EntityEncoder)
 
 
 def get_build_index(config, clear_cache=True):
