@@ -539,7 +539,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
             "path": get_short_path(m, fi),
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
-            "file_type": getattr(file_type(path), "name"),
+            "node_type": getattr(file_type(path), "name"),
         }
         no_link = is_no_link(no_link, fi)
         if no_link:
@@ -557,7 +557,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
 
 def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     files_json_fields = ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
-                         "prefix_placeholder", "no_link", "inode_first_path"]
+                         "prefix_placeholder", "no_link", "inode_paths"]
     files_json_files = build_info_files_json(m, prefix, files, files_with_prefix)
     files_json_info = {
         "version": 1,

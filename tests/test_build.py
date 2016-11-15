@@ -269,6 +269,7 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
                    "size_in_bytes": 0}],
         "fields": ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
                    "prefix_placeholder", "no_link", "inode_first_path"],
+
         "version": 1}
     with open(files_json_path, "r") as files_json:
         assert json.load(files_json) == expected_output
