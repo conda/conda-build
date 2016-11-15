@@ -57,7 +57,6 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     LinkError = conda.exceptions.LinkError
     NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
     CondaValueError = conda.exceptions.CondaValueError
-    from conda.common.compat import CrossPlatformStLink
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     conda.base.context.context.allow_softlinks = False
@@ -285,9 +284,12 @@ else:
                                 ("nFileIndexLow", DWORD)]
 
                 cls.BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION
+
+
                 # http://msdn.microsoft.com/en-us/library/windows/desktop/aa364952
                 cls.GetFileInformationByHandle = ctypes.windll.kernel32.GetFileInformationByHandle
                 cls.GetFileInformationByHandle.argtypes = [HANDLE,
                                                            POINTER(BY_HANDLE_FILE_INFORMATION)]
                 cls.GetFileInformationByHandle.restype = BOOL
+
                 cls._st_nlink = cls._windows_st_nlink
