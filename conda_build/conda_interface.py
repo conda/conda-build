@@ -144,27 +144,24 @@ class NodeType(Enum):
     Refers to if the file in question is hard linked or soft linked. Originally designed to be used
     in files.json
     """
-    hard_link = 1
-    soft_link = 2
+    hardlink = 1
+    softlink = 2
 
     @classmethod
-    def from_string(cls, string):
-        return cls[string.replace('-', '_')]
+    def __call__(cls, value, *args, **kwargs):
+        if isinstance(cls, value, *args, **kwargs):
+            return cls[value]
+        return super(NodeType, cls).__call__(value, *args, **kwargs)
 
     @classmethod
-    def make(cls, value):
-        if isinstance(value, string_types):
-            return cls.from_string(value)
-        elif isinstance(value, cls):
-            return value
-        else:
-            return cls(value)
+    def __getitem__(cls, name):
+        return cls._member_map_[name.replace('-', '').replace('_', '').lower()]
 
     def __int__(self):
         return self.value
 
     def __str__(self):
-        return self.name.replace('_', '-')
+        return self.name
 
 
 class FileMode(Enum):

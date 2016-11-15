@@ -274,7 +274,7 @@ def get_files_with_prefix(m, files, prefix):
     ignore_types = set()
     if not hasattr(ignore_files, "__iter__"):
         if ignore_files is True:
-            ignore_types.update(('text', 'binary'))
+            ignore_types.update((FileMode.text,  FileMode.binary))
         ignore_files = []
     if not m.get_value('build/detect_binary_files_with_prefix', True):
         ignore_types.update(('binary',))
@@ -539,7 +539,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
             "path": get_short_path(m, fi),
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
-            "node_type": getattr(file_type(path), "name"),
+            "node_type": file_type(path).name,
         }
         no_link = is_no_link(no_link, fi)
         if no_link:
