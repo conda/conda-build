@@ -141,7 +141,11 @@ def which_prefix(path):
 if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import FileMode, NodeType
     FileMode, NodeType = FileMode, NodeType
+    from conda.export import EntityEncoder
+    EntityEncoder = EntityEncoder
 else:
+    from json import JSONEncoder
+
     class NodeType(Enum):
         """
         Refers to if the file in question is hard linked or soft linked. Originally designed to be used
@@ -166,6 +170,9 @@ else:
         def __str__(self):
             return self.name
 
+        def __json__(self):
+            return self.name
+
 
     class FileMode(Enum):
         """
@@ -177,3 +184,17 @@ else:
 
         def __str__(self):
             return "%s" % self.value
+
+
+    class EntityEncoder(JSONEncoder):
+        # json.dumps(obj, cls=SetEncoder)
+        def default(self, obj):
+            if hasattr(obj, 'dump'):
+                return obj.dump()
+            elif hasattr(obj, '__json__'):
+                return obj.__json__()
+            elif hasattr(obj, 'to_json'):
+                return obj.to_json()
+            elif hasattr(obj, 'as_json'):
+                return obj.as_json()
+            return JSONEncoder.default(self, obj)

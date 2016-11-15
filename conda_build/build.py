@@ -539,7 +539,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
             "path": get_short_path(m, fi),
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
-            "node_type": node_type(path).name,
+            "node_type": node_type(path),
         }
         no_link = is_no_link(no_link, fi)
         if no_link:
