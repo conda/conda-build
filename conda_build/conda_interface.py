@@ -24,6 +24,7 @@ from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path
 import conda.config as cc  # NOQA
 from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
+from enum import Enum
 
 import os
 
@@ -136,3 +137,35 @@ def which_prefix(path):
             # we cannot chop off any more directories, so we didn't find it
             return None
         prefix = dirname(prefix)
+
+
+class NodeType(Enum):
+    hard_link = 1
+    soft_link = 2
+
+    @classmethod
+    def from_string(cls, string):
+        return cls[string.replace('-', '_')]
+
+    @classmethod
+    def make(cls, value):
+        if isinstance(value, string_types):
+            return cls.from_string(value)
+        elif isinstance(value, cls):
+            return value
+        else:
+            return cls(value)
+
+    def __int__(self):
+        return self.value
+
+    def __str__(self):
+        return self.name.replace('_', '-')
+
+
+class FileMode(Enum):
+    text = 'text'
+    binary = 'binary'
+
+    def __str__(self):
+        return "%s" % self.value

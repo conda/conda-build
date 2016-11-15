@@ -46,6 +46,7 @@ from .conda_interface import VersionOrder
 from .conda_interface import (PaddingError, LinkError, CondaValueError,
                               NoPackagesFoundError, NoPackagesFound)
 from .conda_interface import CrossPlatformStLink
+from .conda_interface import NodeType, FileMode
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck
@@ -65,12 +66,7 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
-
-
-class FileType(Enum):
-    softlink = "softlink"
-    hardlink = "hardlink"
-    directory = "directory"
+from conda_verify.verify import Verify
 
 
 if 'bsd' in sys.platform:
@@ -528,11 +524,9 @@ def get_inode_paths(files, target_short_path, prefix):
 
 
 def file_type(path):
-    if isdir(path):
-        return FileType.directory
-    elif islink(path):
-        return FileType.softlink
-    return FileType.hardlink
+    if islink(path):
+        return NodeType.softlink
+    return NodeType.hardlink
 
 
 def build_info_files_json(m, prefix, files, files_with_prefix):
@@ -553,16 +547,12 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
         if prefix_placeholder and file_mode:
             file_info["prefix_placeholder"] = prefix_placeholder
             file_info["file_mode"] = file_mode
-        if file_info.get("file_type") == FileType.hardlink and CrossPlatformStLink.st_nlink(
+        if file_info.get("file_type") == NodeType.hardlink and CrossPlatformStLink.st_nlink(
                 join(prefix, fi)) > 1:
             inode_paths = get_inode_paths(files, fi, prefix)
             file_info["inode_paths"] = inode_paths
         files_json.append(file_info)
     return files_json
-
-
-def get_files_version():
-    return 1
 
 
 def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
