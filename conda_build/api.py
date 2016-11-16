@@ -39,13 +39,11 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
     config = get_or_merge_config(config, **kwargs)
     if hasattr(recipe_path_or_metadata, 'config'):
         metadata = recipe_path_or_metadata
-        recipe_config = metadata.config
     else:
         metadata, _, _ = render_recipe(recipe_path_or_metadata,
                                     no_download_source=no_download_source,
                                     config=config)
-        recipe_config = config
-    return bldpkg_path(metadata, recipe_config)
+    return bldpkg_path(metadata)
 
 
 def check(recipe_path, no_download_source=False, config=None, **kwargs):
@@ -79,34 +77,61 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
     import os
+    from conda_build.conda_interface import url_path
     from conda_build.build import test
     from conda_build.render import render_recipe
+    from conda_build.utils import get_recipe_abspath, rm_rf
+    from conda_build import source
 
     config = get_or_merge_config(config, **kwargs)
+
+    # we want to know if we're dealing with package input.  If so, we can move the input on success.
+    is_package = False
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
         recipe_config = metadata.config
-    elif os.path.isdir(recipedir_or_package_or_metadata):
+    else:
+        recipe_dir, need_cleanup = get_recipe_abspath(recipedir_or_package_or_metadata)
+        config.need_cleanup = need_cleanup
+
         # This will create a new local build folder if and only if config doesn't already have one.
         #   What this means is that if we're running a test immediately after build, we use the one
         #   that the build already provided
-        config.compute_build_id(recipedir_or_package_or_metadata)
-        metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, config=config)
+        metadata, _, _ = render_recipe(recipe_dir, config=config)
         recipe_config = config
-    else:
-        # fall back to old way (use recipe, rather than package)
-        metadata, _, _ = render_recipe(recipedir_or_package_or_metadata, no_download_source=False,
-                                    config=config, **kwargs)
-        recipe_config = config
+        # this recipe came from an extracted tarball.
+        if need_cleanup:
+            # ensure that the local location of the package is indexed, so that conda can find the
+            #    local package
+            local_location = os.path.dirname(recipedir_or_package_or_metadata)
+            # strip off extra subdir folders
+            for platform in ('win', 'linux', 'osx'):
+                if os.path.basename(local_location).startswith(platform + "-"):
+                    local_location = os.path.dirname(local_location)
+            update_index(local_location, config=config)
+            local_location = url_path(local_location)
+            # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
+            #    how to add elements.
+            recipe_config.channel_urls = list(recipe_config.channel_urls)
+            recipe_config.channel_urls.insert(0, local_location)
+            is_package = True
+            if metadata.meta.get('test') and metadata.meta['test'].get('source_files'):
+                source.provide(metadata.path, metadata.get_section('source'), config=config)
+            rm_rf(recipe_dir)
 
     with recipe_config:
         # This will create a new local build folder if and only if config doesn't already have one.
         #   What this means is that if we're running a test immediately after build, we use the one
         #   that the build already provided
 
-        config.compute_build_id(metadata.name())
+        recipe_config.compute_build_id(metadata.name())
         test_result = test(metadata, config=recipe_config, move_broken=move_broken)
+
+        if test_result and is_package and hasattr(recipe_config, 'output_folder'):
+            os.rename(recipedir_or_package_or_metadata,
+                      os.path.join(recipe_config.output_folder,
+                                   os.path.basename(recipedir_or_package_or_metadata)))
     return test_result
 
 

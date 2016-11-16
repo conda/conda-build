@@ -65,12 +65,12 @@ def set_language_env_vars(args, parser, config, execute=None):
             os.environ[var] = str(getattr(config, var))
 
 
-def bldpkg_path(m, config):
+def bldpkg_path(m):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     output_dir = m.info_index()['subdir']
-    return os.path.join(os.path.dirname(config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
+    return os.path.join(os.path.dirname(m.config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
 
 
 def parse_or_try_download(metadata, no_download_source, config,

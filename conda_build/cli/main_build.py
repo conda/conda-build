@@ -158,6 +158,11 @@ different sets of packages."""
         action="store_true",
         help=("do not run verification on recipes or packages when building")
     )
+    p.add_argument(
+        "--output-folder",
+        help=("folder to dump output package to.  Package are moved here if build or test succeeds."
+              "  Destination folder must exist prior to using this.")
+    )
 
     add_parser_channels(p)
 
@@ -165,12 +170,13 @@ different sets of packages."""
     return p, args
 
 
-def output_action(metadata, config):
+def output_action(recipe, config):
     silence_loggers(show_warnings_and_errors=False)
+    metadata, _, _ = api.render(recipe, config=config)
     if metadata.skip():
         print_skip_message(metadata)
     else:
-        print(bldpkg_path(metadata, config))
+        print(bldpkg_path(metadata))
 
 
 def source_action(metadata, config):
@@ -178,12 +184,12 @@ def source_action(metadata, config):
     print('Source tree in:', config.work_dir)
 
 
-def test_action(metadata, config):
-    return api.test(metadata.path, move_broken=False, config=config)
+def test_action(recipe, config):
+    return api.test(recipe, move_broken=False, config=config)
 
 
-def check_action(metadata, config):
-    return api.check(metadata.path, config=config)
+def check_action(recipe, config):
+    return api.check(recipe, config=config)
 
 
 def execute(args):
@@ -222,17 +228,8 @@ def execute(args):
 
     if action:
         for recipe in args.recipe:
-            recipe_dir, need_cleanup = get_recipe_abspath(recipe)
+            action(recipe, config)
 
-            if not isdir(recipe_dir):
-                sys.exit("Error: no such directory: %s" % recipe_dir)
-
-            # this fully renders any jinja templating, throwing an error if any data is missing
-            m, _, _ = render_recipe(recipe_dir, no_download_source=False, config=config)
-            action(m, config)
-
-            if need_cleanup:
-                rm_rf(recipe_dir)
     else:
         api.build(args.recipe, post=args.post, build_only=args.build_only,
                    notest=args.notest, keep_old_work=args.keep_old_work,
