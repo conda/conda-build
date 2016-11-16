@@ -110,11 +110,11 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
                 if os.path.basename(local_location).startswith(platform + "-"):
                     local_location = os.path.dirname(local_location)
             update_index(local_location, config=config)
-            local_location = url_path(local_location)
+            local_url = url_path(local_location)
             # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
             #    how to add elements.
             recipe_config.channel_urls = list(recipe_config.channel_urls)
-            recipe_config.channel_urls.insert(0, local_location)
+            recipe_config.channel_urls.insert(0, local_url)
             is_package = True
             if metadata.meta.get('test') and metadata.meta['test'].get('source_files'):
                 source.provide(metadata.path, metadata.get_section('source'), config=config)
@@ -128,7 +128,8 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
         recipe_config.compute_build_id(metadata.name())
         test_result = test(metadata, config=recipe_config, move_broken=move_broken)
 
-        if test_result and is_package and hasattr(recipe_config, 'output_folder'):
+        if (test_result and is_package and hasattr(recipe_config, 'output_folder') and
+                recipe_config.output_folder):
             os.rename(recipedir_or_package_or_metadata,
                       os.path.join(recipe_config.output_folder,
                                    os.path.basename(recipedir_or_package_or_metadata)))

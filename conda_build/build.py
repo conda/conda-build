@@ -1033,7 +1033,7 @@ def test(m, config, move_broken=True):
     shell_files = create_shell_files(tmp_dir, m, config)
     if not (py_files or shell_files or pl_files or lua_files):
         print("Nothing to test for:", m.dist())
-        return
+        return True
 
     print("TEST START:", m.dist())
 
@@ -1128,6 +1128,7 @@ def test(m, config, move_broken=True):
         tests_failed(m, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
     print("TEST END:", m.dist())
+    return True
 
 
 def tests_failed(m, move_broken, broken_dir, config):
