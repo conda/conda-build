@@ -15,7 +15,8 @@ from conda_build import build, api, __version__
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
 
-from .utils import testing_workdir, test_config, test_metadata, metadata_dir, put_bad_conda_on_path
+from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
+                    get_noarch_python_meta, put_bad_conda_on_path)
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -159,3 +160,115 @@ def test_write_about_json_without_conda_on_path(testing_workdir, test_metadata):
         about = json.load(f)
     assert 'conda_version' in about
     assert 'conda_build_version' in about
+
+
+def test_get_short_path(test_metadata):
+    # Test for regular package
+    assert build.get_short_path(test_metadata, "test/file") == "test/file"
+
+    # Test for noarch: python
+    meta = get_noarch_python_meta(test_metadata)
+    assert build.get_short_path(meta, "lib/site-packages/test") == "site-packages/test"
+    assert build.get_short_path(meta, "bin/test") == "python-scripts/test"
+    assert build.get_short_path(meta, "Scripts/test") == "python-scripts/test"
+
+
+def test_has_prefix():
+    files_with_prefix = [("prefix/path", "text", "short/path/1"),
+                         ("prefix/path", "text", "short/path/2")]
+    assert build.has_prefix("short/path/1", files_with_prefix) == ("prefix/path", "text")
+    assert build.has_prefix("short/path/nope", files_with_prefix) == (None, None)
+
+
+def test_is_no_link():
+    no_link = ["path/1", "path/2"]
+    assert build.is_no_link(no_link, "path/1") is True
+    assert build.is_no_link(no_link, "path/nope") is None
+
+
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="os.link is not available so can't setup test")
+def test_sorted_inode_first_path(testing_workdir):
+    path_one = os.path.join(testing_workdir, "one")
+    path_two = os.path.join(testing_workdir, "two")
+    path_one_hardlink = os.path.join(testing_workdir, "one_hl")
+    open(path_one, "a").close()
+    open(path_two, "a").close()
+
+    os.link(path_one, path_one_hardlink)
+
+    files = ["one", "two", "one_hl"]
+    assert build.get_inode_paths(files, "one", testing_workdir) == ["one", "one_hl"]
+    assert build.get_inode_paths(files, "one_hl", testing_workdir) == ["one", "one_hl"]
+    assert build.get_inode_paths(files, "two", testing_workdir) == ["two"]
+
+
+def test_create_info_files_json(testing_workdir, test_metadata):
+    info_dir = os.path.join(testing_workdir, "info")
+    os.mkdir(info_dir)
+    path_one = os.path.join(testing_workdir, "one")
+    path_two = os.path.join(testing_workdir, "two")
+    path_foo = os.path.join(testing_workdir, "foo")
+    open(path_one, "a").close()
+    open(path_two, "a").close()
+    open(path_foo, "a").close()
+    files_with_prefix = [("prefix/path", "text", "foo")]
+    files = ["one", "two", "foo"]
+
+    build.create_info_files_json(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    files_json_path = os.path.join(info_dir, "files.json")
+    expected_output = {
+        "files": [{"file_type": "hardlink", "path": "one",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"file_type": "hardlink", "path": "two", "size_in_bytes": 0,
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+                  {"file_mode": "text", "file_type": "hardlink",
+                   "path": "foo", "prefix_placeholder": "prefix/path",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0}],
+        "fields": ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
+                   "prefix_placeholder", "no_link", "inode_first_path"],
+        "version": 1}
+    with open(files_json_path, "r") as files_json:
+        output = json.load(files_json)
+        assert output == expected_output
+
+
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="os.link is not available so can't setup test")
+def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
+    info_dir = os.path.join(testing_workdir, "info")
+    os.mkdir(info_dir)
+    path_one = os.path.join(testing_workdir, "one")
+    path_two = os.path.join(testing_workdir, "two")
+    path_foo = os.path.join(testing_workdir, "foo")
+    path_one_hardlink = os.path.join(testing_workdir, "one_hl")
+    open(path_one, "a").close()
+    open(path_two, "a").close()
+    open(path_foo, "a").close()
+    os.link(path_one, path_one_hardlink)
+    files_with_prefix = [("prefix/path", "text", "foo")]
+    files = ["one", "two", "one_hl", "foo"]
+
+    build.create_info_files_json(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    files_json_path = os.path.join(info_dir, "files.json")
+    expected_output = {
+        "files": [{"inode_paths": ["one", "one_hl"], "file_type": "hardlink", "path": "one",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"file_type": "hardlink", "path": "two", "size_in_bytes": 0,
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
+                  {"inode_paths": ["one", "one_hl"], "file_type": "hardlink",
+                   "path": "one_hl",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"file_mode": "text", "file_type": "hardlink", "path": "foo",
+                   "prefix_placeholder": "prefix/path",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0}],
+        "fields": ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
+                   "prefix_placeholder", "no_link", "inode_first_path"],
+        "version": 1}
+    with open(files_json_path, "r") as files_json:
+        assert json.load(files_json) == expected_output

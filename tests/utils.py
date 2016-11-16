@@ -122,3 +122,9 @@ def put_bad_conda_on_path(testing_workdir):
         raise
     finally:
         os.environ['PATH'] = path_backup
+
+
+def get_noarch_python_meta(meta):
+    d = meta.meta
+    d['build']['noarch'] = "python"
+    return MetaData.fromdict(d, config=meta.config)
