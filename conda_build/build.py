@@ -557,7 +557,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
 
 
 def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
-    files_json_fields = ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
+    files_json_fields = ["path", "sha256", "size_in_bytes", "node_type", "file_mode",
                          "prefix_placeholder", "no_link", "inode_paths"]
     files_json_files = build_info_files_json(m, prefix, files, files_with_prefix)
     files_json_info = {

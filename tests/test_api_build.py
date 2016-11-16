@@ -752,7 +752,7 @@ def test_info_files_json(test_config):
     assert package_has_file(fn, "info/files.json")
     with tarfile.open(fn) as tf:
         data = json.loads(tf.extractfile('info/files.json').read().decode('utf-8'))
-    fields = ["path", "sha256", "size_in_bytes", "file_type", "file_mode", "no_link",
+    fields = ["path", "sha256", "size_in_bytes", "node_type", "file_mode", "no_link",
               "prefix_placeholder", "inode_paths"]
     for key in data.keys():
         assert key in ['files', 'fields', 'version']
