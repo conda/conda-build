@@ -652,9 +652,10 @@ def test_noarch_python(test_config):
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
     assert package_has_file(fn, 'info/files') is not ''
-    noarch = json.loads(package_has_file(fn, 'info/noarch.json').decode())
-    assert 'entry_points' in noarch
-    assert 'type' in noarch
+    extra = json.loads(package_has_file(fn, 'info/extra.json').decode())
+    assert 'noarch' in extra
+    assert 'entry_points' in extra['noarch']
+    assert 'type' in extra['noarch']
 
 
 def test_skip_compile_pyc(test_config):
