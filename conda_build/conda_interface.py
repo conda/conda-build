@@ -139,7 +139,7 @@ def which_prefix(path):
 
 if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import FileMode, NodeType
-    FileMode, NodeType = FileMode, NodeType
+    FileMode, PathType = FileMode, NodeType
     from conda.export import EntityEncoder
     EntityEncoder = EntityEncoder
     from conda.export import CrossPlatformStLink
@@ -149,19 +149,19 @@ else:
     from os import lstat
     import os
 
-    class NodeType(Enum):
+    class PathType(Enum):
         """
         Refers to if the file in question is hard linked or soft linked. Originally designed to be used
-        in files.json
+        in paths.json
         """
-        hardlink = 1
-        softlink = 2
+        hardlink = "hardlink"
+        softlink = "softlink"
 
         @classmethod
         def __call__(cls, value, *args, **kwargs):
             if isinstance(cls, value, *args, **kwargs):
                 return cls[value]
-            return super(NodeType, cls).__call__(value, *args, **kwargs)
+            return super(PathType, cls).__call__(value, *args, **kwargs)
 
         @classmethod
         def __getitem__(cls, name):
@@ -180,7 +180,7 @@ else:
     class FileMode(Enum):
         """
         Refers to the mode of the file. Originally referring to the has_prefix file, but adopted for
-        files.json
+        paths.json
         """
         text = 'text'
         binary = 'binary'

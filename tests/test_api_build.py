@@ -749,20 +749,20 @@ def test_info_files_json(test_config):
     recipe = os.path.join(metadata_dir, "ignore_some_prefix_files")
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
-    assert package_has_file(fn, "info/files.json")
+    assert package_has_file(fn, "info/paths.json")
     with tarfile.open(fn) as tf:
-        data = json.loads(tf.extractfile('info/files.json').read().decode('utf-8'))
-    fields = ["path", "sha256", "size_in_bytes", "node_type", "file_mode", "no_link",
+        data = json.loads(tf.extractfile('info/paths.json').read().decode('utf-8'))
+    fields = ["_path", "sha256", "size_in_bytes", "path_type", "file_mode", "no_link",
               "prefix_placeholder", "inode_paths"]
     for key in data.keys():
-        assert key in ['files', 'fields', 'version']
-    for field in data.get('fields'):
+        assert key in ['paths', 'paths_version']
+    for field in data.get('paths'):
         assert field in fields
-    assert len(data.get('files')) == 2
-    for file in data.get('files'):
+    assert len(data.get('paths')) == 2
+    for file in data.get('paths'):
         for key in file.keys():
             assert key in fields
-        short_path = file.get("path")
+        short_path = file.get("_path")
         if short_path == "test.sh" or short_path == "test.bat":
             assert file.get("prefix_placeholder") is not None
             assert file.get("file_mode") is not None

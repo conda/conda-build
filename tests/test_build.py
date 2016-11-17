@@ -14,7 +14,6 @@ import conda
 from conda_build import build, api, __version__
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
-from conda_build.conda_interface import NodeType
 
 from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
                     get_noarch_python_meta, put_bad_conda_on_path)
@@ -217,20 +216,18 @@ def test_create_info_files_json(testing_workdir, test_metadata):
     files = ["one", "two", "foo"]
 
     build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
-    files_json_path = os.path.join(info_dir, "files.json")
+    files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
-        "files": [{"file_mode": "text", "node_type": "hardlink", "path": "foo",
-                     "prefix_placeholder": "prefix/path",
-                     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                     "size_in_bytes": 0},
-                    {"node_type": "hardlink", "path": "one",
-                     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                     "size_in_bytes": 0},
-                    {"node_type": "hardlink", "path": "two",
-                     "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                     "size_in_bytes": 0}],
-        "fields": ["path", "sha256", "size_in_bytes", "node_type", "file_mode",
-                   "prefix_placeholder", "no_link", "inode_paths"],
+        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
+                   "prefix_placeholder": "prefix/path",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "one",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "two",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0}],
         "version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
@@ -254,23 +251,21 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
     files = ["one", "two", "one_hl", "foo"]
 
     build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
-    files_json_path = os.path.join(info_dir, "files.json")
+    files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
-        "files": [{"file_mode": "text", "node_type": "hardlink", "path": "foo",
+        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
                    "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"node_type": "hardlink", "path": "one",
+                  {"path_type": "hardlink", "_path": "one",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"node_type": "hardlink", "path": "one_hl",
+                  {"path_type": "hardlink", "_path": "one_hl",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"node_type": "hardlink", "path": "two",
+                  {"path_type": "hardlink", "_path": "two",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
-        "fields": ["path", "sha256", "size_in_bytes", "node_type", "file_mode",
-                   "prefix_placeholder", "no_link", "inode_paths"],
         "version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)

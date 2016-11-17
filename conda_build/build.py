@@ -46,7 +46,7 @@ from .conda_interface import VersionOrder
 from .conda_interface import (PaddingError, LinkError, CondaValueError,
                               NoPackagesFoundError, NoPackagesFound)
 from .conda_interface import CrossPlatformStLink
-from .conda_interface import NodeType, FileMode
+from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 
 from conda_build import __version__
@@ -526,18 +526,18 @@ def get_inode_paths(files, target_short_path, prefix):
 
 def node_type(path):
     if islink(path):
-        return NodeType.softlink
-    return NodeType.hardlink
+        return PathType.softlink
+    return PathType.hardlink
 
 
-def build_info_files_json(m, prefix, files, files_with_prefix):
+def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     no_link = m.get_value('build/no_link')
     files_json = []
     for fi in sorted(files):
         prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
         path = os.path.join(prefix, fi)
         file_info = {
-            "path": get_short_path(m, fi),
+            "_path": get_short_path(m, fi),
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
             "node_type": node_type(path),
@@ -548,7 +548,7 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
         if prefix_placeholder and file_mode:
             file_info["prefix_placeholder"] = prefix_placeholder
             file_info["file_mode"] = file_mode
-        if file_info.get("file_type") == NodeType.hardlink and CrossPlatformStLink.st_nlink(
+        if file_info.get("path_type") == PathType.hardlink and CrossPlatformStLink.st_nlink(
                 join(prefix, fi)) > 1:
             inode_paths = get_inode_paths(files, fi, prefix)
             file_info["inode_paths"] = inode_paths
@@ -557,15 +557,14 @@ def build_info_files_json(m, prefix, files, files_with_prefix):
 
 
 def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
-    files_json_fields = ["path", "sha256", "size_in_bytes", "node_type", "file_mode",
-                         "prefix_placeholder", "no_link", "inode_paths"]
-    files_json_files = build_info_files_json(m, prefix, files, files_with_prefix)
+    # fields: "_path", "sha256", "size_in_bytes", "path_type", "file_mode",
+    #         "prefix_placeholder", "no_link", "inode_paths"
+    files_json_files = build_info_files_json_v1(m, prefix, files, files_with_prefix)
     files_json_info = {
-        "version": 1,
-        "fields": files_json_fields,
-        "files": files_json_files,
+        "paths_version": 1,
+        "paths": files_json_files,
     }
-    with open(join(info_dir, 'files.json'), "w") as files_json:
+    with open(join(info_dir, 'paths.json'), "w") as files_json:
         json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
                   cls=EntityEncoder)
 
