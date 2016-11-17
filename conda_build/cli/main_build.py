@@ -15,6 +15,7 @@ import filelock
 
 import conda_build.api as api
 import conda_build.build as build
+import conda_build.utils as utils
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          get_render_parser, bldpkg_path)
 from conda_build.conda_interface import cc, add_parser_channels, url_path
@@ -297,7 +298,7 @@ def execute(args):
                    notest=args.notest, keep_old_work=args.keep_old_work,
                    already_built=None, config=config, noverify=args.no_verify)
 
-    if not args.output and len(build.get_build_folders(config.croot)) > 0:
+    if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
 
 

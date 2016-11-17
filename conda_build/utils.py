@@ -12,11 +12,11 @@ from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
 import re
 import stat
 import subprocess
-
 import sys
 import shutil
 import tarfile
 import tempfile
+import time
 import zipfile
 
 import filelock
@@ -86,6 +86,27 @@ def get_recipe_abspath(recipe):
     if not os.path.exists(recipe_dir):
         raise ValueError("Package or recipe at path {0} does not exist".format(recipe_dir))
     return recipe_dir, need_cleanup
+
+
+@contextlib.contextmanager
+def try_acquire_locks(locks, timeout):
+    """Try to acquire all locks.  If any lock can't be immediately acquired, free all locks
+
+    http://stackoverflow.com/questions/9814008/multiple-mutex-locking-strategies-and-why-libraries-dont-use-address-comparison
+    """
+    t = time.time()
+    while (time.time() - t < timeout):
+        for lock in locks:
+            try:
+                lock.acquire(timeout=0.1)
+            except filelock.Timeout:
+                for lock in locks:
+                    lock.release()
+                break
+        break
+    yield
+    for lock in locks:
+        lock.release()
 
 
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None):

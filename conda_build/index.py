@@ -15,11 +15,8 @@ from conda_build.utils import file_info, get_lock, ExitStack
 from .conda_interface import PY3, md5_file
 
 
-def read_index_tar(tar_path, config, lock=None):
+def read_index_tar(tar_path, config, lock):
     """ Returns the index.json dict inside the given package tarball. """
-
-    if not lock:
-        lock = get_lock(os.path.dirname(tar_path), timeout=config.timeout)
     with ExitStack() as stack:
         stack.enter_context(lock)
         t = tarfile.open(tar_path)
