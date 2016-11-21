@@ -470,6 +470,8 @@ def get_short_path(m, target_file):
 
 
 def sha256_checksum(filename, buffersize=65536):
+    if not isfile(filename):
+        return None
     sha256 = hashlib.sha256()
     with open(filename, 'rb') as f:
         for block in iter(lambda: f.read(buffersize), b''):
