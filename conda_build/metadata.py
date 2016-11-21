@@ -295,9 +295,11 @@ FIELDS = {
 
 
 def check_bad_chrs(s, field):
-    bad_chrs = '=!@#$%^&*:;"\'\\|<>?/ '
+    bad_chrs = '=@#$%^&*:;"\'\\|<>?/ '
     if field in ('package/version', 'build/string'):
         bad_chrs += '-'
+    if field != 'package/version':
+        bad_chrs += '!'
     for c in bad_chrs:
         if c in s:
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
