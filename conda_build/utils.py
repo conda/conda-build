@@ -106,7 +106,8 @@ def try_acquire_locks(locks, timeout):
         break
     yield
     for lock in locks:
-        lock.release()
+        if lock:
+            lock.release()
 
 
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
@@ -137,7 +138,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
 
         if not lock:
             lock = get_lock(src_folder, timeout=timeout)
-        with lock:
+        with try_acquire_locks([lock], timeout):
             # if intermediate folders not not exist create them
             dst_folder = os.path.dirname(dst)
             if dst_folder and not os.path.exists(dst_folder):
@@ -226,7 +227,7 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
 
     if not lock:
         lock = get_lock(src, timeout=timeout)
-    with lock:
+    with try_acquire_locks([lock], timeout):
         copytree(src, dst, symlinks=symlinks)
 
 

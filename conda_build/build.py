@@ -608,6 +608,31 @@ def get_build_index(config, clear_cache=True):
     return index
 
 
+def get_subfolder_locks(folders, timeout):
+    sub_locks = []
+    for package in folders:
+        lock = utils.get_lock(os.path.join(cc.pkgs_dirs[0], package),
+                            timeout=timeout)
+        sub_locks.append(lock)
+        for root, folders, _ in os.walk(os.path.join(cc.pkgs_dirs[0], package)):
+            for subfolder in folders:
+                lock = utils.get_lock(os.path.join(root, subfolder),
+                                    timeout=timeout)
+                sub_locks.append(lock)
+    return sub_locks
+
+
+def recursive_req_folders(folders, start_specs, index):
+    """Get folders """
+    for folder in start_specs:
+        folder = folder.replace(" ", '-')
+        matching_keys = {key: val for key, val in index.items() if key.startswith(folder)}
+        for key, val in matching_keys.items():
+            recursive_req_folders(folders, val['requires'], index)
+        folders.extend([key.replace('.tar.bz2', "") for key in matching_keys.keys()])
+    return folders
+
+
 def create_env(prefix, specs, config, clear_cache=True):
     '''
     Create a conda envrionment for the given prefix and specs.
@@ -649,7 +674,6 @@ def create_env(prefix, specs, config, clear_cache=True):
 
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         index = get_build_index(config=config, clear_cache=True)
-
                         actions = plan.install_actions(prefix, index, specs)
                         if config.disable_pip:
                             actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
@@ -924,11 +948,25 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
         if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
             print("%s is installed as a build dependency. Removing." %
                 m.name())
-            index = get_build_index(config=config, clear_cache=False)
-            actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
-            assert not plan.nothing_to_do(actions), actions
-            plan.display_actions(actions, index)
-            plan.execute_actions(actions, index)
+
+            locks = []
+
+            cc.pkgs_dirs = cc.pkgs_dirs[:1]
+            locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+            for folder in locked_folders:
+                if not os.path.isdir(folder):
+                    os.makedirs(folder)
+                lock = utils.get_lock(folder, timeout=config.timeout)
+                if not folder.endswith('pkgs'):
+                    update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                locks.append(lock)
+
+            with utils.try_acquire_locks(locks, timeout=config.timeout):
+                index = get_build_index(config=config, clear_cache=False)
+                actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
+                assert not plan.nothing_to_do(actions), actions
+                plan.display_actions(actions, index)
+                plan.execute_actions(actions, index)
 
         print("Package:", m.dist())
 
@@ -1124,7 +1162,7 @@ def clean_pkg_cache(dist, timeout):
             except AssertionError:
                 log = logging.getLogger(__name__)
                 log.debug("Conda caching error: %s package remains in cache after removal", dist)
-                log.debug("Clearing package cache to compensate")
+                log.debug("manually removing to compensate")
                 cache = package_cache()
                 keys = [key for key in cache.keys() if dist in key]
                 for pkg_id in keys:

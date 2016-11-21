@@ -11,7 +11,7 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info, get_lock, ExitStack
+from conda_build.utils import file_info, get_lock, ExitStack, try_acquire_locks
 from .conda_interface import PY3, md5_file
 
 
@@ -38,7 +38,7 @@ def write_repodata(repodata, dir_path, lock, config=None):
     if not config:
         import conda_build.config
         config = conda_build.config.config
-    with lock:
+    with try_acquire_locks([lock], config.timeout):
         data = json.dumps(repodata, indent=2, sort_keys=True)
         # strip trailing whitespace
         data = '\n'.join(line.rstrip() for line in data.splitlines())
@@ -75,7 +75,7 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     if not lock:
         lock = get_lock(dir_path)
 
-    with lock:
+    with try_acquire_locks([lock], config.timeout):
         if force:
             index = {}
         else:
