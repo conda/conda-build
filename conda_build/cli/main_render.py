@@ -131,7 +131,7 @@ def execute(args):
     if args.output:
         logging.basicConfig(level=logging.ERROR)
         silence_loggers(show_warnings_and_errors=False)
-        print(bldpkg_path(metadata, config=config))
+        print(bldpkg_path(metadata))
     else:
         logging.basicConfig(level=logging.INFO)
         print(output_yaml(metadata, args.file))

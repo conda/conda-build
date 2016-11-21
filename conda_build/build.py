@@ -4,6 +4,8 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import absolute_import, division, print_function
 
 from collections import deque
+import copy
+from enum import Enum
 import fnmatch
 from glob import glob
 import io
@@ -25,6 +27,8 @@ import hashlib
 # exception is raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
+
+from conda_verify.verify import Verify
 
 # used to get version
 from .conda_interface import cc
@@ -60,8 +64,6 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
-from conda_verify.verify import Verify
-from enum import Enum
 
 
 class FileType(Enum):
@@ -209,7 +211,32 @@ def copy_recipe(m, config):
         else:
             original_recipe = ""
 
-        rendered = output_yaml(m)
+        rendered_metadata = copy.deepcopy(m)
+        # fill in build versions used
+        build_deps = []
+        # we only care if we actually have build deps.  Otherwise, the environment will not be
+        #    valid for inspection.
+        if m.meta.get('requirements') and m.meta['requirements'].get('build'):
+            build_deps = environ.Environment(m.config.build_prefix).package_specs
+
+        # hard-code build string so that any future "renderings" can't go wrong based on user env
+        rendered_metadata.meta['build']['string'] = m.build_id()
+
+        rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
+        rendered_metadata.meta['requirements']['build'] = build_deps
+
+        # if source/path is relative, then the output package makes no sense at all.  The next
+        #   best thing is to hard-code the absolute path.  This probably won't exist on any
+        #   system other than the original build machine, but at least it will work there.
+        if m.meta.get('source'):
+            if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
+                rendered_metadata.meta['source']['path'] = os.path.normpath(
+                    os.path.join(m.path, m.meta['source']['path']))
+            elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
+                rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                    os.path.join(m.path, m.meta['source']['git_url']))
+
+        rendered = output_yaml(rendered_metadata)
         if not original_recipe or not open(original_recipe).read() == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
                 f.write("# This file created by conda-build {}\n".format(__version__))
@@ -902,7 +929,7 @@ can lead to packages that include their dependencies.""" % meta_files))
         files3 = prefix_files(prefix=config.build_prefix)
         fix_permissions(files3 - files1, config.build_prefix)
 
-        path = bldpkg_path(m, config)
+        path = bldpkg_path(m)
 
         # lock the output directory while we build this file
         # create the tarball in a temporary directory to minimize lock time
@@ -1008,7 +1035,7 @@ def test(m, config, move_broken=True):
     shell_files = create_shell_files(tmp_dir, m, config)
     if not (py_files or shell_files or pl_files or lua_files):
         print("Nothing to test for:", m.dist())
-        return
+        return True
 
     print("TEST START:", m.dist())
 
@@ -1103,6 +1130,7 @@ def test(m, config, move_broken=True):
         tests_failed(m, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
     print("TEST END:", m.dist())
+    return True
 
 
 def tests_failed(m, move_broken, broken_dir, config):
@@ -1116,7 +1144,7 @@ def tests_failed(m, move_broken, broken_dir, config):
         os.makedirs(broken_dir)
 
     if move_broken:
-        shutil.move(bldpkg_path(m, config), join(broken_dir, "%s.tar.bz2" % m.dist()))
+        shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
 
 
@@ -1237,9 +1265,15 @@ packages, the other package needs to be rebuilt
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         if post in [True, None]:
-            output_file = bldpkg_path(metadata, config=recipe_config)
+            output_file = bldpkg_path(metadata)
             handle_anaconda_upload(output_file, config=recipe_config)
             already_built.add(output_file)
+
+        if hasattr(recipe_config, 'output_folder') and recipe_config.output_folder:
+            destination = os.path.join(recipe_config.output_folder, os.path.basename(output_file))
+            if os.path.exists(destination):
+                os.remove(destination)
+            os.rename(output_file, destination)
 
 
 def handle_anaconda_upload(path, config):
