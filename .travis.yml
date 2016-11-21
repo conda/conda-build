@@ -33,11 +33,11 @@ install:
       conda config --set always_yes yes;
     else
       if [ -n "$CONDA" ]; then
-        conda install -y --no-deps conda=${CONDA} requests;
+        conda install -y --no-deps conda=${CONDA};
       fi
     fi
 
-  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1 conda-verify
+  - conda install -q anaconda-client requests=2.11.1 filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1 conda-verify
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;

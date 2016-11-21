@@ -86,6 +86,8 @@ def get_recipe_abspath(recipe):
     else:
         recipe_dir = abspath(recipe)
         need_cleanup = False
+    if not os.path.exists(recipe_dir):
+        raise ValueError("Package or recipe at path {0} does not exist".format(recipe_dir))
     return recipe_dir, need_cleanup
 
 

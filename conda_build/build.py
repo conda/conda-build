@@ -4,6 +4,8 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from __future__ import absolute_import, division, print_function
 
 from collections import deque
+import copy
+from enum import Enum
 import fnmatch
 from glob import glob
 import io
@@ -18,12 +20,15 @@ import stat
 import subprocess
 import sys
 import tarfile
+import hashlib
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
 # exception is raises: "LookupError: unknown encoding: idna"
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
+
+from conda_verify.verify import Verify
 
 # used to get version
 from .conda_interface import cc
@@ -59,7 +64,12 @@ from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
 import conda_build.noarch_python as noarch_python
-from conda_verify.verify import Verify
+
+
+class FileType(Enum):
+    softlink = "softlink"
+    hardlink = "hardlink"
+    directory = "directory"
 
 
 if 'bsd' in sys.platform:
@@ -201,7 +211,32 @@ def copy_recipe(m, config):
         else:
             original_recipe = ""
 
-        rendered = output_yaml(m)
+        rendered_metadata = copy.deepcopy(m)
+        # fill in build versions used
+        build_deps = []
+        # we only care if we actually have build deps.  Otherwise, the environment will not be
+        #    valid for inspection.
+        if m.meta.get('requirements') and m.meta['requirements'].get('build'):
+            build_deps = environ.Environment(m.config.build_prefix).package_specs
+
+        # hard-code build string so that any future "renderings" can't go wrong based on user env
+        rendered_metadata.meta['build']['string'] = m.build_id()
+
+        rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
+        rendered_metadata.meta['requirements']['build'] = build_deps
+
+        # if source/path is relative, then the output package makes no sense at all.  The next
+        #   best thing is to hard-code the absolute path.  This probably won't exist on any
+        #   system other than the original build machine, but at least it will work there.
+        if m.meta.get('source'):
+            if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
+                rendered_metadata.meta['source']['path'] = os.path.normpath(
+                    os.path.join(m.path, m.meta['source']['path']))
+            elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
+                rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                    os.path.join(m.path, m.meta['source']['git_url']))
+
+        rendered = output_yaml(rendered_metadata)
         if not original_recipe or not open(original_recipe).read() == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
                 f.write("# This file created by conda-build {}\n".format(__version__))
@@ -235,22 +270,27 @@ def copy_license(m, config):
                         join(config.info_dir, 'LICENSE.txt'), config.timeout)
 
 
-def detect_and_record_prefix_files(m, files, prefix, config):
+def get_files_with_prefix(m, files, prefix):
     files_with_prefix = sorted(have_prefix_files(files, prefix))
-    binary_has_prefix_files = m.binary_has_prefix_files()
-    text_has_prefix_files = m.has_prefix_files()
 
     ignore_files = m.ignore_prefix_files()
     ignore_types = set()
     if not hasattr(ignore_files, "__iter__"):
-        if  ignore_files == True:
+        if ignore_files is True:
             ignore_types.update(('text', 'binary'))
         ignore_files = []
     if not m.get_value('build/detect_binary_files_with_prefix', True):
         ignore_types.update(('binary',))
-    ignore_files.extend([f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files])
+    ignore_files.extend(
+        [f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files])
     files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
+    return files_with_prefix
 
+
+def detect_and_record_prefix_files(m, files, prefix, config):
+    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    binary_has_prefix_files = m.binary_has_prefix_files()
+    text_has_prefix_files = m.has_prefix_files()
     is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m) or m.get_value('build/noarch')
 
     if files_with_prefix and not is_noarch:
@@ -425,6 +465,9 @@ def create_info_files(m, files, config, prefix):
             for f in files:
                 fo.write(f + '\n')
 
+    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    create_info_files_json(m, config.info_dir, prefix, files, files_with_prefix)
+
     detect_and_record_prefix_files(m, files, prefix, config)
     write_no_link(m, config, files)
 
@@ -436,6 +479,101 @@ def create_info_files(m, files, config, prefix):
         copy_into(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'),
                   config.timeout)
+
+
+def get_short_path(m, target_file):
+    entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
+    if is_noarch_python(m):
+        if target_file.find("site-packages") > 0:
+            return target_file[target_file.find("site-packages"):]
+        elif target_file.startswith("bin") and (target_file not in entry_point_script_names):
+            return target_file.replace("bin", "python-scripts")
+        elif target_file.startswith("Scripts") and (target_file not in entry_point_script_names):
+            return target_file.replace("Scripts", "python-scripts")
+    elif m.get_value('build/noarch_python'):
+        return None
+    else:
+        return target_file
+
+
+def sha256_checksum(filename, buffersize=65536):
+    if not isfile(filename):
+        return None
+    sha256 = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for block in iter(lambda: f.read(buffersize), b''):
+            sha256.update(block)
+    return sha256.hexdigest()
+
+
+def has_prefix(short_path, files_with_prefix):
+    for prefix, mode, filename in files_with_prefix:
+        if short_path == filename:
+            return prefix, mode
+    return None, None
+
+
+def is_no_link(no_link, short_path):
+    if no_link is not None and short_path in no_link:
+        return True
+
+
+def get_inode_paths(files, target_short_path, prefix):
+    ensure_list(files)
+    target_short_path_inode = os.stat(join(prefix, target_short_path)).st_ino
+    hardlinked_files = [sp for sp in files
+                        if os.stat(join(prefix, sp)).st_ino == target_short_path_inode]
+    return sorted(hardlinked_files)
+
+
+def file_type(path):
+    if isdir(path):
+        return FileType.directory
+    elif islink(path):
+        return FileType.softlink
+    return FileType.hardlink
+
+
+def build_info_files_json(m, prefix, files, files_with_prefix):
+    no_link = m.get_value('build/no_link')
+    files_json = []
+    for fi in files:
+        prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
+        path = os.path.join(prefix, fi)
+        file_info = {
+            "path": get_short_path(m, fi),
+            "sha256": sha256_checksum(path),
+            "size_in_bytes": os.path.getsize(path),
+            "file_type": getattr(file_type(path), "name"),
+        }
+        no_link = is_no_link(no_link, fi)
+        if no_link:
+            file_info["no_link"] = no_link
+        if prefix_placeholder and file_mode:
+            file_info["prefix_placeholder"] = prefix_placeholder
+            file_info["file_mode"] = file_mode
+        if file_info.get("file_type") == "hardlink" and os.stat(join(prefix, fi)).st_nlink > 1:
+            inode_paths = get_inode_paths(files, fi, prefix)
+            file_info["inode_paths"] = inode_paths
+        files_json.append(file_info)
+    return files_json
+
+
+def get_files_version():
+    return 1
+
+
+def create_info_files_json(m, info_dir, prefix, files, files_with_prefix):
+    files_json_fields = ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
+                         "prefix_placeholder", "no_link", "inode_first_path"]
+    files_json_files = build_info_files_json(m, prefix, files, files_with_prefix)
+    files_json_info = {
+        "version": get_files_version(),
+        "fields": files_json_fields,
+        "files": files_json_files,
+    }
+    with open(join(info_dir, 'files.json'), "w") as files_json:
+        json.dump(files_json_info, files_json)
 
 
 def get_build_index(config, clear_cache=True):
@@ -791,7 +929,7 @@ can lead to packages that include their dependencies.""" % meta_files))
         files3 = prefix_files(prefix=config.build_prefix)
         fix_permissions(files3 - files1, config.build_prefix)
 
-        path = bldpkg_path(m, config)
+        path = bldpkg_path(m)
 
         # lock the output directory while we build this file
         # create the tarball in a temporary directory to minimize lock time
@@ -897,7 +1035,7 @@ def test(m, config, move_broken=True):
     shell_files = create_shell_files(tmp_dir, m, config)
     if not (py_files or shell_files or pl_files or lua_files):
         print("Nothing to test for:", m.dist())
-        return
+        return True
 
     print("TEST START:", m.dist())
 
@@ -992,6 +1130,7 @@ def test(m, config, move_broken=True):
         tests_failed(m, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
     print("TEST END:", m.dist())
+    return True
 
 
 def tests_failed(m, move_broken, broken_dir, config):
@@ -1005,7 +1144,7 @@ def tests_failed(m, move_broken, broken_dir, config):
         os.makedirs(broken_dir)
 
     if move_broken:
-        shutil.move(bldpkg_path(m, config), join(broken_dir, "%s.tar.bz2" % m.dist()))
+        shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
     sys.exit("TESTS FAILED: " + m.dist())
 
 
@@ -1126,9 +1265,15 @@ packages, the other package needs to be rebuilt
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         if post in [True, None]:
-            output_file = bldpkg_path(metadata, config=recipe_config)
+            output_file = bldpkg_path(metadata)
             handle_anaconda_upload(output_file, config=recipe_config)
             already_built.add(output_file)
+
+        if hasattr(recipe_config, 'output_folder') and recipe_config.output_folder:
+            destination = os.path.join(recipe_config.output_folder, os.path.basename(output_file))
+            if os.path.exists(destination):
+                os.remove(destination)
+            os.rename(output_file, destination)
 
 
 def handle_anaconda_upload(path, config):
