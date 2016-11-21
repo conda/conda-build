@@ -652,7 +652,7 @@ def test_noarch_python(test_config):
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
     assert package_has_file(fn, 'info/files') is not ''
-    extra = json.loads(package_has_file(fn, 'info/extra.json').decode())
+    extra = json.loads(package_has_file(fn, 'info/package_metadata.json').decode())
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']

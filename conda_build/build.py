@@ -324,7 +324,7 @@ def write_info_files_file(m, files, config):
                 fo.write(f + '\n')
 
 
-def write_extra_json(m, config):
+def write_package_metadata_json(m, config):
     extra = dict()
 
     noarch_type = m.get_value('build/noarch')
@@ -337,7 +337,7 @@ def write_extra_json(m, config):
         extra['noarch'] = noarch_dict
 
     if extra:
-        with open(os.path.join(config.info_dir, "extra.json"), 'w') as fh:
+        with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
             fh.write(json.dumps(extra, sort_keys=True, indent=2, separators=(',', ': ')))
 
 
@@ -451,7 +451,7 @@ def create_info_files(m, files, config, prefix):
 
     write_info_json(m, config)  # actually index.json
     write_about_json(m, config)
-    write_extra_json(m, config)
+    write_package_metadata_json(m, config)
 
     write_info_files_file(m, files, config)
 
