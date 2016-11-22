@@ -55,6 +55,9 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
     CondaValueError = conda.exceptions.CondaValueError
 
+    # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
+    conda.base.context.context.allow_softlinks = False
+
 else:
     from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
     from conda.cli.common import get_prefix  # NOQA
@@ -73,6 +76,8 @@ else:
 
     get_rc_urls = cc.get_rc_urls
     get_local_urls = cc.get_local_urls
+
+    cc.allow_softlinks = False
 
     class PaddingError(Exception):
         pass
