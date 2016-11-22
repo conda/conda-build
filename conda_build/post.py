@@ -364,8 +364,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
             # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
             # it, so instead, make sure that what I think it should be replaced by
             # gives the same result and assert if not. Yeah, I am a chicken.
-            rel_ours = utils.relative(f, rpath)
-            rel_stdlib = os.path.relpath(rpath, os.path.dirname(f))
+            rel_ours = os.path.normpath(utils.relative(f, rpath))
+            rel_stdlib = os.path.normpath(os.path.relpath(rpath, os.path.dirname(f)))
             assert rel_ours == rel_stdlib, \
                 'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
                 rel_ours, rel_stdlib, f, rpath)
