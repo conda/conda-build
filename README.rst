@@ -98,6 +98,12 @@ Running our test suite requires cloning one other repo at the same level as cond
 https://github.com/conda/conda_build_test_recipe - this is necessary for relative path tests
 outside of conda build's build tree.
 
+Additionally, you need to install a few extra packages:
+
+.. code-block:: bash
+
+  conda install pytest pytest-cov mock
+
 The test suite runs with py.test. Some useful commands to run select tests,
 assuming you are in the conda-build root folder:
 
