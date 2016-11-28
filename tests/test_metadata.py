@@ -3,7 +3,7 @@ import unittest
 
 from conda_build.conda_interface import MatchSpec
 
-from conda_build.metadata import select_lines, handle_config_version
+from conda_build.metadata import select_lines, handle_config_version, expand_globs
 from .utils import testing_workdir, test_config, test_metadata
 
 
@@ -107,3 +107,12 @@ class HandleConfigVersionTests(unittest.TestCase):
         self.assertRaises(RuntimeError,
                           handle_config_version,
                           MatchSpec('numpy x.x'), None)
+
+
+def test_expand_globs(testing_workdir):
+    files = ['abc', 'acb']
+    for f in files:
+        with open(f, 'w') as _f:
+            _f.write('weee')
+    assert expand_globs(files) == files
+    assert expand_globs(['a*']) == files
