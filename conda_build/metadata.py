@@ -176,11 +176,12 @@ def parse(data, config, path=None):
     return sanitize(res)
 
 
-def expand_globs(path_list):
+def expand_globs(path_list, root_dir):
     files = []
     for path in path_list:
-        files.extend(glob.glob(path))
-    return files
+        files.extend(glob.glob(os.path.join(root_dir, path)))
+    # list comp is getting rid of absolute prefix, to match relative paths used in file list
+    return [f.replace(root_dir + os.path.sep, '') for f in files]
 
 
 trues = {'y', 'on', 'true', 'yes'}
@@ -693,7 +694,7 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret)
+        return expand_globs(ret, self.config.build_prefix)
 
     def ignore_prefix_files(self):
         ret = self.get_value('build/ignore_prefix_files', False)
@@ -704,7 +705,7 @@ class MetaData(object):
             if type(ret) is list and any('\\' in i for i in ret):
                 raise RuntimeError("build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret) if type(ret) is list else ret
+        return expand_globs(ret, self.config.build_prefix) if type(ret) is list else ret
 
     def always_include_files(self):
         files = ensure_list(self.get_value('build/always_include_files', []))
@@ -714,7 +715,7 @@ class MetaData(object):
         if on_win:
             files = [f.replace("/", "\\") for f in files]
 
-        return expand_globs(files)
+        return expand_globs(files, self.config.build_prefix)
 
     def include_recipe(self):
         return self.get_value('build/include_recipe', True)
@@ -727,7 +728,7 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/binary_has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret)
+        return expand_globs(ret, self.config.build_prefix)
 
     def skip(self):
         return self.get_value('build/skip', False)
