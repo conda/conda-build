@@ -717,6 +717,17 @@ class MetaData(object):
 
         return expand_globs(files, self.config.build_prefix)
 
+    def binary_relocation(self):
+        ret = self.get_value('build/binary_relocation', True)
+        if type(ret) not in (list, bool):
+            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths '
+                               '(optionally globs)')
+        if sys.platform == 'win32':
+            if type(ret) is list and any('\\' in i for i in ret):
+                raise RuntimeError("build/ignore_prefix_files paths must use / "
+                                   "as the path delimiter on Windows")
+        return expand_globs(ret, self.config.build_prefix) if type(ret) is list else ret
+
     def include_recipe(self):
         return self.get_value('build/include_recipe', True)
 

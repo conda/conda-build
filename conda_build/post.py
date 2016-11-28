@@ -388,12 +388,6 @@ def mk_relative(m, f, prefix):
     if not is_obj(path):
         return
 
-    # skip over this file
-    if (m.ignore_prefix_files() and (type(m.ignore_prefix_files()) is bool or
-                                     f in m.ignore_prefix_files())):
-        print("Skipping relocation path patch for " + f)
-        return
-
     if sys.platform.startswith('linux'):
         mk_relative_linux(f, prefix=prefix, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
@@ -427,7 +421,7 @@ def post_build(m, files, prefix, build_python, croot):
     if sys.platform == 'win32':
         return
 
-    binary_relocation = bool(m.get_value('build/binary_relocation', True))
+    binary_relocation = m.binary_relocation()
     if not binary_relocation:
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
@@ -437,7 +431,7 @@ def post_build(m, files, prefix, build_python, croot):
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
-        if binary_relocation:
+        if binary_relocation is True or (isinstance(f, list) and f in binary_relocation):
             mk_relative(m, f, prefix)
         make_hardlink_copy(f, prefix)
 
