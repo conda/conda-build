@@ -114,5 +114,5 @@ def test_expand_globs(testing_workdir):
     for f in files:
         with open(f, 'w') as _f:
             _f.write('weee')
-    assert expand_globs(files) == files
-    assert expand_globs(['a*']) == files
+    assert expand_globs(files, testing_workdir) == files
+    assert expand_globs(['a*'], testing_workdir) == files
