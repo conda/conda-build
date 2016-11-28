@@ -14,7 +14,6 @@ import conda
 from conda_build import build, api, __version__
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
-from conda_build.conda_interface import NodeType
 
 from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
                     get_noarch_python_meta, put_bad_conda_on_path)
@@ -229,7 +228,7 @@ def test_create_info_files_json(testing_workdir, test_metadata):
                   {"path_type": "hardlink", "_path": "two",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
-        "version": 1}
+        "paths_version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
         assert output == expected_output
@@ -258,16 +257,16 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
                    "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "one",
+                  {"path_type": "hardlink", "_path": "one", "inode_paths": ["one", "one_hl"],
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"path_type": "hardlink", "_path": "one_hl",
+                  {"path_type": "hardlink", "_path": "one_hl", "inode_paths": ["one", "one_hl"],
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "two",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
-        "version": 1}
+        "paths_version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
         assert output == expected_output

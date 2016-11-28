@@ -522,7 +522,7 @@ def get_inode_paths(files, target_short_path, prefix):
     return sorted(hardlinked_files)
 
 
-def node_type(path):
+def path_type(path):
     if islink(path):
         return PathType.softlink
     return PathType.hardlink
@@ -538,7 +538,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
             "_path": get_short_path(m, fi),
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
-            "node_type": node_type(path),
+            "path_type": path_type(path),
         }
         no_link = is_no_link(no_link, fi)
         if no_link:

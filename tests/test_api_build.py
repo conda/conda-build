@@ -754,10 +754,12 @@ def test_info_files_json(test_config):
         data = json.loads(tf.extractfile('info/paths.json').read().decode('utf-8'))
     fields = ["_path", "sha256", "size_in_bytes", "path_type", "file_mode", "no_link",
               "prefix_placeholder", "inode_paths"]
+
     for key in data.keys():
         assert key in ['paths', 'paths_version']
-    for field in data.get('paths'):
-        assert field in fields
+    for paths in data.get('paths'):
+        for field in paths.keys():
+            assert field in fields
     assert len(data.get('paths')) == 2
     for file in data.get('paths'):
         for key in file.keys():

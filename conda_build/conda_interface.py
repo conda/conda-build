@@ -179,8 +179,8 @@ else:
 
     class FileMode(Enum):
         """
-        Refers to the mode of the file. Originally referring to the has_prefix file, but adopted for
-        paths.json
+        Refers to the mode of the file. Originally referring to the has_prefix file, but adopted
+        for paths.json
         """
         text = 'text'
         binary = 'binary'
