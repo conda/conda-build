@@ -69,6 +69,7 @@ def ns_cfg(config):
         np=np,
         os=os,
         environ=os.environ,
+        nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
