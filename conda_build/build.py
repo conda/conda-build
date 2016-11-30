@@ -32,7 +32,7 @@ from conda_verify.verify import Verify
 
 # used to get version
 from .conda_interface import cc
-from .conda_interface import envs_dirs, root_dir
+from .conda_interface import envs_dirs, env_path_backup_var_exists, root_dir
 from .conda_interface import plan
 from .conda_interface import get_index
 from .conda_interface import PY3
@@ -855,6 +855,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                     with path_prepended(config.build_prefix):
                         env = environ.get_dict(config=config, m=m)
                     env["CONDA_BUILD_STATE"] = "BUILD"
+                    if env_path_backup_var_exists:
+                        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
                     work_file = join(config.work_dir, 'conda_build.sh')
                     if script:
                         with open(work_file, 'w') as bf:
@@ -1064,6 +1066,8 @@ def test(m, config, move_broken=True):
         env = dict(os.environ.copy())
         env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
+        if env_path_backup_var_exists:
+            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if not config.activate:
         # prepend bin (or Scripts) directory
