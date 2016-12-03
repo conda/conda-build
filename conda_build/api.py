@@ -87,6 +87,7 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
 
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     is_package = False
+    need_cleanup = False
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
@@ -118,7 +119,6 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
             is_package = True
             if metadata.meta.get('test') and metadata.meta['test'].get('source_files'):
                 source.provide(metadata.path, metadata.get_section('source'), config=config)
-            rm_rf(recipe_dir)
 
     with recipe_config:
         # This will create a new local build folder if and only if config doesn't already have one.
@@ -133,6 +133,8 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
             os.rename(recipedir_or_package_or_metadata,
                       os.path.join(recipe_config.output_folder,
                                    os.path.basename(recipedir_or_package_or_metadata)))
+    if need_cleanup:
+        rm_rf(recipe_dir)
     return test_result
 
 
