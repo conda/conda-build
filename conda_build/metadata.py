@@ -296,7 +296,7 @@ FIELDS = {
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
-    'test': ['requires', 'commands', 'files', 'imports'],
+    'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
     'about': ['home', 'dev_url', 'doc_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
