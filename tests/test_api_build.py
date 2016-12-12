@@ -656,9 +656,9 @@ def test_noarch_python(test_config):
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']
-    assert['preferred_env'] in extra
-    assert['name'] in extra['preferred_env']
-    assert['executable_paths'] in extra['preferred_env']
+    assert 'preferred_env' in extra
+    assert 'name' in extra['preferred_env']
+    assert 'executable_paths' in extra['preferred_env']
     assert 'version' in extra
 
 
