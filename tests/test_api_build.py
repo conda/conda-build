@@ -659,7 +659,7 @@ def test_noarch_python(test_config):
     assert 'preferred_env' in extra
     assert 'name' in extra['preferred_env']
     assert 'executable_paths' in extra['preferred_env']
-    assert 'version' in extra
+    assert 'package_metadata_version' in extra
 
 
 def test_skip_compile_pyc(test_config):
