@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import argparse
 import logging
-from os.path import isdir
+import os
 import sys
 
 import filelock
@@ -16,11 +16,10 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
-                                         render_recipe, get_render_parser, bldpkg_path)
-from conda_build.conda_interface import cc
-from conda_build.conda_interface import add_parser_channels
+                                         get_render_parser, bldpkg_path)
+from conda_build.conda_interface import cc, add_parser_channels, url_path
 import conda_build.source as source
-from conda_build.utils import get_recipe_abspath, silence_loggers, rm_rf, print_skip_message
+from conda_build.utils import silence_loggers, print_skip_message
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -198,7 +197,19 @@ def execute(args):
     build.check_external()
 
     # change globals in build module, see comment there as well
-    config.channel_urls = args.channel or ()
+    channel_urls = args.channel or ()
+    config.channel_urls = []
+
+    for url in channel_urls:
+        # allow people to specify relative or absolute paths to local channels
+        #    These channels still must follow conda rules - they must have the
+        #    appropriate platform-specific subdir (e.g. win-64)
+        if os.path.isdir(url):
+            if not os.path.isabs(url):
+                url = os.path.normpath(os.path.abspath(os.path.join(os.getcwd(), url)))
+            url = url_path(url)
+        config.channel_urls.append(url)
+
     config.override_channels = args.override_channels
     config.verbose = not args.quiet or args.debug
 
