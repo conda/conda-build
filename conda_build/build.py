@@ -1021,20 +1021,19 @@ def test(m, config, move_broken=True):
 
     clean_pkg_cache(m.dist(), config.timeout)
 
-    tmp_dir = config.test_dir
-    if not isdir(tmp_dir):
-        os.makedirs(tmp_dir)
-    create_files(tmp_dir, m, config)
+    if not isdir(config.test_dir):
+        os.makedirs(config.test_dir)
+    create_files(config.test_dir, m, config)
     # Make Perl or Python-specific test files
     if m.name().startswith('perl-'):
-        pl_files = create_pl_files(tmp_dir, m)
+        pl_files = create_pl_files(config.test_dir, m)
         py_files = False
         lua_files = False
     else:
-        py_files = create_py_files(tmp_dir, m)
+        py_files = create_py_files(config.test_dir, m)
         pl_files = False
         lua_files = False
-    shell_files = create_shell_files(tmp_dir, m, config)
+    shell_files = create_shell_files(config.test_dir, m, config)
     if not (py_files or shell_files or pl_files or lua_files):
         print("Nothing to test for:", m.dist())
         return True
@@ -1082,7 +1081,7 @@ def test(m, config, move_broken=True):
     # Python 2 Windows requires that envs variables be string, not unicode
     env = {str(key): str(value) for key, value in env.items()}
     suffix = "bat" if on_win else "sh"
-    test_script = join(tmp_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
+    test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
     with open(test_script, 'w') as tf:
         if config.activate:
@@ -1098,23 +1097,23 @@ def test(m, config, move_broken=True):
         if py_files:
             tf.write("{python} -s {test_file}\n".format(
                 python=config.test_python,
-                test_file=join(tmp_dir, 'run_test.py')))
+                test_file=join(config.test_dir, 'run_test.py')))
             if on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if pl_files:
             tf.write("{perl} {test_file}\n".format(
                 perl=config.test_perl,
-                test_file=join(tmp_dir, 'run_test.pl')))
+                test_file=join(config.test_dir, 'run_test.pl')))
             if on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if lua_files:
             tf.write("{lua} {test_file}\n".format(
                 lua=config.test_lua,
-                test_file=join(tmp_dir, 'run_test.lua')))
+                test_file=join(config.test_dir, 'run_test.lua')))
             if on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if shell_files:
-            test_file = join(tmp_dir, 'run_test.' + suffix)
+            test_file = join(config.test_dir, 'run_test.' + suffix)
             if on_win:
                 tf.write("call {test_file}\n".format(test_file=test_file))
                 if on_win:
@@ -1129,7 +1128,7 @@ def test(m, config, move_broken=True):
     else:
         cmd = [shell_path, '-x', '-e', test_script]
     try:
-        subprocess.check_call(cmd, env=env, cwd=tmp_dir)
+        subprocess.check_call(cmd, env=env, cwd=config.test_dir)
     except subprocess.CalledProcessError:
         tests_failed(m, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
