@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import json
 import logging
 import multiprocessing
 import os
@@ -384,6 +385,8 @@ def unix_vars(prefix):
 
 def osx_vars(compiler_vars, config):
     OSX_ARCH = 'i386' if config.arch == 32 else 'x86_64'
+    MACOSX_DEPLOYMENT_TARGET = os.environ.get('MACOSX_DEPLOYMENT_TARGET', '10.7')
+
     compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
@@ -392,7 +395,7 @@ def osx_vars(compiler_vars, config):
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     return {
         'OSX_ARCH': OSX_ARCH,
-        'MACOSX_DEPLOYMENT_TARGET': '10.7',
+        'MACOSX_DEPLOYMENT_TARGET': MACOSX_DEPLOYMENT_TARGET,
     }
 
 
@@ -441,6 +444,63 @@ def system_vars(env_dict, prefix, config):
     d.update(compiler_vars)
 
     return d
+
+
+class InvalidEnvironment(Exception):
+    pass
+
+
+# Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
+# Vendored here to avoid the whole dependency for just this bit.
+def _load_json(path):
+    with open(path, 'r') as fin:
+        x = json.load(fin)
+    return x
+
+
+def _load_all_json(path):
+    """
+    Load all json files in a directory.  Return dictionary with filenames mapped to json
+    dictionaries.
+    """
+    root, _, files = next(os.walk(path))
+    result = {}
+    for f in files:
+        if f.endswith('.json'):
+            result[f] = _load_json(join(root, f))
+    return result
+
+
+class Environment(object):
+    def __init__(self, path):
+        """
+        Initialize an Environment object.
+
+        To reflect changes in the underlying environment, a new Environment object should be
+        created.
+        """
+        self.path = path
+        self._meta = join(path, 'conda-meta')
+        if os.path.isdir(path) and os.path.isdir(self._meta):
+            self._packages = {}
+        else:
+            raise InvalidEnvironment('Unable to load environment {}'.format(path))
+
+    def _read_package_json(self):
+        if not self._packages:
+            self._packages = _load_all_json(self._meta)
+
+    def package_specs(self):
+        """
+        List all package specs in the environment.
+        """
+        self._read_package_json()
+        json_objs = self._packages.values()
+        specs = []
+        for i in json_objs:
+            p, v, b = i['name'], i['version'], i['build']
+            specs.append('{} {} {}'.format(p, v, b))
+        return specs
 
 
 if __name__ == '__main__':

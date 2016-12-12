@@ -364,8 +364,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
             # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
             # it, so instead, make sure that what I think it should be replaced by
             # gives the same result and assert if not. Yeah, I am a chicken.
-            rel_ours = utils.relative(f, rpath)
-            rel_stdlib = os.path.relpath(rpath, os.path.dirname(f))
+            rel_ours = os.path.normpath(utils.relative(f, rpath))
+            rel_stdlib = os.path.normpath(os.path.relpath(rpath, os.path.dirname(f)))
             assert rel_ours == rel_stdlib, \
                 'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
                 rel_ours, rel_stdlib, f, rpath)
@@ -386,12 +386,6 @@ def mk_relative(m, f, prefix):
     assert sys.platform != 'win32'
     path = join(prefix, f)
     if not is_obj(path):
-        return
-
-    # skip over this file
-    if (m.ignore_prefix_files() and (type(m.ignore_prefix_files()) is bool or
-                                     f in m.ignore_prefix_files())):
-        print("Skipping relocation path patch for " + f)
         return
 
     if sys.platform.startswith('linux'):
@@ -427,7 +421,7 @@ def post_build(m, files, prefix, build_python, croot):
     if sys.platform == 'win32':
         return
 
-    binary_relocation = bool(m.get_value('build/binary_relocation', True))
+    binary_relocation = m.binary_relocation()
     if not binary_relocation:
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False))
@@ -437,7 +431,7 @@ def post_build(m, files, prefix, build_python, croot):
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
-        if binary_relocation:
+        if binary_relocation is True or (isinstance(f, list) and f in binary_relocation):
             mk_relative(m, f, prefix)
         make_hardlink_copy(f, prefix)
 

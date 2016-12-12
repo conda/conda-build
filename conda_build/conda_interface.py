@@ -25,6 +25,8 @@ import conda.config as cc  # NOQA
 from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
 
+import os
+
 if parse_version(conda.__version__) >= parse_version("4.2"):
     # conda 4.2.x
     import conda.base.context
@@ -55,6 +57,13 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
     CondaValueError = conda.exceptions.CondaValueError
 
+    # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
+    conda.base.context.context.allow_softlinks = False
+
+    # when deactivating envs (e.g. switching from root to build/test) this env var is used,
+    # except the PR that removed this has been reverted (for now) and Windows doesnt need it.
+    env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
+
 else:
     from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
     from conda.cli.common import get_prefix  # NOQA
@@ -74,6 +83,8 @@ else:
     get_rc_urls = cc.get_rc_urls
     get_local_urls = cc.get_local_urls
 
+    cc.allow_softlinks = False
+
     class PaddingError(Exception):
         pass
 
@@ -86,6 +97,7 @@ else:
     class CondaValueError(Exception):
         pass
 
+    env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
 class SignatureError(Exception):
     pass

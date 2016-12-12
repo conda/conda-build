@@ -8,7 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 import argparse
 import logging
-from os.path import isdir
+import os
 import sys
 
 import filelock
@@ -16,11 +16,10 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
-                                         render_recipe, get_render_parser, bldpkg_path)
-from conda_build.conda_interface import cc
-from conda_build.conda_interface import add_parser_channels
+                                         get_render_parser, bldpkg_path)
+from conda_build.conda_interface import cc, add_parser_channels, url_path
 import conda_build.source as source
-from conda_build.utils import get_recipe_abspath, silence_loggers, rm_rf, print_skip_message
+from conda_build.utils import silence_loggers, print_skip_message
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -158,6 +157,11 @@ different sets of packages."""
         action="store_true",
         help=("do not run verification on recipes or packages when building")
     )
+    p.add_argument(
+        "--output-folder",
+        help=("folder to dump output package to.  Package are moved here if build or test succeeds."
+              "  Destination folder must exist prior to using this.")
+    )
 
     add_parser_channels(p)
 
@@ -165,12 +169,13 @@ different sets of packages."""
     return p, args
 
 
-def output_action(metadata, config):
+def output_action(recipe, config):
     silence_loggers(show_warnings_and_errors=False)
+    metadata, _, _ = api.render(recipe, config=config)
     if metadata.skip():
         print_skip_message(metadata)
     else:
-        print(bldpkg_path(metadata, config))
+        print(bldpkg_path(metadata))
 
 
 def source_action(metadata, config):
@@ -178,12 +183,12 @@ def source_action(metadata, config):
     print('Source tree in:', config.work_dir)
 
 
-def test_action(metadata, config):
-    return api.test(metadata.path, move_broken=False, config=config)
+def test_action(recipe, config):
+    return api.test(recipe, move_broken=False, config=config)
 
 
-def check_action(metadata, config):
-    return api.check(metadata.path, config=config)
+def check_action(recipe, config):
+    return api.check(recipe, config=config)
 
 
 def execute(args):
@@ -192,7 +197,19 @@ def execute(args):
     build.check_external()
 
     # change globals in build module, see comment there as well
-    config.channel_urls = args.channel or ()
+    channel_urls = args.channel or ()
+    config.channel_urls = []
+
+    for url in channel_urls:
+        # allow people to specify relative or absolute paths to local channels
+        #    These channels still must follow conda rules - they must have the
+        #    appropriate platform-specific subdir (e.g. win-64)
+        if os.path.isdir(url):
+            if not os.path.isabs(url):
+                url = os.path.normpath(os.path.abspath(os.path.join(os.getcwd(), url)))
+            url = url_path(url)
+        config.channel_urls.append(url)
+
     config.override_channels = args.override_channels
     config.verbose = not args.quiet or args.debug
 
@@ -222,17 +239,8 @@ def execute(args):
 
     if action:
         for recipe in args.recipe:
-            recipe_dir, need_cleanup = get_recipe_abspath(recipe)
+            action(recipe, config)
 
-            if not isdir(recipe_dir):
-                sys.exit("Error: no such directory: %s" % recipe_dir)
-
-            # this fully renders any jinja templating, throwing an error if any data is missing
-            m, _, _ = render_recipe(recipe_dir, no_download_source=False, config=config)
-            action(m, config)
-
-            if need_cleanup:
-                rm_rf(recipe_dir)
     else:
         api.build(args.recipe, post=args.post, build_only=args.build_only,
                    notest=args.notest, keep_old_work=args.keep_old_work,

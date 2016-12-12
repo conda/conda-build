@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import glob
 import logging
 import os
 import re
@@ -68,6 +69,7 @@ def ns_cfg(config):
         np=np,
         os=os,
         environ=os.environ,
+        nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
@@ -173,6 +175,14 @@ def parse(data, config, path=None):
     ensure_valid_license_family(res)
     ensure_valid_noarch_value(res)
     return sanitize(res)
+
+
+def expand_globs(path_list, root_dir):
+    files = []
+    for path in path_list:
+        files.extend(glob.glob(os.path.join(root_dir, path)))
+    # list comp is getting rid of absolute prefix, to match relative paths used in file list
+    return [f.replace(root_dir + os.path.sep, '') for f in files]
 
 
 trues = {'y', 'on', 'true', 'yes'}
@@ -288,7 +298,7 @@ FIELDS = {
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
-    'test': ['requires', 'commands', 'files', 'imports'],
+    'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
     'about': ['home', 'dev_url', 'doc_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
@@ -297,9 +307,11 @@ FIELDS = {
 
 
 def check_bad_chrs(s, field):
-    bad_chrs = '=!@#$%^&*:;"\'\\|<>?/ '
+    bad_chrs = '=@#$%^&*:;"\'\\|<>?/ '
     if field in ('package/version', 'build/string'):
         bad_chrs += '-'
+    if field != 'package/version':
+        bad_chrs += '!'
     for c in bad_chrs:
         if c in s:
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
@@ -685,17 +697,18 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return ret
+        return expand_globs(ret, self.config.build_prefix)
 
     def ignore_prefix_files(self):
         ret = self.get_value('build/ignore_prefix_files', False)
         if type(ret) not in (list, bool):
-            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths')
+            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths '
+                               '(optionally globs)')
         if sys.platform == 'win32':
             if type(ret) is list and any('\\' in i for i in ret):
                 raise RuntimeError("build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return ret
+        return expand_globs(ret, self.config.build_prefix) if type(ret) is list else ret
 
     def always_include_files(self):
         files = ensure_list(self.get_value('build/always_include_files', []))
@@ -704,7 +717,19 @@ class MetaData(object):
                                 "as the path delimiter on Windows")
         if on_win:
             files = [f.replace("/", "\\") for f in files]
-        return files
+
+        return expand_globs(files, self.config.build_prefix)
+
+    def binary_relocation(self):
+        ret = self.get_value('build/binary_relocation', True)
+        if type(ret) not in (list, bool):
+            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths '
+                               '(optionally globs)')
+        if sys.platform == 'win32':
+            if type(ret) is list and any('\\' in i for i in ret):
+                raise RuntimeError("build/ignore_prefix_files paths must use / "
+                                   "as the path delimiter on Windows")
+        return expand_globs(ret, self.config.build_prefix) if type(ret) is list else ret
 
     def include_recipe(self):
         return self.get_value('build/include_recipe', True)
@@ -717,7 +742,7 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/binary_has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return ret
+        return expand_globs(ret, self.config.build_prefix)
 
     def skip(self):
         return self.get_value('build/skip', False)

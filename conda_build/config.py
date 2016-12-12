@@ -93,7 +93,7 @@ class Config(object):
         Setting = namedtuple("ConfigSetting", "name, default")
         values = [Setting('activate', True),
                   Setting('anaconda_upload', binstar_upload),
-                  Setting('channel_urls', ()),
+                  Setting('channel_urls', []),
                   Setting('dirty', False),
                   Setting('include_recipe', True),
                   Setting('keep_old_work', False),

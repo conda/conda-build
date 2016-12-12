@@ -1,3 +1,31 @@
+2016-11-28 2.0.11:
+------------------
+
+Enhancements:
+-------------
+
+* Further develop and update files.json #1501
+* New command line option: ``--output-folder`` allows moving artifact after build (to facilitate CI) #1538
+* support globs in `ignore_prefix_files`, `has_prefix_files`, `always_include_files`, `binary_has_prefix_files` #1554
+* decouple `ignore_prefix_files` from `binary_relocation`; make `binary_relocation` also accept a list of files or globs #1555
+
+Bug fixes:
+----------
+
+* rename `short_path` key in files.json to `path` #1501
+* allow `!` in package version (used in epoch) #1542
+* don't compute SHA256 for folders #1544
+* fix merge check for dst starting with src #1546
+* use normpath when comparing utils.relative (fixes git clone issue) #1547
+* disallow softlinks for conda (>=v.4.2) in conda-build created environments #1548
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @soapy1
+
 2016-11-14 2.0.10:
 ------------------
 
