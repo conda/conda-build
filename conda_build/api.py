@@ -111,6 +111,9 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
                 if os.path.basename(local_location).startswith(platform + "-"):
                     local_location = os.path.dirname(local_location)
             update_index(local_location, config=config)
+            if not os.path.abspath(local_location):
+                local_location = os.path.normpath(os.path.abspath(
+                    os.path.join(os.getcwd(), local_location)))
             local_url = url_path(local_location)
             # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
             #    how to add elements.
