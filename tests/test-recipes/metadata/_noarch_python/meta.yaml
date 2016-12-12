@@ -17,3 +17,7 @@ requirements:
     - setuptools
   run:
     - python
+  preferred_env: _env_
+  preferred_env_executable_paths:
+    - test/path
+    - test/path2

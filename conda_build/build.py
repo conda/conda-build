@@ -3,7 +3,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
 
-from collections import deque
+from collections import deque, OrderedDict
 import fnmatch
 from glob import glob
 import io
@@ -325,18 +325,27 @@ def write_info_files_file(m, files, config):
 
 
 def write_package_metadata_json(m, config):
-    extra = dict()
+    extra = OrderedDict()
 
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
-        noarch_dict = dict(type=text_type(noarch_type))
+        noarch_dict = OrderedDict(type=text_type(noarch_type))
         if text_type(noarch_type).lower() == "python":
             entry_points = m.get_value('build/entry_points')
             if entry_points:
                 noarch_dict['entry_points'] = entry_points
         extra['noarch'] = noarch_dict
 
+    preferred_env = m.get_value("requirements/preferred_env")
+    if preferred_env:
+        preferred_env_dict = OrderedDict(name=text_type(preferred_env))
+        executable_paths = m.get_value("requirements/preferred_env_executable_paths")
+        if executable_paths:
+            preferred_env_dict["executable_paths"] = executable_paths
+        extra["preferred_env"] = preferred_env_dict
+
     if extra:
+        extra["package_metadata_version"] = 1
         with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
             fh.write(json.dumps(extra, sort_keys=True, indent=2, separators=(',', ': ')))
 
