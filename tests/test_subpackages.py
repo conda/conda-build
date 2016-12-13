@@ -13,8 +13,7 @@ def recipe(request):
 
 def test_subpackage_recipes(recipe, test_config):
     api.build(recipe, config=test_config)
-    pass
 
 
 def test_all_subpackages_uploaded():
-    pass
+    raise NotImplementedError

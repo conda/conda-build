@@ -27,7 +27,7 @@ outputs:
     files:
       - subpackage_file1
       - somedir
-      - *.ext
+      - "*.ext"
     test:
       script: test_subpackage1.py
       script_interpreter: python
