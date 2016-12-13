@@ -180,7 +180,12 @@ def parse(data, config, path=None):
 def expand_globs(path_list, root_dir):
     files = []
     for path in path_list:
-        files.extend(glob.glob(os.path.join(root_dir, path)))
+        if os.path.isdir(os.path.join(root_dir, path)):
+            files.extend([os.path.join(root, f) for root, _, _ in os.walk(path)
+                          for f in glob(os.path.join(root, '*'))])
+        else:
+            files.extend(glob.glob(os.path.join(root_dir, path)))
+
     # list comp is getting rid of absolute prefix, to match relative paths used in file list
     return [f.replace(root_dir + os.path.sep, '') for f in files]
 

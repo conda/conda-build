@@ -986,7 +986,7 @@ can lead to packages that include their dependencies.""" % meta_files))
                             'requirements': m.get_value('requirements/run')})
 
         for output in outputs:
-            files = expand_globs(output.get('files', []), config.build_prefix)
+            files = output.get('files', [])
             if not files and output.get('script'):
                 interpreter = output.get('script_interpreter')
                 if not interpreter:
@@ -1002,7 +1002,7 @@ can lead to packages that include their dependencies.""" % meta_files))
             output_filename = ('-'.join([output['name'], m.version(),
                                          build_string_from_metadata(tmp_metadata)]) +
                                '.tar.bz2')
-
+            files = expand_globs(files, config.build_prefix)
             output_package = bundle_files(files, tmp_metadata, config, output_filename)
 
             if not getattr(config, "noverify", False):
