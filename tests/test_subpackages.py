@@ -19,5 +19,6 @@ def test_autodetect_raises_on_invalid_extension(test_config):
     with pytest.raises(NotImplementedError):
         api.build(os.path.join(subpackage_dir, '_invalid_script_extension'), config=test_config)
 
-def test_all_subpackages_uploaded():
-    raise NotImplementedError
+
+# def test_all_subpackages_uploaded():
+#     raise NotImplementedError

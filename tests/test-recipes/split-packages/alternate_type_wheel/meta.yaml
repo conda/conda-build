@@ -2,15 +2,8 @@ package:
   name: split_packages_alternate_type_wheel
   version: 1.0
 
-requirements:
-  run:
-    - my_script_subpackage
+source:
+  path: ../../../../../conda_build_test_recipe
 
 outputs:
-  - name: my_script_subpackage
-    script: subpackage1.py
-    script_interpreter: python
-    type: wheel
-    test:
-      script: test_subpackage1.py
-      script_interpreter: python
+  - type: wheel

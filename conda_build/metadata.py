@@ -180,9 +180,9 @@ def parse(data, config, path=None):
 def expand_globs(path_list, root_dir):
     files = []
     for path in path_list:
-        if os.path.isdir(os.path.join(root_dir, path)):
-            files.extend([os.path.join(root, f) for root, _, _ in os.walk(path)
-                          for f in glob(os.path.join(root, '*'))])
+        fullpath = os.path.join(root_dir, path)
+        if os.path.isdir(fullpath):
+            files.extend([os.path.join(root, f) for root, _, fs in os.walk(fullpath) for f in fs])
         else:
             files.extend(glob.glob(os.path.join(root_dir, path)))
 
@@ -356,6 +356,8 @@ def handle_config_version(ms, ver, dep_type='run'):
 
 
 def build_string_from_metadata(metadata):
+    if metadata.meta.get('build', {}).get('string'):
+        return metadata.get_value('build/string')
     res = []
     version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
     for name, s in (('numpy', 'np'), ('python', 'py'),

@@ -78,16 +78,17 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
     from conda_build.build import test
 
-    config = get_or_merge_config(config, **kwargs)
     if hasattr(recipedir_or_package_or_metadata, 'config'):
-        recipe_config = recipedir_or_package_or_metadata.config
+        config = recipedir_or_package_or_metadata.config
+    else:
+        config = get_or_merge_config(config, **kwargs)
 
-    with recipe_config:
+    with config:
         # This will create a new local build folder if and only if config doesn't already have one.
         #   What this means is that if we're running a test immediately after build, we use the one
         #   that the build already provided
 
-        test_result = test(recipedir_or_package_or_metadata, config=recipe_config,
+        test_result = test(recipedir_or_package_or_metadata, config=config,
                            move_broken=move_broken)
 
     return test_result
