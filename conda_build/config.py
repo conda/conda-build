@@ -110,6 +110,15 @@ class Config(object):
                   Setting('platform', platform),
                   Setting('set_build_id', True),
                   Setting('disable_pip', False),
+
+                  # pypi upload settings (twine)
+                  Setting('password', None),
+                  Setting('sign', False),
+                  Setting('sign_with', 'gpg'),
+                  Setting('identity', None),
+                  Setting('config_file', None),
+                  Setting('repository', 'pypi'),
+
                   Setting('ignore_recipe_verify_scripts',
                           cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
                   Setting('ignore_package_verify_scripts',

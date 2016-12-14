@@ -734,11 +734,34 @@ to get the latest version.
 """ % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
-def bundle_files(pkg_files, metadata, config, output_filename):
-    info_files = create_info_files(metadata, pkg_files, config=config, prefix=config.build_prefix)
+def bundle_conda(output, metadata, config, env, **kw):
+    files = output.get('files', [])
+    if not files and output.get('script'):
+        interpreter = output.get('script_interpreter')
+        if not interpreter:
+            interpreter = guess_interpreter(output['script'])
+        subprocess.check_output(interpreter.split(' ') +
+                                [os.path.join(metadata.path, output['script'])],
+                                cwd=config.build_prefix, env=env)
+        files_txt = os.path.splitext(os.path.join(config.build_prefix, output['script']))[0] + '.txt'  # NOQA
+        try:
+            files = open(files_txt).read().splitlines()
+        except OSError:
+            raise ValueError("output script {0} specified, but script does not create "
+                             "<build prefix>/{1} - please rectify by making your script output the "
+                             "list of files (one per line) to that file.".format(output['script'],
+                                                                    os.path.basename(files_txt)))
+    tmp_metadata = copy.deepcopy(metadata)
+    tmp_metadata.meta['package']['name'] = output['name']
+    tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
+
+    output_filename = ('-'.join([output['name'], metadata.version(),
+                                 build_string_from_metadata(tmp_metadata)]) + '.tar.bz2')
+    files = list(set(expand_globs(files, config.build_prefix)))
+    info_files = create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
     for f in info_files:
-        if f not in pkg_files:
-            pkg_files.append(f)
+        if f not in files:
+            files.append(f)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -756,14 +779,37 @@ def bundle_files(pkg_files, metadata, config, output_filename):
         # add files in order of a) in info directory, b) increasing size so
         # we can access small manifest or json files without decompressing
         # possible large binary or data files
-        for f in sorted(pkg_files, key=order):
+        for f in sorted(files, key=order):
             t.add(join(config.build_prefix, f), f)
         t.close()
 
         # we're done building, perform some checks
         tarcheck.check_all(tmp_path)
+        if not getattr(config, "noverify", False):
+            verifier = Verify()
+            ignore_scripts = config.ignore_package_verify_scripts if \
+                             config.ignore_package_verify_scripts else None
+            run_scripts = config.run_package_verify_scripts if \
+                          config.run_package_verify_scripts else None
+            verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
+                                    path_to_package=tmp_path)
         copy_into(tmp_path, config.bldpkgs_dir, config.timeout)
     return os.path.join(config.bldpkgs_dir, output_filename)
+
+
+def bundle_wheel(output, metadata, config, env):
+    with TemporaryDirectory() as tmpdir:
+        subprocess.check_call(['pip', 'wheel', '--wheel-dir', tmpdir, '--no-deps', '.'],
+                            env=env, cwd=config.work_dir)
+        wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
+        copy_into(wheel_file, config.bldpkgs_dir)
+    return os.path.join(config.bldpkgs_dir, os.path.basename(wheel_file))
+
+
+bundlers = {
+    'conda': bundle_conda,
+    'wheel': bundle_wheel,
+}
 
 
 def build(m, config, post=None, need_source_download=True, need_reparse_in_env=False):
@@ -803,6 +849,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             print("    (actual version deferred until further download or env creation)")
 
         specs = [ms.spec for ms in m.ms_depends('build')]
+        if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
+            specs.extend(['pip', 'wheel'])
         create_env(config.build_prefix, specs, config=config)
         vcs_source = m.uses_vcs_in_build
         if vcs_source and vcs_source not in specs:
@@ -973,47 +1021,26 @@ can lead to packages that include their dependencies.""" % meta_files))
         fix_permissions(files3 - files1, config.build_prefix)
 
         outputs = m.get_section('outputs')
+        # this is the old, default behavior: conda package, with difference between start
+        #    set of files and end set of files
+        requirements = m.get_value('requirements/run')
         if not outputs:
             outputs = [{'name': m.name(),
-                       'files': files3 - files1}]
+                        'files': files3 - files1,
+                        'requirements': requirements}]
         else:
-            # make a metapackage if the recipe depends on any of its subpackages as runtime reqs
-            requirements = m.get_value('requirements/run')
+            made_meta = False
             for out in outputs:
-                if out['name'] in requirements:
+                if out.get('name') in requirements:
                     requirements.extend(out.get('requirements', []))
-            outputs.append({'name': m.name(),
-                            'requirements': m.get_value('requirements/run')})
+                    made_meta = True
+            else:
+                if made_meta:
+                    outputs.append({'name': m.name(), 'requirements': requirements})
 
         for output in outputs:
-            files = output.get('files', [])
-            if not files and output.get('script'):
-                interpreter = output.get('script_interpreter')
-                if not interpreter:
-                    interpreter = guess_interpreter(output['script'])
-                files = subprocess.check_output(interpreter.split(' ') +
-                                                [os.path.join(m.path, output['script'])],
-                                                cwd=config.build_prefix, env=env).split('\n')
-            tmp_metadata = MetaData.fromdict({'package': {'name': output['name'],
-                                                          'version': m.version()},
-                                              'requirements': {'run': output.get('requirements',
-                                                                                 [])}})
+            built_packages.append(bundlers[output.get('type', 'conda')](output, m, config, env))
 
-            output_filename = ('-'.join([output['name'], m.version(),
-                                         build_string_from_metadata(tmp_metadata)]) +
-                               '.tar.bz2')
-            files = expand_globs(files, config.build_prefix)
-            output_package = bundle_files(files, tmp_metadata, config, output_filename)
-
-            if not getattr(config, "noverify", False):
-                verifier = Verify()
-                ignore_scripts = config.ignore_package_verify_scripts if \
-                    config.ignore_package_verify_scripts else None
-                run_scripts = config.run_package_verify_scripts if \
-                    config.run_package_verify_scripts else None
-                verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
-                                        path_to_package=output_package)
-            built_packages.append(output_package)
         update_index(config.bldpkgs_dir, config, could_be_mirror=False)
 
     else:
@@ -1038,7 +1065,6 @@ def guess_interpreter(script_filename):
                                   "script_interpreter for {1} output".format(file_ext,
                                                                              script_filename))
     return interpreter_command
-
 
 
 def clean_pkg_cache(dist, timeout):
@@ -1122,8 +1148,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     clean_pkg_cache(metadata.dist(), config.timeout)
 
-    if not isdir(config.test_dir):
-        os.makedirs(config.test_dir)
     create_files(config.test_dir, metadata, config)
     # Make Perl or Python-specific test files
     if metadata.name().startswith('perl-'):
@@ -1288,6 +1312,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
 
     already_built = set()
     extra_help = ""
+    built_packages = []
+
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -1304,24 +1330,23 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         recipe = recipe_list.popleft()
         if hasattr(recipe, 'config'):
             metadata = recipe
-            recipe_config = metadata.config
+            config = metadata.config
             # this code is duplicated below because we need to be sure that the build id is set
             #    before downloading happens - or else we lose where downloads are
-            if recipe_config.set_build_id:
-                recipe_config.compute_build_id(metadata.name(), reset=True)
+            if config.set_build_id:
+                config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
             recipe_parent_dir = os.path.dirname(recipe)
             recipe = recipe.rstrip("/").rstrip("\\")
-            recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
             #    before downloading happens - or else we lose where downloads are
-            if recipe_config.set_build_id:
-                recipe_config.compute_build_id(os.path.basename(recipe), reset=True)
+            if config.set_build_id:
+                config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
-                                                                    config=recipe_config)
+                                                                    config=config)
         if not getattr(config, "noverify", False):
             verifier = Verify()
             ignore_scripts = config.ignore_recipe_verify_scripts if \
@@ -1331,14 +1356,17 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                    rendered_meta=metadata.meta, recipe_dir=metadata.path)
         try:
-            with recipe_config:
-                built_packages = build(metadata, post=post,
-                                       need_source_download=need_source_download,
-                                       need_reparse_in_env=need_reparse_in_env,
-                                       config=recipe_config)
-                if not notest and built_packages:
-                    for pkg in built_packages:
-                        test(pkg, config=recipe_config)
+            with config:
+                packages_from_this = build(metadata, post=post,
+                                           need_source_download=need_source_download,
+                                           need_reparse_in_env=need_reparse_in_env,
+                                           config=config)
+                if not notest and packages_from_this:
+                    for pkg in packages_from_this:
+                        if pkg.endswith('.tar.bz2'):
+                            # we only know how to test conda packages
+                            test(pkg, config=config)
+                    built_packages.append(pkg)
         except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaValueError) as e:
             error_str = str(e)
             skip_names = ['python', 'r']
@@ -1378,15 +1406,21 @@ packages, the other package needs to be rebuilt
         # outputs message, or does upload, depending on value of args.anaconda_upload
         if post in [True, None]:
             for f in built_packages:
-                handle_anaconda_upload(f, config=recipe_config)
+                # TODO: could probably use a better check for pkg type than this...
+                if f.endswith('.tar.bz2'):
+                    handle_anaconda_upload(f, config=config)
+                elif f.endswith('.whl'):
+                    handle_pypi_upload(f, config=config)
                 already_built.add(f)
 
-        if hasattr(recipe_config, 'output_folder') and recipe_config.output_folder:
+        if hasattr(config, 'output_folder') and config.output_folder:
             for f in built_packages:
-                destination = os.path.join(recipe_config.output_folder, os.path.basename(f))
-                if os.path.exists(destination):
-                    os.remove(destination)
-                os.rename(f, destination)
+                # may have already been moved during testing
+                destination = os.path.join(config.output_folder, os.path.basename(f))
+                if os.path.isfile(f):
+                    if os.path.exists(destination):
+                        os.remove(destination)
+                    os.rename(f, destination)
 
 
 def handle_anaconda_upload(path, config):
@@ -1440,6 +1474,28 @@ Error: cannot locate anaconda command (required for upload)
     except:
         print(no_upload_message)
         raise
+
+
+def handle_pypi_upload(f, config):
+    args = ['twine', 'upload', '--sign-with', config.sign_with, '--repository', config.repository]
+    if config.user:
+        args.extend(['--user', config.user])
+    if config.password:
+        args.extend(['--password', config.password])
+    if config.sign:
+        args.extend(['--sign'])
+    if config.identity:
+        args.extend(['--identity', config.identity])
+    if config.config_file:
+        args.extend(['--config-file', config.config_file])
+    if config.repository:
+        args.extend(['--repository', config.repository])
+
+    args.append(f)
+    try:
+        subprocess.check_call()
+    except:
+        log.warn("wheel upload failed - is twine installed?  Is this package registered?")
 
 
 def print_build_intermediate_warning(config):

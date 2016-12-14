@@ -72,10 +72,17 @@ def create_files(dir_path, m, config):
 
 def create_shell_files(dir_path, m, config):
     has_tests = False
-    if sys.platform == 'win32':
-        name = 'run_test.bat'
+    ext = '.bat' if sys.platform == 'win32' else '.sh'
+    name = 'no-file'
+
+    for out in m.meta.get('outputs', []):
+        if m.name() == out['name']:
+            out_test_script = out.get('test', {}).get('script', 'no-file')
+            if os.path.splitext(out_test_script)[1].lower() == ext:
+                name = out_test_script
+                break
     else:
-        name = 'run_test.sh'
+        name = "run_test{}".format(ext)
 
     if exists(join(m.path, name)):
         copy_into(join(m.path, name), dir_path, config.timeout)
@@ -107,7 +114,13 @@ def create_py_files(dir_path, m):
             has_tests = True
 
         try:
-            with open(join(m.path, 'run_test.py')) as fi:
+            name = 'run_test.py'
+            for out in m.meta.get('outputs', []):
+                if m.name() == out['name']:
+                    out_test_script = out.get('test', {}).get('script', 'no-file')
+                    name = out_test_script if out_test_script.endswith('.py') else 'no-file'
+
+            with open(join(m.path, name)) as fi:
                 fo.write("print('running run_test.py')\n")
                 fo.write("# --- run_test.py (begin) ---\n")
                 fo.write(fi.read())
@@ -146,7 +159,12 @@ def create_pl_files(dir_path, m):
             has_tests = True
 
         try:
-            with open(join(m.path, 'run_test.pl')) as fi:
+            name = 'run_test.pl'
+            for out in m.meta.get('outputs', []):
+                if m.name() == out['name']:
+                    out_test_script = out.get('test', {}).get('script', 'no-file')
+                    name = out_test_script if out_test_script[-3:].lower() == '.pl' else 'no-file'
+            with open(join(m.path, name)) as fi:
                 print("# --- run_test.pl (begin) ---", file=fo)
                 fo.write(fi.read())
                 print("# --- run_test.pl (end) ---", file=fo)
