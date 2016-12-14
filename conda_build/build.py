@@ -740,17 +740,11 @@ def bundle_conda(output, metadata, config, env, **kw):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
+        initial_files_snapshot = prefix_files(config.build_prefix)
         subprocess.check_output(interpreter.split(' ') +
                                 [os.path.join(metadata.path, output['script'])],
                                 cwd=config.build_prefix, env=env)
-        files_txt = os.path.splitext(os.path.join(config.build_prefix, output['script']))[0] + '.txt'  # NOQA
-        try:
-            files = open(files_txt).read().splitlines()
-        except OSError:
-            raise ValueError("output script {0} specified, but script does not create "
-                             "<build prefix>/{1} - please rectify by making your script output the "
-                             "list of files (one per line) to that file.".format(output['script'],
-                                                                    os.path.basename(files_txt)))
+        files = prefix_files(config.build_prefix) - initial_files_snapshot
     tmp_metadata = copy.deepcopy(metadata)
     tmp_metadata.meta['package']['name'] = output['name']
     tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
