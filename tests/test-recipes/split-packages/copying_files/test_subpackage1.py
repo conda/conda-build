@@ -15,7 +15,6 @@ filename = os.path.join(os.environ['PREFIX'], 'subpackage_file1.ext')
 assert os.path.isfile(filename)
 assert open(filename).read().rstrip() == "weee"
 
-
 filename = os.path.join(os.environ['PREFIX'], 'subpackage_file2.ext')
 assert os.path.isfile(filename)
 assert open(filename).read().rstrip() == "weee"
