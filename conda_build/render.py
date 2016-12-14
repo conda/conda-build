@@ -168,7 +168,7 @@ def render_recipe(recipe_path, config, no_download_source=False):
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
 class _MetaYaml(dict):
-    fields = ["package", "source", "build", "requirements", "test", "about", "extra"]
+    fields = ["package", "source", "build", "requirements", "test", "outputs", "about", "extra"]
 
     def to_omap(self):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]

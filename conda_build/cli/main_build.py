@@ -132,7 +132,32 @@ different sets of packages."""
     )
     p.add_argument(
         '--user',
-        help="User/organization to upload packages to on anaconda.org"
+        help="User/organization to upload packages to on anaconda.org or pypi"
+    )
+    pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
+    pypi_grp.add_argument(
+        '--password',
+        help="password to use when uploading packages to pypi"
+    )
+    pypi_grp.add_argument(
+        '--sign', default=False,
+        help="sign files when uploading to pypi"
+    )
+    pypi_grp.add_argument(
+        '--sign-with', default='gpg', dest='sign_with',
+        help="program to use to sign files when uploading to pypi"
+    )
+    pypi_grp.add_argument(
+        '--identity',
+        help="GPG identity to use to sign files when uploading to pypi"
+    )
+    pypi_grp.add_argument(
+        '--config-file',
+        help="path to .pypirc file to use when uploading to pypi"
+    )
+    pypi_grp.add_argument(
+        '--repository', default='pypi',
+        help="PyPI repository to upload to"
     )
     p.add_argument(
         "--no-activate",
