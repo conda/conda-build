@@ -622,6 +622,9 @@ def create_env(prefix, specs, config, clear_cache=True):
             specs.append('%s@' % feature)
 
     if specs:  # Don't waste time if there is nothing to do
+        log.debug("Creating environment in %s", prefix)
+        log.debug(str(specs))
+
         with path_prepended(prefix):
             locks = []
             try:
@@ -1005,8 +1008,10 @@ can lead to packages that include their dependencies.""" % meta_files))
         else:
             pkg_files = sorted(files2 - files1)
 
+        # the legacy noarch
         if m.get_value('build/noarch_python'):
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
+        # new way: build/noarch: python
         elif is_noarch_python(m):
             noarch_python.populate_files(
                 m, pkg_files, config.build_prefix, entry_point_script_names)
@@ -1359,7 +1364,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     for pkg in packages_from_this:
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
-                            test(pkg, config=config)
+                            try:
+                                test(pkg, config=config)
+                            # IOError means recipe was not included with package. metadata instead
+                            except IOError:
+                                test(metadata, config=config)
                     built_packages.append(pkg)
         except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaValueError) as e:
             error_str = str(e)
@@ -1415,6 +1424,7 @@ packages, the other package needs to be rebuilt
                     if os.path.exists(destination):
                         os.remove(destination)
                     os.rename(f, destination)
+    return built_packages
 
 
 def handle_anaconda_upload(path, config):
