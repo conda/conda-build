@@ -743,7 +743,7 @@ def filter_files(files_list, prefix, filter_patterns=('.*[\\\\/]?\.git[\\\\/].*'
     for pattern in filter_patterns:
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
-    return [f for f in files_list if not os.path.isdir(os.path.join(prefix, f))]
+    return [f.replace(prefix + os.path.sep, '') for f in files_list if not os.path.isdir(os.path.join(prefix, f))]
 
 
 def bundle_conda(output, metadata, config, env, **kw):
