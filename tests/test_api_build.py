@@ -716,19 +716,10 @@ def test_script_win_creates_exe(test_config):
     assert package_has_file(outputs[0], 'Scripts/test-script-script.py')
 
 
-def test_build_output_folder_moves_file(test_metadata, testing_workdir):
+def test_output_folder_moves_file(test_metadata, testing_workdir):
     test_metadata.config.output_folder = testing_workdir
     outputs = api.build(test_metadata, no_test=True)
-    assert not os.path.exists(outputs[0])
-    assert os.path.isfile(os.path.join(testing_workdir, os.path.basename(outputs[0])))
-
-
-def test_test_output_folder_moves_file(test_metadata, testing_workdir):
-    outputs = api.build(test_metadata, no_test=True)
-    assert os.path.exists(outputs[0])
-    api.test(outputs[0], output_folder=testing_workdir)
-    assert not os.path.exists(outputs[0])
-    assert os.path.isfile(os.path.join(testing_workdir, os.path.basename(outputs[0])))
+    assert outputs[0].startswith(testing_workdir)
 
 
 def test_info_files_json(test_config):

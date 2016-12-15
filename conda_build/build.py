@@ -769,7 +769,8 @@ def bundle_conda(output, metadata, config, env, **kw):
         if f not in files:
             files.append(f)
     files = filter_files(files, prefix=config.build_prefix)
-    final_output = os.path.join(config.output_folder or config.bldpkgs_dir, output_filename)
+    output_folder = os.path.join(config.output_folder, config.subdir) if config.output_folder else None
+    final_output = os.path.join(output_folder or config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
