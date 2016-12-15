@@ -1,7 +1,10 @@
 import unittest
+import json
+from os import link
+from os.path import join
 
 import conda_build._link as _link
-
+from conda_build.conda_interface import PathType, EntityEncoder, CrossPlatformStLink
 
 class TestLink(unittest.TestCase):
 
@@ -17,3 +20,38 @@ class TestLink(unittest.TestCase):
                  'sp/foo/__pycache__/utils.cpython-34.pyc'),
         ]:
             self.assertEqual(_link.pyc_f(f, (3, 4, 2)), r)
+
+
+def test_pathtype():
+    hardlink = PathType("hardlink")
+    assert str(hardlink) == "hardlink"
+    assert hardlink.__json__() == 'hardlink'
+
+    softlink = PathType("softlink")
+    assert str(softlink) == "softlink"
+    assert softlink.__json__() == "softlink"
+
+
+def test_entity_encoder(tmpdir):
+    test_file = join(str(tmpdir), "test-file")
+    test_json = {"a": PathType("hardlink"), "b": 1}
+    with open(test_file, "w") as f:
+        json.dump(test_json, f, cls=EntityEncoder)
+
+    with open(test_file, "r") as f:
+        json_file = json.load(f)
+    assert json_file == {"a": "hardlink", "b": 1}
+
+
+def test_crossplatform_st_link(tmpdir):
+    test_file = join(str(tmpdir), "test-file")
+    test_file_linked = join(str(tmpdir), "test-file-linked")
+    test_file_link = join(str(tmpdir), "test-file-link")
+
+    open(test_file, "a").close()
+    open(test_file_link, "a").close()
+    link(test_file_link, test_file_linked)
+    assert 1 == CrossPlatformStLink.st_nlink(test_file)
+    assert 2 == CrossPlatformStLink.st_nlink(test_file_link)
+    assert 2 == CrossPlatformStLink.st_nlink(test_file_linked)
+
