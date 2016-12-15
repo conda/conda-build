@@ -138,8 +138,8 @@ def which_prefix(path):
         prefix = dirname(prefix)
 
 if parse_version(conda.__version__) >= parse_version("4.3"):
-    from conda.exports import FileMode, NodeType
-    FileMode, PathType = FileMode, NodeType
+    from conda.exports import FileMode, PathType
+    FileMode, PathType = FileMode, PathType
     from conda.export import EntityEncoder
     EntityEncoder = EntityEncoder
     from conda.export import CrossPlatformStLink
