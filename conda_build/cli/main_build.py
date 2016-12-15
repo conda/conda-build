@@ -116,6 +116,12 @@ different sets of packages."""
         help='Do not remove work directory or _build environment, '
         'to speed up debugging.  Does not apply patches or download source.'
     )
+
+    p.add_argument(
+        '--force_download',
+        action='store_true',
+        help='Force conda-build to update source'
+    )
     p.add_argument(
         '-q', "--quiet",
         action="store_true",

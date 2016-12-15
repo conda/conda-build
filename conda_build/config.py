@@ -99,6 +99,7 @@ class Config(object):
                   Setting('keep_old_work', False),
                   Setting('noarch', False),
                   Setting('no_download_source', False),
+                  Setting('force_download', False),
                   Setting('override_channels', False),
                   Setting('skip_existing', False),
                   Setting('token', None),
