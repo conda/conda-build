@@ -110,6 +110,7 @@ class Config(object):
                   Setting('platform', platform),
                   Setting('set_build_id', True),
                   Setting('disable_pip', False),
+                  Setting('output_folder', None),
 
                   # pypi upload settings (twine)
                   Setting('password', None),

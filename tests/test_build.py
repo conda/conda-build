@@ -272,3 +272,8 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
         "version": 1}
     with open(files_json_path, "r") as files_json:
         assert json.load(files_json) == expected_output
+
+
+def test_filter_files():
+    files_list = ['a', '.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
+    assert build.filter_files(files_list, '') == ['a']

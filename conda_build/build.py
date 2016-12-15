@@ -737,6 +737,14 @@ to get the latest version.
 """ % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
+def filter_files(files_list, prefix, filter_patterns=('.*[\\\\/]?\.git[\\\\/].*', )):
+    """Remove things like .git from the list of files to be copied"""
+    for pattern in filter_patterns:
+        r = re.compile(pattern)
+        files_list = set(files_list) - set(filter(r.match, files_list))
+    return [f for f in files_list if not os.path.isdir(os.path.join(prefix, f))]
+
+
 def bundle_conda(output, metadata, config, env, **kw):
     files = output.get('files', [])
     if not files and output.get('script'):
@@ -759,6 +767,8 @@ def bundle_conda(output, metadata, config, env, **kw):
     for f in info_files:
         if f not in files:
             files.append(f)
+    files = filter_files(files, prefix=config.build_prefix)
+    final_output = os.path.join(config.output_folder or config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -790,8 +800,10 @@ def bundle_conda(output, metadata, config, env, **kw):
                           config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
-        copy_into(tmp_path, config.bldpkgs_dir, config.timeout)
-    return os.path.join(config.bldpkgs_dir, output_filename)
+        if os.path.isfile(final_output):
+            os.remove(final_output)
+        copy_into(tmp_path, final_output, config.timeout)
+    return final_output
 
 
 def bundle_wheel(output, metadata, config, env):
@@ -1256,10 +1268,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
-    if (is_package and hasattr(config, 'output_folder') and config.output_folder):
-        os.rename(recipedir_or_package_or_metadata,
-                  os.path.join(config.output_folder,
-                               os.path.basename(recipedir_or_package_or_metadata)))
     if need_cleanup:
         rm_rf(recipe_dir)
 
@@ -1416,14 +1424,6 @@ packages, the other package needs to be rebuilt
                     handle_pypi_upload(f, config=config)
                 already_built.add(f)
 
-        if hasattr(config, 'output_folder') and config.output_folder:
-            for f in built_packages:
-                # may have already been moved during testing
-                destination = os.path.join(config.output_folder, os.path.basename(f))
-                if os.path.isfile(f):
-                    if os.path.exists(destination):
-                        os.remove(destination)
-                    os.rename(f, destination)
     return built_packages
 
 
