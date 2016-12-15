@@ -157,21 +157,8 @@ else:
         hardlink = "hardlink"
         softlink = "softlink"
 
-        @classmethod
-        def __call__(cls, value, *args, **kwargs):
-            if isinstance(cls, value, *args, **kwargs):
-                return cls[value]
-            return super(PathType, cls).__call__(value, *args, **kwargs)
-
-        @classmethod
-        def __getitem__(cls, name):
-            return cls._member_map_[name.replace('-', '').replace('_', '').lower()]
-
-        def __int__(self):
-            return self.value
-
         def __str__(self):
-            return self.name
+            return self.value
 
         def __json__(self):
             return self.name
@@ -238,13 +225,14 @@ else:
                                        OPEN_EXISTING, 0, None)
                 if hfile is None:
                     from ctypes import WinError
-                    raise WinError()
+                    raise WinError(
+                        "Could not determine determine number of hardlinks for %s" % path)
                 info = cls.BY_HANDLE_FILE_INFORMATION()
                 rv = cls.GetFileInformationByHandle(hfile, info)
                 cls.CloseHandle(hfile)
                 if rv == 0:
                     from ctypes import WinError
-                    raise WinError()
+                    raise WinError("Could not determine file information for %s" % path)
                 return info.nNumberOfLinks
 
         @classmethod
