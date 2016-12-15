@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
 import contextlib
-from difflib import get_close_matches
 import fnmatch
 from glob import glob
 from locale import getpreferredencoding

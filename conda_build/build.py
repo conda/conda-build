@@ -57,7 +57,7 @@ from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_
                                silence_loggers, path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
                                ensure_list, get_lock, ExitStack, get_recipe_abspath)
-from conda_build.metadata import MetaData, build_string_from_metadata, expand_globs
+from conda_build.metadata import build_string_from_metadata, expand_globs
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -297,7 +297,8 @@ def detect_and_record_prefix_files(m, files, prefix, config):
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m) or m.get_value('build/noarch')
+    is_noarch = (m.get_value('build/noarch_python') or is_noarch_python(m) or
+                 m.get_value('build/noarch'))
 
     if files_with_prefix and not is_noarch:
         if on_win:
@@ -1119,7 +1120,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     :type m: Metadata
     '''
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
-    is_package = False
     need_cleanup = False
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
@@ -1151,8 +1151,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             #    how to add elements.
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
-            is_package = True
-            if metadata.meta.get('test') and metadata.meta['test'].get('source_files'):
+            if (metadata.meta.get('test') and metadata.meta['test'].get('source_files') and
+                    not os.listdir(config.work_dir)):
                 source.provide(metadata.path, metadata.get_section('source'), config=config)
 
     config.compute_build_id(metadata.name())

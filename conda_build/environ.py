@@ -360,6 +360,7 @@ def get_shlib_ext():
     else:
         raise NotImplementedError(sys.platform)
 
+
 def windows_vars(prefix):
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
