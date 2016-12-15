@@ -5,15 +5,18 @@ matrix:
       os: linux
     - python: '3.5'
       os: linux
-    # - python: '3.5'
-    #   env: CANARY=true
-    #   os: linux
+#    - python: '3.5'
+#      env: CANARY=true
+#      os: linux
     - python: '3.5'
       env: CONDA=4.1
       os: linux
     - python: '3.5'
       env:
         - FLAKE8=true
+      os: linux
+    - python: '3.5'
+      env: CONDA_MASTER=true
       os: linux
 
 install:
@@ -34,6 +37,15 @@ install:
     else
       if [ -n "$CONDA" ]; then
         conda install -y --no-deps conda=${CONDA};
+      fi
+    
+      if [[ "$CONDA_MASTER" == "true" ]]; then
+        git clone https://github.com/conda/conda.git;
+        pushd conda;
+        python setup.py install;
+        hash -r;
+        conda info;
+        popd;
       fi
     fi
 
