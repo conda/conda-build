@@ -1,0 +1,10 @@
+package:
+  name: split_packages_jinja2_subpackage_name
+  version: 1.0
+
+requirements:
+  run:
+    - {{ PKG_NAME }}_subpackage
+
+outputs:
+  - name: {{ PKG_NAME }}_subpackage

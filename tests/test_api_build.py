@@ -80,9 +80,7 @@ def test_recipe_builds(recipe, test_config, testing_workdir):
     # so they can be checked within build scripts
     os.environ["CONDA_TEST_VAR"] = "conda_test"
     os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
-    ok_to_test = api.build(recipe, config=test_config)
-    if ok_to_test:
-        api.test(recipe, config=test_config)
+    outputs = api.build(recipe, config=test_config)
 
 
 def test_token_upload(testing_workdir):
@@ -131,9 +129,8 @@ def test_git_describe_info_on_branch(test_config):
 def test_no_include_recipe_config_arg(test_metadata):
     """Two ways to not include recipe: build/include_recipe: False in meta.yaml; or this.
     Former is tested with specific recipe."""
-    output_file = api.get_output_file_path(test_metadata)
-    api.build(test_metadata)
-    assert package_has_file(output_file, "info/recipe/meta.yaml")
+    outputs = api.build(test_metadata)
+    assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
     # make sure that it is not there when the command line flag is passed
     test_metadata.config.include_recipe = False
@@ -146,9 +143,8 @@ def test_no_include_recipe_config_arg(test_metadata):
 def test_no_include_recipe_meta_yaml(test_metadata, test_config):
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
-    output_file = api.get_output_file_path(test_metadata)
-    api.build(test_metadata)
-    assert package_has_file(output_file, "info/recipe/meta.yaml")
+    outputs = api.build(test_metadata)
+    assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
     output_file = api.get_output_file_path(os.path.join(metadata_dir, '_no_include_recipe'),
                                            config=test_config)
@@ -245,7 +241,6 @@ def test_checkout_tool_as_dependency(testing_workdir, test_config):
     test_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
-    old_path = os.environ["PATH"]
     os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
     FNULL = open(os.devnull, 'w')
     with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
@@ -340,14 +335,13 @@ def test_skip_existing(testing_workdir, test_config, capfd):
 
 def test_skip_existing_url(test_metadata, testing_workdir, capfd):
     # make sure that it is built
-    output_file = api.get_output_file_path(test_metadata)
-    api.build(test_metadata)
+    outputs = api.build(test_metadata)
 
     # Copy our package into some new folder
     output_dir = os.path.join(testing_workdir, 'someoutput')
     platform = os.path.join(output_dir, test_metadata.config.subdir)
     os.makedirs(platform)
-    copy_into(output_file, os.path.join(platform, os.path.basename(output_file)))
+    copy_into(outputs[0], os.path.join(platform, os.path.basename(outputs[0])))
 
     # create the index so conda can find the file
     api.update_index(platform, config=test_metadata.config)
@@ -649,19 +643,16 @@ def test_noarch_python_with_tests(test_config):
 
 def test_noarch_python(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
-    assert package_has_file(fn, 'info/files') is not ''
-    noarch = json.loads(package_has_file(fn, 'info/noarch.json').decode())
+    outputs = api.build(recipe, config=test_config)
+    noarch = json.loads(package_has_file(outputs[0], 'info/noarch.json').decode())
     assert 'entry_points' in noarch
     assert 'type' in noarch
 
 
 def test_skip_compile_pyc(test_config):
     recipe = os.path.join(metadata_dir, "skip_compile_pyc")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
-    tf = tarfile.open(fn)
+    outputs = api.build(recipe, config=test_config)
+    tf = tarfile.open(outputs[0])
     pyc_count = 0
     for f in tf.getmembers():
         filename = os.path.basename(f.name)
@@ -678,10 +669,9 @@ def test_skip_compile_pyc(test_config):
 #@pytest.mark.skipif(on_win, reason="binary prefixes not supported on Windows")
 def test_detect_binary_files_with_prefix(test_config):
     recipe = os.path.join(metadata_dir, "_detect_binary_files_with_prefix")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
+    outputs = api.build(recipe, config=test_config)
     matches = []
-    with tarfile.open(fn) as tf:
+    with tarfile.open(outputs[0]) as tf:
         has_prefix = tf.extractfile('info/has_prefix')
         contents = [p.strip().decode('utf-8') for p in
                     has_prefix.readlines()]
@@ -694,10 +684,9 @@ def test_detect_binary_files_with_prefix(test_config):
 
 def test_skip_detect_binary_files_with_prefix(test_config):
     recipe = os.path.join(metadata_dir, "_skip_detect_binary_files_with_prefix")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
+    outputs = api.build(recipe, config=test_config)
     matches = []
-    with tarfile.open(fn) as tf:
+    with tarfile.open(outputs[0]) as tf:
         try:
             has_prefix = tf.extractfile('info/has_prefix')
             contents = [p.strip().decode('utf-8') for p in
@@ -713,36 +702,24 @@ def test_skip_detect_binary_files_with_prefix(test_config):
 
 def test_fix_permissions(test_config):
     recipe = os.path.join(metadata_dir, "fix_permissions")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
-    tf = tarfile.open(fn)
-    for f in tf.getmembers():
-        assert f.mode & 0o444 == 0o444, "tar member '{}' has invalid (read) mode".format(f.name)
+    outputs = api.build(recipe, config=test_config)
+    with tarfile.open(outputs[0]) as tf:
+        for f in tf.getmembers():
+            assert f.mode & 0o444 == 0o444, "tar member '{}' has invalid (read) mode".format(f.name)
 
 
 @pytest.mark.skipif(not on_win, reason="windows-only functionality")
 def test_script_win_creates_exe(test_config):
     recipe = os.path.join(metadata_dir, "_script_win_creates_exe")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
-    assert package_has_file(fn, 'Scripts/test-script.exe')
-    assert package_has_file(fn, 'Scripts/test-script-script.py')
+    outputs = api.build(recipe, config=test_config)
+    assert package_has_file(outputs[0], 'Scripts/test-script.exe')
+    assert package_has_file(outputs[0], 'Scripts/test-script-script.py')
 
 
-def test_build_output_folder_moves_file(test_metadata, testing_workdir):
-    output_path = api.get_output_file_path(test_metadata)
+def test_output_folder_moves_file(test_metadata, testing_workdir):
     test_metadata.config.output_folder = testing_workdir
-    api.build(test_metadata, no_test=True)
-    assert not os.path.exists(output_path)
-    assert os.path.isfile(os.path.join(testing_workdir, os.path.basename(output_path)))
-
-
-def test_test_output_folder_moves_file(test_metadata, testing_workdir):
-    output_path = api.get_output_file_path(test_metadata)
-    api.build(test_metadata, no_test=True)
-    api.test(output_path, output_folder=testing_workdir)
-    assert not os.path.exists(output_path)
-    assert os.path.isfile(os.path.join(testing_workdir, os.path.basename(output_path)))
+    outputs = api.build(test_metadata, no_test=True)
+    assert outputs[0].startswith(testing_workdir)
 
 
 def test_info_files_json(test_config):
@@ -754,7 +731,6 @@ def test_info_files_json(test_config):
         data = json.loads(tf.extractfile('info/paths.json').read().decode('utf-8'))
     fields = ["_path", "sha256", "size_in_bytes", "path_type", "file_mode", "no_link",
               "prefix_placeholder", "inode_paths"]
-
     for key in data.keys():
         assert key in ['paths', 'paths_version']
     for paths in data.get('paths'):

@@ -1,3 +1,27 @@
+2016-12-12 2.0.12:
+
+Enhancements:
+-------------
+
+* Whitelist, rather than hardcode, MACOSX_DEPLOYMENT_TARGET.  Default to 10.7  #1561
+* Allow local relative paths to be passed as channel arguments #1565
+
+Bug fixes:
+----------
+
+* Keep CONDA_PATH_BACKUP as allowed variable in build/test env activation.  Necessary to make deactivation work correctly.  #1560
+* Define nomkl selector when FEATURE_NOMKL environment variable is not set #1562
+* Move test removal of packaged recipe until after test completes #1563
+* Allow source_files in recognized meta.yaml fields #1572
+
+Contributors:
+-------------
+
+* @jakirkham
+* @mingwandroid
+* @msarahan
+
+
 2016-11-28 2.0.11:
 ------------------
 

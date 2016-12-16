@@ -102,7 +102,7 @@ def ensure_valid_license_family(meta):
     except KeyError:
         return
     if (remove_special_characters(normalize(license_family))
-        not in allowed_license_families):
+            not in allowed_license_families):
         raise RuntimeError(exceptions.indent(
             "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
