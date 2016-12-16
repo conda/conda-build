@@ -13,5 +13,5 @@ outputs:
       - somedir
       - "*.ext"
     test:
-      script: test_subpackage1.py
+      script: run_test.py
       script_interpreter: python

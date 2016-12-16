@@ -163,7 +163,7 @@ def create_pl_files(dir_path, m):
             for out in m.meta.get('outputs', []):
                 if m.name() == out['name']:
                     out_test_script = out.get('test', {}).get('script', 'no-file')
-                    name = out_test_script if out_test_script[-3:].lower() == '.pl' else 'no-file'
+                    name = out_test_script if out_test_script.endswith('.pl') else 'no-file'
             with open(join(m.path, name)) as fi:
                 print("# --- run_test.pl (begin) ---", file=fo)
                 fo.write(fi.read())
