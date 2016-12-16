@@ -17,6 +17,7 @@ from conda_build.conda_interface import PY3, url_path
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
+from pytest_mock import mocker
 import yaml
 import tarfile
 
