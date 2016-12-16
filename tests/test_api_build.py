@@ -173,6 +173,7 @@ def test_build_with_no_activate_does_not_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False)
 
 
+@pytest.mark.serial
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True)
 
