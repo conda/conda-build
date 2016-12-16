@@ -56,7 +56,7 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
-                               ensure_list, get_lock, ExitStack, get_recipe_abspath)
+                               ensure_list, get_lock, ExitStack, get_recipe_abspath, tmp_chdir)
 from conda_build.metadata import build_string_from_metadata, expand_globs
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
@@ -753,9 +753,9 @@ def bundle_conda(output, metadata, config, env, **kw):
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
         initial_files_snapshot = prefix_files(config.build_prefix)
-        subprocess.check_output(interpreter.split(' ') +
-                                [os.path.join(metadata.path, output['script'])],
-                                cwd=config.build_prefix, env=env)
+        _check_call(interpreter.split(' ') +
+                    [os.path.join(metadata.path, output['script'])],
+                    cwd=config.build_prefix, env=env)
         files = prefix_files(config.build_prefix) - initial_files_snapshot
     tmp_metadata = copy.deepcopy(metadata)
     tmp_metadata.meta['package']['name'] = output['name']
@@ -809,9 +809,9 @@ def bundle_conda(output, metadata, config, env, **kw):
 
 
 def bundle_wheel(output, metadata, config, env):
-    with TemporaryDirectory() as tmpdir:
-        subprocess.check_call(['pip', 'wheel', '--wheel-dir', tmpdir, '--no-deps', '.'],
-                            env=env, cwd=config.work_dir)
+    import pip
+    with TemporaryDirectory() as tmpdir, tmp_chdir(config.work_dir):
+        pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
         wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
         copy_into(wheel_file, config.bldpkgs_dir)
     return os.path.join(config.bldpkgs_dir, os.path.basename(wheel_file))
