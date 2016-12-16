@@ -21,6 +21,7 @@ import sys as _sys
 # make the Config class available in the api namespace
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
 from conda_build.utils import ensure_list as _ensure_list
+from conda_build.utils import expand_globs as _expand_globs
 
 
 def render(recipe_path, config=None, **kwargs):
@@ -58,15 +59,25 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
           build_only=False, notest=False, config=None, **kwargs):
     import os
     from conda_build.build import build_tree
+    from conda_build.conda_interface import string_types
+    from conda_build.utils import find_recipe
 
     config = get_or_merge_config(config, **kwargs)
 
-    recipes = _ensure_list(recipe_paths_or_metadata)
+    recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
+    string_paths = [p for p in recipe_paths_or_metadata if isinstance(p, string_types)]
+    paths = _expand_globs(string_paths, os.getcwd())
+    recipes = []
+    for recipe in paths[:]:
+        try:
+            recipes.append(find_recipe(recipe))
+        except IOError:
+            pass
+    metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
+    recipes.extend(metadata)
     absolute_recipes = []
     for recipe in recipes:
-        if hasattr(recipe, "config"):
-            absolute_recipes.append(recipe)
-        elif os.path.isabs(recipe):
+        if hasattr(recipe, "config") or os.path.isabs(recipe):
             absolute_recipes.append(recipe)
         else:
             absolute_recipes.append(os.path.normpath(os.path.join(os.getcwd(), recipe)))

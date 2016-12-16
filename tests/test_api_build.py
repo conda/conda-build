@@ -748,3 +748,17 @@ def test_info_files_json(test_config):
         else:
             assert file.get("prefix_placeholder") is None
             assert file.get("file_mode") is None
+
+
+def test_build_expands_wildcards(mocker, testing_workdir):
+    build_tree = mocker.patch("conda_build.build.build_tree")
+    config = api.Config()
+    files = ['abc', 'acb']
+    for f in files:
+        os.makedirs(f)
+        with open(os.path.join(f, 'meta.yaml'), 'w') as fh:
+            fh.write('\n')
+    api.build(["a*"], config=config)
+    output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
+    build_tree.assert_called_once_with(output, post=None, need_source_download=True,
+                                       build_only=False, notest=False, config=config)

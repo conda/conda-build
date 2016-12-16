@@ -103,25 +103,19 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     fn = api.get_output_file_path(recipe_path, config=test_config)
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', test_config.croot]
     main_build.execute(args)
-    fn = api.get_output_file_path(recipe_path,
-                                  config=test_config)
-    assert package_has_file(fn, 'info/has_prefix')
-    data = package_has_file(fn, 'info/has_prefix')
-    if hasattr(data, 'decode'):
-        data = data.decode('UTF-8')
+    data = package_has_file(fn, 'binary-has-prefix')
+    assert data
     assert 'has_prefix_files_1' in data
 
 
 def test_build_no_build_id(testing_workdir, test_config, capfd):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
-            '--croot', test_config.croot, '--no-activate',]
+            '--croot', test_config.croot, '--no-activate']
     main_build.execute(args)
     fn = api.get_output_file_path(os.path.join(metadata_dir, "has_prefix_files"),
                                   config=test_config)
     assert package_has_file(fn, 'info/has_prefix')
-    data = package_has_file(fn, 'info/has_prefix')
-    if hasattr(data, 'decode'):
-        data = data.decode('UTF-8')
+    data = package_has_file(fn, 'binary-has-prefix')
     assert 'has_prefix_files_1' not in data
 
 

@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import glob
 import logging
 import os
 import re
@@ -16,7 +15,7 @@ from .conda_interface import specs_from_url
 from conda_build import exceptions
 from conda_build.features import feature_list
 from conda_build.config import Config
-from conda_build.utils import rec_glob, ensure_list
+from conda_build.utils import ensure_list, find_recipe, expand_globs
 from conda_build.license_family import ensure_valid_license_family
 
 try:
@@ -175,19 +174,6 @@ def parse(data, config, path=None):
     ensure_valid_license_family(res)
     ensure_valid_noarch_value(res)
     return sanitize(res)
-
-
-def expand_globs(path_list, root_dir):
-    files = []
-    for path in path_list:
-        fullpath = os.path.join(root_dir, path)
-        if os.path.isdir(fullpath):
-            files.extend([os.path.join(root, f) for root, _, fs in os.walk(fullpath) for f in fs])
-        else:
-            files.extend(glob.glob(os.path.join(root_dir, path)))
-
-    # list comp is getting rid of absolute prefix, to match relative paths used in file list
-    return [f.replace(root_dir + os.path.sep, '') for f in files]
 
 
 trues = {'y', 'on', 'true', 'yes'}
@@ -388,24 +374,6 @@ def build_string_from_metadata(metadata):
         res.extend(('_'.join(features), '_'))
     res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
     return "".join(res)
-
-
-def find_recipe(path):
-    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
-
-    Returns folder containing meta.yaml, to be built.
-
-    If we have a base level meta.yaml and other supplemental ones, use that first"""
-    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
-    if len(results) > 1:
-        base_recipe = os.path.join(path, "meta.yaml")
-        if base_recipe in results:
-            return base_recipe
-        else:
-            raise IOError("More than one meta.yaml files found in %s" % path)
-    elif not results:
-        raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
-    return results[0]
 
 
 class MetaData(object):
