@@ -14,8 +14,4 @@ setup(
     provides=[name],
     py_modules=[name],
     entry_points={'console_scripts': ['%s_script = %s:main' % (name, name)], },
-    scripts=[
-        'shell/test-executable',
-        'shell/test-executable.bat',
-    ],
 )
