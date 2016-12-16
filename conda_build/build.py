@@ -344,7 +344,7 @@ def write_info_files_file(m, files, config):
             fo.write('\n')
         elif is_noarch_python(m):
             for f in files:
-                if f.find("site-packages") > 0:
+                if f.find("site-packages") >= 0:
                     fo.write(f[f.find("site-packages"):] + '\n')
                 elif f.startswith("bin") and (f not in entry_point_script_names):
                     fo.write(f.replace("bin", "python-scripts") + '\n')
@@ -1041,7 +1041,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 
         # the legacy noarch
         if m.get_value('build/noarch_python'):
-            noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
+            noarch_python.Ftransform(m, sorted(files2 - files1), config.build_prefix)
         # new way: build/noarch: python
         elif is_noarch_python(m):
             noarch_python.populate_files(
