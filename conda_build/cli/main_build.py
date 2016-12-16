@@ -187,7 +187,33 @@ different sets of packages."""
         help=("folder to dump output package to.  Package are moved here if build or test succeeds."
               "  Destination folder must exist prior to using this.")
     )
-
+    p.add_argument(
+        "--no-prefix-length-fallback", dest='prefix_length_fallback',
+        action="store_false",
+        help=("Disable fallback to older 80 character prefix length if environment creation"
+              " fails due to insufficient prefix length in dependency packages"),
+        default=True,
+    )
+    p.add_argument(
+        "--prefix-length-fallback", dest='prefix_length_fallback',
+        action="store_true",
+        help=("Disable fallback to older 80 character prefix length if environment creation"
+              " fails due to insufficient prefix length in dependency packages"),
+        # this default will change to false in the future, when we deem that the community has
+        #     had enough time to build long-prefix length packages.
+        default=True,
+    )
+    p.add_argument(
+        "--prefix-length", dest='_prefix_length',
+        help=("length of build prefix.  For packages with binaries that embed the path, this is"
+              " critical to ensuring that your package can run as many places as possible.  Note"
+              "that this value can be altered by the OS below conda-build (e.g. encrypted "
+              "filesystems on Linux), and you should prefer to set --croot to a non-encrypted "
+              "location instead, so that you maintain a known prefix length."),
+        # this default will change to false in the future, when we deem that the community has
+        #     had enough time to build long-prefix length packages.
+        default=255, type=int,
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)

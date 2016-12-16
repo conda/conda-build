@@ -18,12 +18,12 @@ from .utils import get_build_folders, rm_rf
 
 log = logging.getLogger(__file__)
 on_win = (sys.platform == 'win32')
+DEFAULT_PREFIX_LENGTH = 255
 
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
 
-DEFAULT_PREFIX_LENGTH = 255
 conda_build = "conda-build"
 
 
@@ -81,8 +81,6 @@ class Config(object):
             self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
-        self._prefix_length = kwargs.get("prefix_length", getattr(self, '_prefix_length',
-                                                                  DEFAULT_PREFIX_LENGTH))
         croot = kwargs.get('croot')
         if croot:
             self._croot = croot
@@ -111,6 +109,8 @@ class Config(object):
                   Setting('set_build_id', True),
                   Setting('disable_pip', False),
                   Setting('output_folder', None),
+                  Setting('prefix_length_fallback', True),
+                  Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
 
                   # pypi upload settings (twine)
                   Setting('password', None),
