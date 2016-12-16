@@ -346,6 +346,7 @@ def test_sign(testing_workdir):
     os.remove(keypath + '.pub')
 
 
+@pytest.mark.serial
 def test_purge(testing_workdir, test_metadata):
     """
     purge clears out build folders - things like some_pkg_12048309850135

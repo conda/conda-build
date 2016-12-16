@@ -73,7 +73,8 @@ test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
   - mkdir C:\cbtmp
-  - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 2
+  - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp
