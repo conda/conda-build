@@ -215,21 +215,20 @@ def test_create_info_files_json(testing_workdir, test_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "foo"]
 
-    build.create_info_files_json(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
-    files_json_path = os.path.join(info_dir, "files.json")
+    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
-        "files": [{"file_type": "hardlink", "path": "one",
+        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
+                   "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
-                  {"file_type": "hardlink", "path": "two", "size_in_bytes": 0,
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
-                  {"file_mode": "text", "file_type": "hardlink",
-                   "path": "foo", "prefix_placeholder": "prefix/path",
+                  {"path_type": "hardlink", "_path": "one",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "two",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
-        "fields": ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
-                   "prefix_placeholder", "no_link", "inode_first_path"],
-        "version": 1}
+        "paths_version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
         assert output == expected_output
@@ -251,24 +250,28 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "one_hl", "foo"]
 
-    build.create_info_files_json(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
-    files_json_path = os.path.join(info_dir, "files.json")
+    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
-        "files": [{"inode_paths": ["one", "one_hl"], "file_type": "hardlink", "path": "one",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"file_type": "hardlink", "path": "two", "size_in_bytes": 0,
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"},
-                  {"inode_paths": ["one", "one_hl"], "file_type": "hardlink",
-                   "path": "one_hl",
-                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                   "size_in_bytes": 0},
-                  {"file_mode": "text", "file_type": "hardlink", "path": "foo",
+        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
                    "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "one", "inode_paths": ["one", "one_hl"],
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "one_hl", "inode_paths": ["one", "one_hl"],
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "two",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
-        "fields": ["path", "sha256", "size_in_bytes", "file_type", "file_mode",
-                   "prefix_placeholder", "no_link", "inode_first_path"],
-        "version": 1}
+        "paths_version": 1}
     with open(files_json_path, "r") as files_json:
-        assert json.load(files_json) == expected_output
+        output = json.load(files_json)
+        assert output == expected_output
+
+
+def test_filter_files():
+    files_list = ['a', '.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
+    assert build.filter_files(files_list, '') == ['a']

@@ -24,6 +24,7 @@ from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path
 import conda.config as cc  # NOQA
 from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
+from enum import Enum
 
 import os
 
@@ -99,6 +100,7 @@ else:
 
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
+
 class SignatureError(Exception):
     pass
 
@@ -135,3 +137,148 @@ def which_prefix(path):
             # we cannot chop off any more directories, so we didn't find it
             return None
         prefix = dirname(prefix)
+
+if parse_version(conda.__version__) >= parse_version("4.3"):
+    from conda.exports import FileMode, PathType
+    FileMode, PathType = FileMode, PathType
+    from conda.export import EntityEncoder
+    EntityEncoder = EntityEncoder
+    from conda.export import CrossPlatformStLink
+    CrossPlatformStLink = CrossPlatformStLink
+else:
+    from json import JSONEncoder
+    from os import lstat
+    import os
+
+    class PathType(Enum):
+        """
+        Refers to if the file in question is hard linked or soft linked. Originally designed to be used
+        in paths.json
+        """
+        hardlink = "hardlink"
+        softlink = "softlink"
+
+        def __str__(self):
+            return self.value
+
+        def __json__(self):
+            return self.name
+
+
+    class FileMode(Enum):
+        """
+        Refers to the mode of the file. Originally referring to the has_prefix file, but adopted
+        for paths.json
+        """
+        text = 'text'
+        binary = 'binary'
+
+        def __str__(self):
+            return "%s" % self.value
+
+
+    class EntityEncoder(JSONEncoder):
+        # json.dumps(obj, cls=SetEncoder)
+        def default(self, obj):
+            if hasattr(obj, 'dump'):
+                return obj.dump()
+            elif hasattr(obj, '__json__'):
+                return obj.__json__()
+            elif hasattr(obj, 'to_json'):
+                return obj.to_json()
+            elif hasattr(obj, 'as_json'):
+                return obj.as_json()
+            return JSONEncoder.default(self, obj)
+
+
+    # work-around for python bug on Windows prior to python 3.2
+    # https://bugs.python.org/issue10027
+    # Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
+    class CrossPlatformStLink(object):
+        _st_nlink = None
+
+        def __call__(self, path):
+            return self.st_nlink(path)
+
+        @classmethod
+        def st_nlink(cls, path):
+            if cls._st_nlink is None:
+                cls._initialize()
+            return cls._st_nlink(path)
+
+        @classmethod
+        def _standard_st_nlink(cls, path):
+            return lstat(path).st_nlink
+
+        @classmethod
+        def _windows_st_nlink(cls, path):
+            st_nlink = cls._standard_st_nlink(path)
+            if st_nlink != 0:
+                return st_nlink
+            else:
+                # cannot trust python on Windows when st_nlink == 0
+                # get value using windows libraries to be sure of its true value
+                # Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
+                GENERIC_READ = 0x80000000
+                FILE_SHARE_READ = 0x00000001
+                OPEN_EXISTING = 3
+                hfile = cls.CreateFile(path, GENERIC_READ, FILE_SHARE_READ, None,
+                                       OPEN_EXISTING, 0, None)
+                if hfile is None:
+                    from ctypes import WinError
+                    raise WinError(
+                        "Could not determine determine number of hardlinks for %s" % path)
+                info = cls.BY_HANDLE_FILE_INFORMATION()
+                rv = cls.GetFileInformationByHandle(hfile, info)
+                cls.CloseHandle(hfile)
+                if rv == 0:
+                    from ctypes import WinError
+                    raise WinError("Could not determine file information for %s" % path)
+                return info.nNumberOfLinks
+
+        @classmethod
+        def _initialize(cls):
+            if os.name != 'nt':
+                cls._st_nlink = cls._standard_st_nlink
+            else:
+                # http://msdn.microsoft.com/en-us/library/windows/desktop/aa363858
+                import ctypes
+                from ctypes import POINTER
+                from ctypes.wintypes import DWORD, HANDLE, BOOL
+
+                cls.CreateFile = ctypes.windll.kernel32.CreateFileW
+                cls.CreateFile.argtypes = [ctypes.c_wchar_p, DWORD, DWORD, ctypes.c_void_p,
+                                           DWORD, DWORD, HANDLE]
+                cls.CreateFile.restype = HANDLE
+
+                # http://msdn.microsoft.com/en-us/library/windows/desktop/ms724211
+                cls.CloseHandle = ctypes.windll.kernel32.CloseHandle
+                cls.CloseHandle.argtypes = [HANDLE]
+                cls.CloseHandle.restype = BOOL
+
+                class FILETIME(ctypes.Structure):
+                    _fields_ = [("dwLowDateTime", DWORD),
+                                ("dwHighDateTime", DWORD)]
+
+                class BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
+                    _fields_ = [("dwFileAttributes", DWORD),
+                                ("ftCreationTime", FILETIME),
+                                ("ftLastAccessTime", FILETIME),
+                                ("ftLastWriteTime", FILETIME),
+                                ("dwVolumeSerialNumber", DWORD),
+                                ("nFileSizeHigh", DWORD),
+                                ("nFileSizeLow", DWORD),
+                                ("nNumberOfLinks", DWORD),
+                                ("nFileIndexHigh", DWORD),
+                                ("nFileIndexLow", DWORD)]
+
+                cls.BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION
+
+
+                # http://msdn.microsoft.com/en-us/library/windows/desktop/aa364952
+                cls.GetFileInformationByHandle = ctypes.windll.kernel32.GetFileInformationByHandle
+                cls.GetFileInformationByHandle.argtypes = [HANDLE,
+                                                           POINTER(BY_HANDLE_FILE_INFORMATION)]
+                cls.GetFileInformationByHandle.restype = BOOL
+
+                cls._st_nlink = cls._windows_st_nlink

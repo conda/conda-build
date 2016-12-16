@@ -16,6 +16,7 @@ from conda_build.utils import on_win, prepend_bin_path
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
+subpackage_dir = os.path.join(thisdir, "test-recipes/split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
 
 
@@ -128,3 +129,11 @@ def get_noarch_python_meta(meta):
     d = meta.meta
     d['build']['noarch'] = "python"
     return MetaData.fromdict(d, config=meta.config)
+
+
+@pytest.fixture(autouse=True)
+def skip_serial(request):
+    if (request.node.get_marker('serial') and
+            getattr(request.config, 'slaveinput', {}).get('slaveid', 'local') != 'local'):
+        # under xdist and serial
+        pytest.skip('serial')

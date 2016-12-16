@@ -1,0 +1,12 @@
+package:
+  name: split_packages_unrecognized_script_type
+  version: 1.0
+
+requirements:
+  run:
+    - my_script_subpackage_unrecognized
+
+outputs:
+  # what happens when we have an unrecognized script type?
+  - name: my_script_subpackage_unrecognized
+    script: subpackage3.unrecognized

@@ -1,0 +1,15 @@
+package:
+  name: split_packages_script_install_files
+  version: 1.0
+
+requirements:
+  run:
+    - my_script_subpackage
+
+outputs:
+  - name: my_script_subpackage
+    script: subpackage1.py
+    script_interpreter: python
+    test:
+      script: test_subpackage1.py
+      script_interpreter: python
