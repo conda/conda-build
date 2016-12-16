@@ -418,6 +418,9 @@ def post_build(m, files, prefix, build_python, croot):
     print('number of files:', len(files))
     fix_permissions(files, prefix)
 
+    for f in files:
+        make_hardlink_copy(f, prefix)
+
     if sys.platform == 'win32':
         return
 
@@ -433,7 +436,6 @@ def post_build(m, files, prefix, build_python, croot):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
         if binary_relocation is True or (isinstance(f, list) and f in binary_relocation):
             mk_relative(m, f, prefix)
-        make_hardlink_copy(f, prefix)
 
 
 def check_symlinks(files, prefix, croot):
