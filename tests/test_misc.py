@@ -1,6 +1,5 @@
 import unittest
 import json
-from os import link
 from os.path import join
 
 import pytest
@@ -48,6 +47,7 @@ def test_entity_encoder(tmpdir):
 
 @pytest.mark.skipif(on_win, reason="link not available on win/py2.7")
 def test_crossplatform_st_link(tmpdir):
+    from os import link
     test_file = join(str(tmpdir), "test-file")
     test_file_linked = join(str(tmpdir), "test-file-linked")
     test_file_link = join(str(tmpdir), "test-file-link")
@@ -60,6 +60,7 @@ def test_crossplatform_st_link(tmpdir):
     assert 2 == CrossPlatformStLink.st_nlink(test_file_linked)
 
 
+@pytest.mark.skipif(not on_win, reason="already tested")
 def test_crossplatform_st_link_on_win(tmpdir):
     test_file = join(str(tmpdir), "test-file")
     open(test_file, "a").close()
