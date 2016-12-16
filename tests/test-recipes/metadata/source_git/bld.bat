@@ -9,8 +9,6 @@ echo "%gitdesc%"
 if not "%gitdesc%"=="1.20.2" exit 1
 git status
 if errorlevel 1 exit 1
-git diff
-if errorlevel 1 exit 1
 
 
 rem check that GIT_* tags are present

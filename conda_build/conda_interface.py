@@ -99,6 +99,7 @@ else:
 
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
+
 class SignatureError(Exception):
     pass
 

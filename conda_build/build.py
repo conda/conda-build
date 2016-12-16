@@ -56,7 +56,8 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
-                               ensure_list, get_lock, ExitStack)
+                               ensure_list, get_lock, ExitStack, get_recipe_abspath, tmp_chdir)
+from conda_build.metadata import build_string_from_metadata, expand_globs
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -195,7 +196,10 @@ def get_run_dists(m, config):
 def copy_recipe(m, config):
     if config.include_recipe and m.include_recipe():
         recipe_dir = join(config.info_dir, 'recipe')
-        os.makedirs(recipe_dir)
+        try:
+            os.makedirs(recipe_dir)
+        except:
+            pass
 
         if os.path.isdir(m.path):
             for fn in os.listdir(m.path):
@@ -219,6 +223,8 @@ def copy_recipe(m, config):
         if m.meta.get('requirements') and m.meta['requirements'].get('build'):
             build_deps = environ.Environment(m.config.build_prefix).package_specs
 
+        if not rendered_metadata.meta.get('build'):
+            rendered_metadata.meta['build'] = {}
         # hard-code build string so that any future "renderings" can't go wrong based on user env
         rendered_metadata.meta['build']['string'] = m.build_id()
 
@@ -291,7 +297,8 @@ def detect_and_record_prefix_files(m, files, prefix, config):
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    is_noarch = m.get_value('build/noarch_python') or is_noarch_python(m) or m.get_value('build/noarch')
+    is_noarch = (m.get_value('build/noarch_python') or is_noarch_python(m) or
+                 m.get_value('build/noarch'))
 
     if files_with_prefix and not is_noarch:
         if on_win:
@@ -479,6 +486,8 @@ def create_info_files(m, files, config, prefix):
         copy_into(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'),
                   config.timeout)
+    return [f.replace(config.build_prefix + '/', '') for root, _, _ in os.walk(config.info_dir)
+            for f in glob(os.path.join(root, '*'))]
 
 
 def get_short_path(m, target_file):
@@ -614,6 +623,9 @@ def create_env(prefix, specs, config, clear_cache=True):
             specs.append('%s@' % feature)
 
     if specs:  # Don't waste time if there is nothing to do
+        log.debug("Creating environment in %s", prefix)
+        log.debug(str(specs))
+
         with path_prepended(prefix):
             locks = []
             try:
@@ -726,6 +738,91 @@ to get the latest version.
 """ % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
+def filter_files(files_list, prefix, filter_patterns=('.*[\\\\/]?\.git[\\\\/].*', )):
+    """Remove things like .git from the list of files to be copied"""
+    for pattern in filter_patterns:
+        r = re.compile(pattern)
+        files_list = set(files_list) - set(filter(r.match, files_list))
+    return [f.replace(prefix + os.path.sep, '') for f in files_list if not os.path.isdir(os.path.join(prefix, f))]
+
+
+def bundle_conda(output, metadata, config, env, **kw):
+    files = output.get('files', [])
+    if not files and output.get('script'):
+        interpreter = output.get('script_interpreter')
+        if not interpreter:
+            interpreter = guess_interpreter(output['script'])
+        initial_files_snapshot = prefix_files(config.build_prefix)
+        _check_call(interpreter.split(' ') +
+                    [os.path.join(metadata.path, output['script'])],
+                    cwd=config.build_prefix, env=env)
+        files = prefix_files(config.build_prefix) - initial_files_snapshot
+    tmp_metadata = copy.deepcopy(metadata)
+    tmp_metadata.meta['package']['name'] = output['name']
+    tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
+
+    output_filename = ('-'.join([output['name'], metadata.version(),
+                                 build_string_from_metadata(tmp_metadata)]) + '.tar.bz2')
+    files = list(set(expand_globs(files, config.build_prefix)))
+    info_files = create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
+    for f in info_files:
+        if f not in files:
+            files.append(f)
+    files = filter_files(files, prefix=config.build_prefix)
+    output_folder = os.path.join(config.output_folder, config.subdir) if config.output_folder else None
+    final_output = os.path.join(output_folder or config.bldpkgs_dir, output_filename)
+
+    # lock the output directory while we build this file
+    # create the tarball in a temporary directory to minimize lock time
+    with TemporaryDirectory() as tmp:
+        tmp_path = os.path.join(tmp, os.path.basename(output_filename))
+        t = tarfile.open(tmp_path, 'w:bz2')
+
+        def order(f):
+            # we don't care about empty files so send them back via 100000
+            fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
+            # info/* records will be False == 0, others will be 1.
+            info_order = int(os.path.dirname(f) != 'info')
+            return info_order, fsize
+
+        # add files in order of a) in info directory, b) increasing size so
+        # we can access small manifest or json files without decompressing
+        # possible large binary or data files
+        for f in sorted(files, key=order):
+            t.add(join(config.build_prefix, f), f)
+        t.close()
+
+        # we're done building, perform some checks
+        tarcheck.check_all(tmp_path)
+        if not getattr(config, "noverify", False):
+            verifier = Verify()
+            ignore_scripts = config.ignore_package_verify_scripts if \
+                             config.ignore_package_verify_scripts else None
+            run_scripts = config.run_package_verify_scripts if \
+                          config.run_package_verify_scripts else None
+            verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
+                                    path_to_package=tmp_path)
+        if os.path.isfile(final_output):
+            os.remove(final_output)
+        copy_into(tmp_path, final_output, config.timeout)
+    return final_output
+
+
+def bundle_wheel(output, metadata, config, env):
+    import pip
+    with TemporaryDirectory() as tmpdir, tmp_chdir(config.work_dir):
+        pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
+        wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
+        copy_into(wheel_file, config.bldpkgs_dir)
+    return os.path.join(config.bldpkgs_dir, os.path.basename(wheel_file))
+
+
+bundlers = {
+    'conda': bundle_conda,
+    'wheel': bundle_wheel,
+}
+
+
 def build(m, config, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
@@ -741,13 +838,21 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
     if m.skip():
         print_skip_message(m)
-        return False
+        return []
+
+    with path_prepended(config.build_prefix):
+        env = environ.get_dict(config=config, m=m)
+    env["CONDA_BUILD_STATE"] = "BUILD"
+    if env_path_backup_var_exists:
+        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if config.skip_existing:
         package_exists = is_package_built(m, config)
         if package_exists:
             print(m.dist(), "is already built in {0}, skipping.".format(package_exists))
-            return False
+            return []
+
+    built_packages = []
 
     if post in [False, None]:
         print("BUILD START:", m.dist())
@@ -755,6 +860,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             print("    (actual version deferred until further download or env creation)")
 
         specs = [ms.spec for ms in m.ms_depends('build')]
+        if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
+            specs.extend(['pip', 'wheel'])
         create_env(config.build_prefix, specs, config=config)
         vcs_source = m.uses_vcs_in_build
         if vcs_source and vcs_source not in specs:
@@ -852,11 +959,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
-                    with path_prepended(config.build_prefix):
-                        env = environ.get_dict(config=config, m=m)
-                    env["CONDA_BUILD_STATE"] = "BUILD"
-                    if env_path_backup_var_exists:
-                        env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
                     work_file = join(config.work_dir, 'conda_build.sh')
                     if script:
                         with open(work_file, 'w') as bf:
@@ -920,10 +1022,10 @@ can lead to packages that include their dependencies.""" % meta_files))
         else:
             pkg_files = sorted(files2 - files1)
 
-        create_info_files(m, pkg_files, config=config, prefix=config.build_prefix)
-
+        # the legacy noarch
         if m.get_value('build/noarch_python'):
             noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
+        # new way: build/noarch: python
         elif is_noarch_python(m):
             noarch_python.populate_files(
                 m, pkg_files, config.build_prefix, entry_point_script_names)
@@ -931,48 +1033,51 @@ can lead to packages that include their dependencies.""" % meta_files))
         files3 = prefix_files(prefix=config.build_prefix)
         fix_permissions(files3 - files1, config.build_prefix)
 
-        path = bldpkg_path(m)
+        outputs = m.get_section('outputs')
+        # this is the old, default behavior: conda package, with difference between start
+        #    set of files and end set of files
+        requirements = m.get_value('requirements/run')
+        if not outputs:
+            outputs = [{'name': m.name(),
+                        'files': files3 - files1,
+                        'requirements': requirements}]
+        else:
+            made_meta = False
+            for out in outputs:
+                if out.get('name') in requirements:
+                    requirements.extend(out.get('requirements', []))
+                    made_meta = True
+            else:
+                if made_meta:
+                    outputs.append({'name': m.name(), 'requirements': requirements})
 
-        # lock the output directory while we build this file
-        # create the tarball in a temporary directory to minimize lock time
-        with TemporaryDirectory() as tmp:
-            tmp_path = os.path.join(tmp, os.path.basename(path))
-            t = tarfile.open(tmp_path, 'w:bz2')
+        for output in outputs:
+            built_packages.append(bundlers[output.get('type', 'conda')](output, m, config, env))
 
-            def order(f):
-                # we don't care about empty files so send them back via 100000
-                fsize = os.stat(join(config.build_prefix, f)).st_size or 100000
-                # info/* records will be False == 0, others will be 1.
-                info_order = int(os.path.dirname(f) != 'info')
-                return info_order, fsize
-
-            # add files in order of a) in info directory, b) increasing size so
-            # we can access small manifest or json files without decompressing
-            # possible large binary or data files
-            for f in sorted(files3 - files1, key=order):
-                t.add(join(config.build_prefix, f), f)
-            t.close()
-
-            # we're done building, perform some checks
-            tarcheck.check_all(tmp_path)
-
-            copy_into(tmp_path, path, config.timeout)
         update_index(config.bldpkgs_dir, config, could_be_mirror=False)
-
-        if not getattr(config, "noverify", False):
-            verifier = Verify()
-            ignore_scripts = config.ignore_package_verify_scripts if \
-                config.ignore_package_verify_scripts else None
-            run_scripts = config.run_package_verify_scripts if \
-                config.run_package_verify_scripts else None
-            verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
-                                    path_to_package=path)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
-    # returning true here says package is OK to test
-    return True
+    # return list of all package files emitted by this build
+    return built_packages
+
+
+def guess_interpreter(script_filename):
+    extensions_to_run_commands = {'.sh': 'sh',
+                                  '.bat': 'cmd',
+                                  '.ps1': 'powershell -executionpolicy bypass -File',
+                                  '.py': 'python'}
+    file_ext = os.path.splitext(script_filename)[1]
+    for ext, command in extensions_to_run_commands.items():
+        if file_ext.lower().startswith(ext):
+            interpreter_command = command
+            break
+    else:
+        raise NotImplementedError("Don't know how to run {0} file.   Please specify "
+                                  "script_interpreter for {1} output".format(file_ext,
+                                                                             script_filename))
+    return interpreter_command
 
 
 def clean_pkg_cache(dist, timeout):
@@ -1008,44 +1113,76 @@ def clean_pkg_cache(dist, timeout):
                     rm_rf(entry)
 
 
-def test(m, config, move_broken=True):
+def test(recipedir_or_package_or_metadata, config, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
     :param m: Package's metadata.
     :type m: Metadata
     '''
+    # we want to know if we're dealing with package input.  If so, we can move the input on success.
+    need_cleanup = False
 
-    if not os.path.isdir(config.build_folder):
-        os.makedirs(config.build_folder)
+    if hasattr(recipedir_or_package_or_metadata, 'config'):
+        metadata = recipedir_or_package_or_metadata
+        config = metadata.config
+    else:
+        recipe_dir, need_cleanup = get_recipe_abspath(recipedir_or_package_or_metadata)
+        config.need_cleanup = need_cleanup
 
-    clean_pkg_cache(m.dist(), config.timeout)
+        # This will create a new local build folder if and only if config doesn't already have one.
+        #   What this means is that if we're running a test immediately after build, we use the one
+        #   that the build already provided
+        metadata, _, _ = render_recipe(recipe_dir, config=config)
+        # this recipe came from an extracted tarball.
+        if need_cleanup:
+            # ensure that the local location of the package is indexed, so that conda can find the
+            #    local package
+            local_location = os.path.dirname(recipedir_or_package_or_metadata)
+            # strip off extra subdir folders
+            for platform in ('win', 'linux', 'osx'):
+                if os.path.basename(local_location).startswith(platform + "-"):
+                    local_location = os.path.dirname(local_location)
+            update_index(local_location, config=config)
+            if not os.path.abspath(local_location):
+                local_location = os.path.normpath(os.path.abspath(
+                    os.path.join(os.getcwd(), local_location)))
+            local_url = url_path(local_location)
+            # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
+            #    how to add elements.
+            config.channel_urls = list(config.channel_urls)
+            config.channel_urls.insert(0, local_url)
+            if (metadata.meta.get('test') and metadata.meta['test'].get('source_files') and
+                    not os.listdir(config.work_dir)):
+                source.provide(metadata.path, metadata.get_section('source'), config=config)
 
-    if not isdir(config.test_dir):
-        os.makedirs(config.test_dir)
-    create_files(config.test_dir, m, config)
+    config.compute_build_id(metadata.name())
+
+    clean_pkg_cache(metadata.dist(), config.timeout)
+
+    create_files(config.test_dir, metadata, config)
     # Make Perl or Python-specific test files
-    if m.name().startswith('perl-'):
-        pl_files = create_pl_files(config.test_dir, m)
+    if metadata.name().startswith('perl-'):
+        pl_files = create_pl_files(config.test_dir, metadata)
         py_files = False
         lua_files = False
     else:
-        py_files = create_py_files(config.test_dir, m)
+        py_files = create_py_files(config.test_dir, metadata)
         pl_files = False
         lua_files = False
-    shell_files = create_shell_files(config.test_dir, m, config)
+    shell_files = create_shell_files(config.test_dir, metadata, config)
     if not (py_files or shell_files or pl_files or lua_files):
-        print("Nothing to test for:", m.dist())
+        print("Nothing to test for:", metadata.dist())
         return True
 
-    print("TEST START:", m.dist())
+    print("TEST START:", metadata.dist())
 
-    get_build_metadata(m, config=config)
-    specs = ['%s %s %s' % (m.name(), m.version(), m.build_id())]
+    get_build_metadata(metadata, config=config)
+    specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
 
     # add packages listed in the run environment and test/requires
-    specs.extend(ms.spec for ms in m.ms_depends('run'))
-    specs += ensure_list(m.get_value('test/requires', []))
+    specs.extend(ms.spec for ms in metadata.ms_depends('run'))
+    specs += ensure_list(metadata.get_value('test/requires', []))
 
     if py_files:
         # as the tests are run by python, ensure that python is installed.
@@ -1063,7 +1200,7 @@ def test(m, config, move_broken=True):
 
     with path_prepended(config.test_prefix):
         env = dict(os.environ.copy())
-        env.update(environ.get_dict(config=config, m=m, prefix=config.test_prefix))
+        env.update(environ.get_dict(config=config, m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
@@ -1130,9 +1267,12 @@ def test(m, config, move_broken=True):
     try:
         subprocess.check_call(cmd, env=env, cwd=config.test_dir)
     except subprocess.CalledProcessError:
-        tests_failed(m, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
+        tests_failed(metadata, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
-    print("TEST END:", m.dist())
+    if need_cleanup:
+        rm_rf(recipe_dir)
+
+    print("TEST END:", metadata.dist())
     return True
 
 
@@ -1180,6 +1320,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
 
     already_built = set()
     extra_help = ""
+    built_packages = []
+
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -1196,24 +1338,23 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         recipe = recipe_list.popleft()
         if hasattr(recipe, 'config'):
             metadata = recipe
-            recipe_config = metadata.config
+            config = metadata.config
             # this code is duplicated below because we need to be sure that the build id is set
             #    before downloading happens - or else we lose where downloads are
-            if recipe_config.set_build_id:
-                recipe_config.compute_build_id(metadata.name(), reset=True)
+            if config.set_build_id:
+                config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
         else:
             recipe_parent_dir = os.path.dirname(recipe)
             recipe = recipe.rstrip("/").rstrip("\\")
-            recipe_config = config
             to_build_recursive.append(os.path.basename(recipe))
 
             #    before downloading happens - or else we lose where downloads are
-            if recipe_config.set_build_id:
-                recipe_config.compute_build_id(os.path.basename(recipe), reset=True)
+            if config.set_build_id:
+                config.compute_build_id(os.path.basename(recipe), reset=True)
             metadata, need_source_download, need_reparse_in_env = render_recipe(recipe,
-                                                                    config=recipe_config)
+                                                                    config=config)
         if not getattr(config, "noverify", False):
             verifier = Verify()
             ignore_scripts = config.ignore_recipe_verify_scripts if \
@@ -1223,13 +1364,21 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                    rendered_meta=metadata.meta, recipe_dir=metadata.path)
         try:
-            with recipe_config:
-                ok_to_test = build(metadata, post=post,
-                                   need_source_download=need_source_download,
-                                   need_reparse_in_env=need_reparse_in_env,
-                                   config=recipe_config)
-                if not notest and ok_to_test:
-                    test(metadata, config=recipe_config)
+            with config:
+                packages_from_this = build(metadata, post=post,
+                                           need_source_download=need_source_download,
+                                           need_reparse_in_env=need_reparse_in_env,
+                                           config=config)
+                if not notest and packages_from_this:
+                    for pkg in packages_from_this:
+                        if pkg.endswith('.tar.bz2'):
+                            # we only know how to test conda packages
+                            try:
+                                test(pkg, config=config)
+                            # IOError means recipe was not included with package. metadata instead
+                            except IOError:
+                                test(metadata, config=config)
+                    built_packages.append(pkg)
         except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaValueError) as e:
             error_str = str(e)
             skip_names = ['python', 'r']
@@ -1268,15 +1417,15 @@ packages, the other package needs to be rebuilt
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
         if post in [True, None]:
-            output_file = bldpkg_path(metadata)
-            handle_anaconda_upload(output_file, config=recipe_config)
-            already_built.add(output_file)
+            for f in built_packages:
+                # TODO: could probably use a better check for pkg type than this...
+                if f.endswith('.tar.bz2'):
+                    handle_anaconda_upload(f, config=config)
+                elif f.endswith('.whl'):
+                    handle_pypi_upload(f, config=config)
+                already_built.add(f)
 
-        if hasattr(recipe_config, 'output_folder') and recipe_config.output_folder:
-            destination = os.path.join(recipe_config.output_folder, os.path.basename(output_file))
-            if os.path.exists(destination):
-                os.remove(destination)
-            os.rename(output_file, destination)
+    return built_packages
 
 
 def handle_anaconda_upload(path, config):
@@ -1330,6 +1479,28 @@ Error: cannot locate anaconda command (required for upload)
     except:
         print(no_upload_message)
         raise
+
+
+def handle_pypi_upload(f, config):
+    args = ['twine', 'upload', '--sign-with', config.sign_with, '--repository', config.repository]
+    if config.user:
+        args.extend(['--user', config.user])
+    if config.password:
+        args.extend(['--password', config.password])
+    if config.sign:
+        args.extend(['--sign'])
+    if config.identity:
+        args.extend(['--identity', config.identity])
+    if config.config_file:
+        args.extend(['--config-file', config.config_file])
+    if config.repository:
+        args.extend(['--repository', config.repository])
+
+    args.append(f)
+    try:
+        subprocess.check_call()
+    except:
+        log.warn("wheel upload failed - is twine installed?  Is this package registered?")
 
 
 def print_build_intermediate_warning(config):

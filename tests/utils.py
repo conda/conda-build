@@ -16,6 +16,7 @@ from conda_build.utils import on_win, prepend_bin_path
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
+subpackage_dir = os.path.join(thisdir, "test-recipes/split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
 
 

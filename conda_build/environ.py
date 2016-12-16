@@ -360,6 +360,7 @@ def get_shlib_ext():
     else:
         raise NotImplementedError(sys.platform)
 
+
 def windows_vars(prefix):
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
@@ -370,7 +371,8 @@ def windows_vars(prefix):
         'LIBRARY_INC': join(library_prefix, 'include'),
         'LIBRARY_LIB': join(library_prefix, 'lib'),
         'R': join(prefix, 'Scripts', 'R.exe'),
-        'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/')))
+        'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/'))),
+        'SYSTEMROOT': os.getenv('SYSTEMROOT'),
     }
 
 

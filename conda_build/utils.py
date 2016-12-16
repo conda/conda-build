@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
 import contextlib
-from difflib import get_close_matches
 import fnmatch
 from glob import glob
 from locale import getpreferredencoding
@@ -244,10 +243,12 @@ def relative(f, d='lib'):
 
 
 def _check_call(args, **kwargs):
+    if 'env' in kwargs:
+        kwargs['env'] = {str(key): str(value) for key, value in kwargs['env'].items()}
     try:
         subprocess.check_call(args, **kwargs)
-    except subprocess.CalledProcessError:
-        sys.exit('Command failed: %s' % ' '.join(args))
+    except subprocess.CalledProcessError as e:
+        sys.exit('Command failed: %s, output: %s' % (' '.join(args), str(e)))
 
 
 def tar_xf(tarball, dir_path, mode='r:*'):
@@ -630,3 +631,13 @@ def ensure_list(arg):
         else:
             arg = []
     return arg
+
+
+@contextlib.contextmanager
+def tmp_chdir(dest):
+    curdir = os.getcwd()
+    try:
+        os.chdir(dest)
+        yield
+    finally:
+        os.chdir(curdir)

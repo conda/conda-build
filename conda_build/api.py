@@ -76,68 +76,21 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
-    import os
-    from conda_build.conda_interface import url_path
     from conda_build.build import test
-    from conda_build.render import render_recipe
-    from conda_build.utils import get_recipe_abspath, rm_rf
-    from conda_build import source
-
-    config = get_or_merge_config(config, **kwargs)
-
-    # we want to know if we're dealing with package input.  If so, we can move the input on success.
-    is_package = False
-    need_cleanup = False
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
-        metadata = recipedir_or_package_or_metadata
-        recipe_config = metadata.config
+        config = recipedir_or_package_or_metadata.config
     else:
-        recipe_dir, need_cleanup = get_recipe_abspath(recipedir_or_package_or_metadata)
-        config.need_cleanup = need_cleanup
+        config = get_or_merge_config(config, **kwargs)
 
-        # This will create a new local build folder if and only if config doesn't already have one.
-        #   What this means is that if we're running a test immediately after build, we use the one
-        #   that the build already provided
-        metadata, _, _ = render_recipe(recipe_dir, config=config)
-        recipe_config = config
-        # this recipe came from an extracted tarball.
-        if need_cleanup:
-            # ensure that the local location of the package is indexed, so that conda can find the
-            #    local package
-            local_location = os.path.dirname(recipedir_or_package_or_metadata)
-            # strip off extra subdir folders
-            for platform in ('win', 'linux', 'osx'):
-                if os.path.basename(local_location).startswith(platform + "-"):
-                    local_location = os.path.dirname(local_location)
-            update_index(local_location, config=config)
-            if not os.path.abspath(local_location):
-                local_location = os.path.normpath(os.path.abspath(
-                    os.path.join(os.getcwd(), local_location)))
-            local_url = url_path(local_location)
-            # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
-            #    how to add elements.
-            recipe_config.channel_urls = list(recipe_config.channel_urls)
-            recipe_config.channel_urls.insert(0, local_url)
-            is_package = True
-            if metadata.meta.get('test') and metadata.meta['test'].get('source_files'):
-                source.provide(metadata.path, metadata.get_section('source'), config=config)
-
-    with recipe_config:
+    with config:
         # This will create a new local build folder if and only if config doesn't already have one.
         #   What this means is that if we're running a test immediately after build, we use the one
         #   that the build already provided
 
-        recipe_config.compute_build_id(metadata.name())
-        test_result = test(metadata, config=recipe_config, move_broken=move_broken)
+        test_result = test(recipedir_or_package_or_metadata, config=config,
+                           move_broken=move_broken)
 
-        if (test_result and is_package and hasattr(recipe_config, 'output_folder') and
-                recipe_config.output_folder):
-            os.rename(recipedir_or_package_or_metadata,
-                      os.path.join(recipe_config.output_folder,
-                                   os.path.basename(recipedir_or_package_or_metadata)))
-    if need_cleanup:
-        rm_rf(recipe_dir)
     return test_result
 
 
