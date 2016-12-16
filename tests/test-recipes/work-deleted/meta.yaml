@@ -1,0 +1,18 @@
+package:
+  name: conda-build-test-work-deleted
+  version: 1.0
+
+requirements:
+  build:
+    - python
+
+source:
+  path: ../test-package
+
+test:
+  files:
+    - test.py
+  requirements:
+    - python
+  commands:
+    - python test.py
