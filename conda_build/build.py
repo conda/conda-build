@@ -1166,6 +1166,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         print("Nothing to test for:", metadata.dist())
         return True
 
+    # Needs to come after create_files in case there's test/source_files
+    rm_rf(config.work_dir)
+
     print("TEST START:", metadata.dist())
 
     get_build_metadata(metadata, config=config)
