@@ -1041,7 +1041,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 
         # the legacy noarch
         if m.get_value('build/noarch_python'):
-            noarch_python.Ftransform(m, sorted(files2 - files1), config.build_prefix)
+            noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
         # new way: build/noarch: python
         elif is_noarch_python(m):
             noarch_python.populate_files(

@@ -611,12 +611,11 @@ def test_noarch_none_value(testing_workdir, test_config):
 
 
 def test_noarch_foo_value(test_config):
-    recipe = os.path.join(metadata_dir, "noarch_foo")
+    recipe = os.path.join(metadata_dir, "noarch_generic")
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
     metadata = json.loads(package_has_file(fn, 'info/index.json').decode())
-    assert 'noarch' in metadata
-    assert metadata['noarch'] == "foo"
+    assert metadata['noarch'] == "generic"
 
 
 def test_about_json_content(test_metadata):
