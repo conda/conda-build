@@ -55,7 +55,7 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
-                               silence_loggers, path_prepended, create_entry_points,
+                               path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
                                ensure_list, get_lock, ExitStack, get_recipe_abspath, tmp_chdir,
                                expand_globs)
@@ -74,8 +74,6 @@ if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
     shell_path = '/bin/bash'
-
-log = logging.getLogger(__file__)
 
 
 def prefix_files(prefix):
@@ -593,18 +591,11 @@ def create_env(prefix, specs, config, clear_cache=True):
     Create a conda envrionment for the given prefix and specs.
     '''
     if config.debug:
-        logging.getLogger("conda").setLevel(logging.DEBUG)
-        logging.getLogger("binstar").setLevel(logging.DEBUG)
-        logging.getLogger("install").setLevel(logging.DEBUG)
-        logging.getLogger("conda.install").setLevel(logging.DEBUG)
-        logging.getLogger("fetch").setLevel(logging.DEBUG)
-        logging.getLogger("print").setLevel(logging.DEBUG)
-        logging.getLogger("progress").setLevel(logging.DEBUG)
-        logging.getLogger("dotupdate").setLevel(logging.DEBUG)
-        logging.getLogger("stdoutlog").setLevel(logging.DEBUG)
-        logging.getLogger("requests").setLevel(logging.DEBUG)
+        logging.getLogger("conda_build").setLevel(logging.DEBUG)
     else:
-        silence_loggers(show_warnings_and_errors=True)
+        logging.getLogger("conda_build").setLevel(logging.INFO)
+
+    log = logging.getLogger(__name__)
 
     if os.path.isdir(prefix):
         rm_rf(prefix)
@@ -685,7 +676,7 @@ def get_installed_conda_build_version():
     vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
         if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
-        log.warn("Could not detect installed version of conda-build")
+        logging.getLogger(__name__).warn("Could not detect installed version of conda-build")
         return None
     return vers_inst[0]
 
@@ -696,7 +687,8 @@ def get_conda_build_index_versions(index):
     try:
         pkgs = r.get_pkgs(MatchSpec('conda-build'))
     except (NoPackagesFound, NoPackagesFoundError):
-        log.warn("Could not find any versions of conda-build in the channels")
+        logging.getLogger(__name__).warn("Could not find any versions of conda-build "
+                                         "in the channels")
     return [pkg.version for pkg in pkgs]
 
 
@@ -834,6 +826,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
     if m.skip():
         print_skip_message(m)
         return []
+
+    log = logging.getLogger(__name__)
 
     with path_prepended(config.build_prefix):
         env = environ.get_dict(config=config, m=m)
@@ -1097,6 +1091,7 @@ def clean_pkg_cache(dist, timeout):
                 for pkg_id in [dist, 'local::' + dist]:
                     assert pkg_id not in package_cache()
             except AssertionError:
+                log = logging.getLogger(__name__)
                 log.debug("Conda caching error: %s package remains in cache after removal", dist)
                 log.debug("Clearing package cache to compensate")
                 cache = package_cache()

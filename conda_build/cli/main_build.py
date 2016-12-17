@@ -19,7 +19,7 @@ from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          get_render_parser, bldpkg_path)
 from conda_build.conda_interface import cc, add_parser_channels, url_path
 import conda_build.source as source
-from conda_build.utils import silence_loggers, print_skip_message
+from conda_build.utils import print_skip_message
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -221,7 +221,6 @@ different sets of packages."""
 
 
 def output_action(recipe, config):
-    silence_loggers(show_warnings_and_errors=False)
     metadata, _, _ = api.render(recipe, config=config)
     if metadata.skip():
         print_skip_message(metadata)

@@ -19,8 +19,6 @@ from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
 
-log = logging.getLogger(__file__)
-
 
 def get_perl_ver(config):
     return str(config.CONDA_PERL)
@@ -50,6 +48,7 @@ def get_lua_include_dir(config):
 
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     env = os.environ.copy()
+    log = logging.getLogger(__name__)
     if config.verbose:
         stderr = None
     else:
@@ -138,6 +137,7 @@ def get_git_info(repo, config):
     :return:
     """
     d = {}
+    log = logging.getLogger(__name__)
 
     if config.verbose:
         stderr = None

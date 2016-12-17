@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+import glob
 import logging
 import os
+from os.path import isfile, join
 import re
 import sys
-from os.path import isfile, join
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import memoized, md5_file
@@ -31,7 +32,6 @@ except ImportError:
              'files of conda recipes)')
 
 on_win = (sys.platform == 'win32')
-log = logging.getLogger(__file__)
 
 
 def ns_cfg(config):

@@ -16,7 +16,6 @@ from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path
 from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
                                     LuaVersionsCompleter, NumPyVersionCompleter)
 from conda_build.config import Config
-from conda_build.utils import silence_loggers
 
 on_win = (sys.platform == 'win32')
 
@@ -129,11 +128,8 @@ def execute(args):
 
     metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source, config=config)
     if args.output:
-        logging.basicConfig(level=logging.ERROR)
-        silence_loggers(show_warnings_and_errors=False)
         print(bldpkg_path(metadata))
     else:
-        logging.basicConfig(level=logging.INFO)
         print(output_yaml(metadata, args.file))
 
 

@@ -41,8 +41,6 @@ else:
     from contextlib2 import ExitStack  # NOQA
 
 
-log = logging.getLogger(__file__)
-
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
 from .conda_interface import rm_rf  # NOQA
 
@@ -50,7 +48,6 @@ on_win = (sys.platform == 'win32')
 
 codec = getpreferredencoding() or 'utf-8'
 on_win = sys.platform == "win32"
-log = logging.getLogger(__file__)
 root_script_dir = os.path.join(root_dir, 'Scripts' if on_win else 'bin')
 
 
@@ -92,7 +89,8 @@ def get_recipe_abspath(recipe):
 
 
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
-    "Copy all the files and directories in src to the directory dst"
+    """Copy all the files and directories in src to the directory dst"""
+    log = logging.getLogger(__name__)
     if isdir(src):
         merge_tree(src, dst, symlinks, timeout=timeout, lock=lock)
 
@@ -446,25 +444,6 @@ def get_site_packages(prefix):
 def get_build_folders(croot):
     # remember, glob is not a regex.
     return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
-
-
-def silence_loggers(show_warnings_and_errors=True):
-    if show_warnings_and_errors:
-        log_level = logging.WARN
-    else:
-        log_level = logging.CRITICAL + 1
-    logging.getLogger(os.path.dirname(__file__)).setLevel(log_level)
-    # This squelches a ton of conda output that is not hugely relevant
-    logging.getLogger("conda").setLevel(log_level)
-    logging.getLogger("binstar").setLevel(log_level)
-    logging.getLogger("install").setLevel(log_level + 10)
-    logging.getLogger("conda.install").setLevel(log_level + 10)
-    logging.getLogger("fetch").setLevel(log_level)
-    logging.getLogger("print").setLevel(log_level)
-    logging.getLogger("progress").setLevel(log_level)
-    logging.getLogger("dotupdate").setLevel(log_level)
-    logging.getLogger("stdoutlog").setLevel(log_level)
-    logging.getLogger("requests").setLevel(log_level)
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):

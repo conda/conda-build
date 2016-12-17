@@ -21,8 +21,6 @@ Error: could not import Crypto (required for "conda sign").
     $ conda install -n root pycrypto
 """)
 
-log = logging.getLogger(__file__)
-
 
 def keygen(name, size=2048):
     print("Generating public/private key pair (%d bits)..." % size)
@@ -103,6 +101,7 @@ def verify(path):
     It raises SignatureError when the signature file, or the public key
     does not exist.
     """
+    log = logging.getLogger(__name__)
     sig_path = path + '.sig'
     if not isfile(sig_path):
         log.error("signature does not exist: %s", sig_path)

@@ -16,7 +16,6 @@ from .conda_interface import string_types, binstar_upload
 
 from .utils import get_build_folders, rm_rf
 
-log = logging.getLogger(__file__)
 on_win = (sys.platform == 'win32')
 DEFAULT_PREFIX_LENGTH = 255
 
@@ -404,7 +403,8 @@ class Config(object):
 
     def __exit__(self, e_type, e_value, traceback):
         if not getattr(self, 'dirty') and not getattr(self, 'keep_old_work') and e_type is None:
-            log.info("--keep-old-work flag not specified.  Removing source and build files.\n")
+            logging.getLogger(__name__).info("--keep-old-work flag not specified.  "
+                                             "Removing source and build files.\n")
             self.clean()
 
 

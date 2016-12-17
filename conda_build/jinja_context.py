@@ -4,6 +4,7 @@ from functools import partial
 import json
 import logging
 import os
+import re
 import sys
 
 import jinja2
@@ -11,8 +12,6 @@ import jinja2
 from .conda_interface import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
-
-log = logging.getLogger(__file__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -77,6 +76,7 @@ class FilteredLoader(jinja2.BaseLoader):
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                        permit_undefined_jinja=True):
     _setuptools_data = {}
+    log = logging.getLogger(__name__)
 
     def setup(**kw):
         _setuptools_data.update(kw)
@@ -152,6 +152,7 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
 
 def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     permit_undefined_jinja=True):
+    log = logging.getLogger(__name__)
     log.warn("Deprecation notice: the load_setuptools function has been renamed to "
              "load_setup_py_data.  load_setuptools will be removed in a future release.")
     return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
@@ -167,8 +168,8 @@ def load_npm():
 
 def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
                     recipe_dir=None, permit_undefined_jinja=True):
-    import re
     match = False
+    log = logging.getLogger(__name__)
 
     cd_to_work = False
 
