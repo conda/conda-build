@@ -3,7 +3,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
 
-from collections import deque
+from collections import deque, OrderedDict
 import copy
 import fnmatch
 from glob import glob
@@ -43,6 +43,7 @@ from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
 from .conda_interface import (PaddingError, LinkError, CondaValueError,
                               NoPackagesFoundError, NoPackagesFound)
+from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
@@ -334,6 +335,53 @@ def sanitize_channel(channel):
     return re.sub('\/t\/[a-zA-Z0-9\-]*\/', '/t/<TOKEN>/', channel)
 
 
+def write_info_files_file(m, files, config):
+    entry_point_scripts = m.get_value('build/entry_points')
+    entry_point_script_names = get_entry_point_script_names(entry_point_scripts)
+
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
+        if m.get_value('build/noarch_python'):
+            fo.write('\n')
+        elif is_noarch_python(m):
+            for f in files:
+                if f.find("site-packages") >= 0:
+                    fo.write(f[f.find("site-packages"):] + '\n')
+                elif f.startswith("bin") and (f not in entry_point_script_names):
+                    fo.write(f.replace("bin", "python-scripts") + '\n')
+                elif f.startswith("Scripts") and (f not in entry_point_script_names):
+                    fo.write(f.replace("Scripts", "python-scripts") + '\n')
+        else:
+            for f in files:
+                fo.write(f + '\n')
+
+
+def write_package_metadata_json(m, config):
+    extra = OrderedDict()
+
+    noarch_type = m.get_value('build/noarch')
+    if noarch_type:
+        noarch_dict = OrderedDict(type=text_type(noarch_type))
+        if text_type(noarch_type).lower() == "python":
+            entry_points = m.get_value('build/entry_points')
+            if entry_points:
+                noarch_dict['entry_points'] = entry_points
+        extra['noarch'] = noarch_dict
+
+    preferred_env = m.get_value("requirements/preferred_env")
+    if preferred_env:
+        preferred_env_dict = OrderedDict(name=text_type(preferred_env))
+        executable_paths = m.get_value("requirements/preferred_env_executable_paths")
+        if executable_paths:
+            preferred_env_dict["executable_paths"] = executable_paths
+        extra["preferred_env"] = preferred_env_dict
+
+    if extra:
+        extra["package_metadata_version"] = 1
+        with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
+            fh.write(json.dumps(extra, sort_keys=True, indent=2, separators=(',', ': ')))
+
+
 def write_about_json(m, config):
     with open(join(config.info_dir, 'about.json'), 'w') as fo:
         d = {}
@@ -375,7 +423,7 @@ def write_about_json(m, config):
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
-def write_info_json(m, config, mode_dict):
+def write_info_json(m, config):
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
@@ -396,6 +444,7 @@ def write_info_json(m, config, mode_dict):
                                      for dist in dists]
 
     # Deal with Python 2 and 3's different json module type reqs
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(info_index, fo, indent=2, sort_keys=True)
 
@@ -433,42 +482,19 @@ def create_info_files(m, files, config, prefix):
     :type files: list of str
     '''
 
-    copy_recipe(m, config)
-    copy_readme(m, config)
-    copy_license(m, config)
-
-    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
-
-    write_info_json(m, config, mode_dict)
-    write_about_json(m, config)
-
-    entry_point_scripts = m.get_value('build/entry_points')
-
-    if is_noarch_python(m):
-        noarch_python.create_entry_point_information(
-            "python", entry_point_scripts, config
-        )
-
-    entry_point_script_names = get_entry_point_script_names(entry_point_scripts)
-
     if on_win:
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    with open(join(config.info_dir, 'files'), **mode_dict) as fo:
-        if m.get_value('build/noarch_python'):
-            fo.write('\n')
-        elif is_noarch_python(m):
-            for f in files:
-                if f.find("site-packages") > 0:
-                    fo.write(f[f.find("site-packages"):] + '\n')
-                elif f.startswith("bin") and (f not in entry_point_script_names):
-                    fo.write(f.replace("bin", "python-scripts") + '\n')
-                elif f.startswith("Scripts") and (f not in entry_point_script_names):
-                    fo.write(f.replace("Scripts", "python-scripts") + '\n')
-        else:
-            for f in files:
-                fo.write(f + '\n')
+    copy_recipe(m, config)
+    copy_readme(m, config)
+    copy_license(m, config)
+
+    write_info_json(m, config)  # actually index.json
+    write_about_json(m, config)
+    write_package_metadata_json(m, config)
+
+    write_info_files_file(m, files, config)
 
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     create_info_files_json_v1(m, config.info_dir, prefix, files, files_with_prefix)

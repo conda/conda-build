@@ -1,6 +1,0 @@
-package:
-  name: noarch_foo_test_package
-  version: "1.0"
-
-build:
-  noarch: foo

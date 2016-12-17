@@ -37,30 +37,12 @@ def rewrite_script(fn, prefix):
     if ISWIN and fn.endswith('-script.py'):
         fn = fn[:-10]
 
-    # Check that it does have a #! python string, and skip it
-    encoding = sys.stdout.encoding or 'utf8'
-
-    m = SHEBANG_PAT.match(data.encode(encoding))
-    if m and b'python' in m.group():
-        new_data = data[data.find('\n') + 1:]
-    elif ISWIN:
-        new_data = data
-    else:
-        _error_exit("No python shebang in: %s" % fn)
-
     # Rewrite the file to the python-scripts directory
     dst_dir = join(prefix, 'python-scripts')
     _force_dir(dst_dir)
     with open(join(dst_dir, fn), 'w') as fo:
-        fo.write(new_data)
+        fo.write(data)
     return fn
-
-
-def create_entry_point_information(noarch_type, entry_points, config):
-    entry_point_information = {"type": noarch_type, "entry_points": entry_points}
-    file = os.path.join(config.info_dir, "noarch.json")
-    with open(file, 'w') as entry_point_file:
-        entry_point_file.write(json.dumps(entry_point_information))
 
 
 def handle_file(f, d, prefix):

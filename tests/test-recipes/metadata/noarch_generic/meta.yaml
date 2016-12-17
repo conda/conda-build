@@ -1,0 +1,6 @@
+package:
+  name: noarch_generic_test_package
+  version: "1.0"
+
+build:
+  noarch: generic

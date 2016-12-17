@@ -189,6 +189,8 @@ default_structs = {
     'requirements/build': list,
     'requirements/run': list,
     'requirements/conflicts': list,
+    'requirements/preferred_env': text_type,
+    'requirements/preferred_env_executable_paths': list,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
