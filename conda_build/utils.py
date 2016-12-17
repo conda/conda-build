@@ -25,6 +25,7 @@ from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import linked
 from .conda_interface import root_dir
+from .conda_interface import string_types
 
 from conda_build.os_utils import external
 
@@ -641,3 +642,36 @@ def tmp_chdir(dest):
         yield
     finally:
         os.chdir(curdir)
+
+
+def expand_globs(path_list, root_dir):
+    files = []
+    for path in path_list:
+        if not os.path.isabs(path):
+            path = os.path.join(root_dir, path)
+        if os.path.isdir(path):
+            files.extend(os.path.join(root, f).replace(root_dir + os.path.sep, '')
+                            for root, _, fs in os.walk(path) for f in fs)
+        else:
+            files.extend(f.replace(root_dir + os.path.sep, '') for f in glob(path))
+    return files
+
+
+def find_recipe(path):
+    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
+
+    Returns folder containing meta.yaml, to be built.
+
+    If we have a base level meta.yaml and other supplemental ones, use that first"""
+    if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
+        return os.path.dirname(path)
+    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
+    if len(results) > 1:
+        base_recipe = os.path.join(path, "meta.yaml")
+        if base_recipe in results:
+            return base_recipe
+        else:
+            raise IOError("More than one meta.yaml files found in %s" % path)
+    elif not results:
+        raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
+    return results[0]

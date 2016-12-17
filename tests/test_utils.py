@@ -161,3 +161,12 @@ class TestUtils(unittest.TestCase):
                 ('x/x/x/x/libhdf5.so', '../../../../a/b/c/d'),
         ]:
             self.assertEqual(utils.relative(f, 'a/b/c/d'), r)
+
+
+def test_expand_globs(testing_workdir):
+    files = ['abc', 'acb']
+    for f in files:
+        with open(f, 'w') as _f:
+            _f.write('weee')
+    assert utils.expand_globs(files, testing_workdir) == files
+    assert utils.expand_globs(['a*'], testing_workdir) == files

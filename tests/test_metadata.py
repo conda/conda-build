@@ -108,11 +108,3 @@ class HandleConfigVersionTests(unittest.TestCase):
                           handle_config_version,
                           MatchSpec('numpy x.x'), None)
 
-
-def test_expand_globs(testing_workdir):
-    files = ['abc', 'acb']
-    for f in files:
-        with open(f, 'w') as _f:
-            _f.write('weee')
-    assert expand_globs(files, testing_workdir) == files
-    assert expand_globs(['a*'], testing_workdir) == files

@@ -57,8 +57,9 @@ from conda_build.post import (post_process, post_build,
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
                                silence_loggers, path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
-                               ensure_list, get_lock, ExitStack, get_recipe_abspath, tmp_chdir)
-from conda_build.metadata import build_string_from_metadata, expand_globs
+                               ensure_list, get_lock, ExitStack, get_recipe_abspath, tmp_chdir,
+                               expand_globs)
+from conda_build.metadata import build_string_from_metadata
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -1461,7 +1462,7 @@ Error: cannot locate anaconda command (required for upload)
 
     if config.token:
         cmd.extend(['--token', config.token])
-    cmd.append('upload')
+    cmd.extend(['upload', '--force'])
     if config.user:
         cmd.extend(['--user', config.user])
     cmd.append(path)
