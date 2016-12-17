@@ -654,3 +654,32 @@ def find_recipe(path):
     elif not results:
         raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
     return results[0]
+
+
+class LoggingContext(object):
+    loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'print', 'progress',
+               'dotupdate', 'stdoutlog', 'requests']
+
+    def __init__(self, level=logging.WARN, handler=None, close=True):
+        self.level = level
+        self.old_levels = {}
+        self.handler = handler
+        self.close = close
+
+    def __enter__(self):
+        for logger in LoggingContext.loggers:
+            log = logging.getLogger(logger)
+            self.old_levels[logger] = log.level
+            log.setLevel(self.level if ('install' not in logger or
+                                        self.level < logging.INFO) else self.level + 10)
+        if self.handler:
+            self.logger.addHandler(self.handler)
+
+    def __exit__(self, et, ev, tb):
+        for logger, level in self.old_levels.items():
+            logging.getLogger(logger).setLevel(level)
+        if self.handler:
+            self.logger.removeHandler(self.handler)
+        if self.handler and self.close:
+            self.handler.close()
+        # implicit return of None => don't swallow exceptions
