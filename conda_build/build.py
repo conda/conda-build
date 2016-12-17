@@ -1169,6 +1169,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     print("TEST START:", metadata.dist())
 
+    # Needs to come after create_files in case there's test/source_files
+    print("Deleting work directory,", config.work_dir)
+    rm_rf(config.work_dir)
+
     get_build_metadata(metadata, config=config)
     specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
 
