@@ -10,10 +10,10 @@ import sys
 
 import pytest
 
-import conda
-from conda_build import build, api, __version__
+from conda_build import build, api
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
+from conda_build.conda_interface import LinkError, PaddingError
 
 from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
                     get_noarch_python_meta, put_bad_conda_on_path)
@@ -81,6 +81,28 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     finally:
         rm_rf(test_base)
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text()
+
+
+@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
+                                    " not length dependent"))
+def test_env_creation_with_prefix_fallback_disabled():
+    test_base = os.path.expanduser("~/cbtmp")
+    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True,
+                        prefix_length_fallback=False)
+    recipe_path = os.path.join(metadata_dir, "has_prefix_files")
+    metadata, _, _ = api.render(recipe_path, config=config)
+    metadata.meta['package']['name'] = 'test_env_creation_with_short_prefix'
+    fn = api.get_output_file_path(metadata)
+    if os.path.isfile(fn):
+        os.remove(fn)
+    config.prefix_length = 80
+
+    with pytest.raises((SystemExit, PaddingError, LinkError)):
+        api.build(metadata)
+        pkg_name = os.path.basename(fn).replace("-1.0-0.tar.bz2", "")
+        assert not api.inspect_prefix_length(fn, 255)
+        config.prefix_length = 255
+        build.create_env(config.build_prefix, specs=["python", pkg_name], config=config)
 
 
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"

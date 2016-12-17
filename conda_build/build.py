@@ -650,21 +650,24 @@ def create_env(prefix, specs, config, clear_cache=True):
                         'post-link failed for: openssl' in str(exc) or
                         isinstance(exc, PaddingError)) and
                         config.prefix_length > 80):
-                    log.warn("Build prefix failed with prefix length %d", config.prefix_length)
-                    log.warn("Error was: ")
-                    log.warn(str(exc))
-                    log.warn("One or more of your package dependencies needs to be rebuilt "
-                            "with a longer prefix length.")
-                    log.warn("Falling back to legacy prefix length of 80 characters.")
-                    log.warn("Your package will not install into prefixes > 80 characters.")
-                    config.prefix_length = 80
+                    if config.prefix_length_fallback:
+                        log.warn("Build prefix failed with prefix length %d", config.prefix_length)
+                        log.warn("Error was: ")
+                        log.warn(str(exc))
+                        log.warn("One or more of your package dependencies needs to be rebuilt "
+                                "with a longer prefix length.")
+                        log.warn("Falling back to legacy prefix length of 80 characters.")
+                        log.warn("Your package will not install into prefixes > 80 characters.")
+                        config.prefix_length = 80
 
-                    # Set this here and use to create environ
-                    #   Setting this here is important because we use it below (symlink)
-                    prefix = config.build_prefix
+                        # Set this here and use to create environ
+                        #   Setting this here is important because we use it below (symlink)
+                        prefix = config.build_prefix
 
-                    create_env(prefix, specs, config=config,
-                                clear_cache=clear_cache)
+                        create_env(prefix, specs, config=config,
+                                    clear_cache=clear_cache)
+                    else:
+                        raise
         warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
