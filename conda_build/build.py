@@ -219,7 +219,7 @@ def copy_recipe(m, config):
         # we only care if we actually have build deps.  Otherwise, the environment will not be
         #    valid for inspection.
         if m.meta.get('requirements') and m.meta['requirements'].get('build'):
-            build_deps = environ.Environment(m.config.build_prefix).package_specs
+            build_deps = environ.Environment(m.config.build_prefix).package_specs()
 
         if not rendered_metadata.meta.get('build'):
             rendered_metadata.meta['build'] = {}
