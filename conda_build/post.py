@@ -176,6 +176,8 @@ def rm_pyc(files, prefix):
 
 
 def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
+    if not os.path.isfile(python_exe):
+        return
     compile_files = []
     skip_compile_pyc_n = [os.path.normpath(skip) for skip in skip_compile_pyc]
     skipped_files = set()
