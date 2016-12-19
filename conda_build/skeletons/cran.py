@@ -29,14 +29,15 @@ from conda_build.conda_interface import Completer
 from conda_build.license_family import allowed_license_families, guess_license_family
 
 CRAN_META = """\
+{{% set name = '{cran_packagename}' %}}
+{{% set version = '{cran_version}' %}}
+
 {{% set posix = 'm2-' if win else '' %}}
 {{% set native = 'm2w64-' if win else '' %}}
 
 package:
-  name: {packagename}
-  # Note that conda versions cannot contain -, so any -'s in the version have
-  # been replaced with _'s.
-  version: "{conda_version}"
+  name: r-{{{{ name|lower }}}}
+  version: {{{{ version|replace("-", "_") }}}}
 
 source:
   {fn_key} {filename}
@@ -51,9 +52,8 @@ source:
    # - fix.patch
 
 build:
-  # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  # number: 1
+  # If this is a new build for the same version, increment the build number.
+  number: 0
 
   # This is required to make R link correctly on Linux.
   rpaths:
@@ -69,8 +69,8 @@ requirements:
 test:
   commands:
     # You can put additional test commands to be run here.
-    - $R -e "library('{cran_packagename}')" # [not win]
-    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\"" # [win]
+    - $R -e "library('{cran_packagename}')"  # [not win]
+    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
 
   # You can also put a file called run_test.py, run_test.sh, or run_test.bat
   # in the recipe that will be run at test time.
@@ -202,7 +202,7 @@ class CRANPackagesCompleter(Completer):
 
     def _get_items(self):
         args = self.parsed_args
-        cran_url = getattr(args, 'cran_url', 'http://cran.r-project.org/')
+        cran_url = getattr(args, 'cran_url', 'https://cran.r-project.org/')
         output_dir = getattr(args, 'output_dir', '.')
         cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
         return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
@@ -252,7 +252,7 @@ def add_parser(repos):
     )
     cran.add_argument(
         "--cran-url",
-        default='http://cran.r-project.org/',
+        default='https://cran.r-project.org/',
         help="URL to use for CRAN (default: %(default)s).",
     )
     cran.add_argument(
@@ -443,7 +443,7 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
 
 
 def skeletonize(packages, output_dir=".", version=None, git_tag=None,
-                cran_url="http://cran.r-project.org/", recursive=False, archive=True,
+                cran_url="https://cran.r-project.org/", recursive=False, archive=True,
                 version_compare=False, update_outdated=False, config=None):
 
     if not config:
@@ -570,11 +570,11 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             sys.exit(not version_compare(dir_path, d['conda_version']))
 
         if not is_github_url:
-            d['filename'] = "{cran_packagename}_{cran_version}.tar.gz".format(**d)
+            d['filename'] = "{{ name }}_{{ version }}.tar.gz"
             if archive:
                 d['cranurl'] = (INDENT + cran_url + 'src/contrib/' +
                     d['filename'] + INDENT + cran_url + 'src/contrib/' +
-                    'Archive/' + d['cran_packagename'] + '/' + d['filename'])
+                    'Archive/{{ name }}/' + d['filename'])
             else:
                 d['cranurl'] = ' ' + cran_url + 'src/contrib/' + d['filename']
 
@@ -593,6 +593,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
         if "URL" in cran_package:
             d['home_comment'] = ''
             d['homeurl'] = ' ' + yaml_quote_string(cran_package['URL'])
+        else:
+            d['home_comment'] = ''
+            d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
         if 'Description' in cran_package:
             d['summary_comment'] = ''
@@ -666,9 +669,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
 
             if cran_package.get("NeedsCompilation", 'no') == 'yes':
                 if dep_type == 'build':
-                    deps.append('{indent}posix               # [win]'.format(indent=INDENT))
-                    deps.append('{indent}{{{{native}}}}toolchain # [win]'.format(indent=INDENT))
-                    deps.append('{indent}gcc                 # [not win]'.format(indent=INDENT))
+                    deps.append('{indent}posix                # [win]'.format(indent=INDENT))
+                    deps.append('{indent}{{{{native}}}}toolchain  # [win]'.format(indent=INDENT))
+                    deps.append('{indent}gcc                  # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
