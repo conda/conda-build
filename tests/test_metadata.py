@@ -1,6 +1,8 @@
 import os
 import unittest
 
+import pytest
+
 from conda_build.conda_interface import MatchSpec
 
 from conda_build.metadata import select_lines, handle_config_version, expand_globs
@@ -108,3 +110,8 @@ class HandleConfigVersionTests(unittest.TestCase):
                           handle_config_version,
                           MatchSpec('numpy x.x'), None)
 
+
+def test_disallow_leading_period_in_version(test_metadata):
+    test_metadata.meta['package']['version'] = '.ste.ve'
+    with pytest.raises(AssertionError):
+        test_metadata.version()
