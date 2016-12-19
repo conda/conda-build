@@ -4,7 +4,7 @@ from .conda_interface import Completer
 
 
 all_versions = {
-    'python': [26, 27, 33, 34, 35],
+    'python': [26, 27, 33, 34, 35, 36],
     'numpy': [16, 17, 18, 19, 110, 111],
     'perl': None,
     'R': None,
