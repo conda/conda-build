@@ -89,6 +89,8 @@ def parse_or_try_download(metadata, no_download_source, config,
                 metadata.parse_again(config=config, permit_undefined_jinja=False)
             except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
                 need_reparse_in_env = True
+            else:
+                need_source_download = force_download
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
@@ -156,7 +158,7 @@ def render_recipe(recipe_path, config, no_download_source=False):
 
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,
-                                                config=config)
+                                                config=config, force_download=config.force_download)
     config.noarch = bool(m.get_value('build/noarch'))
 
     if need_cleanup:
