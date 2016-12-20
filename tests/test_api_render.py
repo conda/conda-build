@@ -16,7 +16,8 @@ from .utils import testing_workdir, test_config, metadata_dir, test_metadata
 def test_render_need_download(testing_workdir, test_config):
     # first, test that the download/render system renders all it can,
     #    and accurately returns its needs
-    with pytest.raises(SystemExit):
+
+    with pytest.raises(ValueError):
         metadata, need_download, need_reparse_in_env = api.render(
             os.path.join(metadata_dir, "source_git_jinja2"),
             config=test_config,
@@ -68,7 +69,7 @@ def test_get_output_file_path_jinja2(testing_workdir, test_config):
     #    being cleaned as it should.
 
     # First get metadata with a recipe that is known to need a download:
-    with pytest.raises(SystemExit):
+    with pytest.raises(ValueError):
         build_path = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
                                               config=test_config,
                                               no_download_source=True)

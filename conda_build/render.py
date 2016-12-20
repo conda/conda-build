@@ -99,16 +99,12 @@ def parse_or_try_download(metadata, no_download_source, config,
 
     elif not metadata.get_section('source'):
         need_source_download = False
-    else:
-        # we have not downloaded source in the render phase.  Download it in
-        #     the build phase
-        need_source_download = not no_download_source
+        need_reparse_in_env = False
     if not need_reparse_in_env:
         try:
             metadata.parse_until_resolved(config=config)
-            need_reparse_in_env = False
         except exceptions.UnableToParseMissingSetuptoolsDependencies:
-            pass  # we just don't alter the need_reparse_in_env variable
+            need_reparse_in_env = True
     if metadata.get_value('build/noarch'):
         config.noarch = True
     return metadata, need_source_download, need_reparse_in_env
@@ -159,6 +155,10 @@ def render_recipe(recipe_path, config, no_download_source=False):
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,
                                                 config=config)
+    if need_download and no_download_source:
+        raise ValueError("no_download_source specified, but can't fully render recipe without"
+                         " downloading source.  Please fix the recipe, or don't use "
+                         "no_download_source.")
     config.noarch = bool(m.get_value('build/noarch'))
 
     if need_cleanup:

@@ -42,8 +42,8 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
         metadata = recipe_path_or_metadata
     else:
         metadata, _, _ = render_recipe(recipe_path_or_metadata,
-                                    no_download_source=no_download_source,
-                                    config=config)
+                                       no_download_source=no_download_source,
+                                       config=config)
     return bldpkg_path(metadata)
 
 
