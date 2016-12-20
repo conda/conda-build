@@ -260,6 +260,7 @@ def test_inspect_objects(testing_workdir, capfd):
         assert 'rpath: @loader_path' in output
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="Windows prefix length doesn't matter (yet?)")
 def test_inspect_prefix_length(testing_workdir, capfd):
     from conda_build import api
@@ -287,6 +288,7 @@ def test_inspect_prefix_length(testing_workdir, capfd):
     assert 'No packages found with binary prefixes shorter' in output
 
 
+@pytest.mark.serial
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")

@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
@@ -240,11 +241,15 @@ _locations = {}
 def get_lock(folder, timeout=90, filename=".conda_lock"):
     global _locations
     location = os.path.abspath(os.path.normpath(folder))
-    if not os.path.isdir(location):
-        os.makedirs(location)
+    lock_filename = base64.urlsafe_b64encode(location)
+    locks_dir = os.path.join(root_dir, 'locks')
+    if not os.path.isdir(locks_dir):
+        os.makedirs(locks_dir)
+    lock_file = os.path.join(locks_dir, lock_filename)
+    if not os.path.isfile(lock_file):
+        open(lock_file, 'a').close()
     if location not in _locations:
-        _locations[location] = filelock.SoftFileLock(os.path.join(location, filename),
-                                                     timeout)
+        _locations[location] = filelock.FileLock(lock_file, timeout)
     return _locations[location]
 
 

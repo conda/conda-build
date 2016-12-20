@@ -689,7 +689,8 @@ def create_env(prefix, specs, config, clear_cache=True):
                             isinstance(exc, PaddingError)) and
                             config.prefix_length > 80):
                         if config.prefix_length_fallback:
-                            log.warn("Build prefix failed with prefix length %d", config.prefix_length)
+                            log.warn("Build prefix failed with prefix length %d",
+                                     config.prefix_length)
                             log.warn("Error was: ")
                             log.warn(str(exc))
                             log.warn("One or more of your package dependencies needs to be rebuilt "
@@ -777,7 +778,8 @@ def filter_files(files_list, prefix, filter_patterns=('.*[\\\\/]?\.git[\\\\/].*'
     for pattern in filter_patterns:
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
-    return [f.replace(prefix + os.path.sep, '') for f in files_list if not os.path.isdir(os.path.join(prefix, f))]
+    return [f.replace(prefix + os.path.sep, '') for f in files_list
+            if not os.path.isdir(os.path.join(prefix, f))]
 
 
 def bundle_conda(output, metadata, config, env, **kw):
@@ -803,9 +805,14 @@ def bundle_conda(output, metadata, config, env, **kw):
         if f not in files:
             files.append(f)
     files = filter_files(files, prefix=config.build_prefix)
+<<<<<<< d25fc98c88facda4bac230950daebd121a798965
     output_folder = None
     if config.output_folder:
         output_folder = os.path.join(config.output_folder, config.subdir)
+=======
+    output_folder = os.path.join(config.output_folder,
+                                 config.subdir) if config.output_folder else None
+>>>>>>> try FileLock instead of SoftFileLock.  Centralize lock file location to root_dir/locks
     final_output = os.path.join(output_folder or config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
