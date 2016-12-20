@@ -23,9 +23,6 @@ from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join, rm_rf
 
 
-log = logging.getLogger(__file__)
-
-
 def which_prefix(path):
     """
     given the path (to a (presumably) conda installed file) return the
@@ -144,6 +141,7 @@ def replace_path(binary, path, prefix):
 
 def test_installable(channel='defaults'):
     success = True
+    log = logging.getLogger(__name__)
     has_py = re.compile(r'py(\d)(\d)')
     for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
         log.info("######## Testing platform %s ########", platform)
@@ -238,8 +236,8 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 if path.startswith(prefix):
                     deps = list(which_package(path))
                     if len(deps) > 1:
-                        log.warn("Warning: %s comes from multiple packages: %s", path,
-                                 comma_join(deps))
+                        logging.getLogger(__name__).warn("Warning: %s comes from multiple "
+                                                         "packages: %s", path, comma_join(deps))
                     if not deps:
                         if exists(path):
                             depmap['untracked'].append((lib, path.split(prefix +

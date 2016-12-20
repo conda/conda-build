@@ -33,8 +33,6 @@ else:
 
 git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
 
-log = logging.getLogger(__file__)
-
 
 def download_to_cache(meta, config):
     ''' Download a source to the local cache. '''
@@ -374,7 +372,7 @@ def get_repository_info(recipe_path):
                                              time.ctime(os.path.getmtime(
                                                  join(recipe_path, "meta.yaml"))))
     except CalledProcessError:
-        log.debug("Failed to checkout source in " + recipe_path)
+        logging.getLogger(__name__).debug("Failed to checkout source in " + recipe_path)
         return "{}, last modified {}".format(recipe_path,
                                              time.ctime(os.path.getmtime(
                                                  join(recipe_path, "meta.yaml"))))

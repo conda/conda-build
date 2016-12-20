@@ -56,10 +56,10 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.utils import (rm_rf, _check_call, copy_into, on_win, get_build_folders,
-                               silence_loggers, path_prepended, create_entry_points,
+                               path_prepended, create_entry_points,
                                prepend_bin_path, codec, root_script_dir, print_skip_message,
                                ensure_list, get_lock, ExitStack, get_recipe_abspath, tmp_chdir,
-                               expand_globs)
+                               expand_globs, LoggingContext)
 from conda_build.metadata import build_string_from_metadata
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
@@ -75,8 +75,6 @@ if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
     shell_path = '/bin/bash'
-
-log = logging.getLogger(__file__)
 
 
 def prefix_files(prefix):
@@ -619,82 +617,78 @@ def create_env(prefix, specs, config, clear_cache=True):
     Create a conda envrionment for the given prefix and specs.
     '''
     if config.debug:
-        logging.getLogger("conda").setLevel(logging.DEBUG)
-        logging.getLogger("binstar").setLevel(logging.DEBUG)
-        logging.getLogger("install").setLevel(logging.DEBUG)
-        logging.getLogger("conda.install").setLevel(logging.DEBUG)
-        logging.getLogger("fetch").setLevel(logging.DEBUG)
-        logging.getLogger("print").setLevel(logging.DEBUG)
-        logging.getLogger("progress").setLevel(logging.DEBUG)
-        logging.getLogger("dotupdate").setLevel(logging.DEBUG)
-        logging.getLogger("stdoutlog").setLevel(logging.DEBUG)
-        logging.getLogger("requests").setLevel(logging.DEBUG)
+        logging.getLogger("conda_build").setLevel(logging.DEBUG)
+        external_logger_context = LoggingContext(logging.DEBUG)
     else:
-        silence_loggers(show_warnings_and_errors=True)
+        logging.getLogger("conda_build").setLevel(logging.INFO)
+        external_logger_context = LoggingContext(logging.ERROR)
 
-    if os.path.isdir(prefix):
-        rm_rf(prefix)
+    with external_logger_context:
+        log = logging.getLogger(__name__)
 
-    specs = list(specs)
-    for feature, value in feature_list:
-        if value:
-            specs.append('%s@' % feature)
+        if os.path.isdir(prefix):
+            rm_rf(prefix)
 
-    if specs:  # Don't waste time if there is nothing to do
-        log.debug("Creating environment in %s", prefix)
-        log.debug(str(specs))
+        specs = list(specs)
+        for feature, value in feature_list:
+            if value:
+                specs.append('%s@' % feature)
 
-        with path_prepended(prefix):
-            locks = []
-            try:
-                cc.pkgs_dirs = cc.pkgs_dirs[:1]
-                locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
-                for folder in locked_folders:
-                    if not os.path.isdir(folder):
-                        os.makedirs(folder)
-                    lock = get_lock(folder, timeout=config.timeout)
-                    if not folder.endswith('pkgs'):
-                        update_index(folder, config=config, lock=lock, could_be_mirror=False)
-                    locks.append(lock)
+        if specs:  # Don't waste time if there is nothing to do
+            log.debug("Creating environment in %s", prefix)
+            log.debug(str(specs))
 
-                with ExitStack() as stack:
-                    for lock in locks:
-                        stack.enter_context(lock)
-                    index = get_build_index(config=config, clear_cache=True)
+            with path_prepended(prefix):
+                locks = []
+                try:
+                    cc.pkgs_dirs = cc.pkgs_dirs[:1]
+                    locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+                    for folder in locked_folders:
+                        if not os.path.isdir(folder):
+                            os.makedirs(folder)
+                        lock = get_lock(folder, timeout=config.timeout)
+                        if not folder.endswith('pkgs'):
+                            update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                        locks.append(lock)
 
-                    actions = plan.install_actions(prefix, index, specs)
-                    if config.disable_pip:
-                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
-                        actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
-                    plan.display_actions(actions, index)
-                    if on_win:
-                        for k, v in os.environ.items():
-                            os.environ[k] = str(v)
-                    plan.execute_actions(actions, index, verbose=config.debug)
-            except (SystemExit, PaddingError, LinkError) as exc:
-                if (("too short in" in str(exc) or
-                        'post-link failed for: openssl' in str(exc) or
-                        isinstance(exc, PaddingError)) and
-                        config.prefix_length > 80):
-                    if config.prefix_length_fallback:
-                        log.warn("Build prefix failed with prefix length %d", config.prefix_length)
-                        log.warn("Error was: ")
-                        log.warn(str(exc))
-                        log.warn("One or more of your package dependencies needs to be rebuilt "
-                                "with a longer prefix length.")
-                        log.warn("Falling back to legacy prefix length of 80 characters.")
-                        log.warn("Your package will not install into prefixes > 80 characters.")
-                        config.prefix_length = 80
+                    with ExitStack() as stack:
+                        for lock in locks:
+                            stack.enter_context(lock)
+                        index = get_build_index(config=config, clear_cache=True)
 
-                        # Set this here and use to create environ
-                        #   Setting this here is important because we use it below (symlink)
-                        prefix = config.build_prefix
+                        actions = plan.install_actions(prefix, index, specs)
+                        if config.disable_pip:
+                            actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
+                            actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
+                        plan.display_actions(actions, index)
+                        if on_win:
+                            for k, v in os.environ.items():
+                                os.environ[k] = str(v)
+                        plan.execute_actions(actions, index, verbose=config.debug)
+                except (SystemExit, PaddingError, LinkError) as exc:
+                    if (("too short in" in str(exc) or
+                            'post-link failed for: openssl' in str(exc) or
+                            isinstance(exc, PaddingError)) and
+                            config.prefix_length > 80):
+                        if config.prefix_length_fallback:
+                            log.warn("Build prefix failed with prefix length %d", config.prefix_length)
+                            log.warn("Error was: ")
+                            log.warn(str(exc))
+                            log.warn("One or more of your package dependencies needs to be rebuilt "
+                                    "with a longer prefix length.")
+                            log.warn("Falling back to legacy prefix length of 80 characters.")
+                            log.warn("Your package will not install into prefixes > 80 characters.")
+                            config.prefix_length = 80
 
-                        create_env(prefix, specs, config=config,
-                                    clear_cache=clear_cache)
-                    else:
-                        raise
-        warn_on_old_conda_build(index=index)
+                            # Set this here and use to create environ
+                            #   Setting this here is important because we use it below (symlink)
+                            prefix = config.build_prefix
+
+                            create_env(prefix, specs, config=config,
+                                        clear_cache=clear_cache)
+                        else:
+                            raise
+            warn_on_old_conda_build(index=index)
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
@@ -711,7 +705,7 @@ def get_installed_conda_build_version():
     vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in root_linked
         if dist.split('::', 1)[-1].rsplit('-', 2)[0] == 'conda-build']
     if not len(vers_inst) == 1:
-        log.warn("Could not detect installed version of conda-build")
+        logging.getLogger(__name__).warn("Could not detect installed version of conda-build")
         return None
     return vers_inst[0]
 
@@ -722,7 +716,8 @@ def get_conda_build_index_versions(index):
     try:
         pkgs = r.get_pkgs(MatchSpec('conda-build'))
     except (NoPackagesFound, NoPackagesFoundError):
-        log.warn("Could not find any versions of conda-build in the channels")
+        logging.getLogger(__name__).warn("Could not find any versions of conda-build "
+                                         "in the channels")
     return [pkg.version for pkg in pkgs]
 
 
@@ -860,6 +855,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
     if m.skip():
         print_skip_message(m)
         return []
+
+    log = logging.getLogger(__name__)
 
     with path_prepended(config.build_prefix):
         env = environ.get_dict(config=config, m=m)
@@ -1123,6 +1120,7 @@ def clean_pkg_cache(dist, timeout):
                 for pkg_id in [dist, 'local::' + dist]:
                     assert pkg_id not in package_cache()
             except AssertionError:
+                log = logging.getLogger(__name__)
                 log.debug("Conda caching error: %s package remains in cache after removal", dist)
                 log.debug("Clearing package cache to compensate")
                 cache = package_cache()
@@ -1525,7 +1523,8 @@ def handle_pypi_upload(f, config):
     try:
         subprocess.check_call()
     except:
-        log.warn("wheel upload failed - is twine installed?  Is this package registered?")
+        logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
+                                         "  Is this package registered?")
 
 
 def print_build_intermediate_warning(config):

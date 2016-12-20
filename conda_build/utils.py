@@ -41,8 +41,6 @@ else:
     from contextlib2 import ExitStack  # NOQA
 
 
-log = logging.getLogger(__file__)
-
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
 from .conda_interface import rm_rf  # NOQA
 
@@ -50,7 +48,6 @@ on_win = (sys.platform == 'win32')
 
 codec = getpreferredencoding() or 'utf-8'
 on_win = sys.platform == "win32"
-log = logging.getLogger(__file__)
 root_script_dir = os.path.join(root_dir, 'Scripts' if on_win else 'bin')
 
 
@@ -92,7 +89,8 @@ def get_recipe_abspath(recipe):
 
 
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
-    "Copy all the files and directories in src to the directory dst"
+    """Copy all the files and directories in src to the directory dst"""
+    log = logging.getLogger(__name__)
     if isdir(src):
         merge_tree(src, dst, symlinks, timeout=timeout, lock=lock)
 
@@ -448,25 +446,6 @@ def get_build_folders(croot):
     return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
 
 
-def silence_loggers(show_warnings_and_errors=True):
-    if show_warnings_and_errors:
-        log_level = logging.WARN
-    else:
-        log_level = logging.CRITICAL + 1
-    logging.getLogger(os.path.dirname(__file__)).setLevel(log_level)
-    # This squelches a ton of conda output that is not hugely relevant
-    logging.getLogger("conda").setLevel(log_level)
-    logging.getLogger("binstar").setLevel(log_level)
-    logging.getLogger("install").setLevel(log_level + 10)
-    logging.getLogger("conda.install").setLevel(log_level + 10)
-    logging.getLogger("fetch").setLevel(log_level)
-    logging.getLogger("print").setLevel(log_level)
-    logging.getLogger("progress").setLevel(log_level)
-    logging.getLogger("dotupdate").setLevel(log_level)
-    logging.getLogger("stdoutlog").setLevel(log_level)
-    logging.getLogger("requests").setLevel(log_level)
-
-
 def prepend_bin_path(env, prefix, prepend_prefix=False):
     # bin_dirname takes care of bin on *nix, Scripts on win
     env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
@@ -675,3 +654,32 @@ def find_recipe(path):
     elif not results:
         raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
     return results[0]
+
+
+class LoggingContext(object):
+    loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'print', 'progress',
+               'dotupdate', 'stdoutlog', 'requests']
+
+    def __init__(self, level=logging.WARN, handler=None, close=True):
+        self.level = level
+        self.old_levels = {}
+        self.handler = handler
+        self.close = close
+
+    def __enter__(self):
+        for logger in LoggingContext.loggers:
+            log = logging.getLogger(logger)
+            self.old_levels[logger] = log.level
+            log.setLevel(self.level if ('install' not in logger or
+                                        self.level < logging.INFO) else self.level + 10)
+        if self.handler:
+            self.logger.addHandler(self.handler)
+
+    def __exit__(self, et, ev, tb):
+        for logger, level in self.old_levels.items():
+            logging.getLogger(logger).setLevel(level)
+        if self.handler:
+            self.logger.removeHandler(self.handler)
+        if self.handler and self.close:
+            self.handler.close()
+        # implicit return of None => don't swallow exceptions
