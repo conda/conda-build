@@ -76,7 +76,8 @@ def bldpkg_path(m):
 def parse_or_try_download(metadata, no_download_source, config,
                           force_download=False):
 
-    need_reparse_in_env = False
+    need_reparse_in_env = True
+    need_source_download = True
     if (force_download or (not no_download_source and metadata.needs_source_for_render)):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
@@ -87,21 +88,18 @@ def parse_or_try_download(metadata, no_download_source, config,
                 need_source_download = False
             try:
                 metadata.parse_again(config=config, permit_undefined_jinja=False)
+                need_reparse_in_env = False
             except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-                need_reparse_in_env = True
+                pass  # we just don't alter the need_reparse_in_env variable
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
             print("Error was: ")
             print(error)
-            need_source_download = True
 
     elif not metadata.get_section('source'):
         need_source_download = False
-    else:
-        # we have not downloaded source in the render phase.  Download it in
-        #     the build phase
-        need_source_download = not no_download_source
+        need_reparse_in_env = False
     if not need_reparse_in_env:
         try:
             metadata.parse_until_resolved(config=config)
@@ -157,6 +155,10 @@ def render_recipe(recipe_path, config, no_download_source=False):
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,
                                                 config=config)
+    if need_download and no_download_source:
+        raise ValueError("no_download_source specified, but can't fully render recipe without"
+                         " downloading source.  Please fix the recipe, or don't use "
+                         "no_download_source.")
     config.noarch = bool(m.get_value('build/noarch'))
 
     if need_cleanup:
