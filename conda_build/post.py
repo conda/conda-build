@@ -120,7 +120,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                     # from another installed dependency
                     if os.path.exists(join(sp_dir, fn)):
                         try:
-                            utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout)
+                            utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout,
+                                            locking=config.locking)
                             utils.rm_rf(join(egg_path, fn))
                         except IOError as e:
                             fn = os.path.basename(str(e).split()[-1])

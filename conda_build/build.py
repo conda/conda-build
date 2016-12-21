@@ -42,7 +42,7 @@ from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
 from .conda_interface import (PaddingError, LinkError, CondaValueError,
-                              NoPackagesFoundError, NoPackagesFound)
+                              NoPackagesFoundError, NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
@@ -102,7 +102,7 @@ def create_post_scripts(m, config):
         if not isdir(dst_dir):
             os.makedirs(dst_dir, 0o775)
         dst = join(dst_dir, '.%s-%s%s' % (m.name(), tp, ext))
-        utils.copy_into(src, dst, config.timeout)
+        utils.copy_into(src, dst, config.timeout, locking=config.locking)
         os.chmod(dst, 0o775)
 
 
@@ -198,7 +198,7 @@ def copy_recipe(m, config):
                     continue
                 src_path = join(m.path, fn)
                 dst_path = join(recipe_dir, fn)
-                utils.copy_into(src_path, dst_path, timeout=config.timeout)
+                utils.copy_into(src_path, dst_path, timeout=config.timeout, locking=config.locking)
 
             # store the rendered meta.yaml file, plus information about where it came from
             #    and what version of conda-build created it
@@ -244,7 +244,7 @@ def copy_recipe(m, config):
                 f.write(rendered)
             if original_recipe:
                 utils.copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
-                          timeout=config.timeout)
+                          timeout=config.timeout, locking=config.locking)
 
 
 def copy_readme(m, config):
@@ -254,7 +254,7 @@ def copy_readme(m, config):
         if not isfile(src):
             sys.exit("Error: no readme file: %s" % readme)
         dst = join(config.info_dir, readme)
-        utils.copy_into(src, dst, config.timeout)
+        utils.copy_into(src, dst, config.timeout, locking=config.locking)
         if os.path.split(readme)[1] not in {"README.md", "README.rst", "README"}:
             print("WARNING: anaconda.org only recognizes about/readme "
                   "as README.md and README.rst", file=sys.stderr)
@@ -264,7 +264,8 @@ def copy_license(m, config):
     license_file = m.get_value('about/license_file')
     if license_file:
         utils.copy_into(join(config.work_dir, license_file),
-                        join(config.info_dir, 'LICENSE.txt'), config.timeout)
+                        join(config.info_dir, 'LICENSE.txt'), config.timeout,
+                        locking=config.locking)
 
 
 def get_files_with_prefix(m, files, prefix):
@@ -502,7 +503,7 @@ def create_info_files(m, files, config, prefix):
     if m.get_value('app/icon'):
         utils.copy_into(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'),
-                        config.timeout)
+                        config.timeout, locking=config.locking)
     return [f.replace(config.build_prefix + '/', '') for root, _, _ in os.walk(config.info_dir)
             for f in glob(os.path.join(root, '*'))]
 
@@ -608,20 +609,6 @@ def get_build_index(config, clear_cache=True):
     return index
 
 
-def get_subfolder_locks(folders, timeout):
-    sub_locks = []
-    for package in folders:
-        lock = utils.get_lock(os.path.join(cc.pkgs_dirs[0], package),
-                            timeout=timeout)
-        sub_locks.append(lock)
-        for root, folders, _ in os.walk(os.path.join(cc.pkgs_dirs[0], package)):
-            for subfolder in folders:
-                lock = utils.get_lock(os.path.join(root, subfolder),
-                                    timeout=timeout)
-                sub_locks.append(lock)
-    return sub_locks
-
-
 def recursive_req_folders(folders, start_specs, index):
     """Get folders """
     for folder in start_specs:
@@ -633,7 +620,7 @@ def recursive_req_folders(folders, start_specs, index):
     return folders
 
 
-def create_env(prefix, specs, config, clear_cache=True):
+def create_env(prefix, specs, config, clear_cache=True, retry=0):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -662,15 +649,16 @@ def create_env(prefix, specs, config, clear_cache=True):
             with utils.path_prepended(prefix):
                 locks = []
                 try:
-                    cc.pkgs_dirs = cc.pkgs_dirs[:1]
-                    locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
-                    for folder in locked_folders:
-                        if not os.path.isdir(folder):
-                            os.makedirs(folder)
-                        lock = utils.get_lock(folder, timeout=config.timeout)
-                        if not folder.endswith('pkgs'):
-                            update_index(folder, config=config, lock=lock, could_be_mirror=False)
-                        locks.append(lock)
+                    if config.locking:
+                        cc.pkgs_dirs = cc.pkgs_dirs[:1]
+                        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+                        for folder in locked_folders:
+                            if not os.path.isdir(folder):
+                                os.makedirs(folder)
+                            lock = utils.get_lock(folder, timeout=config.timeout)
+                            if not folder.endswith('pkgs'):
+                                update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                            locks.append(lock)
 
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         index = get_build_index(config=config, clear_cache=True)
@@ -683,6 +671,7 @@ def create_env(prefix, specs, config, clear_cache=True):
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
                         plan.execute_actions(actions, index, verbose=config.debug)
+                        warn_on_old_conda_build(index=index)
                 except (SystemExit, PaddingError, LinkError) as exc:
                     if (("too short in" in str(exc) or
                             'post-link failed for: openssl' in str(exc) or
@@ -707,7 +696,16 @@ def create_env(prefix, specs, config, clear_cache=True):
                                         clear_cache=clear_cache)
                         else:
                             raise
-            warn_on_old_conda_build(index=index)
+                # HACK: some of the time, conda screws up somehow and incomplete packages result.
+                #    Just retry.
+                except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+                    if retry < config.max_env_retry:
+                        log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                        create_env(prefix, specs, config=config,
+                                   clear_cache=clear_cache, retry=retry + 1)
+                    else:
+                        log.error("Failed to create env, max retries exceeded.")
+                        raise
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
@@ -805,14 +803,9 @@ def bundle_conda(output, metadata, config, env, **kw):
         if f not in files:
             files.append(f)
     files = filter_files(files, prefix=config.build_prefix)
-<<<<<<< d25fc98c88facda4bac230950daebd121a798965
     output_folder = None
     if config.output_folder:
         output_folder = os.path.join(config.output_folder, config.subdir)
-=======
-    output_folder = os.path.join(config.output_folder,
-                                 config.subdir) if config.output_folder else None
->>>>>>> try FileLock instead of SoftFileLock.  Centralize lock file location to root_dir/locks
     final_output = os.path.join(output_folder or config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
@@ -847,7 +840,7 @@ def bundle_conda(output, metadata, config, env, **kw):
                                     path_to_package=tmp_path)
         if os.path.isfile(final_output):
             os.remove(final_output)
-        utils.copy_into(tmp_path, final_output, config.timeout)
+        utils.copy_into(tmp_path, final_output, config.timeout, locking=config.locking)
     # remove files from build prefix.  This is so that they can be included in other packages.  If
     #     we were to leave them in place, then later scripts meant to also include them may not.
     for f in files:
@@ -860,7 +853,7 @@ def bundle_wheel(output, metadata, config, env):
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(config.work_dir):
         pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
         wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
-        utils.copy_into(wheel_file, config.bldpkgs_dir)
+        utils.copy_into(wheel_file, config.bldpkgs_dir, locking=config.locking)
     return os.path.join(config.bldpkgs_dir, os.path.basename(wheel_file))
 
 
@@ -952,29 +945,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             reparse(m, config=config)
             print("BUILD START (revised):", m.dist())
 
-        if m.name() in [i.rsplit('-', 2)[0] for i in linked(config.build_prefix)]:
-            print("%s is installed as a build dependency. Removing." %
-                m.name())
-
-            locks = []
-
-            cc.pkgs_dirs = cc.pkgs_dirs[:1]
-            locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
-            for folder in locked_folders:
-                if not os.path.isdir(folder):
-                    os.makedirs(folder)
-                lock = utils.get_lock(folder, timeout=config.timeout)
-                if not folder.endswith('pkgs'):
-                    update_index(folder, config=config, lock=lock, could_be_mirror=False)
-                locks.append(lock)
-
-            with utils.try_acquire_locks(locks, timeout=config.timeout):
-                index = get_build_index(config=config, clear_cache=False)
-                actions = plan.remove_actions(config.build_prefix, [m.name()], index=index)
-                assert not plan.nothing_to_do(actions), actions
-                plan.display_actions(actions, index)
-                plan.execute_actions(actions, index)
-
         print("Package:", m.dist())
 
         # get_dir here might be just work, or it might be one level deeper,
@@ -1042,7 +1012,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                             bf.write(data)
                     else:
                         if not isfile(work_file):
-                            utils.copy_into(build_file, work_file, config.timeout)
+                            utils.copy_into(build_file, work_file, config.timeout, locking=config.locking)
                     os.chmod(work_file, 0o766)
 
                     if isfile(work_file):
@@ -1147,10 +1117,12 @@ def guess_interpreter(script_filename):
     return interpreter_command
 
 
-def clean_pkg_cache(dist, timeout):
-    cc.pkgs_dirs = cc.pkgs_dirs[:1]
-    locks = [utils.get_lock(folder, timeout=timeout) for folder in cc.pkgs_dirs]
-    with utils.try_acquire_locks(locks, timeout=timeout):
+def clean_pkg_cache(dist, config):
+    pkgs_dirs = cc.pkgs_dirs[:1]
+    locks = []
+    if config.locking:
+        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in pkgs_dirs]
+    with utils.try_acquire_locks(locks, timeout=config.timeout):
         rmplan = [
             'RM_EXTRACTED {0} local::{0}'.format(dist),
             'RM_FETCHED {0} local::{0}'.format(dist),
@@ -1224,7 +1196,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     config.compute_build_id(metadata.name())
 
-    clean_pkg_cache(metadata.dist(), config.timeout)
+    clean_pkg_cache(metadata.dist(), config)
 
     create_files(config.test_dir, metadata, config)
     # Make Perl or Python-specific test files

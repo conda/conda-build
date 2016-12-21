@@ -60,36 +60,39 @@ def test_build_without_channel_fails(testing_workdir):
     main_build.execute(args)
 
 
-def test_render_output_build_path(testing_workdir, capfd):
-    args = ['--output', os.path.join(metadata_dir, "python_run")]
+def test_render_output_build_path(testing_workdir, test_metadata, capfd):
+    api.output_yaml(test_metadata, 'meta.yaml')
+    args = ['--output', testing_workdir]
     main_render.execute(args)
-    test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+    test_path = "test_render_output_build_path-1.0-py{}{}_1.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor)
     output, error = capfd.readouterr()
     assert error == ""
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_build_output_build_path(testing_workdir, test_config, capfd):
-    args = ['--output', os.path.join(metadata_dir, "python_run")]
+def test_build_output_build_path(testing_workdir, test_config, test_metadata, capfd):
+    api.output_yaml(test_metadata, 'meta.yaml')
+    args = ['--output', testing_workdir]
     main_build.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
-                                  "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+                                  "test_build_output_build_path-1.0-py{}{}_1.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor))
     output, error = capfd.readouterr()
     assert error == ""
     assert output.rstrip() == test_path, error
 
 
-def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, capfd):
+def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, test_metadata, capfd):
     skip_recipe = os.path.join(metadata_dir, "build_skip")
-    args = ['--output', os.path.join(metadata_dir, "python_run"), skip_recipe]
+    api.output_yaml(test_metadata, 'meta.yaml')
+    args = ['--output', testing_workdir, skip_recipe]
 
     main_build.execute(args)
 
     test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", test_config.subdir, pkg)
     test_paths = [test_path(
-        "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+        "test_build_output_build_path_multiple_recipes-1.0-py{}{}_1.tar.bz2".format(
         sys.version_info.major, sys.version_info.minor)),
         "Skipped: {} defines build/skip for this "
         "configuration.".format(os.path.abspath(skip_recipe))]
@@ -123,16 +126,17 @@ def test_build_no_build_id(testing_workdir, test_config, capfd):
     assert 'has_prefix_files_1' not in data
 
 
-def test_render_output_build_path_set_python(testing_workdir, capfd):
+def test_render_output_build_path_set_python(testing_workdir, test_metadata, capfd):
+    api.output_yaml(test_metadata, 'meta.yaml')
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
         version = "2.7"
     else:
         version = "3.5"
 
-    args = ['--output', os.path.join(metadata_dir, "python_run"), '--python', version]
+    args = ['--output', testing_workdir, '--python', version]
     main_render.execute(args)
-    test_path = "conda-build-test-python-run-1.0-py{}{}_0.tar.bz2".format(
+    test_path = "test_render_output_build_path_set_python-1.0-py{}{}_1.tar.bz2".format(
                                       version.split('.')[0], version.split('.')[1])
     output, error = capfd.readouterr()
     assert os.path.basename(output.rstrip()) == test_path, error

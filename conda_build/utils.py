@@ -111,11 +111,11 @@ def try_acquire_locks(locks, timeout):
             lock.release()
 
 
-def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
+def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
     """Copy all the files and directories in src to the directory dst"""
     log = logging.getLogger(__name__)
     if isdir(src):
-        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock)
+        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking)
 
     else:
         if isdir(dst):
@@ -139,7 +139,9 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
 
         if not lock:
             lock = get_lock(src_folder, timeout=timeout)
-        with try_acquire_locks([lock], timeout):
+        if locking:
+            locks = [lock]
+        with try_acquire_locks(locks, timeout):
             # if intermediate folders not not exist create them
             dst_folder = os.path.dirname(dst)
             if dst_folder and not os.path.exists(dst_folder):
@@ -206,7 +208,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
-def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
+def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -228,7 +230,9 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
 
     if not lock:
         lock = get_lock(src, timeout=timeout)
-    with try_acquire_locks([lock], timeout):
+    if locking:
+        locks = [lock]
+    with try_acquire_locks(locks, timeout):
         copytree(src, dst, symlinks=symlinks)
 
 
@@ -241,13 +245,19 @@ _locations = {}
 def get_lock(folder, timeout=90, filename=".conda_lock"):
     global _locations
     location = os.path.abspath(os.path.normpath(folder))
-    lock_filename = base64.urlsafe_b64encode(location)
+    b_location = location
+    if hasattr(b_location, 'encode'):
+        b_location = b_location.encode()
+    lock_filename = base64.urlsafe_b64encode(b_location)[:20]
+    if hasattr(lock_filename, 'decode'):
+        lock_filename = lock_filename.decode()
     locks_dir = os.path.join(root_dir, 'locks')
     if not os.path.isdir(locks_dir):
         os.makedirs(locks_dir)
     lock_file = os.path.join(locks_dir, lock_filename)
     if not os.path.isfile(lock_file):
-        open(lock_file, 'a').close()
+        with open(lock_file, 'a') as f:
+            f.write(location)
     if location not in _locations:
         _locations[location] = filelock.FileLock(lock_file, timeout)
     return _locations[location]

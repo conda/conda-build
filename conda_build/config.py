@@ -110,6 +110,7 @@ class Config(object):
                   Setting('output_folder', None),
                   Setting('prefix_length_fallback', True),
                   Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
+                  Setting('locking', True),
 
                   # pypi upload settings (twine)
                   Setting('password', None),

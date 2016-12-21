@@ -215,6 +215,11 @@ different sets of packages."""
         #     had enough time to build long-prefix length packages.
         default=255, type=int,
     )
+    p.add_argument(
+        "--no-locking", dest='locking', default=True, action="store_false",
+        help=("Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple"
+              "builds at once on one system with this set.")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)

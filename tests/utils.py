@@ -67,8 +67,6 @@ def test_metadata(request, test_config):
     d['package']['version'] = '1.0'
     d['build']['number'] = '1'
     d['build']['entry_points'] = []
-    # MetaData does the auto stuff if the build string is None
-    d['build']['string'] = None
     d['requirements']['build'] = ['python']
     d['requirements']['run'] = ['python']
     d['test']['commands'] = ['echo "A-OK"', 'exit 0']
