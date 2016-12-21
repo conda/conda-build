@@ -244,7 +244,10 @@ _locations = {}
 
 def get_lock(folder, timeout=90, filename=".conda_lock"):
     global _locations
-    location = os.path.abspath(os.path.normpath(folder))
+    try:
+        location = os.path.abspath(os.path.normpath(folder))
+    except OSError:
+        location = folder
     b_location = location
     if hasattr(b_location, 'encode'):
         b_location = b_location.encode()
@@ -641,7 +644,6 @@ def package_has_file(package_path, file_path):
 
 
 def ensure_list(arg):
-    from .conda_interface import string_types
     if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
         if arg:
             arg = [arg]

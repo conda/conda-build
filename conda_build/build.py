@@ -657,8 +657,11 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                                 os.makedirs(folder)
                             lock = utils.get_lock(folder, timeout=config.timeout)
                             if not folder.endswith('pkgs'):
-                                update_index(folder, config=config, lock=lock, could_be_mirror=False)
+                                update_index(folder, config=config, lock=lock,
+                                             could_be_mirror=False)
                             locks.append(lock)
+                        # lock used to generally indicate a conda operation occurring
+                        locks.append(utils.get_lock('conda-operation', timeout=config.timeout))
 
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         index = get_build_index(config=config, clear_cache=True)
@@ -1012,7 +1015,8 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                             bf.write(data)
                     else:
                         if not isfile(work_file):
-                            utils.copy_into(build_file, work_file, config.timeout, locking=config.locking)
+                            utils.copy_into(build_file, work_file, config.timeout,
+                                            locking=config.locking)
                     os.chmod(work_file, 0o766)
 
                     if isfile(work_file):

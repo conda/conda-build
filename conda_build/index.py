@@ -11,7 +11,7 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info, get_lock, ExitStack, try_acquire_locks
+from conda_build.utils import file_info, get_lock, try_acquire_locks
 from .conda_interface import PY3, md5_file
 
 

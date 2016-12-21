@@ -156,8 +156,8 @@ else:
 
     class PathType(Enum):
         """
-        Refers to if the file in question is hard linked or soft linked. Originally designed to be used
-        in paths.json
+        Refers to if the file in question is hard linked or soft linked. Originally designed to be
+        used in paths.json
         """
         hardlink = "hardlink"
         softlink = "softlink"
@@ -167,7 +167,6 @@ else:
 
         def __json__(self):
             return self.name
-
 
     class FileMode(Enum):
         """
@@ -179,7 +178,6 @@ else:
 
         def __str__(self):
             return "%s" % self.value
-
 
     class EntityEncoder(JSONEncoder):
         # json.dumps(obj, cls=SetEncoder)
@@ -193,7 +191,6 @@ else:
             elif hasattr(obj, 'as_json'):
                 return obj.as_json()
             return JSONEncoder.default(self, obj)
-
 
     # work-around for python bug on Windows prior to python 3.2
     # https://bugs.python.org/issue10027
@@ -277,7 +274,6 @@ else:
                                 ("nFileIndexLow", DWORD)]
 
                 cls.BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION
-
 
                 # http://msdn.microsoft.com/en-us/library/windows/desktop/aa364952
                 cls.GetFileInformationByHandle = ctypes.windll.kernel32.GetFileInformationByHandle
