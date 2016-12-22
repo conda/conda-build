@@ -785,7 +785,9 @@ def bundle_conda(output, metadata, config, env, **kw):
         if f not in files:
             files.append(f)
     files = filter_files(files, prefix=config.build_prefix)
-    output_folder = os.path.join(config.output_folder, config.subdir) if config.output_folder else None
+    output_folder = None
+    if config.output_folder:
+        output_folder = os.path.join(config.output_folder, config.subdir)
     final_output = os.path.join(output_folder or config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
@@ -821,6 +823,10 @@ def bundle_conda(output, metadata, config, env, **kw):
         if os.path.isfile(final_output):
             os.remove(final_output)
         copy_into(tmp_path, final_output, config.timeout)
+    # remove files from build prefix.  This is so that they can be included in other packages.  If
+    #     we were to leave them in place, then later scripts meant to also include them may not.
+    for f in files:
+        rm_rf(f)
     return final_output
 
 
@@ -1066,7 +1072,9 @@ can lead to packages that include their dependencies.""" % meta_files))
                     requirements.extend(out.get('requirements', []))
                     made_meta = True
             else:
-                if made_meta:
+                # make a metapackage for the top-level package, but only if a matching output name
+                #    is not explicitly provided
+                if made_meta and not any(m.name() in out.get('name', '') for out in outputs):
                     outputs.append({'name': m.name(), 'requirements': requirements})
 
         for output in outputs:
@@ -1083,7 +1091,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 
 def guess_interpreter(script_filename):
     extensions_to_run_commands = {'.sh': 'sh',
-                                  '.bat': 'cmd',
+                                  '.bat': 'cmd /d /c',
                                   '.ps1': 'powershell -executionpolicy bypass -File',
                                   '.py': 'python'}
     file_ext = os.path.splitext(script_filename)[1]
