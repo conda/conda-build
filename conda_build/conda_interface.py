@@ -141,9 +141,9 @@ def which_prefix(path):
 if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import FileMode, PathType
     FileMode, PathType = FileMode, PathType
-    from conda.export import EntityEncoder
+    from conda.exports import EntityEncoder
     EntityEncoder = EntityEncoder
-    from conda.export import CrossPlatformStLink
+    from conda.exports import CrossPlatformStLink
     CrossPlatformStLink = CrossPlatformStLink
 else:
     from json import JSONEncoder
