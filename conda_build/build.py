@@ -699,6 +699,11 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                                         clear_cache=clear_cache)
                         else:
                             raise
+                    elif 'lock' in str(exc):
+                        if retry < config.max_env_retry:
+                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                            create_env(prefix, specs, config=config,
+                                    clear_cache=clear_cache, retry=retry + 1)
                 # HACK: some of the time, conda screws up somehow and incomplete packages result.
                 #    Just retry.
                 except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
