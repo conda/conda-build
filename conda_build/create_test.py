@@ -75,6 +75,8 @@ def create_shell_files(dir_path, m, config):
     ext = '.bat' if sys.platform == 'win32' else '.sh'
     name = 'no-file'
 
+    # the way this works is that each output needs to explicitly define a test script to run.
+    #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
     for out in m.meta.get('outputs', []):
         if m.name() == out['name']:
             out_test_script = out.get('test', {}).get('script', 'no-file')
@@ -115,6 +117,8 @@ def create_py_files(dir_path, m):
 
         try:
             name = 'run_test.py'
+            # the way this works is that each output needs to explicitly define a test script to run
+            #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
             for out in m.meta.get('outputs', []):
                 if m.name() == out['name']:
                     out_test_script = out.get('test', {}).get('script', 'no-file')
@@ -160,6 +164,9 @@ def create_pl_files(dir_path, m):
 
         try:
             name = 'run_test.pl'
+
+            # the way this works is that each output needs to explicitly define a test script to run
+            #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
             for out in m.meta.get('outputs', []):
                 if m.name() == out['name']:
                     out_test_script = out.get('test', {}).get('script', 'no-file')
