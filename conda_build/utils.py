@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
@@ -12,11 +13,11 @@ from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
 import re
 import stat
 import subprocess
-
 import sys
 import shutil
 import tarfile
 import tempfile
+import time
 import zipfile
 
 import filelock
@@ -88,11 +89,33 @@ def get_recipe_abspath(recipe):
     return recipe_dir, need_cleanup
 
 
-def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
+@contextlib.contextmanager
+def try_acquire_locks(locks, timeout):
+    """Try to acquire all locks.  If any lock can't be immediately acquired, free all locks
+
+    http://stackoverflow.com/questions/9814008/multiple-mutex-locking-strategies-and-why-libraries-dont-use-address-comparison
+    """
+    t = time.time()
+    while (time.time() - t < timeout):
+        for lock in locks:
+            try:
+                lock.acquire(timeout=0.1)
+            except filelock.Timeout:
+                for lock in locks:
+                    lock.release()
+                break
+        break
+    yield
+    for lock in locks:
+        if lock:
+            lock.release()
+
+
+def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
     """Copy all the files and directories in src to the directory dst"""
     log = logging.getLogger(__name__)
     if isdir(src):
-        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock)
+        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking)
 
     else:
         if isdir(dst):
@@ -116,7 +139,9 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None):
 
         if not lock:
             lock = get_lock(src_folder, timeout=timeout)
-        with lock:
+        if locking:
+            locks = [lock]
+        with try_acquire_locks(locks, timeout):
             # if intermediate folders not not exist create them
             dst_folder = os.path.dirname(dst)
             if dst_folder and not os.path.exists(dst_folder):
@@ -183,7 +208,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
-def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
+def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -205,7 +230,9 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None):
 
     if not lock:
         lock = get_lock(src, timeout=timeout)
-    with lock:
+    if locking:
+        locks = [lock]
+    with try_acquire_locks(locks, timeout):
         copytree(src, dst, symlinks=symlinks)
 
 
@@ -217,12 +244,25 @@ _locations = {}
 
 def get_lock(folder, timeout=90, filename=".conda_lock"):
     global _locations
-    location = os.path.abspath(os.path.normpath(folder))
-    if not os.path.isdir(location):
-        os.makedirs(location)
+    try:
+        location = os.path.abspath(os.path.normpath(folder))
+    except OSError:
+        location = folder
+    b_location = location
+    if hasattr(b_location, 'encode'):
+        b_location = b_location.encode()
+    lock_filename = base64.urlsafe_b64encode(b_location)[:20]
+    if hasattr(lock_filename, 'decode'):
+        lock_filename = lock_filename.decode()
+    locks_dir = os.path.join(root_dir, 'locks')
+    if not os.path.isdir(locks_dir):
+        os.makedirs(locks_dir)
+    lock_file = os.path.join(locks_dir, lock_filename)
+    if not os.path.isfile(lock_file):
+        with open(lock_file, 'a') as f:
+            f.write(location)
     if location not in _locations:
-        _locations[location] = filelock.SoftFileLock(os.path.join(location, filename),
-                                                     timeout)
+        _locations[location] = filelock.FileLock(lock_file, timeout)
     return _locations[location]
 
 
@@ -604,7 +644,6 @@ def package_has_file(package_path, file_path):
 
 
 def ensure_list(arg):
-    from .conda_interface import string_types
     if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
         if arg:
             arg = [arg]

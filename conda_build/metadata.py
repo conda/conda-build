@@ -1,7 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import glob
-import logging
 import os
 from os.path import isfile, join
 import re

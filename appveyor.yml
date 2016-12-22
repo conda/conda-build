@@ -74,6 +74,7 @@ test_script:
   - set PATH
   - mkdir C:\cbtmp
   - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
+  - rd /S /Q C:\cbtmp
   - py.test -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
 
 on_failure:

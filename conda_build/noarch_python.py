@@ -6,8 +6,6 @@ import shutil
 import locale
 from os.path import basename, dirname, isdir, join, isfile
 
-from conda_build.post import SHEBANG_PAT
-
 ISWIN = sys.platform.startswith('win')
 
 

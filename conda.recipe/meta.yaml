@@ -22,17 +22,18 @@ requirements:
   build:
     - python
   run:
-    - conda-verify
     - conda  >=4.1
     - contextlib2   [py<34]
+    - conda-verify
+    - enum34        [py<34]
     - filelock
+    - futures       [py<3]
     - jinja2
     - patchelf      [linux]
+    - pkginfo
     - pycrypto
     - python
     - pyyaml
-    - pkginfo
-    - enum34        [py<34]
 
 test:
   requires:

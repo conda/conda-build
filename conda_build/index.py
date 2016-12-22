@@ -11,29 +11,26 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info, get_lock, ExitStack
+from conda_build.utils import file_info, get_lock, try_acquire_locks
 from .conda_interface import PY3, md5_file
 
 
-def read_index_tar(tar_path, config, lock=None):
+def read_index_tar(tar_path, config, lock):
     """ Returns the index.json dict inside the given package tarball. """
-
-    if not lock:
-        lock = get_lock(os.path.dirname(tar_path), timeout=config.timeout)
-    with ExitStack() as stack:
-        stack.enter_context(lock)
-        t = tarfile.open(tar_path)
-        stack.enter_context(t)
-        try:
-            return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
-        except EOFError:
-            raise RuntimeError("Could not extract %s. File probably corrupt."
-                % tar_path)
-        except OSError as e:
-            raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
-        except tarfile.ReadError:
-            raise RuntimeError("Could not extract metadata from %s. "
-                            "File probably corrupt." % tar_path)
+    if config.locking:
+        locks = [lock]
+    with try_acquire_locks(locks, config.timeout):
+        with tarfile.open(tar_path) as t:
+            try:
+                return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+            except EOFError:
+                raise RuntimeError("Could not extract %s. File probably corrupt."
+                    % tar_path)
+            except OSError as e:
+                raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
+            except tarfile.ReadError:
+                raise RuntimeError("Could not extract metadata from %s. "
+                                "File probably corrupt." % tar_path)
 
 
 def write_repodata(repodata, dir_path, lock, config=None):
@@ -41,7 +38,9 @@ def write_repodata(repodata, dir_path, lock, config=None):
     if not config:
         import conda_build.config
         config = conda_build.config.config
-    with lock:
+    if config.locking:
+        locks = [lock]
+    with try_acquire_locks(locks, config.timeout):
         data = json.dumps(repodata, indent=2, sort_keys=True)
         # strip trailing whitespace
         data = '\n'.join(line.rstrip() for line in data.splitlines())
@@ -78,7 +77,10 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     if not lock:
         lock = get_lock(dir_path)
 
-    with lock:
+    if config.locking:
+        locks = [lock]
+
+    with try_acquire_locks(locks, config.timeout):
         if force:
             index = {}
         else:

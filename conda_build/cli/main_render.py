@@ -128,7 +128,8 @@ def execute(args):
     set_language_env_vars(args, p, config)
 
     with LoggingContext(logging.CRITICAL + 1):
-        metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source, config=config)
+        metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source,
+                                       config=config)
         if args.output:
             print(bldpkg_path(metadata))
         else:

@@ -329,6 +329,7 @@ def test_jinja_typo(testing_workdir, test_config):
         assert "'GIT_DSECRIBE_TAG' is undefined" in exc
 
 
+@pytest.mark.serial
 def test_skip_existing(testing_workdir, test_config, capfd):
     # build the recipe first
     api.build(empty_sections, config=test_config)
@@ -337,6 +338,7 @@ def test_skip_existing(testing_workdir, test_config, capfd):
     assert "is already built" in output
 
 
+@pytest.mark.serial
 def test_skip_existing_url(test_metadata, testing_workdir, capfd):
     # make sure that it is built
     outputs = api.build(test_metadata)

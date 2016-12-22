@@ -15,6 +15,7 @@ import filelock
 
 import conda_build.api as api
 import conda_build.build as build
+import conda_build.utils as utils
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          get_render_parser, bldpkg_path)
 from conda_build.conda_interface import cc, add_parser_channels, url_path
@@ -214,6 +215,11 @@ different sets of packages."""
         #     had enough time to build long-prefix length packages.
         default=255, type=int,
     )
+    p.add_argument(
+        "--no-locking", dest='locking', default=True, action="store_false",
+        help=("Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple"
+              "builds at once on one system with this set.")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)
@@ -297,7 +303,7 @@ def execute(args):
                    notest=args.notest, keep_old_work=args.keep_old_work,
                    already_built=None, config=config, noverify=args.no_verify)
 
-    if not args.output and len(build.get_build_folders(config.croot)) > 0:
+    if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
 
 
