@@ -423,26 +423,25 @@ class MetaData(object):
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
-        if not self.meta_path:
-            return
+        if self.meta_path:
+            if not config:
+                config = self.config
+            try:
+                os.environ["CONDA_BUILD_STATE"] = "RENDER"
+                self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
+                                config=config, path=self.meta_path)
+            except:
+                raise
+            finally:
+                del os.environ["CONDA_BUILD_STATE"]
 
-        if not config:
-            config = self.config
+            if (isfile(self.requirements_path) and
+                    not self.meta['requirements']['run']):
+                self.meta.setdefault('requirements', {})
+                run_requirements = specs_from_url(self.requirements_path)
+                self.meta['requirements']['run'] = run_requirements
 
-        try:
-            os.environ["CONDA_BUILD_STATE"] = "RENDER"
-            self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
-                              config=config, path=self.meta_path)
-        except:
-            raise
-        finally:
-            del os.environ["CONDA_BUILD_STATE"]
-
-        if (isfile(self.requirements_path) and
-                   not self.meta['requirements']['run']):
-            self.meta.setdefault('requirements', {})
-            run_requirements = specs_from_url(self.requirements_path)
-            self.meta['requirements']['run'] = run_requirements
+        self.validate_features()
 
     def parse_until_resolved(self, config):
         # undefined_jinja_vars is refreshed by self.parse again
@@ -867,3 +866,8 @@ class MetaData(object):
                                 vcs = "mercurial"
                             return vcs
         return None
+
+    def validate_features(self):
+        if any('-' in feature for feature in self.get_value('build/features')):
+            raise ValueError("- is a disallowed character in features.  Please change this "
+                             "character in your recipe.")

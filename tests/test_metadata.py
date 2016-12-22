@@ -115,3 +115,11 @@ def test_disallow_leading_period_in_version(test_metadata):
     test_metadata.meta['package']['version'] = '.ste.ve'
     with pytest.raises(AssertionError):
         test_metadata.version()
+
+
+def test_disallow_dash_in_features(test_metadata):
+    test_metadata.meta['build']['features'] = ['abc']
+    test_metadata.parse_again()
+    with pytest.raises(ValueError):
+        test_metadata.meta['build']['features'] = ['ab-c']
+        test_metadata.parse_again()
