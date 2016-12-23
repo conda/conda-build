@@ -287,6 +287,6 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
 def init_project(name, path, conf=None):
     project = Project(name, path, conf=conf)
     create_project_skeleton(project)
+    project.initial_commit()
     # ip.init_versioneer(project)
-    # ip.init_git(project)
     # ip.create_github_repo(project)

@@ -1,5 +1,6 @@
 import os
 import subprocess
+from git import Repo
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -36,6 +37,7 @@ class Project(object):
         self.templates = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates/project')))
         self.author = conf.get('author') or get_user_info('name')
         self.email = conf.get('email') or get_user_info('email')
+        self.repo = None
 
     def create_base_files(self, dryrun=None):
         if dryrun:
@@ -68,6 +70,14 @@ class Project(object):
          .stream(name=self.name)
          .dump(os.path.join(self.project_path, 'README.md')))
 
+    def init_git(self):
+        self.repo = Repo.init(self.project_path)
+
+    def initial_commit(self):
+        if not self.repo:
+            self.init_git()
+        self.repo.git.add(A=True)
+        self.repo.index.commit("Initial commit by conda project!")
 
 def create_project_skeleton(project):
     os.mkdir(project.project_path)
