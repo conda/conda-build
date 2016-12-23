@@ -24,3 +24,5 @@ test:
     - pytest
     - pytest-spec
     - pytest-cov
+  commands:
+    py.test --cov={{ name }} tests/

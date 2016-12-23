@@ -1,0 +1,7 @@
+[run]
+omit =
+    {{ name }}/_version.py
+    {{ name }}/versioneer.py
+    {{ name }}/setup.py
+    {{ name }}/tests/test*
+    {{ name }}/*/tests/test*
