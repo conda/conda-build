@@ -288,5 +288,7 @@ def init_project(name, path, conf=None):
     project = Project(name, path, conf=conf)
     create_project_skeleton(project)
     project.initial_commit()
+    python_ver = input("Enter python version [2.7]: ") or '2.7'
+    # project.create_conda_env(python_ver)
     # ip.init_versioneer(project)
     # ip.create_github_repo(project)

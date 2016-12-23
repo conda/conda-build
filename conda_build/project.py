@@ -1,5 +1,6 @@
 import os
 import subprocess
+import conda.cli.python_api as capi
 from git import Repo
 from jinja2 import Environment, FileSystemLoader
 
@@ -78,6 +79,10 @@ class Project(object):
             self.init_git()
         self.repo.git.add(A=True)
         self.repo.index.commit("Initial commit by conda project!")
+
+    def create_conda_env(self, python_ver):
+        cmd = "-n {} python={} ipython".format(self.name, python_ver)
+        capi.run_command(capi.Commands.CREATE, cmd)
 
 def create_project_skeleton(project):
     os.mkdir(project.project_path)
