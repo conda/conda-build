@@ -1,0 +1,26 @@
+package:
+  name: {{ name }}
+{% raw %}
+  version: {{ environ.get('GIT_DESCRIBE_TAG', '') }}
+
+build:
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+{% endraw %}
+
+source:
+  git_url: ../
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python
+
+test:
+  imports:
+    - {{ name }}
+  requires:
+    - pytest
+    - pytest-spec
+    - pytest-cov

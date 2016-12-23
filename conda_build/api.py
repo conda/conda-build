@@ -20,6 +20,7 @@ import sys as _sys
 
 # make the Config class available in the api namespace
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
+from conda_build.project import Project, create_project_skeleton
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 
@@ -281,3 +282,11 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
 
     for path in dir_paths:
         update_index(path, config, force=force, check_md5=check_md5, remove=remove)
+
+
+def init_project(name, path, conf=None):
+    project = Project(name, path, conf=conf)
+    create_project_skeleton(project)
+    # ip.init_versioneer(project)
+    # ip.init_git(project)
+    # ip.create_github_repo(project)
