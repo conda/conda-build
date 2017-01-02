@@ -789,3 +789,12 @@ def test_build_expands_wildcards(mocker, testing_workdir):
     output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
     build_tree.assert_called_once_with(output, post=None, need_source_download=True,
                                        build_only=False, notest=False, config=config)
+
+
+@pytest.mark.skipif(not on_win, reason="windows-only functionality")
+def test_build_sh_on_win(test_config, capfd):
+    recipe = os.path.join(metadata_dir, "_build_sh")
+    outputs = api.build(recipe, config=test_config)
+    assert package_has_file(outputs[0], 'test_file'), "expected file doesn't exist - build.sh didn't run"
+    output, error = capfd.readouterr()
+    assert "Running test in shell" in output, "didn't run run_test.sh"

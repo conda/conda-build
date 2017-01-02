@@ -847,8 +847,10 @@ class MetaData(object):
 
     @property
     def uses_vcs_in_build(self):
-        build_script = "bld.bat" if on_win else "build.sh"
-        build_script = os.path.join(os.path.dirname(self.meta_path), build_script)
+        build_script = "bld.bat" if (on_win and
+                                     os.path.isfile(os.path.join(self.path, 'bld.bat'))) else \
+                                     "build.sh"
+        build_script = os.path.join(self.path, build_script)
         for recipe_file in (build_script, self.meta_path):
             if os.path.isfile(recipe_file):
                 vcs_types = ["git", "svn", "hg"]

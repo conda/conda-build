@@ -31,6 +31,7 @@ requirements:
     - jinja2
     - patchelf      [linux]
     - pkginfo
+    - posix         [win]
     - pycrypto
     - python
     - pyyaml

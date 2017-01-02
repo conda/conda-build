@@ -73,31 +73,31 @@ def create_files(dir_path, m, config):
 
 def create_shell_files(dir_path, m, config):
     has_tests = False
-    ext = '.bat' if sys.platform == 'win32' else '.sh'
     name = 'no-file'
+    exts = ('.bat', '.sh') if sys.platform == 'win32' else ('.sh', )
 
     # the way this works is that each output needs to explicitly define a test script to run.
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
     for out in m.meta.get('outputs', []):
         if m.name() == out['name']:
             out_test_script = out.get('test', {}).get('script', 'no-file')
-            if os.path.splitext(out_test_script)[1].lower() == ext:
+            if os.path.splitext(out_test_script)[1].lower() in exts:
                 name = out_test_script
                 break
     else:
-        name = "run_test{}".format(ext)
+        name = "run_test{}"
 
-    if exists(join(m.path, name)):
-        copy_into(join(m.path, name), dir_path, config.timeout, locking=config.locking)
-        has_tests = True
+    for ext in exts:
+        _name = name.format(ext)
+        if exists(join(m.path, _name)):
+            copy_into(join(m.path, _name), dir_path, config.timeout, locking=config.locking)
+            has_tests = True
 
     with open(join(dir_path, name), 'a') as f:
         f.write('\n\n')
         for cmd in ensure_list(m.get_value('test/commands', [])):
             f.write(cmd)
             f.write('\n')
-            if sys.platform == 'win32':
-                f.write("if errorlevel 1 exit 1\n")
             has_tests = True
 
     return has_tests

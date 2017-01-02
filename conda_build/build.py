@@ -67,9 +67,9 @@ from conda_verify.verify import Verify
 
 
 if 'bsd' in sys.platform:
-    shell_path = '/bin/sh'
+    shell_path = 'sh'
 else:
-    shell_path = '/bin/bash'
+    shell_path = 'bash'
 
 
 def prefix_files(prefix):
@@ -987,8 +987,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                 script = '\n'.join(script)
 
         if isdir(src_dir):
-            if utils.on_win:
-                build_file = join(m.path, 'bld.bat')
+            if utils.on_win and os.path.isfile(join(m.path, 'bld.bat')):
                 if script:
                     build_file = join(src_dir, 'bld.bat')
                     with open(build_file, 'w') as bf:
@@ -1268,8 +1267,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     # Python 2 Windows requires that envs variables be string, not unicode
     env = {str(key): str(value) for key, value in env.items()}
-    suffix = "bat" if utils.on_win else "sh"
-    test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
+    test_script = join(config.test_dir, "conda_test_runner.sh")
 
     with open(test_script, 'w') as tf:
         if config.activate:
@@ -1301,20 +1299,20 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if shell_files:
-            test_file = join(config.test_dir, 'run_test.' + suffix)
+            test_file_path = join(config.test_dir, 'run_test.sh')
             if utils.on_win:
-                tf.write("call {test_file}\n".format(test_file=test_file))
-                if utils.on_win:
-                    tf.write("if errorlevel 1 exit 1\n")
-            else:
-                # TODO: Run the test/commands here instead of in run_test.py
-                tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
-                                                                    test_file=test_file))
+                if os.path.isfile(join(config.test_dir, 'run_test.bat')):
+                    test_file_path = join(config.test_dir, 'run_test.bat').replace('\\', '\\\\')
+                    tf.write("cmd.exe /d /c {test_file}\n".format(test_file=test_file_path))
+                else:
+                    test_file_path = test_file_path.replace('\\', '\\\\')
+            # TODO: Run the test/commands here instead of in run_test.py
+            tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
+                                                               test_file=test_file_path))
 
     if utils.on_win:
-        cmd = ['cmd.exe', "/d", "/c", test_script]
-    else:
-        cmd = [shell_path, '-x', '-e', test_script]
+        test_script = test_script.replace('\\', '\\\\')
+    cmd = [shell_path, '-x', '-e', test_script]
     try:
         subprocess.check_call(cmd, env=env, cwd=config.test_dir)
     except subprocess.CalledProcessError:

@@ -1,0 +1,5 @@
+# test that build.sh works on windows as well as on mac and linux
+
+package:
+  name: test_build_sh
+  version: 1.0
