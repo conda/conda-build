@@ -1,1 +1,1 @@
-MOVE test $PREFIX\test
+MOVE test %PREFIX%\test
