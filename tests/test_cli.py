@@ -15,6 +15,7 @@ from conda_build.tarcheck import TarCheck
 
 from conda_build import api
 from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file
+from conda_build.conda_interface import TemporaryDirectory
 from .utils import (testing_workdir, metadata_dir, testing_env, test_config, test_metadata,
                     put_bad_conda_on_path)
 
@@ -30,7 +31,8 @@ import conda_build.cli.main_index as main_index
 
 
 def test_build():
-    args = ['--no-anaconda-upload', os.path.join(metadata_dir, "empty_sections"), '--no-activate']
+    args = ['--no-anaconda-upload', os.path.join(metadata_dir, "empty_sections"), '--no-activate',
+            '--no-anaconda-upload']
     main_build.execute(args)
 
 
@@ -46,7 +48,7 @@ def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
 
-    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate',
+    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate', '--no-anaconda-upload',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
@@ -86,7 +88,7 @@ def test_build_output_build_path(testing_workdir, test_config, test_metadata, ca
 def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, test_metadata, capfd):
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     api.output_yaml(test_metadata, 'meta.yaml')
-    args = ['--output', testing_workdir, skip_recipe]
+    args = ['--output', testing_workdir, skip_recipe, '--no-anaconda-upload']
 
     main_build.execute(args)
 
@@ -104,7 +106,8 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
 def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     recipe_path = os.path.join(metadata_dir, "has_prefix_files" + os.path.sep)
     fn = api.get_output_file_path(recipe_path, config=test_config)
-    args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', test_config.croot]
+    args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', test_config.croot,
+            '--no-anaconda-upload']
     main_build.execute(args)
     data = package_has_file(fn, 'binary-has-prefix')
     assert data
@@ -113,9 +116,9 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     assert 'has_prefix_files_1' in data
 
 
-def test_build_no_build_id(testing_workdir, test_config, capfd):
+def test_build_no_build_id(testing_workdir, test_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
-            '--croot', test_config.croot, '--no-activate']
+            '--croot', test_config.croot, '--no-activate', '--no-anaconda-upload']
     main_build.execute(args)
     fn = api.get_output_file_path(os.path.join(metadata_dir, "has_prefix_files"),
                                   config=test_config)
@@ -124,6 +127,19 @@ def test_build_no_build_id(testing_workdir, test_config, capfd):
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
     assert 'has_prefix_files_1' not in data
+
+
+def test_build_output_folder(testing_workdir, test_metadata, capfd):
+    api.output_yaml(test_metadata, 'meta.yaml')
+    with TemporaryDirectory() as tmp:
+        out = os.path.join(tmp, 'out')
+        args = [testing_workdir, '--no-build-id',
+                '--croot', tmp, '--no-activate', '--no-anaconda-upload',
+                '--output-folder', out]
+        main_build.execute(args)
+        test_metadata.config.output_folder = out
+        output, error = capfd.readouterr()
+        assert "anaconda upload {}".format(out) in output
 
 
 def test_render_output_build_path_set_python(testing_workdir, test_metadata, capfd):
