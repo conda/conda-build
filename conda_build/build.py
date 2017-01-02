@@ -560,7 +560,7 @@ def path_type(path):
 
 
 def build_info_files_json_v1(m, prefix, files, files_with_prefix):
-    no_link = m.get_value('build/no_link')
+    no_link_files = m.get_value('build/no_link')
     files_json = []
     for fi in sorted(files):
         prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
@@ -571,7 +571,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
             "size_in_bytes": os.path.getsize(path),
             "path_type": path_type(path),
         }
-        no_link = is_no_link(no_link, fi)
+        no_link = is_no_link(no_link_files, fi)
         if no_link:
             file_info["no_link"] = no_link
         if prefix_placeholder and file_mode:
@@ -982,10 +982,9 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             f.write(u'\n')
 
         # Use script from recipe?
-        script = m.get_value('build/script', None)
+        script = utils.ensure_list(m.get_value('build/script', None))
         if script:
-            if isinstance(script, list):
-                script = '\n'.join(script)
+            script = '\n'.join(script)
 
         if isdir(src_dir):
             if utils.on_win:

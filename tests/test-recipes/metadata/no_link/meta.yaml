@@ -1,0 +1,13 @@
+package:
+  name: test_no_link
+  version: 1.0
+
+build:
+  no_link:
+    - no_link_file.example
+    - no_link_file.example2
+  script:
+    - echo "something" > $PREFIX/no_link_file.example  # [not win]
+    - echo "something_else" > $PREFIX/no_link_file.example2  # [not win]
+    - echo "something" > %PREFIX%/no_link_file.example  # [win]
+    - echo "something_else" > %PREFIX%/no_link_file.example2  # [win]
