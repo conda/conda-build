@@ -236,7 +236,7 @@ def output_action(recipe, config):
 
 
 def source_action(metadata, config):
-    source.provide(metadata.path, metadata.get_section('source'), config=config)
+    source.provide(metadata, config=config)
     print('Source tree in:', config.work_dir)
 
 

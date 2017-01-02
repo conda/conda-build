@@ -1201,7 +1201,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             config.channel_urls.insert(0, local_url)
             if (metadata.meta.get('test') and metadata.meta['test'].get('source_files') and
                     not os.listdir(config.work_dir)):
-                source.provide(metadata.path, metadata.get_section('source'), config=config)
+                source.provide(metadata, config=config)
 
     config.compute_build_id(metadata.name())
 
