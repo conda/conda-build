@@ -849,6 +849,7 @@ def bundle_conda(output, metadata, config, env, **kw):
         if os.path.isfile(final_output):
             os.remove(final_output)
         utils.copy_into(tmp_path, final_output, config.timeout, locking=config.locking)
+
     # remove files from build prefix.  This is so that they can be included in other packages.  If
     #     we were to leave them in place, then later scripts meant to also include them may not.
     for f in files:
@@ -1098,9 +1099,14 @@ can lead to packages that include their dependencies.""" % meta_files))
                 if made_meta and not any(m.name() in out.get('name', '') for out in outputs):
                     outputs.append({'name': m.name(), 'requirements': requirements})
 
+        output_folders = set()
         for output in outputs:
-            built_packages.append(bundlers[output.get('type', 'conda')](output, m, config, env))
-        update_index(config.bldpkgs_dir, config, could_be_mirror=False)
+            built_package = bundlers[output.get('type', 'conda')](output, m, config, env)
+            built_packages.append(built_package)
+            output_folders.add(os.path.dirname(built_package))
+
+        for folder in output_folders:
+            update_index(folder, config, could_be_mirror=False)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
