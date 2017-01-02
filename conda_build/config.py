@@ -196,10 +196,7 @@ class Config(object):
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
-            from .conda_interface import linked
-            packages = linked(prefix)
-            packages_names = (pkg.split('-')[0] for pkg in packages)
-            if 'debug' in packages_names:
+            if os.path.isfile(os.path.join(prefix, 'python_d.exe')):
                 res = join(prefix, 'python_d.exe')
             else:
                 res = join(prefix, 'python.exe')
