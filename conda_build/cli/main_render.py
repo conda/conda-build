@@ -52,44 +52,34 @@ source to try fill in related template variables.",
     p.add_argument(
         '--python',
         action="append",
-        help="""Set the Python version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    PythonVersionCompleter() if '.' in i],
+        help="Set the Python version used by conda build.",
         metavar="PYTHON_VER",
         choices=PythonVersionCompleter(),
     )
     p.add_argument(
         '--perl',
         action="append",
-        help="""Set the Perl version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
+        help="Set the Perl version used by conda build.",
         metavar="PERL_VER",
     )
     p.add_argument(
         '--numpy',
         action="append",
-        help="""Set the NumPy version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    NumPyVersionCompleter() if '.' in i],
+        help="Set the NumPy version used by conda build.",
         metavar="NUMPY_VER",
         choices=NumPyVersionCompleter(),
     )
     p.add_argument(
         '--R',
         action="append",
-        help="""Set the R version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
+        help="""Set the R version used by conda build.""",
         metavar="R_VER",
         choices=RVersionsCompleter(),
     )
     p.add_argument(
         '--lua',
         action="append",
-        help="Set the Lua version used by conda build. Can be passed"
-        "multiple times to build against multiple versions (%r)." %
-        [i for i in LuaVersionsCompleter()],
+        help="Set the Lua version used by conda build.",
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )
