@@ -1,0 +1,6 @@
+package:
+  name: test_relative_url
+  version: 1.0
+
+source:
+  url: ./test.tar.gz

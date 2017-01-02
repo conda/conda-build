@@ -53,7 +53,7 @@ def create_files(dir_path, m, config):
         copy_into(path, join(dir_path, fn), config.timeout, locking=config.locking)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(config.work_dir):
-        source.provide(m.path, m.get_section('source'), config=config)
+        source.provide(m, config=config)
     for pattern in ensure_list(m.get_value('test/source_files', [])):
         if on_win and '\\' in pattern:
             raise RuntimeError("test/source_files paths must use / "

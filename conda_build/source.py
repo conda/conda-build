@@ -13,6 +13,7 @@ from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
+from conda_build.conda_interface import url_path
 from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2)
 
@@ -34,11 +35,12 @@ else:
 git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
 
 
-def download_to_cache(meta, config):
+def download_to_cache(metadata, config):
     ''' Download a source to the local cache. '''
     print('Source cache directory is: %s' % config.src_cache)
     if not isdir(config.src_cache):
         os.makedirs(config.src_cache)
+    meta = metadata.get_section('source')
 
     fn = meta['fn'] if 'fn' in meta else basename(meta['url'])
     path = join(config.src_cache, fn)
@@ -50,6 +52,10 @@ def download_to_cache(meta, config):
             meta['url'] = [meta['url']]
 
         for url in meta['url']:
+            if "://" not in url:
+                if not os.path.isabs(url):
+                    url = os.path.normpath(os.path.join(metadata.path, url))
+                url = url_path(url)
             try:
                 print("Downloading %s" % url)
                 download(url, path)
@@ -203,7 +209,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         FNULL.close()
 
 
-def git_source(meta, recipe_dir, config):
+def git_source(metadata, config):
     ''' Download a source from a Git repo (or submodule, recursively) '''
     if not isdir(config.git_cache):
         os.makedirs(config.git_cache)
@@ -212,13 +218,15 @@ def git_source(meta, recipe_dir, config):
     if not git:
         sys.exit("Error: git is not installed")
 
+    meta = metadata.get_section('source')
+
     git_url = meta['git_url']
     git_depth = int(meta.get('git_depth', -1))
     git_ref = meta.get('git_rev', 'HEAD')
 
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
-        git_url = abspath(normpath(os.path.join(recipe_dir, git_url)))
+        git_url = abspath(normpath(os.path.join(metadata.path, git_url)))
         if sys.platform == 'win32':
             git_dn = git_url.replace(':', '_')
         else:
@@ -267,7 +275,7 @@ def git_info(config, fo=None):
                 safe_print_unicode(stdout + u'\n')
 
 
-def hg_source(meta, config):
+def hg_source(metadata, config):
     ''' Download a source from Mercurial repo. '''
     if config.verbose:
         stdout = None
@@ -276,6 +284,8 @@ def hg_source(meta, config):
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
         stderr = FNULL
+
+    meta = metadata.get_section('source')
 
     hg = external.find_executable('hg', config.build_prefix)
     if not hg:
@@ -305,7 +315,7 @@ def hg_source(meta, config):
     return config.work_dir
 
 
-def svn_source(meta, config):
+def svn_source(metadata, config):
     ''' Download a source from SVN repo. '''
     if config.verbose:
         stdout = None
@@ -314,6 +324,8 @@ def svn_source(meta, config):
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
         stderr = FNULL
+
+    meta = metadata.get_section('source')
 
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
@@ -468,7 +480,7 @@ def apply_patch(src_dir, path, config, git=None):
             os.remove(patch_args[-1])  # clean up .patch_unix file
 
 
-def provide(recipe_dir, meta, config, patch=True):
+def provide(metadata, config, patch=True):
     """
     given a recipe_dir:
       - download (if necessary)
@@ -479,18 +491,21 @@ def provide(recipe_dir, meta, config, patch=True):
     if not os.path.isdir(config.build_folder):
         os.makedirs(config.build_folder)
     git = None
+
+    meta = metadata.get_section('source')
+
     if any(k in meta for k in ('fn', 'url')):
-        unpack(meta, config=config)
+        unpack(metadata, config=config)
     elif 'git_url' in meta:
-        git = git_source(meta, recipe_dir, config=config)
+        git = git_source(metadata, config=config)
     # build to make sure we have a work directory with source in it.  We want to make sure that
     #    whatever version that is does not interfere with the test we run next.
     elif 'hg_url' in meta:
-        hg_source(meta, config=config)
+        hg_source(metadata, config=config)
     elif 'svn_url' in meta:
-        svn_source(meta, config=config)
+        svn_source(metadata, config=config)
     elif 'path' in meta:
-        path = normpath(abspath(join(recipe_dir, meta.get('path'))))
+        path = normpath(abspath(join(metadata.path, metadata.get_value('source/path'))))
         if config.verbose:
             print("Copying %s to %s" % (path, config.work_dir))
         # careful here: we set test path to be outside of conda-build root in setup.cfg.
@@ -504,14 +519,6 @@ def provide(recipe_dir, meta, config, patch=True):
         src_dir = config.work_dir
         patches = ensure_list(meta.get('patches', []))
         for patch in patches:
-            apply_patch(src_dir, join(recipe_dir, patch), config, git)
+            apply_patch(src_dir, join(metadata.path, patch), config, git)
 
     return config.work_dir
-
-
-if __name__ == '__main__':
-    from conda_build.config import Config
-    print(provide('.',
-                  {'url': 'http://pypi.python.org/packages/source/b/bitarray/bitarray-0.8.0.tar.gz',
-                   'git_url': 'git@github.com:ilanschnell/bitarray.git',
-                   'git_tag': '0.5.2'}), Config())
