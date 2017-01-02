@@ -24,7 +24,6 @@ import filelock
 
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
-from .conda_interface import linked
 from .conda_interface import root_dir
 from .conda_interface import string_types
 
@@ -547,9 +546,7 @@ def create_entry_point(path, module, func, config):
     pyscript = PY_TMPL % {'module': module, 'func': func}
     if sys.platform == 'win32':
         with open(path + '-script.py', 'w') as fo:
-            packages = linked(config.build_prefix)
-            packages_names = (pkg.split('-')[0] for pkg in packages)
-            if 'debug' in packages_names:
+            if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
                 fo.write('#!python_d\n')
             fo.write(pyscript)
         copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
