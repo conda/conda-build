@@ -6,7 +6,7 @@ from conda_build.conda_interface import download
 from conda_build import api
 from conda_build.utils import package_has_file
 
-from .utils import testing_workdir, test_config, on_win, metadata_dir
+from .utils import testing_workdir, test_config, on_win, metadata_dir, assert_package_consistency
 
 def test_convert_wheel_raises():
     with pytest.raises(RuntimeError) as exc:
@@ -38,7 +38,9 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config):
     api.build(recipe_dir, config=test_config)
     for platform in ['win-64', 'win-32']:
         api.convert(fn, platforms=[platform], force=True)
-        assert package_has_file(os.path.join(platform, os.path.basename(fn)), "Scripts/test-script-manual-script.py")
-        assert package_has_file(os.path.join(platform, os.path.basename(fn)), "Scripts/test-script-manual.bat")
-        assert package_has_file(os.path.join(platform, os.path.basename(fn)), "Scripts/test-script-setup-script.py")
-        assert package_has_file(os.path.join(platform, os.path.basename(fn)), "Scripts/test-script-setup.bat")
+        converted_fn = os.path.join(platform, os.path.basename(fn))
+        assert package_has_file(converted_fn, "Scripts/test-script-manual-script.py")
+        assert package_has_file(converted_fn, "Scripts/test-script-manual.bat")
+        assert package_has_file(converted_fn, "Scripts/test-script-setup-script.py")
+        assert package_has_file(converted_fn, "Scripts/test-script-setup.bat")
+        assert_package_consistency(converted_fn)
