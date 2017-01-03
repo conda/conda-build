@@ -1,3 +1,51 @@
+2017-01-02 2.1.0:
+
+(includes changes since 2.0.12, including those already listed under 2.1.0beta1)
+
+Enhancements:
+-------------
+
+* Consolidate package metadata from extra.json and noarch.json into package_metadata.json #1535 #1539
+* finalize paths.json, (formerly files.json), which supersedes the older separate files for tracking file data #1535
+* Support output of multiple packages from one recipe #1576
+* Support output of wheels #1576
+* Add ``--prefix-length`` to conda-build.  This allows one to set the prefix length manually.  It should be used sparingly, preferring creation of a temporary folder on non-encrypted locations, and setting ``--croot`` to that temporary folder.  #1579
+* Add ``--no-prefix-length-fallback`` option to conda-build, to fail builds that encounter short prefixes, rather than falling back to the short prefix #1579
+* Change CRAN-skeleton to follow conda-forge style #1596
+* Allow relative paths to files in source/url field #1614
+
+Bug fixes:
+----------
+
+* Rework locks to be more robust #1540
+* Call make_hardlink_copy on Windows to prevent conda failures #1575
+* Delete the work folder before running the test suite.  Exposes faulty links to source files more easily.  #1581
+* Add support for Python 3.6 in selector expressions #1592
+* Don't try to compile pyc files when python is not installed in the build env #1593
+* Fix a function call leading to corrupted meta.yaml output #1589
+* Fix logger to be package-local.  Fixes logger output not showing up.  #1583
+* Disallow leading periods in package version  #1594
+* Fix reference to undefined need_source_download #1595
+* Disallow - in feature names, to avoid conflicts with conda's handling of package names #1600
+* Remove help text about passing multiple --python options or "all" - this has been broken for some time.  Replacement coming in 3.0.0.  #1610
+* Fix clobbering of no_link variable.  #1611
+* Fix index when --output-folder is specified #1613
+* Fix python_d.exe incompatibility with conda 4.3 #1615
+
+Contributors:
+-------------
+
+* @asmeurer
+* @hajs
+* @johanneskoester
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @mwiebe
+* @soapy1
+
+
+
 2016-12-20 2.1.0beta1:
 
 Enhancements:
