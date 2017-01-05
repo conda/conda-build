@@ -29,7 +29,13 @@ install:
   - conda config --set auto_update_conda False
   - conda update -q --all
   - if [[ "$CANARY" == "true" ]]; then
-      conda install -y -q -c conda-canary conda;
+      pushd ..;
+      rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+      git clone https://github.com/conda/conda;
+      pushd conda
+      pip install .
+      popd;
+      popd;
       conda config --set always_yes yes;
     else
       if [ -n "$CONDA" ]; then
