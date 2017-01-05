@@ -65,6 +65,8 @@ from conda_build.features import feature_list
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
 
+from conda import __version__ as conda_version
+from conda_build import __version__ as conda_build_version
 
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
@@ -392,8 +394,8 @@ def write_about_json(m, config):
         if hasattr(conda_info, 'decode'):
             conda_info = conda_info.decode(utils.codec)
         conda_info = json.loads(conda_info)
-        d['conda_version'] = conda_info['conda_version']
-        d['conda_build_version'] = conda_info['conda_build_version']
+        d['conda_version'] = conda_version
+        d['conda_build_version'] = conda_build_version
         # conda env will be in most, but not necessarily all installations.
         #    Don't die if we don't see it.
         if 'conda_env_version' in conda_info:
