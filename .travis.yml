@@ -33,7 +33,7 @@ install:
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git
         $HOME/miniconda/python conda/utils/setup-testing.py install
         hash -r
-        test "$(conda --version)" = "conda $CONDA_VERSION"
+        conda info
     fi
 
   - conda install -q anaconda-client requests=2.11.1 filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1 conda-verify
