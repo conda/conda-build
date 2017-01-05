@@ -31,7 +31,7 @@ install:
   - if [ -n "$CONDA_VERSION" ]; then
         rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
-        $HOME/miniconda/python conda/utils/setup-testing.py install;
+        $HOME/miniconda/bin/python conda/utils/setup-testing.py install;
         hash -r;
         conda info;
     fi
