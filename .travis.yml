@@ -6,10 +6,10 @@ matrix:
     - python: '3.5'
       os: linux
     - python: '3.5'
-      env: CANARY=true
+      env: $CONDA_VERSION=4.2.x
       os: linux
     - python: '3.5'
-      env: CONDA=4.1
+      env: $CONDA_VERSION=4.3.x
       os: linux
     - python: '3.5'
       env:
@@ -28,15 +28,15 @@ install:
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
   - conda update -q --all
-  - if [[ "$CANARY" == "true" ]]; then
-      conda install -y -q -c conda-canary conda;
-      conda config --set always_yes yes;
-    else
-      if [ -n "$CONDA" ]; then
-        conda install -y --no-deps conda=${CONDA};
-      fi
+  - if [ -n "$CONDA_VERSION" ]; then
+        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
+        pushd conda;
+        $HOME/miniconda/bin/python utils/setup-testing.py install;
+        popd;
+        hash -r;
+        conda info;
     fi
-
   - conda install -q anaconda-client requests=2.11.1 filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1 conda-verify
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
