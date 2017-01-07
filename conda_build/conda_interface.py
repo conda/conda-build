@@ -25,84 +25,49 @@ import conda.config as cc  # NOQA
 from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
 from enum import Enum
+import conda.base.context
+import conda.exceptions
+from conda.models.channel import get_conda_build_local_url
+from conda.cli.main import _main
 
-import os
 
-if parse_version(conda.__version__) >= parse_version("4.2"):
-    # conda 4.2.x
-    import conda.base.context
-    import conda.exceptions
-    from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
+from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
 
-    from conda.base.constants import DEFAULT_CHANNELS  # NOQA
-    get_prefix = partial(context_get_prefix, conda.base.context.context)
-    get_default_urls = lambda: DEFAULT_CHANNELS
+from conda.base.constants import DEFAULT_CHANNELS  # NOQA
+get_prefix = partial(context_get_prefix, conda.base.context.context)
+get_default_urls = lambda: DEFAULT_CHANNELS
 
-    arch_name = conda.base.context.context.arch_name
-    binstar_upload = conda.base.context.context.binstar_upload
-    bits = conda.base.context.context.bits
-    default_prefix = conda.base.context.context.default_prefix
-    default_python = conda.base.context.context.default_python
-    envs_dirs = conda.base.context.context.envs_dirs
-    pkgs_dirs = conda.base.context.context.pkgs_dirs
-    platform = conda.base.context.context.platform
-    root_dir = conda.base.context.context.root_dir
-    root_writable = conda.base.context.context.root_writable
-    subdir = conda.base.context.context.subdir
-    from conda.models.channel import get_conda_build_local_url
-    get_rc_urls = lambda: list(conda.base.context.context.channels)
-    get_local_urls = lambda: list(get_conda_build_local_url()) or []
-    load_condarc = lambda fn: conda.base.context.reset_context([fn])
-    PaddingError = conda.exceptions.PaddingError
-    LinkError = conda.exceptions.LinkError
-    NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
-    CondaValueError = conda.exceptions.CondaValueError
-    LockError = conda.exceptions.LockError
+arch_name = conda.base.context.context.arch_name
+binstar_upload = conda.base.context.context.binstar_upload
+bits = conda.base.context.context.bits
+default_prefix = conda.base.context.context.default_prefix
+default_python = conda.base.context.context.default_python
+envs_dirs = conda.base.context.context.envs_dirs
+pkgs_dirs = conda.base.context.context.pkgs_dirs
+platform = conda.base.context.context.platform
+root_dir = conda.base.context.context.root_dir
+root_writable = conda.base.context.context.root_writable
+subdir = conda.base.context.context.subdir
+get_rc_urls = lambda: list(conda.base.context.context.channels)
+get_local_urls = lambda: list(get_conda_build_local_url()) or []
+load_condarc = lambda fn: conda.base.context.reset_context([fn])
+PaddingError = conda.exceptions.PaddingError
+LinkError = conda.exceptions.LinkError
+NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
+PackageNotFoundError = conda.exceptions.PackageNotFoundError
+UnsatisfiableError = conda.exceptions.UnsatisfiableError
+CondaValueError = conda.exceptions.CondaValueError
+CondaHTTPError = conda.exceptions.CondaHTTPError
+LockError = conda.exceptions.LockError
+reset_context = conda.base.context.reset_context
+conda_main = _main
 
-    # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-    conda.base.context.context.allow_softlinks = False
+# disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
+conda.base.context.context.allow_softlinks = False
 
-    # when deactivating envs (e.g. switching from root to build/test) this env var is used,
-    # except the PR that removed this has been reverted (for now) and Windows doesnt need it.
-    env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
-
-else:
-    from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
-    from conda.cli.common import get_prefix  # NOQA
-
-    arch_name = cc.arch_name
-    binstar_upload = cc.binstar_upload
-    bits = cc.bits
-    default_prefix = cc.default_prefix
-    default_python = cc.default_python
-    envs_dirs = cc.envs_dirs
-    pkgs_dirs = cc.pkgs_dirs
-    platform = cc.platform
-    root_dir = cc.root_dir
-    root_writable = cc.root_writable
-    subdir = cc.subdir
-
-    get_rc_urls = cc.get_rc_urls
-    get_local_urls = cc.get_local_urls
-
-    cc.allow_softlinks = False
-
-    class PaddingError(Exception):
-        pass
-
-    class LockError(Exception):
-        pass
-
-    class LinkError(Exception):
-        pass
-
-    class NoPackagesFoundError(Exception):
-        pass
-
-    class CondaValueError(Exception):
-        pass
-
-    env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
+# when deactivating envs (e.g. switching from root to build/test) this env var is used,
+# except the PR that removed this has been reverted (for now) and Windows doesnt need it.
+env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
 
 class SignatureError(Exception):
