@@ -65,10 +65,13 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     config = get_or_merge_config(config, **kwargs)
 
     recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
+    for recipe in recipe_paths_or_metadata:
+        if not any((hasattr(recipe, "config"), isinstance(recipe, string_types))):
+            raise ValueError("Recipe passed was unrecognized object: {}".format(recipe))
     string_paths = [p for p in recipe_paths_or_metadata if isinstance(p, string_types)]
     paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
-    for recipe in paths[:]:
+    for recipe in paths:
         try:
             recipes.append(find_recipe(recipe))
         except IOError:

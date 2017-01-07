@@ -882,7 +882,6 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
     :type m: Metadata
     :type post: bool or None. None means run the whole build. True means run
     post only. False means stop just before the post.
-    :type keep_old_work: bool: Keep any previous work directory.
     :type need_source_download: bool: if rendering failed to download source
     (due to missing tools), retry here after build env is populated
     '''
@@ -1167,6 +1166,19 @@ def clean_pkg_cache(dist, config):
                     utils.rm_rf(entry)
 
 
+def warn_on_use_of_SRC_DIR(metadata):
+    test_files = glob(os.path.join(metadata.path, 'run_test*'))
+    for f in test_files:
+        with open(f) as _f:
+            contents = _f.read()
+        if ("SRC_DIR" in contents and 'source_files' not in metadata.get_section('test') and
+                metadata.config.remove_work_dir):
+            raise ValueError("In conda-build 2.1+, the work dir is removed by default before the "
+                             "test scripts run.  You are using the SRC_DIR variable in your test "
+                             "script, but these files have been deleted.  Please see the "
+                             " documentation regarding the test/source_files meta.yaml section, "
+                             "or pass the --no-remove-work-dir flag.")
+
 def test(recipedir_or_package_or_metadata, config, move_broken=True):
     '''
     Execute any test scripts for the given package.
@@ -1174,6 +1186,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     :param m: Package's metadata.
     :type m: Metadata
     '''
+    log = logging.getLogger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     need_cleanup = False
 
@@ -1210,6 +1223,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     not os.listdir(config.work_dir)):
                 source.provide(metadata, config=config)
 
+    warn_on_use_of_SRC_DIR(metadata)
+
     config.compute_build_id(metadata.name())
 
     clean_pkg_cache(metadata.dist(), config)
@@ -1231,9 +1246,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     print("TEST START:", metadata.dist())
 
-    # Needs to come after create_files in case there's test/source_files
-    print("Deleting work directory,", config.work_dir)
-    utils.rm_rf(config.work_dir)
+    if config.remove_work_dir:
+        # Needs to come after create_files in case there's test/source_files
+        print("Deleting work directory,", config.work_dir)
+        utils.rm_rf(config.work_dir)
+    else:
+        log.warn("Not removing work directory after build.  Your package may depend on files in "
+                 "the work directory that are not included with your package")
 
     get_build_metadata(metadata, config=config)
     specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
@@ -1246,13 +1265,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         # as the tests are run by python, ensure that python is installed.
         # (If they already provided python as a run or test requirement,
         #  this won't hurt anything.)
-        specs += ['python %s*' % environ.get_py_ver(config)]
+        specs += ['python %s.*' % environ.get_py_ver(config)]
     if pl_files:
         # as the tests are run by perl, we need to specify it
-        specs += ['perl %s*' % environ.get_perl_ver(config)]
+        specs += ['perl %s.*' % environ.get_perl_ver(config)]
     if lua_files:
         # not sure how this shakes out
-        specs += ['lua %s*' % environ.get_lua_ver(config)]
+        specs += ['lua %s.*' % environ.get_lua_ver(config)]
 
     create_env(config.test_prefix, specs, config=config)
 
@@ -1463,14 +1482,13 @@ packages, the other package needs to be rebuilt
                 recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
                 if recipe_glob:
                     for recipe_dir in recipe_glob:
-                        print(error_str)
                         print(("Missing dependency {0}, but found" +
                                 " recipe directory, so building " +
                                 "{0} first").format(pkg))
                         add_recipes.append(recipe_dir)
                 else:
-                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
-                                       .format(recipe) + error_str + "\n\n" + extra_help)
+                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
+                                       .format(recipe, e.packages) + "\n\n" + extra_help)
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload

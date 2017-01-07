@@ -108,8 +108,8 @@ different sets of packages."""
     p.add_argument(
         '--keep-old-work',
         action='store_true',
-        help="""Keep any existing, old work directory. Useful if debugging across
-        callstacks involving multiple packages/recipes. """
+        dest='dirty',
+        help="Deprecated.  Same as --dirty."
     )
     p.add_argument(
         '--dirty',
@@ -220,6 +220,13 @@ different sets of packages."""
         help=("Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple"
               "builds at once on one system with this set.")
     )
+    p.add_argument(
+        "--no-remove-work-dir", dest='remove_work_dir', default=True, action="store_false",
+        help=("Disable removal of the work dir before testing.  Be careful using this option, as"
+              " you package may depend on files that are not included in the package, and may pass"
+              "tests, but ultimately fail on installed systems.")
+    )
+
     add_parser_channels(p)
 
     args = p.parse_args(args)
@@ -300,8 +307,8 @@ def execute(args):
 
     else:
         api.build(args.recipe, post=args.post, build_only=args.build_only,
-                   notest=args.notest, keep_old_work=args.keep_old_work,
-                   already_built=None, config=config, noverify=args.no_verify)
+                   notest=args.notest, already_built=None, config=config,
+                  noverify=args.no_verify)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)

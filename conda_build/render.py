@@ -82,9 +82,9 @@ def parse_or_try_download(metadata, no_download_source, config,
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not config.dirty:
-                if len(os.listdir(config.work_dir)) == 0:
-                    source.provide(metadata, config=config)
+            if not config.dirty or len(os.listdir(config.work_dir)) == 0:
+                source.provide(metadata, config=config)
+            if not metadata.get_section('source') or len(os.listdir(config.work_dir)) > 0:
                 need_source_download = False
             try:
                 metadata.parse_again(config=config, permit_undefined_jinja=False)
