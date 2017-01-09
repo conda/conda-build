@@ -868,6 +868,6 @@ class MetaData(object):
         return None
 
     def validate_features(self):
-        if any('-' in feature for feature in self.get_value('build/features')):
+        if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
                              "character in your recipe.")
