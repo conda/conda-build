@@ -295,6 +295,9 @@ default_structs = {
     'requirements/host': list,
     'requirements/run': list,
     'requirements/conflicts': list,
+    'requirements/preferred_env': text_type,
+    'requirements/preferred_env_executable_paths': list,
+    'requirements/aggressive_update': text_type,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
@@ -393,7 +396,7 @@ FIELDS = {
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths',
               ],
-    'requirements': ['build', 'host', 'run', 'conflicts'],
+    'requirements': ['build', 'run', 'conflicts', 'aggressive_update'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
@@ -930,6 +933,8 @@ class MetaData(object):
                 d['noarch'] = build_noarch
         if self.is_app():
             d.update(self.app_meta())
+        if self.get_value('requirements/aggressive_update'):
+            d['aggressive_update'] = self.get_value('requirements/aggressive_update')
         return d
 
     def has_prefix_files(self):
