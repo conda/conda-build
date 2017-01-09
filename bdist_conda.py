@@ -92,7 +92,7 @@ class CondaDistribution(Distribution):
         'conda_command_tests': True,
         'conda_binary_relocation': True,
         'conda_preserve_egg_dir': None,
-        'conda_features': None,
+        'conda_features': [],
         'conda_track_features': None,
     }
 
