@@ -52,8 +52,8 @@ install:
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda update -q --all
-  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2
-  - conda install -q pyflakes=1.1 pycrypto posix m2-git anaconda-client numpy conda-verify
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet
+  - conda install -q pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4
   - conda install -c conda-forge -q perl
   # this is to ensure dependencies
   - python --version
