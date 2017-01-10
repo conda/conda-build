@@ -56,3 +56,17 @@ class VerifyError(CondaBuildException):
         self.script = script
         self.msg = "%s failed to verify\n%s" % (script, error)
         super(VerifyError, self).__init__(self.msg)
+
+
+class DependencyNeedsBuildingError(CondaBuildException):
+    def __init__(self, CondaException, *args, **kwargs):
+        self.packages = []
+        for line in str(CondaException).splitlines():
+            if not line.startswith('  - '):
+                continue
+            pkg = line.lstrip('  - ').split(' -> ')[-1]
+            pkg = pkg.strip().split(' ')[0]
+            self.packages.append(pkg)
+        if not self.packages:
+            raise RuntimeError("failed to parse packages from exception:"
+                               " {}".format(str(CondaException)))

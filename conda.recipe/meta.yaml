@@ -22,7 +22,7 @@ requirements:
   build:
     - python
   run:
-    - conda  >=4.1
+    - conda  >=4.2.14
     - contextlib2   [py<34]
     - conda-verify
     - enum34        [py<34]

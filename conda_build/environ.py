@@ -13,11 +13,17 @@ import subprocess
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import root_dir, cc
+from .conda_interface import (PaddingError, LinkError, LockError, NoPackagesFound,
+                              NoPackagesFoundError, PackageNotFoundError, Unsatisfiable,
+                              CondaValueError, UnsatisfiableError)
+from .conda_interface import reset_context, conda_main, symlink_conda
 
 from conda_build.os_utils import external
 from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
+from conda_build.index import update_index
+from conda_build.exceptions import DependencyNeedsBuildingError
 
 
 def get_perl_ver(config):
@@ -510,3 +516,137 @@ if __name__ == '__main__':
     for k in sorted(e):
         assert isinstance(e[k], str), k
         print('%s=%s' % (k, e[k]))
+
+
+def create_env(prefix, specs, config, clear_cache=True, retry=0):
+    '''
+    Create a conda envrionment for the given prefix and specs.
+    '''
+    capture = contextlib.contextmanager(lambda: (yield))
+    if config.debug:
+        logging.getLogger("conda_build").setLevel(logging.DEBUG)
+        external_logger_context = utils.LoggingContext(logging.DEBUG)
+    elif config.verbose:
+        logging.getLogger("conda_build").setLevel(logging.INFO)
+        external_logger_context = utils.LoggingContext(logging.ERROR)
+    else:
+        logging.getLogger("conda_build").setLevel(logging.CRITICAL)
+        external_logger_context = utils.LoggingContext(logging.CRITICAL)
+        capture = utils.capture
+
+    with capture():
+        with external_logger_context:
+            log = logging.getLogger(__name__)
+
+            if os.path.isdir(prefix):
+                utils.rm_rf(prefix)
+
+            specs = list(specs)
+            for feature, value in feature_list:
+                if value:
+                    specs.append('%s@' % feature)
+            specs = (spec.replace(' ', '=') for spec in specs)
+
+            if specs:  # Don't waste time if there is nothing to do
+                log.debug("Creating environment in %s", prefix)
+
+                with utils.path_prepended(prefix):
+                    locks = []
+                    try:
+                        if config.locking:
+                            cc.pkgs_dirs = cc.pkgs_dirs[:1]
+                            locked_folders = set(cc.pkgs_dirs + list(config.bldpkgs_dirs) +
+                                              [os.path.join(cc.root_dir, 'conda-bld', arch)
+                                               for arch in ('noarch', config.subdir)])
+                            for folder in locked_folders:
+                                if not os.path.isdir(folder):
+                                    os.makedirs(folder)
+                                lock = utils.get_lock(folder, timeout=config.timeout)
+                                if not folder.endswith('pkgs'):
+                                    update_index(folder, config=config, lock=lock,
+                                                could_be_mirror=False)
+                                locks.append(lock)
+                            # lock used to generally indicate a conda operation occurring
+                            locks.append(utils.get_lock('conda-operation',
+                                                        timeout=config.timeout))
+
+                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                            if config.disable_pip:
+                                pip_set = partial(utils.env_var,
+                                                    "CONDA_ADD_PIP_AS_PYTHON_DEPENDENCY",
+                                                    False, callback=reset_context)
+                            else:
+                                pip_set = contextlib.contextmanager(lambda: (yield))
+
+                            with utils.ExitStack() as stack:
+                                stack.enter_context(pip_set())
+                                stack.enter_context(utils.env_var('CONDA_CHANNELS',
+                                                        ','.join(utils.collect_channels(config)),
+                                                                  callback=reset_context))
+                                stack.enter_context(utils.env_var('CONDA_REPODATA_TIMEOUT_SECS', 0,
+                                                                  callback=reset_context))
+                                stack.enter_context(utils.env_var('CONDA_PKGS_DIRS',
+                                                                  config.croot,
+                                                                  callback=reset_context))
+                                cmd = 'create -yp {prefix} {specs}'.format(
+                                    prefix=prefix, specs=" ".join(specs)).split()
+                                if config.debug:
+                                    cmd.insert(1, '--debug')
+                                reset_context()
+                                conda_main(*cmd)
+
+                    except (SystemExit, PaddingError, LinkError) as exc:
+                        exc_text = str(exc)
+                        if (("too short in" in exc_text or
+                                'post-link failed for: openssl' in exc_text or
+                                isinstance(exc, PaddingError)) and
+                                config.prefix_length > 80):
+                            if config.prefix_length_fallback:
+                                log.warn("Build prefix failed with prefix length %d",
+                                        config.prefix_length)
+                                log.warn("Error was: ")
+                                log.warn(str(exc))
+                                log.warn("One or more of your package dependencies needs to be "
+                                        "rebuilt with a longer prefix length.")
+                                log.warn("Falling back to prefix length of 80 characters")
+                                log.warn("Your package will not install into prefixes > 80 "
+                                            "characters.")
+                                config.prefix_length = 80
+
+                                # Set this here and use to create environ
+                                #   Setting this here is important because we use it below
+                                #      (symlink)
+                                prefix = config.build_prefix
+
+                                create_env(prefix, specs, config=config,
+                                            clear_cache=clear_cache, retry=retry)
+                            else:
+                                raise
+                        else:
+                            raise
+
+                    except(NoPackagesFoundError, PackageNotFoundError, Unsatisfiable,
+                           UnsatisfiableError, CondaValueError) as exc:
+                        raise DependencyNeedsBuildingError(exc)
+
+                    # HACK: some of the time, conda screws up somehow and incomplete packages
+                    #    result.  Just retry.
+                    except (IOError, AssertionError, ValueError, RuntimeError) as exc:
+                        if retry < config.max_env_retry:
+                            log.warn("failed to create env, retrying (%d of %d).  "
+                                        "exception was: %s",
+                                        retry, config.max_env_retry, str(exc))
+                            create_env(prefix, specs, config=config,
+                                        clear_cache=clear_cache, retry=retry + 1)
+                        else:
+                            log.error("Failed to create env, max retries exceeded.")
+                            raise
+
+            # ensure prefix exists, even if empty, i.e. when specs are empty
+            if not os.path.isdir(prefix):
+                os.makedirs(prefix)
+            if utils.on_win:
+                shell = "cmd.exe"
+            else:
+                shell = "bash"
+            symlink_conda(prefix, sys.prefix, shell)
