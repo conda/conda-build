@@ -14,7 +14,7 @@ from distutils.msvc9compiler import Reg, WINSDK_BASE
 from .conda_interface import bits
 
 from conda_build import environ
-from conda_build.utils import _check_call, root_script_dir, path_prepended, copy_into
+from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into
 
 
 assert sys.platform == 'win32'
@@ -227,6 +227,6 @@ def build(m, bld_bat, config):
             fo.write(data)
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
-        _check_call(cmd, cwd=src_dir)
+        check_call_env(cmd, cwd=src_dir)
 
     fix_staged_scripts(join(config.build_prefix, 'Scripts'))

@@ -13,7 +13,7 @@ import sys
 from .conda_interface import string_types
 
 from conda_build.post import mk_relative_osx
-from conda_build.utils import _check_call, rec_glob, get_site_packages
+from conda_build.utils import check_call_env, rec_glob, get_site_packages
 from conda_build.os_utils.external import find_executable
 
 
@@ -82,7 +82,7 @@ def _clean(setup_py):
     '''
     # first call setup.py clean
     cmd = ['python', setup_py, 'clean']
-    _check_call(cmd)
+    check_call_env(cmd)
     print("Completed: " + " ".join(cmd))
     print("===============================================")
 
@@ -100,7 +100,7 @@ def _build_ext(setup_py):
 
     # next call setup.py develop
     cmd = ['python', setup_py, 'build_ext', '--inplace']
-    _check_call(cmd)
+    check_call_env(cmd)
     print("Completed: " + " ".join(cmd))
     print("===============================================")
 

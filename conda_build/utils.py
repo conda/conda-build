@@ -279,15 +279,6 @@ def relative(f, d='lib'):
     return '/'.join(((['..'] * len(f)) if f else ['.']) + d)
 
 
-def _check_call(args, **kwargs):
-    if 'env' in kwargs:
-        kwargs['env'] = {str(key): str(value) for key, value in kwargs['env'].items()}
-    try:
-        subprocess.check_call(args, **kwargs)
-    except subprocess.CalledProcessError as e:
-        sys.exit('Command failed: %s, output: %s' % (' '.join(args), str(e)))
-
-
 def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.lower().endswith('.tar.z'):
         uncompress = external.find_executable('uncompress')
@@ -297,7 +288,7 @@ def tar_xf(tarball, dir_path, mode='r:*'):
             sys.exit("""\
 uncompress (or gunzip) is required to unarchive .z source files.
 """)
-        subprocess.check_call([uncompress, '-f', tarball])
+        check_call_env([uncompress, '-f', tarball])
         tarball = tarball[:-2]
     if not PY3 and tarball.endswith('.tar.xz'):
         unxz = external.find_executable('unxz')
@@ -306,7 +297,7 @@ uncompress (or gunzip) is required to unarchive .z source files.
 unxz is required to unarchive .xz source files.
 """)
 
-        subprocess.check_call([unxz, '-f', '-k', tarball])
+        check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
     t.extractall(path=dir_path)
@@ -418,6 +409,9 @@ def safe_print_unicode(*args, **kwargs):
 def rec_glob(path, patterns):
     result = []
     for d_f in os.walk(path):
+        # ignore the .git folder
+        # if '.git' in d_f[0]:
+        #     continue
         m = []
         for pattern in patterns:
             m.extend(fnmatch.filter(d_f[2], pattern))
@@ -580,6 +574,7 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
         kwargs = kwargs.copy()
         env_copy = os.environ.copy()
         kwargs.update({'env': env_copy})
+    kwargs['env'] = {str(key): str(value) for key, value in kwargs['env'].items()}
     _args = []
     for arg in popenargs:
         # arguments to subprocess need to be bytestrings
@@ -596,7 +591,8 @@ def check_call_env(popenargs, **kwargs):
 
 
 def check_output_env(popenargs, **kwargs):
-    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)
+    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)\
+        .rstrip()
 
 
 _posix_exes_cache = {}
@@ -683,7 +679,7 @@ def find_recipe(path):
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
-            return base_recipe
+            results = [base_recipe]
         else:
             raise IOError("More than one meta.yaml files found in %s" % path)
     elif not results:

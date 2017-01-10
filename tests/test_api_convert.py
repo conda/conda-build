@@ -20,6 +20,7 @@ def test_convert_exe_raises():
         assert "cannot convert:" in str(exc)
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 def test_convert_platform_to_others(testing_workdir, base_platform):
     f = 'http://repo.continuum.io/pkgs/free/{}-64/itsdangerous-0.24-py27_0.tar.bz2'.format(base_platform)
@@ -31,6 +32,8 @@ def test_convert_platform_to_others(testing_workdir, base_platform):
         assert package_has_file(os.path.join(platform, fn),
                                 '{}/site-packages/itsdangerous.py'.format(python_folder))
 
+
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="we create the package to be converted in *nix, so don't run on win.")
 def test_convert_from_unix_to_win_creates_entry_points(test_config):
     recipe_dir = os.path.join(metadata_dir, "entry_points")

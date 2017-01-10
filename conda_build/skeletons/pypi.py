@@ -29,7 +29,7 @@ from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
 
-from conda_build.utils import tar_xf, unzip, rm_rf
+from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env
 from conda_build.source import apply_patch
 from conda_build.build import create_env
 from conda_build.config import Config
@@ -993,7 +993,7 @@ def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
     cmdargs = [config.build_python, 'setup.py', 'install']
     cmdargs.extend(setup_options)
     try:
-        subprocess.check_call(cmdargs, env=env)
+        check_call_env(cmdargs, env=env)
     except subprocess.CalledProcessError:
         print('$PYTHONPATH = %s' % env['PYTHONPATH'])
         sys.exit('Error: command failed: %s' % ' '.join(cmdargs))

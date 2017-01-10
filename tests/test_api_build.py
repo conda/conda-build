@@ -27,7 +27,7 @@ import tarfile
 from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file)
+                               package_has_file, check_output_env)
 from conda_build.os_utils.external import find_executable
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
@@ -66,7 +66,7 @@ class AnacondaClientArgs(object):
 def describe_root(cwd=None):
     if not cwd:
         cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    tag = subprocess.check_output(["git", "describe", "--abbrev=0"], cwd=cwd).rstrip()
+    tag = check_output_env(["git", "describe", "--abbrev=0"], cwd=cwd).rstrip()
     if PY3:
         tag = tag.decode("utf-8")
     return tag
@@ -213,7 +213,7 @@ def test_dirty_variable_available_in_build_scripts(testing_workdir, test_config)
     test_config.dirty = True
     api.build(recipe, config=test_config)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(subprocess.CalledProcessError):
         test_config.dirty = False
         api.build(recipe, config=test_config)
 
@@ -487,43 +487,43 @@ def test_relative_git_url_submodule_clone(testing_workdir):
     for tag in range(2):
         os.chdir(absolute_sub)
         if tag == 0:
-            subprocess.check_call([git, 'init'], env=sys_git_env)
+            check_call_env([git, 'init'], env=sys_git_env)
         with open('absolute', 'w') as f:
             f.write(str(tag))
-        subprocess.check_call([git, 'add', 'absolute'], env=sys_git_env)
-        subprocess.check_call([git, 'commit', '-m', 'absolute{}'.format(tag)],
+        check_call_env([git, 'add', 'absolute'], env=sys_git_env)
+        check_call_env([git, 'commit', '-m', 'absolute{}'.format(tag)],
                                 env=sys_git_env)
 
         os.chdir(relative_sub)
         if tag == 0:
-            subprocess.check_call([git, 'init'], env=sys_git_env)
+            check_call_env([git, 'init'], env=sys_git_env)
         with open('relative', 'w') as f:
             f.write(str(tag))
-        subprocess.check_call([git, 'add', 'relative'], env=sys_git_env)
-        subprocess.check_call([git, 'commit', '-m', 'relative{}'.format(tag)],
+        check_call_env([git, 'add', 'relative'], env=sys_git_env)
+        check_call_env([git, 'commit', '-m', 'relative{}'.format(tag)],
                                 env=sys_git_env)
 
         os.chdir(toplevel)
         if tag == 0:
-            subprocess.check_call([git, 'init'], env=sys_git_env)
+            check_call_env([git, 'init'], env=sys_git_env)
         with open('toplevel', 'w') as f:
             f.write(str(tag))
-        subprocess.check_call([git, 'add', 'toplevel'], env=sys_git_env)
-        subprocess.check_call([git, 'commit', '-m', 'toplevel{}'.format(tag)],
+        check_call_env([git, 'add', 'toplevel'], env=sys_git_env)
+        check_call_env([git, 'commit', '-m', 'toplevel{}'.format(tag)],
                                 env=sys_git_env)
         if tag == 0:
-            subprocess.check_call([git, 'submodule', 'add',
+            check_call_env([git, 'submodule', 'add',
                                     convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
                                     env=sys_git_env)
-            subprocess.check_call([git, 'submodule', 'add', '../relative_sub', 'relative'],
+            check_call_env([git, 'submodule', 'add', '../relative_sub', 'relative'],
                                     env=sys_git_env)
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
-            subprocess.check_call([git, 'submodule', 'foreach', git, 'pull'], env=sys_git_env)
-        subprocess.check_call([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
+            check_call_env([git, 'submodule', 'foreach', git, 'pull'], env=sys_git_env)
+        check_call_env([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
                               env=sys_git_env)
-        subprocess.check_call([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
+        check_call_env([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
                                 env=sys_git_env)
 
         # It is possible to use `Git for Windows` here too, though you *must* not use a different
@@ -595,11 +595,11 @@ def test_disable_pip(test_config):
     metadata, _, _ = api.render(recipe_path, config=test_config)
 
     metadata.meta['build']['script'] = 'python -c "import pip"'
-    with pytest.raises(SystemExit):
+    with pytest.raises(subprocess.CalledProcessError):
         api.build(metadata)
 
     metadata.meta['build']['script'] = 'python -c "import setuptools"'
-    with pytest.raises(SystemExit):
+    with pytest.raises(subprocess.CalledProcessError):
         api.build(metadata)
 
 
