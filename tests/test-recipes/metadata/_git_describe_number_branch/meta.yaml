@@ -1,6 +1,6 @@
 package:
   name: git_describe_number_branch
-  version: {{ GIT_DESCRIBE_TAG }}
+  version: {{ GIT_DESCRIBE_TAG }}.0
 
 source:
   git_url: https://github.com/conda/conda_build_test_recipe
