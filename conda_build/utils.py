@@ -410,6 +410,9 @@ def safe_print_unicode(*args, **kwargs):
 def rec_glob(path, patterns):
     result = []
     for d_f in os.walk(path):
+        # ignore the .git folder
+        # if '.git' in d_f[0]:
+        #     continue
         m = []
         for pattern in patterns:
             m.extend(fnmatch.filter(d_f[2], pattern))
@@ -589,7 +592,8 @@ def check_call_env(popenargs, **kwargs):
 
 
 def check_output_env(popenargs, **kwargs):
-    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)
+    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)\
+        .rstrip()
 
 
 _posix_exes_cache = {}
@@ -676,7 +680,7 @@ def find_recipe(path):
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
-            return base_recipe
+            results = [base_recipe]
         else:
             raise IOError("More than one meta.yaml files found in %s" % path)
     elif not results:

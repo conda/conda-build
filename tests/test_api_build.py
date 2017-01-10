@@ -212,7 +212,7 @@ def test_dirty_variable_available_in_build_scripts(testing_workdir, test_config)
     test_config.dirty = True
     api.build(recipe, config=test_config)
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(subprocess.CalledProcessError):
         test_config.dirty = False
         api.build(recipe, config=test_config)
 
@@ -594,11 +594,11 @@ def test_disable_pip(test_config):
     metadata, _, _ = api.render(recipe_path, config=test_config)
 
     metadata.meta['build']['script'] = 'python -c "import pip"'
-    with pytest.raises(SystemExit):
+    with pytest.raises(subprocess.CalledProcessError):
         api.build(metadata)
 
     metadata.meta['build']['script'] = 'python -c "import setuptools"'
-    with pytest.raises(SystemExit):
+    with pytest.raises(subprocess.CalledProcessError):
         api.build(metadata)
 
 
