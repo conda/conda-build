@@ -2,6 +2,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from functools import partial
+import os
 from pkg_resources import parse_version
 
 import conda

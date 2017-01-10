@@ -1,0 +1,10 @@
+package:
+  name: test_keep_work_dir
+  version: 1.0
+
+source:
+  path: ../../test-package
+
+test:
+  source_files:
+    - setup.py

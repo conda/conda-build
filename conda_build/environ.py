@@ -1,5 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
+import contextlib
+from functools import partial
 import json
 import logging
 import multiprocessing
@@ -232,6 +234,7 @@ def get_dict(config, m=None, prefix=None):
 
 
 def conda_build_vars(prefix, config):
+    src_dir = config.test_dir if os.path.basename(prefix)[:2] == '_t' else config.work_dir
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
@@ -241,7 +244,7 @@ def conda_build_vars(prefix, config):
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
         'SUBDIR': config.subdir,
-        'SRC_DIR': config.work_dir,
+        'SRC_DIR': src_dir,
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
         'DIRTY': '1' if config.dirty else '',

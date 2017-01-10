@@ -258,7 +258,6 @@ class bdist_conda(install):
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
         m.config.set_build_id = False
-        m.config.keep_old_work = True
         api.build(m, build_only=True)
         # prevent changes in the build ID from here, so that we're working in the same prefix
         # Do the install
@@ -267,7 +266,6 @@ class bdist_conda(install):
             install.run(self)
         else:
             super().run()
-        m.config.keep_old_work = False
         api.build(m, post=True)
         api.test(m)
         output_file = api.get_output_file_path(m)

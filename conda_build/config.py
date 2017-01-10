@@ -93,7 +93,6 @@ class Config(object):
                   Setting('channel_urls', []),
                   Setting('dirty', False),
                   Setting('include_recipe', True),
-                  Setting('keep_old_work', False),
                   Setting('noarch', False),
                   Setting('no_download_source', False),
                   Setting('override_channels', False),
@@ -112,6 +111,7 @@ class Config(object):
                   Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
                   Setting('locking', True),
                   Setting('max_env_retry', 3),
+                  Setting('remove_work_dir', True),
 
                   # pypi upload settings (twine)
                   Setting('password', None),
@@ -401,9 +401,9 @@ class Config(object):
         pass
 
     def __exit__(self, e_type, e_value, traceback):
-        if not getattr(self, 'dirty') and not getattr(self, 'keep_old_work') and e_type is None:
-            logging.getLogger(__name__).info("--keep-old-work flag not specified.  "
-                                             "Removing source and build files.\n")
+        if not getattr(self, 'dirty') and e_type is None:
+            logging.getLogger(__name__).info("--dirty flag not specified.  Removing build"
+                                             " folder after successful build/test.\n")
             self.clean()
 
 

@@ -3,6 +3,7 @@ This module tests the build API.  These are high-level integration tests.
 """
 
 from collections import OrderedDict
+from glob import glob
 import logging
 import os
 import subprocess
@@ -405,11 +406,11 @@ def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
 
 def test_debug_build_option(test_metadata, caplog, capfd):
     logging.basicConfig(level=logging.INFO)
-    info_message = "Starting new HTTPS connection"
-    debug_message = "GET /pkgs/free/noarch/repodata.json.bz2 HTTP/1.1"
+    info_message = "INFO"
+    debug_message = "DEBUG"
     api.build(test_metadata)
     # this comes from an info message
-    assert info_message not in caplog.text()
+    assert info_message in caplog.text()
     # this comes from a debug message
     assert debug_message not in caplog.text()
 
@@ -789,3 +790,34 @@ def test_build_expands_wildcards(mocker, testing_workdir):
     output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
     build_tree.assert_called_once_with(output, post=None, need_source_download=True,
                                        build_only=False, notest=False, config=config)
+
+
+@pytest.mark.serial
+def test_remove_workdir_default(test_config, caplog):
+    recipe = os.path.join(metadata_dir, '_keep_work_dir')
+    api.build(recipe, config=test_config)
+    assert not glob(os.path.join(test_config.work_dir, '*'))
+
+
+@pytest.mark.serial
+def test_keep_workdir(test_config, caplog):
+    recipe = os.path.join(metadata_dir, '_keep_work_dir')
+    api.build(recipe, config=test_config, dirty=True, remove_work_dir=False, debug=True)
+    assert "Not removing work directory after build" in caplog.text()
+    assert glob(os.path.join(test_config.work_dir, '*'))
+    test_config.clean()
+
+
+@pytest.mark.serial
+def test_workdir_removal_warning(test_config, caplog):
+    recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
+    with pytest.raises(ValueError) as exc:
+        api.build(recipe, config=test_config)
+        assert "work dir is removed" in str(exc)
+
+
+@pytest.mark.serial
+def test_workdir_removal_warning_no_remove(test_config, caplog):
+    recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
+    api.build(recipe, config=test_config, remove_work_dir=False)
+    assert "Not removing work directory after build" in caplog.text()
