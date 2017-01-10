@@ -37,7 +37,8 @@ install:
         hash -r;
         conda info;
     fi
-  - conda install -q anaconda-client requests=2.11.1 filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1 conda-verify
+  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
+  - conda install -q pyflakes conda-verify beautifulsoup4 chardet
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;

@@ -4,6 +4,7 @@ import os
 import sys
 from os.path import isdir, join, dirname, isfile
 
+import bs4
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
@@ -43,7 +44,7 @@ def fix_staged_scripts(scripts_dir):
             continue
 
         with open(join(scripts_dir, fn)) as f:
-            line = f.readline().lower()
+            line = bs4.UnicodeDammit(f.readline()).unicode_markup.lower()
             # If it's a #!python script
             if not (line.startswith('#!') and 'python' in line.lower()):
                 continue
