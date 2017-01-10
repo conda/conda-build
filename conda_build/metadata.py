@@ -544,7 +544,8 @@ class MetaData(object):
         if res is None:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         check_bad_chrs(res, 'package/version')
-        assert not res.startswith('.'), "Version can't start with leading period -  got %s" % res
+        assert self.undefined_jinja_vars or not res.startswith('.'), "Fully-rendered version can't\
+        start with leading period -  got %s" % res
         return res
 
     def build_number(self):

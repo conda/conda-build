@@ -125,7 +125,7 @@ def test_no_anaconda_upload_condarc(service_name, testing_workdir, test_config, 
 def test_git_describe_info_on_branch(test_config):
     output = api.get_output_file_path(os.path.join(metadata_dir, "_git_describe_number_branch"))
     test_path = os.path.join(sys.prefix, "conda-bld", test_config.subdir,
-                             "git_describe_number_branch-1.20.2-1_g82c6ba6.tar.bz2")
+                             "git_describe_number_branch-1.20.2.0-1_g82c6ba6.tar.bz2")
     assert test_path == output
 
 
