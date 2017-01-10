@@ -138,8 +138,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
 
         if not lock:
             lock = get_lock(src_folder, timeout=timeout)
-        if locking:
-            locks = [lock]
+        locks = [lock] if locking else []
         with try_acquire_locks(locks, timeout):
             # if intermediate folders not not exist create them
             dst_folder = os.path.dirname(dst)
