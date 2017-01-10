@@ -41,7 +41,7 @@ def test_build_with_conda_not_on_path(testing_workdir):
     with put_bad_conda_on_path(testing_workdir):
         # using subprocess is not ideal, but it is the easiest way to ensure that PATH
         #    is altered the way we want here.
-        subprocess.check_call('conda-build {0}'.format(os.path.join(metadata_dir, "python_run")),
+        utils.check_call_env('conda-build {0}'.format(os.path.join(metadata_dir, "python_run")),
                               env=os.environ, shell=True)
 
 def test_build_add_channel():

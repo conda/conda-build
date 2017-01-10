@@ -13,7 +13,7 @@ import pytest
 from conda_build.conda_interface import PY3
 from conda_build.config import Config
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win, prepend_bin_path
+from conda_build.utils import on_win, prepend_bin_path, check_call_env
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
@@ -82,8 +82,8 @@ def test_metadata(request, test_config):
 def testing_env(testing_workdir, request):
     env_path = os.path.join(testing_workdir, 'env')
 
-    subprocess.check_call(['conda', 'create', '-yq', '-p', env_path,
-                           'python={0}'.format(".".join(sys.version.split('.')[:2]))])
+    check_call_env(['conda', 'create', '-yq', '-p', env_path,
+                    'python={0}'.format(".".join(sys.version.split('.')[:2]))])
     path_backup = os.environ['PATH']
     os.environ['PATH'] = prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH']
 

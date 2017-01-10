@@ -20,7 +20,7 @@ from conda_build.conda_interface import MatchSpec, Resolve
 from conda_build.conda_interface import memoized
 
 from conda_build.config import Config
-from conda_build.utils import on_win
+from conda_build.utils import on_win, check_call_env
 
 CPAN_META = """\
 package:
@@ -173,7 +173,7 @@ def package_exists(package_name):
         if on_win:
             cmd.insert(0, '/c')
             cmd.insert(0, 'cmd.exe')
-        subprocess.check_call(cmd)
+        check_call_env(cmd)
         in_repo = True
     except subprocess.CalledProcessError:
         in_repo = False

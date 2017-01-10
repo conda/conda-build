@@ -797,7 +797,7 @@ def bundle_conda(output, metadata, config, env, **kw):
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
         initial_files_snapshot = prefix_files(config.build_prefix)
-        utils._check_call(interpreter.split(' ') +
+        utils.check_call_env(interpreter.split(' ') +
                     [os.path.join(metadata.path, output['script'])],
                     cwd=config.build_prefix, env=env)
         files = prefix_files(config.build_prefix) - initial_files_snapshot
@@ -1029,7 +1029,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                     if isfile(work_file):
                         cmd = [shell_path, '-x', '-e', work_file]
                         # this should raise if any problems occur while building
-                        utils._check_call(cmd, env=env, cwd=src_dir)
+                        utils.check_call_env(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
         if post:
@@ -1323,7 +1323,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     else:
         cmd = [shell_path, '-x', '-e', test_script]
     try:
-        subprocess.check_call(cmd, env=env, cwd=config.test_dir)
+        utils.check_call_env(cmd, env=env, cwd=config.test_dir)
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=config.broken_dir, config=config)
 
@@ -1556,7 +1556,7 @@ def handle_pypi_upload(f, config):
 
     args.append(f)
     try:
-        subprocess.check_call()
+        utils.check_call_env(args)
     except:
         logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
                                          "  Is this package registered?")
