@@ -22,6 +22,8 @@ requirements:
   build:
     - python
   run:
+    - beautifulsoup4
+    - chardet
     - conda  >=4.1
     - contextlib2   [py<34]
     - conda-verify
