@@ -1,3 +1,27 @@
+2017-01-12 2.1.1:
+
+Bug fixes:
+----------
+
+* Fix package conversion consistency, wrt entry points #1609
+* Fix about.json contents regarding development versions of conda/conda-build #1625
+* Fix Appveyor for testing against source branches of conda #1628
+* Raise exception when SRC_DIR is used in tests, but meta.yaml has no test/source_files entry.  SRC_DIR points at test work folder at test time, for minimal needed changes to recipes - just add test/source_files entry with desired files.  #1630
+* Fix features list not allowed to be None in bdist_conda #1636
+* Fix undefined reference to locks in copy_into #1637
+* Fix version comparison in cpan skeleton #1638
+* Add dependency on beautifulsoup4 and chardet to better support strangely encoded text files.  #1641
+* Fix not-yet-fully-rendered versions starting with . from raising exception #1644
+* Consolidate _check_call and check_call_env in utils.  Fix coercion to string that was missing in latter.  #1645
+
+Contributors:
+-------------
+
+* @gomyhr
+* @jakirkham
+* @kalefranz
+* @msarahan
+
 2017-01-02 2.1.0:
 
 (includes changes since 2.0.12, including those already listed under 2.1.0beta1)
