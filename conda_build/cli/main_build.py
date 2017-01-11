@@ -304,14 +304,16 @@ def execute(args):
     if action:
         for recipe in args.recipe:
             action(recipe, config)
+        outputs = []
 
     else:
-        api.build(args.recipe, post=args.post, build_only=args.build_only,
-                   notest=args.notest, already_built=None, config=config,
-                  noverify=args.no_verify)
+        outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
+                            notest=args.notest, already_built=None, config=config,
+                            noverify=args.no_verify)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
+    return outputs
 
 
 def main():

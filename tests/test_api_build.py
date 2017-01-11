@@ -353,6 +353,11 @@ def test_skip_existing_url(test_metadata, testing_workdir, capfd):
     # create the index so conda can find the file
     api.update_index(platform, config=test_metadata.config)
 
+    # HACK: manually create noarch location there, so that conda 4.3.2+ considers this a valid channel
+    noarch = os.path.join(output_dir, 'noarch')
+    os.makedirs(noarch)
+    api.update_index(noarch, config=test_metadata.config)
+
     test_metadata.config.skip_existing = True
     test_metadata.config.channel_urls = [url_path(output_dir)]
     api.build(test_metadata)
