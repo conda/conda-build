@@ -2,6 +2,7 @@ import os
 import json
 import glob
 
+
 def main():
     prefix = os.environ['PREFIX']
 

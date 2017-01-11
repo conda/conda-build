@@ -1,0 +1,121 @@
+from __future__ import absolute_import, division, print_function
+
+from difflib import get_close_matches
+import re
+import string
+from conda_build import exceptions
+from conda_build.utils import comma_join
+
+allowed_license_families = """
+AGPL
+LGPL
+GPL3
+GPL2
+GPL
+BSD
+MIT
+APACHE
+PSF
+PUBLICDOMAIN
+PROPRIETARY
+OTHER
+NONE
+""".split()
+
+# regular expressions
+gpl2_regex = re.compile('GPL[^3]*2')  # match GPL2
+gpl3_regex = re.compile('GPL[^2]*3')  # match GPL3
+gpl23_regex = re.compile('GPL[^2]*>= *2')  # match GPL >= 2
+punk_regex = re.compile('[%s]' % re.escape(string.punctuation))  # removes punks
+
+
+def match_gpl3(family):
+    """True if family matches GPL3 or GPL >= 2, else False"""
+    return (gpl23_regex.search(family) or
+            gpl3_regex.search(family))
+
+
+def normalize(s):
+    """Set to ALL CAPS, replace common GPL patterns, and strip"""
+    s = s.upper()
+    s = re.sub('GENERAL PUBLIC LICENSE', 'GPL', s)
+    s = re.sub('LESSER *', 'L', s)
+    s = re.sub('AFFERO *', 'A', s)
+    return s.strip()
+
+
+def remove_special_characters(s):
+    """Remove punctuation, spaces, tabs, and line feeds"""
+    s = punk_regex.sub(' ', s)
+    s = re.sub('\s+', '', s)
+    return s
+
+
+def guess_license_family_from_index(index=None,
+                                    recognized=allowed_license_families):
+    """Return best guess of license_family from the conda package index.
+
+    Note: Logic here is simple, and focuses on existing set of allowed families
+    """
+
+    if isinstance(index, dict):
+        license_name = index.get('license_family', index.get('license'))
+    else:  # index argument is actually a string
+        license_name = index
+
+    return guess_license_family(license_name, recognized)
+
+
+def guess_license_family(license_name=None,
+                         recognized=allowed_license_families):
+    """Return best guess of license_family from the conda package index.
+
+    Note: Logic here is simple, and focuses on existing set of allowed families
+    """
+
+    if license_name is None:
+        return 'NONE'
+
+    license_name = normalize(license_name)
+
+    # Handle GPL families as special cases
+    # Remove AGPL and LGPL before looking for GPL2 and GPL3
+    sans_lgpl = re.sub('[A,L]GPL', '', license_name)
+    if match_gpl3(sans_lgpl):
+        return 'GPL3'
+    elif gpl2_regex.search(sans_lgpl):
+        return 'GPL2'
+
+    license_name = remove_special_characters(license_name)
+    for family in recognized:
+        if family in license_name:
+            return family
+    for family in recognized:
+        if license_name in family:
+            return family
+    return 'OTHER'
+
+
+def ensure_valid_license_family(meta):
+    try:
+        license_family = meta['about']['license_family']
+    except KeyError:
+        return
+    if remove_special_characters(normalize(license_family)) not in allowed_license_families:
+        raise RuntimeError(exceptions.indent(
+            "about/license_family '%s' not allowed. Allowed families are %s." %
+            (license_family, comma_join(sorted(allowed_license_families)))))
+
+
+def deprecated_guess_license_family(license_name, recognized=allowed_license_families):
+    """Deprecated guess of license_family from license
+
+    Use guess_license_family instead
+    """
+    # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
+    if 'GPL (>= 2)' in license_name or license_name == 'GPL':
+        return 'GPL3'
+    elif 'LGPL' in license_name:
+        return 'LGPL'
+    else:
+        return get_close_matches(license_name, recognized, 1, 0.0)[0]

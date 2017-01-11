@@ -9,18 +9,23 @@ Tools for converting conda packages
 
 """
 from __future__ import absolute_import, division, print_function
-import re
-import tarfile
-import json
 
 from copy import deepcopy
+import json
+import os
+from os.path import abspath, expanduser, isdir, join
+import pprint
+import re
+import sys
+import tarfile
 
-from conda.compat import PY3
+from .conda_interface import PY3
+
 if PY3:
-    from io import StringIO, BytesIO
+    from io import StringIO, BytesIO as bytes_io
 else:
     from cStringIO import StringIO
-    BytesIO = StringIO
+    bytes_io = StringIO
 
 
 BAT_PROXY = """\
@@ -34,6 +39,7 @@ libpy_pat = re.compile(
     r'(lib/python\d\.\d|Lib)'
     r'/(site-packages|lib-dynload)/(\S+?)(\.cpython-\d\dm)?\.(so|pyd)')
 
+
 def has_cext(t, show=False):
     matched = False
     for m in t.getmembers():
@@ -46,6 +52,7 @@ def has_cext(t, show=False):
             else:
                 return True
     return matched
+
 
 def has_nonpy_entry_points(t, unix_to_win=True, show=False, quiet=False):
     """
@@ -155,26 +162,35 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
     finally:
         t.close()
 
+
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
     (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
-    ]
+]
 
 path_mapping_unix_windows = [
-    (r'lib/python{pyver}/', r'Lib/'),
+    (r'lib/python(\d.\d)/', r'Lib/'),
     # Handle entry points already ending in .py. This is OK because these are
     # parsed in order. Only concern is if there are both script and script.py,
     # which seems unlikely
     (r'bin/(.*)(\.py)', r'Scripts/\1-script.py'),
     (r'bin/(.*)', r'Scripts/\1-script.py'),
-    ]
+]
 
 path_mapping_windows_unix = [
     (r'Lib/', r'lib/python{pyver}/'),
-    (r'Scripts/', r'bin/'), # Not supported right now anyway
-    ]
+    (r'Scripts/', r'bin/'),  # Not supported right now anyway
+]
 
-pyver_re = re.compile(r'python\s+(\d.\d)')
+path_mapping_identity = [
+    (r'Lib/', r'Lib/'),
+    (r'lib/python{pyver}/', r'lib/python{pyver}/'),
+    (r'Scripts/', r'Scripts/'),
+    (r'bin/', 'bin/'),  # Not supported right now anyway
+]
+
+pyver_re = re.compile(r'python\s+(?:(?:[<>=]*)(\d.\d))?')
+
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
@@ -183,14 +199,14 @@ def get_pure_py_file_map(t, platform):
     dest_plat, dest_arch = platform.split('-')
     dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
 
-    files = t.extractfile('info/files').read().decode("utf-8")
+    files = t.extractfile('info/files').read().decode("utf-8").splitlines()
 
     if source_type == 'unix' and dest_type == 'win':
         mapping = path_mapping_unix_windows
     elif source_type == 'win' and dest_type == 'unix':
         mapping = path_mapping_windows_unix
     else:
-        mapping = []
+        mapping = path_mapping_identity
 
     newinfo = info.copy()
     newinfo['platform'] = dest_plat
@@ -201,14 +217,21 @@ def get_pure_py_file_map(t, platform):
     if len(pythons) > 1:
         raise RuntimeError("Found more than one Python dependency in package %s"
             % t.name)
-    if len(pythons) == 0:
+    elif len(pythons) == 0:
         # not a Python package
         mapping = []
-    else:
+    elif pythons[0].group(1):
         pyver = pythons[0].group(1)
 
         mapping = [(re.compile(i[0].format(pyver=pyver)),
             i[1].format(pyver=pyver)) for i in mapping]
+    else:
+        # No python version dependency was specified
+        # Only a problem when converting from windows to unix, since
+        # the python version is part of the folder structure on unix.
+        if source_type == 'win' and dest_type == 'unix':
+            raise RuntimeError("Python dependency must explicit when converting"
+                               "from windows package to a linux packages")
 
     members = t.getmembers()
     file_map = {}
@@ -221,7 +244,7 @@ def get_pure_py_file_map(t, platform):
             else:
                 newbytes = json.dumps(newinfo)
             newmember.size = len(newbytes)
-            file_map['info/index.json'] = (newmember, BytesIO(newbytes))
+            file_map['info/index.json'] = (newmember, bytes_io(newbytes))
             continue
         elif member.path == 'info/files':
             # We have to do this at the end when we have all the files
@@ -245,7 +268,11 @@ def get_pure_py_file_map(t, platform):
                 assert member.path == oldpath
                 file_map[oldpath] = None
                 file_map[newpath] = newmember
-                files = files.replace(oldpath, newpath)
+                loc = files.index(oldpath)
+                files[loc] = newpath
+                break
+        else:
+            file_map[oldpath] = member
 
         # Make Windows compatible entry-points
         batseen = set()
@@ -261,14 +288,99 @@ def get_pure_py_file_map(t, platform):
                     else:
                         data = BAT_PROXY.replace('\n', '\r\n')
                     newmember.size = len(data)
-                    file_map[newpath] = newmember, BytesIO(data)
+                    file_map[newpath] = newmember, bytes_io(data)
                     batseen.add(oldpath)
-                    files = files + newpath + "\n"
+                    files.append(newpath)
 
-    files = '\n'.join(sorted(files.splitlines())) + '\n'
+    files = '\n'.join(sorted(files)) + '\n'
     if PY3:
         files = bytes(files, 'utf-8')
     filemember.size = len(files)
-    file_map['info/files'] = filemember, BytesIO(files)
+    file_map['info/files'] = filemember, bytes_io(files)
 
     return file_map
+
+
+def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
+                  dependencies=None, verbose=False, quiet=True, dry_run=False):
+    if not show_imports and platforms is None:
+        sys.exit('Error: --platform option required for conda package conversion')
+
+    with tarfile.open(file_path) as t:
+        if show_imports:
+            has_cext(t, show=True)
+            return
+
+        if not force and has_cext(t, show=show_imports):
+            print("WARNING: Package %s has C extensions, skipping. Use -f to "
+                  "force conversion." % file_path, file=sys.stderr)
+            return
+
+        fn = os.path.basename(file_path)
+
+        info = json.loads(t.extractfile('info/index.json')
+                          .read().decode('utf-8'))
+        source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
+
+        if dependencies:
+            info['depends'].extend(dependencies)
+
+        nonpy_unix = False
+        nonpy_win = False
+
+        if 'all' in platforms:
+            platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
+        base_output_dir = output_dir
+        for platform in platforms:
+            info['subdir'] = platform
+            output_dir = join(base_output_dir, platform)
+            if abspath(expanduser(join(output_dir, fn))) == file_path:
+                if not quiet:
+                    print("Skipping %s/%s. Same as input file" % (platform, fn))
+                continue
+            if not PY3:
+                platform = platform.decode('utf-8')
+            dest_plat = platform.split('-')[0]
+            dest_type = 'unix' if dest_plat in {'osx', 'linux'} else 'win'
+
+            if source_type == 'unix' and dest_type == 'win':
+                nonpy_unix = nonpy_unix or has_nonpy_entry_points(t,
+                    unix_to_win=True,
+                    show=verbose,
+                    quiet=quiet)
+            if source_type == 'win' and dest_type == 'unix':
+                nonpy_win = nonpy_win or has_nonpy_entry_points(t,
+                    unix_to_win=False,
+                    show=verbose,
+                    quiet=quiet)
+
+            if nonpy_unix and not force:
+                print(("WARNING: Package %s has non-Python entry points, "
+                       "skipping %s to %s conversion. Use -f to force.") %
+                      (file_path, info['platform'], platform), file=sys.stderr)
+                continue
+
+            if nonpy_win and not force:
+                print(("WARNING: Package %s has entry points, which are not "
+                       "supported yet. Skipping %s to %s conversion. Use -f to force.") %
+                      (file_path, info['platform'], platform), file=sys.stderr)
+                continue
+
+            file_map = get_pure_py_file_map(t, platform)
+
+            if dry_run:
+                if not quiet:
+                    print("Would convert %s from %s to %s" %
+                        (file_path, info['platform'], dest_plat))
+                if verbose:
+                    pprint.pprint(file_map)
+                continue
+            else:
+                if not quiet:
+                    print("Converting %s from %s to %s" %
+                        (file_path, info['platform'], platform))
+
+            if not isdir(output_dir):
+                os.makedirs(output_dir)
+            tar_update(t, join(output_dir, fn), file_map,
+                verbose=verbose, quiet=quiet)

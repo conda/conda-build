@@ -11,14 +11,15 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info
-from conda.compat import PY3
-from conda.utils import md5_file
+from conda_build.utils import file_info, get_lock, try_acquire_locks
+from .conda_interface import PY3, md5_file
 
 
-def read_index_tar(tar_path):
+def read_index_tar(tar_path, config, lock):
     """ Returns the index.json dict inside the given package tarball. """
-    try:
+    if config.locking:
+        locks = [lock]
+    with try_acquire_locks(locks, config.timeout):
         with tarfile.open(tar_path) as t:
             try:
                 return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
@@ -27,23 +28,33 @@ def read_index_tar(tar_path):
                     % tar_path)
             except OSError as e:
                 raise RuntimeError("Could not extract %s (%s)" % (tar_path, e))
-    except tarfile.ReadError:
-        raise RuntimeError("Could not extract metadata from %s. File probably corrupt." % tar_path)
+            except tarfile.ReadError:
+                raise RuntimeError("Could not extract metadata from %s. "
+                                "File probably corrupt." % tar_path)
 
-def write_repodata(repodata, dir_path):
+
+def write_repodata(repodata, dir_path, lock, config=None):
     """ Write updated repodata.json and repodata.json.bz2 """
-    data = json.dumps(repodata, indent=2, sort_keys=True)
-    # strip trailing whitespace
-    data = '\n'.join(line.rstrip() for line in data.splitlines())
-    # make sure we have newline at the end
-    if not data.endswith('\n'):
-        data += '\n'
-    with open(join(dir_path, 'repodata.json'), 'w') as fo:
-        fo.write(data)
-    with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
-        fo.write(bz2.compress(data.encode('utf-8')))
+    if not config:
+        import conda_build.config
+        config = conda_build.config.config
+    if config.locking:
+        locks = [lock]
+    with try_acquire_locks(locks, config.timeout):
+        data = json.dumps(repodata, indent=2, sort_keys=True)
+        # strip trailing whitespace
+        data = '\n'.join(line.rstrip() for line in data.splitlines())
+        # make sure we have newline at the end
+        if not data.endswith('\n'):
+            data += '\n'
+        with open(join(dir_path, 'repodata.json'), 'w') as fo:
+            fo.write(data)
+        with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
+            fo.write(bz2.compress(data.encode('utf-8')))
 
-def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=True):
+
+def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None,
+                 could_be_mirror=True):
     """
     Update all index files in dir_path with changed packages.
 
@@ -56,67 +67,78 @@ def update_index(dir_path, verbose=False, force=False, check_md5=False, remove=T
                       if a package changed.
     :type check_md5: bool
     """
-    if verbose:
+
+    if config.verbose:
         print("updating index in:", dir_path)
     index_path = join(dir_path, '.index.json')
-    if force:
-        index = {}
-    else:
-        try:
-            mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
-            with open(index_path, **mode_dict) as fi:
-                index = json.load(fi)
-        except (IOError, ValueError):
+    if not os.path.isdir(dir_path):
+        os.makedirs(dir_path)
+
+    if not lock:
+        lock = get_lock(dir_path)
+
+    if config.locking:
+        locks = [lock]
+
+    with try_acquire_locks(locks, config.timeout):
+        if force:
             index = {}
-
-    files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-    if any(fn.startswith('_license-') for fn in files):
-        sys.exit("""\
-Error:
-    Indexing a copy of the Anaconda conda package channel is neither
-    necessary nor supported.  If you which to add your own packages,
-    you can do so by adding them to a separate channel.
-""")
-    for fn in files:
-        path = join(dir_path, fn)
-        if fn in index:
-            if check_md5:
-                if index[fn]['md5'] == md5_file(path):
-                    continue
-            elif index[fn]['mtime'] == getmtime(path):
-                continue
-        if verbose:
-            print('updating:', fn)
-        d = read_index_tar(path)
-        d.update(file_info(path))
-        index[fn] = d
-
-    for fn in files:
-        index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
-
-    if remove:
-        # remove files from the index which are not on disk
-        for fn in set(index) - files:
-            if verbose:
-                print("removing:", fn)
-            del index[fn]
-
-    # Deal with Python 2 and 3's different json module type reqs
-    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
-    with open(index_path, **mode_dict) as fo:
-        json.dump(index, fo, indent=2, sort_keys=True, default=str)
-
-    # --- new repodata
-    for fn in index:
-        info = index[fn]
-        for varname in 'arch', 'platform', 'mtime', 'ucs':
+        else:
             try:
-                del info[varname]
-            except KeyError:
-                pass
+                mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+                with open(index_path, **mode_dict) as fi:
+                    index = json.load(fi)
+            except (IOError, ValueError):
+                index = {}
 
-        if 'requires' in info and 'depends' not in info:
-            info['depends'] = info['requires']
+        files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
+        if could_be_mirror and any(fn.startswith('_license-') for fn in files):
+            sys.exit("""\
+    Error:
+        Indexing a copy of the Anaconda conda package channel is neither
+        necessary nor supported.  If you wish to add your own packages,
+        you can do so by adding them to a separate channel.
+    """)
+        for fn in files:
+            path = join(dir_path, fn)
+            if fn in index:
+                if check_md5:
+                    if index[fn]['md5'] == md5_file(path):
+                        continue
+                elif index[fn]['mtime'] == getmtime(path):
+                    continue
+            if config.verbose:
+                print('updating:', fn)
+            d = read_index_tar(path, config, lock=lock)
+            d.update(file_info(path))
+            index[fn] = d
 
-    repodata = {'packages': index, 'info': {}}
-    write_repodata(repodata, dir_path)
+        for fn in files:
+            index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
+
+        if remove:
+            # remove files from the index which are not on disk
+            for fn in set(index) - files:
+                if config.verbose:
+                    print("removing:", fn)
+                del index[fn]
+
+        # Deal with Python 2 and 3's different json module type reqs
+        mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+        with open(index_path, **mode_dict) as fo:
+            json.dump(index, fo, indent=2, sort_keys=True, default=str)
+
+        # --- new repodata
+        for fn in index:
+            info = index[fn]
+            for varname in 'arch', 'platform', 'mtime', 'ucs':
+                try:
+                    del info[varname]
+                except KeyError:
+                    pass
+
+            if 'requires' in info and 'depends' not in info:
+                info['depends'] = info['requires']
+
+        repodata = {'packages': index, 'info': {}}
+        write_repodata(repodata, dir_path, lock=lock, config=config)

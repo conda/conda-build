@@ -1,0 +1,10 @@
+package:
+  name: rpath
+  version: 0.1
+
+build:
+  script: mkdir -p ${PREFIX}/bin ; echo "int main() { return 0; }" | gcc -x c -o ${PREFIX}/bin/rpath -Wl,-rpath,\$ORIGIN/../previous:\$ORIGIN/../lib:$PREFIX/lib:${PREFIX}/plugins:\$ORIGIN/../successive -
+
+test:
+  commands:
+    - readelf --dynamic ${PREFIX}/bin/rpath | grep \$ORIGIN/../previous:\$ORIGIN/../lib:\$ORIGIN/../plugins:\$ORIGIN/../successive

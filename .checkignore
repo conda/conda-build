@@ -1,0 +1,3 @@
+# Ignore versioneer files
+versioneer.py
+conda_build/_version.py

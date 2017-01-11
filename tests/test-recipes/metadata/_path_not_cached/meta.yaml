@@ -1,0 +1,10 @@
+package:
+  name: mypkg
+  version: 1.0
+
+source:
+  path: .
+
+test:
+  files:
+    - test2.py

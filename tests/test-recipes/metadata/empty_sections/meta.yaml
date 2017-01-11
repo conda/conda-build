@@ -1,0 +1,8 @@
+package:
+  name: empty_sections
+  version: 0.0
+
+build:
+
+requirements:
+  build:

@@ -1,0 +1,10 @@
+package:
+  name: flex
+  version: {{ environ.get('GIT_DESCRIBE_TAG', '0.0') }}
+
+build:
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  string: {{ environ.get('GIT_DESCRIBE_NUMBER', '0') + '_JPMC' }}
+
+source:
+  path: ../../../../../conda_build_test_recipe

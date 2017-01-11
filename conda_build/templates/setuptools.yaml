@@ -1,4 +1,4 @@
-{% set data = load_setuptools()%}
+{% set data = load_setup_py_data()%}
 {% block body -%}
 {% block package -%}
 package:
@@ -10,7 +10,7 @@ build:
   number: {% block build_number -%}1{%- endblock %}
   script:
     - cd $RECIPE_DIR
-    - $PYTHON setup.py install --single-version-externally-managed --record=record.txt
+    - pip install --no-deps .
 
   {% block entry_points -%}
   entry_points: {{data.get('entry_points', {}).get('console_scripts', [])}}

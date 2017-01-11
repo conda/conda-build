@@ -1,0 +1,16 @@
+package:
+  # should be defined as "RENDER" during rendering phase
+  name: {{ CONDA_BUILD_STATE|lower }}
+  version: 1.0
+
+build:
+  script:
+    - test "$PKG_NAME" = "render"  # [unix]
+    - test "$CONDA_BUILD_STATE" = "BUILD"  # [unix]
+    - IF NOT "%PKG_NAME%" == "render" exit 1  # [win]
+    - IF NOT "%CONDA_BUILD_STATE%" == "BUILD" exit 1  # [win]
+
+test:
+  commands:
+    - test "$CONDA_BUILD_STATE" = "TEST"  # [unix]
+    - IF NOT "%CONDA_BUILD_STATE%" == "TEST" exit 1  # [win]

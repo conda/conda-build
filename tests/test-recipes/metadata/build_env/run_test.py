@@ -1,5 +1,6 @@
 import os
 
+
 def main():
     undef_var = os.environ.get("UNDEF_VAR")
 

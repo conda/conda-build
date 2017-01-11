@@ -1,36 +1,73 @@
 language: python
-python:
-  # We don't actually use the system Python but this keeps it organized.
-  - "2.7"
-  - "3.4"
-  - "3.5"
-env:
-  -
+matrix:
+  include:
+    - python: '2.7'
+      os: linux
+    - python: '3.5'
+      os: linux
+    - python: '3.5'
+      env: $CONDA_VERSION=4.2.x
+      os: linux
+    - python: '3.5'
+      env: $CONDA_VERSION=4.3.x
+      os: linux
+    - python: '3.5'
+      env:
+        - FLAKE8=true
+      os: linux
+
 install:
-  # TODO: Use a "latest" url
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda-3.5.2-Linux-x86_64.sh -O miniconda.sh;
-    elif [[ "$TRAVIS_PYTHON_VERSION" == "3.3" ]]; then
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.0.0-Linux-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
     else
-      wget http://repo.continuum.io/miniconda/Miniconda3-3.5.2-Linux-x86_64.sh -O miniconda.sh;
+      wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
-  - conda install --force --no-deps conda requests
-  - conda install pip pytest requests jinja2 patchelf pyflakes python=$TRAVIS_PYTHON_VERSION
-  - pip install pytest-cov
-  - python setup.py install
+  - conda config --set auto_update_conda False
+  - conda update -q --all
+  - if [ -n "$CONDA_VERSION" ]; then
+        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
+        pushd conda;
+        $HOME/miniconda/bin/python utils/setup-testing.py install;
+        popd;
+        hash -r;
+        conda info;
+    fi
+  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
+  - conda install -q pyflakes conda-verify beautifulsoup4 chardet
+  - pip install pkginfo
+  - if [[ "$FLAKE8" == "true" ]]; then
+      conda install -q flake8;
+    else
+      conda install -c conda-forge -q perl;
+      conda install -q pytest pip pytest-cov numpy mock;
+      $HOME/miniconda/bin/pip install pytest-xdist pytest-capturelog pytest-mock;
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
+    fi
+  - pip install --no-deps .
   - conda info -a
 
 script:
-  - pyflakes conda_build tests bin/* bdist_conda.py setup.py example_packages
-  - py.test --cov conda_build --cov-report xml tests
-  - tests/test-recipes/build_recipes.sh
-  - tests/test-skeleton/test-skeleton.sh
-  - conda build --help
+  # flake8 and bdist_conda test together
+  - if [[ "$FLAKE8" == "true" ]]; then
+      flake8 .;
+      cp bdist_conda.py $HOME/miniconda/lib/python${TRAVIS_PYTHON_VERSION}/distutils/command;
+      pushd tests/bdist-recipe && python setup.py bdist_conda && popd;
+      conda build --help;
+      conda build conda.recipe --no-anaconda-upload -c conda-forge;
+      conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION;
+      source activate _cbtest;
+      conda install $(conda render --output conda.recipe);
+      conda install filelock;
+      conda build conda.recipe --no-anaconda-upload -c conda-forge;
+    else
+      $HOME/miniconda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests;
+      $HOME/miniconda/bin/py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests;
+    fi
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb

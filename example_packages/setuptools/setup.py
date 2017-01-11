@@ -9,8 +9,8 @@ setup(
     packages=find_packages(),
     install_requires=['Flask', 'werkzeug'],
     entry_points={
-        'console_scripts' : [
+        'console_scripts': [
             'script1 = package1.scripts:main'
-            ]
+        ]
     }
 )

@@ -4,23 +4,26 @@ bdist_conda
 """
 from __future__ import print_function, division, unicode_literals
 
+import time
+
 from collections import defaultdict
 
 from distutils.command.install import install
 from distutils.errors import DistutilsOptionError, DistutilsGetoptError
 from distutils.dist import Distribution
 
-from conda.compat import (StringIO, string_types, configparser, PY3, text_type
-as unicode)
-from conda.lock import Locked
-import conda.config
-from conda.cli.common import spec_from_line
+from conda_build.conda_interface import (StringIO, string_types, configparser, PY3,
+                                         text_type as unicode)
+from conda_build.conda_interface import spec_from_line
 from conda_build.metadata import MetaData
-from conda_build import build, pypi
-from conda_build.config import config
-from conda_build.main_build import handle_binstar_upload
+from conda_build import api
+from conda_build.skeletons import pypi
+from conda_build.build import handle_anaconda_upload
+from conda_build.config import Config
+
 
 # TODO: Add support for all the options that conda build has
+
 
 class CondaDistribution(Distribution):
     """
@@ -91,7 +94,7 @@ class CondaDistribution(Distribution):
         'conda_preserve_egg_dir': None,
         'conda_features': None,
         'conda_track_features': None,
-        }
+    }
 
     def __init__(self, attrs=None):
         given_attrs = {}
@@ -111,8 +114,10 @@ class CondaDistribution(Distribution):
         for attr in self.conda_attrs:
             setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
 
+
 class bdist_conda(install):
     description = "create a conda package"
+    config = Config(build_id="bdist_conda" + "_" + str(int(time.time() * 1000)))
 
     def initialize_options(self):
         if not PY3:
@@ -121,13 +126,13 @@ class bdist_conda(install):
         else:
             super().initialize_options()
         self.buildnum = None
-        self.binstar_upload = False
+        self.anaconda_upload = False
 
     def finalize_options(self):
         opt_dict = self.distribution.get_option_dict('install')
         if self.prefix:
             raise DistutilsOptionError("--prefix is not allowed")
-        opt_dict['prefix'] = ("bdist_conda", config.build_prefix)
+        opt_dict['prefix'] = ("bdist_conda", self.config.build_prefix)
         if not PY3:
             # Command is an old-style class in Python 2
             install.finalize_options(self)
@@ -150,126 +155,131 @@ class bdist_conda(install):
         if self.buildnum is not None:
             metadata.conda_buildnum = self.buildnum
 
-        with Locked(config.croot):
-            d = defaultdict(dict)
-            # PyPI allows uppercase letters but conda does not, so we fix the
-            # name here.
-            d['package']['name'] = metadata.name.lower()
-            d['package']['version'] = metadata.version
-            d['build']['number'] = metadata.conda_buildnum
+        d = defaultdict(dict)
+        # PyPI allows uppercase letters but conda does not, so we fix the
+        # name here.
+        d['package']['name'] = metadata.name.lower()
+        d['package']['version'] = metadata.version
+        d['build']['number'] = metadata.conda_buildnum
 
-            # MetaData does the auto stuff if the build string is None
-            d['build']['string'] = metadata.conda_buildstr
+        # MetaData does the auto stuff if the build string is None
+        d['build']['string'] = metadata.conda_buildstr
 
-            d['build']['binary_relocation'] = metadata.conda_binary_relocation
-            d['build']['preserve_egg_dir'] = metadata.conda_preserve_egg_dir
-            d['build']['features'] = metadata.conda_features
-            d['build']['track_features'] = metadata.conda_track_features
+        d['build']['binary_relocation'] = metadata.conda_binary_relocation
+        d['build']['preserve_egg_dir'] = metadata.conda_preserve_egg_dir
+        d['build']['features'] = metadata.conda_features
+        d['build']['track_features'] = metadata.conda_track_features
 
-            # XXX: I'm not really sure if it is correct to combine requires
-            # and install_requires
-            d['requirements']['run'] = d['requirements']['build'] = \
-                [spec_from_line(i) for i in
-                    (metadata.requires or []) +
-                    (getattr(self.distribution, 'install_requires', []) or
-                        [])] + ['python']
-            if hasattr(self.distribution, 'tests_require'):
-                # A lot of packages use extras_require['test'], but
-                # tests_require is the one that is officially supported by
-                # setuptools.
-                d['test']['requires'] = [spec_from_line(i) for i in
-                    self.distribution.tests_require or []]
+        # XXX: I'm not really sure if it is correct to combine requires
+        # and install_requires
+        d['requirements']['run'] = d['requirements']['build'] = \
+            [spec_from_line(i) for i in
+                (metadata.requires or []) +
+                (getattr(self.distribution, 'install_requires', []) or
+                    [])] + ['python']
+        if hasattr(self.distribution, 'tests_require'):
+            # A lot of packages use extras_require['test'], but
+            # tests_require is the one that is officially supported by
+            # setuptools.
+            d['test']['requires'] = [spec_from_line(i) for i in
+                self.distribution.tests_require or []]
 
-            d['about']['home'] = metadata.url
-            # Don't worry about classifiers. This isn't skeleton pypi. We
-            # don't need to make this work with random stuff in the wild. If
-            # someone writes their setup.py wrong and this doesn't work, it's
-            # their fault.
-            d['about']['license'] = metadata.license
-            d['about']['summary'] = metadata.description
+        d['about']['home'] = metadata.url
+        # Don't worry about classifiers. This isn't skeleton pypi. We
+        # don't need to make this work with random stuff in the wild. If
+        # someone writes their setup.py wrong and this doesn't work, it's
+        # their fault.
+        d['about']['license'] = metadata.license
+        d['about']['summary'] = metadata.description
 
-            # This is similar logic from conda skeleton pypi
-            entry_points = getattr(self.distribution, 'entry_points', [])
-            if entry_points:
-                if isinstance(entry_points, string_types):
-                    # makes sure it is left-shifted
-                    newstr = "\n".join(x.strip() for x in
-                        entry_points.splitlines())
-                    c = configparser.ConfigParser()
-                    entry_points = {}
-                    try:
-                        c.readfp(StringIO(newstr))
-                    except Exception as err:
-                        # This seems to be the best error here
-                        raise DistutilsGetoptError("ERROR: entry-points not understood: " + str(err) + "\nThe string was" + newstr)
-                    else:
-                        for section in config.sections():
-                            if section in ['console_scripts', 'gui_scripts']:
-                                value = ['%s=%s' % (option, config.get(section, option))
-                                         for option in config.options(section)]
-                                entry_points[section] = value
-                            else:
-                                # Make sure setuptools is added as a dependency below
-                                entry_points[section] = None
-
-                if not isinstance(entry_points, dict):
-                    raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" + entry_points)
+        # This is similar logic from conda skeleton pypi
+        entry_points = getattr(self.distribution, 'entry_points', [])
+        if entry_points:
+            if isinstance(entry_points, string_types):
+                # makes sure it is left-shifted
+                newstr = "\n".join(x.strip() for x in
+                    entry_points.splitlines())
+                c = configparser.ConfigParser()
+                entry_points = {}
+                try:
+                    c.readfp(StringIO(newstr))
+                except Exception as err:
+                    # This seems to be the best error here
+                    raise DistutilsGetoptError("ERROR: entry-points not understood: " +
+                                                str(err) + "\nThe string was" + newstr)
                 else:
-                    rs = entry_points.get('scripts', [])
-                    cs = entry_points.get('console_scripts', [])
-                    gs = entry_points.get('gui_scripts', [])
-                    # We have *other* kinds of entry-points so we need
-                    # setuptools at run-time
-                    if not rs and not cs and not gs and len(entry_points) > 1:
-                        d['requirements']['run'].append('setuptools')
-                        d['requirements']['build'].append('setuptools')
-                    entry_list = rs + cs + gs
-                    if gs and conda.config.platform == 'osx':
-                        d['build']['osx_is_app'] = True
-                    if len(cs + gs) != 0:
-                        d['build']['entry_points'] = entry_list
-                        if metadata.conda_command_tests is True:
-                            d['test']['commands'] = list(map(unicode, pypi.make_entry_tests(entry_list)))
+                    for section in c.sections():
+                        if section in ['console_scripts', 'gui_scripts']:
+                            value = ['%s=%s' % (option, c.get(section, option))
+                                        for option in c.options(section)]
+                            entry_points[section] = value
+                        else:
+                            # Make sure setuptools is added as a dependency below
+                            entry_points[section] = None
 
-            if 'setuptools' in d['requirements']['run']:
-                d['build']['preserve_egg_dir'] = True
+            if not isinstance(entry_points, dict):
+                raise DistutilsGetoptError("ERROR: Could not add entry points. They were:\n" +
+                                            entry_points)
+            else:
+                rs = entry_points.get('scripts', [])
+                cs = entry_points.get('console_scripts', [])
+                gs = entry_points.get('gui_scripts', [])
+                # We have *other* kinds of entry-points so we need
+                # setuptools at run-time
+                if not rs and not cs and not gs and len(entry_points) > 1:
+                    d['requirements']['run'].append('setuptools')
+                    d['requirements']['build'].append('setuptools')
+                entry_list = rs + cs + gs
+                if gs and self.config.platform == 'osx':
+                    d['build']['osx_is_app'] = True
+                if len(cs + gs) != 0:
+                    d['build']['entry_points'] = entry_list
+                    if metadata.conda_command_tests is True:
+                        d['test']['commands'] = list(map(unicode,
+                                                            pypi.make_entry_tests(entry_list)))
 
-            if metadata.conda_import_tests:
-                if metadata.conda_import_tests is True:
-                    d['test']['imports'] = ((self.distribution.packages or [])
-                                            + (self.distribution.py_modules or []))
-                else:
-                    d['test']['imports'] = metadata.conda_import_tests
+        if 'setuptools' in d['requirements']['run']:
+            d['build']['preserve_egg_dir'] = True
 
-            if (metadata.conda_command_tests and not
+        if metadata.conda_import_tests:
+            if metadata.conda_import_tests is True:
+                d['test']['imports'] = ((self.distribution.packages or []) +
+                                        (self.distribution.py_modules or []))
+            else:
+                d['test']['imports'] = metadata.conda_import_tests
+
+        if (metadata.conda_command_tests and not
                 isinstance(metadata.conda_command_tests,
                 bool)):
-                d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
+            d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
-            d = dict(d)
-            m = MetaData.fromdict(d)
-            # Shouldn't fail, but do you really trust the code above?
-            m.check_fields()
-            build.build(m, post=False)
-            # Do the install
-            if not PY3:
-                # Command is an old-style class in Python 2
-                install.run(self)
-            else:
-                super().run()
-            build.build(m, post=True)
-            build.test(m)
-            if self.binstar_upload:
-                class args:
-                    binstar_upload = self.binstar_upload
-                handle_binstar_upload(build.bldpkg_path(m), args)
-            else:
-                no_upload_message = """\
+        d = dict(d)
+        m = MetaData.fromdict(d, config=self.config)
+        # Shouldn't fail, but do you really trust the code above?
+        m.check_fields()
+        m.config.set_build_id = False
+        api.build(m, build_only=True)
+        # prevent changes in the build ID from here, so that we're working in the same prefix
+        # Do the install
+        if not PY3:
+            # Command is an old-style class in Python 2
+            install.run(self)
+        else:
+            super().run()
+        api.build(m, post=True)
+        api.test(m)
+        output_file = api.get_output_file_path(m)
+        if self.anaconda_upload:
+            class args:
+                anaconda_upload = self.anaconda_upload
+            handle_anaconda_upload(output_file, args)
+        else:
+            no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
 # $ anaconda upload %s
-""" % build.bldpkg_path(m)
-                print(no_upload_message)
+""" % output_file
+            print(no_upload_message)
 
 
 # Distutils looks for user_options on the class (not instance).  It also
@@ -283,6 +293,6 @@ bdist_conda.user_options.extend([
     setup() function. The command line flag overrides the option to
     setup().''')),
     (str('anaconda-upload'), None, ("""Upload the finished package to anaconda.org""")),
-    ])
+])
 
 bdist_conda.boolean_options.extend([str('anaconda-upload')])

@@ -1,0 +1,14 @@
+package:
+  name: conda-build-test-source-git-jinja2-2
+  version: 1.0
+
+source:
+  path: ../../../../../conda_build_test_recipe
+
+build:
+  string: {{ PKG_BUILDNUM }}_g{{ GIT_FULL_HASH[:7] }}
+
+requirements:
+  build:
+    # To test the conda_build version
+    - python

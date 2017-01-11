@@ -1,31 +1,28 @@
-## The package attribure specifies a binstar package namespace to build the package to.
-## This can be specified here or on the command line
 package: conda-build
-
-## You can also specify the account to upload to,
-## you must be an admin of that account, this
-## defaults to your user account
-# user: USERNAME
+user: conda-team
 
 #===============================================================================
 # Build Matrix Options
-# Thes options may be a single item, a list or empty
-# The resulting number of builds is [platform * engine * env]
+# These options may be a single item, a list or empty
+# The resulting number of builds is [platform * engine * envvars]
 #===============================================================================
 
 ## The platforms to build on.
 ## platform defaults to linux-64
 platform:
-  - win-64
+  - linux-32
+  - linux-64
+  - osx-64
   - win-32
+  - win-64
 ## The engine are the inital conda packages you want to run with
 engine:
-  - python=2
   - python=3
-## The env param is an environment variable list
-# env:
-#  - MY_ENV=A CC=gcc
-#  - MY_ENV=B
+## The envvars param is an environment variable list
+env:
+  - PYTHON_VERSION=2.7
+  - PYTHON_VERSION=3.4
+  - PYTHON_VERSION=3.5
 
 #===============================================================================
 # Script options
@@ -34,39 +31,18 @@ engine:
 #===============================================================================
 
 ## Run before the script
-# before_script:
-#   - echo "before_script!"
+before_script:
+  - python -c "from platform import system as s; import sys; sys.exit(int(s()!='Windows'))" || export SOURCE_DIR=$SOURCE_DIR
 ## Put your main computations here!
-
-install:
-  # Use the provided conda and Python to run the install script. The order of these commands matters.
-  - conda install requests jinja2
-  - set "CONDA_DEFAULT_ENV="
-  - python tests\install_miniconda.py
-
-test:
-  - cd tests\test-recipes\metadata
-  # This will be effectively a no-op for recipes without bld.bat
-  - for /D %%f in (*) do (C:\Users\binstar\conda-build-miniconda\Scripts\conda-build.exe --no-binstar-upload %%~nf)
-
-# script:
-#   - echo "This is my binstar build!"
-
-## This will run after the script regardless of the result of script
-## BINSTAR_BUILD_RESULT=[succcess|failure]
-# after_script:
-#   - echo "The build was a $BINSTAR_BUILD_RESULT" | tee artifact1.txt
-## This will be run only after a successfull build
-# after_success:
-#   - echo "after_success!"
-## This will be run only after a build failure
-# after_failure:
-#   - echo "after_failure!"
+script:
+  # - echo 4.1.0.rc1 > conda/.version
+  - python -c "from platform import system as s; import sys; sys.exit(int(s()!='Windows'))" || conda build conda.recipe --python $PYTHON_VERSION
+  - python -c "from platform import system as s; import sys; sys.exit(int(s()=='Windows'))" || conda build conda.recipe --python %PYTHON_VERSION%
 
 #===============================================================================
 # Build Results
 # Build results are split into two categories: artifacts and targets
-# You may omit either key and stiff have a successfull build
+# You may omit either key and stiff have a successful build
 # They may be a string, list and contain any bash glob
 #===============================================================================
 
@@ -75,5 +51,5 @@ test:
 ## The special build targets 'conda' and 'pypi' may be used to
 ## upload conda builds
 ## e.g. conda is an alias for /opt/anaconda/conda-bld/<os-arch>/*.tar.bz2
-# build_targets:
-#   - conda
+build_targets:
+  - conda

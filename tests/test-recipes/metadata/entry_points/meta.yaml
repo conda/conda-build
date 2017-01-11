@@ -3,11 +3,16 @@ package:
   version: 1.0
 
 source:
-  git_url: ../../../../
+  path: ../../test-package
 
 build:
   entry_points:
     - test-script-manual = conda_build_test.manual_entry:main
+    # One entry point which is longer than test-script-manual
+    - test-script-manual-postfix = conda_build_test.manual_entry:main
+    # One entry point which is shorter than test-script-manual
+    # (and also a substring of test-script-setup.py)
+    - test-script = conda_build_test.manual_entry:main
 
 requirements:
   build:

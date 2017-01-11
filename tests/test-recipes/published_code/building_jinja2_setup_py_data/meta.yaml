@@ -1,0 +1,15 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: conda-build-test-source-setup-py-data
+  version: {{ data.get('version') }}
+
+# source will be downloaded prior to filling in jinja templates
+# Example assumes that this folder has setup.py in it
+source:
+  git_url: ../../../../../conda_build_test_recipe
+  git_tag: 1.21.0
+
+requirements:
+  build:
+    - python {{ PY_VER }}*

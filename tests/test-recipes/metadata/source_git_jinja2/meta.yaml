@@ -2,11 +2,11 @@
 # including use cases involving expressions such as FOO[:7] or FOO.replace(...)
 package:
   name: conda-build-test-source-git-jinja2
-  version: {{ GIT_DESCRIBE_TAG.replace('v', '') }}
+  version: {{ environ.get("GIT_DESCRIBE_TAG", "WRONG_ANSWER").replace('v', '') }}
 
 source:
-  git_url: https://github.com/conda/conda-build
-  git_tag: 1.8.1
+  git_url: https://github.com/conda/conda_build_test_recipe
+  git_tag: 1.20.2
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER|int }}
