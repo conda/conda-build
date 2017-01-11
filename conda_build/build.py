@@ -813,10 +813,6 @@ def bundle_conda(output, metadata, config, env, **kw):
         if f not in files:
             files.append(f)
     files = filter_files(files, prefix=config.build_prefix)
-    output_folder = None
-    if config.output_folder:
-        output_folder = os.path.join(config.output_folder, config.subdir)
-    final_output = os.path.join(output_folder or config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -848,9 +844,25 @@ def bundle_conda(output, metadata, config, env, **kw):
                           config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
+        if config.output_folder:
+            output_folder = os.path.join(config.output_folder, config.subdir)
+        else:
+            output_folder = config.bldpkgs_dir
+        final_output = os.path.join(output_folder, output_filename)
         if os.path.isfile(final_output):
             os.remove(final_output)
+        print(final_output)
         utils.copy_into(tmp_path, final_output, config.timeout, locking=config.locking)
+
+    update_index(os.path.dirname(output_folder), config=config)
+
+    # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
+    if os.path.basename(output_folder) != 'noarch':
+        try:
+            os.makedirs(os.path.join(os.path.dirname(output_folder), 'noarch'))
+        except OSError:
+            pass
+        update_index(os.path.join(os.path.dirname(output_folder), 'noarch'), config=config)
 
     # remove files from build prefix.  This is so that they can be included in other packages.  If
     #     we were to leave them in place, then later scripts meant to also include them may not.

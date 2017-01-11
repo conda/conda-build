@@ -137,10 +137,8 @@ def test_build_output_folder(testing_workdir, test_metadata, capfd):
         args = [testing_workdir, '--no-build-id',
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload',
                 '--output-folder', out]
-        main_build.execute(args)
-        test_metadata.config.output_folder = out
-        output, error = capfd.readouterr()
-        assert "anaconda upload {}".format(out) in output
+        output = main_build.execute(args)[0]
+        assert os.path.isfile(os.path.join(out, test_metadata.config.subdir, os.path.basename(output)))
 
 
 def test_render_output_build_path_set_python(testing_workdir, test_metadata, capfd):
