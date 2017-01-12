@@ -293,6 +293,9 @@ def dict_from_cran_lines(lines):
     for line in lines:
         if not line:
             continue
+        if line == 'Depends:':
+            # The CRAN package 'leaps' has empty depends. Make it depend on CONDA_R instead.
+            line = 'Depends: R (>= %s)' % (Config().CONDA_R)
         try:
             (k, v) = line.split(': ', 1)
         except ValueError:
