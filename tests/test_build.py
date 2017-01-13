@@ -295,5 +295,13 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
 
 
 def test_filter_files():
-    files_list = ['a', '.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
-    assert build.filter_files(files_list, '') == ['a']
+    # Files that should be filtered out.
+    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
+    assert not build.filter_files(files_list, '')
+
+    # Files that should *not* be filtered out.
+    # Example of valid 'x.git' directory:
+    #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
+    files_list = ['a', 'x.git/a', 'something/x.git/a',
+                  'x.git\\a', 'something\\x.git\\a']
+    assert len(build.filter_files(files_list, '')) == len(files_list)
