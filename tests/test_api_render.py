@@ -53,17 +53,19 @@ def test_get_output_file_path(testing_workdir, test_metadata, test_config):
                                           config=test_config,
                                           no_download_source=True)[0]
     _hash = test_metadata._hash_dependencies()
+    python = ''.join(test_config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(test_config.croot, test_config.host_subdir,
                                       "test_get_output_file_path-1.0-py{}{}_1.tar.bz2".format(
-                                          test_config.CONDA_PY, _hash))
+                                          python, _hash))
 
 
 def test_get_output_file_path_metadata_object(test_config, test_metadata):
     build_path = api.get_output_file_path(test_metadata)[0]
     _hash = test_metadata._hash_dependencies()
+    python = ''.join(test_config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(test_config.croot, test_config.host_subdir,
                 "test_get_output_file_path_metadata_object-1.0-py{}{}_1.tar.bz2".format(
-                    test_config.CONDA_PY, _hash))
+                    python, _hash))
 
 
 def test_get_output_file_path_jinja2(testing_workdir, test_config):
@@ -82,10 +84,10 @@ def test_get_output_file_path_jinja2(testing_workdir, test_config):
         config=test_config,
         no_download_source=False)[0]
     _hash = metadata._hash_dependencies()
+    python = ''.join(test_config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(test_config.croot, test_config.host_subdir,
                                       "conda-build-test-source-git-jinja2-1.20.2-"
-                                      "py{0}{1}_0_g262d444.tar.bz2".format(test_config.CONDA_PY,
-                                                                           _hash))
+                                      "py{0}{1}_0_g262d444.tar.bz2".format(python, _hash))
 
 
 @mock.patch('conda_build.source')

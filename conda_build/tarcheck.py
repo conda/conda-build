@@ -6,8 +6,6 @@ import re
 import tarfile
 
 from conda_build.utils import codec
-from conda_build.metadata import HASH_LENGTH
-import conda_build.conda_interface
 
 
 def dist_fn(fn):
@@ -34,7 +32,7 @@ class TarCheck(object):
         self.t.close()
 
     def info_files(self):
-        if re.search('pyh[0-9]{%d}_' % HASH_LENGTH, self.build):
+        if re.search('pyh[0-9]{%d}_' % self.config.hash_length, self.build):
             return
         lista = [p.strip().decode('utf-8') for p in
                  self.t.extractfile('info/files').readlines()]

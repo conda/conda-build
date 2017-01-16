@@ -307,8 +307,8 @@ def execute(args):
         outputs = [action(recipe, config) for recipe in args.recipe]
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
-                            notest=args.notest, keep_old_work=args.keep_old_work,
-                            already_built=None, config=config, noverify=args.no_verify)
+                            notest=args.notest, already_built=None, config=config,
+                            noverify=args.no_verify)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)

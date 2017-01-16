@@ -20,7 +20,9 @@ from .conda_interface import (PaddingError, LinkError, LockError, NoPackagesFoun
                               NoPackagesFoundError, PackageNotFoundError, Unsatisfiable,
                               CondaValueError, UnsatisfiableError)
 from .conda_interface import Resolve, MatchSpec, VersionOrder
-from .conda_interface import reset_context, conda_main
+from .conda_interface import plan
+from .conda_interface import memoized
+from .conda_interface import package_cache
 
 from conda_build.os_utils import external
 from conda_build import utils
@@ -30,24 +32,12 @@ from conda_build.index import update_index
 from conda_build.exceptions import DependencyNeedsBuildingError
 
 
-def get_perl_ver(config):
-    return str(config.CONDA_PERL)
-
-
-def get_lua_ver(config):
-    return str(config.CONDA_LUA)
-
-
-def get_py_ver(config):
-    return '.'.join(str(config.CONDA_PY))
-
-
 def get_npy_ver(config):
-    if config.CONDA_NPY:
+    if config.variant['numpy']:
         # Convert int -> string, e.g.
         #   17 -> '1.7'
         #   110 -> '1.10'
-        conda_npy = str(config.CONDA_NPY)
+        conda_npy = str(config.variant['numpy'])
         return conda_npy[0] + '.' + conda_npy[1:]
     return ''
 
@@ -224,9 +214,12 @@ def get_dict(config, m=None, prefix=None):
     d = conda_build_vars(prefix, config)
 
     # languages
-    d.update(python_vars(config))
-    d.update(perl_vars(config))
-    d.update(lua_vars(config))
+    if 'python' in config.variant:
+        d.update(python_vars(config))
+    if 'perl' in config.variant:
+        d.update(perl_vars(config))
+    if 'lua' in config.variant:
+        d.update(lua_vars(config))
 
     if m:
         d.update(meta_vars(m, config))
@@ -237,6 +230,8 @@ def get_dict(config, m=None, prefix=None):
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
               feature_list})
+
+    d.update(**config.variant)
 
     return d
 
@@ -274,23 +269,24 @@ def conda_build_vars(prefix, config):
 def python_vars(config):
     d = {
         'PYTHON': config.build_python,
-        'PY3K': str(config.PY3K),
+        'PY3K': str(int(config.variant['python'][0]) == 3),
         'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
         'SP_DIR': utils.get_site_packages(config.build_prefix),
-        'PY_VER': get_py_ver(config),
-        'CONDA_PY': str(config.CONDA_PY),
+        'PY_VER': config.variant['python'],
+        'CONDA_PY': config.variant['python'],
     }
+
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
-    if get_npy_ver(config):
-        d['NPY_VER'] = get_npy_ver(config)
-        d['CONDA_NPY'] = str(config.CONDA_NPY)
+    if config.variant.get('numpy'):
+        d['NPY_VER'] = config.variant['numpy']
+        d['CONDA_NPY'] = ''.join(config.variant['numpy'].split('.')[:2])
     return d
 
 
 def perl_vars(config):
     return {
-        'PERL_VER': get_perl_ver(config),
+        'PERL_VER': config.variant['perl'],
     }
 
 
@@ -300,7 +296,7 @@ def lua_vars(config):
         return {
             'LUA': lua,
             'LUA_INCLUDE_DIR': get_lua_include_dir(config),
-            'LUA_VER': get_lua_ver(config),
+            'LUA_VER': config.variant['lua'],
         }
     else:
         return {}
@@ -539,8 +535,149 @@ class Environment(object):
         return specs
 
 
-if __name__ == '__main__':
-    e = get_dict(cc)
-    for k in sorted(e):
-        assert isinstance(e[k], str), k
-        print('%s=%s' % (k, e[k]))
+def get_conda_operation_locks(config):
+    locks = []
+    if config.locking:
+        cc.pkgs_dirs = cc.pkgs_dirs[:1]
+        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+        for folder in locked_folders:
+            if not os.path.isdir(folder):
+                os.makedirs(folder)
+            lock = utils.get_lock(folder, timeout=config.timeout)
+            if not folder.endswith('pkgs'):
+                update_index(folder, config=config, lock=lock,
+                             could_be_mirror=False)
+                locks.append(lock)
+        # lock used to generally indicate a conda operation occurring
+        locks.append(utils.get_lock('conda-operation', timeout=config.timeout))
+    return locks
+
+
+@memoized
+def get_install_actions(prefix, index, specs, config):
+    actions = plan.install_actions(prefix, index, specs)
+    if config.disable_pip:
+        actions['LINK'] = [spec for spec in actions['LINK']
+                            if not spec.startswith('pip-') and
+                            not spec.startswith('setuptools-')]
+    return actions
+
+
+def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=None, locks=None):
+    '''
+    Create a conda envrionment for the given prefix and specs.
+    '''
+    if config.debug:
+        logging.getLogger("conda_build").setLevel(logging.DEBUG)
+        external_logger_context = utils.LoggingContext(logging.DEBUG)
+    else:
+        logging.getLogger("conda_build").setLevel(logging.INFO)
+        external_logger_context = utils.LoggingContext(logging.ERROR)
+
+    with external_logger_context:
+        log = logging.getLogger(__name__)
+
+        if os.path.isdir(prefix):
+            utils.rm_rf(prefix)
+
+        specs = list(specs)
+        for feature, value in feature_list:
+            if value:
+                specs.append('%s@' % feature)
+
+        if specs:  # Don't waste time if there is nothing to do
+            log.debug("Creating environment in %s", prefix)
+            log.debug(str(specs))
+
+            with utils.path_prepended(prefix):
+                if not locks:
+                    locks = get_conda_operation_locks(config)
+                try:
+                    with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        if not index:
+                            index = utils.get_build_index(config=config, subdir=subdir,
+                                                        clear_cache=True)
+                        actions = get_install_actions(prefix, index, specs, config)
+                        plan.display_actions(actions, index)
+                        if utils.on_win:
+                            for k, v in os.environ.items():
+                                os.environ[k] = str(v)
+                        plan.execute_actions(actions, index, verbose=config.debug)
+                except (SystemExit, PaddingError, LinkError) as exc:
+                    if (("too short in" in str(exc) or
+                               'post-link failed for: openssl' in str(exc) or
+                                isinstance(exc, PaddingError)) and
+                            config.prefix_length > 80):
+                        if config.prefix_length_fallback:
+                            log.warn("Build prefix failed with prefix length %d",
+                                     config.prefix_length)
+                            log.warn("Error was: ")
+                            log.warn(str(exc))
+                            log.warn("One or more of your package dependencies needs to be rebuilt "
+                                    "with a longer prefix length.")
+                            log.warn("Falling back to legacy prefix length of 80 characters.")
+                            log.warn("Your package will not install into prefixes > 80 characters.")
+                            config.prefix_length = 80
+
+                            # Set this here and use to create environ
+                            #   Setting this here is important because we use it below (symlink)
+                            prefix = config.build_prefix
+
+                            create_env(prefix, specs, config=config, subdir=subdir,
+                                       clear_cache=clear_cache)
+                        else:
+                            raise
+                    elif 'lock' in str(exc):
+                        if retry < config.max_env_retry:
+                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                            create_env(prefix, specs, config=config, subdir=subdir,
+                                    clear_cache=clear_cache, retry=retry + 1)
+                # HACK: some of the time, conda screws up somehow and incomplete packages result.
+                #    Just retry.
+                except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+                    if retry < config.max_env_retry:
+                        log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                        create_env(prefix, specs, config=config, subdir=subdir,
+                                   clear_cache=clear_cache, retry=retry + 1)
+                    else:
+                        log.error("Failed to create env, max retries exceeded.")
+                        raise
+    if utils.on_win:
+        shell = "cmd.exe"
+    else:
+        shell = "bash"
+    symlink_conda(prefix, sys.prefix, shell)
+
+
+def clean_pkg_cache(dist, config):
+    pkgs_dirs = cc.pkgs_dirs[:1]
+    locks = []
+    if config.locking:
+        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in pkgs_dirs]
+    with utils.try_acquire_locks(locks, timeout=config.timeout):
+        rmplan = [
+            'RM_EXTRACTED {0} local::{0}'.format(dist),
+            'RM_FETCHED {0} local::{0}'.format(dist),
+        ]
+        plan.execute_plan(rmplan)
+
+        # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
+        #   Conda's cleanup is still necessary - it keeps track of its own in-memory
+        #   list of downloaded things.
+        for folder in cc.pkgs_dirs:
+            try:
+                assert not os.path.exists(os.path.join(folder, dist))
+                assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
+                for pkg_id in [dist, 'local::' + dist]:
+                    assert pkg_id not in package_cache()
+            except AssertionError:
+                log = logging.getLogger(__name__)
+                log.debug("Conda caching error: %s package remains in cache after removal", dist)
+                log.debug("manually removing to compensate")
+                cache = package_cache()
+                keys = [key for key in cache.keys() if dist in key]
+                for pkg_id in keys:
+                    if pkg_id in cache:
+                        del cache[pkg_id]
+                for entry in glob(os.path.join(folder, dist + '*')):
+                    utils.rm_rf(entry)

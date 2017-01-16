@@ -955,7 +955,7 @@ def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
 
     create_env(config.build_prefix, specs=specs,
                clear_cache=False,
-               config=config)
+               config=config, subdir=config.build_subdir)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

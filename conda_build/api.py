@@ -24,12 +24,15 @@ from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 
 
-def render(recipe_path, config=None, **kwargs):
-    """Given path to a recipe, return the MetaData object representing that recipe, with jinja2
-       templates evaluated"""
+def render(recipe_path, config=None, variants=None, **kwargs):
+    """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
+       templates evaluated.
+
+    Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
-    return render_recipe(recipe_path, no_download_source=config.no_download_source, config=config)
+    return render_recipe(recipe_path, no_download_source=config.no_download_source, config=config,
+                         variants=variants)
 
 
 def output_yaml(metadata, file_path=None):
@@ -69,7 +72,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
 
 
 def build(recipe_paths_or_metadata, post=None, need_source_download=True,
-          build_only=False, notest=False, config=None, **kwargs):
+          build_only=False, notest=False, config=None, variants=None, **kwargs):
     """Run the build step.
 
     If recipe paths are provided, renders recipe before building.
@@ -103,7 +106,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
             absolute_recipes.append(os.path.normpath(os.path.join(os.getcwd(), recipe)))
 
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
-                      need_source_download=need_source_download, config=config)
+                      need_source_download=need_source_download, config=config, variants=variants)
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):

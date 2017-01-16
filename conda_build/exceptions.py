@@ -75,3 +75,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
         if not self.packages:
             raise RuntimeError("failed to parse packages from exception:"
                                " {}".format(str(CondaException)))
+
+
+class UnsatisfiableVariantError(CondaBuildException):
+    pass

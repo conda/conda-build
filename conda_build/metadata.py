@@ -9,16 +9,16 @@ import sys
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import memoized, md5_file
-from .conda_interface import non_x86_linux_machines, platform, arch_name
+from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
 from .conda_interface import envs_dirs
 
-from conda_build import exceptions
+from conda_build import exceptions, filt
 from conda_build.features import feature_list
-from conda_build.config import Config
+from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
-                               HashableDict)
+                               HashableDict, trim_empty_keys)
 from conda_build.license_family import ensure_valid_license_family
 
 try:
@@ -35,15 +35,14 @@ except ImportError:
 
 on_win = (sys.platform == 'win32')
 
+# arches that don't follow exact names in the subdir need to be mapped here
+ARCH_MAP = {'32': 'x86',
+            '64': 'x86_64'}
+
 
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
-    plat = config.subdir
-    py = config.CONDA_PY
-    np = config.CONDA_NPY
-    pl = config.CONDA_PERL
-    lua = config.CONDA_LUA
-    assert isinstance(py, int), py
+    plat = config.build_subdir
     d = dict(
         linux=plat.startswith('linux-'),
         linux32=bool(plat == 'linux-32'),
@@ -56,23 +55,37 @@ def ns_cfg(config):
         win64=bool(plat == 'win-64'),
         x86=plat.endswith(('-32', '-64')),
         x86_64=plat.endswith('-64'),
-        pl=pl,
-        py=py,
-        lua=lua,
-        luajit=bool(lua[0] == "2"),
-        py3k=bool(30 <= py < 40),
-        py2k=bool(20 <= py < 30),
-        py26=bool(py == 26),
-        py27=bool(py == 27),
-        py33=bool(py == 33),
-        py34=bool(py == 34),
-        py35=bool(py == 35),
-        py36=bool(py == 36),
-        np=np,
         os=os,
         environ=os.environ,
         nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
+
+    py = config.variant.get('python')
+    if py:
+        py = int("".join(py.split('.')[:2]))
+        d.update(dict(py=py,
+                      py3k=bool(30 <= py < 40),
+                      py2k=bool(20 <= py < 30),
+                      py26=bool(py == 26),
+                      py27=bool(py == 27),
+                      py33=bool(py == 33),
+                      py34=bool(py == 34),
+                      py35=bool(py == 35),
+                      py36=bool(py == 36),))
+
+    np = config.variant.get('numpy')
+    if np:
+        d['np'] = int("".join(np.split('.')[:2]))
+
+    pl = config.variant.get('perl')
+    if pl:
+        d['pl'] = pl
+
+    lua = config.variant.get('lua')
+    if lua:
+        d['lua'] = lua
+        d['luajit'] = bool(lua[0] == "2")
+
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
@@ -148,6 +161,18 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
+def _merge_or_update_values(base, new, merge):
+    for key, value in new.items():
+        if hasattr(value, 'keys'):
+            return _merge_or_update_values(base[key], value, merge)
+        else:
+            if merge:
+                base[key] += value
+            else:
+                base[key] = value
+    return base
+
+
 def ensure_valid_noarch_value(meta):
     try:
         build_noarch = meta['build']['noarch']
@@ -190,6 +215,7 @@ default_structs = {
     'build/features': list,
     'build/track_features': list,
     'requirements/build': list,
+    'requirements/host': list,
     'requirements/run': list,
     'requirements/conflicts': list,
     'requirements/preferred_env': text_type,
@@ -289,7 +315,7 @@ FIELDS = {
               'script_env', 'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends', 'include_recipe'  # pin_depends is experimental still
               ],
-    'requirements': ['build', 'run', 'conflicts'],
+    'requirements': ['build', 'host', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
@@ -412,13 +438,9 @@ class MetaData(object):
     def __init__(self, path, config=None, variant=None):
 
         self.undefined_jinja_vars = []
-
-        if not config:
-            self.config = Config()
-        else:
-            # decouple this config from whatever was fed in.  People must change config by
-            #    accessing and changing this attribute.
-            self.config = copy.deepcopy(config)
+        # decouple this config from whatever was fed in.  People must change config by
+        #    accessing and changing this attribute.
+        self.config = copy.deepcopy(get_or_merge_config(config, variant=variant))
 
         if isfile(path):
             self.meta_path = path
@@ -435,14 +457,11 @@ class MetaData(object):
                           path=self.meta_path,
                           config=self.config)
 
-        if not variant:
-            self.variant = {}
-
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
-        self.parse_again(permit_undefined_jinja=True, variant=variant)
+        self.parse_again(permit_undefined_jinja=True)
         self.config.disable_pip = self.disable_pip
 
     @property
@@ -464,7 +483,7 @@ class MetaData(object):
                 build_config = parse(configfile.read(), config=self.config)
         _merge_or_update_values(self.meta, build_config, merge=merge)
 
-    def parse_again(self, permit_undefined_jinja=False, variant=None):
+    def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -475,14 +494,12 @@ class MetaData(object):
                                 evaluate to an emtpy string, without emitting an error.
         """
         log = logging.getLogger(__name__)
+        log.addFilter(filt)
 
         if isfile(self.requirements_path) and not self.get_value('requirements/run'):
             self.meta.setdefault('requirements', {})
             run_requirements = specs_from_url(self.requirements_path)
             self.meta['requirements']['run'] = run_requirements
-
-        if variant:
-            self.variant = variant
 
         os.environ["CONDA_BUILD_STATE"] = "RENDER"
         append_sections_file = None
@@ -490,8 +507,7 @@ class MetaData(object):
         try:
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
-                self.meta = parse(self._get_contents(permit_undefined_jinja,
-                                                        variant=self.variant),
+                self.meta = parse(self._get_contents(permit_undefined_jinja),
                                   config=self.config,
                                   path=self.meta_path)
 
@@ -535,30 +551,30 @@ class MetaData(object):
                                  ".  Note that pip requirements as used in conda-env "
                                  "environment.yml files are not supported by conda-build.")
 
-    def parse_until_resolved(self, config, variant=None):
+    def parse_until_resolved(self, config):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
         undefined_jinja_vars = ()
         # always parse again at least once.
-        self.parse_again(permit_undefined_jinja=True, variant=variant)
+        self.parse_again(permit_undefined_jinja=True)
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
-            self.parse_again(permit_undefined_jinja=True, variant=variant)
+            self.parse_again(permit_undefined_jinja=True)
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
         # always parse again at the end, too.
-        self.parse_again(permit_undefined_jinja=False, variant=variant)
+        self.parse_again(permit_undefined_jinja=False)
 
     @classmethod
-    def fromstring(cls, metadata, config=None):
+    def fromstring(cls, metadata, config=None, variant=None):
         m = super(MetaData, cls).__new__(cls)
         if not config:
             config = Config()
-        m.meta = parse(metadata, config=config, path='')
+        m.meta = parse(metadata, config=config, path='', variant=variant)
         m.config = config
         m.parse_again(permit_undefined_jinja=True)
         return m
@@ -657,15 +673,15 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [
-            ('python', self.config.CONDA_PY),
-            ('numpy', self.config.CONDA_NPY),
-            ('perl', self.config.CONDA_PERL),
-            ('lua', self.config.CONDA_LUA),
+        names = ('python', 'numpy', 'perl', 'lua')
+        name_ver_list = [(name, self.config.variant[name])
+                         for name in names
+                         if self.config.variant.get(name)]
+        if self.config.variant.get('r_base'):
             # r is kept for legacy installations, r-base deprecates it.
-            ('r', self.config.CONDA_R),
-            ('r-base', self.config.CONDA_R),
-        ]
+            name_ver_list.extend([('r', self.config.variant['r_base']),
+                                  ('r-base', self.config.variant['r_base']),
+                                  ])
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
@@ -725,8 +741,9 @@ class MetaData(object):
         # save only the first HASH_LENGTH characters - should be more than enough, since these only
         #    need to be unique within one version
         # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-        hash_ = 'h{hash_:0{length}d}'.format(length=HASH_LENGTH,
-                                hash_=abs(hash(self._get_hash_dictionary())))[:HASH_LENGTH + 1]
+        hash_ = 'h{hash_:0{length}d}'.format(length=self.config.hash_length,
+                                hash_=abs(hash(self._get_hash_dictionary())))[
+                                    :self.config.hash_length + 1]
         return hash_
 
     def build_id(self):
@@ -735,7 +752,7 @@ class MetaData(object):
             check_bad_chrs(out, 'build/string')
         else:
             out = build_string_from_metadata(self)
-        if not re.findall('h[0-9]{%s}' % HASH_LENGTH, out):
+        if not re.findall('h[0-9]{%s}' % self.config.hash_length, out):
             ret = out.rsplit('_', 1)
             try:
                 int(ret[0])
@@ -745,7 +762,7 @@ class MetaData(object):
             if len(ret) > 1:
                 out = '_'.join([out] + ret[1:])
         else:
-            out = re.sub('h[0-9]{%s}' % HASH_LENGTH, self._hash_dependencies(), out)
+            out = re.sub('h[0-9]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
         return out
 
     def dist(self):
@@ -863,7 +880,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja, variant=None):
+    def _get_contents(self, permit_undefined_jinja):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -908,11 +925,8 @@ class MetaData(object):
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         env.globals.update(ns_cfg(self.config))
-        if variant:
-            env.globals.update(variant)
         env.globals.update(context_processor(self, path, config=self.config,
-                                             permit_undefined_jinja=permit_undefined_jinja,
-                                             variant=variant))
+                                             permit_undefined_jinja=permit_undefined_jinja))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 

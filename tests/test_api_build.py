@@ -128,7 +128,7 @@ def test_git_describe_info_on_branch(test_config):
     output = api.get_output_file_path(recipe_path)[0]
     _hash = api.render(recipe_path, config=test_config)[0][0]._hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", test_config.host_subdir,
-                             "git_describe_number_branch-1.20.2-{}_1_g82c6ba6.tar.bz2".format(_hash))
+                             "git_describe_number_branch-1.20.2.0-{}_1_g82c6ba6.tar.bz2".format(_hash))
     assert test_path == output
 
 
@@ -292,7 +292,7 @@ def test_build_msvc_compiler(msvc_ver):
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler, testing_workdir, test_config):
-    test_config.python = target_compiler
+    test_config.variant['python'] = target_compiler
     api.build(os.path.join(metadata_dir, '_cmake_generator'), config=test_config)
 
 
@@ -438,10 +438,10 @@ def test_build_metadata_object(test_metadata):
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
 def test_numpy_setup_py_data(test_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
-    _hash = api.render(recipe_path, config=test_config, numpy="1.11")[0][0]._hash_dependencies()
+    _hash = api.render(recipe_path, config=test_config, numpy="1.10")[0][0]._hash_dependencies()
     assert os.path.basename(api.get_output_file_path(recipe_path,
-                            config=test_config, numpy="1.11")[0]) == \
-                            "load_setup_py_test-1.0a1-np111py{0}{1}{2}_1.tar.bz2".format(
+                            config=test_config, numpy="1.10")[0]) == \
+                            "load_setup_py_test-1.0a1-np110py{0}{1}{2}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 

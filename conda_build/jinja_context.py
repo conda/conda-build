@@ -11,7 +11,6 @@ import jinja2
 
 from .conda_interface import PY3
 from .environ import get_dict as get_environ
-from .metadata import select_lines, ns_cfg
 from .utils import get_installed_packages
 
 
@@ -69,6 +68,8 @@ class FilteredLoader(jinja2.BaseLoader):
         self.config = config
 
     def get_source(self, environment, template):
+        # we have circular imports here.  Do a local import
+        from .metadata import select_lines, ns_cfg
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
         return select_lines(contents, ns_cfg(self.config)), filename, uptodate
@@ -341,7 +342,7 @@ def runtime(language, config, variant, permit_undefined_jinja=False):
     return runtime
 
 
-def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja, variant):
+def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -364,12 +365,10 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
         pin_compatible=partial(pin_compatible, config,
                                permit_undefined_jinja=permit_undefined_jinja),
-        compiler=partial(compiler, variant=variant, config=config,
-                         permit_undefined_jinja=permit_undefined_jinja),
+        compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
-        runtime=partial(runtime, variant=variant, config=config,
+        runtime=partial(runtime, config=config,
                          permit_undefined_jinja=permit_undefined_jinja),
-        variant=variant,
         environ=environ)
     return ctx
 

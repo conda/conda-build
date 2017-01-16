@@ -11,6 +11,7 @@ from locale import getpreferredencoding
 import logging
 import os
 from os.path import isdir, isfile, abspath
+import re
 import subprocess
 import sys
 import tarfile
@@ -18,54 +19,13 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3
+from .conda_interface import PY3, memoized, NoPackagesFoundError
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
-from conda_build.completers import all_versions, conda_version
-from conda_build.utils import rm_rf
-from conda_build.variants import get_package_variants
-
-
-def set_language_env_vars(args, parser, config, execute=None):
-    """Given args passed into conda command, set language env vars"""
-    for lang in all_versions:
-        versions = getattr(args, lang)
-        if not versions:
-            continue
-        if versions == ['all']:
-            if all_versions[lang]:
-                versions = all_versions[lang]
-            else:
-                parser.error("'all' is not supported for --%s" % lang)
-        if len(versions) > 1:
-            for ver in versions[:]:
-                setattr(args, lang, [str(ver)])
-                if execute:
-                    execute(args, parser, config)
-                # This is necessary to make all combinations build.
-                setattr(args, lang, versions)
-            return
-        else:
-            version = versions[0]
-            if lang in ('python', 'numpy'):
-                version = int(version.replace('.', ''))
-            setattr(config, conda_version[lang], version)
-        if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
-            if all_versions[lang]:
-                raise RuntimeError("%s must be major.minor, like %s, not %s" %
-                    (conda_version[lang], all_versions[lang][-1] / 10, version))
-            else:
-                raise RuntimeError("%s must be major.minor, not %s" %
-                    (conda_version[lang], version))
-
-    # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
-    # Auto-set those env variables
-    for var in conda_version.values():
-        if hasattr(config, var) and getattr(config, var):
-            # Set the env variable.
-            os.environ[var] = str(getattr(config, var))
+from conda_build.variants import get_package_variants, dict_of_lists_to_list_of_dicts
+from conda_build.exceptions import UnsatisfiableVariantError
 
 
 def bldpkg_path(m):
@@ -76,16 +36,87 @@ def bldpkg_path(m):
     return os.path.join(os.path.dirname(m.config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
 
 
-def parse_or_try_download(metadata, no_download_source, config, force_download=False):
+def actions_to_pins(actions):
+    return [' '.join(spec.split()[0].rsplit('-', 2)) for spec in actions['LINK']]
+
+
+def get_env_dependencies(m, env, variant, index=None):
+    dash_or_under = re.compile("[-_]")
+    if not index:
+        index = utils.get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
+    specs = [ms.spec for ms in m.ms_depends(env)]
+    for spec in specs[:]:
+        spec_name = spec.split()[0]
+        for key, value in variant.items():
+            if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
+                specs.append(" ".join((spec_name, value)))
+    prefix = m.config.host_prefix if env == 'host' else m.config.build_prefix
+    try:
+        actions = environ.get_install_actions(prefix, index, specs, m.config)
+    except NoPackagesFoundError as e:
+        # we'll get here if the environment is unsatisfiable
+        raise UnsatisfiableVariantError("Invalid variant: {}.  Led to unsatisfiable environment.\n"
+                                        "Error was: {}".format(variant, str(e)))
+    return actions_to_pins(actions)
+
+
+@memoized
+def finalize_metadata(m, variant, indexes):
+    """Fully render a recipe.  Fill in versions for build dependencies."""
+    rendered_metadata = copy.deepcopy(m)
+    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
+    #     be installed in the environment.
+    deps = {env: get_env_dependencies(m, env, variant, indexes[env]) for env in ('build', 'host')}
+    build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in deps['build']}
+    if not rendered_metadata.meta.get('build'):
+        rendered_metadata.meta['build'] = {}
+    # hard-code build string so that any future "renderings" can't go wrong based on user env
+    rendered_metadata.meta['build']['string'] = m.build_id()
+
+    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
+    for env, values in deps.items():
+        if values:
+            rendered_metadata.meta['requirements'][env] = values
+
+    # here's where we pin run dependencies to their build time versions.  This happens based
+    #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
+    #     names to have this behavior.
+    run_deps = rendered_metadata.meta['requirements'].get('run', [])
+    for dep in run_deps[:]:
+        dep_name = dep.split()[0]
+        if dep_name in variant['pin_run_as_build'] and dep_name in build_dep_versions:
+            run_deps.append(" ".join((dep_name, build_dep_versions[dep_name])))
+
+    rendered_metadata.meta['requirements']['run'] = run_deps
+
+    if not rendered_metadata.meta.get('test'):
+        rendered_metadata.meta['test'] = {}
+    rendered_metadata.meta['test']['requires'] = rendered_metadata.get_value('test/requires') + run_deps
+
+    # if source/path is relative, then the output package makes no sense at all.  The next
+    #   best thing is to hard-code the absolute path.  This probably won't exist on any
+    #   system other than the original build machine, but at least it will work there.
+    if m.meta.get('source'):
+        if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
+            rendered_metadata.meta['source']['path'] = os.path.normpath(
+                os.path.join(m.path, m.meta['source']['path']))
+        elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
+            rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                os.path.join(m.path, m.meta['source']['git_url']))
+    return rendered_metadata
+
+
+def parse_or_try_download(metadata, no_download_source, config, variants, force_download=False):
+    log = logging.getLogger(__name__)
     need_reparse_in_env = True
     need_source_download = True
     if (force_download or (not no_download_source and metadata.needs_source_for_render)):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not config.dirty or len(os.listdir(config.work_dir)) == 0:
-                source.provide(metadata, config=config)
-            if not metadata.get_section('source') or len(os.listdir(config.work_dir)) > 0:
+            if not config.dirty or len(os.listdir(metadata.config.work_dir)) == 0:
+                source.provide(metadata)
+            if not metadata.get_section('source') or len(os.listdir(metadata.config.work_dir)) > 0:
                 need_source_download = False
             try:
                 metadata.parse_again(permit_undefined_jinja=False)
@@ -102,26 +133,57 @@ def parse_or_try_download(metadata, no_download_source, config, force_download=F
         need_source_download = False
         need_reparse_in_env = False
 
+    if need_source_download and no_download_source:
+        raise ValueError("no_download_source specified, but can't fully render recipe without"
+                         " downloading source.  Please fix the recipe, or don't use "
+                         "no_download_source.")
+
     if metadata.get_value('build/noarch'):
         config.noarch = True
 
     if 'host' in metadata.get_section('requirements'):
         metadata.config.has_separate_host_prefix = True
 
-    output = []
-    variants = get_package_variants(metadata, config.variant_config_files,
-                                    config.ignore_system_variants)
+    # this additional parse ensures that jinja2 stuff is evaluated
+    metadata.parse_again(permit_undefined_jinja=True)
+
+    outputs = {}
+    indexes = {env: utils.get_build_index(metadata.config,
+                                          getattr(metadata.config, '{}_subdir'.format(env)))
+                                          for env in ('build', 'host')}
     for variant in variants:
-        metadata = copy.deepcopy(metadata)
+        varmeta = copy.deepcopy(metadata)
+        varmeta.config.variant = variant
         if 'target_platform' in variant:
-            metadata.config.host_subdir = variant['target_platform']
+            varmeta.config.host_subdir = variant['target_platform']
         try:
-            metadata.parse_until_resolved(config=config, variant=variant)
-            need_reparse_in_env = False
+            varmeta.parse_until_resolved(config=varmeta.config)
         except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-            need_reparse_in_env = True
-        output.append((metadata, need_source_download, need_reparse_in_env))
-    return output
+            log.warn("Need to create build environment to fully render this recipe.  Doing so.")
+            specs = [ms.spec for ms in metadata.ms_depends('build')]
+            environ.create_env(config.build_prefix, specs, config=config,
+                               subdir=config.build_subdir)
+            reparse(metadata)
+            need_reparse_in_env = False
+
+        metadata.config.noarch = bool((metadata.get_value('build/noarch') or
+                                       metadata.get_value('build/noarch_python')))
+        try:
+            # keys in variant are named after package, but config is still used for some things.
+            #    This overrides the config with the variant settings.  The initial config
+            #    overrides the variant, though, so the variant is only clobbering in the case
+            #    where no CONDA_PY variables are set, or no version args passed to config object.
+            # computes hashes based on whatever the current specs are - not the final specs
+            #    This is a deduplication step.  Any variants that end up identical because a given
+            #    variant is not used in a recipe are effectively ignored.
+            reparse(varmeta)
+            final = finalize_metadata(varmeta, variant, indexes=indexes)
+        except UnsatisfiableVariantError as e:
+            log.warn("Unsatisfiable variant: {}"
+                     "Error was {}".format(variant, e))
+            continue
+        outputs[final.build_id()] = (final, need_source_download, need_reparse_in_env)
+    return outputs.values()
 
 
 def reparse(metadata):
@@ -132,8 +194,7 @@ def reparse(metadata):
     metadata.parse_again(permit_undefined_jinja=False)
 
 
-def render_recipe(recipe_path, config, no_download_source=False):
-    log = logging.getLogger(__file__)
+def render_recipe(recipe_path, config, no_download_source=False, variants=None):
     arg = recipe_path
     # Don't use byte literals for paths in Python 2
     if not PY3:
@@ -167,25 +228,14 @@ def render_recipe(recipe_path, config, no_download_source=False):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
+    variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m, config)
+
+    # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
     rendered_metadata = parse_or_try_download(m,
                                               no_download_source=no_download_source,
-                                              config=config)
-    if any(entry[1] for entry in rendered_metadata) and no_download_source:
-        raise ValueError("no_download_source specified, but can't fully render recipe without"
-                         " downloading source.  Please fix the recipe, or don't use "
-                         "no_download_source.")
-    for entry in rendered_metadata:
-        if entry[2]:
-            log.warn("Need to create build environment to fully render this recipe.  Doing so.")
-            specs = [ms.spec for ms in entry[0].ms_depends('build')]
-            environ.create_env(config.build_prefix, specs, config=config)
-        reparse(entry[0])
-
-        entry[0].config.noarch = bool((entry[0].get_value('build/noarch') or
-                                       entry[0].get_value('build/noarch_python')))
-
+                                              config=config, variants=variants)
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 

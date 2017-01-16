@@ -143,7 +143,7 @@ def test_build_output_folder(testing_workdir, test_metadata, capfd):
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload',
                 '--output-folder', out]
         output = main_build.execute(args)[0]
-        assert os.path.isfile(os.path.join(out, test_metadata.config.subdir, os.path.basename(output)))
+        assert os.path.isfile(os.path.join(out, test_metadata.config.host_subdir, os.path.basename(output)))
 
 
 def test_render_output_build_path_set_python(testing_workdir, test_metadata, capfd):

@@ -12,10 +12,11 @@ import sys
 from conda_build.conda_interface import ArgumentParser, add_parser_channels
 
 from conda_build import __version__
-from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path, output_yaml
-from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
-                                    LuaVersionsCompleter, NumPyVersionCompleter)
-from conda_build.config import Config
+from conda_build.render import render_recipe, bldpkg_path, output_yaml
+from conda_build.completers import RecipeCompleter
+
+from conda_build.config import get_or_merge_config
+from conda_build.variants import get_package_variants, set_language_env_vars
 from conda_build.utils import LoggingContext
 
 on_win = (sys.platform == 'win32')
@@ -53,35 +54,27 @@ source to try fill in related template variables.",
         '--python',
         action="append",
         help="Set the Python version used by conda build.",
-        metavar="PYTHON_VER",
-        choices=PythonVersionCompleter(),
     )
     p.add_argument(
         '--perl',
         action="append",
         help="Set the Perl version used by conda build.",
-        metavar="PERL_VER",
     )
     p.add_argument(
         '--numpy',
         action="append",
         help="Set the NumPy version used by conda build.",
-        metavar="NUMPY_VER",
-        choices=NumPyVersionCompleter(),
     )
     p.add_argument(
         '--R',
         action="append",
         help="""Set the R version used by conda build.""",
-        metavar="R_VER",
-        choices=RVersionsCompleter(),
+        dest="r_base"
     )
     p.add_argument(
         '--lua',
         action="append",
         help="Set the Lua version used by conda build.",
-        metavar="LUA_VER",
-        choices=LuaVersionsCompleter(),
     )
     p.add_argument(
         '--bootstrap',
@@ -140,8 +133,9 @@ def parse_args(args):
 def execute(args):
     p, args = parse_args(args)
 
-    config = Config()
-    set_language_env_vars(args, p, config)
+    config = get_or_merge_config(None, **args.__dict__)
+    variants = get_package_variants(args.recipe, config)
+    set_language_env_vars(variants)
 
     metadata_tuples = render_recipe(args.recipe, config=config, no_download_source=args.no_source)
     if args.output:

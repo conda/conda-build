@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 import unittest
 
 import pytest
@@ -172,23 +173,24 @@ def test_build_bootstrap_env_by_path(test_metadata):
 @pytest.mark.parametrize('py_ver', [('2.7', 'vs2008'),
                                     ('3.4', 'vs2010'),
                                     ('3.5', 'vs2015'), ])
-def test_native_compiler_metadata_win(test_config, py_ver):
-    test_config.platform = 'win'
+def test_native_compiler_metadata_win(test_config, py_ver, mocker):
     variant = {'python': py_ver[0]}
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config, variant=variant)
+    test_config._platform = 'win'
+    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config,
+                        variant=variant)
     assert py_ver[1] in metadata.meta['requirements']['build']
 
 
-def test_native_compiler_metadata_linux(test_config):
-    test_config.platform = 'linux'
+def test_native_compiler_metadata_linux(test_config, mocker):
+    test_config._platform = 'linux'
     metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config)
     assert 'gcc' in metadata.meta['requirements']['build']
     assert 'g++' in metadata.meta['requirements']['build']
     assert 'gfortran' in metadata.meta['requirements']['build']
 
 
-def test_native_compiler_metadata_osx(test_config):
-    test_config.platform = 'osx'
+def test_native_compiler_metadata_osx(test_config, mocker):
+    test_config._platform = 'osx'
     metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config)
     assert 'gcc' in metadata.meta['requirements']['build']
     assert 'g++' in metadata.meta['requirements']['build']
@@ -207,8 +209,8 @@ def test_compiler_metadata_cross_compiler():
 
 
 def test_hash_build_id(test_metadata):
-    assert test_metadata._hash_dependencies() == 'h8302'
-    assert test_metadata.build_id() == 'py27h8302_1'
+    assert test_metadata._hash_dependencies() == 'h9080'
+    assert test_metadata.build_id() == 'py{}{}h9080_1'.format(sys.version_info.major, sys.version_info.minor)
 
 
 def test_hash_build_id_key_order(test_metadata):
@@ -232,7 +234,7 @@ def test_hash_build_id_key_order(test_metadata):
 
 def test_hash_applies_to_custom_build_string(test_metadata):
     test_metadata.meta['build']['string'] = 'steve'
-    assert test_metadata.build_id() == 'steveh8302'
+    assert test_metadata.build_id() == 'steveh9080'
 
 
 def test_disallow_leading_period_in_version(test_metadata):

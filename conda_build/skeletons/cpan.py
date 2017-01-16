@@ -19,7 +19,7 @@ from conda_build.conda_interface import TmpDownload, download
 from conda_build.conda_interface import MatchSpec, Resolve
 from conda_build.conda_interface import memoized
 
-from conda_build.config import Config
+from conda_build.config import get_or_merge_config
 from conda_build.utils import on_win, check_call_env
 
 CPAN_META = """\
@@ -187,10 +187,10 @@ def skeletonize(packages, output_dir=".", version=None,
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
 
-    if not config:
-        config = Config()
+    config = get_or_merge_config(config)
+    # TODO: load/use variants?
 
-    perl_version = config.CONDA_PERL
+    perl_version = config.variant['perl']
     package_dicts = {}
     indent = '\n    - '
     processed_packages = set()
@@ -394,7 +394,7 @@ def core_module_version(module, version, config):
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
     if version in [None, '']:
-        version = LooseVersion(config.CONDA_PERL)
+        version = LooseVersion(config.variant['perl'])
     else:
         version = LooseVersion(version)
     corelist = 'corelist' + ('.bat' if on_win else '')

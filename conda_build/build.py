@@ -40,6 +40,7 @@ from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
+from .conda_interface import memoized
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -52,6 +53,7 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
+from conda_build.variants import set_language_env_vars
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -174,52 +176,9 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
 def get_run_dists(m):
     prefix = join(envs_dirs[0], '_run')
     utils.rm_rf(prefix)
-    environ.create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=m.config)
+    environ.create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=m.config,
+                       subdir=m.config.host_subdir)
     return sorted(linked(prefix))
-
-
-def get_deps(m, type_, prefix):
-    # we only care if we actually have deps.  Otherwise, the environment will not be
-    #    valid for inspection.
-    if glob(os.path.join(prefix, 'conda-meta', '*')):
-        return environ.Environment(prefix).package_specs()
-    return []
-
-
-def finalize_metadata(m):
-    """Fully render a recipe.  Fill in versions for build dependencies."""
-    rendered_metadata = copy.deepcopy(m)
-    build_deps = []
-    host_deps = []
-    # fill in build versions used
-    if glob(os.path.join(m.config.build_prefix, '*')):
-        build_deps = get_deps(m, 'build', m.config.build_prefix)
-    if glob(os.path.join(m.config.host_prefix, '*')):
-        host_deps = get_deps(m, 'host', m.config.host_prefix)
-
-    if not rendered_metadata.meta.get('build'):
-        rendered_metadata.meta['build'] = {}
-    # hard-code build string so that any future "renderings" can't go wrong based on user env
-    rendered_metadata.meta['build']['string'] = m.build_id()
-
-    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
-    if build_deps:
-        rendered_metadata.meta['requirements']['build'] = build_deps
-    if host_deps:
-        rendered_metadata.meta['requirements']['host'] = host_deps
-
-    # if source/path is relative, then the output package makes no sense at all.  The next
-    #   best thing is to hard-code the absolute path.  This probably won't exist on any
-    #   system other than the original build machine, but at least it will work there.
-    if m.meta.get('source'):
-        if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
-            rendered_metadata.meta['source']['path'] = os.path.normpath(
-                os.path.join(m.path, m.meta['source']['path']))
-        elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
-            rendered_metadata.meta['source']['git_url'] = os.path.normpath(
-                os.path.join(m.path, m.meta['source']['git_url']))
-
-    return rendered_metadata
 
 
 def copy_recipe(m):
@@ -245,7 +204,7 @@ def copy_recipe(m):
         else:
             original_recipe = ""
 
-        rendered = output_yaml(finalize_metadata(m))
+        rendered = output_yaml(m)
         if not original_recipe or not open(original_recipe).read() == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
                 f.write("# This file created by conda-build {}\n".format(__version__))
@@ -281,8 +240,7 @@ def copy_license(m):
 
 
 def write_hash_input(m):
-    final_metadata = finalize_metadata(m)
-    hash_input = final_metadata._get_hash_dictionary()
+    hash_input = m._get_hash_dictionary()
     with open(os.path.join(m.config.info_dir, 'hash_input.json'), 'w') as f:
         json.dump(hash_input, f)
 
@@ -500,34 +458,33 @@ def create_info_files(m, files, prefix):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    final = finalize_metadata(m)
-    copy_recipe(final)
-    copy_readme(final)
-    copy_license(final)
+    copy_recipe(m)
+    copy_readme(m)
+    copy_license(m)
 
-    write_hash_input(final)
-    write_info_json(final)  # actually index.json
-    write_about_json(final)
-    write_package_metadata_json(final)
+    write_hash_input(m)
+    write_info_json(m)  # actually index.json
+    write_about_json(m)
+    write_package_metadata_json(m)
 
-    write_info_files_file(final, files)
+    write_info_files_file(m, files)
 
-    files_with_prefix = get_files_with_prefix(final, files, prefix)
-    create_info_files_json_v1(m, final.config.info_dir, prefix, files, files_with_prefix)
+    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
-    detect_and_record_prefix_files(final, files, prefix)
-    write_no_link(final, files)
+    detect_and_record_prefix_files(m, files, prefix)
+    write_no_link(m, files)
 
-    if final.get_value('source/git_url'):
-        with io.open(join(final.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
-            source.git_info(final.config, fo)
+    if m.get_value('source/git_url'):
+        with io.open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
+            source.git_info(m.config, fo)
 
-    if final.get_value('app/icon'):
-        utils.copy_into(join(final.path, m.get_value('app/icon')),
-                        join(final.config.info_dir, 'icon.png'),
-                        final.config.timeout, locking=final.config.locking)
-    return [f.replace(final.config.host_prefix + '/', '')
-            for root, _, _ in os.walk(final.config.info_dir)
+    if m.get_value('app/icon'):
+        utils.copy_into(join(m.path, m.get_value('app/icon')),
+                        join(m.config.info_dir, 'icon.png'),
+                        m.config.timeout, locking=m.config.locking)
+    return [f.replace(m.config.host_prefix + '/', '')
+            for root, _, _ in os.walk(m.config.info_dir)
             for f in glob(os.path.join(root, '*'))]
 
 
@@ -577,9 +534,7 @@ def get_inode_paths(files, target_short_path, prefix):
 
 
 def path_type(path):
-    if islink(path):
-        return PathType.softlink
-    return PathType.hardlink
+    return PathType.softlink if islink(path) else PathType.hardlink
 
 
 def build_info_files_json_v1(m, prefix, files, files_with_prefix):
@@ -621,17 +576,6 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
                   cls=EntityEncoder)
 
 
-def recursive_req_folders(folders, start_specs, index):
-    """Get folders """
-    for folder in start_specs:
-        folder = folder.replace(" ", '-')
-        matching_keys = {key: val for key, val in index.items() if key.startswith(folder)}
-        for key, val in matching_keys.items():
-            recursive_req_folders(folders, val['requires'], index)
-        folders.extend([key.replace('.tar.bz2', "") for key in matching_keys.keys()])
-    return folders
-
-
 def filter_files(files_list, prefix, filter_patterns=('.*[\\\\/]?\.git[\\\\/].*', )):
     """Remove things like .git from the list of files to be copied"""
     for pattern in filter_patterns:
@@ -656,9 +600,8 @@ def bundle_conda(output, metadata, env, **kw):
     tmp_metadata.meta['package']['name'] = output['name']
     tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
 
-    final_metadata = finalize_metadata(tmp_metadata)
     output_filename = ('-'.join([output['name'], metadata.version(),
-                                 final_metadata.build_id()]) + '.tar.bz2')
+                                 metadata.build_id()]) + '.tar.bz2')
     files = list(set(utils.expand_globs(files, metadata.config.host_prefix)))
     info_files = create_info_files(tmp_metadata, files, prefix=metadata.config.host_prefix)
     for f in info_files:
@@ -701,7 +644,7 @@ def bundle_conda(output, metadata, env, **kw):
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
         if metadata.config.output_folder:
-            output_folder = os.path.join(metadata.config.output_folder, metadata.config.subdir)
+            output_folder = os.path.join(metadata.config.output_folder, metadata.config.host_subdir)
         else:
             output_folder = metadata.config.bldpkgs_dir
         final_output = os.path.join(output_folder, output_filename)
@@ -808,24 +751,28 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False):
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        environ.create_env(m.config.build_prefix, specs, config=m.config)
+        environ.create_env(m.config.build_prefix, specs, config=m.config,
+                           subdir=m.config.build_subdir)
 
-        final_metadata = finalize_metadata(m)
+        # this check happens for the sake of tests, but let's do it before the build so we don't
+        #     make people wait longer only to see an error
+        warn_on_use_of_SRC_DIR(m)
 
         if m.config.skip_existing:
-            package_exists = is_package_built(final_metadata)
+            package_exists = is_package_built(m)
             if package_exists:
-                print(final_metadata.dist(),
+                print(m.dist(),
                       "is already built in {0}, skipping.".format(package_exists))
                 return []
 
-        print("BUILD START:", final_metadata.dist())
+        print("BUILD START:", m.dist())
 
         if m.config.has_separate_host_prefix:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
             specs = [ms.spec for ms in m.ms_depends('host')]
-            environ.create_env(m.config.host_prefix, specs, config=m.config)
+            environ.create_env(m.config.host_prefix, specs, config=m.config,
+                               subdir=m.config.host_subdir)
 
         if need_source_download:
             # Execute any commands fetching the source (e.g., git) in the _build environment.
@@ -835,11 +782,11 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False):
                 source.provide(m)
             reparse(m)
             if m.uses_jinja:
-                print("BUILD START (revised):", finalize_metadata(m).dist())
+                print("BUILD START (revised):", m.dist())
 
         elif need_reparse_in_env:
             reparse(m)
-            print("BUILD START (revised):", finalize_metadata(m).dist())
+            print("BUILD START (revised):", m.dist())
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -888,6 +835,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False):
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(config=m.config, m=m)
                     env["CONDA_BUILD_STATE"] = "BUILD"
+
+                    # set variables like CONDA_PY in the test environment
+                    env.update(set_language_env_vars(m.config.variant))
+
                     work_file = join(m.config.work_dir, 'conda_build.sh')
                     if script:
                         with open(work_file, 'w') as bf:
@@ -1083,8 +1034,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     not os.listdir(config.work_dir)):
                 source.provide(metadata)
 
-    warn_on_use_of_SRC_DIR(metadata)
-
     for (metadata, _, _) in metadata_tuples:
         config.compute_build_id(metadata.name())
         environ.clean_pkg_cache(metadata.dist(), config)
@@ -1124,13 +1073,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             # as the tests are run by python, ensure that python is installed.
             # (If they already provided python as a run or test requirement,
             #  this won't hurt anything.)
-            specs += ['python %s.*' % environ.get_py_ver(config)]
+            specs += ['python']
         if pl_files:
             # as the tests are run by perl, we need to specify it
-            specs += ['perl %s.*' % environ.get_perl_ver(config)]
+            specs += ['perl']
         if lua_files:
             # not sure how this shakes out
-            specs += ['lua %s.*' % environ.get_lua_ver(config)]
+            specs += ['lua']
 
         with utils.path_prepended(config.test_prefix):
             env = dict(os.environ.copy())
@@ -1146,15 +1095,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         if utils.on_win:
             env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
 
-        for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
-            env[varname] = str(getattr(config, varname) or '')
-
-        # Python 2 Windows requires that envs variables be string, not unicode
-        env = {str(key): str(value) for key, value in env.items()}
         suffix = "bat" if utils.on_win else "sh"
         test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        environ.create_env(config.test_prefix, specs, config=config)
+        # we want subdir to match the target arch.  If we're runnin the test on the target arch,
+        #     the build_subdir should be that match.  The host_subdir may not be, and would lead
+        #     to unsatisfiable packages.
+        environ.create_env(config.test_prefix, specs, config=config, subdir=config.build_subdir)
 
         with utils.path_prepended(config.test_prefix):
             env = dict(os.environ.copy())
@@ -1170,8 +1117,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             if utils.on_win:
                 env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
 
-        for varname in 'CONDA_PY', 'CONDA_NPY', 'CONDA_PERL', 'CONDA_LUA':
-            env[varname] = str(getattr(config, varname) or '')
+        # set variables like CONDA_PY in the test environment
+        env.update(set_language_env_vars(config.variant))
 
         # Python 2 Windows requires that envs variables be string, not unicode
         env = {str(key): str(value) for key, value in env.items()}
@@ -1263,7 +1210,7 @@ Error:
 
 
 def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
-               need_source_download=True, need_reparse_in_env=False):
+               need_source_download=True, need_reparse_in_env=False, variants=None):
 
     to_build_recursive = []
     recipe_list = deque(recipe_list)
@@ -1315,7 +1262,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             # each tuple is:
             #    metadata, need_source_download, need_reparse_in_env =
             # We get one tuple per variant
-            metadata_tuples = render_recipe(recipe, config=config)
+            metadata_tuples = render_recipe(recipe, config=config, variants=variants)
         if not getattr(config, "noverify", False):
             verifier = Verify()
             ignore_scripts = config.ignore_recipe_verify_scripts if \

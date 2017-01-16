@@ -10,16 +10,23 @@ import yaml
 
 from conda_build.utils import ensure_list
 from conda_build.conda_interface import cc
-from conda_build import jinja_context
 
-
+DEFAULT_EXTEND_KEYS = ['pin_run_as_build']
 DEFAULT_VARIANTS = {
-    'python': ['{0}.{1}'.format(sys.version_info.major, sys.version_info.minor)],
-    'numpy': ['1.11'],
-    'perl': ['5.20'],
-    'lua': ['5.2'],
-    'r': ['3.3'],
+    'python': ['{0}.{1}.*'.format(sys.version_info.major, sys.version_info.minor)],
+    'numpy': ['1.11.*'],
+    'perl': ['5.20.*'],
+    'lua': ['5.2.*'],
+    'r_base': ['3.3.1.*'],
+    'pin_run_as_build': ['python']
 }
+
+
+SUFFIX_MAP = {'PY': 'python',
+              'NPY': 'numpy',
+              'LUA': 'lua',
+              'PERL': 'perl',
+              'R': 'r_base'}
 
 
 def parse_config_file(path):
@@ -28,11 +35,26 @@ def parse_config_file(path):
     return content
 
 
-def find_config_files(metadata, additional_files=None, ignore_system_config=False):
+def validate_variant(variant):
+    errors = []
+    for key in variant:
+        if '-' in key:
+            errors.append('"-" is a disallowed character in variant keys.  Key was: {}'.format(key))
+    if errors:
+        raise ValueError("Variant configuration errors: \n{}".format(errors))
+
+
+def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False):
     """Find files to load variables from.  Note that order here determines clobbering.
 
     Later files clobber earlier ones.  Preference is system-wide, then """
     files = []
+
+    if hasattr(metadata_or_path, 'path'):
+        recipe_config = os.path.join(metadata_or_path.path, ".conda_build_config.yaml")
+    else:
+        recipe_config = os.path.join(metadata_or_path, ".conda_build_config.yaml")
+
     if not ignore_system_config:
         if hasattr(cc, "conda_build_config") and getattr(cc, "conda_build_config"):
             system_path = cc.conda_build_config
@@ -40,7 +62,6 @@ def find_config_files(metadata, additional_files=None, ignore_system_config=Fals
             system_path = os.path.join(os.path.expanduser('~'), ".conda_build_config.yaml")
         if os.path.isfile(system_path):
             files.append(system_path)
-    recipe_config = os.path.join(metadata.path, ".conda_build_config.yaml")
     if os.path.isfile(recipe_config):
         files.append(recipe_config)
     if additional_files:
@@ -57,26 +78,71 @@ def combine_specs(specs):
            names used in Jinja2 templated recipes.  Values can be either single
            values (strings or integers), or collections (lists, tuples, sets).
     """
+    extend_keys = DEFAULT_EXTEND_KEYS
+    extend_keys.extend([key for spec in specs for key in ensure_list(spec.get('extend_keys'))])
+
     values = {}
-    # each spec replaces the previous one.  Only the last one with the key stays.
+    # each spec is a dictionary.  Each subsequent spec replaces the previous one.
+    #     Only the last one with the key stays.
     for spec in specs:
-        values.update(spec)
-    return values
+        for k, v in spec.items():
+            if k in extend_keys:
+                values[k] = ensure_list(values.get(k, []))
+                values[k].extend(v)
+            else:
+                values[k] = v
+    return values, set(extend_keys)
 
 
-def get_package_variants(recipe_metadata, config_files=None, ignore_system_config=False):
-    files = find_config_files(recipe_metadata, ensure_list(config_files),
-                              ignore_system_config=ignore_system_config)
-    specs = [parse_config_file(f) for f in files]
-    if not specs:
-        specs = [DEFAULT_VARIANTS]
-    combined_spec = combine_specs(specs)
-    matching_subset = (set(recipe_metadata.undefined_jinja_vars) |
-                       jinja_context.get_used_variants(recipe_metadata)) & \
-    set(combined_spec.keys())
-    matching_subset = {key: ensure_list(combined_spec[key]) for key in matching_subset}
+def set_language_env_vars(variant):
+    """Given args passed into conda command, set language env vars to be made available"""
+    inverse_map = {v: k for k, v in SUFFIX_MAP.items()}
+    env = {}
+    for variant_name, env_var_name in inverse_map.items():
+        if variant_name in variant:
+            env['CONDA_' + env_var_name] = str(variant[variant_name])
+    return env
 
+
+def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
     # http://stackoverflow.com/a/5228294/1170370
-    # end result is a collection of dicts, like [{'CONDA_PY': 2.7, 'CONDA_NPY': 1.11},
-    #                                            {'CONDA_PY': 3.5, 'CONDA_NPY': 1.11}]
-    return (dict(six.moves.zip(matching_subset, x)) for x in product(*matching_subset.values()))
+    # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
+    #                                            {'python': 3.5, 'numpy': 1.11}]
+    if hasattr(dict_or_list_of_dicts, 'keys'):
+        specs = [DEFAULT_VARIANTS, dict_or_list_of_dicts]
+    else:
+        specs = [DEFAULT_VARIANTS] + list(dict_or_list_of_dicts or [])
+
+    combined, extend_keys = combine_specs(specs)
+    if 'extend_keys' in combined:
+        del combined['extend_keys']
+
+    extended_cols = ['extend_keys'] + list(extend_keys)
+    dicts = []
+    dimensions = {k: v for k, v in combined.items() if k not in extended_cols}
+    for x in product(*dimensions.values()):
+        remapped = dict(six.moves.zip(dimensions, x))
+        remapped.update({k: set(v) for k, v in combined.items() if k in extended_cols})
+        dicts.append(remapped)
+    return dicts
+
+
+def get_package_variants(recipedir_or_metadata, config):
+    files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
+                              ignore_system_config=config.ignore_system_variants)
+    specs = get_default_variants() + [parse_config_file(f) for f in files]
+    # this tweaks behavior from clobbering to appending/extending
+    combined_spec, extend_keys = combine_specs(specs)
+
+    # clobber the variant with anything in the config (stuff set via CLI flags or env vars)
+    for k, v in config.variant.items():
+        if k in extend_keys:
+            combined_spec[k].extend(v)
+        else:
+            combined_spec[k] = [v]
+    validate_variant(combined_spec)
+    return dict_of_lists_to_list_of_dicts(combined_spec)
+
+
+def get_default_variants():
+    return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS)

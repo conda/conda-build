@@ -4,11 +4,11 @@ package:
 
 requirements:
   build:
-    - python {{ python }}
+    - python
     - numpy
   run:
-    - python {{ python }}
+    - python
     - numpy
 
 about:
-  summary: nope
+  summary: {{ python }}

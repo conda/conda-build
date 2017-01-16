@@ -11,13 +11,12 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import root_dir, root_writable, cc, subdir, platform
-from .conda_interface import string_types, binstar_upload
+from .conda_interface import root_dir, root_writable, cc
+from .conda_interface import binstar_upload
 
-from .utils import get_build_folders, rm_rf
+from .utils import get_build_folders, rm_rf, trim_empty_keys
 
 on_win = (sys.platform == 'win32')
-DEFAULT_PREFIX_LENGTH = 255
 
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
@@ -35,14 +34,79 @@ def _ensure_dir(path):
         except OSError:
             pass
 
+# we need this to be accessible to the CLI, so it needs to be more static.
+DEFAULT_PREFIX_LENGTH = 255
+
+Setting = namedtuple("ConfigSetting", "name, default")
+DEFAULTS = [Setting('activate', True),
+            Setting('anaconda_upload', binstar_upload),
+            Setting('channel_urls', []),
+            Setting('dirty', False),
+            Setting('include_recipe', True),
+            Setting('noarch', False),
+            Setting('no_download_source', False),
+            Setting('override_channels', False),
+            Setting('skip_existing', False),
+            Setting('token', None),
+            Setting('user', None),
+            Setting('verbose', True),
+            Setting('debug', False),
+            Setting('timeout', 90),
+            Setting('set_build_id', True),
+            Setting('disable_pip', False),
+            Setting('output_folder', None),
+            Setting('prefix_length_fallback', True),
+            Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
+            Setting('locking', True),
+            Setting('max_env_retry', 1),
+            Setting('remove_work_dir', True),
+            Setting('_host_platform', None),
+            Setting('_host_arch', None),
+            Setting('has_separate_host_prefix', False),
+
+            # these are primarily for testing.  They override the native build platform/arch,
+            #     which is useful in tests, but makes little sense on actual systems.
+            Setting('_platform', None),
+            Setting('_arch', None),
+
+            # variants
+            Setting('variant_config_files', []),
+            Setting('ignore_system_variants', False),
+            Setting('hash_length', 4),
+
+            # append/clobber metadata section data (for global usage.  Can also add files to
+            #    recipe.)
+            Setting('append_sections_file', None),
+            Setting('clobber_sections_file', None),
+            Setting('bootstrap', None),
+
+            # pypi upload settings (twine)
+            Setting('password', None),
+            Setting('sign', False),
+            Setting('sign_with', 'gpg'),
+            Setting('identity', None),
+            Setting('config_file', None),
+            Setting('repository', 'pypi'),
+
+            Setting('ignore_recipe_verify_scripts',
+                  cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
+            Setting('ignore_package_verify_scripts',
+                    cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
+            Setting('run_recipe_verify_scripts',
+                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+            Setting('run_package_verify_scripts',
+                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+            ]
+
 
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
     __doc__ = __doc__
 
-    def __init__(self, **kwargs):
+    def __init__(self, variant=None, **kwargs):
         super(Config, self).__init__()
+        self.variant = variant or {}
         self.set_keys(**kwargs)
 
     def _set_attribute_from_kwargs(self, kwargs, attr, default):
@@ -58,26 +122,23 @@ class Config(object):
                 # Hooray for corner cases.
                 if lang == 'python':
                     lang = 'py'
+                elif lang == 'numpy':
+                    lang = 'npy'
+                elif lang == 'r_base':
+                    lang = 'r'
                 var = 'CONDA_' + lang.upper()
                 version = os.getenv(var) if os.getenv(var) else default
             elif isinstance(version, list) and len(version) == 1:
                 version = version[0]
             return version
 
-        self.CONDA_PERL = env('perl', '5.20.3')
-        self.CONDA_LUA = env('lua', '5.2')
-        self.CONDA_R = env('r', '3.3.1')
-        self.CONDA_PY = int(env('python', "%s%s" % (sys.version_info.major, sys.version_info.minor))
-                        .replace('.', ''))
-
-        self.CONDA_NPY = kwargs.get('numpy')
-        # if keyword argument is not present get numpy version from environment variable
-        if not self.CONDA_NPY:
-            self.CONDA_NPY = os.getenv("CONDA_NPY")
-        if self.CONDA_NPY:
-            if not isinstance(self.CONDA_NPY, string_types):
-                self.CONDA_NPY = self.CONDA_NPY[0]
-            self.CONDA_NPY = int(self.CONDA_NPY.replace('.', '')) or None
+        self.variant.update({'perl': env('perl', None),
+                   'lua': env('lua', None),
+                   'python': env('python', None),
+                   'numpy': env('numpy', None),
+                   'r_base': env('r_base', None),
+                   })
+        trim_empty_keys(self.variant)
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         croot = kwargs.get('croot')
@@ -87,63 +148,8 @@ class Config(object):
             # set default value (not actually None)
             self._croot = getattr(self, '_croot', None)
 
-        Setting = namedtuple("ConfigSetting", "name, default")
-        values = [Setting('activate', True),
-                  Setting('anaconda_upload', binstar_upload),
-                  Setting('channel_urls', []),
-                  Setting('dirty', False),
-                  Setting('include_recipe', True),
-                  Setting('noarch', False),
-                  Setting('no_download_source', False),
-                  Setting('override_channels', False),
-                  Setting('skip_existing', False),
-                  Setting('token', None),
-                  Setting('user', None),
-                  Setting('verbose', True),
-                  Setting('debug', False),
-                  Setting('timeout', 90),
-                  Setting('set_build_id', True),
-                  Setting('disable_pip', False),
-                  Setting('output_folder', None),
-                  Setting('prefix_length_fallback', True),
-                  Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
-                  Setting('locking', True),
-                  Setting('max_env_retry', 1),
-                  Setting('remove_work_dir', True),
-                  Setting('_host_platform', None),
-                  Setting('_host_arch', None),
-                  Setting('has_separate_host_prefix', False),
-
-                  # variants
-                  Setting('variant_config_files', []),
-                  Setting('ignore_system_variants', False),
-
-                  # append/clobber metadata section data (for global usage.  Can also add files to
-                  #    recipe.)
-                  Setting('append_sections_file', None),
-                  Setting('clobber_sections_file', None),
-                  Setting('bootstrap', None),
-
-                  # pypi upload settings (twine)
-                  Setting('password', None),
-                  Setting('sign', False),
-                  Setting('sign_with', 'gpg'),
-                  Setting('identity', None),
-                  Setting('config_file', None),
-                  Setting('repository', 'pypi'),
-
-                  Setting('ignore_recipe_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
-                  Setting('ignore_package_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
-                  Setting('run_recipe_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
-                  Setting('run_package_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
-                  ]
-
         # handle known values better than unknown (allow defaults)
-        for value in values:
+        for value in DEFAULTS:
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
 
         # dangle remaining keyword arguments as attributes on this class
@@ -153,19 +159,18 @@ class Config(object):
     @property
     def arch(self):
         """Always the native (build system) arch"""
-        return cc.subdir.split('-')[-1]
+        return self._arch or cc.subdir.split('-')[-1]
 
     @property
     def platform(self):
         """Always the native (build system) OS"""
-        return cc.platform
+        return self._platform or cc.platform
 
     @property
     def build_subdir(self):
-        if self.platform == 'noarch' or self.noarch:
-            return 'noarch'
-        else:
-            return cc.subdir
+        """Determines channel to download build env packages from.
+        Should generally be the native platform.  Does not preclude packages from noarch."""
+        return '-'.join((self.platform, self.arch))
 
     @property
     def host_arch(self):
@@ -228,20 +233,6 @@ class Config(object):
         It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
 
-    @property
-    def PY3K(self):
-        return int(bool(self.CONDA_PY >= 30))
-
-    @property
-    def use_MSVC2015(self):
-        """Returns whether python version is above 3.4
-
-        (3.5 is compiler switch to MSVC 2015)"""
-        return bool(self.CONDA_PY >= 35)
-
-    def get_conda_py(self):
-        return self.CONDA_PY
-
     def _get_python(self, prefix):
         if sys.platform == 'win32':
             if os.path.isfile(os.path.join(prefix, 'python_d.exe')):
@@ -260,7 +251,7 @@ class Config(object):
         return res
 
     def _get_lua(self, prefix):
-        binary_name = "luajit" if "2" == self.CONDA_LUA[0] else "lua"
+        binary_name = "luajit" if (self.variant['lua'] and "2" == self.variant['lua'][0]) else "lua"
         if sys.platform == 'win32':
             res = join(prefix, '{}.exe'.format(binary_name))
         else:
@@ -475,26 +466,13 @@ class Config(object):
             self.clean()
 
 
-def get_or_merge_config(config, **kwargs):
+def get_or_merge_config(config, variant=None, **kwargs):
     if not config:
-        config = Config()
+        config = Config(variant=variant)
+
     if kwargs:
         config.set_keys(**kwargs)
     return config
 
-
-def show(config):
-    print('CONDA_PY:', config.CONDA_PY)
-    print('CONDA_NPY:', config.CONDA_NPY)
-    print('build subdir:', config.build_subdir)
-    print('host subdir:', config.host_subdir)
-    print('croot:', config.croot)
-    print('build packages directory:', config.bldpkgs_dir)
-
-
 # legacy exports for conda
 croot = Config().croot
-
-
-if __name__ == '__main__':
-    show(Config())
