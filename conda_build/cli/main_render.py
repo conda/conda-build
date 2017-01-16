@@ -83,6 +83,32 @@ source to try fill in related template variables.",
         metavar="LUA_VER",
         choices=LuaVersionsCompleter(),
     )
+    p.add_argument(
+        '--bootstrap',
+        help="""Provide initial configuration in addition to recipe.
+        Can be a path to or name of an environment, which will be emulated
+        in the package.""",
+    )
+    p.add_argument(
+        '--append-file',
+        help="""Append data in meta.yaml with fields from this file.  Jinja2 is not done
+        on appended fields""",
+        dest='append_sections_file',
+    )
+    p.add_argument(
+        '--clobber-file',
+        help="""Clobber data in meta.yaml with fields from this file.  Jinja2 is not done
+        on clobbered fields.""",
+        dest='clobber_sections_file',
+    )
+    p.add_argument(
+        '-m', '--variant-config-files',
+        dest='variant_config_files',
+        action="append",
+        help="""Additional variant config files to add.  These yaml files can contain
+        keys such as `c_compiler` and `target_platform` to form a build matrix."""
+    )
+
     add_parser_channels(p)
     return p
 
@@ -117,12 +143,14 @@ def execute(args):
     config = Config()
     set_language_env_vars(args, p, config)
 
-    with LoggingContext(logging.CRITICAL + 1):
-        metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source,
-                                       config=config)
-        if args.output:
-            print(bldpkg_path(metadata))
-        else:
+    metadata_tuples = render_recipe(args.recipe, config=config, no_download_source=args.no_source)
+    if args.output:
+        with LoggingContext(logging.CRITICAL + 1):
+            for (metadata, _, _) in metadata_tuples:
+                print(bldpkg_path(metadata))
+    else:
+        logging.basicConfig(level=logging.INFO)
+        for (metadata, _, _) in metadata_tuples:
             print(output_yaml(metadata, args.file))
 
 

@@ -5,6 +5,7 @@ from collections import defaultdict
 import contextlib
 import fnmatch
 from glob import glob
+import json
 from locale import getpreferredencoding
 import logging
 import operator
@@ -25,7 +26,8 @@ import filelock
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir
-from .conda_interface import string_types, url_path, get_rc_urls
+from .conda_interface import string_types, url_path, get_index, get_rc_urls
+from .conda_interface import CondaHTTPError
 
 from conda_build.os_utils import external
 
@@ -714,3 +716,108 @@ class LoggingContext(object):
         if self.handler and self.close:
             self.handler.close()
         # implicit return of None => don't swallow exceptions
+
+
+def get_installed_packages(path):
+    '''
+    Scan all json files in 'path' and return a dictionary with their contents.
+    Files are assumed to be in 'index.json' format.
+    '''
+    installed = dict()
+    for filename in glob(os.path.join(path, 'conda-meta', '*.json')):
+        with open(filename) as file:
+            data = json.load(file)
+            installed[data['name']] = data
+    return installed
+
+
+def _convert_lists_to_sets(_dict):
+    for k, v in _dict.items():
+        if hasattr(v, 'keys'):
+            _dict[k] = HashableDict(_convert_lists_to_sets(v))
+        elif hasattr(v, '__iter__'):
+            _dict[k] = sorted(list(set(v)))
+    return _dict
+
+
+class HashableDict(dict):
+    """use hashable frozen dictionaries for resources and resource types so that they can be in sets
+    """
+    def __init__(self, *args, **kwargs):
+        super(HashableDict, self).__init__(*args, **kwargs)
+        self = _convert_lists_to_sets(self)
+
+    def __hash__(self):
+        return hash(json.dumps(self, sort_keys=True))
+
+
+# http://stackoverflow.com/a/10743550/1170370
+@contextlib.contextmanager
+def capture():
+    import sys
+    from cStringIO import StringIO
+    oldout, olderr = sys.stdout, sys.stderr
+    try:
+        out = [StringIO(), StringIO()]
+        sys.stdout, sys.stderr = out
+        yield out
+    finally:
+        sys.stdout, sys.stderr = oldout, olderr
+        out[0] = out[0].getvalue()
+        out[1] = out[1].getvalue()
+
+
+# copied from conda; added in 4.3, not currently part of exported functionality
+@contextlib.contextmanager
+def env_var(name, value, callback=None):
+    # NOTE: will likely want to call reset_context() when using this function, so pass
+    #       it as callback
+    name, value = str(name), str(value)
+    saved_env_var = os.environ.get(name)
+    try:
+        os.environ[name] = value
+        if callback:
+            callback()
+        yield
+    finally:
+        if saved_env_var:
+            os.environ[name] = saved_env_var
+        else:
+            del os.environ[name]
+        if callback:
+            callback()
+
+
+def collect_channels(config, is_host=False):
+    urls = [url_path(config.croot)] + get_rc_urls() + ['local', ]
+    if config.channel_urls:
+        urls.extend(config.channel_urls)
+    # defaults has a very limited set of repo urls.  Omit it from the URL list so
+    #     that it doesn't fail.
+    if config.is_cross and is_host:
+        urls.remove('defaults')
+        urls.remove('local')
+    return urls
+
+
+def get_build_index(config, clear_cache=True, omit_defaults=False):
+    # priority: local by croot (can vary), then channels passed as args,
+    #     then channels from config.
+    urls = list(config.channel_urls)
+    if os.path.isdir(config.croot):
+        urls.insert(0, url_path(config.croot))
+    try:
+        index = get_index(channel_urls=urls,
+                          prepend=(not config.override_channels),
+                          use_local=False,
+                          use_cache=not clear_cache,
+                          platform=config.host_subdir)
+    # HACK: defaults does not have the many subfolders we support.  Omit it and try again.
+    except CondaHTTPError:
+        urls.remove('defaults')
+        index = get_index(channel_urls=urls,
+                          prepend=config.override_channels,
+                          use_local=False,
+                          use_cache=not clear_cache,
+                          platform=config.host_subdir)
+    return index

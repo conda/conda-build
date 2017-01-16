@@ -99,19 +99,30 @@ class Config(object):
                   Setting('skip_existing', False),
                   Setting('token', None),
                   Setting('user', None),
-                  Setting('verbose', False),
+                  Setting('verbose', True),
                   Setting('debug', False),
                   Setting('timeout', 90),
-                  Setting('arch', subdir.split('-')[-1]),
-                  Setting('platform', platform),
                   Setting('set_build_id', True),
                   Setting('disable_pip', False),
                   Setting('output_folder', None),
                   Setting('prefix_length_fallback', True),
                   Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
                   Setting('locking', True),
-                  Setting('max_env_retry', 3),
+                  Setting('max_env_retry', 1),
                   Setting('remove_work_dir', True),
+                  Setting('_host_platform', None),
+                  Setting('_host_arch', None),
+                  Setting('has_separate_host_prefix', False),
+
+                  # variants
+                  Setting('variant_config_files', []),
+                  Setting('ignore_system_variants', False),
+
+                  # append/clobber metadata section data (for global usage.  Can also add files to
+                  #    recipe.)
+                  Setting('append_sections_file', None),
+                  Setting('clobber_sections_file', None),
+                  Setting('bootstrap', None),
 
                   # pypi upload settings (twine)
                   Setting('password', None),
@@ -140,18 +151,55 @@ class Config(object):
             setattr(self, name, value)
 
     @property
-    def subdir(self):
-        if self.platform == 'noarch':
-            return self.platform
-        else:
-            return "-".join([self.platform, str(self.arch)])
+    def arch(self):
+        """Always the native (build system) arch"""
+        return cc.subdir.split('-')[-1]
 
-    @subdir.setter
-    def subdir(self, value):
+    @property
+    def platform(self):
+        """Always the native (build system) OS"""
+        return cc.platform
+
+    @property
+    def build_subdir(self):
+        if self.platform == 'noarch' or self.noarch:
+            return 'noarch'
+        else:
+            return cc.subdir
+
+    @property
+    def host_arch(self):
+        return self._host_arch or self.arch
+
+    @host_arch.setter
+    def host_arch(self, value):
+        self._host_arch = value
+
+    @property
+    def host_platform(self):
+        return self._host_platform or self.platform
+
+    @host_platform.setter
+    def host_platform(self, value):
+        self._host_platform = value
+
+    @property
+    def host_subdir(self):
+        if self.host_platform == 'noarch' or self.noarch:
+            return 'noarch'
+        else:
+            return "-".join([self.host_platform, str(self.host_arch)])
+
+    @host_subdir.setter
+    def host_subdir(self, value):
         values = value.split('-')
-        self.platform = values[0]
+        self.host_platform = values[0]
         if len(values) > 1:
-            self.arch = values[1]
+            self.host_arch = values[1]
+
+    @property
+    def is_cross(self):
+        return self.build_subdir != self.host_subdir
 
     @property
     def croot(self):
@@ -219,13 +267,6 @@ class Config(object):
             res = join(prefix, 'bin/{}'.format(binary_name))
         return res
 
-    @property
-    def build_id(self):
-        """This is a per-build (almost) unique id, consisting of the package being built, and the
-        time since the epoch, in ms.  It is appended to build and test prefixes, and used to create
-        unique work folders for build and test."""
-        return self._build_id
-
     def compute_build_id(self, package_name, reset=False):
         if not self._build_id or reset:
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
@@ -243,6 +284,13 @@ class Config(object):
                 # important: this is recomputing prefixes and determines where work folders are.
                 self._build_id = build_id
 
+    @property
+    def build_id(self):
+        """This is a per-build (almost) unique id, consisting of the package being built, and the
+        time since the epoch, in ms.  It is appended to build and test prefixes, and used to create
+        unique work folders for build and test."""
+        return self._build_id
+
     @build_id.setter
     def build_id(self, _build_id):
         _build_id = _build_id.rstrip("/").rstrip("\\")
@@ -259,31 +307,48 @@ class Config(object):
         self._prefix_length = length
 
     @property
-    def _short_build_prefix(self):
-        return join(self.build_folder, '_b_env')
+    def _short_host_prefix(self):
+        return join(self.build_folder, '_h_env')
 
     @property
-    def _long_build_prefix(self):
-        placeholder_length = self.prefix_length - len(self._short_build_prefix)
+    def _long_host_prefix(self):
+        placeholder_length = self.prefix_length - len(self._short_host_prefix)
         placeholder = '_placehold'
         repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
-        placeholder = (self._short_build_prefix + repeats * placeholder)[:self.prefix_length]
-        return max(self._short_build_prefix, placeholder)
+        placeholder = (self._short_host_prefix + repeats * placeholder)[:self.prefix_length]
+        return max(self._short_host_prefix, placeholder)
 
     @property
     def build_prefix(self):
+        """The temporary folder where the build environment is created.  The build env contains
+        libraries that may be linked, but only if the host env is not specified.  It is placed on
+        PATH."""
+        if self.has_separate_host_prefix:
+            prefix = join(self.build_folder, '_build_env')
+        else:
+            prefix = self.host_prefix
+        return prefix
+
+    @property
+    def host_prefix(self):
+        """The temporary folder where the host environment is created.  The host env contains
+        libraries that may be linked.  It is not placed on PATH."""
         if on_win:
-            return self._short_build_prefix
-        return self._long_build_prefix
+            return self._short_host_prefix
+        return self._long_host_prefix
 
     @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        return join(self.build_folder, '_t_env')
+        return join(self.build_folder, '_test_env')
 
     @property
     def build_python(self):
         return self._get_python(self.build_prefix)
+
+    @property
+    def host_python(self):
+        return self._get_python(self.host_prefix)
 
     @property
     def test_python(self):
@@ -291,7 +356,7 @@ class Config(object):
 
     @property
     def build_perl(self):
-        return self._get_perl(self.build_prefix)
+        return self._get_perl(self.host_prefix)
 
     @property
     def test_perl(self):
@@ -299,7 +364,7 @@ class Config(object):
 
     @property
     def build_lua(self):
-        return self._get_lua(self.build_prefix)
+        return self._get_lua(self.host_prefix)
 
     @property
     def test_lua(self):
@@ -307,13 +372,13 @@ class Config(object):
 
     @property
     def info_dir(self):
-        path = join(self.build_prefix, 'info')
+        path = join(self.host_prefix, 'info')
         _ensure_dir(path)
         return path
 
     @property
     def meta_dir(self):
-        path = join(self.build_prefix, 'conda-meta')
+        path = join(self.host_prefix, 'conda-meta')
         _ensure_dir(path)
         return path
 
@@ -329,14 +394,17 @@ class Config(object):
         if self.noarch:
             path = join(self.croot, "noarch")
         else:
-            path = join(self.croot, self.subdir)
+            path = join(self.croot, self.host_subdir)
         _ensure_dir(path)
         return path
 
     @property
     def bldpkgs_dirs(self):
         """ Dirs where previous build packages might be. """
-        return join(self.croot, self.subdir), join(self.croot, "noarch")
+        # The first two *might* be the same, but might not, depending on if this is a cross-compile.
+        #     cc.subdir should be the native platform, while self.subdir would be the host platform.
+        return {join(self.croot, self.host_subdir), join(self.croot, cc.subdir),
+                join(self.croot, "noarch"), }
 
     @property
     def src_cache(self):
@@ -418,7 +486,8 @@ def get_or_merge_config(config, **kwargs):
 def show(config):
     print('CONDA_PY:', config.CONDA_PY)
     print('CONDA_NPY:', config.CONDA_NPY)
-    print('subdir:', config.subdir)
+    print('build subdir:', config.build_subdir)
+    print('host subdir:', config.host_subdir)
     print('croot:', config.croot)
     print('build packages directory:', config.bldpkgs_dir)
 

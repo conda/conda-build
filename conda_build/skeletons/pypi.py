@@ -31,7 +31,7 @@ from conda_build.conda_interface import default_python
 
 from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env
 from conda_build.source import apply_patch
-from conda_build.build import create_env
+from conda_build.environ import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family

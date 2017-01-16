@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import contextlib
 from functools import partial
+from glob import glob
 import json
 import logging
 import multiprocessing
@@ -14,12 +15,19 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, cc
+from .conda_interface import root_dir, cc, symlink_conda, linked
+from .conda_interface import (PaddingError, LinkError, LockError, NoPackagesFound,
+                              NoPackagesFoundError, PackageNotFoundError, Unsatisfiable,
+                              CondaValueError, UnsatisfiableError)
+from .conda_interface import Resolve, MatchSpec, VersionOrder
+from .conda_interface import reset_context, conda_main
 
 from conda_build.os_utils import external
 from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
+from conda_build.index import update_index
+from conda_build.exceptions import DependencyNeedsBuildingError
 
 
 def get_perl_ver(config):
@@ -45,7 +53,7 @@ def get_npy_ver(config):
 
 
 def get_lua_include_dir(config):
-    return join(config.build_prefix, "include")
+    return join(config.host_prefix, "include")
 
 
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
@@ -210,7 +218,7 @@ def get_hg_build_info(repo):
 
 def get_dict(config, m=None, prefix=None):
     if not prefix:
-        prefix = config.build_prefix
+        prefix = config.host_prefix
 
     # conda-build specific vars
     d = conda_build_vars(prefix, config)
@@ -240,10 +248,21 @@ def conda_build_vars(prefix, config):
         'PYTHONNOUSERSITE': '1',
         'CONDA_DEFAULT_ENV': config.build_prefix,
         'ARCH': str(config.arch),
+        # This is the one that is most important for where people put artifacts that get bundled.
+        #     It is fed from our function argument, and can be any of:
+        #     1. Build prefix - when host requirements are not explicitly set,
+        #        then prefix = build prefix = host prefix
+        #     2. Host prefix - when host requirements are explicitly set, prefix = host prefix
+        #     3. Test prefix - during test runs, this points at the test prefix
         'PREFIX': prefix,
+        # This is for things that are specifically build tools.  Things that run on the build
+        #    platform, but probably should not be linked against, since they may not run on the
+        #    destination host platform
+        # It can be equivalent to config.host_prefix if the host section is not explicitly set.
+        'BUILD_PREFIX': config.build_prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
-        'SUBDIR': config.subdir,
+        'SUBDIR': config.host_subdir,
         'SRC_DIR': src_dir,
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
@@ -335,6 +354,7 @@ def meta_vars(meta, config):
     d['PKG_BUILDNUM'] = str(meta.build_number())
     d['PKG_BUILD_STRING'] = str(meta.build_id())
     d['RECIPE_DIR'] = meta.path
+    d['RECIPE_HASH'] = meta._hash_dependencies()
     return d
 
 
@@ -405,11 +425,22 @@ def osx_vars(compiler_vars, config):
 
 
 def linux_vars(compiler_vars, prefix, config):
-    compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
+    # This is effectively saying "if any host env is installed, then prefer it over the build env"
+    if glob(os.path.join(config.host_prefix, '*')):
+        compiler_vars['LD_RUN_PATH'] = config.host_prefix + '/lib'
+    else:
+        compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
     if config.arch == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
-    return {}
+    return {
+        # There is also QEMU_SET_ENV, but that needs to be
+        # filtered so it only contains the result of `linux_vars`
+        # which, before this change was empty, and after it only
+        # contains other QEMU env vars.
+        'QEMU_LD_PREFIX': os.getenv('QEMU_LD_PREFIX'),
+        'QEMU_UNAME': os.getenv('QEMU_UNAME'),
+    }
 
 
 def system_vars(env_dict, prefix, config):

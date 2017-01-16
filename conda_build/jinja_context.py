@@ -12,6 +12,7 @@ import jinja2
 from .conda_interface import PY3
 from .environ import get_dict as get_environ
 from .metadata import select_lines, ns_cfg
+from .utils import get_installed_packages
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -203,7 +204,144 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
-def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
+def pin_compatible(config, package_name, package_table=None, permit_undefined_jinja=True):
+    """Query a compatibility database, or just guess about compatibility based on semantic
+    versioning.  Returns string with guess about compatible pinning."""
+    log = logging.getLogger(__name__)
+    packages = get_installed_packages(config.build_prefix)
+    compatibility = None
+    if packages.get(package_name):
+        version = packages[package_name]['version']
+        if package_table and package_name in package_table:
+            # Look up compatibilty in table - TODO: need to factor version into this somehow
+            compatibility = package_table[package_name]
+        else:
+            try:
+                log.info('Package %s does not have compatibilty entry.  Assuming semantic '
+                            'versioning style, and allowing bug-fix revisions.  '
+                            'Please add package to lookup table if necessary.', package_name)
+                versions = version.split('.')
+                compatibility = ">=" + version + "," + ".".join([versions[0], versions[1], '*'])
+            except IndexError:
+                raise RuntimeError('Package {} does not follow semantic versioning style.  '
+                                   'Please add package to lookup table for compatible '
+                                   'pinning.'.format(package_name))
+
+    if not compatibility and not permit_undefined_jinja:
+        raise RuntimeError("Could not get compatibility information for {} package.  Is the "
+                            "build environment created?".format(package_name))
+    return compatibility
+
+
+# map python version to default compiler on windows, to match upstream python
+#    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
+#    in the conda-build variant configuration
+compilers = {
+    'win': {
+        'c': {
+            '2.7': 'vs2008',
+            '3.3': 'vs2010',
+            '3.4': 'vs2010',
+            '3.5': 'vs2015',
+        },
+        'cxx': {
+            '2.7': 'vs2008',
+            '3.3': 'vs2010',
+            '3.4': 'vs2010',
+            '3.5': 'vs2015',
+        },
+        'fortran': 'gfortran',
+    },
+    'linux': {
+        'c': 'gcc',
+        'cxx': 'g++',
+        'fortran': 'gfortran',
+    },
+    # TODO: Clang?  System clang, or compiled package?  Can handle either as package.
+    'osx': {
+        'c': 'gcc',
+        'cxx': 'g++',
+        'fortran': 'gfortran',
+    },
+}
+
+runtimes = {
+    'vs2008': 'vs2008_runtime',
+    'vs2010': 'vs2010_runtime',
+    'vs2015': 'vs2015_runtime',
+    'gfortran': 'libgfortran',
+    'g++': 'libstdc++',
+    'gcc': 'libgcc',
+}
+
+
+def _native_compiler(language, config, variant):
+    compiler = compilers[config.platform][language]
+    if hasattr(compiler, 'keys'):
+        compiler = compiler.get(variant.get('python', 'nope'), 'vs2015')
+    return compiler
+
+
+def compiler(language, config, variant, permit_undefined_jinja=False):
+    """Support configuration of compilers.  This is somewhat platform specific.
+
+    Native compilers never list their host - it is always implied.  Generally, they are
+    metapackages, pointing at a package that does specify the host.  These in turn may be
+    metapackages, pointing at a package where the host is the same as the target (both being the
+    native architecture).
+    """
+    native_compiler = _native_compiler(language, config, variant)
+    language_compiler_key = '{}_compiler'.format(language)
+    # fall back to native if language-compiler is not explicitly set in variant
+    compiler = variant.get(language_compiler_key, native_compiler)
+
+    # support cross compilers.  A cross-compiler package will have a name such as
+    #    gcc_host_target
+    #    gcc_centos5_centos5
+    #    gcc_centos7_centos5
+    #
+    # Note that the host needs to be part of the compiler.  Right now, that means that the compiler
+    #    needs to be defined in the variant - not just the native default
+    if 'target_platform' in variant:
+        if language_compiler_key in variant:
+            compiler = '_'.join([variant[language_compiler_key], variant['target_platform']])
+        # This is not defined in early stages of parsing.  Let it by if permit_undefined_jinja set
+        elif not permit_undefined_jinja:
+            raise ValueError("{0} must be set in variant config in order to use target_platform."
+                             "  Please set it to the name of the package, including the host "
+                             "(e.g. gcc-centos5)".format(language_compiler_key))
+    return compiler
+
+
+def runtime(language, config, variant, permit_undefined_jinja=False):
+    """Support configuration of runtimes.  This is somewhat platform specific.
+
+    Native compilers never list their host - it is always implied.  Generally, they are
+    metapackages, pointing at a package that does specify the host.  These in turn may be
+    metapackages, pointing at a package where the host is the same as the target (both being the
+    native architecture).
+    """
+    native_compiler = _native_compiler(language, config, variant)
+    language_compiler_key = '{}_compiler'.format(language)
+    # fall back to native if language-compiler is not explicitly set in variant
+    compiler = variant.get(language_compiler_key, native_compiler)
+    try:
+        if 'runtimes' in variant:
+            runtime = variant['runtimes'][compiler]
+        else:
+            runtime = runtimes[compiler]
+    except KeyError:
+        raise KeyError("Conda-build doesn't know which runtime goes with the {} compiler.  "
+                        "Please provide a 'runtimes' section in your variant configuration, "
+                        "with the key being your compiler, and the value being the runtime "
+                        "package name.".format(compiler))
+
+    if 'target_platform' in variant:
+        runtime = '_'.join([runtime, variant['target_platform']])
+    return runtime
+
+
+def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja, variant):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -223,5 +361,27 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_npm=load_npm,
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
+        installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
+        pin_compatible=partial(pin_compatible, config,
+                               permit_undefined_jinja=permit_undefined_jinja),
+        compiler=partial(compiler, variant=variant, config=config,
+                         permit_undefined_jinja=permit_undefined_jinja),
+
+        runtime=partial(runtime, variant=variant, config=config,
+                         permit_undefined_jinja=permit_undefined_jinja),
+        variant=variant,
         environ=environ)
     return ctx
+
+
+def get_used_variants(recipe_metadata):
+    """because the functions in jinja_context don't directly used jinja variables, we need to teach
+    conda-build which ones are used, so that it can limit the build space based on what entries are
+    actually used."""
+    with open(recipe_metadata.meta_path) as f:
+        recipe_text = f.read()
+    used_variables = set()
+    for lang in 'c', 'cxx', 'fortran':
+        if re.search('compiler\([\\]?[\'"]{}[\\]?[\'"]\)'.format(lang), recipe_text):
+            used_variables.update(set(['{}_compiler'.format(lang), 'target_platform']))
+    return used_variables

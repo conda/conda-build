@@ -195,9 +195,9 @@ def msvc_env_cmd(bits, config, override=None):
     return '\n'.join(msvc_env_lines) + '\n'
 
 
-def build(m, bld_bat, config):
-    with path_prepended(config.build_prefix):
-        env = environ.get_dict(config=config, m=m)
+def build(m, bld_bat):
+    with path_prepended(m.config.build_prefix):
+        env = environ.get_dict(config=m.config, m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     for name in 'BIN', 'INC', 'LIB':
@@ -205,7 +205,7 @@ def build(m, bld_bat, config):
         if not isdir(path):
             os.makedirs(path)
 
-    src_dir = config.work_dir
+    src_dir = m.config.work_dir
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
@@ -214,20 +214,20 @@ def build(m, bld_bat, config):
             fo.write('@echo on\n')
             for key, value in env.items():
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write(msvc_env_cmd(bits=bits, config=config,
+            fo.write(msvc_env_cmd(bits=bits, config=m.config,
                                   override=m.get_value('build/msvc_compiler', None)))
             # Reset echo on, because MSVC scripts might have turned it off
             fo.write('@echo on\n')
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
             fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
-            if config.activate:
+            if m.config.activate:
                 fo.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
                     conda_root=root_script_dir,
-                    prefix=config.build_prefix))
+                    prefix=m.config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
         check_call_env(cmd, cwd=src_dir)
 
-    fix_staged_scripts(join(config.build_prefix, 'Scripts'))
+    fix_staged_scripts(join(m.config.build_prefix, 'Scripts'))

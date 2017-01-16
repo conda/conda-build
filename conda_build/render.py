@@ -6,7 +6,9 @@
 
 from __future__ import absolute_import, division, print_function
 
+import copy
 from locale import getpreferredencoding
+import logging
 import os
 from os.path import isdir, isfile, abspath
 import subprocess
@@ -18,11 +20,12 @@ import yaml
 
 from .conda_interface import PY3
 
-from conda_build import exceptions, utils
+from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
 from conda_build.utils import rm_rf
+from conda_build.variants import get_package_variants
 
 
 def set_language_env_vars(args, parser, config, execute=None):
@@ -73,9 +76,7 @@ def bldpkg_path(m):
     return os.path.join(os.path.dirname(m.config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
 
 
-def parse_or_try_download(metadata, no_download_source, config,
-                          force_download=False):
-
+def parse_or_try_download(metadata, no_download_source, config, force_download=False):
     need_reparse_in_env = True
     need_source_download = True
     if (force_download or (not no_download_source and metadata.needs_source_for_render)):
@@ -87,7 +88,7 @@ def parse_or_try_download(metadata, no_download_source, config,
             if not metadata.get_section('source') or len(os.listdir(config.work_dir)) > 0:
                 need_source_download = False
             try:
-                metadata.parse_again(config=config, permit_undefined_jinja=False)
+                metadata.parse_again(permit_undefined_jinja=False)
                 need_reparse_in_env = False
             except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
                 pass  # we just don't alter the need_reparse_in_env variable
@@ -100,25 +101,39 @@ def parse_or_try_download(metadata, no_download_source, config,
     elif not metadata.get_section('source'):
         need_source_download = False
         need_reparse_in_env = False
-    if not need_reparse_in_env:
-        try:
-            metadata.parse_until_resolved(config=config)
-        except exceptions.UnableToParseMissingSetuptoolsDependencies:
-            need_reparse_in_env = True
+
     if metadata.get_value('build/noarch'):
         config.noarch = True
-    return metadata, need_source_download, need_reparse_in_env
+
+    if 'host' in metadata.get_section('requirements'):
+        metadata.config.has_separate_host_prefix = True
+
+    output = []
+    variants = get_package_variants(metadata, config.variant_config_files,
+                                    config.ignore_system_variants)
+    for variant in variants:
+        metadata = copy.deepcopy(metadata)
+        if 'target_platform' in variant:
+            metadata.config.host_subdir = variant['target_platform']
+        try:
+            metadata.parse_until_resolved(config=config, variant=variant)
+            need_reparse_in_env = False
+        except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
+            need_reparse_in_env = True
+        output.append((metadata, need_source_download, need_reparse_in_env))
+    return output
 
 
-def reparse(metadata, config):
+def reparse(metadata):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
-    sys.path.insert(0, config.build_prefix)
-    sys.path.insert(0, utils.get_site_packages(config.build_prefix))
-    metadata.parse_again(config=config, permit_undefined_jinja=False)
+    sys.path.insert(0, metadata.config.build_prefix)
+    sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
+    metadata.parse_again(permit_undefined_jinja=False)
 
 
 def render_recipe(recipe_path, config, no_download_source=False):
+    log = logging.getLogger(__file__)
     arg = recipe_path
     # Don't use byte literals for paths in Python 2
     if not PY3:
@@ -152,19 +167,29 @@ def render_recipe(recipe_path, config, no_download_source=False):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    m, need_download, need_reparse_in_env = parse_or_try_download(m,
-                                                no_download_source=no_download_source,
-                                                config=config)
-    if need_download and no_download_source:
+    # each tuple item is a tuple of 3 items:
+    #    metadata, need_download, need_reparse_in_env
+    rendered_metadata = parse_or_try_download(m,
+                                              no_download_source=no_download_source,
+                                              config=config)
+    if any(entry[1] for entry in rendered_metadata) and no_download_source:
         raise ValueError("no_download_source specified, but can't fully render recipe without"
                          " downloading source.  Please fix the recipe, or don't use "
                          "no_download_source.")
-    config.noarch = bool(m.get_value('build/noarch'))
+    for entry in rendered_metadata:
+        if entry[2]:
+            log.warn("Need to create build environment to fully render this recipe.  Doing so.")
+            specs = [ms.spec for ms in entry[0].ms_depends('build')]
+            environ.create_env(config.build_prefix, specs, config=config)
+        reparse(entry[0])
+
+        entry[0].config.noarch = bool((entry[0].get_value('build/noarch') or
+                                       entry[0].get_value('build/noarch_python')))
 
     if need_cleanup:
-        rm_rf(recipe_dir)
+        utils.rm_rf(recipe_dir)
 
-    return m, need_download, need_reparse_in_env
+    return rendered_metadata
 
 
 # Next bit of stuff is to support YAML output in the order we expect.

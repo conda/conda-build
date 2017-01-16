@@ -1,0 +1,14 @@
+package:
+  name: test_variants
+  version: 1.0
+
+requirements:
+  build:
+    - python {{ python }}
+    - numpy
+  run:
+    - python {{ python }}
+    - numpy
+
+about:
+  summary: nope

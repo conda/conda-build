@@ -1,0 +1,19 @@
+package:
+  name: _cross_libgreeting
+  version: 1.0
+
+source:
+  path: ./src
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+
+build:
+  script:
+    - env | sort
+    - mkdir -p ${PREFIX}/lib || true
+    - mkdir -p ${PREFIX}/include || true
+    - ${CC} -c ${LDFLAGS} ${CFLAGS} -o libgreeting.o libgreeting.c
+    - ${AR} cru ${PREFIX}/lib/libgreeting.a libgreeting.o
+    - cp libgreeting.h ${PREFIX}/include

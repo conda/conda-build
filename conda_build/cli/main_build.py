@@ -235,16 +235,18 @@ different sets of packages."""
 
 def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
-        metadata, _, _ = api.render(recipe, config=config)
+        metadata_tuples = api.render(recipe, config=config)
+    for (metadata, _, _) in metadata_tuples:
         if metadata.skip():
             print_skip_message(metadata)
         else:
             print(bldpkg_path(metadata))
 
 
-def source_action(metadata, config):
-    source.provide(metadata, config=config)
-    print('Source tree in:', config.work_dir)
+def source_action(recipe, config):
+    metadata = api.render(recipe, config=config)[0][0]
+    source.provide(metadata)
+    print('Source tree in:', metadata.config.work_dir)
 
 
 def test_action(recipe, config):
@@ -261,7 +263,7 @@ def execute(args):
     build.check_external()
 
     # change globals in build module, see comment there as well
-    channel_urls = args.channel or ()
+    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
     config.channel_urls = []
 
     for url in channel_urls:
@@ -291,9 +293,9 @@ def execute(args):
     action = None
     if args.output:
         action = output_action
-        logging.basicConfig(level=logging.ERROR)
         config.verbose = False
         config.quiet = True
+        config.debug = False
     elif args.test:
         action = test_action
     elif args.source:
@@ -302,14 +304,11 @@ def execute(args):
         action = check_action
 
     if action:
-        for recipe in args.recipe:
-            action(recipe, config)
-        outputs = []
-
+        outputs = [action(recipe, config) for recipe in args.recipe]
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
-                            notest=args.notest, already_built=None, config=config,
-                            noverify=args.no_verify)
+                            notest=args.notest, keep_old_work=args.keep_old_work,
+                            already_built=None, config=config, noverify=args.no_verify)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)

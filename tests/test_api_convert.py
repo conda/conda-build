@@ -37,8 +37,7 @@ def test_convert_platform_to_others(testing_workdir, base_platform):
 @pytest.mark.skipif(on_win, reason="we create the package to be converted in *nix, so don't run on win.")
 def test_convert_from_unix_to_win_creates_entry_points(test_config):
     recipe_dir = os.path.join(metadata_dir, "entry_points")
-    fn = api.get_output_file_path(recipe_dir, config=test_config)
-    api.build(recipe_dir, config=test_config)
+    fn = api.build(recipe_dir, config=test_config)[0]
     for platform in ['win-64', 'win-32']:
         api.convert(fn, platforms=[platform], force=True)
         converted_fn = os.path.join(platform, os.path.basename(fn))

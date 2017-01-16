@@ -38,7 +38,7 @@ def call_args(string):
 '''
 
 
-def create_files(dir_path, m, config):
+def create_files(dir_path, m):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
@@ -50,28 +50,28 @@ def create_files(dir_path, m, config):
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(dir_path, fn), config.timeout, locking=config.locking)
+        copy_into(path, join(dir_path, fn), m.config.timeout, locking=m.config.locking)
     # need to re-download source in order to do tests
-    if m.get_value('test/source_files') and not isdir(config.work_dir):
-        source.provide(m, config=config)
+    if m.get_value('test/source_files') and not isdir(m.config.work_dir):
+        source.provide(m)
     for pattern in ensure_list(m.get_value('test/source_files', [])):
         if on_win and '\\' in pattern:
             raise RuntimeError("test/source_files paths must use / "
                                 "as the path delimiter on Windows")
         has_files = True
-        files = glob.glob(join(config.work_dir, pattern))
+        files = glob.glob(join(m.config.work_dir, pattern))
         if not files:
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
-            copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout,
-                      locking=config.locking)
+            copy_into(f, f.replace(m.config.work_dir, m.config.test_dir), m.config.timeout,
+                      locking=m.config.locking)
         for ext in '.pyc', '.pyo':
-            for f in get_ext_files(config.test_dir, ext):
+            for f in get_ext_files(m.config.test_dir, ext):
                 os.remove(f)
     return has_files
 
 
-def create_shell_files(dir_path, m, config):
+def create_shell_files(dir_path, m):
     has_tests = False
     ext = '.bat' if sys.platform == 'win32' else '.sh'
     name = 'no-file'
@@ -88,7 +88,7 @@ def create_shell_files(dir_path, m, config):
         name = "run_test{}".format(ext)
 
     if exists(join(m.path, name)):
-        copy_into(join(m.path, name), dir_path, config.timeout, locking=config.locking)
+        copy_into(join(m.path, name), dir_path, m.config.timeout, locking=m.config.locking)
         has_tests = True
 
     with open(join(dir_path, name), 'a') as f:
