@@ -10,6 +10,9 @@ from .utils import testing_workdir, test_config
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', "8.1.2"),
+                 # has no deps
+                 ('r', 'cran', 'leaps', ""),
+                 # has deps
                  ('r', 'cran', 'nmf', ""),
                  ('perl', 'cpan', 'Shell-Cmd', ""),
                  # ('lua', luarocks', 'LuaSocket'),
