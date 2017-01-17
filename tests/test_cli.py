@@ -141,6 +141,14 @@ def test_build_output_folder(testing_workdir, test_metadata, capfd):
         assert os.path.isfile(os.path.join(out, test_metadata.config.subdir, os.path.basename(output)))
 
 
+def test_build_source(testing_workdir):
+    with TemporaryDirectory() as tmp:
+        args = [os.path.join(metadata_dir, '_pyyaml_find_header'), '--source', '--no-build-id',
+                '--croot', tmp, '--no-activate', '--no-anaconda-upload', ]
+        main_build.execute(args)
+        assert os.path.isfile(os.path.join(tmp, 'work', 'PyYAML-3.11', 'setup.py'))
+
+
 def test_render_output_build_path_set_python(testing_workdir, test_metadata, capfd):
     api.output_yaml(test_metadata, 'meta.yaml')
     # build the other major thing, whatever it is

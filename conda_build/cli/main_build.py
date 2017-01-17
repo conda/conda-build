@@ -242,7 +242,8 @@ def output_action(recipe, config):
             print(bldpkg_path(metadata))
 
 
-def source_action(metadata, config):
+def source_action(recipe, config):
+    metadata, _, _ = api.render(recipe, config=config)
     source.provide(metadata, config=config)
     print('Source tree in:', config.work_dir)
 
