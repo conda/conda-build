@@ -1,0 +1,16 @@
+package:
+  name: test_has_ds_store
+  version: 1.0
+
+source:
+  path: .
+
+build:
+  script:
+    - cp .DS_Store $PREFIX
+
+test:
+  requires:
+    - python
+  commands:
+    - python -c "import os; assert not os.path.isfile(os.path.join(os.getenv('PREFIX'), '.DS_Store'))"
