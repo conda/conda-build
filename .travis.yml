@@ -2,8 +2,7 @@ language: python
 matrix:
   include:
     - python: '2.7'
-      os: linux
-    - python: '3.5'
+      env: $CONDA_VERSION=4.2.x
       os: linux
     - python: '3.5'
       env: $CONDA_VERSION=4.2.x
