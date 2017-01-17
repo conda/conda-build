@@ -442,6 +442,16 @@ class MetaData(object):
                 self.meta['requirements']['run'] = run_requirements
 
         self.validate_features()
+        self.append_requirements()
+
+    def append_requirements(self):
+        """For dynamic determination of build or run reqs, based on configuration"""
+        reqs = self.meta.get('requirements', {})
+        run_reqs = reqs.get('run', [])
+        build_reqs = reqs.get('build', [])
+        if bool(self.get_value('build/osx_is_app', False)) and self.config.platform == 'osx':
+            run_reqs.append('python.app')
+        self.meta['requirements'] = reqs
 
     def parse_until_resolved(self, config):
         # undefined_jinja_vars is refreshed by self.parse again
