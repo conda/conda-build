@@ -47,6 +47,7 @@ from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
+from .conda_interface import dist_str_in_index
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -1621,8 +1622,9 @@ def is_package_built(metadata, config):
         urls.extend(config.channel_urls)
 
     # will be empty if none found, and evalute to False
-    package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
-    return package_exists or metadata.pkg_fn() in index
+    package_exists = [url for url in urls
+                      if dist_str_in_index(index, url + '::' + metadata.pkg_fn())]
+    return package_exists or dist_str_in_index(index, metadata.pkg_fn())
 
 
 def is_noarch_python(meta):
