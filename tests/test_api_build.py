@@ -321,13 +321,13 @@ def test_broken_conda_meta(testing_workdir, test_config):
 def test_recursive_fail(testing_workdir, test_config):
     with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)
-        assert "recursive-build2" in exc
+        assert "recursive-build2" in str(exc)
 
 
 def test_jinja_typo(testing_workdir, test_config):
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=test_config)
-        assert "'GIT_DSECRIBE_TAG' is undefined" in exc
+        assert "'GIT_DSECRIBE_TAG' is undefined" in str(exc)
 
 
 @pytest.mark.serial
@@ -664,10 +664,6 @@ def test_noarch_python_1(test_config):
     assert 'package_metadata_version' in extra
 
 
-@pytest.mark.xfail(strict=True, condition=datetime.now() < datetime(2017, 1, 15),
-                   reason="Need advice from msarahan on config object. The preferred_env stuff "
-                          "isn't critical for 2.1, but the package_metadata.json file with the"
-                          "noarch stuff is.  That's covered sufficiently in the test above.")
 def test_noarch_python_2(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python")
     fn = api.get_output_file_path(recipe, config=test_config)
@@ -677,9 +673,9 @@ def test_noarch_python_2(test_config):
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']
-    assert 'preferred_env' in extra
-    assert 'name' in extra['preferred_env']
-    assert 'executable_paths' in extra['preferred_env']
+    # assert 'preferred_env' in extra
+    # assert 'name' in extra['preferred_env']
+    # assert 'executable_paths' in extra['preferred_env']
     assert 'package_metadata_version' in extra
 
 

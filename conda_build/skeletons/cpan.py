@@ -582,7 +582,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # specific version
     try:
         rel_dict = get_cpan_api_url('{0}/v0/release/{1}'.format(cpan_url, package), colons=False)
-        rel_dict['version'] = rel_dict['version'].lstrip('v')
+        rel_dict['version'] = str(rel_dict['version']).lstrip('v')
     except RuntimeError:
         core_version = core_module_version(orig_package, perl_version, config=config)
         if core_version is not None and (version is None or

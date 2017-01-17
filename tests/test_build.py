@@ -58,6 +58,7 @@ def test_build_preserves_PATH(testing_workdir, test_config):
     assert os.environ['PATH'] == ref_path
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
@@ -83,6 +84,7 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text()
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_env_creation_with_prefix_fallback_disabled():
@@ -105,6 +107,7 @@ def test_env_creation_with_prefix_fallback_disabled():
         build.create_env(config.build_prefix, specs=["python", pkg_name], config=config)
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):

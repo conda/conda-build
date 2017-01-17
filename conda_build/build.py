@@ -41,7 +41,7 @@ from .conda_interface import Resolve, MatchSpec, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
-from .conda_interface import (PaddingError, LinkError, CondaValueError,
+from .conda_interface import (PaddingError, LinkError, CondaValueError, CondaError,
                               NoPackagesFoundError, NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
@@ -365,13 +365,13 @@ def write_package_metadata_json(m, config):
                 noarch_dict['entry_points'] = entry_points
         extra['noarch'] = noarch_dict
 
-    preferred_env = m.get_value("requirements/preferred_env")
-    if preferred_env:
-        preferred_env_dict = OrderedDict(name=text_type(preferred_env))
-        executable_paths = m.get_value("requirements/preferred_env_executable_paths")
-        if executable_paths:
-            preferred_env_dict["executable_paths"] = executable_paths
-        extra["preferred_env"] = preferred_env_dict
+    # preferred_env = m.get_value("requirements/preferred_env")
+    # if preferred_env:
+    #     preferred_env_dict = OrderedDict(name=text_type(preferred_env))
+    #     executable_paths = m.get_value("requirements/preferred_env_executable_paths")
+    #     if executable_paths:
+    #         preferred_env_dict["executable_paths"] = executable_paths
+    #     extra["preferred_env"] = preferred_env_dict
 
     if extra:
         extra["package_metadata_version"] = 1
@@ -678,7 +678,7 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                                 os.environ[k] = str(v)
                         plan.execute_actions(actions, index, verbose=config.debug)
                         warn_on_old_conda_build(index=index)
-                except (SystemExit, PaddingError, LinkError) as exc:
+                except (SystemExit, PaddingError, LinkError, CondaError) as exc:
                     if (("too short in" in str(exc) or
                             'post-link failed for: openssl' in str(exc) or
                             isinstance(exc, PaddingError)) and

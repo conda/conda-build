@@ -151,6 +151,7 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import CrossPlatformStLink
     CrossPlatformStLink = CrossPlatformStLink
     from conda.exports import dist_str_in_index
+    from conda.exports import CondaError
 else:
     from json import JSONEncoder
     from os import lstat
@@ -171,6 +172,9 @@ else:
 
         def __json__(self):
             return self.name
+
+    class CondaError(Exception):
+        pass
 
     class FileMode(Enum):
         """

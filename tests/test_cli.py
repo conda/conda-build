@@ -4,12 +4,13 @@
 
 import json
 import os
-import subprocess
 import sys
 import yaml
 
+from distutils.version import LooseVersion
 import pytest
 
+import conda
 from conda_build.conda_interface import download
 from conda_build.tarcheck import TarCheck
 
@@ -349,6 +350,8 @@ def test_convert(testing_workdir):
             tar.correct_subdir(platform)
 
 
+@pytest.mark.skipif(LooseVersion(conda.__version__) >= LooseVersion('4.3'),
+                    reason="conda 4.3 removed sign support")
 def test_sign(testing_workdir):
     # test keygen
     args = ['-k', 'testkey']
@@ -388,6 +391,7 @@ def test_purge(testing_workdir, test_metadata):
     assert os.path.isfile(fn)
 
 
+@pytest.mark.serial
 def test_purge_all(test_metadata):
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
