@@ -781,7 +781,8 @@ to get the latest version.
 """ % (installed_version, available_packages[-1]), file=sys.stderr)
 
 
-def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*', )):
+def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
+                                                      '(.*)?\.DS_Store.*')):
     """Remove things like .git from the list of files to be copied"""
     for pattern in filter_patterns:
         r = re.compile(pattern)
@@ -808,11 +809,11 @@ def bundle_conda(output, metadata, config, env, **kw):
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  build_string_from_metadata(tmp_metadata)]) + '.tar.bz2')
     files = list(set(utils.expand_globs(files, config.build_prefix)))
+    files = filter_files(files, prefix=config.build_prefix)
     info_files = create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
     for f in info_files:
         if f not in files:
             files.append(f)
-    files = filter_files(files, prefix=config.build_prefix)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
