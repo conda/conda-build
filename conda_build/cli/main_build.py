@@ -288,8 +288,6 @@ def execute(args):
         config.clean_pkgs()
         return
 
-    set_language_env_vars(args, parser, config=config, execute=execute)
-
     action = None
     if args.output:
         action = output_action

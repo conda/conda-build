@@ -209,8 +209,9 @@ def test_compiler_metadata_cross_compiler():
 
 
 def test_hash_build_id(test_metadata):
-    assert test_metadata._hash_dependencies() == 'h9080'
-    assert test_metadata.build_id() == 'py{}{}h9080_1'.format(sys.version_info.major, sys.version_info.minor)
+    assert test_metadata._hash_dependencies() == 'h4442'
+    assert test_metadata.build_id() == 'py{}{}h4442_1'.format(sys.version_info.major,
+                                                              sys.version_info.minor)
 
 
 def test_hash_build_id_key_order(test_metadata):
@@ -234,7 +235,7 @@ def test_hash_build_id_key_order(test_metadata):
 
 def test_hash_applies_to_custom_build_string(test_metadata):
     test_metadata.meta['build']['string'] = 'steve'
-    assert test_metadata.build_id() == 'steveh9080'
+    assert test_metadata.build_id() == 'steveh44429080'
 
 
 def test_disallow_leading_period_in_version(test_metadata):

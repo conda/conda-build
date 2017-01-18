@@ -26,6 +26,7 @@ from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import get_package_variants, dict_of_lists_to_list_of_dicts
 from conda_build.exceptions import UnsatisfiableVariantError
+from conda_build.index import get_build_index
 
 
 def bldpkg_path(m):
@@ -43,7 +44,7 @@ def actions_to_pins(actions):
 def get_env_dependencies(m, env, variant, index=None):
     dash_or_under = re.compile("[-_]")
     if not index:
-        index = utils.get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
+        index = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
     specs = [ms.spec for ms in m.ms_depends(env)]
     for spec in specs[:]:
         spec_name = spec.split()[0]
@@ -58,6 +59,12 @@ def get_env_dependencies(m, env, variant, index=None):
         raise UnsatisfiableVariantError("Invalid variant: {}.  Led to unsatisfiable environment.\n"
                                         "Error was: {}".format(variant, str(e)))
     return actions_to_pins(actions)
+
+
+def strip_channel(spec_str):
+    if ':' in spec_str:
+        spec_str = spec_str.split("::")[-1]
+    return spec_str
 
 
 @memoized
@@ -76,7 +83,7 @@ def finalize_metadata(m, variant, indexes):
     rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
     for env, values in deps.items():
         if values:
-            rendered_metadata.meta['requirements'][env] = values
+            rendered_metadata.meta['requirements'][env] = [strip_channel(dep) for dep in values]
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -84,14 +91,15 @@ def finalize_metadata(m, variant, indexes):
     run_deps = rendered_metadata.meta['requirements'].get('run', [])
     for dep in run_deps[:]:
         dep_name = dep.split()[0]
-        if dep_name in variant['pin_run_as_build'] and dep_name in build_dep_versions:
+        if dep_name in variant.get('pin_run_as_build', []) and dep_name in build_dep_versions:
             run_deps.append(" ".join((dep_name, build_dep_versions[dep_name])))
 
-    rendered_metadata.meta['requirements']['run'] = run_deps
+    rendered_metadata.meta['requirements']['run'] = [strip_channel(dep) for dep in run_deps]
 
     if not rendered_metadata.meta.get('test'):
         rendered_metadata.meta['test'] = {}
-    rendered_metadata.meta['test']['requires'] = rendered_metadata.get_value('test/requires') + run_deps
+    rendered_metadata.meta['test']['requires'] = (rendered_metadata.get_value('test/requires') +
+                                                  run_deps)
 
     # if source/path is relative, then the output package makes no sense at all.  The next
     #   best thing is to hard-code the absolute path.  This probably won't exist on any
@@ -103,6 +111,7 @@ def finalize_metadata(m, variant, indexes):
         elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
             rendered_metadata.meta['source']['git_url'] = os.path.normpath(
                 os.path.join(m.path, m.meta['source']['git_url']))
+    rendered_metadata.final = True
     return rendered_metadata
 
 
@@ -118,11 +127,6 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
                 source.provide(metadata)
             if not metadata.get_section('source') or len(os.listdir(metadata.config.work_dir)) > 0:
                 need_source_download = False
-            try:
-                metadata.parse_again(permit_undefined_jinja=False)
-                need_reparse_in_env = False
-            except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-                pass  # we just don't alter the need_reparse_in_env variable
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
@@ -148,7 +152,7 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
     metadata.parse_again(permit_undefined_jinja=True)
 
     outputs = {}
-    indexes = {env: utils.get_build_index(metadata.config,
+    indexes = {env: get_build_index(metadata.config,
                                           getattr(metadata.config, '{}_subdir'.format(env)))
                                           for env in ('build', 'host')}
     for variant in variants:
@@ -163,7 +167,6 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
             specs = [ms.spec for ms in metadata.ms_depends('build')]
             environ.create_env(config.build_prefix, specs, config=config,
                                subdir=config.build_subdir)
-            reparse(metadata)
             need_reparse_in_env = False
 
         metadata.config.noarch = bool((metadata.get_value('build/noarch') or
@@ -176,8 +179,7 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
             # computes hashes based on whatever the current specs are - not the final specs
             #    This is a deduplication step.  Any variants that end up identical because a given
             #    variant is not used in a recipe are effectively ignored.
-            reparse(varmeta)
-            final = finalize_metadata(varmeta, variant, indexes=indexes)
+            final = reparse(varmeta, indexes, variant)
         except UnsatisfiableVariantError as e:
             log.warn("Unsatisfiable variant: {}"
                      "Error was {}".format(variant, e))
@@ -186,12 +188,14 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
     return outputs.values()
 
 
-def reparse(metadata):
+def reparse(metadata, indexes, variant):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
+    metadata.final = False
     sys.path.insert(0, metadata.config.build_prefix)
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
     metadata.parse_again(permit_undefined_jinja=False)
+    return finalize_metadata(metadata, variant, indexes)
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None):

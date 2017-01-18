@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import contextlib
-from functools import partial
 from glob import glob
 import json
 import logging
@@ -15,11 +14,10 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, cc, symlink_conda, linked
+from .conda_interface import root_dir, cc, symlink_conda
 from .conda_interface import (PaddingError, LinkError, LockError, NoPackagesFound,
                               NoPackagesFoundError, PackageNotFoundError, Unsatisfiable,
                               CondaValueError, UnsatisfiableError)
-from .conda_interface import Resolve, MatchSpec, VersionOrder
 from .conda_interface import plan
 from .conda_interface import memoized
 from .conda_interface import package_cache
@@ -28,8 +26,7 @@ from conda_build.os_utils import external
 from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
-from conda_build.index import update_index
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.index import update_index, get_build_index
 
 
 def get_npy_ver(config):
@@ -555,7 +552,11 @@ def get_conda_operation_locks(config):
 
 @memoized
 def get_install_actions(prefix, index, specs, config):
-    actions = plan.install_actions(prefix, index, specs)
+    # this is hiding output like:
+    #    Fetching package metadata ...........
+    #    Solving package specifications: ..........
+    with utils.capture():
+        actions = plan.install_actions(prefix, index, specs)
     if config.disable_pip:
         actions['LINK'] = [spec for spec in actions['LINK']
                             if not spec.startswith('pip-') and
@@ -595,8 +596,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                 try:
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         if not index:
-                            index = utils.get_build_index(config=config, subdir=subdir,
-                                                        clear_cache=True)
+                            index = get_build_index(config=config, subdir=subdir)
                         actions = get_install_actions(prefix, index, specs, config)
                         plan.display_actions(actions, index)
                         if utils.on_win:

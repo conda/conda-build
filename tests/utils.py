@@ -1,9 +1,6 @@
 from collections import defaultdict
 import contextlib
 import os
-from os.path import join, dirname
-import stat
-import subprocess
 import sys
 import shlex
 
@@ -14,6 +11,7 @@ from conda_build.conda_interface import PY3
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.utils import on_win, prepend_bin_path, check_call_env
+from conda_build.variants import get_default_variants
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
@@ -59,7 +57,7 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture(scope='function')
 def test_config(testing_workdir, request):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
-                  activate=False, debug=False)
+                  activate=False, debug=False, variant=get_default_variants()[0])
 
 
 @pytest.fixture(scope='function')

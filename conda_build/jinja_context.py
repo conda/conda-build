@@ -276,14 +276,14 @@ runtimes = {
 }
 
 
-def _native_compiler(language, config, variant):
+def _native_compiler(language, config):
     compiler = compilers[config.platform][language]
     if hasattr(compiler, 'keys'):
-        compiler = compiler.get(variant.get('python', 'nope'), 'vs2015')
+        compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
     return compiler
 
 
-def compiler(language, config, variant, permit_undefined_jinja=False):
+def compiler(language, config, permit_undefined_jinja=False):
     """Support configuration of compilers.  This is somewhat platform specific.
 
     Native compilers never list their host - it is always implied.  Generally, they are
@@ -291,10 +291,10 @@ def compiler(language, config, variant, permit_undefined_jinja=False):
     metapackages, pointing at a package where the host is the same as the target (both being the
     native architecture).
     """
-    native_compiler = _native_compiler(language, config, variant)
+    native_compiler = _native_compiler(language, config)
     language_compiler_key = '{}_compiler'.format(language)
     # fall back to native if language-compiler is not explicitly set in variant
-    compiler = variant.get(language_compiler_key, native_compiler)
+    compiler = config.variant.get(language_compiler_key, native_compiler)
 
     # support cross compilers.  A cross-compiler package will have a name such as
     #    gcc_host_target
@@ -303,9 +303,10 @@ def compiler(language, config, variant, permit_undefined_jinja=False):
     #
     # Note that the host needs to be part of the compiler.  Right now, that means that the compiler
     #    needs to be defined in the variant - not just the native default
-    if 'target_platform' in variant:
-        if language_compiler_key in variant:
-            compiler = '_'.join([variant[language_compiler_key], variant['target_platform']])
+    if 'target_platform' in config.variant:
+        if language_compiler_key in config.variant:
+            compiler = '_'.join([config.variant[language_compiler_key],
+                                 config.variant['target_platform']])
         # This is not defined in early stages of parsing.  Let it by if permit_undefined_jinja set
         elif not permit_undefined_jinja:
             raise ValueError("{0} must be set in variant config in order to use target_platform."
@@ -314,7 +315,7 @@ def compiler(language, config, variant, permit_undefined_jinja=False):
     return compiler
 
 
-def runtime(language, config, variant, permit_undefined_jinja=False):
+def runtime(language, config, permit_undefined_jinja=False):
     """Support configuration of runtimes.  This is somewhat platform specific.
 
     Native compilers never list their host - it is always implied.  Generally, they are
@@ -322,13 +323,13 @@ def runtime(language, config, variant, permit_undefined_jinja=False):
     metapackages, pointing at a package where the host is the same as the target (both being the
     native architecture).
     """
-    native_compiler = _native_compiler(language, config, variant)
+    native_compiler = _native_compiler(language, config)
     language_compiler_key = '{}_compiler'.format(language)
     # fall back to native if language-compiler is not explicitly set in variant
-    compiler = variant.get(language_compiler_key, native_compiler)
+    compiler = config.variant.get(language_compiler_key, native_compiler)
     try:
-        if 'runtimes' in variant:
-            runtime = variant['runtimes'][compiler]
+        if 'runtimes' in config.variant:
+            runtime = config.variant['runtimes'][compiler]
         else:
             runtime = runtimes[compiler]
     except KeyError:
@@ -337,8 +338,8 @@ def runtime(language, config, variant, permit_undefined_jinja=False):
                         "with the key being your compiler, and the value being the runtime "
                         "package name.".format(compiler))
 
-    if 'target_platform' in variant:
-        runtime = '_'.join([runtime, variant['target_platform']])
+    if 'target_platform' in config.variant:
+        runtime = '_'.join([runtime, config.variant['target_platform']])
     return runtime
 
 

@@ -23,8 +23,8 @@ def test_later_spec_priority():
     # override a single key
     combined_spec, extend_keys = variants.combine_specs([global_specs, single_version])
     assert len(combined_spec) == 2
-    assert combined_spec["python"] == "2.7.*"
-    assert extend_keys == ['pin_run_as_build']
+    assert combined_spec["python"] == ["2.7.*"]
+    assert extend_keys == set(['pin_run_as_build'])
 
     # keep keys that are not overwritten
     combined_spec, extend_keys = variants.combine_specs([single_version, no_numpy_version])

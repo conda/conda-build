@@ -68,7 +68,6 @@ def test_render_output_build_path(testing_workdir, test_metadata, capfd, caplog)
     api.output_yaml(test_metadata, 'meta.yaml')
     metadata = api.render(testing_workdir)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
-    #with caplog.at_level(logging.WARN):
     main_render.execute(args)
     _hash = metadata._hash_dependencies()
     test_path = "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(

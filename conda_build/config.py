@@ -106,6 +106,7 @@ class Config(object):
 
     def __init__(self, variant=None, **kwargs):
         super(Config, self).__init__()
+        # default variant is set in
         self.variant = variant or {}
         self.set_keys(**kwargs)
 
@@ -469,9 +470,10 @@ class Config(object):
 def get_or_merge_config(config, variant=None, **kwargs):
     if not config:
         config = Config(variant=variant)
-
     if kwargs:
         config.set_keys(**kwargs)
+    if variant:
+        config.variant.update(variant)
     return config
 
 # legacy exports for conda

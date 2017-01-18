@@ -380,7 +380,7 @@ def build_string_from_metadata(metadata):
     for name, s in (('numpy', 'np'), ('python', 'py'),
                     ('perl', 'pl'), ('lua', 'lua'),
                     ('r', 'r'), ('r-base', 'r')):
-        for ms in metadata.ms_depends():
+        for ms in metadata.ms_depends('run'):
             if ms.name == name:
                 try:
                     v = ms.spec.split()[1]
@@ -388,8 +388,9 @@ def build_string_from_metadata(metadata):
                     if name not in ['numpy']:
                         res.append(s)
                     break
+                # compound constraints and indeterminate specs can't isolate the right version.
                 if any(i in v for i in ',|>!<'):
-                    break
+                    continue
                 if name not in ['perl', 'lua', 'r', 'r-base']:
                     match = version_pat.match(v)
                     if match:
@@ -442,6 +443,9 @@ class MetaData(object):
         #    accessing and changing this attribute.
         self.config = copy.deepcopy(get_or_merge_config(config, variant=variant))
 
+        # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
+        self.final = False
+
         if isfile(path):
             self.meta_path = path
             self.path = os.path.dirname(path)
@@ -493,6 +497,8 @@ class MetaData(object):
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
+        assert not self.final, "modifying metadata after finalization"
+
         log = logging.getLogger(__name__)
         log.addFilter(filt)
 
@@ -598,6 +604,7 @@ class MetaData(object):
         m.config = config
         m.variant = variant
         m.undefined_jinja_vars = []
+        m.final = False
 
         return m
 

@@ -780,7 +780,8 @@ def test_build_expands_wildcards(mocker, testing_workdir):
     api.build(["a*"], config=config)
     output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
     build_tree.assert_called_once_with(output, post=None, need_source_download=True,
-                                       build_only=False, notest=False, config=config)
+                                       build_only=False, notest=False, config=config,
+                                       variants=None)
 
 
 @pytest.mark.serial

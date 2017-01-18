@@ -323,7 +323,8 @@ def unzip(zip_path, dir_path):
 def file_info(path):
     return {'size': getsize(path),
             'md5': md5_file(path),
-            'mtime': getmtime(path)}
+            'mtime': getmtime(path),
+            'fn': os.path.basename(path)}
 
 # Taken from toolz
 
@@ -800,52 +801,12 @@ def collect_channels(config, is_host=False):
     return urls
 
 
-def ensure_valid_channel(local_folder, subdir, config):
-    from .index import update_index
-    for folder in set((subdir, 'noarch')):
-        path = os.path.join(local_folder, subdir)
-        if not os.path.isdir(path):
-            os.makedirs(path)
-        if not os.path.isfile(os.path.join(path, 'repodata.json')):
-            update_index(path, config)
-
-
-def get_build_index(config, subdir, clear_cache=True, omit_defaults=False):
-    # priority: local by croot (can vary), then channels passed as args,
-    #     then channels from config.
-    urls = list(config.channel_urls)
-    if os.path.isdir(config.croot):
-        urls.insert(0, url_path(config.croot))
-    ensure_valid_channel(config.croot, subdir, config)
-
-    try:
-        index = get_index(channel_urls=urls,
-                          prepend=(not config.override_channels),
-                          use_local=False,
-                          use_cache=not clear_cache,
-                          platform=subdir)
-    # HACK: defaults does not have the many subfolders we support.  Omit it and try again.
-    except CondaHTTPError:
-        urls.remove('defaults')
-        index = get_index(channel_urls=urls,
-                          prepend=config.override_channels,
-                          use_local=False,
-                          use_cache=not clear_cache,
-                          platform=subdir)
-    return index
-
-
-def _trim_empty_keys_mark(dict_, to_remove):
-    for k, v in dict_.items():
-        if hasattr(v, 'keys'):
-            _trim_empty_keys_mark(v, to_remove)
-        if not v:
-            to_remove.add(k)
-
-
 def trim_empty_keys(dict_):
     to_remove = set()
-    _trim_empty_keys_mark(dict_, to_remove)
+    for k, v in dict_.items():
+        if hasattr(v, 'keys'):
+            trim_empty_keys(v)
+        if not v:
+            to_remove.add(k)
     for k in to_remove:
-        if k in dict_:
-            del dict_[k]
+        del dict_[k]

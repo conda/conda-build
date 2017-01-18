@@ -30,9 +30,9 @@ import encodings.idna  # NOQA
 
 # used to get version
 from .conda_interface import envs_dirs, env_path_backup_var_exists
-from .conda_interface import PY3
+from .conda_interface import PY3, cc
 from .conda_interface import prefix_placeholder, linked
-from .conda_interface import url_path
+from .conda_interface import url_path, download
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
 from .conda_interface import text_type
@@ -40,11 +40,12 @@ from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
-from .conda_interface import memoized
+from .conda_interface import package_cache
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
-from conda_build.render import output_yaml, bldpkg_path, render_recipe, reparse
+from conda_build.index import get_build_index
+from conda_build.render import output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -53,7 +54,7 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
-from conda_build.variants import set_language_env_vars
+from conda_build.variants import set_language_env_vars, get_default_variants
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -698,7 +699,7 @@ bundlers = {
 }
 
 
-def build(m, post=None, need_source_download=True, need_reparse_in_env=False):
+def build(m, indexes, variant, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
 
@@ -780,12 +781,12 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False):
             # dependencies.
             with utils.path_prepended(m.config.build_prefix):
                 source.provide(m)
-            reparse(m)
+            m = reparse(m, indexes, variant)
             if m.uses_jinja:
                 print("BUILD START (revised):", m.dist())
 
         elif need_reparse_in_env:
-            reparse(m)
+            m = reparse(m, indexes, variant)
             print("BUILD START (revised):", m.dist())
 
         # get_dir here might be just work, or it might be one level deeper,
@@ -995,6 +996,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata_tuples = [(recipedir_or_package_or_metadata, None, None)]
         config = recipedir_or_package_or_metadata.config
+        local_url = None
     else:
         recipe_dir, need_cleanup = utils.get_recipe_abspath(recipedir_or_package_or_metadata)
         config.need_cleanup = need_cleanup
@@ -1021,6 +1023,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 if os.path.basename(local_location).startswith(platform + "-"):
                     local_location = os.path.dirname(local_location)
             update_index(local_location, config=config)
+
             if not os.path.abspath(local_location):
                 local_location = os.path.normpath(os.path.abspath(
                     os.path.join(os.getcwd(), local_location)))
@@ -1227,6 +1230,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     extra_help = ""
     built_packages = []
 
+    # here's where we set the default variant.  Mostly this applies when metadata is created
+    #    directly - rendering reads in file paths.
+    if not variants:
+        variants = get_default_variants()
+
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -1250,7 +1258,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 config.compute_build_id(metadata.name(), reset=True)
             recipe_parent_dir = ""
             to_build_recursive.append(metadata.name())
-            metadata_tuples = [(metadata, None, None)]
+            metadata_tuples = []
+            for variant in variants:
+                m = copy.deepcopy(metadata)
+                m.config.variant = variant
+                metadata_tuples.append((m, None, None))
         else:
             recipe_parent_dir = os.path.dirname(recipe)
             recipe = recipe.rstrip("/").rstrip("\\")
@@ -1272,26 +1284,36 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             for m_tuple in metadata_tuples:
                 verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     rendered_meta=m_tuple[0].meta, recipe_dir=m_tuple[0].path)
+
         try:
             with config:
+
+                indexes = {env: get_build_index(config,
+                                                getattr(config, '{}_subdir'.format(env)))
+                           for env in ('build', 'host')}
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
-                    packages_from_this = build(metadata, post=post,
-                                            need_source_download=need_source_download,
-                                            need_reparse_in_env=need_reparse_in_env)
+                    if not metadata.final:
+                        metadata = finalize_metadata(metadata, metadata.config.variant, indexes)
+                    packages_from_this = build(metadata, indexes=indexes, variant=config.variant,
+                                               post=post,
+                                               need_source_download=need_source_download,
+                                               need_reparse_in_env=need_reparse_in_env)
                     if not notest:
                         for pkg in packages_from_this:
                             if pkg.endswith('.tar.bz2'):
                                 # we only know how to test conda packages
                                 try:
-                                    test(pkg, config=config)
+                                    test(pkg, config=metadata.config)
                                 # IOError means recipe was not included with package. use metadata
                                 except IOError:
                                     # force the build string to line up - recomputing it would
                                     #    yield a different result
                                     index_contents = utils.package_has_file(pkg, 'info/index.json')
                                     build_str = json.loads(index_contents)['build']
-                                    metadata.meta['build']['string'] = build_str
-                                    test(metadata, config=config)
+                                    build_meta = metadata.meta.get('build', {})
+                                    build_meta['string'] = build_str
+                                    metadata.meta['build'] = build_meta
+                                    test(metadata, config=metadata.config)
                             built_packages.append(pkg)
                     else:
                         built_packages.extend(packages_from_this)
@@ -1440,7 +1462,7 @@ def is_package_built(metadata):
         if not os.path.isdir(d):
             os.makedirs(d)
         update_index(d, metadata.config, could_be_mirror=False)
-    index = utils.get_build_index(config=metadata.config, clear_cache=True)
+    index = get_build_index(config=metadata.config, clear_cache=True)
 
     urls = [url_path(metadata.config.croot)] + get_rc_urls()
     if metadata.config.channel_urls:

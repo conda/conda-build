@@ -88,9 +88,9 @@ def combine_specs(specs):
         for k, v in spec.items():
             if k in extend_keys:
                 values[k] = ensure_list(values.get(k, []))
-                values[k].extend(v)
+                values[k].extend(ensure_list(v))
             else:
-                values[k] = v
+                values[k] = ensure_list(v)
     return values, set(extend_keys)
 
 

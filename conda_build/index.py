@@ -11,8 +11,14 @@ import json
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info, get_lock, try_acquire_locks
-from .conda_interface import PY3, md5_file
+from conda_build.utils import file_info, get_lock, try_acquire_locks, capture
+from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, package_cache
+
+# each python process keeps an index.  When a package is done building, it updates this index.
+#    This is a pretty massive performance optimization.
+# Top-level keys are subdir.  Each value there is a complete index for that subdir - which may
+#    actually come from multiple folders on disk
+CURRENT_INDEX = {}
 
 
 def read_index_tar(tar_path, config, lock):
@@ -68,11 +74,14 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     :type check_md5: bool
     """
 
+    global CURRENT_INDEX
+
     if config.verbose:
         print("updating index in:", dir_path)
-    index_path = join(dir_path, '.index.json')
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
+
+    index_path = join(dir_path, '.index.json')
 
     if not lock:
         lock = get_lock(dir_path)
@@ -80,16 +89,18 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     if config.locking:
         locks = [lock]
 
+    index = {}
+
     with try_acquire_locks(locks, config.timeout):
-        if force:
-            index = {}
-        else:
+        if not force:
             try:
                 mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
                 with open(index_path, **mode_dict) as fi:
                     index = json.load(fi)
             except (IOError, ValueError):
                 index = {}
+
+        subdir = None
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
         if could_be_mirror and any(fn.startswith('_license-') for fn in files):
@@ -99,6 +110,7 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         necessary nor supported.  If you wish to add your own packages,
         you can do so by adding them to a separate channel.
     """)
+        channel_url = url_path(dir_path)
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:
@@ -110,8 +122,12 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
             if config.verbose:
                 print('updating:', fn)
             d = read_index_tar(path, config, lock=lock)
+            d['channel'] = channel_url
             d.update(file_info(path))
             index[fn] = d
+            # there's only one subdir for a given folder, so only read these contents once
+            if not subdir:
+                subdir = d['subdir']
 
         for fn in files:
             index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
@@ -142,3 +158,47 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
 
         repodata = {'packages': index, 'info': {}}
         write_repodata(repodata, dir_path, lock=lock, config=config)
+        subdir_index = CURRENT_INDEX.get(subdir, {})
+        subdir_index.update(index)
+        CURRENT_INDEX[subdir] = subdir_index
+
+
+def ensure_valid_channel(local_folder, subdir, config):
+    for folder in set((subdir, 'noarch')):
+        path = os.path.join(local_folder, folder)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        if not os.path.isfile(os.path.join(path, 'repodata.json')):
+            update_index(path, config)
+
+
+def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
+    # priority: local by croot (can vary), then channels passed as args,
+    #     then channels from config.
+    global CURRENT_INDEX
+    if CURRENT_INDEX.get(subdir) and not clear_cache:
+        index = CURRENT_INDEX[subdir]
+    else:
+        urls = list(config.channel_urls)
+        if os.path.isdir(config.croot):
+            urls.insert(0, url_path(config.croot))
+        ensure_valid_channel(config.croot, subdir, config)
+
+        # silence output from conda about fetching index files
+        with capture():
+            try:
+                index = get_index(channel_urls=urls,
+                                prepend=(not config.override_channels),
+                                use_local=False,
+                                use_cache=False,
+                                platform=subdir)
+            # HACK: defaults does not have the many subfolders we support.  Omit it and try again.
+            except CondaHTTPError:
+                urls.remove('defaults')
+                index = get_index(channel_urls=urls,
+                                prepend=config.override_channels,
+                                use_local=False,
+                                use_cache=False,
+                                platform=subdir)
+        CURRENT_INDEX[subdir] = index or {}
+    return index
