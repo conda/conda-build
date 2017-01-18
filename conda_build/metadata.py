@@ -291,13 +291,13 @@ default_structs = {
     'build/script_env': list,
     'build/features': list,
     'build/track_features': list,
+    'build/aggressive_update': text_type,
     'requirements/build': list,
     'requirements/host': list,
     'requirements/run': list,
     'requirements/conflicts': list,
     'requirements/preferred_env': text_type,
     'requirements/preferred_env_executable_paths': list,
-    'requirements/aggressive_update': text_type,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
@@ -387,7 +387,7 @@ FIELDS = {
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'
                ],
-    'build': ['number', 'string', 'entry_points', 'osx_is_app',
+    'build': ['number', 'string', 'entry_points', 'osx_is_app', 'aggressive_update',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
@@ -396,7 +396,7 @@ FIELDS = {
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths',
               ],
-    'requirements': ['build', 'run', 'conflicts', 'aggressive_update'],
+    'requirements': ['build', 'run', 'conflicts', ],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
@@ -933,8 +933,8 @@ class MetaData(object):
                 d['noarch'] = build_noarch
         if self.is_app():
             d.update(self.app_meta())
-        if self.get_value('requirements/aggressive_update'):
-            d['aggressive_update'] = self.get_value('requirements/aggressive_update')
+        if self.get_value('build/aggressive_update'):
+            d['aggressive_update'] = self.get_value('build/aggressive_update')
         return d
 
     def has_prefix_files(self):

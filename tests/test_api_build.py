@@ -152,6 +152,10 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
                             config=testing_config)[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
+    # also test aggressive_update here
+    index_json = json.loads(package_has_file(output_file, 'info/index.json').decode())
+    assert index_json['aggressive_update'] == "<2.0"
+
 
 def test_early_abort(testing_config, capfd):
     """There have been some problems with conda-build dropping out early.

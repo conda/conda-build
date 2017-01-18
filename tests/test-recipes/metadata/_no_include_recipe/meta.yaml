@@ -4,3 +4,4 @@ package:
 
 build:
   include_recipe: False
+  aggressive_update: '<2.0'
