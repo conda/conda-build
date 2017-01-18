@@ -513,12 +513,14 @@ def create_info_files(m, files, config, prefix):
 def get_short_path(m, target_file):
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
     if is_noarch_python(m):
-        if target_file.find("site-packages") > 0:
+        if target_file.find("site-packages") >= 0:
             return target_file[target_file.find("site-packages"):]
         elif target_file.startswith("bin") and (target_file not in entry_point_script_names):
             return target_file.replace("bin", "python-scripts")
         elif target_file.startswith("Scripts") and (target_file not in entry_point_script_names):
             return target_file.replace("Scripts", "python-scripts")
+        else:
+            return target_file
     elif m.get_value('build/noarch_python'):
         return None
     else:
@@ -595,6 +597,10 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
         "paths_version": 1,
         "paths": files_json_files,
     }
+
+    # don't create info/paths.json file if this is an old noarch package
+    if m.get_value('build/noarch_python', None):
+        return
     with open(join(info_dir, 'paths.json'), "w") as files_json:
         json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
                   cls=EntityEncoder)
