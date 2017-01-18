@@ -162,6 +162,20 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
     finally:
         t.close()
 
+def _check_paths_version(paths):
+    """Verify that we can handle this version of a paths file"""
+    # For now we only accept 1, but its possible v2 will still have the structure we need
+    # If so just update this if statement.
+    if paths['paths_version'] != 1:
+        raise RuntimeError("Cannot handle info/paths.json paths_version other than 1")
+
+def _update_paths(paths, mapping_dict):
+    """Given a paths file, update it such that old paths are replaced with new"""
+    updated_paths = deepcopy(paths)
+    for path in updated_paths['paths']:
+        if path['_path'] in mapping_dict:
+            path['_path'] = mapping_dict[path['_path']]
+    return updated_paths
 
 path_mapping_bat_proxy = [
     (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
@@ -194,6 +208,8 @@ pyver_re = re.compile(r'python\s+(?:(?:[<>=]*)(\d.\d))?')
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+    paths = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
+    _check_paths_version(paths)
     source_plat = info['platform']
     source_type = 'unix' if source_plat in {'osx', 'linux'} else 'win'
     dest_plat, dest_arch = platform.split('-')
@@ -235,6 +251,7 @@ def get_pure_py_file_map(t, platform):
 
     members = t.getmembers()
     file_map = {}
+    paths_mapping_dict = {} # keep track of what we change in files
     for member in members:
         # Update metadata
         if member.path == 'info/index.json':
@@ -249,6 +266,9 @@ def get_pure_py_file_map(t, platform):
         elif member.path == 'info/files':
             # We have to do this at the end when we have all the files
             filemember = deepcopy(member)
+            continue
+        elif member.path == 'info/paths.json':
+            pathmember = deepcopy(member)
             continue
         elif member.path == 'info/has_prefix':
             if source_type == 'unix' and dest_type == 'win':
@@ -270,6 +290,7 @@ def get_pure_py_file_map(t, platform):
                 file_map[newpath] = newmember
                 loc = files.index(oldpath)
                 files[loc] = newpath
+                paths_mapping_dict[oldpath] = newpath
                 break
         else:
             file_map[oldpath] = member
@@ -292,11 +313,18 @@ def get_pure_py_file_map(t, platform):
                     batseen.add(oldpath)
                     files.append(newpath)
 
+    # Change paths.json the same way that we changed files
+    updated_paths = _update_paths(paths, paths_mapping_dict)
+    paths = json.dumps(updated_paths, sort_keys=True,
+                       indent=4, separators=(',', ': '))
     files = '\n'.join(sorted(files)) + '\n'
     if PY3:
         files = bytes(files, 'utf-8')
+        paths = bytes(paths, 'utf-8')
     filemember.size = len(files)
+    pathmember.size = len(paths)
     file_map['info/files'] = filemember, bytes_io(files)
+    file_map['info/paths.json'] = pathmember, bytes_io(paths)
 
     return file_map
 
