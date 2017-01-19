@@ -506,7 +506,7 @@ def create_info_files(m, files, config, prefix):
         utils.copy_into(join(m.path, m.get_value('app/icon')),
                         join(config.info_dir, 'icon.png'),
                         config.timeout, locking=config.locking)
-    return [f.replace(config.build_prefix + '/', '') for root, _, _ in os.walk(config.info_dir)
+    return [f.replace(config.build_prefix + os.sep, '') for root, _, _ in os.walk(config.info_dir)
             for f in glob(os.path.join(root, '*'))]
 
 
