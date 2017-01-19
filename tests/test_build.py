@@ -110,22 +110,22 @@ def test_env_creation_with_prefix_fallback_disabled():
 @pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
-# def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):
-#     config = api.Config(anaconda_upload=False, verbose=True, python="2.6")
-#     test_metadata.config = api.get_or_merge_config(test_metadata.config, python='2.6')
-#     cmd = """
-# import os
+def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):
+    config = api.Config(anaconda_upload=False, verbose=True, python="2.6")
+    test_metadata.config = api.get_or_merge_config(test_metadata.config, python='2.6')
+    cmd = """
+import os
 
-# prefix = os.environ['PREFIX']
-# fn = os.path.join(prefix, 'binary-has-prefix')
+prefix = os.environ['PREFIX']
+fn = os.path.join(prefix, 'binary-has-prefix')
 
-# with open(fn, 'wb') as f:
-#     f.write(prefix.encode('utf-8') + b'\x00\x00')
-#  """
-#     test_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
+with open(fn, 'wb') as f:
+    f.write(prefix.encode('utf-8') + b'\x00\x00')
+ """
+    test_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
 
-#     api.build(test_metadata)
-#     assert "Falling back to legacy prefix" in caplog.text()
+    api.build(test_metadata)
+    assert "Falling back to legacy prefix" in caplog.text()
 
 
 def test_warn_on_old_conda_build(test_config, capfd):

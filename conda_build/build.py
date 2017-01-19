@@ -685,7 +685,7 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                         warn_on_old_conda_build(index=index)
                 except (SystemExit, PaddingError, LinkError, CondaError) as exc:
                     if (("too short in" in str(exc) or
-                            'post-link failed for: openssl' in str(exc) or
+                            re.search('post-link failed for: .*openssl', str(exc)) or
                             isinstance(exc, PaddingError)) and
                             config.prefix_length > 80):
                         if config.prefix_length_fallback:
