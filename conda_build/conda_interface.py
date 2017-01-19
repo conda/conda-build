@@ -59,6 +59,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
     CondaValueError = conda.exceptions.CondaValueError
     LockError = conda.exceptions.LockError
+    CondaHTTPError = conda.exceptions.CondaHTTPError
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     conda.base.context.context.allow_softlinks = False
@@ -87,6 +88,9 @@ else:
     get_local_urls = cc.get_local_urls
 
     cc.allow_softlinks = False
+
+    class CondaHTTPError(Exception):
+        pass
 
     class PaddingError(Exception):
         pass
