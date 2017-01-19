@@ -817,6 +817,7 @@ def bundle_conda(output, metadata, config, env, **kw):
     files = list(set(utils.expand_globs(files, config.build_prefix)))
     files = filter_files(files, prefix=config.build_prefix)
     info_files = create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
+    info_files = filter_files(info_files, prefix=config.build_prefix)
     for f in info_files:
         if f not in files:
             files.append(f)

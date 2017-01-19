@@ -321,7 +321,7 @@ def test_broken_conda_meta(testing_workdir, test_config):
 def test_recursive_fail(testing_workdir, test_config):
     with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)
-        assert "recursive-build2" in str(exc)
+        assert "recursive-build2" in exc
 
 
 def test_jinja_typo(testing_workdir, test_config):
@@ -518,10 +518,10 @@ def test_relative_git_url_submodule_clone(testing_workdir):
                                 env=sys_git_env)
         if tag == 0:
             check_call_env([git, 'submodule', 'add',
-                                    convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
-                                    env=sys_git_env)
+                            convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
+                           env=sys_git_env)
             check_call_env([git, 'submodule', 'add', '../relative_sub', 'relative'],
-                                    env=sys_git_env)
+                           env=sys_git_env)
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
@@ -551,11 +551,11 @@ def test_relative_git_url_submodule_clone(testing_workdir):
             ('source', OrderedDict([
                 ('git_url', toplevel),
                 ('git_tag', str(tag))])),
-             requirements,
+            requirements,
             ('build', OrderedDict([
                 ('script',
-                 ['git submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',    # NOQA
-                  'git submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]']) # NOQA
+                 ['git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',
+                  'git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]'])
             ])),
             ('test', OrderedDict([
                 ('commands',
@@ -576,6 +576,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
         output = api.get_output_file_path(testing_workdir)
         assert ("relative_submodules-{}-0".format(tag) in output)
         api.build(testing_workdir)
+
 
 
 def test_noarch(testing_workdir):
