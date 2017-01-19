@@ -321,13 +321,16 @@ def test_broken_conda_meta(testing_workdir, test_config):
 def test_recursive_fail(testing_workdir, test_config):
     with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)
-        assert "recursive-build2" in exc
+    # indentation critical here.  If you indent this, and the exception is not raised, then
+    #     the exc variable here isn't really completely created and shows really strange errors:
+    #     AttributeError: 'ExceptionInfo' object has no attribute 'typename'
+    assert "recursive-build2" in str(exc.value)
 
 
 def test_jinja_typo(testing_workdir, test_config):
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=test_config)
-        assert "'GIT_DSECRIBE_TAG' is undefined" in str(exc)
+    assert "'GIT_DSECRIBE_TAG' is undefined" in exc.exconly()
 
 
 @pytest.mark.serial

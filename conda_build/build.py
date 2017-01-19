@@ -712,6 +712,8 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config,
                                     clear_cache=clear_cache, retry=retry + 1)
+                    else:
+                        raise
                 # HACK: some of the time, conda screws up somehow and incomplete packages result.
                 #    Just retry.
                 except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
@@ -1476,7 +1478,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                             except IOError:
                                 test(metadata, config=config)
                     built_packages.append(pkg)
-        except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaValueError) as e:
+        except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaError) as e:
             error_str = str(e)
             skip_names = ['python', 'r']
             add_recipes = []
