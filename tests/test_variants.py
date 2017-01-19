@@ -43,10 +43,10 @@ def test_get_package_variants_from_file(test_config):
             yaml.dump(global_specs, inner_f)
         metadata = api.render(os.path.join(thisdir, "variant_recipe"),
                               no_download_source=False, config=test_config)
-    # one for each Python version
-    assert len(metadata) == 4
-    assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 2
-    assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 2
+    # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
+    assert len(metadata) == 2
+    assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
+    assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
 
 
 def test_get_package_variants_from_dictionary_of_lists(test_config):
@@ -54,7 +54,7 @@ def test_get_package_variants_from_dictionary_of_lists(test_config):
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
                           no_download_source=False, config=test_config,
                           variants=global_specs)
-    # one for each Python version
-    assert len(metadata) == 4
-    assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 2
-    assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 2
+    # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
+    assert len(metadata) == 2
+    assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
+    assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1

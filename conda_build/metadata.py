@@ -768,8 +768,6 @@ class MetaData(object):
                 out = ret[0] + self._hash_dependencies()
             if len(ret) > 1:
                 out = '_'.join([out] + ret[1:])
-        else:
-            out = re.sub('h[0-9]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
         return out
 
     def dist(self):

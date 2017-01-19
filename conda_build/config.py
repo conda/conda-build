@@ -131,6 +131,8 @@ class Config(object):
                 version = os.getenv(var) if os.getenv(var) else default
             elif isinstance(version, list) and len(version) == 1:
                 version = version[0]
+            if version and not version.endswith('*'):
+                version = version + '.*'
             return version
 
         self.variant.update({'perl': env('perl', None),

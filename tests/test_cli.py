@@ -153,7 +153,7 @@ def test_render_output_build_path_set_python(testing_workdir, test_metadata, cap
         version = "3.5"
 
     api.output_yaml(test_metadata, 'meta.yaml')
-    metadata = api.render(testing_workdir)[0][0]
+    metadata = api.render(testing_workdir, python=version)[0][0]
 
     args = ['--output', testing_workdir, '--python', version]
     main_render.execute(args)
