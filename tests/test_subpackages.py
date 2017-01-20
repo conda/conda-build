@@ -19,6 +19,12 @@ def test_autodetect_raises_on_invalid_extension(test_config):
     with pytest.raises(NotImplementedError):
         api.build(os.path.join(subpackage_dir, '_invalid_script_extension'), config=test_config)
 
-
-# def test_all_subpackages_uploaded():
-#     raise NotImplementedError
+def test_rm_rf_does_not_follow_links(test_config):
+    recipe_dir = os.path.join(subpackage_dir, '_rm_rf_stays_within_prefix')
+    bin_file_that_disappears = os.path.join(recipe_dir, 'bin', 'lsfm')
+    if not os.path.isfile(bin_file_that_disappears):
+        with open(bin_file_that_disappears, 'w') as f:
+            f.write('weee')
+    assert os.path.isfile(bin_file_that_disappears)
+    api.build(os.path.join(recipe_dir, 'conda'), config=test_config)
+    assert os.path.isfile(bin_file_that_disappears)
