@@ -707,7 +707,11 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                                         clear_cache=clear_cache)
                         else:
                             raise
-                    elif 'lock' in str(exc):
+                    # conda sometimes gets files deleted out from under itself.  Retry.
+                    #    The reason why we treat the "minimum conda version" text this way is that
+                    #    it occurs with info/files is missing.  That's also a symptom of these
+                    #    weird I/O issues that happen with parallel conda-build jobs.
+                    elif 'lock' in str(exc) or 'requires a minimum conda version' in str(exc):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config,
