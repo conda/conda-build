@@ -81,7 +81,7 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
         raise
     finally:
         rm_rf(test_base)
-    assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text()
+    assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text
 
 
 @pytest.mark.serial
@@ -125,7 +125,7 @@ with open(fn, 'wb') as f:
     test_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
 
     api.build(test_metadata)
-    assert "Falling back to legacy prefix" in caplog.text()
+    assert "Falling back to legacy prefix" in caplog.text
 
 
 def test_warn_on_old_conda_build(test_config, capfd):
