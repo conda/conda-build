@@ -743,8 +743,9 @@ def test_fix_permissions(test_config):
 
 
 @pytest.mark.skipif(not on_win, reason="windows-only functionality")
-def test_script_win_creates_exe(test_config):
-    recipe = os.path.join(metadata_dir, "_script_win_creates_exe")
+@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe", "_script_win_creates_exe_garbled"])
+def test_script_win_creates_exe(test_config, recipe_name):
+    recipe = os.path.join(metadata_dir, recipe_name)
     outputs = api.build(recipe, config=test_config)
     assert package_has_file(outputs[0], 'Scripts/test-script.exe')
     assert package_has_file(outputs[0], 'Scripts/test-script-script.py')
