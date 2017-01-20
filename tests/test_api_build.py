@@ -664,22 +664,23 @@ def test_noarch_python_1(test_config):
     assert 'package_metadata_version' in extra
 
 
-@pytest.mark.xfail(strict=True, condition=datetime.now() < datetime(2017, 1, 15),
-                   reason="Need advice from msarahan on config object. The preferred_env stuff "
-                          "isn't critical for 2.1, but the package_metadata.json file with the"
-                          "noarch stuff is.  That's covered sufficiently in the test above.")
-def test_noarch_python_2(test_config):
-    recipe = os.path.join(metadata_dir, "_noarch_python")
+# @pytest.mark.xfail(strict=True, condition=datetime.now() < datetime(2017, 1, 15),
+#                    reason="Need advice from msarahan on config object. The preferred_env stuff "
+#                           "isn't critical for 2.1, but the package_metadata.json file with the"
+#                           "noarch stuff is.  That's covered sufficiently in the test above.")
+def test_preferred_env(test_config):
+    recipe = os.path.join(metadata_dir, "_preferred_env")
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
-    assert package_has_file(fn, 'info/files') is not ''
     extra = json.loads(package_has_file(fn, 'info/package_metadata.json').decode())
-    assert 'noarch' in extra
-    assert 'entry_points' in extra['noarch']
-    assert 'type' in extra['noarch']
     assert 'preferred_env' in extra
     assert 'name' in extra['preferred_env']
     assert 'executable_paths' in extra['preferred_env']
+    exe_paths = extra['preferred_env']['executable_paths']
+    if on_win:
+        assert exe_paths == ['Scripts/exepath1.bat', 'Scripts/exepath2.bat']
+    else:
+        assert exe_paths == ['bin/exepath1', 'bin/exepath2']
     assert 'package_metadata_version' in extra
 
 

@@ -353,7 +353,7 @@ def write_info_files_file(m, files, config):
 
 
 def write_package_metadata_json(m, config):
-    extra = OrderedDict()
+    package_metadata = OrderedDict()
 
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
@@ -362,20 +362,19 @@ def write_package_metadata_json(m, config):
             entry_points = m.get_value('build/entry_points')
             if entry_points:
                 noarch_dict['entry_points'] = entry_points
-        extra['noarch'] = noarch_dict
+        package_metadata['noarch'] = noarch_dict
 
-    preferred_env = m.get_value("requirements/preferred_env")
+    preferred_env = m.get_value("build/preferred_env")
     if preferred_env:
         preferred_env_dict = OrderedDict(name=text_type(preferred_env))
-        executable_paths = m.get_value("requirements/preferred_env_executable_paths")
+        executable_paths = m.get_value("build/preferred_env_executable_paths")
         if executable_paths:
             preferred_env_dict["executable_paths"] = executable_paths
-        extra["preferred_env"] = preferred_env_dict
-
-    if extra:
-        extra["package_metadata_version"] = 1
+        package_metadata["preferred_env"] = preferred_env_dict
+    if package_metadata:
+        package_metadata["package_metadata_version"] = 1
         with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
-            fh.write(json.dumps(extra, sort_keys=True, indent=2, separators=(',', ': ')))
+            fh.write(json.dumps(package_metadata, sort_keys=True, indent=2, separators=(',', ': ')))
 
 
 def write_about_json(m, config):
