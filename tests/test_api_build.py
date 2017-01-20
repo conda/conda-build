@@ -409,7 +409,7 @@ def test_compileall_compiles_all_good_files(testing_workdir, test_config):
 def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
     logging.basicConfig(level=logging.INFO)
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=test_config)
-    assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
 
 
 def test_debug_build_option(test_metadata, caplog, capfd):
@@ -418,16 +418,16 @@ def test_debug_build_option(test_metadata, caplog, capfd):
     debug_message = "DEBUG"
     api.build(test_metadata)
     # this comes from an info message
-    assert info_message in caplog.text()
+    assert info_message in caplog.text
     # this comes from a debug message
-    assert debug_message not in caplog.text()
+    assert debug_message not in caplog.text
 
     test_metadata.config.debug = True
     api.build(test_metadata)
     # this comes from an info message
-    assert info_message in caplog.text()
+    assert info_message in caplog.text
     # this comes from a debug message
-    assert debug_message in caplog.text()
+    assert debug_message in caplog.text
 
 
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
@@ -809,7 +809,7 @@ def test_remove_workdir_default(test_config, caplog):
 def test_keep_workdir(test_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     api.build(recipe, config=test_config, dirty=True, remove_work_dir=False, debug=True)
-    assert "Not removing work directory after build" in caplog.text()
+    assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(test_config.work_dir, '*'))
     test_config.clean()
 
@@ -826,7 +826,7 @@ def test_workdir_removal_warning(test_config, caplog):
 def test_workdir_removal_warning_no_remove(test_config, caplog):
     recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
     api.build(recipe, config=test_config, remove_work_dir=False)
-    assert "Not removing work directory after build" in caplog.text()
+    assert "Not removing work directory after build" in caplog.text
 
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
