@@ -59,6 +59,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     NoPackagesFoundError = conda.exceptions.NoPackagesFoundError
     CondaValueError = conda.exceptions.CondaValueError
     LockError = conda.exceptions.LockError
+    CondaHTTPError = conda.exceptions.CondaHTTPError
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     conda.base.context.context.allow_softlinks = False
@@ -101,6 +102,9 @@ else:
         pass
 
     class CondaValueError(Exception):
+        pass
+
+    class CondaHTTPError(Exception):
         pass
 
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
