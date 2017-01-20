@@ -188,8 +188,6 @@ default_structs = {
     'requirements/build': list,
     'requirements/run': list,
     'requirements/conflicts': list,
-    'requirements/preferred_env': text_type,
-    'requirements/preferred_env_executable_paths': list,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
@@ -213,6 +211,8 @@ default_structs = {
     'build/detect_binary_files_with_prefix': bool,
     'build/skip': bool,
     'build/skip_compile_pyc': list,
+    'build/preferred_env': text_type,
+    'build/preferred_env_executable_paths': list,
     'app/own_environment': bool
 }
 
@@ -283,7 +283,8 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
               'script_env', 'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends', 'include_recipe'  # pin_depends is experimental still
+              'pin_depends', 'include_recipe',  # pin_depends is experimental still
+              'preferred_env', 'preferred_env_executable_paths',
               ],
     'requirements': ['build', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',

@@ -20,8 +20,10 @@ import tempfile
 import time
 import zipfile
 
+from distutils.version import LooseVersion
 import filelock
 
+from conda import __version__ as conda_version
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir
@@ -714,3 +716,9 @@ class LoggingContext(object):
         if self.handler and self.close:
             self.handler.close()
         # implicit return of None => don't swallow exceptions
+
+
+def conda_43():
+    """Conda 4.3 broke compatibility in lots of new fun and exciting ways.  This function is for
+    changing conda-build's behavior when conda 4.3 or higher is installed."""
+    return LooseVersion(conda_version) >= LooseVersion('4.3')

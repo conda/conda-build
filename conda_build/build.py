@@ -41,12 +41,13 @@ from .conda_interface import Resolve, MatchSpec, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
-from .conda_interface import (PaddingError, LinkError, CondaValueError,
+from .conda_interface import (PaddingError, LinkError, CondaValueError, CondaError,
                               NoPackagesFoundError, NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
+from .conda_interface import dist_str_in_index
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -353,7 +354,7 @@ def write_info_files_file(m, files, config):
 
 
 def write_package_metadata_json(m, config):
-    extra = OrderedDict()
+    package_metadata = OrderedDict()
 
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
@@ -362,20 +363,19 @@ def write_package_metadata_json(m, config):
             entry_points = m.get_value('build/entry_points')
             if entry_points:
                 noarch_dict['entry_points'] = entry_points
-        extra['noarch'] = noarch_dict
+        package_metadata['noarch'] = noarch_dict
 
-    preferred_env = m.get_value("requirements/preferred_env")
+    preferred_env = m.get_value("build/preferred_env")
     if preferred_env:
         preferred_env_dict = OrderedDict(name=text_type(preferred_env))
-        executable_paths = m.get_value("requirements/preferred_env_executable_paths")
+        executable_paths = m.get_value("build/preferred_env_executable_paths")
         if executable_paths:
             preferred_env_dict["executable_paths"] = executable_paths
-        extra["preferred_env"] = preferred_env_dict
-
-    if extra:
-        extra["package_metadata_version"] = 1
+        package_metadata["preferred_env"] = preferred_env_dict
+    if package_metadata:
+        package_metadata["package_metadata_version"] = 1
         with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
-            fh.write(json.dumps(extra, sort_keys=True, indent=2, separators=(',', ': ')))
+            fh.write(json.dumps(package_metadata, sort_keys=True, indent=2, separators=(',', ': ')))
 
 
 def write_about_json(m, config):
@@ -513,12 +513,14 @@ def create_info_files(m, files, config, prefix):
 def get_short_path(m, target_file):
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
     if is_noarch_python(m):
-        if target_file.find("site-packages") > 0:
+        if target_file.find("site-packages") >= 0:
             return target_file[target_file.find("site-packages"):]
         elif target_file.startswith("bin") and (target_file not in entry_point_script_names):
             return target_file.replace("bin", "python-scripts")
         elif target_file.startswith("Scripts") and (target_file not in entry_point_script_names):
             return target_file.replace("Scripts", "python-scripts")
+        else:
+            return target_file
     elif m.get_value('build/noarch_python'):
         return None
     else:
@@ -595,6 +597,10 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
         "paths_version": 1,
         "paths": files_json_files,
     }
+
+    # don't create info/paths.json file if this is an old noarch package
+    if m.get_value('build/noarch_python', None):
+        return
     with open(join(info_dir, 'paths.json'), "w") as files_json:
         json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
                   cls=EntityEncoder)
@@ -677,9 +683,9 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                                 os.environ[k] = str(v)
                         plan.execute_actions(actions, index, verbose=config.debug)
                         warn_on_old_conda_build(index=index)
-                except (SystemExit, PaddingError, LinkError) as exc:
+                except (SystemExit, PaddingError, LinkError, CondaError) as exc:
                     if (("too short in" in str(exc) or
-                            'post-link failed for: openssl' in str(exc) or
+                            re.search('post-link failed for: .*openssl', str(exc)) or
                             isinstance(exc, PaddingError)) and
                             config.prefix_length > 80):
                         if config.prefix_length_fallback:
@@ -706,6 +712,8 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config,
                                     clear_cache=clear_cache, retry=retry + 1)
+                    else:
+                        raise
                 # HACK: some of the time, conda screws up somehow and incomplete packages result.
                 #    Just retry.
                 except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
@@ -811,6 +819,7 @@ def bundle_conda(output, metadata, config, env, **kw):
     files = list(set(utils.expand_globs(files, config.build_prefix)))
     files = filter_files(files, prefix=config.build_prefix)
     info_files = create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
+    info_files = filter_files(info_files, prefix=config.build_prefix)
     for f in info_files:
         if f not in files:
             files.append(f)
@@ -1469,7 +1478,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                             except IOError:
                                 test(metadata, config=config)
                     built_packages.append(pkg)
-        except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaValueError) as e:
+        except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaError) as e:
             error_str = str(e)
             skip_names = ['python', 'r']
             add_recipes = []
@@ -1621,8 +1630,9 @@ def is_package_built(metadata, config):
         urls.extend(config.channel_urls)
 
     # will be empty if none found, and evalute to False
-    package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
-    return package_exists or metadata.pkg_fn() in index
+    package_exists = [url for url in urls
+                      if dist_str_in_index(index, url + '::' + metadata.pkg_fn())]
+    return package_exists or dist_str_in_index(index, metadata.pkg_fn())
 
 
 def is_noarch_python(meta):

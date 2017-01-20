@@ -13,7 +13,7 @@ import pytest
 from conda_build import build, api
 from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
-from conda_build.conda_interface import LinkError, PaddingError
+from conda_build.conda_interface import LinkError, PaddingError, CondaError
 
 from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
                     get_noarch_python_meta, put_bad_conda_on_path)
@@ -58,6 +58,7 @@ def test_build_preserves_PATH(testing_workdir, test_config):
     assert os.environ['PATH'] == ref_path
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
@@ -83,6 +84,7 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text()
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_env_creation_with_prefix_fallback_disabled():
@@ -97,7 +99,7 @@ def test_env_creation_with_prefix_fallback_disabled():
         os.remove(fn)
     config.prefix_length = 80
 
-    with pytest.raises((SystemExit, PaddingError, LinkError)):
+    with pytest.raises((SystemExit, PaddingError, LinkError, CondaError)):
         api.build(metadata)
         pkg_name = os.path.basename(fn).replace("-1.0-0.tar.bz2", "")
         assert not api.inspect_prefix_length(fn, 255)
@@ -105,6 +107,7 @@ def test_env_creation_with_prefix_fallback_disabled():
         build.create_env(config.build_prefix, specs=["python", pkg_name], config=config)
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):

@@ -27,7 +27,7 @@ import tarfile
 from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env)
+                               package_has_file, check_output_env, conda_43)
 from conda_build.os_utils.external import find_executable
 
 from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
@@ -321,13 +321,16 @@ def test_broken_conda_meta(testing_workdir, test_config):
 def test_recursive_fail(testing_workdir, test_config):
     with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)
-        assert "recursive-build2" in exc
+    # indentation critical here.  If you indent this, and the exception is not raised, then
+    #     the exc variable here isn't really completely created and shows really strange errors:
+    #     AttributeError: 'ExceptionInfo' object has no attribute 'typename'
+    assert "recursive-build2" in str(exc.value)
 
 
 def test_jinja_typo(testing_workdir, test_config):
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=test_config)
-        assert "'GIT_DSECRIBE_TAG' is undefined" in exc
+    assert "'GIT_DSECRIBE_TAG' is undefined" in exc.exconly()
 
 
 @pytest.mark.serial
@@ -518,10 +521,10 @@ def test_relative_git_url_submodule_clone(testing_workdir):
                                 env=sys_git_env)
         if tag == 0:
             check_call_env([git, 'submodule', 'add',
-                                    convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
-                                    env=sys_git_env)
+                            convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
+                           env=sys_git_env)
             check_call_env([git, 'submodule', 'add', '../relative_sub', 'relative'],
-                                    env=sys_git_env)
+                           env=sys_git_env)
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
@@ -551,11 +554,11 @@ def test_relative_git_url_submodule_clone(testing_workdir):
             ('source', OrderedDict([
                 ('git_url', toplevel),
                 ('git_tag', str(tag))])),
-             requirements,
+            requirements,
             ('build', OrderedDict([
                 ('script',
-                 ['git submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',    # NOQA
-                  'git submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]']) # NOQA
+                 ['git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',
+                  'git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]'])
             ])),
             ('test', OrderedDict([
                 ('commands',
@@ -576,6 +579,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
         output = api.get_output_file_path(testing_workdir)
         assert ("relative_submodules-{}-0".format(tag) in output)
         api.build(testing_workdir)
+
 
 
 def test_noarch(testing_workdir):
@@ -646,7 +650,7 @@ def test_about_json_content(test_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
-@pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
+@pytest.mark.xfail(not conda_43(), reason="new noarch supported starting with conda 4.3")
 def test_noarch_python_with_tests(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     api.build(recipe, config=test_config)
@@ -664,22 +668,19 @@ def test_noarch_python_1(test_config):
     assert 'package_metadata_version' in extra
 
 
-@pytest.mark.xfail(strict=True, condition=datetime.now() < datetime(2017, 1, 15),
-                   reason="Need advice from msarahan on config object. The preferred_env stuff "
-                          "isn't critical for 2.1, but the package_metadata.json file with the"
-                          "noarch stuff is.  That's covered sufficiently in the test above.")
-def test_noarch_python_2(test_config):
-    recipe = os.path.join(metadata_dir, "_noarch_python")
+def test_preferred_env(test_config):
+    recipe = os.path.join(metadata_dir, "_preferred_env")
     fn = api.get_output_file_path(recipe, config=test_config)
     api.build(recipe, config=test_config)
-    assert package_has_file(fn, 'info/files') is not ''
     extra = json.loads(package_has_file(fn, 'info/package_metadata.json').decode())
-    assert 'noarch' in extra
-    assert 'entry_points' in extra['noarch']
-    assert 'type' in extra['noarch']
     assert 'preferred_env' in extra
     assert 'name' in extra['preferred_env']
     assert 'executable_paths' in extra['preferred_env']
+    exe_paths = extra['preferred_env']['executable_paths']
+    if on_win:
+        assert exe_paths == ['Scripts/exepath1.bat', 'Scripts/exepath2.bat']
+    else:
+        assert exe_paths == ['bin/exepath1', 'bin/exepath2']
     assert 'package_metadata_version' in extra
 
 
