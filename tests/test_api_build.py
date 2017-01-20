@@ -646,7 +646,6 @@ def test_about_json_content(test_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
-@pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
 def test_noarch_python_with_tests(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     api.build(recipe, config=test_config)
