@@ -463,6 +463,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
     3. That `source.py` is using `check_call_env` and `check_output_env` and that those
        functions are using tools from the build env.
     """
+
     toplevel = os.path.join(testing_workdir, 'toplevel')
     os.mkdir(toplevel)
     relative_sub = os.path.join(testing_workdir, 'relative_sub')
@@ -492,7 +493,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
     FNULL.close()
 
     for tag in range(2):
-        monkeypatch.chdir(absolute_sub)
+        os.chdir(absolute_sub)
         if tag == 0:
             check_call_env([git, 'init'], env=sys_git_env)
         with open('absolute', 'w') as f:
@@ -501,7 +502,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
         check_call_env([git, 'commit', '-m', 'absolute{}'.format(tag)],
                                 env=sys_git_env)
 
-        monkeypatch.chdir(relative_sub)
+        os.chdir(relative_sub)
         if tag == 0:
             check_call_env([git, 'init'], env=sys_git_env)
         with open('relative', 'w') as f:
@@ -510,7 +511,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
         check_call_env([git, 'commit', '-m', 'relative{}'.format(tag)],
                                 env=sys_git_env)
 
-        monkeypatch.chdir(toplevel)
+        os.chdir(toplevel)
         if tag == 0:
             check_call_env([git, 'init'], env=sys_git_env)
         with open('toplevel', 'w') as f:
