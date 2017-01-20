@@ -63,6 +63,9 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     from conda_build.conda_interface import string_types
     from conda_build.utils import find_recipe
 
+    assert post in (None, True, False), ("post must be boolean or None.  Remember, you must pass "
+                                         "other arguments (config) by keyword.")
+
     config = get_or_merge_config(config, **kwargs)
 
     recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
@@ -81,10 +84,14 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     recipes.extend(metadata)
     absolute_recipes = []
     for recipe in recipes:
-        if hasattr(recipe, "config") or os.path.isabs(recipe):
+        if hasattr(recipe, "config"):
             absolute_recipes.append(recipe)
         else:
-            absolute_recipes.append(os.path.normpath(os.path.join(os.getcwd(), recipe)))
+            if not os.path.isabs(recipe):
+                recipe = os.path.normpath(os.path.join(os.getcwd(), recipe))
+            if not os.path.exists(recipe):
+                raise ValueError("Path to recipe did not exist: {}".format(recipe))
+            absolute_recipes.append(recipe)
 
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
                       need_source_download=need_source_download, config=config)
