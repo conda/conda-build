@@ -827,3 +827,12 @@ def test_workdir_removal_warning_no_remove(test_config, caplog):
     recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
     api.build(recipe, config=test_config, remove_work_dir=False)
     assert "Not removing work directory after build" in caplog.text()
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
+def test_append_python_app_osx(test_config):
+    """Recipes that use osx_is_app need to have python.app in their runtime requirements."""
+    recipe = os.path.join(metadata_dir, '_nexpy')
+    # tests will fail here if python.app is not added to the run reqs by conda-build, because
+    #    without it, pythonw will be missing.
+    api.build(recipe, config=test_config, channel_urls=('nexpy', ))

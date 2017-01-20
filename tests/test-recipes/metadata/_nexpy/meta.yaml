@@ -1,0 +1,56 @@
+package:
+  name: nexpy
+  version: "0.9.2"
+
+source:
+  git_url: https://github.com/nexpy/nexpy.git
+  git_tag: v0.9.2
+
+build:
+  entry_points:
+    - nexpy = nexpy.nexpygui:main
+  number: 0
+  osx_is_app: True
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - nexusformat >=0.4.5
+    - numpy >=1.6.0
+    - scipy
+    - h5py
+    - jupyter
+    - ipython >=4.0.0
+    - matplotlib >=1.4.0
+    - six
+
+  run:
+    - python
+    - nexusformat >=0.4.4
+    - numpy >=1.6.0
+    - scipy
+    - h5py
+    - jupyter
+    - ipython >=4.0.0
+    - matplotlib >=1.4.0
+
+test:
+  imports:
+    - nexpy
+    - nexpy.api
+    - nexpy.api.frills
+    - nexpy.api.frills.functions
+    - nexpy.api.nexus
+    - nexpy.definitions
+    - nexpy.gui
+    - nexpy.plugins
+    - nexpy.readers
+
+  commands:
+    - nexpy --help
+
+about:
+  home: http://nexpy.github.io/nexpy/
+  license: BSD License
+  summary: 'NeXpy: A Python GUI to analyze NeXus data'

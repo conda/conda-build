@@ -1331,6 +1331,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if py_files:
+            test_python = config.test_python
+            # use pythonw for import tests when osx_is_app is set
+            if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
+                test_python = test_python + 'w'
             tf.write("{python} -s {test_file}\n".format(
                 python=config.test_python,
                 test_file=join(config.test_dir, 'run_test.py')))
