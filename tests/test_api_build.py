@@ -667,6 +667,14 @@ def test_noarch_python_1(test_config):
     assert 'package_metadata_version' in extra
 
 
+def test_legacy_noarch_python(test_config):
+    recipe = os.path.join(metadata_dir, "_legacy_noarch_python")
+    fn = api.get_output_file_path(recipe, config=test_config)
+    # make sure that the package is going into the noarch folder
+    assert os.path.basename(os.path.dirname(fn)) == 'noarch'
+    api.build(recipe, config=test_config)
+
+
 def test_preferred_env(test_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
     fn = api.get_output_file_path(recipe, config=test_config)
