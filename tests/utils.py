@@ -79,19 +79,13 @@ def test_metadata(request, test_config):
 
 
 @pytest.fixture(scope='function')
-def testing_env(testing_workdir, request):
+def testing_env(testing_workdir, request, monkeypatch):
     env_path = os.path.join(testing_workdir, 'env')
 
     check_call_env(['conda', 'create', '-yq', '-p', env_path,
                     'python={0}'.format(".".join(sys.version.split('.')[:2]))])
-    path_backup = os.environ['PATH']
-    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH']
-
+    monkeypatch.setenv('PATH', prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH'])
     # cleanup is done by just cleaning up the testing_workdir
-    def reset_path():
-        os.environ['PATH'] = path_backup
-
-    request.addfinalizer(reset_path)
     return env_path
 
 

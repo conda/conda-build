@@ -79,11 +79,11 @@ def recipe(request):
 
 
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
-def test_recipe_builds(recipe, test_config, testing_workdir):
+def test_recipe_builds(recipe, test_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
-    os.environ["CONDA_TEST_VAR"] = "conda_test"
-    os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     outputs = api.build(recipe, config=test_config)
 
 
@@ -241,12 +241,12 @@ def dummy_executable(folder, exename):
     return exename
 
 
-def test_checkout_tool_as_dependency(testing_workdir, test_config):
+def test_checkout_tool_as_dependency(testing_workdir, test_config, monkeypatch):
     # temporarily necessary because we have custom rebuilt svn for longer prefix here
     test_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
-    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+    monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     FNULL = open(os.devnull, 'w')
     with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
         check_call_env([exename, '--version'], stderr=FNULL)
@@ -268,7 +268,7 @@ else:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="MSVC only on windows")
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
-def test_build_msvc_compiler(msvc_ver):
+def test_build_msvc_compiler(msvc_ver, monkeypatch):
     # verify that the correct compiler is available
     cl_versions = {"9.0": 15,
                    "10.0": 16,
@@ -276,8 +276,8 @@ def test_build_msvc_compiler(msvc_ver):
                    "12.0": 18,
                    "14.0": 19}
 
-    os.environ['CONDATEST_MSVC_VER'] = msvc_ver
-    os.environ['CL_EXE_VERSION'] = str(cl_versions[msvc_ver])
+    monkeypatch.setenv('CONDATEST_MSVC_VER', msvc_ver)
+    monkeypatch.setenv('CL_EXE_VERSION', str(cl_versions[msvc_ver]))
 
     try:
         # Always build Python 2.7 - but set MSVC version manually via Jinja template
@@ -450,7 +450,7 @@ def test_numpy_setup_py_data(test_config):
                                 sys.version_info.major, sys.version_info.minor)
 
 
-def test_relative_git_url_submodule_clone(testing_workdir):
+def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
     """
     A multi-part test encompassing the following checks:
 
@@ -481,8 +481,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
 
     # Put the broken git on os.environ["PATH"]
     exename = dummy_executable(testing_workdir, 'git')
-    old_path = os.environ["PATH"]
-    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+    monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     # .. and ensure it gets run (and fails).
     FNULL = open(os.devnull, 'w')
     # Strangely ..
@@ -493,7 +492,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
     FNULL.close()
 
     for tag in range(2):
-        os.chdir(absolute_sub)
+        monkeypatch.chdir(absolute_sub)
         if tag == 0:
             check_call_env([git, 'init'], env=sys_git_env)
         with open('absolute', 'w') as f:
@@ -502,7 +501,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
         check_call_env([git, 'commit', '-m', 'absolute{}'.format(tag)],
                                 env=sys_git_env)
 
-        os.chdir(relative_sub)
+        monkeypatch.chdir(relative_sub)
         if tag == 0:
             check_call_env([git, 'init'], env=sys_git_env)
         with open('relative', 'w') as f:
@@ -511,7 +510,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
         check_call_env([git, 'commit', '-m', 'relative{}'.format(tag)],
                                 env=sys_git_env)
 
-        os.chdir(toplevel)
+        monkeypatch.chdir(toplevel)
         if tag == 0:
             check_call_env([git, 'init'], env=sys_git_env)
         with open('toplevel', 'w') as f:
@@ -573,7 +572,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
         # Reset the path because our broken, dummy `git` would cause `render_recipe`
         # to fail, while no `git` will cause the build_dependencies to be installed.
-        os.environ["PATH"] = old_path
+        monkeypatch.undo()
         # This will (after one spin round the loop) install and run 'git' with the
         # build env prepended to os.environ[]
         output = api.get_output_file_path(testing_workdir)
