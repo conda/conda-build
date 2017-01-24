@@ -5,7 +5,6 @@ import sys
 import pytest
 
 import conda_build.utils as utils
-from .utils import test_config, testing_workdir
 
 
 def makefile(name, contents=""):
@@ -61,7 +60,7 @@ def test_merge_namespace_trees(namespace_setup):
     assert os.path.isfile(dep)
 
 
-def test_disallow_merge_conflicts(namespace_setup, test_config):
+def test_disallow_merge_conflicts(namespace_setup, testing_config):
     duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
     makefile(duplicate)
     with pytest.raises(IOError):

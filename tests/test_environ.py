@@ -5,18 +5,19 @@ import pytest
 from conda_build import environ, api, utils
 from conda_build.conda_interface import url_path, PaddingError, LinkError
 
-from .utils import testing_workdir, test_config, metadata_dir
+# * import because pytest fixtures need to be all imported
+from .utils import metadata_dir
 
 
-def test_environment_creation_preserves_PATH(testing_workdir, test_config):
+def test_environment_creation_preserves_PATH(testing_workdir, testing_config):
     ref_path = os.environ['PATH']
-    environ.create_env(testing_workdir, ['python'], test_config, subdir=test_config.build_subdir)
+    environ.create_env(testing_workdir, ['python'], testing_config, subdir=testing_config.build_subdir)
     assert os.environ['PATH'] == ref_path
 
 
 @pytest.mark.skipif(utils.on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
-def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
+def test_env_creation_with_short_prefix_does_not_deadlock(testing_config, caplog):
     test_base = os.path.expanduser("~/cbtmp")
     config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
@@ -30,7 +31,7 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
         metadata.config.prefix_length = 255
         metadata.config.channel_urls = [url_path(os.path.dirname(output))]
         environ.create_env(config.build_prefix, specs=["python", pkg_name], config=metadata.config,
-                           subdir=test_config.build_subdir)
+                           subdir=testing_config.build_subdir)
     except:
         raise
     finally:
@@ -40,7 +41,7 @@ def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
 
 @pytest.mark.skipif(utils.on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
-def test_env_creation_with_prefix_fallback_disabled():
+def test_env_creation_with_prefix_fallback_disabled(testing_config):
     test_base = os.path.expanduser("~/cbtmp")
     config = api.Config(croot=test_base, anaconda_upload=False, verbose=True,
                         prefix_length_fallback=False)
@@ -56,4 +57,4 @@ def test_env_creation_with_prefix_fallback_disabled():
         config.prefix_length = 255
         config.channel_urls = [url_path(os.path.dirname(output))]
         environ.create_env(config.build_prefix, specs=["python", pkg_name], config=config,
-                           subdir=test_config.build_subdir)
+                           subdir=testing_config.build_subdir)

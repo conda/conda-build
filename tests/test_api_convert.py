@@ -4,9 +4,10 @@ import pytest
 
 from conda_build.conda_interface import download
 from conda_build import api
-from conda_build.utils import package_has_file
+from conda_build.utils import package_has_file, on_win
 
-from .utils import testing_workdir, test_config, on_win, metadata_dir, assert_package_consistency
+from .utils import metadata_dir, assert_package_consistency
+
 
 def test_convert_wheel_raises():
     with pytest.raises(RuntimeError) as exc:
@@ -35,9 +36,9 @@ def test_convert_platform_to_others(testing_workdir, base_platform):
 
 @pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="we create the package to be converted in *nix, so don't run on win.")
-def test_convert_from_unix_to_win_creates_entry_points(test_config):
+def test_convert_from_unix_to_win_creates_entry_points(testing_config):
     recipe_dir = os.path.join(metadata_dir, "entry_points")
-    fn = api.build(recipe_dir, config=test_config)[0]
+    fn = api.build(recipe_dir, config=testing_config)[0]
     for platform in ['win-64', 'win-32']:
         api.convert(fn, platforms=[platform], force=True)
         converted_fn = os.path.join(platform, os.path.basename(fn))

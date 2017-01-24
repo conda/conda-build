@@ -8,7 +8,7 @@ import pytest
 from conda_build import post
 from conda_build.utils import on_win
 
-from .utils import test_config, testing_workdir, add_mangling
+from .utils import testing_config, testing_workdir, add_mangling
 
 
 def test_compile_missing_pyc(testing_workdir):

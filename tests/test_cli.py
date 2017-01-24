@@ -5,7 +5,6 @@
 from glob import glob
 import json
 import os
-import subprocess
 import sys
 import yaml
 
@@ -18,8 +17,6 @@ from conda_build import api
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
                                check_call_env)
 from conda_build.conda_interface import TemporaryDirectory
-from .utils import (testing_workdir, metadata_dir, testing_env, test_config, test_metadata,
-                    put_bad_conda_on_path)
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -30,6 +27,8 @@ import conda_build.cli.main_metapackage as main_metapackage
 import conda_build.cli.main_skeleton as main_skeleton
 import conda_build.cli.main_inspect as main_inspect
 import conda_build.cli.main_index as main_index
+
+from .utils import metadata_dir, put_bad_conda_on_path
 
 
 def test_build():
@@ -64,8 +63,8 @@ def test_build_without_channel_fails(testing_workdir):
     main_build.execute(args)
 
 
-def test_render_output_build_path(testing_workdir, test_metadata, capfd, caplog):
-    api.output_yaml(test_metadata, 'meta.yaml')
+def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
+    api.output_yaml(testing_metadata, 'meta.yaml')
     metadata = api.render(testing_workdir)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_render.execute(args)
@@ -77,13 +76,15 @@ def test_render_output_build_path(testing_workdir, test_metadata, capfd, caplog)
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_build_output_build_path(testing_workdir, test_metadata, test_config, capfd):
-    api.output_yaml(test_metadata, 'meta.yaml')
-    metadata = api.render(testing_workdir)[0][0]
+def test_build_output_build_path(testing_workdir, testing_metadata, testing_config, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    testing_config.verbose = False
+    testing_config.debug = False
+    metadata = api.render(testing_workdir, config=testing_config)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_build.execute(args)
     _hash = metadata._hash_dependencies()
-    test_path = os.path.join(sys.prefix, "conda-bld", test_config.host_subdir,
+    test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                                   "test_build_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor, _hash))
     output, error = capfd.readouterr()
@@ -91,8 +92,8 @@ def test_build_output_build_path(testing_workdir, test_metadata, test_config, ca
     assert output.rstrip() == test_path, error
 
 
-def test_build_output_build_path_multiple_recipes(testing_workdir, test_metadata, test_config, capfd):
-    api.output_yaml(test_metadata, 'meta.yaml')
+def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata, testing_config, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
     metadata = api.render(testing_workdir)[0][0]
 
     skip_recipe = os.path.join(metadata_dir, "build_skip")
@@ -101,7 +102,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_metadata
     main_build.execute(args)
 
     _hash = metadata._hash_dependencies()
-    test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", test_config.host_subdir, pkg)
+    test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir, pkg)
     test_paths = [test_path(
         "test_build_output_build_path_multiple_recipes-1.0-py{}{}{}_1.tar.bz2".format(
             sys.version_info.major, sys.version_info.minor, _hash)),
@@ -112,8 +113,8 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_metadata
     # assert error == ""
     assert output.rstrip().splitlines() == test_paths, error
 
-def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
-    args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', test_config.croot,
+def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
+    args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
             '--no-anaconda-upload']
     outputs = main_build.execute(args)
     data = package_has_file(outputs[0], 'binary-has-prefix')
@@ -123,9 +124,9 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     assert 'has_prefix_files_1' in data
 
 
-def test_build_no_build_id(testing_workdir, test_config):
+def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
-            '--croot', test_config.croot, '--no-activate', '--no-anaconda-upload']
+            '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
     outputs = main_build.execute(args)
     data = package_has_file(outputs[0], 'binary-has-prefix')
     assert data
@@ -134,25 +135,25 @@ def test_build_no_build_id(testing_workdir, test_config):
     assert 'has_prefix_files_1' not in data
 
 
-def test_build_output_folder(testing_workdir, test_metadata, capfd):
-    api.output_yaml(test_metadata, 'meta.yaml')
+def test_build_output_folder(testing_workdir, testing_metadata, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
     with TemporaryDirectory() as tmp:
         out = os.path.join(tmp, 'out')
         args = [testing_workdir, '--no-build-id',
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload',
                 '--output-folder', out]
         output = main_build.execute(args)[0]
-        assert os.path.isfile(os.path.join(out, test_metadata.config.host_subdir, os.path.basename(output)))
+        assert os.path.isfile(os.path.join(out, testing_metadata.config.host_subdir, os.path.basename(output)))
 
 
-def test_render_output_build_path_set_python(testing_workdir, test_metadata, capfd):
+def test_render_output_build_path_set_python(testing_workdir, testing_metadata, capfd):
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
         version = "2.7"
     else:
         version = "3.5"
 
-    api.output_yaml(test_metadata, 'meta.yaml')
+    api.output_yaml(testing_metadata, 'meta.yaml')
     metadata = api.render(testing_workdir, python=version)[0][0]
 
     args = ['--output', testing_workdir, '--python', version]
@@ -165,17 +166,17 @@ def test_render_output_build_path_set_python(testing_workdir, test_metadata, cap
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
-def test_skeleton_pypi(testing_workdir, test_config):
+def test_skeleton_pypi(testing_workdir, testing_config):
     args = ['pypi', 'click']
     main_skeleton.execute(args)
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot, '--no-activate',]
+    args = ['click', '--no-anaconda-upload', '--croot', testing_config.croot, '--no-activate',]
     main_build.execute(args)
 
 
-def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
+def test_skeleton_pypi_arguments_work(testing_workdir, testing_config):
     """
     These checks whether skeleton executes without error when these
     options are specified on the command line AND whether the underlying
@@ -209,40 +210,40 @@ def test_skeleton_pypi_arguments_work(testing_workdir, test_config):
         assert 'version: "0.2.2"' in content
 
 
-def test_metapackage(test_config, testing_workdir):
+def test_metapackage(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--no-anaconda-upload']
     main_metapackage.execute(args)
-    test_path = glob(os.path.join(sys.prefix, "conda-bld", test_config.host_subdir,
+    test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                              'metapackage_test-1.0*_0.tar.bz2'))[0]
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_build_number(test_config, testing_workdir):
+def test_metapackage_build_number(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test_build_number', '1.0', '-d', 'bzip2', '--build-number', '1', '--no-anaconda-upload']
     main_metapackage.execute(args)
-    test_path = glob(os.path.join(sys.prefix, "conda-bld", test_config.host_subdir,
+    test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                              'metapackage_test_build_number-1.0-*_1.tar.bz2'))[0]
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_build_string(test_config, testing_workdir):
+def test_metapackage_build_string(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test_build_string', '1.0', '-d', 'bzip2', '--build-string', 'frank', '--no-anaconda-upload']
     main_metapackage.execute(args)
-    test_path = glob(os.path.join(sys.prefix, "conda-bld", test_config.host_subdir,
+    test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                              'metapackage_test_build_string-1.0-frank*.tar.bz2'))[0]
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_metadata(test_config, testing_workdir):
-    args = ['metapackage_test_metadata', '1.0', '-d', 'bzip2', "--home", "http://abc.com",
+def test_metapackage_metadata(testing_config, testing_workdir):
+    args = ['metapackage_testing_metadata', '1.0', '-d', 'bzip2', "--home", "http://abc.com",
             "--summary", "wee", "--license", "BSD", '--no-anaconda-upload']
     main_metapackage.execute(args)
 
-    test_path = glob(os.path.join(sys.prefix, "conda-bld", test_config.host_subdir,
-                             'metapackage_test_metadata-1.0-*_0.tar.bz2'))[0]
+    test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
+                             'metapackage_testing_metadata-1.0-*_0.tar.bz2'))[0]
     assert os.path.isfile(test_path)
     info = json.loads(package_has_file(test_path, 'info/index.json').decode('utf-8'))
     assert info['license'] == 'BSD'
@@ -251,7 +252,7 @@ def test_metapackage_metadata(test_config, testing_workdir):
     assert info['summary'] == 'wee'
 
 
-def test_index(testing_workdir):
+def testing_index(testing_workdir):
     args = ['.']
     main_index.execute(args)
     assert os.path.isfile('repodata.json')
@@ -330,7 +331,7 @@ def test_develop(testing_env):
     assert (cwd not in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read())
 
 
-def test_convert(testing_workdir, test_config):
+def test_convert(testing_workdir, testing_config):
     # download a sample py2.7 package
     f = 'https://repo.continuum.io/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
     pkg_name = "affine-2.0.0-py27_0.tar.bz2"
@@ -343,8 +344,8 @@ def test_convert(testing_workdir, test_config):
         dirname = os.path.join('converted', platform)
         assert os.path.isdir(dirname)
         assert pkg_name in os.listdir(dirname)
-        test_config.host_subdir = platform
-        with TarCheck(os.path.join(dirname, pkg_name), config=test_config) as tar:
+        testing_config.host_subdir = platform
+        with TarCheck(os.path.join(dirname, pkg_name), config=testing_config) as tar:
             tar.correct_subdir()
 
 
@@ -373,26 +374,26 @@ def test_sign(testing_workdir):
 
 
 @pytest.mark.serial
-def test_purge(testing_workdir, test_metadata):
+def test_purge(testing_workdir, testing_metadata):
     """
     purge clears out build folders - things like some_pkg_12048309850135
 
     It does not clear out build packages from folders like osx-64 or linux-64.
     """
-    outputs = api.build(test_metadata)
+    outputs = api.build(testing_metadata)
     args = ['purge']
     main_build.execute(args)
-    assert not get_build_folders(test_metadata.config.croot)
+    assert not get_build_folders(testing_metadata.config.croot)
     assert all(os.path.isfile(fn) for fn in outputs)
 
 
 @pytest.mark.serial
-def test_purge_all(test_metadata):
+def test_purge_all(testing_metadata):
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
-    outputs = api.build(test_metadata)
-    args = ['purge-all', '--croot', test_metadata.config.croot]
+    outputs = api.build(testing_metadata)
+    args = ['purge-all', '--croot', testing_metadata.config.croot]
     main_build.execute(args)
-    assert not get_build_folders(test_metadata.config.croot)
+    assert not get_build_folders(testing_metadata.config.croot)
     assert not any(os.path.isfile(fn) for fn in outputs)

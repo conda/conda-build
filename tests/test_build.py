@@ -12,11 +12,9 @@ import pytest
 
 from conda_build import build, api
 from conda_build.metadata import MetaData
-from conda_build.utils import rm_rf, on_win
-from conda_build.conda_interface import LinkError, PaddingError, url_path
+from conda_build.utils import on_win
 
-from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
-                    get_noarch_python_meta, put_bad_conda_on_path)
+from .utils import metadata_dir, put_bad_conda_on_path, get_noarch_python_meta
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -45,17 +43,17 @@ def test_find_prefix_files(testing_workdir):
     assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
 
 
-def test_build_preserves_PATH(testing_workdir, test_config):
-    m = MetaData(os.path.join(metadata_dir, 'source_git'), config=test_config)
+def test_build_preserves_PATH(testing_workdir, testing_config, testing_index):
+    m = MetaData(os.path.join(metadata_dir, 'source_git'), config=testing_config)
     ref_path = os.environ['PATH']
-    build.build(m, test_config)
+    build.build(m, testing_config.variant, index=testing_index)
     assert os.environ['PATH'] == ref_path
 
 
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
-def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):
-    test_metadata.config = api.get_or_merge_config(test_metadata.config, python='2.6')
+def test_catch_openssl_legacy_short_prefix_error(testing_metadata, caplog):
+    testing_metadata.config = api.get_or_merge_config(testing_metadata.config, python='2.6')
     cmd = """
 import os
 
@@ -65,9 +63,9 @@ fn = os.path.join(prefix, 'binary-has-prefix')
 with open(fn, 'wb') as f:
     f.write(prefix.encode('utf-8') + b'\x00\x00')
  """
-    test_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
+    testing_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
 
-    api.build(test_metadata)
+    api.build(testing_metadata)
     assert "Falling back to legacy prefix" in caplog.text()
 
 
@@ -76,14 +74,14 @@ def test_sanitize_channel():
     assert build.sanitize_channel(test_url) == 'https://conda.anaconda.org/t/<TOKEN>/somechannel'
 
 
-def test_write_about_json_without_conda_on_path(testing_workdir, test_metadata):
+def test_write_about_json_without_conda_on_path(testing_workdir, testing_metadata):
     with put_bad_conda_on_path(testing_workdir):
         # verify that the correct (bad) conda is the one we call
         with pytest.raises(subprocess.CalledProcessError):
             subprocess.check_output('conda -h', env=os.environ, shell=True)
-        build.write_about_json(test_metadata)
+        build.write_about_json(testing_metadata)
 
-    output_file = os.path.join(test_metadata.config.info_dir, 'about.json')
+    output_file = os.path.join(testing_metadata.config.info_dir, 'about.json')
     assert os.path.isfile(output_file)
     with open(output_file) as f:
         about = json.load(f)
@@ -91,12 +89,12 @@ def test_write_about_json_without_conda_on_path(testing_workdir, test_metadata):
     assert 'conda_build_version' in about
 
 
-def test_get_short_path(test_metadata):
+def test_get_short_path(testing_metadata):
     # Test for regular package
-    assert build.get_short_path(test_metadata, "test/file") == "test/file"
+    assert build.get_short_path(testing_metadata, "test/file") == "test/file"
 
     # Test for noarch: python
-    meta = get_noarch_python_meta(test_metadata)
+    meta = get_noarch_python_meta(testing_metadata)
     assert build.get_short_path(meta, "lib/site-packages/test") == "site-packages/test"
     assert build.get_short_path(meta, "bin/test") == "python-scripts/test"
     assert build.get_short_path(meta, "Scripts/test") == "python-scripts/test"
@@ -132,7 +130,7 @@ def test_sorted_inode_first_path(testing_workdir):
     assert build.get_inode_paths(files, "two", testing_workdir) == ["two"]
 
 
-def test_create_info_files_json(testing_workdir, test_metadata):
+def test_create_info_files_json(testing_workdir, testing_metadata):
     info_dir = os.path.join(testing_workdir, "info")
     os.mkdir(info_dir)
     path_one = os.path.join(testing_workdir, "one")
@@ -144,7 +142,7 @@ def test_create_info_files_json(testing_workdir, test_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "foo"]
 
-    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files, files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
@@ -165,7 +163,7 @@ def test_create_info_files_json(testing_workdir, test_metadata):
 
 @pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
                     reason="os.link is not available so can't setup test")
-def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
+def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
     info_dir = os.path.join(testing_workdir, "info")
     os.mkdir(info_dir)
     path_one = os.path.join(testing_workdir, "one")
@@ -179,7 +177,7 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "one_hl", "foo"]
 
-    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files, files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",

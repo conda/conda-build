@@ -14,14 +14,14 @@ def test_api_config():
 
 def test_api_get_or_merge_config():
     argspec = getargspec(api.get_or_merge_config)
-    assert argspec.args == ['config']
-    assert argspec.defaults is None
+    assert argspec.args == ['config', 'variant']
+    assert argspec.defaults == (None, )
 
 
 def test_api_render():
     argspec = getargspec(api.render)
-    assert argspec.args == ['recipe_path', 'config']
-    assert argspec.defaults == (None,)
+    assert argspec.args == ['recipe_path', 'config', 'variants']
+    assert argspec.defaults == (None, None)
 
 
 def test_api_output_yaml():
@@ -45,8 +45,8 @@ def test_api_check():
 def test_api_build():
     argspec = getargspec(api.build)
     assert argspec.args == ['recipe_paths_or_metadata', 'post', 'need_source_download',
-                            'build_only', 'notest', 'config']
-    assert argspec.defaults == (None, True, False, False, None)
+                            'build_only', 'notest', 'config', 'variants']
+    assert argspec.defaults == (None, True, False, False, None, None)
 
 
 def test_api_test():

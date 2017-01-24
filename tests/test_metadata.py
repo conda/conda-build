@@ -8,27 +8,27 @@ import pytest
 from conda_build.conda_interface import MatchSpec
 
 from conda_build.metadata import select_lines, handle_config_version, MetaData
-from .utils import testing_workdir, test_config, test_metadata, thisdir, metadata_dir
+from .utils import thisdir, metadata_dir
 
 
-def test_uses_vcs_in_metadata(testing_workdir, test_metadata):
-    test_metadata.meta_path = os.path.join(testing_workdir, 'meta.yaml')
-    with open(test_metadata.meta_path, 'w') as f:
+def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
+    testing_metadata.meta_path = os.path.join(testing_workdir, 'meta.yaml')
+    with open(testing_metadata.meta_path, 'w') as f:
         f.write('http://hg.something.com')
-    assert not test_metadata.uses_vcs_in_meta
-    assert not test_metadata.uses_vcs_in_build
-    with open(test_metadata.meta_path, 'w') as f:
+    assert not testing_metadata.uses_vcs_in_meta
+    assert not testing_metadata.uses_vcs_in_build
+    with open(testing_metadata.meta_path, 'w') as f:
         f.write('hg something something')
-    assert not test_metadata.uses_vcs_in_meta
-    assert test_metadata.uses_vcs_in_build
-    with open(test_metadata.meta_path, 'w') as f:
+    assert not testing_metadata.uses_vcs_in_meta
+    assert testing_metadata.uses_vcs_in_build
+    with open(testing_metadata.meta_path, 'w') as f:
         f.write('hg.exe something something')
-    assert not test_metadata.uses_vcs_in_meta
-    assert test_metadata.uses_vcs_in_build
-    with open(test_metadata.meta_path, 'w') as f:
+    assert not testing_metadata.uses_vcs_in_meta
+    assert testing_metadata.uses_vcs_in_build
+    with open(testing_metadata.meta_path, 'w') as f:
         f.write('HG_WEEEEE')
-    assert test_metadata.uses_vcs_in_meta
-    assert not test_metadata.uses_vcs_in_build
+    assert testing_metadata.uses_vcs_in_meta
+    assert not testing_metadata.uses_vcs_in_build
 
 
 def test_select_lines():
@@ -113,58 +113,62 @@ class HandleConfigVersionTests(unittest.TestCase):
                           MatchSpec('numpy x.x'), None)
 
 
-def test_disallow_leading_period_in_version(test_metadata):
-    test_metadata.meta['package']['version'] = '.ste.ve'
+def test_disallow_leading_period_in_version(testing_metadata):
+    testing_metadata.meta['package']['version'] = '.ste.ve'
     with pytest.raises(AssertionError):
-        test_metadata.version()
+        testing_metadata.version()
 
 
-def test_disallow_dash_in_features(test_metadata):
-    test_metadata.meta['build']['features'] = ['abc']
-    test_metadata.parse_again()
+def test_disallow_dash_in_features(testing_metadata):
+    testing_metadata.meta['build']['features'] = ['abc']
+    testing_metadata.parse_again()
     with pytest.raises(ValueError):
-        test_metadata.meta['build']['features'] = ['ab-c']
-        test_metadata.parse_again()
+        testing_metadata.meta['build']['features'] = ['ab-c']
+        testing_metadata.parse_again()
 
 
-def test_append_section_data(test_metadata):
-    test_metadata.config.append_sections_file = os.path.join(thisdir, 'test-append.yaml')
-    test_metadata.parse_again()
-    assert len(test_metadata.meta['requirements']['build']) == 2
-    assert 'frank' in test_metadata.meta['requirements']['build']
+def test_append_section_data(testing_metadata):
+    testing_metadata.config.append_sections_file = os.path.join(thisdir, 'test-append.yaml')
+    testing_metadata.final = False
+    testing_metadata.parse_again()
+    assert len(testing_metadata.meta['requirements']['build']) == 2
+    assert 'frank' in testing_metadata.meta['requirements']['build']
 
 
-def test_clobber_section_data(test_metadata):
-    test_metadata.config.clobber_sections_file = os.path.join(thisdir, 'test-clobber.yaml')
-    test_metadata.parse_again()
+def test_clobber_section_data(testing_metadata):
+    testing_metadata.config.clobber_sections_file = os.path.join(thisdir, 'test-clobber.yaml')
+    testing_metadata.final = False
+    testing_metadata.parse_again()
     # a field that should be clobbered
-    test_metadata.meta['about']['summary'] = 'yep'
+    testing_metadata.meta['about']['summary'] = 'yep'
     # a field that should stay the same
-    test_metadata.meta['about']['home'] = 'sweet home'
+    testing_metadata.meta['about']['home'] = 'sweet home'
 
 
-def test_build_bootstrap_env_by_name(test_metadata):
-    assert not any("git" in pkg for pkg in test_metadata.meta["requirements"]["build"]), test_metadata.meta["requirements"]["build"]
+def test_build_bootstrap_env_by_name(testing_metadata):
+    assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
     try:
         cmd = "conda create -y -n conda_build_bootstrap_test git"
         subprocess.check_call(cmd.split())
-        test_metadata.config.bootstrap = "conda_build_bootstrap_test"
-        test_metadata.parse_again()
-        assert any("git" in pkg for pkg in test_metadata.meta["requirements"]["build"]), test_metadata.meta["requirements"]["build"]
+        testing_metadata.config.bootstrap = "conda_build_bootstrap_test"
+        testing_metadata.final = False
+        testing_metadata.parse_again()
+        assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
     finally:
         cmd = "conda remove -y -n conda_build_bootstrap_test --all"
         subprocess.check_call(cmd.split())
 
 
-def test_build_bootstrap_env_by_path(test_metadata):
-    assert not any("git" in pkg for pkg in test_metadata.meta["requirements"]["build"]), test_metadata.meta["requirements"]["build"]
+def test_build_bootstrap_env_by_path(testing_metadata):
+    assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
     path = os.path.join(thisdir, "conda_build_bootstrap_test")
     try:
         cmd = "conda create -y -p {} git".format(path)
         subprocess.check_call(cmd.split())
-        test_metadata.config.bootstrap = path
-        test_metadata.parse_again()
-        assert any("git" in pkg for pkg in test_metadata.meta["requirements"]["build"]), test_metadata.meta["requirements"]["build"]
+        testing_metadata.config.bootstrap = path
+        testing_metadata.final = False
+        testing_metadata.parse_again()
+        assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
     finally:
         cmd = "conda remove -y -p {} --all".format(path)
         subprocess.check_call(cmd.split())
@@ -173,25 +177,25 @@ def test_build_bootstrap_env_by_path(test_metadata):
 @pytest.mark.parametrize('py_ver', [('2.7', 'vs2008'),
                                     ('3.4', 'vs2010'),
                                     ('3.5', 'vs2015'), ])
-def test_native_compiler_metadata_win(test_config, py_ver, mocker):
+def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
     variant = {'python': py_ver[0]}
-    test_config._platform = 'win'
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config,
+    testing_config._platform = 'win'
+    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
                         variant=variant)
     assert py_ver[1] in metadata.meta['requirements']['build']
 
 
-def test_native_compiler_metadata_linux(test_config, mocker):
-    test_config._platform = 'linux'
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config)
+def test_native_compiler_metadata_linux(testing_config, mocker):
+    testing_config._platform = 'linux'
+    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
     assert 'gcc' in metadata.meta['requirements']['build']
     assert 'g++' in metadata.meta['requirements']['build']
     assert 'gfortran' in metadata.meta['requirements']['build']
 
 
-def test_native_compiler_metadata_osx(test_config, mocker):
-    test_config._platform = 'osx'
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=test_config)
+def test_native_compiler_metadata_osx(testing_config, mocker):
+    testing_config._platform = 'osx'
+    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
     assert 'gcc' in metadata.meta['requirements']['build']
     assert 'g++' in metadata.meta['requirements']['build']
     assert 'gfortran' in metadata.meta['requirements']['build']
@@ -208,45 +212,46 @@ def test_compiler_metadata_cross_compiler():
     assert 'fortran-compiler-linux_macos' in metadata.meta['requirements']['build']
 
 
-def test_hash_build_id(test_metadata):
-    assert test_metadata._hash_dependencies() == 'h4442'
-    assert test_metadata.build_id() == 'py{}{}h4442_1'.format(sys.version_info.major,
+def test_hash_build_id(testing_metadata):
+    assert testing_metadata._hash_dependencies() == 'h7502'
+    assert testing_metadata.build_id() == 'py{}{}h7502_1'.format(sys.version_info.major,
                                                               sys.version_info.minor)
 
 
-def test_hash_build_id_key_order(test_metadata):
-    deps = test_metadata.meta['requirements']['build'][:]
+def test_hash_build_id_key_order(testing_metadata):
+    deps = testing_metadata.meta['requirements']['build'][:]
 
     # first, prepend
     newdeps = deps[:]
     newdeps.insert(0, 'steve')
-    test_metadata.meta['requirements']['build'] = newdeps
-    hash_pre = test_metadata._hash_dependencies()
+    testing_metadata.meta['requirements']['build'] = newdeps
+    hash_pre = testing_metadata._hash_dependencies()
 
     # next, append
     newdeps = deps[:]
     newdeps.append('steve')
-    test_metadata.meta['requirements']['build'] = newdeps
-    hash_post = test_metadata._hash_dependencies()
+    testing_metadata.meta['requirements']['build'] = newdeps
+    hash_post = testing_metadata._hash_dependencies()
 
     # make sure they match
     assert hash_pre == hash_post
 
 
-def test_hash_applies_to_custom_build_string(test_metadata):
-    test_metadata.meta['build']['string'] = 'steve'
-    assert test_metadata.build_id() == 'steveh44429080'
+def test_hash_applies_to_custom_build_string(testing_metadata):
+    testing_metadata.meta['build']['string'] = 'steve'
+    assert testing_metadata.build_id() == 'steveh7502'
 
 
-def test_disallow_leading_period_in_version(test_metadata):
-    test_metadata.meta['package']['version'] = '.ste.ve'
+def test_disallow_leading_period_in_version(testing_metadata):
+    testing_metadata.meta['package']['version'] = '.ste.ve'
     with pytest.raises(AssertionError):
-        test_metadata.version()
+        testing_metadata.version()
 
 
-def test_disallow_dash_in_features(test_metadata):
-    test_metadata.meta['build']['features'] = ['abc']
-    test_metadata.parse_again()
+def test_disallow_dash_in_features(testing_metadata):
+    testing_metadata.meta['build']['features'] = ['abc']
+    testing_metadata.final = False
+    testing_metadata.parse_again()
     with pytest.raises(ValueError):
-        test_metadata.meta['build']['features'] = ['ab-c']
-        test_metadata.parse_again()
+        testing_metadata.meta['build']['features'] = ['ab-c']
+        testing_metadata.parse_again()
