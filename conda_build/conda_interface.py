@@ -27,7 +27,6 @@ from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
 from enum import Enum
 
-import os
 
 if parse_version(conda.__version__) >= parse_version("4.2"):
     # conda 4.2.x
@@ -91,6 +90,9 @@ else:
 
     cc.allow_softlinks = False
 
+    class CondaHTTPError(Exception):
+        pass
+
     class PaddingError(Exception):
         pass
 
@@ -107,9 +109,6 @@ else:
         pass
 
     class CondaValueError(Exception):
-        pass
-
-    class CondaHTTPError(Exception):
         pass
 
     class UnsatisfiableError(Exception):
@@ -162,10 +161,14 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     EntityEncoder = EntityEncoder
     from conda.exports import CrossPlatformStLink
     CrossPlatformStLink = CrossPlatformStLink
+    from conda.exports import dist_str_in_index
+    from conda.exports import CondaError
 else:
     from json import JSONEncoder
     from os import lstat
     import os
+
+    dist_str_in_index = lambda index, dist_str: dist_str in index
 
     class PathType(Enum):
         """
@@ -180,6 +183,9 @@ else:
 
         def __json__(self):
             return self.name
+
+    class CondaError(Exception):
+        pass
 
     class FileMode(Enum):
         """

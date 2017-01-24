@@ -13,7 +13,7 @@ from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
-from conda_build.conda_interface import url_path
+from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2)
 
@@ -59,6 +59,8 @@ def download_to_cache(metadata):
             try:
                 print("Downloading %s" % url)
                 download(url, path)
+            except CondaHTTPError as e:
+                print("Error: %s" % str(e).strip(), file=sys.stderr)
             except RuntimeError as e:
                 print("Error: %s" % str(e).strip(), file=sys.stderr)
             else:

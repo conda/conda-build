@@ -45,15 +45,16 @@ def fix_staged_scripts(scripts_dir):
         if not isfile(join(scripts_dir, fn)) or '.' in fn:
             continue
 
-        with open(join(scripts_dir, fn)) as f:
-            line = bs4.UnicodeDammit(f.readline()).unicode_markup.lower()
+        # read as binary file to ensure we don't run into encoding errors, see #1632
+        with open(join(scripts_dir, fn), 'rb') as f:
+            line = f.readline()
             # If it's a #!python script
-            if not (line.startswith('#!') and 'python' in line.lower()):
+            if not (line.startswith(b'#!') and b'python' in line.lower()):
                 continue
             print('Adjusting unix-style #! script %s, '
                   'and adding a .bat file for it' % fn)
             # copy it with a .py extension (skipping that first #! line)
-            with open(join(scripts_dir, fn + '-script.py'), 'w') as fo:
+            with open(join(scripts_dir, fn + '-script.py'), 'wb') as fo:
                 fo.write(f.read())
             # now create the .exe file
             copy_into(join(dirname(__file__), 'cli-%d.exe' % bits),
@@ -137,7 +138,7 @@ def msvc_env_cmd(bits, config, override=None):
                                                             {64: ' Win64', 32: ''}[bits]))
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
-    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out;%MSYS2_ARG_CONV_EXCL%"')
+    msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
     msvc_env_lines.append('set "MSYS2_ENV_CONV_EXCL=CL"')
     if version == '10.0':
         try:

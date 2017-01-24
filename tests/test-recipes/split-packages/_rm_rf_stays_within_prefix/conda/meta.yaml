@@ -1,0 +1,16 @@
+# regression test for https://github.com/conda/conda-build/issues/1661
+
+package:
+  name: test_rm_rf_does_not_follow_links
+  version: 1.0
+
+source:
+  path: ../
+
+build:
+  script: python setup.py install --single-version-externally-managed --record=record.txt
+
+requirements:
+  build:
+    - python
+    - setuptools

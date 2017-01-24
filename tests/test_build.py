@@ -12,7 +12,8 @@ import pytest
 
 from conda_build import build, api
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win
+from conda_build.utils import rm_rf, on_win
+from conda_build.conda_interface import LinkError, PaddingError, CondaError
 
 from .utils import metadata_dir, put_bad_conda_on_path, get_noarch_python_meta
 
@@ -50,6 +51,56 @@ def test_build_preserves_PATH(testing_workdir, testing_config, testing_index):
     assert os.environ['PATH'] == ref_path
 
 
+@pytest.mark.serial
+@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
+                                    " not length dependent"))
+def test_env_creation_with_short_prefix_does_not_deadlock(caplog):
+    test_base = os.path.expanduser("~/cbtmp")
+    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
+    recipe_path = os.path.join(metadata_dir, "has_prefix_files")
+    metadata, _, _ = api.render(recipe_path, config=config)
+    metadata.meta['package']['name'] = 'test_env_creation_with_short_prefix'
+    fn = api.get_output_file_path(metadata)
+    if os.path.isfile(fn):
+        os.remove(fn)
+    config.prefix_length = 80
+    try:
+        api.build(metadata)
+        pkg_name = os.path.basename(fn).replace("-1.0-0.tar.bz2", "")
+        assert not api.inspect_prefix_length(fn, 255)
+        config.prefix_length = 255
+        build.create_env(config.build_prefix, specs=["python", pkg_name], config=config)
+    except:
+        raise
+    finally:
+        rm_rf(test_base)
+    assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text
+
+
+@pytest.mark.serial
+@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
+                                    " not length dependent"))
+def test_env_creation_with_prefix_fallback_disabled():
+    test_base = os.path.expanduser("~/cbtmp")
+    config = api.Config(croot=test_base, anaconda_upload=False, verbose=True,
+                        prefix_length_fallback=False)
+    recipe_path = os.path.join(metadata_dir, "has_prefix_files")
+    metadata, _, _ = api.render(recipe_path, config=config)
+    metadata.meta['package']['name'] = 'test_env_creation_with_short_prefix'
+    fn = api.get_output_file_path(metadata)
+    if os.path.isfile(fn):
+        os.remove(fn)
+    config.prefix_length = 80
+
+    with pytest.raises((SystemExit, PaddingError, LinkError, CondaError)):
+        api.build(metadata)
+        pkg_name = os.path.basename(fn).replace("-1.0-0.tar.bz2", "")
+        assert not api.inspect_prefix_length(fn, 255)
+        config.prefix_length = 255
+        build.create_env(config.build_prefix, specs=["python", pkg_name], config=config)
+
+
+@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_catch_openssl_legacy_short_prefix_error(testing_metadata, caplog):
@@ -66,7 +117,7 @@ with open(fn, 'wb') as f:
     testing_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
 
     api.build(testing_metadata)
-    assert "Falling back to legacy prefix" in caplog.text()
+    assert "Falling back to legacy prefix" in caplog.text
 
 
 def test_sanitize_channel():
@@ -142,7 +193,8 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "foo"]
 
-    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
+                                    files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
@@ -177,7 +229,8 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "one_hl", "foo"]
 
-    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
+                                    files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
@@ -200,5 +253,13 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
 
 
 def test_filter_files():
-    files_list = ['a', '.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
-    assert build.filter_files(files_list, '') == ['a']
+    # Files that should be filtered out.
+    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
+    assert not build.filter_files(files_list, '')
+
+    # Files that should *not* be filtered out.
+    # Example of valid 'x.git' directory:
+    #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
+    files_list = ['a', 'x.git/a', 'something/x.git/a',
+                  'x.git\\a', 'something\\x.git\\a']
+    assert len(build.filter_files(files_list, '')) == len(files_list)

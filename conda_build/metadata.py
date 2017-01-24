@@ -218,8 +218,6 @@ default_structs = {
     'requirements/host': list,
     'requirements/run': list,
     'requirements/conflicts': list,
-    'requirements/preferred_env': text_type,
-    'requirements/preferred_env_executable_paths': list,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
@@ -243,6 +241,8 @@ default_structs = {
     'build/detect_binary_files_with_prefix': bool,
     'build/skip': bool,
     'build/skip_compile_pyc': list,
+    'build/preferred_env': text_type,
+    'build/preferred_env_executable_paths': list,
     'app/own_environment': bool
 }
 
@@ -313,7 +313,8 @@ FIELDS = {
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
               'script_env', 'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends', 'include_recipe'  # pin_depends is experimental still
+              'pin_depends', 'include_recipe',  # pin_depends is experimental still
+              'preferred_env', 'preferred_env_executable_paths',
               ],
     'requirements': ['build', 'host', 'run', 'conflicts'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -557,6 +558,16 @@ class MetaData(object):
                 raise ValueError("Dictionaries are not supported as values in requirements sections"
                                  ".  Note that pip requirements as used in conda-env "
                                  "environment.yml files are not supported by conda-build.")
+        self.append_requirements()
+
+    def append_requirements(self):
+        """For dynamic determination of build or run reqs, based on configuration"""
+        reqs = self.meta.get('requirements', {})
+        run_reqs = reqs.get('run', [])
+        build_reqs = reqs.get('build', [])
+        if bool(self.get_value('build/osx_is_app', False)) and self.config.platform == 'osx':
+            run_reqs.append('python.app')
+        self.meta['requirements'] = reqs
 
     def parse_until_resolved(self, config):
         """variant contains key-value mapping for additional functions and values

@@ -26,7 +26,7 @@ import tarfile
 from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env)
+                               package_has_file, check_output_env, conda_43)
 from conda_build.os_utils.external import find_executable
 
 # * import because pytest fixtures need to be all imported
@@ -78,12 +78,12 @@ def recipe(request):
 
 
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
-def test_recipe_builds(recipe, testing_config, testing_workdir):
+def test_recipe_builds(recipe, test_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
-    os.environ["CONDA_TEST_VAR"] = "conda_test"
-    os.environ["CONDA_TEST_VAR_2"] = "conda_test_2"
-    outputs = api.build(recipe, config=testing_config)
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    outputs = api.build(recipe, config=test_config)
 
 
 def test_token_upload(testing_workdir):
@@ -240,12 +240,12 @@ def dummy_executable(folder, exename):
     return exename
 
 
-def test_checkout_tool_as_dependency(testing_workdir, testing_config):
+def test_checkout_tool_as_dependency(testing_workdir, test_config, monkeypatch):
     # temporarily necessary because we have custom rebuilt svn for longer prefix here
     testing_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
-    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+    monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     FNULL = open(os.devnull, 'w')
     with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
         check_call_env([exename, '--version'], stderr=FNULL)
@@ -267,7 +267,7 @@ else:
 
 @pytest.mark.skipif(sys.platform != "win32", reason="MSVC only on windows")
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
-def test_build_msvc_compiler(msvc_ver):
+def test_build_msvc_compiler(msvc_ver, monkeypatch):
     # verify that the correct compiler is available
     cl_versions = {"9.0": 15,
                    "10.0": 16,
@@ -275,8 +275,8 @@ def test_build_msvc_compiler(msvc_ver):
                    "12.0": 18,
                    "14.0": 19}
 
-    os.environ['CONDATEST_MSVC_VER'] = msvc_ver
-    os.environ['CL_EXE_VERSION'] = str(cl_versions[msvc_ver])
+    monkeypatch.setenv('CONDATEST_MSVC_VER', msvc_ver)
+    monkeypatch.setenv('CL_EXE_VERSION', str(cl_versions[msvc_ver]))
 
     try:
         # Always build Python 2.7 - but set MSVC version manually via Jinja template
@@ -320,13 +320,16 @@ def test_broken_conda_meta(testing_workdir, testing_config):
 def test_recursive_fail(testing_workdir, testing_config):
     with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=testing_config)
-        assert "recursive-build2" in exc
+    # indentation critical here.  If you indent this, and the exception is not raised, then
+    #     the exc variable here isn't really completely created and shows really strange errors:
+    #     AttributeError: 'ExceptionInfo' object has no attribute 'typename'
+    assert "recursive-build2" in str(exc.value)
 
 
 def test_jinja_typo(testing_workdir, testing_config):
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
-        assert "'GIT_DSECRIBE_TAG' is undefined" in exc
+    assert "'GIT_DSECRIBE_TAG' is undefined" in exc.exconly()
 
 
 @pytest.mark.serial
@@ -402,7 +405,7 @@ def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
 def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
     logging.basicConfig(level=logging.INFO)
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=testing_config)
-    assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text()
+    assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
 
 
 def test_debug_build_option(testing_metadata, caplog, capfd):
@@ -413,16 +416,16 @@ def test_debug_build_option(testing_metadata, caplog, capfd):
     testing_metadata.config.verbose = False
     api.build(testing_metadata)
     # this comes from an info message
-    assert info_message in caplog.text()
+    assert info_message in caplog.text
     # this comes from a debug message
-    assert debug_message not in caplog.text()
+    assert debug_message not in caplog.text
 
     testing_metadata.config.debug = True
     api.build(testing_metadata)
     # this comes from an info message
-    assert info_message in caplog.text()
+    assert info_message in caplog.text
     # this comes from a debug message
-    assert debug_message in caplog.text()
+    assert debug_message in caplog.text
 
 
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
@@ -446,7 +449,7 @@ def test_numpy_setup_py_data(testing_config):
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
-def test_relative_git_url_submodule_clone(testing_workdir):
+def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
     """
     A multi-part test encompassing the following checks:
 
@@ -459,6 +462,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
     3. That `source.py` is using `check_call_env` and `check_output_env` and that those
        functions are using tools from the build env.
     """
+
     toplevel = os.path.join(testing_workdir, 'toplevel')
     os.mkdir(toplevel)
     relative_sub = os.path.join(testing_workdir, 'relative_sub')
@@ -477,8 +481,7 @@ def test_relative_git_url_submodule_clone(testing_workdir):
 
     # Put the broken git on os.environ["PATH"]
     exename = dummy_executable(testing_workdir, 'git')
-    old_path = os.environ["PATH"]
-    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
+    monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     # .. and ensure it gets run (and fails).
     FNULL = open(os.devnull, 'w')
     # Strangely ..
@@ -517,10 +520,10 @@ def test_relative_git_url_submodule_clone(testing_workdir):
                                 env=sys_git_env)
         if tag == 0:
             check_call_env([git, 'submodule', 'add',
-                                    convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
-                                    env=sys_git_env)
+                            convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
+                           env=sys_git_env)
             check_call_env([git, 'submodule', 'add', '../relative_sub', 'relative'],
-                                    env=sys_git_env)
+                           env=sys_git_env)
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
@@ -550,11 +553,11 @@ def test_relative_git_url_submodule_clone(testing_workdir):
             ('source', OrderedDict([
                 ('git_url', toplevel),
                 ('git_tag', str(tag))])),
-             requirements,
+            requirements,
             ('build', OrderedDict([
                 ('script',
-                 ['git submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',    # NOQA
-                  'git submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]']) # NOQA
+                 ['git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',
+                  'git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]'])
             ])),
             ('test', OrderedDict([
                 ('commands',
@@ -569,12 +572,13 @@ def test_relative_git_url_submodule_clone(testing_workdir):
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
         # Reset the path because our broken, dummy `git` would cause `render_recipe`
         # to fail, while no `git` will cause the build_dependencies to be installed.
-        os.environ["PATH"] = old_path
+        monkeypatch.undo()
         # This will (after one spin round the loop) install and run 'git' with the
         # build env prepended to os.environ[]
         output = api.get_output_file_path(testing_workdir)[0]
         assert ("relative_submodules-{}-".format(tag) in output)
         api.build(testing_workdir)
+
 
 
 def test_noarch(testing_workdir):
@@ -642,7 +646,7 @@ def test_about_json_content(testing_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
-@pytest.mark.xfail(reason="Conda can not yet install `noarch: python` packages")
+@pytest.mark.xfail(not conda_43(), reason="new noarch supported starting with conda 4.3")
 def test_noarch_python_with_tests(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     api.build(recipe, config=testing_config)
@@ -658,20 +662,27 @@ def test_noarch_python_1(testing_config):
     assert 'package_metadata_version' in extra
 
 
-@pytest.mark.xfail(strict=True, condition=datetime.now() < datetime(2017, 1, 15),
-                   reason="Need advice from msarahan on config object. The preferred_env stuff "
-                          "isn't critical for 2.1, but the package_metadata.json file with the"
-                          "noarch stuff is.  That's covered sufficiently in the test above.")
-def test_noarch_python_2(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)
-    assert package_has_file(outputs[0], 'info/files') is not ''
-    extra = json.loads(package_has_file(outputs[0], 'info/package_metadata.json').decode())
-    assert 'noarch' in extra
-    assert 'entry_points' in extra['noarch']
-    assert 'type' in extra['noarch']
+def test_legacy_noarch_python(test_config):
+    recipe = os.path.join(metadata_dir, "_legacy_noarch_python")
+    fn = api.get_output_file_path(recipe, config=test_config)
+    # make sure that the package is going into the noarch folder
+    assert os.path.basename(os.path.dirname(fn)) == 'noarch'
+    api.build(recipe, config=test_config)
+
+
+def test_preferred_env(test_config):
+    recipe = os.path.join(metadata_dir, "_preferred_env")
+    fn = api.get_output_file_path(recipe, config=test_config)
+    api.build(recipe, config=test_config)
+    extra = json.loads(package_has_file(fn, 'info/package_metadata.json').decode())
     assert 'preferred_env' in extra
     assert 'name' in extra['preferred_env']
     assert 'executable_paths' in extra['preferred_env']
+    exe_paths = extra['preferred_env']['executable_paths']
+    if on_win:
+        assert exe_paths == ['Scripts/exepath1.bat', 'Scripts/exepath2.bat']
+    else:
+        assert exe_paths == ['bin/exepath1', 'bin/exepath2']
     assert 'package_metadata_version' in extra
 
 
@@ -733,8 +744,10 @@ def test_fix_permissions(testing_config):
 
 
 @pytest.mark.skipif(not on_win, reason="windows-only functionality")
-def test_script_win_creates_exe(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "_script_win_creates_exe"), config=testing_config)
+@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe", "_script_win_creates_exe_garbled"])
+def test_script_win_creates_exe(testing_config, recipe_name):
+    recipe = os.path.join(metadata_dir, recipe_name)
+    outputs = api.build(recipe, config=testing_config)
     assert package_has_file(outputs[0], 'Scripts/test-script.exe')
     assert package_has_file(outputs[0], 'Scripts/test-script-script.py')
 
@@ -796,7 +809,8 @@ def test_remove_workdir_default(testing_config, caplog):
 def test_keep_workdir(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     api.build(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)
-    assert "Not removing work directory after build" in caplog.text()
+    api.build(recipe, config=test_config, dirty=True, remove_work_dir=False, debug=True)
+    assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(testing_config.work_dir, '*'))
     testing_config.clean()
 
@@ -829,3 +843,14 @@ def test_cross_compiler(testing_workdir, testing_config):
     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
     output = api.build(recipe_dir, config=testing_config)[0]
     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
+    api.build(recipe, config=test_config, remove_work_dir=False)
+    assert "Not removing work directory after build" in caplog.text
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
+def test_append_python_app_osx(test_config):
+    """Recipes that use osx_is_app need to have python.app in their runtime requirements."""
+    recipe = os.path.join(metadata_dir, '_nexpy')
+    # tests will fail here if python.app is not added to the run reqs by conda-build, because
+    #    without it, pythonw will be missing.
+    api.build(recipe, config=test_config, channel_urls=('nexpy', ))

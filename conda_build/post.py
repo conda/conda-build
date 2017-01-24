@@ -71,7 +71,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
     encoding = sys.stdout.encoding or 'utf8'
 
-    py_exec = ('/bin/bash ' + prefix + '/bin/python.app'
+    py_exec = ('/bin/bash ' + prefix + '/bin/pythonw'
                if sys.platform == 'darwin' and osx_is_app else
                prefix + '/bin/' + basename(build_python))
     new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
@@ -430,7 +430,7 @@ def post_build(m, files, prefix, build_python, croot):
     binary_relocation = m.binary_relocation()
     if not binary_relocation:
         print("Skipping binary relocation logic")
-    osx_is_app = bool(m.get_value('build/osx_is_app', False))
+    osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
 
     check_symlinks(files, prefix, croot)
 

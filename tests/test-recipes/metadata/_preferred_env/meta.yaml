@@ -1,0 +1,11 @@
+package:
+  name: preferred_env_test_package
+  version: "1.0"
+
+build:
+  preferred_env: _env_
+  preferred_env_executable_paths:
+    - bin/exepath1            [unix]
+    - bin/exepath2            [unix]
+    - Scripts/exepath1.bat    [win]
+    - Scripts/exepath2.bat    [win]

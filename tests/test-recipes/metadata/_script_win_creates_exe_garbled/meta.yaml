@@ -1,0 +1,13 @@
+package:
+  name: script_win_creates_exe
+  version: 1.0
+
+source:
+  path: .
+
+build:
+  script: python setup.py install
+
+requirements:
+  build:
+    - python

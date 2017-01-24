@@ -1,3 +1,37 @@
+2017-01-20 2.1.2:
+
+Enhancements:
+-------------
+
+* iron out compatibility with conda 4.3 #1667
+* pytest improvements for a cleaner CI experience #1686 #1687
+
+Bug fixes:
+----------
+
+* Avoid trailing semicolon in MSYS2_ARG_CONV_EXCL variable setting #1651
+* filter .git directories more strictly (keep x.git folders, not .git) #1657
+* fix 404's killing CPAN skeleton with newer conda versions #1667
+* use pythonw to run tests on OSX when osx_is_app is defined in meta.yaml #1669
+* ignore obnoxious .DS_Store files when packaging  #1670
+* fix --source argument to download source specified in meta.yaml #1671
+* fix slashes in file prefix replacement on Windows #1680
+* fix multiple source url fallbacks (handle CondaHTTPErrors) #1683
+* fix bizarre encoding errors on Windows with projects that embed binary in setup files #1685
+* fix CPAN JSON file encoding issue on windows #1688
+* revise retry when conda is missing files from a package #1690
+
+Contributors:
+-------------
+
+* @dfroger
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @nicoddemus
+* @pkgw
+
+
 2017-01-12 2.1.1:
 
 Bug fixes:

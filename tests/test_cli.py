@@ -8,8 +8,10 @@ import os
 import sys
 import yaml
 
+from distutils.version import LooseVersion
 import pytest
 
+import conda
 from conda_build.conda_interface import download
 from conda_build.tarcheck import TarCheck
 
@@ -45,12 +47,14 @@ def test_build_with_conda_not_on_path(testing_workdir):
         check_call_env('conda-build {0}'.format(os.path.join(metadata_dir, "python_run")).split(),
                               env=os.environ)
 
+
 def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
 
-    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate', '--no-anaconda-upload',
-            os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
+    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate',
+            '--no-anaconda-upload', os.path.join(metadata_dir,
+                                                 "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
 
@@ -92,7 +96,8 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
     assert output.rstrip() == test_path, error
 
 
-def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata, testing_config, capfd):
+def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata, testing_config,
+                                                  capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
     metadata = api.render(testing_workdir, config=testing_config)[0][0]
@@ -113,6 +118,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metad
     output, error = capfd.readouterr()
     # assert error == ""
     assert output.rstrip().splitlines() == test_paths, error
+
 
 def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
@@ -144,10 +150,20 @@ def test_build_output_folder(testing_workdir, testing_metadata, capfd):
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload',
                 '--output-folder', out]
         output = main_build.execute(args)[0]
-        assert os.path.isfile(os.path.join(out, testing_metadata.config.host_subdir, os.path.basename(output)))
+        assert os.path.isfile(os.path.join(out, testing_metadata.config.host_subdir,
+                                           os.path.basename(output)))
+
+
+def test_build_source(testing_workdir):
+    with TemporaryDirectory() as tmp:
+        args = [os.path.join(metadata_dir, '_pyyaml_find_header'), '--source', '--no-build-id',
+                '--croot', tmp, '--no-activate', '--no-anaconda-upload', ]
+        main_build.execute(args)
+        assert os.path.isfile(os.path.join(tmp, 'work', 'PyYAML-3.11', 'setup.py'))
 
 
 def test_render_output_build_path_set_python(testing_workdir, testing_metadata, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
         version = "2.7"
@@ -173,7 +189,7 @@ def test_skeleton_pypi(testing_workdir, testing_config):
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--croot', testing_config.croot, '--no-activate',]
+    args = ['click', '--no-anaconda-upload', '--croot', testing_config.croot, '--no-activate']
     main_build.execute(args)
 
 
@@ -222,7 +238,8 @@ def test_metapackage(testing_config, testing_workdir):
 
 def test_metapackage_build_number(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
-    args = ['metapackage_test_build_number', '1.0', '-d', 'bzip2', '--build-number', '1', '--no-anaconda-upload']
+    args = ['metapackage_test_build_number', '1.0', '-d', 'bzip2', '--build-number', '1',
+            '--no-anaconda-upload']
     main_metapackage.execute(args)
     test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                              'metapackage_test_build_number-1.0-*_1.tar.bz2'))[0]
@@ -231,7 +248,8 @@ def test_metapackage_build_number(testing_config, testing_workdir):
 
 def test_metapackage_build_string(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
-    args = ['metapackage_test_build_string', '1.0', '-d', 'bzip2', '--build-string', 'frank', '--no-anaconda-upload']
+    args = ['metapackage_test_build_string', '1.0', '-d', 'bzip2', '--build-string', 'frank',
+            '--no-anaconda-upload']
     main_metapackage.execute(args)
     test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                              'metapackage_test_build_string-1.0-frank*.tar.bz2'))[0]
@@ -350,6 +368,8 @@ def test_convert(testing_workdir, testing_config):
             tar.correct_subdir()
 
 
+@pytest.mark.skipif(LooseVersion(conda.__version__) >= LooseVersion('4.3'),
+                    reason="conda 4.3 removed sign support")
 def test_sign(testing_workdir):
     # test keygen
     args = ['-k', 'testkey']

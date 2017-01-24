@@ -3,7 +3,7 @@ import os
 from conda_build.source import _guess_patch_strip_level, apply_patch
 
 
-def test_patch_strip_level(testing_workdir):
+def test_patch_strip_level(testing_workdir, monkeypatch):
     patchfiles = set(('some/common/prefix/one.txt',
                       'some/common/prefix/two.txt',
                       'some/common/prefix/three.txt'))
@@ -14,13 +14,13 @@ def test_patch_strip_level(testing_workdir):
         with open(os.path.join(os.path.join(*folders), file), 'w') as f:
             f.write('hello\n')
     assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 0
-    os.chdir(folders[0])
+    monkeypatch.chdir(folders[0])
     assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 1
-    os.chdir(folders[1])
+    monkeypatch.chdir(folders[1])
     assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 2
-    os.chdir(folders[2])
+    monkeypatch.chdir(folders[2])
     assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 3
-    os.chdir(testing_workdir)
+    monkeypatch.chdir(testing_workdir)
 
 
 def test_patch(testing_workdir, testing_config):

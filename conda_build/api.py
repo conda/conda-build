@@ -22,6 +22,7 @@ import sys as _sys
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
+from conda_build.utils import conda_43 as _conda_43
 
 
 def render(recipe_path, config=None, variants=None, **kwargs):
@@ -87,6 +88,9 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     from conda_build.conda_interface import string_types
     from conda_build.utils import find_recipe
 
+    assert post in (None, True, False), ("post must be boolean or None.  Remember, you must pass "
+                                         "other arguments (config) by keyword.")
+
     config = get_or_merge_config(config, **kwargs)
 
     recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
@@ -105,10 +109,14 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     recipes.extend(metadata)
     absolute_recipes = []
     for recipe in recipes:
-        if hasattr(recipe, "config") or os.path.isabs(recipe):
+        if hasattr(recipe, "config"):
             absolute_recipes.append(recipe)
         else:
-            absolute_recipes.append(os.path.normpath(os.path.join(os.getcwd(), recipe)))
+            if not os.path.isabs(recipe):
+                recipe = os.path.normpath(os.path.join(os.getcwd(), recipe))
+            if not os.path.exists(recipe):
+                raise ValueError("Path to recipe did not exist: {}".format(recipe))
+            absolute_recipes.append(recipe)
 
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
                       need_source_download=need_source_download, config=config, variants=variants)
@@ -143,6 +151,8 @@ def keygen(name="conda_build_signing", size=2048):
     name: string name of key to be generated.
     size: length of the RSA key, in bits.  Should be power of 2.
     """
+    if _conda_43():
+        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
     from .sign import keygen
     return keygen(name, size)
 
@@ -153,18 +163,24 @@ def import_sign_key(private_key_path, new_name=None):
           generated automatically.  Specify ```new_name``` also to rename the
           private key in the copied location.
     """
+    if _conda_43():
+        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
     from .sign import import_key
     return import_key(private_key_path, new_name=new_name)
 
 
 def sign(file_path, key_name_or_path=None):
     """Create a signature file for accompanying a package"""
+    if _conda_43():
+        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
     from .sign import sign_and_write
     return sign_and_write(file_path, key_name_or_path)
 
 
 def verify(file_path):
     """Verify a signed package"""
+    if _conda_43():
+        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
     from .sign import verify
     return verify(file_path)
 
