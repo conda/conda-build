@@ -374,38 +374,40 @@ def handle_config_version(ms, ver, dep_type='run'):
 
 def build_string_from_metadata(metadata):
     if metadata.meta.get('build', {}).get('string'):
-        return metadata.get_value('build/string')
-    res = []
-    version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
-    for name, s in (('numpy', 'np'), ('python', 'py'),
-                    ('perl', 'pl'), ('lua', 'lua'),
-                    ('r', 'r'), ('r-base', 'r')):
-        for ms in metadata.ms_depends('run'):
-            if ms.name == name:
-                try:
-                    v = ms.spec.split()[1]
-                except IndexError:
-                    if name not in ['numpy']:
-                        res.append(s)
+        build_str = metadata.get_value('build/string')
+    else:
+        res = []
+        version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)(?:[\.\*])?')
+        for name, s in (('numpy', 'np'), ('python', 'py'),
+                        ('perl', 'pl'), ('lua', 'lua'),
+                        ('r', 'r'), ('r-base', 'r')):
+            for ms in metadata.ms_depends('run'):
+                if ms.name == name:
+                    try:
+                        v = ms.spec.split()[1]
+                    except IndexError:
+                        if name not in ['numpy']:
+                            res.append(s)
+                        break
+                    # compound constraints and indeterminate specs can't isolate the right version.
+                    if any(i in v for i in ',|>!<'):
+                        continue
+                    if name not in ['perl', 'lua', 'r', 'r-base']:
+                        match = version_pat.match(v)
+                        if match:
+                            res.append(s + match.group(1) + match.group(2))
+                    else:
+                        res.append(s + v.strip('*'))
                     break
-                # compound constraints and indeterminate specs can't isolate the right version.
-                if any(i in v for i in ',|>!<'):
-                    continue
-                if name not in ['perl', 'lua', 'r', 'r-base']:
-                    match = version_pat.match(v)
-                    if match:
-                        res.append(s + match.group(1) + match.group(2))
-                else:
-                    res.append(s + v.strip('*'))
-                break
 
-    features = ensure_list(metadata.get_value('build/features', []))
-    if res:
-        res.append('_')
-    if features:
-        res.extend(('_'.join(features), '_'))
-    res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
-    return "".join(res)
+        features = ensure_list(metadata.get_value('build/features', []))
+        if res:
+            res.append('_')
+        if features:
+            res.extend(('_'.join(features), '_'))
+        res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
+        build_str = "".join(res)
+    return build_str
 
 
 # This really belongs in conda, and it is int conda.cli.common,
@@ -443,9 +445,6 @@ class MetaData(object):
         #    accessing and changing this attribute.
         self.config = copy.deepcopy(get_or_merge_config(config, variant=variant))
 
-        # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.final = False
-
         if isfile(path):
             self.meta_path = path
             self.path = os.path.dirname(path)
@@ -465,6 +464,8 @@ class MetaData(object):
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
+        # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
+        self.final = False
         self.parse_again(permit_undefined_jinja=True)
         self.config.disable_pip = self.disable_pip
 
@@ -597,12 +598,9 @@ class MetaData(object):
         m.meta = sanitize(metadata)
 
         if not config:
-            config = Config()
-        if not variant:
-            variant = {}
+            config = Config(variant=variant)
 
         m.config = config
-        m.variant = variant
         m.undefined_jinja_vars = []
         m.final = False
 
@@ -768,6 +766,8 @@ class MetaData(object):
                 out = ret[0] + self._hash_dependencies()
             if len(ret) > 1:
                 out = '_'.join([out] + ret[1:])
+        else:
+            out = re.sub('h[0-9]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
         return out
 
     def dist(self):

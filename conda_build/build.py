@@ -599,7 +599,9 @@ def bundle_conda(output, metadata, env, **kw):
         files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
     tmp_metadata = copy.deepcopy(metadata)
     tmp_metadata.meta['package']['name'] = output['name']
-    tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
+    requirements = tmp_metadata.meta.get('requirements', {})
+    requirements['run'] = output.get('requirements', [])
+    tmp_metadata.meta['requirements'] = requirements
 
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  metadata.build_id()]) + '.tar.bz2')
@@ -654,7 +656,7 @@ def bundle_conda(output, metadata, env, **kw):
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=metadata.config.locking)
 
-    update_index(os.path.dirname(output_folder), config=metadata.config)
+    update_index(output_folder, config=metadata.config)
 
     # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
     if os.path.basename(output_folder) != 'noarch':
@@ -699,7 +701,7 @@ bundlers = {
 }
 
 
-def build(m, indexes, variant, post=None, need_source_download=True, need_reparse_in_env=False):
+def build(m, variant, index, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
 
@@ -753,7 +755,7 @@ def build(m, indexes, variant, post=None, need_source_download=True, need_repars
                                     "your mercurial actions outside of your build script.")
 
         environ.create_env(m.config.build_prefix, specs, config=m.config,
-                           subdir=m.config.build_subdir)
+                           subdir=m.config.build_subdir, index=index)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -781,12 +783,12 @@ def build(m, indexes, variant, post=None, need_source_download=True, need_repars
             # dependencies.
             with utils.path_prepended(m.config.build_prefix):
                 source.provide(m)
-            m = reparse(m, indexes, variant)
+            m = reparse(m, index)
             if m.uses_jinja:
                 print("BUILD START (revised):", m.dist())
 
         elif need_reparse_in_env:
-            m = reparse(m, indexes, variant)
+            m = reparse(m, index)
             print("BUILD START (revised):", m.dist())
 
         # get_dir here might be just work, or it might be one level deeper,
@@ -935,14 +937,9 @@ can lead to packages that include their dependencies.""" % meta_files))
                 if made_meta and not any(m.name() in out.get('name', '') for out in outputs):
                     outputs.append({'name': m.name(), 'requirements': requirements})
 
-        output_folders = set()
         for output in outputs:
             built_package = bundlers[output.get('type', 'conda')](output, m, env)
             built_packages.append(built_package)
-            output_folders.add(os.path.dirname(built_package))
-
-        for folder in output_folders:
-            update_index(folder, m.config, could_be_mirror=False)
 
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -992,6 +989,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     log = logging.getLogger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     need_cleanup = False
+    hash_input = {}
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata_tuples = [(recipedir_or_package_or_metadata, None, None)]
@@ -1009,12 +1007,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             if os.path.isdir(info_dir):
                 with open(os.path.join(info_dir, 'index.json')) as f:
                     config.host_subdir = json.load(f)['subdir']
-            metadata_tuples = render_recipe(recipe_dir, config=config)
-        except IOError:
-            raise IOError("Didn't find recipe in folder or package under test.  Can't test "
-                          "this after exiting build.")
-        # this recipe came from an extracted tarball.
-        if need_cleanup:
+                with open(os.path.join(info_dir, 'hash_input.json')) as f:
+                    hash_input = json.load(f)
+
             # ensure that the local location of the package is indexed, so that conda can find the
             #    local package
             local_location = os.path.dirname(recipedir_or_package_or_metadata)
@@ -1032,12 +1027,19 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             #    how to add elements.
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
+
+            metadata_tuples = render_recipe(recipe_dir, config=config)
+
             metadata = metadata_tuples[0][0]
             if (metadata.meta.get('test') and metadata.meta['test'].get('source_files') and
                     not os.listdir(config.work_dir)):
                 source.provide(metadata)
+        except IOError:
+            raise IOError("Didn't find recipe in folder or package under test.  Can't test "
+                          "this after exiting build.")
 
     for (metadata, _, _) in metadata_tuples:
+        metadata.meta.update(hash_input)
         config.compute_build_id(metadata.name())
         environ.clean_pkg_cache(metadata.dist(), config)
         create_files(config.test_dir, metadata)
@@ -1287,15 +1289,15 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
 
         try:
             with config:
-
-                indexes = {env: get_build_index(config,
-                                                getattr(config, '{}_subdir'.format(env)))
-                           for env in ('build', 'host')}
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                    if metadata.config.index:
+                        index = metadata.config.index
+                    else:
+                        index = get_build_index(config, config.build_subdir)
                     if not metadata.final:
-                        metadata = finalize_metadata(metadata, metadata.config.variant, indexes)
-                    packages_from_this = build(metadata, indexes=indexes, variant=config.variant,
-                                               post=post,
+                        metadata = finalize_metadata(metadata, index)
+                    packages_from_this = build(metadata, variant=config.variant,
+                                               index=index, post=post,
                                                need_source_download=need_source_download,
                                                need_reparse_in_env=need_reparse_in_env)
                     if not notest:
@@ -1462,15 +1464,16 @@ def is_package_built(metadata):
         if not os.path.isdir(d):
             os.makedirs(d)
         update_index(d, metadata.config, could_be_mirror=False)
-    index = get_build_index(config=metadata.config, clear_cache=True)
+    if not metadata.config.index:
+        metadata.config.index = get_build_index(config=metadata.config, clear_cache=True)
 
     urls = [url_path(metadata.config.croot)] + get_rc_urls()
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 
     # will be empty if none found, and evalute to False
-    package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in index]
-    return package_exists or metadata.pkg_fn() in index
+    package_exists = [url for url in urls if url + '::' + metadata.pkg_fn() in metadata.conig.index]
+    return package_exists or metadata.pkg_fn() in metadata.config.index
 
 
 def is_noarch_python(meta):

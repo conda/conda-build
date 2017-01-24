@@ -128,10 +128,13 @@ def test_disallow_dash_in_features(testing_metadata):
 
 
 def test_append_section_data(testing_metadata):
+    testing_metadata.final = False
+    testing_metadata.parse_again()
+    requirements_len = len(testing_metadata.meta['requirements']['build'])
     testing_metadata.config.append_sections_file = os.path.join(thisdir, 'test-append.yaml')
     testing_metadata.final = False
     testing_metadata.parse_again()
-    assert len(testing_metadata.meta['requirements']['build']) == 2
+    assert len(testing_metadata.meta['requirements']['build']) == requirements_len + 1
     assert 'frank' in testing_metadata.meta['requirements']['build']
 
 

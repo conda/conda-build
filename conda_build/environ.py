@@ -270,7 +270,7 @@ def python_vars(config):
         'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
         'SP_DIR': utils.get_site_packages(config.build_prefix),
         'PY_VER': config.variant['python'],
-        'CONDA_PY': config.variant['python'],
+        'CONDA_PY': ''.join(config.variant['python'].split('.')[:2]),
     }
 
     # Only define these variables if '--numpy=X.Y' was provided,
@@ -345,7 +345,8 @@ def meta_vars(meta, config):
     d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
     d['PKG_BUILDNUM'] = str(meta.build_number())
-    d['PKG_BUILD_STRING'] = str(meta.build_id())
+    if meta.final:
+        d['PKG_BUILD_STRING'] = str(meta.build_id())
     d['RECIPE_DIR'] = meta.path
     d['RECIPE_HASH'] = meta._hash_dependencies()
     return d
@@ -550,7 +551,6 @@ def get_conda_operation_locks(config):
     return locks
 
 
-@memoized
 def get_install_actions(prefix, index, specs, config):
     # this is hiding output like:
     #    Fetching package metadata ...........
@@ -561,18 +561,6 @@ def get_install_actions(prefix, index, specs, config):
         actions['LINK'] = [spec for spec in actions['LINK']
                             if not spec.startswith('pip-') and
                             not spec.startswith('setuptools-')]
-    extract_actions = []
-    # for some reason, the extract step is missing the URL prefix
-    for spec in actions['EXTRACT']:
-        if spec in package_cache():
-            extract_actions.append(spec)
-        else:
-            index_entry = index[spec + '.tar.bz2']
-            channel_url = index_entry['channel']
-            if 'subdir' in index_entry:
-                channel_url = channel_url.replace('/' + index_entry['subdir'], "")
-            extract_actions.append('::'.join((channel_url, spec)))
-    actions['EXTRACT'] = extract_actions
     return actions
 
 

@@ -10,7 +10,7 @@ from conda_build.conda_interface import subdir
 from conda_build.variants import get_default_variants
 from conda_build.metadata import MetaData
 from conda_build.render import finalize_metadata
-from conda_build.utils import check_call_env, prepend_bin_path
+from conda_build.utils import check_call_env, prepend_bin_path, capture
 
 
 @pytest.fixture(scope='function')
@@ -43,7 +43,8 @@ def testing_workdir(tmpdir, request):
 
 @pytest.fixture(scope='function')
 def testing_index(request):
-    return get_build_index(config=Config(), subdir=subdir, clear_cache=True)
+    index = get_build_index(config=Config(debug=False, verbose=False), subdir=subdir, clear_cache=True)
+    return index
 
 
 @pytest.fixture(scope='function')

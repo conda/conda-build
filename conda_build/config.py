@@ -13,6 +13,7 @@ import time
 
 from .conda_interface import root_dir, root_writable, cc
 from .conda_interface import binstar_upload
+from .variants import get_default_variants
 
 from .utils import get_build_folders, rm_rf, trim_empty_keys
 
@@ -64,6 +65,8 @@ DEFAULTS = [Setting('activate', True),
             Setting('_host_arch', None),
             Setting('has_separate_host_prefix', False),
 
+            Setting('index', None),
+
             # these are primarily for testing.  They override the native build platform/arch,
             #     which is useful in tests, but makes little sense on actual systems.
             Setting('_platform', None),
@@ -107,7 +110,7 @@ class Config(object):
     def __init__(self, variant=None, **kwargs):
         super(Config, self).__init__()
         # default variant is set in
-        self.variant = variant or {}
+        self.variant = variant or get_default_variants()[0]
         self.set_keys(**kwargs)
 
     def _set_attribute_from_kwargs(self, kwargs, attr, default):
@@ -135,6 +138,8 @@ class Config(object):
                 version = version + '.*'
             return version
 
+        # this is where we override any variant config files with the legacy CONDA_* vars
+        #     or CLI params
         self.variant.update({'perl': env('perl', None),
                    'lua': env('lua', None),
                    'python': env('python', None),

@@ -21,6 +21,7 @@ from conda_build.conda_interface import memoized
 
 from conda_build.config import get_or_merge_config
 from conda_build.utils import on_win, check_call_env
+from conda_build.variants import get_default_variants
 
 CPAN_META = """\
 package:
@@ -190,7 +191,7 @@ def skeletonize(packages, output_dir=".", version=None,
     config = get_or_merge_config(config)
     # TODO: load/use variants?
 
-    perl_version = config.variant['perl']
+    perl_version = config.variant.get('perl', get_default_variants()[0]['perl'])
     package_dicts = {}
     indent = '\n    - '
     processed_packages = set()

@@ -127,7 +127,9 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
     return dicts
 
 
-def get_package_variants(recipedir_or_metadata, config):
+def get_package_variants(recipedir_or_metadata, config=None):
+    if hasattr(recipedir_or_metadata, 'config'):
+        config = recipedir_or_metadata.config
     files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
                               ignore_system_config=config.ignore_system_variants)
     specs = get_default_variants() + [parse_config_file(f) for f in files]

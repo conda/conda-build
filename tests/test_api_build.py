@@ -409,6 +409,8 @@ def test_debug_build_option(testing_metadata, caplog, capfd):
     logging.basicConfig(level=logging.INFO)
     info_message = "INFO"
     debug_message = "DEBUG"
+    testing_metadata.config.debug = False
+    testing_metadata.config.verbose = False
     api.build(testing_metadata)
     # this comes from an info message
     assert info_message in caplog.text()

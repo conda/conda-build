@@ -4,15 +4,19 @@ Functions related to creating repodata index files.
 
 from __future__ import absolute_import, division, print_function
 
-import os
 import bz2
-import sys
+import contextlib
+from functools import partial
 import json
+import logging
+import os
+import sys
 import tarfile
 from os.path import isfile, join, getmtime
 
-from conda_build.utils import file_info, get_lock, try_acquire_locks, capture
-from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, package_cache
+from conda_build.utils import file_info, get_lock, try_acquire_locks
+from conda_build import utils
+from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, package_cache, memoized
 
 # each python process keeps an index.  When a package is done building, it updates this index.
 #    This is a pretty massive performance optimization.
@@ -74,8 +78,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     :type check_md5: bool
     """
 
-    global CURRENT_INDEX
-
     if config.verbose:
         print("updating index in:", dir_path)
     if not os.path.isdir(dir_path):
@@ -110,7 +112,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         necessary nor supported.  If you wish to add your own packages,
         you can do so by adding them to a separate channel.
     """)
-        channel_url = url_path(dir_path)
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:
@@ -122,7 +123,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
             if config.verbose:
                 print('updating:', fn)
             d = read_index_tar(path, config, lock=lock)
-            d['channel'] = channel_url
             d.update(file_info(path))
             index[fn] = d
             # there's only one subdir for a given folder, so only read these contents once
@@ -158,9 +158,8 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
 
         repodata = {'packages': index, 'info': {}}
         write_repodata(repodata, dir_path, lock=lock, config=config)
-        subdir_index = CURRENT_INDEX.get(subdir, {})
-        subdir_index.update(index)
-        CURRENT_INDEX[subdir] = subdir_index
+        # subdir_index = CURRENT_INDEX.get(subdir, {})
+        # subdir_index.update(index)
 
 
 def ensure_valid_channel(local_folder, subdir, config):
@@ -175,20 +174,36 @@ def ensure_valid_channel(local_folder, subdir, config):
 def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
-    global CURRENT_INDEX
-    if CURRENT_INDEX.get(subdir) and not clear_cache:
-        index = CURRENT_INDEX[subdir]
+    if config.debug:
+        log_context = partial(utils.LoggingContext, logging.DEBUG)
+    if config.verbose:
+        capture = contextlib.contextmanager(lambda: (yield))
+        log_context = partial(utils.LoggingContext, logging.INFO)
     else:
-        urls = list(config.channel_urls)
-        if os.path.isdir(config.croot):
-            urls.insert(0, url_path(config.croot))
-        ensure_valid_channel(config.croot, subdir, config)
+        capture = utils.capture
+        log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
 
-        # silence output from conda about fetching index files
+    # Note on conda and indexes:
+    #    get_index is unfortunately much more stateful than simply returning an index.
+    #    You cannot run get_index on one set of channels, and then later append a different
+    #    index from a different set of channels - conda has some other state that it is loading
+    #    and your second get_index will invalidate results from the first.   =(
+
+    # global CURRENT_INDEX
+    # if CURRENT_INDEX.get(subdir) and not clear_cache:
+    #     index = CURRENT_INDEX[subdir]
+    # else:
+    urls = list(config.channel_urls)
+    if os.path.isdir(config.croot):
+        urls.insert(0, url_path(config.croot))
+    ensure_valid_channel(config.croot, subdir, config)
+
+    # silence output from conda about fetching index files
+    with log_context():
         with capture():
             try:
                 index = get_index(channel_urls=urls,
-                                prepend=(not config.override_channels),
+                                prepend=not omit_defaults,
                                 use_local=False,
                                 use_cache=False,
                                 platform=subdir)
@@ -196,9 +211,9 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
             except CondaHTTPError:
                 urls.remove('defaults')
                 index = get_index(channel_urls=urls,
-                                prepend=config.override_channels,
+                                prepend=omit_defaults,
                                 use_local=False,
                                 use_cache=False,
                                 platform=subdir)
-        CURRENT_INDEX[subdir] = index or {}
+        # CURRENT_INDEX[subdir] = index or {}
     return index

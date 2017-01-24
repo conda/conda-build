@@ -46,19 +46,29 @@ def get_env_dependencies(m, env, variant, index=None):
     if not index:
         index = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
     specs = [ms.spec for ms in m.ms_depends(env)]
-    for spec in specs[:]:
+    subpackages = []
+    dependencies = []
+    for spec in specs:
+        is_subpackage = False
         spec_name = spec.split()[0]
+        for entry in m.get_section('outputs'):
+            name = entry.get('name')
+            if name == spec_name:
+                subpackages.append(' '.join((name, m.version())))
+                is_subpackage = True
+        if not is_subpackage:
+            dependencies.append(spec)
         for key, value in variant.items():
             if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
-                specs.append(" ".join((spec_name, value)))
+                dependencies.append(" ".join((spec_name, value)))
     prefix = m.config.host_prefix if env == 'host' else m.config.build_prefix
     try:
-        actions = environ.get_install_actions(prefix, index, specs, m.config)
+        actions = environ.get_install_actions(prefix, index, dependencies, m.config)
     except NoPackagesFoundError as e:
         # we'll get here if the environment is unsatisfiable
         raise UnsatisfiableVariantError("Invalid variant: {}.  Led to unsatisfiable environment.\n"
                                         "Error was: {}".format(variant, str(e)))
-    return actions_to_pins(actions)
+    return actions_to_pins(actions) + subpackages
 
 
 def strip_channel(spec_str):
@@ -67,34 +77,41 @@ def strip_channel(spec_str):
     return spec_str
 
 
-@memoized
-def finalize_metadata(m, variant, indexes):
+def finalize_metadata(m, index):
     """Fully render a recipe.  Fill in versions for build dependencies."""
-    rendered_metadata = copy.deepcopy(m)
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
     #     be installed in the environment.
-    deps = {env: get_env_dependencies(m, env, variant, indexes[env]) for env in ('build', 'host')}
-    build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in deps['build']}
-    if not rendered_metadata.meta.get('build'):
-        rendered_metadata.meta['build'] = {}
-    # hard-code build string so that any future "renderings" can't go wrong based on user env
-    rendered_metadata.meta['build']['string'] = m.build_id()
+    build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
+    # optimization: we don't need the index after here, and copying them takes a lot of time.
+    rendered_metadata = copy.deepcopy(m)
+    build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
 
-    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
-    for env, values in deps.items():
-        if values:
-            rendered_metadata.meta['requirements'][env] = [strip_channel(dep) for dep in values]
+    reset_index = False
+    # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
+    if m.config.build_subdir != m.config.host_subdir:
+        index = get_build_index(m.config, m.config.host_subdir)
+        reset_index = True
+    run_deps = get_env_dependencies(m, 'run', m.config.variant, index)
+
+    if reset_index:
+        index = None
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
     #     names to have this behavior.
-    run_deps = rendered_metadata.meta['requirements'].get('run', [])
+    requirements = rendered_metadata.meta.get('requirements', {})
+    run_deps = requirements.get('run', [])
     for dep in run_deps[:]:
         dep_name = dep.split()[0]
-        if dep_name in variant.get('pin_run_as_build', []) and dep_name in build_dep_versions:
+        if (dep_name in m.config.variant.get('pin_run_as_build', []) and
+                dep_name in build_dep_versions):
             run_deps.append(" ".join((dep_name, build_dep_versions[dep_name])))
 
-    rendered_metadata.meta['requirements']['run'] = [strip_channel(dep) for dep in run_deps]
+    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
+    for env, values in (('build', build_deps), ('run', run_deps)):
+        if values:
+            requirements[env] = [strip_channel(dep) for dep in values]
+    rendered_metadata.meta['requirements'] = requirements
 
     if not rendered_metadata.meta.get('test'):
         rendered_metadata.meta['test'] = {}
@@ -111,11 +128,18 @@ def finalize_metadata(m, variant, indexes):
         elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
             rendered_metadata.meta['source']['git_url'] = os.path.normpath(
                 os.path.join(m.path, m.meta['source']['git_url']))
+
+    if not rendered_metadata.meta.get('build'):
+        rendered_metadata.meta['build'] = {}
+    # hard-code build string so that any future "renderings" can't go wrong based on user env
+    rendered_metadata.meta['build']['string'] = rendered_metadata.build_id()
+
     rendered_metadata.final = True
+    rendered_metadata.config.index = index
     return rendered_metadata
 
 
-def parse_or_try_download(metadata, no_download_source, config, variants, force_download=False):
+def parse_or_try_download(metadata, no_download_source, variants, force_download=False):
     log = logging.getLogger(__name__)
     need_reparse_in_env = True
     need_source_download = True
@@ -123,7 +147,7 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not config.dirty or len(os.listdir(metadata.config.work_dir)) == 0:
+            if not metadata.config.dirty or len(os.listdir(metadata.config.work_dir)) == 0:
                 source.provide(metadata)
             if not metadata.get_section('source') or len(os.listdir(metadata.config.work_dir)) > 0:
                 need_source_download = False
@@ -143,7 +167,7 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
                          "no_download_source.")
 
     if metadata.get_value('build/noarch'):
-        config.noarch = True
+        metadata.config.noarch = True
 
     if 'host' in metadata.get_section('requirements'):
         metadata.config.has_separate_host_prefix = True
@@ -152,9 +176,7 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
     metadata.parse_again(permit_undefined_jinja=True)
 
     outputs = {}
-    indexes = {env: get_build_index(metadata.config,
-                                          getattr(metadata.config, '{}_subdir'.format(env)))
-                                          for env in ('build', 'host')}
+    index = get_build_index(metadata.config, metadata.config.build_subdir)
     for variant in variants:
         varmeta = copy.deepcopy(metadata)
         varmeta.config.variant = variant
@@ -165,8 +187,8 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
         except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
             log.warn("Need to create build environment to fully render this recipe.  Doing so.")
             specs = [ms.spec for ms in metadata.ms_depends('build')]
-            environ.create_env(config.build_prefix, specs, config=config,
-                               subdir=config.build_subdir)
+            environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
+                               subdir=metadata.config.build_subdir)
             need_reparse_in_env = False
 
         metadata.config.noarch = bool((metadata.get_value('build/noarch') or
@@ -179,7 +201,7 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
             # computes hashes based on whatever the current specs are - not the final specs
             #    This is a deduplication step.  Any variants that end up identical because a given
             #    variant is not used in a recipe are effectively ignored.
-            final = reparse(varmeta, indexes, variant)
+            final = reparse(varmeta, index)
         except UnsatisfiableVariantError as e:
             log.warn("Unsatisfiable variant: {}"
                      "Error was {}".format(variant, e))
@@ -188,14 +210,14 @@ def parse_or_try_download(metadata, no_download_source, config, variants, force_
     return outputs.values()
 
 
-def reparse(metadata, indexes, variant):
+def reparse(metadata, index):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
     metadata.final = False
     sys.path.insert(0, metadata.config.build_prefix)
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
     metadata.parse_again(permit_undefined_jinja=False)
-    return finalize_metadata(metadata, variant, indexes)
+    return finalize_metadata(metadata, index)
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None):
@@ -232,14 +254,15 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m, config)
+    variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m)
 
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
     rendered_metadata = parse_or_try_download(m,
                                               no_download_source=no_download_source,
-                                              config=config, variants=variants)
+                                              variants=variants)
+    assert rendered_metadata, "whoops - there's supposed to be a recipe's metadata here..."
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 

@@ -41,7 +41,8 @@ def output_yaml(metadata, file_path=None):
     return output_yaml(metadata, file_path)
 
 
-def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None, **kwargs):
+def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None,
+                         **kwargs):
     """Get output file paths for any packages that would be created by a recipe
 
     Both split packages (recipes with more than one ouptut) and build matrices,
@@ -77,6 +78,10 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     If recipe paths are provided, renders recipe before building.
     Tests built packages by default.  notest=True to skip test."""
+
+    if post not in (True, False, None):
+        raise ValueError("post must be boolean or None.  Did you forget to pass config by keyword?")
+
     import os
     from conda_build.build import build_tree
     from conda_build.conda_interface import string_types

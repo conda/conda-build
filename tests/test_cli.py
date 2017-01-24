@@ -94,7 +94,8 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
 
 def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata, testing_config, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
-    metadata = api.render(testing_workdir)[0][0]
+    testing_config.verbose = False
+    metadata = api.render(testing_workdir, config=testing_config)[0][0]
 
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     args = ['--output', testing_workdir, skip_recipe]
