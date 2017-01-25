@@ -851,7 +851,7 @@ class MetaData(object):
             metayaml = f.read()
             for vcs in vcs_types:
                 matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
-                if len(matches) > 0:
+                if len(matches) > 0 and vcs != self.meta['package']['name']:
                     if vcs == "hg":
                         vcs = "mercurial"
                     return vcs
@@ -873,7 +873,7 @@ class MetaData(object):
                         #   3. a target url or other argument
                         matches = re.findall(r"{}(?:\.exe)?(?:\s+\w+\s+[\w\/\.:@]+)".format(vcs),
                                             build_script, flags=re.IGNORECASE)
-                        if len(matches) > 0:
+                        if len(matches) > 0 and vcs != self.meta['package']['name']:
                             if vcs == "hg":
                                 vcs = "mercurial"
                             return vcs
