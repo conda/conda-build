@@ -32,8 +32,9 @@ def render(recipe_path, config=None, variants=None, **kwargs):
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
-    return render_recipe(recipe_path, no_download_source=config.no_download_source, config=config,
+    metadata, _ = render_recipe(recipe_path, no_download_source=config.no_download_source, config=config,
                          variants=variants)
+    return metadata
 
 
 def output_yaml(metadata, file_path=None):
@@ -54,7 +55,7 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
     if hasattr(recipe_path_or_metadata, 'config'):
         metadata = [(recipe_path_or_metadata, None, None)]
     else:
-        metadata = render_recipe(recipe_path_or_metadata,
+        metadata, _ = render_recipe(recipe_path_or_metadata,
                                  no_download_source=no_download_source,
                                  config=config)
     return [bldpkg_path(m[0]) for m in metadata]
@@ -68,7 +69,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
     """
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
-    metadata = render_recipe(recipe_path, no_download_source=no_download_source,
+    metadata, _ = render_recipe(recipe_path, no_download_source=no_download_source,
                              config=config)
     return all(m[0].check_fields() for m in metadata)
 

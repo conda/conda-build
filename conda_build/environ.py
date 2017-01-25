@@ -26,7 +26,7 @@ from conda_build.os_utils import external
 from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
-from conda_build.index import update_index, get_build_index
+from conda_build.index import get_build_index
 
 
 def get_npy_ver(config):
@@ -542,10 +542,7 @@ def get_conda_operation_locks(config):
             if not os.path.isdir(folder):
                 os.makedirs(folder)
             lock = utils.get_lock(folder, timeout=config.timeout)
-            if not folder.endswith('pkgs'):
-                update_index(folder, config=config, lock=lock,
-                             could_be_mirror=False)
-                locks.append(lock)
+            locks.append(lock)
         # lock used to generally indicate a conda operation occurring
         locks.append(utils.get_lock('conda-operation', timeout=config.timeout))
     return locks
@@ -581,7 +578,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
         if os.path.isdir(prefix):
             utils.rm_rf(prefix)
 
-        specs = list(specs)
+        specs = list(set(specs))
         for feature, value in feature_list:
             if value:
                 specs.append('%s@' % feature)

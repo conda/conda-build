@@ -13,7 +13,6 @@ import uuid
 
 # for version
 import conda
-from datetime import datetime
 
 from conda_build.conda_interface import PY3, url_path
 
@@ -78,12 +77,12 @@ def recipe(request):
 
 
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
-def test_recipe_builds(recipe, test_config, testing_workdir, monkeypatch):
+def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
-    outputs = api.build(recipe, config=test_config)
+    api.build(recipe, config=testing_config)
 
 
 def test_token_upload(testing_workdir):
@@ -150,7 +149,8 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     outputs = api.build(testing_metadata)
     assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
-    output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'), config=testing_config)[0]
+    output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
+                            config=testing_config)[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 
@@ -193,7 +193,8 @@ def test_relative_path_git_versioning(testing_workdir, testing_config):
     cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
                                        'conda_build_test_recipe'))
     tag = describe_root(cwd)
-    output = api.get_output_file_path(os.path.join(metadata_dir, "_source_git_jinja2_relative_path"),
+    output = api.get_output_file_path(os.path.join(metadata_dir,
+                                                   "_source_git_jinja2_relative_path"),
                                       config=testing_config)[0]
     assert tag in output
 
@@ -240,7 +241,7 @@ def dummy_executable(folder, exename):
     return exename
 
 
-def test_checkout_tool_as_dependency(testing_workdir, test_config, monkeypatch):
+def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatch):
     # temporarily necessary because we have custom rebuilt svn for longer prefix here
     testing_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
@@ -309,6 +310,7 @@ def test_pip_in_meta_yaml_fail(testing_workdir, testing_config):
         api.build(os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=testing_config)
         assert "environment.yml" in str(exc)
 
+
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows doesn't show this error")
 def test_broken_conda_meta(testing_workdir, testing_config):
@@ -329,7 +331,7 @@ def test_recursive_fail(testing_workdir, testing_config):
 def test_jinja_typo(testing_workdir, testing_config):
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
-    assert "'GIT_DSECRIBE_TAG' is undefined" in exc.exconly()
+    assert "GIT_DSECRIBE_TAG" in exc.exconly()
 
 
 @pytest.mark.serial
@@ -355,7 +357,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     # create the index so conda can find the file
     api.update_index(platform, config=testing_metadata.config)
 
-    # HACK: manually create noarch location there, so that conda 4.3.2+ considers this a valid channel
+    # HACK: manually create noarch location there, so that conda 4.3.2+ considers a valid channel
     noarch = os.path.join(output_dir, 'noarch')
     os.makedirs(noarch)
     api.update_index(noarch, config=testing_metadata.config)
@@ -611,7 +613,8 @@ def test_disable_pip(testing_config):
         api.build(metadata)
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'), reason="rpath fixup only done on Linux so far.")
+@pytest.mark.skipif(not sys.platform.startswith('linux'),
+                    reason="rpath fixup only done on Linux so far.")
 def test_rpath_linux(testing_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
 
@@ -662,19 +665,17 @@ def test_noarch_python_1(testing_config):
     assert 'package_metadata_version' in extra
 
 
-def test_legacy_noarch_python(test_config):
-    recipe = os.path.join(metadata_dir, "_legacy_noarch_python")
-    fn = api.get_output_file_path(recipe, config=test_config)
+def test_legacy_noarch_python(testing_config):
+    output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"),
+                       config=testing_config)[0]
     # make sure that the package is going into the noarch folder
-    assert os.path.basename(os.path.dirname(fn)) == 'noarch'
-    api.build(recipe, config=test_config)
+    assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
 
-def test_preferred_env(test_config):
+def test_preferred_env(testing_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
-    fn = api.get_output_file_path(recipe, config=test_config)
-    api.build(recipe, config=test_config)
-    extra = json.loads(package_has_file(fn, 'info/package_metadata.json').decode())
+    output = api.build(recipe, config=testing_config)[0]
+    extra = json.loads(package_has_file(output, 'info/package_metadata.json').decode())
     assert 'preferred_env' in extra
     assert 'name' in extra['preferred_env']
     assert 'executable_paths' in extra['preferred_env']
@@ -744,7 +745,8 @@ def test_fix_permissions(testing_config):
 
 
 @pytest.mark.skipif(not on_win, reason="windows-only functionality")
-@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe", "_script_win_creates_exe_garbled"])
+@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe",
+                                         "_script_win_creates_exe_garbled"])
 def test_script_win_creates_exe(testing_config, recipe_name):
     recipe = os.path.join(metadata_dir, recipe_name)
     outputs = api.build(recipe, config=testing_config)
@@ -759,7 +761,8 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
 
 
 def test_info_files_json(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "ignore_some_prefix_files"), config=testing_config)
+    outputs = api.build(os.path.join(metadata_dir, "ignore_some_prefix_files"),
+                        config=testing_config)
     assert package_has_file(outputs[0], "info/paths.json")
     with tarfile.open(outputs[0]) as tf:
         data = json.loads(tf.extractfile('info/paths.json').read().decode('utf-8'))
@@ -809,7 +812,7 @@ def test_remove_workdir_default(testing_config, caplog):
 def test_keep_workdir(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     api.build(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)
-    api.build(recipe, config=test_config, dirty=True, remove_work_dir=False, debug=True)
+    api.build(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)
     assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(testing_config.work_dir, '*'))
     testing_config.clean()
@@ -834,7 +837,7 @@ def test_workdir_removal_warning_no_remove(testing_config, caplog):
                     reason="cross compiler packages created only on Linux right now")
 @pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
                    reason="subdir support only in later versions of conda")
-def test_cross_compiler(testing_workdir, testing_config):
+def test_cross_compiler(testing_workdir, testing_config, caplog):
     # TODO: testing purposes.  Package on @mingwandroid's channel.
     testing_config.channel_urls = ('rdonnelly', )
     # activation is necessary to set the appropriate toolchain env vars
@@ -843,14 +846,14 @@ def test_cross_compiler(testing_workdir, testing_config):
     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
     output = api.build(recipe_dir, config=testing_config)[0]
     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
-    api.build(recipe, config=test_config, remove_work_dir=False)
+    api.build(recipe, config=testing_config, remove_work_dir=False)
     assert "Not removing work directory after build" in caplog.text
 
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
-def test_append_python_app_osx(test_config):
+def test_append_python_app_osx(testing_config):
     """Recipes that use osx_is_app need to have python.app in their runtime requirements."""
     recipe = os.path.join(metadata_dir, '_nexpy')
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
-    api.build(recipe, config=test_config, channel_urls=('nexpy', ))
+    api.build(recipe, config=testing_config, channel_urls=('nexpy', ))

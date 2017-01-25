@@ -78,8 +78,9 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     :type check_md5: bool
     """
 
-    if config.verbose:
-        print("updating index in:", dir_path)
+    log = logging.getLogger(__name__)
+
+    log.debug("updating index in: %s", dir_path)
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
 

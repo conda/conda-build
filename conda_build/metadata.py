@@ -444,7 +444,7 @@ class MetaData(object):
         self.undefined_jinja_vars = []
         # decouple this config from whatever was fed in.  People must change config by
         #    accessing and changing this attribute.
-        self.config = copy.deepcopy(get_or_merge_config(config, variant=variant))
+        self.config = copy.copy(get_or_merge_config(config, variant=variant))
 
         if isfile(path):
             self.meta_path = path
@@ -733,7 +733,7 @@ class MetaData(object):
     def _get_hash_dictionary(self):
         sections = ['source', 'requirements', 'build']
         # make a copy of values, so that no sorting occurs in place
-        composite = HashableDict({section: copy.deepcopy(self.get_section(section))
+        composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
         # remove the build number from the hash, so that we can bump it without changing the hash
         if 'number' in composite['build']:

@@ -194,6 +194,8 @@ def skeletonize(packages, output_dir=".", version=None,
     # TODO: load/use variants?
 
     perl_version = config.variant.get('perl', get_default_variants()[0]['perl'])
+    # wildcards are not valid for perl
+    perl_version = perl_version.replace(".*", "")
     package_dicts = {}
     indent = '\n    - '
     processed_packages = set()

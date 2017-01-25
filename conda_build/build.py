@@ -352,7 +352,7 @@ def write_package_metadata_json(m):
         package_metadata["preferred_env"] = preferred_env_dict
     if package_metadata:
         package_metadata["package_metadata_version"] = 1
-        with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
+        with open(os.path.join(m.config.info_dir, "package_metadata.json"), 'w') as fh:
             fh.write(json.dumps(package_metadata, sort_keys=True, indent=2, separators=(',', ': ')))
 
 
@@ -605,7 +605,8 @@ def bundle_conda(output, metadata, env, **kw):
                     [os.path.join(metadata.path, output['script'])],
                     cwd=metadata.config.host_prefix, env=env)
         files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
-    tmp_metadata = copy.deepcopy(metadata)
+    tmp_metadata = copy.copy(metadata)
+    tmp_metadata.meta = copy.deepcopy(metadata.meta)
     tmp_metadata.meta['package']['name'] = output['name']
     requirements = tmp_metadata.meta.get('requirements', {})
     requirements['run'] = output.get('requirements', [])
@@ -614,9 +615,9 @@ def bundle_conda(output, metadata, env, **kw):
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  metadata.build_id()]) + '.tar.bz2')
     files = list(set(utils.expand_globs(files, metadata.config.host_prefix)))
-    files = filter_files(files, prefix=config.build_prefix)
+    files = filter_files(files, prefix=metadata.config.build_prefix)
     info_files = create_info_files(tmp_metadata, files, prefix=metadata.config.host_prefix)
-    info_files = filter_files(info_files, prefix=config.build_prefix)
+    info_files = filter_files(info_files, prefix=metadata.config.build_prefix)
     for f in info_files:
         if f not in files:
             files.append(f)
@@ -735,6 +736,8 @@ def build(m, variant, index, post=None, need_source_download=True, need_reparse_
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     built_packages = []
+
+    m.config.noarch = bool((m.get_value('build/noarch') or m.get_value('build/noarch_python')))
 
     if post in [False, None]:
         if m.uses_jinja and (need_source_download or need_reparse_in_env):
@@ -1019,14 +1022,11 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 with open(os.path.join(info_dir, 'hash_input.json')) as f:
                     hash_input = json.load(f)
 
-            # ensure that the local location of the package is indexed, so that conda can find the
-            #    local package
             local_location = os.path.dirname(recipedir_or_package_or_metadata)
             # strip off extra subdir folders
             for platform in ('win', 'linux', 'osx'):
                 if os.path.basename(local_location).startswith(platform + "-"):
                     local_location = os.path.dirname(local_location)
-            update_index(local_location, config=config)
 
             if not os.path.abspath(local_location):
                 local_location = os.path.normpath(os.path.abspath(
@@ -1037,7 +1037,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
 
-            metadata_tuples = render_recipe(recipe_dir, config=config)
+            metadata_tuples, _ = render_recipe(recipe_dir, config=config)
 
             metadata = metadata_tuples[0][0]
             if (metadata.meta.get('test') and metadata.meta['test'].get('source_files') and
@@ -1112,7 +1112,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         suffix = "bat" if utils.on_win else "sh"
         test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        # we want subdir to match the target arch.  If we're runnin the test on the target arch,
+        # we want subdir to match the target arch.  If we're running the test on the target arch,
         #     the build_subdir should be that match.  The host_subdir may not be, and would lead
         #     to unsatisfiable packages.
         environ.create_env(config.test_prefix, specs, config=config, subdir=config.build_subdir)
@@ -1271,9 +1271,13 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             to_build_recursive.append(metadata.name())
             metadata_tuples = []
             for variant in variants:
-                m = copy.deepcopy(metadata)
+                m = copy.copy(metadata)
+                # deep copy a couple of the more sensitive parts to decouple different metadata objects
+                m.meta = copy.deepcopy(metadata.meta)
+                m.config = copy.deepcopy(metadata.config)
                 m.config.variant = variant
                 metadata_tuples.append((m, None, None))
+            index = None
         else:
             recipe_parent_dir = os.path.dirname(recipe)
             recipe = recipe.rstrip("/").rstrip("\\")
@@ -1285,7 +1289,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             # each tuple is:
             #    metadata, need_source_download, need_reparse_in_env =
             # We get one tuple per variant
-            metadata_tuples = render_recipe(recipe, config=config, variants=variants)
+            metadata_tuples, index = render_recipe(recipe, config=config, variants=variants)
         if not getattr(config, "noverify", False):
             verifier = Verify()
             ignore_scripts = config.ignore_recipe_verify_scripts if \
@@ -1299,9 +1303,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         try:
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
-                    if metadata.config.index:
-                        index = metadata.config.index
-                    else:
+                    if not index:
                         index = get_build_index(config, config.build_subdir)
                     if not metadata.final:
                         metadata = finalize_metadata(metadata, index)
@@ -1333,7 +1335,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([recipe])
-            original_recipe_list = copy.deepcopy(recipe_list)
+            original_recipe_list = copy.copy(recipe_list)
             for pkg in e.packages:
                 if pkg in to_build_recursive:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n {1}"
@@ -1472,7 +1474,7 @@ def is_package_built(metadata):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, metadata.config, could_be_mirror=False)
+            update_index(d, metadata.config, could_be_mirror=False)
     if not metadata.config.index:
         metadata.config.index = get_build_index(config=metadata.config, clear_cache=True)
 

@@ -19,7 +19,7 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3, memoized, NoPackagesFoundError
+from .conda_interface import PY3, UnsatisfiableError
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
@@ -64,7 +64,7 @@ def get_env_dependencies(m, env, variant, index=None):
     prefix = m.config.host_prefix if env == 'host' else m.config.build_prefix
     try:
         actions = environ.get_install_actions(prefix, index, dependencies, m.config)
-    except NoPackagesFoundError as e:
+    except UnsatisfiableError as e:
         # we'll get here if the environment is unsatisfiable
         raise UnsatisfiableVariantError("Invalid variant: {}.  Led to unsatisfiable environment.\n"
                                         "Error was: {}".format(variant, str(e)))
@@ -83,16 +83,17 @@ def finalize_metadata(m, index):
     #     be installed in the environment.
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
-    rendered_metadata = copy.deepcopy(m)
+    rendered_metadata = copy.copy(m)
     build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
 
     reset_index = False
-    # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
-    if m.config.build_subdir != m.config.host_subdir:
+    if m.config.build_subdir != m.config.host_subdir and m.config.host_subdir != 'noarch':
         index = get_build_index(m.config, m.config.host_subdir)
         reset_index = True
     run_deps = get_env_dependencies(m, 'run', m.config.variant, index)
 
+    # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
+    #    To avoid confusion, any index passed around is always the native build platform.
     if reset_index:
         index = None
 
@@ -159,55 +160,53 @@ def parse_or_try_download(metadata, no_download_source, variants, force_download
 
     elif not metadata.get_section('source'):
         need_source_download = False
-        need_reparse_in_env = False
 
     if need_source_download and no_download_source:
         raise ValueError("no_download_source specified, but can't fully render recipe without"
                          " downloading source.  Please fix the recipe, or don't use "
                          "no_download_source.")
 
-    if metadata.get_value('build/noarch'):
-        metadata.config.noarch = True
-
     if 'host' in metadata.get_section('requirements'):
         metadata.config.has_separate_host_prefix = True
 
-    # this additional parse ensures that jinja2 stuff is evaluated
-    metadata.parse_again(permit_undefined_jinja=True)
+    try:
+        # this additional parse ensures that jinja2 stuff is evaluated
+        metadata.parse_again(permit_undefined_jinja=True)
+        need_reparse_in_env = False
 
-    outputs = {}
-    index = get_build_index(metadata.config, metadata.config.build_subdir)
-    for variant in variants:
-        varmeta = copy.deepcopy(metadata)
-        varmeta.config.variant = variant
-        if 'target_platform' in variant:
-            varmeta.config.host_subdir = variant['target_platform']
-        try:
-            varmeta.parse_until_resolved(config=varmeta.config)
-        except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-            log.warn("Need to create build environment to fully render this recipe.  Doing so.")
-            specs = [ms.spec for ms in metadata.ms_depends('build')]
-            environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
-                               subdir=metadata.config.build_subdir)
-            need_reparse_in_env = False
+        outputs = {}
+        index = get_build_index(metadata.config, metadata.config.build_subdir)
+        for variant in variants:
+            varmeta = copy.copy(metadata)
+            varmeta.config.variant = variant
+            if 'target_platform' in variant:
+                varmeta.config.host_subdir = variant['target_platform']
+            try:
+                varmeta.parse_until_resolved(config=varmeta.config)
+            except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
+                log.warn("Need to create build environment to fully render this recipe.  Doing so.")
+                specs = [ms.spec for ms in metadata.ms_depends('build')]
+                environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
+                                subdir=metadata.config.build_subdir)
+                need_reparse_in_env = False
 
-        metadata.config.noarch = bool((metadata.get_value('build/noarch') or
-                                       metadata.get_value('build/noarch_python')))
-        try:
-            # keys in variant are named after package, but config is still used for some things.
-            #    This overrides the config with the variant settings.  The initial config
-            #    overrides the variant, though, so the variant is only clobbering in the case
-            #    where no CONDA_PY variables are set, or no version args passed to config object.
-            # computes hashes based on whatever the current specs are - not the final specs
-            #    This is a deduplication step.  Any variants that end up identical because a given
-            #    variant is not used in a recipe are effectively ignored.
-            final = reparse(varmeta, index)
-        except UnsatisfiableVariantError as e:
-            log.warn("Unsatisfiable variant: {}"
-                     "Error was {}".format(variant, e))
-            continue
-        outputs[final.build_id()] = (final, need_source_download, need_reparse_in_env)
-    return outputs.values()
+            try:
+                # keys in variant are named after package, but config is still used for some things.
+                #    This overrides the config with the variant settings.  The initial config
+                #    overrides the variant, though, so the variant is only clobbering in the case
+                #    where no CONDA_PY variables are set, or no version args passed to config obj.
+                # computes hashes based on whatever the current specs are - not the final specs
+                #    This is a deduplication step.  Any variants that end up identical because a
+                #    given variant is not used in a recipe are effectively ignored.
+                final = reparse(varmeta, index)
+            except UnsatisfiableVariantError as e:
+                log.warn("Unsatisfiable variant: {}"
+                        "Error was {}".format(variant, e))
+                continue
+            outputs[final.build_id()] = (final, need_source_download, need_reparse_in_env)
+    except exceptions.UnableToParseMissingSetuptoolsDependencies:
+        outputs = [(metadata, need_source_download, need_reparse_in_env), ]
+    return outputs.values(), index
 
 
 def reparse(metadata, index):
@@ -259,14 +258,14 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
-    rendered_metadata = parse_or_try_download(m,
+    rendered_metadata, index = parse_or_try_download(m,
                                               no_download_source=no_download_source,
                                               variants=variants)
     assert rendered_metadata, "whoops - there's supposed to be a recipe's metadata here..."
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 
-    return rendered_metadata
+    return rendered_metadata, index
 
 
 # Next bit of stuff is to support YAML output in the order we expect.
