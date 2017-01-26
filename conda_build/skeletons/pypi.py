@@ -302,6 +302,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 all_urls=False, pypi_url='https://pypi.python.org/pypi', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
+                extra_specs=[],
                 pin_numpy=False):
     client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
@@ -404,7 +405,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
-                             noprompt, packages, config=config, setup_options=setup_options)
+                             noprompt, packages, extra_specs, config=config, setup_options=setup_options)
 
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -553,6 +554,13 @@ def add_parser(repos):
              "to CONDA_NPY."
     )
 
+    pypi.add_argument(
+        "--extra-specs",
+        action='append',
+        default=[],
+        help="Extra specs for the build environment to extract the skeleton.",
+    )
+
 
 def get_xmlrpc_client(pypi_url):
     return ServerProxy(pypi_url, transport=RequestsTransport())
@@ -652,7 +660,7 @@ def version_compare(package, versions):
 
 def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
                          recursive, created_recipes, noarch_python, noprompt, packages,
-                         config, setup_options):
+                         extra_specs, config, setup_options):
 
     print("Downloading %s" % package)
 
@@ -661,6 +669,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           pypiurl=d['pypiurl'],
                           md5=d['md5'],
                           python_version=python_version,
+                          extra_specs=extra_specs,
                           setup_options=setup_options,
                           config=config)
 
@@ -895,7 +904,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_options):
+def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, config, setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
     # package uses distribute).  Our strategy is to download the package
@@ -922,7 +931,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_o
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version, config=config, setup_options=setup_options)
+        run_setuppy(src_dir, tempdir, python_version, extra_specs=extra_specs, config=config, setup_options=setup_options)
         try:
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
                 pkg_info = yaml.load(fn)
@@ -934,7 +943,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_o
     return pkg_info
 
 
-def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
+def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_options):
     '''
     Patch distutils and then run setup.py in a subprocess.
 
@@ -948,6 +957,9 @@ def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:
             specs.append('numpy')
+
+    specs.extend(extra_specs)
+
     # Do everything in the build env in case the setup.py install goes
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some
