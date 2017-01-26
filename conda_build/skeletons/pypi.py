@@ -360,7 +360,19 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         if is_url:
             d['version'] = 'UNKNOWN'
         else:
-            versions = sorted(client.package_releases(package, True), key=parse_version)
+            # need to treat hidden and visible packages separately.
+            # the behavior of PyPI XML API differs from the documentation in certain
+            # cases. See
+            # https://github.com/pypa/pypi-legacy/issues/189#issuecomment-275515861
+
+            sort_by_version = lambda l: sorted(l, key=parse_version)
+
+            hidden_versions = sort_by_version(client.package_releases(package, True))
+            visible_versions = sort_by_version(client.package_releases(package, False))
+
+            # this list of available versions is the union of hidden and visible ones.
+            versions = sort_by_version(set(hidden_versions + visible_versions))
+
             if version_compare:
                 version_compare(versions)
             if version:
@@ -369,7 +381,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                              % (version, package))
                 d['version'] = version
             else:
-                if not versions:
+                # select the most visible version from PyPI.
+                if not visible_versions:
                     # The xmlrpc interface is case sensitive, but the index itself
                     # is apparently not (the last time I checked,
                     # len(set(all_packages_lower)) == len(set(all_packages)))
@@ -381,14 +394,14 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                             del package_dicts[package]
                             continue
                     sys.exit("Error: Could not find any versions of package %s" % package)
-                if len(versions) > 1:
+                if len(visible_versions) > 1:
                     print("Warning, the following versions were found for %s" %
                           package)
-                    for ver in versions:
+                    for ver in visible_versions:
                         print(ver)
-                    print("Using %s" % versions[-1])
+                    print("Using %s" % visible_versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = versions[-1]
+                d['version'] = visible_versions[-1]
 
         data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(client,
                                                                         package,
@@ -474,7 +487,8 @@ def add_parser(repos):
     )
     pypi.add_argument(
         "--version",
-        help="Version to use. Applies to all packages.",
+        help="""Version to use. Applies to all packages. If not specified the
+              lastest visible version on PyPI is used.""",
     )
     pypi.add_argument(
         "--all-urls",
@@ -509,8 +523,8 @@ def add_parser(repos):
     pypi.add_argument(
         "--version-compare",
         action='store_true',
-        help="""Compare the package version of the recipe with the one available
-        on PyPI."""
+        help="""Compare the package version of the recipe with all available
+        versions on PyPI."""
     )
     pypi.add_argument(
         "--python-version",
