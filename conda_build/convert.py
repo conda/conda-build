@@ -208,8 +208,11 @@ pyver_re = re.compile(r'python\s+(?:(?:[<>=]*)(\d.\d))?')
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
-    paths = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
-    _check_paths_version(paths)
+    try:
+        paths = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
+        _check_paths_version(paths)
+    except KeyError:
+        paths = None
     source_plat = info['platform']
     source_type = 'unix' if source_plat in {'osx', 'linux'} else 'win'
     dest_plat, dest_arch = platform.split('-')
@@ -252,6 +255,7 @@ def get_pure_py_file_map(t, platform):
     members = t.getmembers()
     file_map = {}
     paths_mapping_dict = {} # keep track of what we change in files
+    pathmember = None
     for member in members:
         # Update metadata
         if member.path == 'info/index.json':
@@ -314,17 +318,20 @@ def get_pure_py_file_map(t, platform):
                     files.append(newpath)
 
     # Change paths.json the same way that we changed files
-    updated_paths = _update_paths(paths, paths_mapping_dict)
-    paths = json.dumps(updated_paths, sort_keys=True,
-                       indent=4, separators=(',', ': '))
+    if paths:
+        updated_paths = _update_paths(paths, paths_mapping_dict)
+        paths = json.dumps(updated_paths, sort_keys=True,
+                           indent=4, separators=(',', ': '))
     files = '\n'.join(sorted(files)) + '\n'
     if PY3:
         files = bytes(files, 'utf-8')
-        paths = bytes(paths, 'utf-8')
+        if paths:
+            paths = bytes(paths, 'utf-8')
     filemember.size = len(files)
-    pathmember.size = len(paths)
     file_map['info/files'] = filemember, bytes_io(files)
-    file_map['info/paths.json'] = pathmember, bytes_io(paths)
+    if pathmember:
+        pathmember.size = len(paths)
+        file_map['info/paths.json'] = pathmember, bytes_io(paths)
 
     return file_map
 
