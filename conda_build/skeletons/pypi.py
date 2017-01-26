@@ -15,6 +15,7 @@ from shutil import copy2
 import subprocess
 import sys
 from tempfile import mkdtemp
+import zipfile
 
 import pkginfo
 import requests
@@ -138,6 +139,7 @@ class PyPIPackagesCompleter(Completer):
         client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
 
+
 pypi_example = """
 Examples:
 
@@ -155,12 +157,13 @@ Use the --pypi-url flag to point to a PyPI mirror url:
 """
 
 PYPI_META = """\
+{{% set fn = "{filename}" %}}
 package:
   name: {packagename}
   version: "{version}"
 
 source:
-  fn: {filename}
+  fn: {{{{ fn }}}}
   url: {pypiurl}
   {usemd5}md5: {md5}
 #  patches:
@@ -168,6 +171,7 @@ source:
    # - fix.patch
 
 {build_comment}build:
+  command: pip install --no-deps {install_name}
   {noarch_python_comment}noarch_python: True
   {egg_comment}preserve_egg_dir: True
   {entry_comment}entry_points:
@@ -185,7 +189,8 @@ source:
 
 requirements:
   build:
-    - python{build_depends}
+    - python
+    - pip{build_depends}
 
   run:
     - python{run_depends}
@@ -217,28 +222,6 @@ about:
 # more information about meta.yaml
 """
 
-PYPI_BUILD_SH = """\
-#!/bin/bash
-
-$PYTHON setup.py install {recipe_setup_options}
-
-# Add more build steps here, if they are necessary.
-
-# See
-# http://docs.continuum.io/conda/build.html
-# for a list of environment variables that are set during the build process.
-"""
-
-PYPI_BLD_BAT = """\
-"%PYTHON%" setup.py install {recipe_setup_options}
-if errorlevel 1 exit 1
-
-:: Add more build steps here, if they are necessary.
-
-:: See
-:: http://docs.continuum.io/conda/build.html
-:: for a list of environment variables that are set during the build process.
-"""
 
 # Note the {} formatting bits here
 DISTUTILS_PATCH = '''\
@@ -352,6 +335,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 'egg_comment': '# ',
                 'summary_comment': '',
                 'home_comment': '',
+                'install_name': '.',
             })
         if is_url:
             del d['packagename']
@@ -442,12 +426,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         name = d['packagename']
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
+
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
             f.write(PYPI_META.format(**d))
-        with open(join(output_dir, name, 'build.sh'), 'w') as f:
-            f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
-            f.write(PYPI_BLD_BAT.format(**d))
 
 
 def add_parser(repos):
@@ -479,7 +460,7 @@ def add_parser(repos):
         "--all-urls",
         action="store_true",
         help="""Look at all URLs, not just source URLs. Use this if it can't
-                find the right URL.""",
+                find the right URL, or if the package only provides a wheel.""",
     )
     pypi.add_argument(
         "--pypi-url",
@@ -558,17 +539,33 @@ def get_xmlrpc_client(pypi_url):
     return ServerProxy(pypi_url, transport=RequestsTransport())
 
 
+def source_first(url):
+    """Sorting function to prioritize sdists"""
+    kind = url['python_version']
+    if kind == 'source':
+        return ''  # sort 'source' first
+    else:
+        return kind
+
+
 def get_download_data(client, package, version, is_url, all_urls, noprompt, manual_url):
     data = client.release_data(package, version) if not is_url else None
     urls = client.release_urls(package, version) if not is_url else [package]
+    if not is_url:
+        urls = sorted(urls, key=source_first)
+        source_urls = [url for url in urls if url['python_version'] == 'source']
+    else:
+        source_urls = urls
+
     if not is_url and not all_urls:
-        # Try to find source urls
-        urls = [url for url in urls if url['python_version'] == 'source']
+        urls = source_urls
+
+    urls = sorted(urls, key=source_first)
     if not urls:
         if 'download_url' in data:
             urls = [defaultdict(str, {'url': data['download_url']})]
             if not urls[0]['url']:
-                # The package doesn't have a url, or maybe it only has a wheel.
+                # The package doesn't have a url.
                 sys.exit("Error: Could not build recipe for %s. "
                     "Could not find any valid urls." % package)
             U = parse_url(urls[0]['url'])
@@ -583,7 +580,7 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
                 md5 = ''
         else:
             sys.exit("Error: No source urls found for %s" % package)
-    if len(urls) > 1 and not noprompt:
+    if len(source_urls) > 1 and not noprompt:
         print("More than one source version is available for %s:" %
                 package)
         if manual_url:
@@ -664,6 +661,10 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           setup_options=setup_options,
                           config=config)
 
+    is_wheel = d['filename'].lower().endswith('.whl')
+    if is_wheel:
+        d['install_name'] = '{{ fn }}'
+
     setuptools_build = pkginfo.get('setuptools', False)
     setuptools_run = False
 
@@ -685,7 +686,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 print("The string was", newstr)
                 entry_points = pkginfo['entry_points']
             else:
-                setuptools_run = True
                 for section in _config.sections():
                     if section in ['console_scripts', 'gui_scripts']:
                         value = ['%s=%s' % (option, _config.get(section, option))
@@ -728,12 +728,17 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             for dep in deptext:
                 # ... and may also contain comments...
                 dep = dep.split('#')[0].strip()
+                marker = None
+                if ';' in dep:
+                    dep, marker = [s.strip() for s in dep.split(';', 1)]
                 if dep:  # ... and empty (or comment only) lines
                     spec = spec_from_line(dep)
                     if spec is None:
                         sys.exit("Error: Could not parse: %s" % dep)
+                    if marker:
+                        # TODO: transform Python environment markers to conda
+                        spec += '  # FIXME: %s' % marker
                     deps.append(spec)
-
         if 'setuptools' in deps:
             setuptools_build = False
             setuptools_run = False
@@ -850,6 +855,8 @@ def unpack(src_path, tempdir):
         tar_xf(src_path, tempdir)
     elif src_path.endswith('.zip'):
         unzip(src_path, tempdir)
+    elif src_path.endswith('.whl'):
+        copy2(src_path, tempdir)
     else:
         raise Exception("not a valid source: %s" % src_path)
 
@@ -886,7 +893,8 @@ def get_requirements(package, pkginfo, all_extras=True):
 
     # ... and collect all needed requirement specs in a single list:
     requires = []
-    for specs in [pkginfo.get('install_requires', "")] + extras_require:
+    for specs in [pkginfo.get('install_requires', "")] + extras_require + \
+                 pkginfo.get('requires_dist', []):
         if isinstance(specs, string_types):
             requires.append(specs)
         else:
@@ -916,18 +924,30 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_o
             download(pypiurl, join(config.src_cache, filename))
         else:
             print("Using cached download")
-        print("Unpacking %s..." % package)
-        unpack(join(config.src_cache, filename), tempdir)
-        print("done")
-        print("working in %s" % tempdir)
-        src_dir = get_dir(tempdir)
-        # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version, config=config, setup_options=setup_options)
-        try:
-            with open(join(tempdir, 'pkginfo.yaml')) as fn:
-                pkg_info = yaml.load(fn)
-        except IOError:
-            pkg_info = pkginfo.SDist(download_path).__dict__
+        if filename.lower().endswith('.whl'):
+            # get pkginfo from wheel metadata
+            pkg_info = pkginfo.Wheel(download_path).__dict__
+            # add entrypoints ourselves, which pkginfo.Wheel doesn't find
+            zf = zipfile.ZipFile(download_path)
+            entrypoints_files = [f for f in zf.filelist
+                if f.filename.endswith('.dist-info/entry_points.txt')]
+            if entrypoints_files:
+                entrypoints_text = zf.read(entrypoints_files[-1])
+                pkg_info['entry_points'] = entrypoints_text.decode('utf8', 'replace')
+        else:
+            print("Unpacking %s..." % package)
+            unpack(join(config.src_cache, filename), tempdir)
+            print("done")
+            print("working in %s" % tempdir)
+            src_dir = get_dir(tempdir)
+            # TODO: find args parameters needed by run_setuppy
+            run_setuppy(src_dir, tempdir, python_version, config=config,
+                        setup_options=setup_options)
+            try:
+                with open(join(tempdir, 'pkginfo.yaml')) as fn:
+                    pkg_info = yaml.load(fn)
+            except IOError:
+                pkg_info = pkginfo.SDist(download_path).__dict__
     finally:
         rm_rf(tempdir)
 
