@@ -38,7 +38,11 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    return [' '.join(spec.split()[0].rsplit('-', 2)) for spec in actions['LINK']]
+    if utils.conda_43():
+        spec_name = lambda x: x.dist_name
+    else:
+        spec_name = lambda x: x
+    return [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
 
 
 def get_env_dependencies(m, env, variant, index=None):

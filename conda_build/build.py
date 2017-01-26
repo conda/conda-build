@@ -1259,48 +1259,48 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         else:
             post = None
 
-        recipe = recipe_list.popleft()
-        if hasattr(recipe, 'config'):
-            metadata = recipe
-            config = metadata.config
-            # this code is duplicated below because we need to be sure that the build id is set
-            #    before downloading happens - or else we lose where downloads are
-            if config.set_build_id:
-                config.compute_build_id(metadata.name(), reset=True)
-            recipe_parent_dir = ""
-            to_build_recursive.append(metadata.name())
-            metadata_tuples = []
-            for variant in variants:
-                m = copy.copy(metadata)
-                # deep copy a couple of the more sensitive parts to decouple different metadata objects
-                m.meta = copy.deepcopy(metadata.meta)
-                m.config = copy.deepcopy(metadata.config)
-                m.config.variant = variant
-                metadata_tuples.append((m, None, None))
-            index = None
-        else:
-            recipe_parent_dir = os.path.dirname(recipe)
-            recipe = recipe.rstrip("/").rstrip("\\")
-            to_build_recursive.append(os.path.basename(recipe))
-
-            #    before downloading happens - or else we lose where downloads are
-            if config.set_build_id:
-                config.compute_build_id(os.path.basename(recipe), reset=True)
-            # each tuple is:
-            #    metadata, need_source_download, need_reparse_in_env =
-            # We get one tuple per variant
-            metadata_tuples, index = render_recipe(recipe, config=config, variants=variants)
-        if not getattr(config, "noverify", False):
-            verifier = Verify()
-            ignore_scripts = config.ignore_recipe_verify_scripts if \
-                config.ignore_recipe_verify_scripts else None
-            run_scripts = config.run_recipe_verify_scripts if \
-                config.run_recipe_verify_scripts else None
-            for m_tuple in metadata_tuples:
-                verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
-                                    rendered_meta=m_tuple[0].meta, recipe_dir=m_tuple[0].path)
-
         try:
+            recipe = recipe_list.popleft()
+            if hasattr(recipe, 'config'):
+                metadata = recipe
+                config = metadata.config
+                # this code is duplicated below because we need to be sure that the build id is set
+                #    before downloading happens - or else we lose where downloads are
+                if config.set_build_id:
+                    config.compute_build_id(metadata.name(), reset=True)
+                recipe_parent_dir = ""
+                to_build_recursive.append(metadata.name())
+                metadata_tuples = []
+                for variant in variants:
+                    m = copy.copy(metadata)
+                    # deep copy a couple of the more sensitive parts to decouple different metadata objects
+                    m.meta = copy.deepcopy(metadata.meta)
+                    m.config = copy.deepcopy(metadata.config)
+                    m.config.variant = variant
+                    metadata_tuples.append((m, None, None))
+                index = None
+            else:
+                recipe_parent_dir = os.path.dirname(recipe)
+                recipe = recipe.rstrip("/").rstrip("\\")
+                to_build_recursive.append(os.path.basename(recipe))
+
+                #    before downloading happens - or else we lose where downloads are
+                if config.set_build_id:
+                    config.compute_build_id(os.path.basename(recipe), reset=True)
+                # each tuple is:
+                #    metadata, need_source_download, need_reparse_in_env =
+                # We get one tuple per variant
+                metadata_tuples, index = render_recipe(recipe, config=config, variants=variants)
+            if not getattr(config, "noverify", False):
+                verifier = Verify()
+                ignore_scripts = config.ignore_recipe_verify_scripts if \
+                    config.ignore_recipe_verify_scripts else None
+                run_scripts = config.run_recipe_verify_scripts if \
+                    config.run_recipe_verify_scripts else None
+                for m_tuple in metadata_tuples:
+                    verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
+                                        rendered_meta=m_tuple[0].meta, recipe_dir=m_tuple[0].path)
+
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
                     if not index:
@@ -1316,7 +1316,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                             if pkg.endswith('.tar.bz2'):
                                 # we only know how to test conda packages
                                 try:
-                                    test(pkg, config=metadata.config)
+                                    test(pkg, config=config)
                                 # IOError means recipe was not included with package. use metadata
                                 except IOError:
                                     # force the build string to line up - recomputing it would

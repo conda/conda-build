@@ -27,6 +27,7 @@ from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
 from conda_build.index import get_build_index
+from conda_build.exceptions import DependencyNeedsBuildingError
 
 
 def get_npy_ver(config):
@@ -549,15 +550,24 @@ def get_conda_operation_locks(config):
 
 
 def get_install_actions(prefix, index, specs, config):
+    if config.verbose:
+        capture = contextlib.contextmanager(lambda: (yield))
+    else:
+        capture = utils.capture
     # this is hiding output like:
     #    Fetching package metadata ...........
     #    Solving package specifications: ..........
-    with utils.capture():
-        actions = plan.install_actions(prefix, index, specs)
-    if config.disable_pip:
-        actions['LINK'] = [spec for spec in actions['LINK']
-                            if not spec.startswith('pip-') and
-                            not spec.startswith('setuptools-')]
+    actions = {'LINK': []}
+    if specs:
+        with capture():
+            try:
+                actions = plan.install_actions(prefix, index, specs)
+            except NoPackagesFoundError as exc:
+                raise DependencyNeedsBuildingError(exc)
+        if config.disable_pip:
+            actions['LINK'] = [spec for spec in actions['LINK']
+                                if not spec.startswith('pip-') and
+                                not spec.startswith('setuptools-')]
     return actions
 
 

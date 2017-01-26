@@ -15,9 +15,9 @@ DEFAULT_EXTEND_KEYS = ['pin_run_as_build']
 DEFAULT_VARIANTS = {
     'python': ['{0}.{1}.*'.format(sys.version_info.major, sys.version_info.minor)],
     'numpy': ['1.11.*'],
-    'perl': ['5.20.*'],
+    'perl': ['5.22.2.*'],
     'lua': ['5.2.*'],
-    'r_base': ['3.3.1.*'],
+    'r_base': ['3.3.2.*'],
     'pin_run_as_build': ['python']
 }
 

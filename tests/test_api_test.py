@@ -7,7 +7,6 @@ import os
 import pytest
 
 from conda_build import api
-# * import because pytest fixtures need to be all imported
 from .utils import metadata_dir
 
 

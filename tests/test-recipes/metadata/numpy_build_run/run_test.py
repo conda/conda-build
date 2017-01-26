@@ -13,7 +13,8 @@ def main():
     with open(info_file, 'r') as fh:
         info = json.load(fh)
 
-    assert len(info['depends']) == 2
+    # numpy with no version, python with no version, python with version pin
+    assert len(info['depends']) == 3
     depends = sorted(info['depends'])
     # With no version
     assert depends[0] == 'numpy'

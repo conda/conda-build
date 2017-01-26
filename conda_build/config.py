@@ -267,7 +267,7 @@ class Config(object):
         return res
 
     def compute_build_id(self, package_name, reset=False):
-        if not self._build_id or reset:
+        if self.set_build_id and (not self._build_id or reset):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
                                                      "to preserve croot during path joins")
             build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)

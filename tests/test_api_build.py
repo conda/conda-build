@@ -28,7 +28,6 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env, conda_43)
 from conda_build.os_utils.external import find_executable
 
-# * import because pytest fixtures need to be all imported
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
