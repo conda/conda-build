@@ -90,6 +90,12 @@ def unpack(meta, config):
         tar_xf(src_path, config.work_dir)
     elif src_path.lower().endswith('.zip'):
         unzip(src_path, config.work_dir)
+    elif src_path.lower().endswith('.whl'):
+        # copy wheel itself *and* unpack it
+        # This allows test_files or about.license_file to locate files in the wheel,
+        # as well as `pip install name-version.whl` as install command
+        unzip(src_path, config.work_dir)
+        copy_into(src_path, config.work_dir, config.timeout, locking=config.locking)
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
