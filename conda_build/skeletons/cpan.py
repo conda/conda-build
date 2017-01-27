@@ -283,6 +283,9 @@ def skeletonize(packages, output_dir=".", version=None,
             packages.extend(packages_to_append)
             empty_recipe = False
 
+        # If we are recursively getting packages for a particular version
+        # we need to make sure this is reset on the loop
+        version = None
         if exists(dir_path) and not force:
             print('Directory %s already exists and you have not specified --force ' % dir_path)
             continue
