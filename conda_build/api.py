@@ -173,8 +173,6 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
 
-    from pprint import pprint
-
     version = getattr(config, "version", version)
     #I dont now if these do anything
     if version:
