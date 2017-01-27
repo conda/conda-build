@@ -1,7 +1,6 @@
 import os
 
 from conda_build import api
-from .utils import testing_workdir, test_config
 
 
 def test_update_index(testing_workdir, test_config):

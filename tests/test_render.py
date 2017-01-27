@@ -1,7 +1,5 @@
 from conda_build import api
 
-from .utils import testing_workdir, test_config, test_metadata
-
 
 def test_output_with_noarch_says_noarch(test_metadata):
     test_metadata.meta['noarch'] = 'python'

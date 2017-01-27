@@ -4,10 +4,9 @@ This module tests the test API.  These are high-level integration tests.
 
 import os
 
-import pytest
-
 from conda_build import api
-from .utils import metadata_dir, testing_workdir, test_config, test_metadata
+from .utils import metadata_dir
+
 
 def test_package_test(testing_workdir, test_config):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""

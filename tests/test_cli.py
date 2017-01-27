@@ -18,8 +18,7 @@ from conda_build import api
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
                                check_call_env)
 from conda_build.conda_interface import TemporaryDirectory
-from .utils import (testing_workdir, metadata_dir, testing_env, test_config, test_metadata,
-                    put_bad_conda_on_path)
+from .utils import metadata_dir, put_bad_conda_on_path
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -46,11 +45,13 @@ def test_build_with_conda_not_on_path(testing_workdir):
         check_call_env('conda-build {0}'.format(os.path.join(metadata_dir, "python_run")).split(),
                               env=os.environ)
 
+
 def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
 
-    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate', '--no-anaconda-upload',
+    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate',
+            '--no-anaconda-upload',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
@@ -87,7 +88,8 @@ def test_build_output_build_path(testing_workdir, test_config, test_metadata, ca
     assert output.rstrip() == test_path, error
 
 
-def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, test_metadata, capfd):
+def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, test_metadata,
+                                                  capfd):
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     api.output_yaml(test_metadata, 'meta.yaml')
     args = ['--output', testing_workdir, skip_recipe, '--no-anaconda-upload']
@@ -104,6 +106,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, test_config, 
     output, error = capfd.readouterr()
     assert error == ""
     assert output.rstrip().splitlines() == test_paths, error
+
 
 def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     recipe_path = os.path.join(metadata_dir, "has_prefix_files" + os.path.sep)
@@ -139,7 +142,8 @@ def test_build_output_folder(testing_workdir, test_metadata, capfd):
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload',
                 '--output-folder', out]
         output = main_build.execute(args)[0]
-        assert os.path.isfile(os.path.join(out, test_metadata.config.subdir, os.path.basename(output)))
+        assert os.path.isfile(os.path.join(out, test_metadata.config.subdir,
+                                           os.path.basename(output)))
 
 
 def test_build_source(testing_workdir):
@@ -172,7 +176,7 @@ def test_skeleton_pypi(testing_workdir, test_config):
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot, '--no-activate',]
+    args = ['click', '--no-anaconda-upload', '--croot', test_config.croot, '--no-activate']
     main_build.execute(args)
 
 
