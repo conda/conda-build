@@ -76,10 +76,10 @@ CPAN_BUILD_SH = """\
 # If it has Build.PL use that, otherwise use Makefile.PL
 if [ -f Build.PL ]; then
     perl Build.PL
-    ./Build
-    ./Build test
+    perl ./Build
+    perl ./Build test
     # Make sure this goes in site
-    ./Build install --installdirs site
+    perl ./Build install --installdirs site
 elif [ -f Makefile.PL ]; then
     # Make sure this goes in site
     perl Makefile.PL INSTALLDIRS=site
@@ -166,6 +166,8 @@ def get_cpan_api_url(url, colons):
             rel_dict = json.loads(output)
         except IOError:
             rel_dict = json.loads(codecs.open(json_path, encoding='utf-8').read())
+        except CondaHTTPError:
+            rel_dict = None
     return rel_dict
 
 
@@ -182,8 +184,9 @@ def package_exists(package_name):
     return in_repo
 
 
+# meta_cpan_url="http://api.metacpan.org",
 def skeletonize(packages, output_dir=".", version=None,
-                meta_cpan_url="http://api.metacpan.org",
+                meta_cpan_url="http://fastapi.metacpan.org/v1",
                 recursive=False, config=None):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
@@ -255,7 +258,7 @@ def skeletonize(packages, output_dir=".", version=None,
                                          perl_version,
                                          config=config)
         # Check if recipe directory already exists
-        dir_path = join(output_dir, packagename)
+        dir_path = join(output_dir, packagename, release_data['version'])
         if exists(dir_path):
             raise RuntimeError("directory already exists: %s" % dir_path)
 
@@ -357,8 +360,8 @@ def add_parser(repos):
         help="Version to use. Applies to all packages.",)
     cpan.add_argument(
         "--meta-cpan-url",
-        default='http://api.metacpan.org',
-        help="URL to use for MetaCPAN API.",)
+        default='http://fastapi.metacpan.org/v1',
+        help="URL to use for MetaCPAN API. It must include a version, such as v1",)
     cpan.add_argument(
         "--recursive",
         action='store_true',
@@ -525,7 +528,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
                                                                         '-'))):
                             packages_to_append.add('='.join((orig_dist,
                                                             dep_dict['version'])))
-                    elif not glob(join(output_dir, (dep_entry + '-[v0-9][0-9.]*'))):
+                    elif not glob(join(output_dir, (dep_entry + '-[v1-9][0-9.]*'))):
                         packages_to_append.add(orig_dist)
 
                 # Add to appropriate dependency list
@@ -551,9 +554,11 @@ def dist_for_module(cpan_url, module, perl_version, config):
     '''
     # First check if its already a distribution
     try:
-        rel_dict = get_cpan_api_url('{0}/v0/release/{1}'.format(cpan_url, module), colons=False)
+        rel_dict = get_cpan_api_url('{0}/release/{1}'.format(cpan_url, module), colons=False)
     # If there was an error, module may actually be a module
     except RuntimeError:
+        rel_dict = None
+    except CondaHTTPError:
         rel_dict = None
     else:
         distribution = module
@@ -561,7 +566,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
     # Check if it's a module instead
     if rel_dict is None:
         try:
-            mod_dict = get_cpan_api_url('{0}/v0/module/{1}'.format(cpan_url, module), colons=True)
+            mod_dict = get_cpan_api_url('{0}/module/{1}'.format(cpan_url, module), colons=True)
         # If there was an error, report it
         except RuntimeError as exc:
             core_version = core_module_version(module, perl_version, config=config)
@@ -589,7 +594,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # Get latest info to find author, which is necessary for retrieving a
     # specific version
     try:
-        rel_dict = get_cpan_api_url('{0}/v0/release/{1}'.format(cpan_url, package), colons=False)
+        rel_dict = get_cpan_api_url('{0}/release/{1}'.format(cpan_url, package), colons=False)
         rel_dict['version'] = str(rel_dict['version']).lstrip('v')
     except RuntimeError:
         core_version = core_module_version(orig_package, perl_version, config=config)
@@ -612,11 +617,11 @@ def get_release_info(cpan_url, package, version, perl_version, config,
             (LooseVersion(rel_dict['version']) != LooseVersion(version_str))):
         author = rel_dict['author']
         try:
-            new_rel_dict = get_cpan_api_url('{0}/v0/release/{1}/{2}-{3}'.format(cpan_url,
+            new_rel_dict = get_cpan_api_url('{0}/release/{1}/{2}-{3}'.format(cpan_url,
                                                 author, package, version_str), colons=False)
             new_rel_dict['version'] = new_rel_dict['version'].lstrip()
         # Check if this is a core module, and don't die if it is
-        except RuntimeError:
+        except CondaHTTPError:
             core_version = core_module_version(orig_package, perl_version, config=config)
             if core_version is not None and (version == core_version):
                 print(("WARNING: Version {0} of {1} is not available on " +
