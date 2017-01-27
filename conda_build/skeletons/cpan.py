@@ -187,7 +187,7 @@ def package_exists(package_name):
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(packages, output_dir=".", version=None,
                 meta_cpan_url="http://fastapi.metacpan.org/v1",
-                recursive=False, config=None):
+                recursive=False, force=False, config=None):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
@@ -259,8 +259,12 @@ def skeletonize(packages, output_dir=".", version=None,
                                          config=config)
         # Check if recipe directory already exists
         dir_path = join(output_dir, packagename, release_data['version'])
-        if exists(dir_path):
-            raise RuntimeError("directory already exists: %s" % dir_path)
+        if exists(dir_path) and not force:
+            # raise RuntimeError("directory already exists: %s" % dir_path)
+            print('Directory %s already exists and you have not specified --force ' % dir_path)
+            return
+        elif exists(dir_path) and force:
+            print('Directory %s already exists, but forcing recipe creation' % dir_path)
 
         # If this is something we're downloading, get MD5
         if release_data['download_url']:
@@ -324,7 +328,8 @@ def skeletonize(packages, output_dir=".", version=None,
             d['import_comment'] = '# '
 
         # Write recipe files to a directory
-        makedirs(dir_path)
+        if not exists(dir_path):
+            makedirs(dir_path)
         print("Writing recipe for %s-%s" % (packagename, d['version']))
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(CPAN_META.format(**d))
@@ -366,6 +371,10 @@ def add_parser(repos):
         "--recursive",
         action='store_true',
         help='Create recipes for dependencies if they do not already exist.')
+    cpan.add_argument(
+        "--force",
+        action='store_true',
+        help='Force overwrite of existing recipes')
 
 
 @memoized
