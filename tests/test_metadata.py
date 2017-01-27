@@ -5,8 +5,7 @@ import pytest
 
 from conda_build.conda_interface import MatchSpec
 
-from conda_build.metadata import select_lines, handle_config_version, expand_globs
-from .utils import testing_workdir, test_config, test_metadata
+from conda_build.metadata import select_lines, handle_config_version
 
 
 def test_uses_vcs_in_metadata(testing_workdir, test_metadata):

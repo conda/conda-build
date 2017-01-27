@@ -5,7 +5,6 @@ import pytest
 import yaml
 
 from conda_build import api
-from .utils import testing_workdir, test_config
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
@@ -25,6 +24,7 @@ def test_repo(prefix, repo, package, version, testing_workdir, test_config):
     except:
         print(os.listdir(testing_workdir))
         raise
+
 
 def test_name_with_version_specified(testing_workdir, test_config):
     api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=test_config)

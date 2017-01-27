@@ -66,7 +66,7 @@ class Config(object):
 
         self.CONDA_PERL = env('perl', '5.20.3')
         self.CONDA_LUA = env('lua', '5.2')
-        self.CONDA_R = env('r', '3.3.1')
+        self.CONDA_R = env('r', '3.3.2')
         self.CONDA_PY = int(env('python', "%s%s" % (sys.version_info.major, sys.version_info.minor))
                         .replace('.', ''))
 

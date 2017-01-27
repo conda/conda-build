@@ -1,10 +1,9 @@
 import os
-import subprocess
 
 import pytest
 
 from conda_build import api
-from .utils import testing_workdir, test_config, metadata_dir, is_valid_dir, check_call_env
+from .utils import metadata_dir, is_valid_dir, check_call_env
 
 published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code')
 
@@ -15,6 +14,7 @@ def test_skeleton_pypi(testing_workdir):
     check_call_env(cmd.split())
     cmd = 'conda build pyinstrument'
     check_call_env(cmd.split())
+
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(published_examples)
                         if is_valid_dir(published_examples, dirname)])

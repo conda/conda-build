@@ -13,14 +13,12 @@ import uuid
 
 # for version
 import conda
-from datetime import datetime
 
 from conda_build.conda_interface import PY3, url_path
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
-from pytest_mock import mocker
 import yaml
 import tarfile
 
@@ -30,8 +28,7 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env, conda_43)
 from conda_build.os_utils.external import find_executable
 
-from .utils import (metadata_dir, fail_dir, is_valid_dir, testing_workdir, test_config,
-                    add_mangling, test_metadata)
+from .utils import metadata_dir, fail_dir, is_valid_dir, add_mangling
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -84,7 +81,7 @@ def test_recipe_builds(recipe, test_config, testing_workdir, monkeypatch):
     # so they can be checked within build scripts
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
-    outputs = api.build(recipe, config=test_config)
+    api.build(recipe, config=test_config)
 
 
 def test_token_upload(testing_workdir):
@@ -310,6 +307,7 @@ def test_pip_in_meta_yaml_fail(testing_workdir, test_config):
         api.build(os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=test_config)
         assert "Received dictionary as spec." in str(exc)
 
+
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="Windows doesn't show this error")
 def test_broken_conda_meta(testing_workdir, test_config):
@@ -356,7 +354,7 @@ def test_skip_existing_url(test_metadata, testing_workdir, capfd):
     # create the index so conda can find the file
     api.update_index(platform, config=test_metadata.config)
 
-    # HACK: manually create noarch location there, so that conda 4.3.2+ considers this a valid channel
+    # HACK: manually create noarch location there, so that conda 4.3.2+ considers a valid channel
     noarch = os.path.join(output_dir, 'noarch')
     os.makedirs(noarch)
     api.update_index(noarch, config=test_metadata.config)
@@ -612,7 +610,8 @@ def test_disable_pip(test_config):
         api.build(metadata)
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'), reason="rpath fixup only done on Linux so far.")
+@pytest.mark.skipif(not sys.platform.startswith('linux'),
+                    reason="rpath fixup only done on Linux so far.")
 def test_rpath_linux(test_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=test_config)
 
@@ -709,7 +708,6 @@ def test_skip_compile_pyc(test_config):
     assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
 
 
-#@pytest.mark.skipif(on_win, reason="binary prefixes not supported on Windows")
 def test_detect_binary_files_with_prefix(test_config):
     recipe = os.path.join(metadata_dir, "_detect_binary_files_with_prefix")
     outputs = api.build(recipe, config=test_config)
@@ -752,7 +750,8 @@ def test_fix_permissions(test_config):
 
 
 @pytest.mark.skipif(not on_win, reason="windows-only functionality")
-@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe", "_script_win_creates_exe_garbled"])
+@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe",
+                                         "_script_win_creates_exe_garbled"])
 def test_script_win_creates_exe(test_config, recipe_name):
     recipe = os.path.join(metadata_dir, recipe_name)
     outputs = api.build(recipe, config=test_config)

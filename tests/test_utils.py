@@ -5,7 +5,6 @@ import sys
 import pytest
 
 import conda_build.utils as utils
-from .utils import test_config, testing_workdir
 
 
 def makefile(name, contents=""):
