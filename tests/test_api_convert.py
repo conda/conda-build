@@ -45,7 +45,6 @@ def test_convert_platform_to_others(testing_workdir, base_platform, package):
     download(f, fn)
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', quiet=False, verbose=False)
-    print testing_workdir
     for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
         python_folder = 'lib/python2.7' if not platform.startswith('win') else 'Lib'
         package = os.path.join(platform, fn)
