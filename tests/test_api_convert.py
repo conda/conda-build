@@ -21,18 +21,18 @@ def test_convert_exe_raises():
         api.convert("some_wheel.exe")
         assert "cannot convert:" in str(exc)
 
-def package_paths_matches_files(package_path):
+def assert_package_paths_matches_files(package_path):
     """Ensure that info/paths.json matches info/files"""
     with tarfile.open(package_path) as t:
-        files_content = t.extractfile('info/files')
-        files_set = set(line.strip() for line in files_content)
+        files_content = t.extractfile('info/files').read().decode('utf-8')
+        files_set = set(line for line in files_content.split('\n') if line)
         paths_content = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
 
     for path_entry in paths_content['paths']:
         assert path_entry['_path'] in files_set
         files_set.remove(path_entry['_path'])
 
-    return not files_set # Check that we've seen all the entries in files
+    assert not files_set # Check that we've seen all the entries in files
 
 @pytest.mark.serial
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
@@ -53,7 +53,7 @@ def test_convert_platform_to_others(testing_workdir, base_platform, package):
 
         if expected_paths_json:
             assert package_has_file(package, 'info/paths.json')
-            assert package_paths_matches_files(package)
+            assert_package_paths_matches_files(package)
 
 @pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="we create the package to be converted in *nix, so don't run on win.")
