@@ -257,12 +257,35 @@ def skeletonize(packages, output_dir=".", version=None,
                                          core_version),
                                          perl_version,
                                          config=config)
+
         # Check if recipe directory already exists
         dir_path = join(output_dir, packagename, release_data['version'])
+
+        # Add Perl version to core module requirements, since these are empty
+        # packages, unless we're newer than what's in core
+        if core_version is not None and ((version in [None, '']) or
+                                            (core_version >=
+                                            LooseVersion(version))):
+            d['useurl'] = '#'
+            d['usemd5'] = '#'
+            d['source_comment'] = '#'
+            empty_recipe = True
+        # Add dependencies to d if not in core, or newer than what's in core
+        else:
+            build_deps, run_deps, packages_to_append = deps_for_package(
+                package, release_data=release_data, perl_version=perl_version,
+                output_dir=output_dir, meta_cpan_url=meta_cpan_url,
+                recursive=recursive, config=config)
+            d['build_depends'] += indent.join([''] + list(build_deps |
+                                                            run_deps))
+            d['run_depends'] += indent.join([''] + list(run_deps))
+            # Make sure we append any packages before continuing
+            packages.extend(packages_to_append)
+            empty_recipe = False
+
         if exists(dir_path) and not force:
-            # raise RuntimeError("directory already exists: %s" % dir_path)
             print('Directory %s already exists and you have not specified --force ' % dir_path)
-            return
+            continue
         elif exists(dir_path) and force:
             print('Directory %s already exists, but forcing recipe creation' % dir_path)
 
@@ -293,27 +316,6 @@ def skeletonize(packages, output_dir=".", version=None,
 
         processed_packages.add(packagename + '-' + d['version'])
 
-        # Add Perl version to core module requirements, since these are empty
-        # packages, unless we're newer than what's in core
-        if core_version is not None and ((version in [None, '']) or
-                                            (core_version >=
-                                            LooseVersion(version))):
-            d['useurl'] = '#'
-            d['usemd5'] = '#'
-            d['source_comment'] = '#'
-            empty_recipe = True
-        # Add dependencies to d if not in core, or newer than what's in core
-        else:
-            build_deps, run_deps, packages_to_append = deps_for_package(
-                package, release_data=release_data, perl_version=perl_version,
-                output_dir=output_dir, meta_cpan_url=meta_cpan_url,
-                recursive=recursive, config=config)
-            d['build_depends'] += indent.join([''] + list(build_deps |
-                                                            run_deps))
-            d['run_depends'] += indent.join([''] + list(run_deps))
-            packages.extend(packages_to_append)
-            empty_recipe = False
-
         # Create import tests
         module_prefix = package.replace('::', '-').split('-')[0]
         if 'provides' in release_data:
@@ -327,9 +329,10 @@ def skeletonize(packages, output_dir=".", version=None,
         else:
             d['import_comment'] = '# '
 
-        # Write recipe files to a directory
         if not exists(dir_path):
             makedirs(dir_path)
+
+        # Write recipe files to a directory
         print("Writing recipe for %s-%s" % (packagename, d['version']))
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(CPAN_META.format(**d))
