@@ -1518,7 +1518,7 @@ packages, the other package needs to be rebuilt
                         add_recipes.append(recipe_dir)
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
-                                       .format(recipe, e.packages) + "\n\n" + extra_help)
+                                       .format(recipe, e.pkgs) + "\n\n" + extra_help)
             recipe_list.extendleft(add_recipes)
 
         # outputs message, or does upload, depending on value of args.anaconda_upload
