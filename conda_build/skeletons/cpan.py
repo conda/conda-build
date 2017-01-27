@@ -580,7 +580,7 @@ def dist_for_module(cpan_url, module, perl_version, config):
         try:
             mod_dict = get_cpan_api_url('{0}/module/{1}'.format(cpan_url, module), colons=True)
         # If there was an error, report it
-        except RuntimeError as exc:
+        except CondaHTTPError as exc:
             core_version = core_module_version(module, perl_version, config=config)
             if core_version is None:
                 sys.exit(('Error: Could not find module or distribution named'
@@ -608,7 +608,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     try:
         rel_dict = get_cpan_api_url('{0}/release/{1}'.format(cpan_url, package), colons=False)
         rel_dict['version'] = str(rel_dict['version']).lstrip('v')
-    except RuntimeError:
+    except CondaHTTPError:
         core_version = core_module_version(orig_package, perl_version, config=config)
         if core_version is not None and (version is None or
                                          (version == core_version)):
