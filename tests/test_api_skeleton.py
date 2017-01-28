@@ -10,6 +10,7 @@ thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', "8.1.2"),
                  ('r', 'cran', 'nmf', ""),
+                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ""),
                  ('perl', 'cpan', 'Moo', ""),
                  # ('lua', luarocks', 'LuaSocket'),
                  ]
@@ -17,13 +18,16 @@ repo_packages = [('', 'pypi', 'pip', "8.1.2"),
 
 @pytest.mark.parametrize("prefix,repo,package, version", repo_packages)
 def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
-    api.skeletonize(package, repo, version=version, output_dir=testing_workdir, config=testing_config)
+    api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
+                    config=testing_config)
     try:
-        package_name = "-".join([prefix, package]) if prefix else package
+        base_package, _ = os.path.splitext(os.path.basename(package))
+        package_name = "-".join([prefix, base_package]) if prefix else base_package
         assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))
     except:
         print(os.listdir(testing_workdir))
         raise
+
 
 def test_name_with_version_specified(testing_workdir, testing_config):
     api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config)

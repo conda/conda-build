@@ -20,6 +20,7 @@ def test_autodetect_raises_on_invalid_extension(testing_config):
     with pytest.raises(NotImplementedError):
         api.build(os.path.join(subpackage_dir, '_invalid_script_extension'), config=testing_config)
 
+
 def test_rm_rf_does_not_follow_links(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_rm_rf_stays_within_prefix')
     bin_file_that_disappears = os.path.join(recipe_dir, 'bin', 'lsfm')

@@ -19,6 +19,7 @@ from conda_build import api
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
                                check_call_env)
 from conda_build.conda_interface import TemporaryDirectory
+from .utils import metadata_dir, put_bad_conda_on_path
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_sign as main_sign
@@ -29,8 +30,6 @@ import conda_build.cli.main_metapackage as main_metapackage
 import conda_build.cli.main_skeleton as main_skeleton
 import conda_build.cli.main_inspect as main_inspect
 import conda_build.cli.main_index as main_index
-
-from .utils import metadata_dir, put_bad_conda_on_path
 
 
 def test_build():
@@ -96,12 +95,9 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
     assert output.rstrip() == test_path, error
 
 
-def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata, testing_config,
-                                                  capfd):
-    api.output_yaml(testing_metadata, 'meta.yaml')
+def test_build_output_build_path_multiple_recipes(testing_workdir, testing_config, capfd):
     testing_config.verbose = False
     metadata = api.render(testing_workdir, config=testing_config)[0][0]
-
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     args = ['--output', testing_workdir, skip_recipe]
 
