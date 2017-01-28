@@ -5,6 +5,7 @@ import pytest
 from conda_build import environ, api
 from conda_build.conda_interface import PaddingError, LinkError, CondaError, subdir
 from conda_build.utils import on_win
+from conda_build.render import reparse
 
 from .utils import metadata_dir
 
@@ -14,6 +15,7 @@ def test_environment_creation_preserves_PATH(testing_workdir, testing_config):
     environ.create_env(testing_workdir, ['python'], testing_config,
                        subdir=testing_config.build_subdir)
     assert os.environ['PATH'] == ref_path
+
 
 @pytest.mark.serial
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
@@ -65,6 +67,7 @@ def test_env_creation_with_prefix_fallback_disabled():
                                     " not length dependent"))
 def test_catch_openssl_legacy_short_prefix_error(testing_metadata, caplog):
     testing_metadata.config = api.get_or_merge_config(testing_metadata.config, python='2.6')
+    testing_metadata = reparse(testing_metadata, testing_metadata.config.index)
     cmd = """
 import os
 

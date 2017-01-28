@@ -25,7 +25,7 @@ from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import get_package_variants, dict_of_lists_to_list_of_dicts
-from conda_build.exceptions import UnsatisfiableVariantError
+from conda_build.exceptions import UnsatisfiableVariantError, DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 
 
@@ -91,10 +91,9 @@ def finalize_metadata(m, index):
     build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
 
     reset_index = False
-    if m.config.build_subdir != m.config.host_subdir and m.config.host_subdir != 'noarch':
+    if m.config.build_subdir != m.config.host_subdir:
         index = get_build_index(m.config, m.config.host_subdir)
         reset_index = True
-    run_deps = get_env_dependencies(m, 'run', m.config.variant, index)
 
     # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
     #    To avoid confusion, any index passed around is always the native build platform.
@@ -106,14 +105,18 @@ def finalize_metadata(m, index):
     #     names to have this behavior.
     requirements = rendered_metadata.meta.get('requirements', {})
     run_deps = requirements.get('run', [])
+    versioned_run_deps = []
     for dep in run_deps[:]:
         dep_name = dep.split()[0]
         if (dep_name in m.config.variant.get('pin_run_as_build', []) and
-                dep_name in build_dep_versions):
-            run_deps.append(" ".join((dep_name, build_dep_versions[dep_name])))
+                dep_name in build_dep_versions and
+                not (dep_name == 'python' and m.noarch)):
+            versioned_run_deps.append(" ".join((dep_name, build_dep_versions[dep_name])))
+        else:
+            versioned_run_deps.append(dep)
 
     rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
-    for env, values in (('build', build_deps), ('run', run_deps)):
+    for env, values in (('build', build_deps), ('run', versioned_run_deps)):
         if values:
             requirements[env] = [strip_channel(dep) for dep in values]
     rendered_metadata.meta['requirements'] = requirements
@@ -121,7 +124,7 @@ def finalize_metadata(m, index):
     if not rendered_metadata.meta.get('test'):
         rendered_metadata.meta['test'] = {}
     rendered_metadata.meta['test']['requires'] = (rendered_metadata.get_value('test/requires') +
-                                                  run_deps)
+                                                  versioned_run_deps)
 
     # if source/path is relative, then the output package makes no sense at all.  The next
     #   best thing is to hard-code the absolute path.  This probably won't exist on any
@@ -130,7 +133,11 @@ def finalize_metadata(m, index):
         if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
             rendered_metadata.meta['source']['path'] = os.path.normpath(
                 os.path.join(m.path, m.meta['source']['path']))
-        elif ('git_url' in m.meta['source'] and not os.path.isabs(m.meta['source']['git_url'])):
+        elif ('git_url' in m.meta['source'] and not (
+                # absolute paths are not relative paths
+                os.path.isabs(m.meta['source']['git_url']) or
+                # real urls are not relative paths
+                ":" in m.meta['source']['git_url'])):
             rendered_metadata.meta['source']['git_url'] = os.path.normpath(
                 os.path.join(m.path, m.meta['source']['git_url']))
 
@@ -220,7 +227,12 @@ def reparse(metadata, index):
     sys.path.insert(0, metadata.config.build_prefix)
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
     metadata.parse_again(permit_undefined_jinja=False)
-    return finalize_metadata(metadata, index)
+    try:
+        metadata = finalize_metadata(metadata, index)
+    except DependencyNeedsBuildingError:
+        # just pass the metadata through unfinalized
+        pass
+    return metadata
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None):

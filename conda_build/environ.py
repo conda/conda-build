@@ -15,11 +15,8 @@ import subprocess
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import root_dir, cc, symlink_conda
-from .conda_interface import (PaddingError, LinkError, LockError, NoPackagesFound,
-                              NoPackagesFoundError, PackageNotFoundError, Unsatisfiable,
-                              CondaValueError, UnsatisfiableError)
+from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError
 from .conda_interface import plan
-from .conda_interface import memoized
 from .conda_interface import package_cache
 
 from conda_build.os_utils import external
@@ -554,11 +551,11 @@ def get_install_actions(prefix, index, specs, config):
         capture = contextlib.contextmanager(lambda: (yield))
     else:
         capture = utils.capture
-    # this is hiding output like:
-    #    Fetching package metadata ...........
-    #    Solving package specifications: ..........
     actions = {'LINK': []}
     if specs:
+        # this is hiding output like:
+        #    Fetching package metadata ...........
+        #    Solving package specifications: ..........
         with capture():
             try:
                 actions = plan.install_actions(prefix, index, specs)
@@ -610,7 +607,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
                         plan.execute_actions(actions, index, verbose=config.debug)
-                except (SystemExit, PaddingError, LinkError) as exc:
+                except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError) as exc:
                     if (("too short in" in str(exc) or
                                'post-link failed for: openssl' in str(exc) or
                                 isinstance(exc, PaddingError)) and
@@ -639,6 +636,8 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config, subdir=subdir,
                                     clear_cache=clear_cache, retry=retry + 1)
+                    else:
+                        raise
                 # HACK: some of the time, conda screws up somehow and incomplete packages result.
                 #    Just retry.
                 except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:

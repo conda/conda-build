@@ -1,8 +1,3 @@
-import re
-
-from .conda_interface import (PackageNotFoundError, NoPackagesFoundError,
-                              UnsatisfiableError, Unsatisfiable)
-
 import textwrap
 SEPARATOR = "-" * 70
 
@@ -72,6 +67,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
             pkg = line.lstrip('  - ').split(' -> ')[-1]
             pkg = pkg.strip().split(' ')[0]
             self.packages.append(pkg)
+        self.message = str(CondaException)
         if not self.packages:
             raise RuntimeError("failed to parse packages from exception:"
                                " {}".format(str(CondaException)))

@@ -30,19 +30,16 @@ import encodings.idna  # NOQA
 
 # used to get version
 from .conda_interface import envs_dirs, env_path_backup_var_exists
-from .conda_interface import PY3, cc
+from .conda_interface import PY3
 from .conda_interface import prefix_placeholder, linked
-from .conda_interface import url_path, download
+from .conda_interface import url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
-from .conda_interface import (PaddingError, LinkError, CondaValueError, CondaError,
-                              NoPackagesFoundError, NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
-from .conda_interface import package_cache
 from .conda_interface import dist_str_in_index
 
 from conda_build import __version__
@@ -57,7 +54,7 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
-from conda_build.variants import set_language_env_vars, get_default_variants
+from conda_build.variants import set_language_env_vars, get_default_variants, combine_variants
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -271,9 +268,8 @@ def detect_and_record_prefix_files(m, files, prefix):
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
-    is_noarch = m.config.noarch
 
-    if files_with_prefix and not is_noarch:
+    if files_with_prefix and not m.noarch:
         if utils.on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -317,7 +313,7 @@ def write_info_files_file(m, files):
     with open(join(m.config.info_dir, 'files'), **mode_dict) as fo:
         if m.get_value('build/noarch_python'):
             fo.write('\n')
-        elif m.config.noarch and is_noarch_python(m):
+        elif m.noarch == 'python':
             for f in files:
                 if f.find("site-packages") >= 0:
                     fo.write(f[f.find("site-packages"):] + '\n')
@@ -492,7 +488,7 @@ def create_info_files(m, files, prefix):
 
 def get_short_path(m, target_file):
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
-    if is_noarch_python(m):
+    if m.noarch == 'python':
         if target_file.find("site-packages") >= 0:
             return target_file[target_file.find("site-packages"):]
         elif target_file.startswith("bin") and (target_file not in entry_point_script_names):
@@ -501,7 +497,7 @@ def get_short_path(m, target_file):
             return target_file.replace("Scripts", "python-scripts")
         else:
             return target_file
-    elif m.get_value('build/noarch_python'):
+    elif m.noarch:
         return None
     else:
         return target_file
@@ -621,10 +617,6 @@ def bundle_conda(output, metadata, env, **kw):
     for f in info_files:
         if f not in files:
             files.append(f)
-    output_folder = None
-    if metadata.config.output_folder:
-        output_folder = os.path.join(metadata.config.output_folder, metadata.config.host_subdir)
-    final_output = os.path.join(output_folder or metadata.config.bldpkgs_dir, output_filename)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -656,10 +648,11 @@ def bundle_conda(output, metadata, env, **kw):
                           metadata.config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
+        subdir = 'noarch' if metadata.noarch else metadata.config.host_subdir
         if metadata.config.output_folder:
-            output_folder = os.path.join(metadata.config.output_folder, metadata.config.host_subdir)
+            output_folder = os.path.join(metadata.config.output_folder, subdir)
         else:
-            output_folder = metadata.config.bldpkgs_dir
+            output_folder = os.path.join(os.path.dirname(metadata.config.bldpkgs_dir), subdir)
         final_output = os.path.join(output_folder, output_filename)
         if os.path.isfile(final_output):
             os.remove(final_output)
@@ -737,8 +730,6 @@ def build(m, variant, index, post=None, need_source_download=True, need_reparse_
 
     built_packages = []
 
-    m.config.noarch = bool((m.get_value('build/noarch') or m.get_value('build/noarch_python')))
-
     if post in [False, None]:
         if m.uses_jinja and (need_source_download or need_reparse_in_env):
             print("    (actual version deferred until further download or env creation)")
@@ -774,10 +765,10 @@ def build(m, variant, index, post=None, need_source_download=True, need_reparse_
         warn_on_use_of_SRC_DIR(m)
 
         if m.config.skip_existing:
-            package_exists = is_package_built(m)
-            if package_exists:
+            package_location = is_package_built(m)
+            if package_location:
                 print(m.dist(),
-                      "is already built in {0}, skipping.".format(package_exists))
+                        "is already built in {0}, skipping.".format(package_location))
                 return []
 
         print("BUILD START:", m.dist())
@@ -888,7 +879,7 @@ def build(m, variant, index, post=None, need_source_download=True, need_reparse_
         get_build_metadata(m)
         create_post_scripts(m)
 
-        if not is_noarch_python(m):
+        if not m.noarch == 'python':
             utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
         files2 = prefix_files(prefix=m.config.host_prefix)
 
@@ -913,7 +904,7 @@ can lead to packages that include their dependencies.""" % meta_files))
                     croot=m.config.croot)
 
         entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
-        if is_noarch_python(m):
+        if m.noarch == 'python':
             pkg_files = [fi for fi in sorted(files2 - files1) if fi not in entry_point_script_names]
         else:
             pkg_files = sorted(files2 - files1)
@@ -922,7 +913,7 @@ can lead to packages that include their dependencies.""" % meta_files))
         if m.get_value('build/noarch_python'):
             noarch_python.transform(m, sorted(files2 - files1), m.config.host_prefix)
         # new way: build/noarch: python
-        elif is_noarch_python(m):
+        elif m.noarch == 'python':
             noarch_python.populate_files(
                 m, pkg_files, m.config.host_prefix, entry_point_script_names)
 
@@ -1018,7 +1009,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             info_dir = os.path.normpath(os.path.join(recipe_dir, 'info'))
             if os.path.isdir(info_dir):
                 with open(os.path.join(info_dir, 'index.json')) as f:
-                    config.host_subdir = json.load(f)['subdir']
+                    subdir = json.load(f)['subdir']
+                if subdir != 'noarch':
+                    config.host_subdir = subdir
                 with open(os.path.join(info_dir, 'hash_input.json')) as f:
                     hash_input = json.load(f)
 
@@ -1048,7 +1041,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                           "this after exiting build.")
 
     for (metadata, _, _) in metadata_tuples:
-        metadata.meta.update(hash_input)
+        metadata.append_metadata_sections(hash_input, merge=False)
         config.compute_build_id(metadata.name())
         environ.clean_pkg_cache(metadata.dist(), config)
         create_files(config.test_dir, metadata)
@@ -1273,7 +1266,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 metadata_tuples = []
                 for variant in variants:
                     m = copy.copy(metadata)
-                    # deep copy a couple of the more sensitive parts to decouple different metadata objects
+                    # the existing config variant has priority over the dynamically determined one.
+                    if m.config.variant:
+                        variant = combine_variants(variant, m.config.variant)
+                    # deep copy a couple of the sensitive parts to decouple metadata objects
                     m.meta = copy.deepcopy(metadata.meta)
                     m.config = copy.deepcopy(metadata.config)
                     m.config.variant = variant
@@ -1475,18 +1471,13 @@ def is_package_built(metadata):
         if not os.path.isdir(d):
             os.makedirs(d)
             update_index(d, metadata.config, could_be_mirror=False)
-    if not metadata.config.index:
-        metadata.config.index = get_build_index(config=metadata.config, clear_cache=True)
+    index = get_build_index(config=metadata.config, subdir=metadata.config.host_subdir,
+                            clear_cache=True)
 
     urls = [url_path(metadata.config.croot)] + get_rc_urls()
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 
     # will be empty if none found, and evalute to False
-    package_exists = [url for url in urls
-                      if dist_str_in_index(index, url + '::' + metadata.pkg_fn())]
-    return package_exists or dist_str_in_index(index, metadata.pkg_fn())
-
-
-def is_noarch_python(meta):
-    return str(meta.get_value('build/noarch')).lower() == "python"
+    return [url for url in urls
+            if dist_str_in_index(index, url + '::' + metadata.pkg_fn())]

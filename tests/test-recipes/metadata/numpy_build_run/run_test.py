@@ -14,7 +14,7 @@ def main():
         info = json.load(fh)
 
     # numpy with no version, python with no version, python with version pin
-    assert len(info['depends']) == 3
+    assert len(info['depends']) == 2
     depends = sorted(info['depends'])
     # With no version
     assert depends[0] == 'numpy'

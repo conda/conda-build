@@ -137,7 +137,8 @@ def execute(args):
     variants = get_package_variants(args.recipe, config)
     set_language_env_vars(variants)
 
-    metadata_tuples, _ = render_recipe(args.recipe, config=config, no_download_source=args.no_source)
+    metadata_tuples, _ = render_recipe(args.recipe, config=config,
+                                       no_download_source=args.no_source)
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):
             for (metadata, _, _) in metadata_tuples:

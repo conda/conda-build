@@ -16,7 +16,7 @@ from os.path import isfile, join, getmtime
 
 from conda_build.utils import file_info, get_lock, try_acquire_locks
 from conda_build import utils
-from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, package_cache, memoized
+from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index
 
 # each python process keeps an index.  When a package is done building, it updates this index.
 #    This is a pretty massive performance optimization.
@@ -173,6 +173,9 @@ def ensure_valid_channel(local_folder, subdir, config):
 
 
 def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
+    log = logging.getLogger(__name__)
+    log.debug("Building new index for subdir '{}' with channels {}, condarc channels = {}".format(
+        subdir, config.channel_urls, not omit_defaults))
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
     if config.debug:
@@ -205,7 +208,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
             try:
                 index = get_index(channel_urls=urls,
                                 prepend=not omit_defaults,
-                                use_local=False,
+                                use_local=True,
                                 use_cache=False,
                                 platform=subdir)
             # HACK: defaults does not have the many subfolders we support.  Omit it and try again.
@@ -213,7 +216,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                 urls.remove('defaults')
                 index = get_index(channel_urls=urls,
                                 prepend=omit_defaults,
-                                use_local=False,
+                                use_local=True,
                                 use_cache=False,
                                 platform=subdir)
         # CURRENT_INDEX[subdir] = index or {}

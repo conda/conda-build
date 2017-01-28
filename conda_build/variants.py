@@ -89,9 +89,24 @@ def combine_specs(specs):
             if k in extend_keys:
                 values[k] = ensure_list(values.get(k, []))
                 values[k].extend(ensure_list(v))
+                # uniquify
+                values[k] = list(set(values[k]))
             else:
                 values[k] = ensure_list(v)
     return values, set(extend_keys)
+
+
+def combine_variants(*variants):
+    """Difference between this and combine_specs is that specs have lists of versions, whereas a
+    single variant has only one version per key.
+
+    The purpose of this function is to clobber earlier variant values with later ones, while merging
+    any values from 'extended' columns.
+
+    Many variants can be passed in, but only one unified variant is returned
+    """
+    combined_specs, extend_keys = combine_specs(variants)
+    return dict_of_lists_to_list_of_dicts(combined_specs)[0]
 
 
 def set_language_env_vars(variant):
@@ -132,9 +147,15 @@ def get_package_variants(recipedir_or_metadata, config=None):
         config = recipedir_or_metadata.config
     files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
                               ignore_system_config=config.ignore_system_variants)
+
     specs = get_default_variants() + [parse_config_file(f) for f in files]
-    # this tweaks behavior from clobbering to appending/extending
-    combined_spec, extend_keys = combine_specs(specs)
+
+    # this is the override of the variants from files and args with values from CLI or env vars
+    if config.variant:
+        combined_spec, extend_keys = combine_specs(specs + [config.variant])
+    else:
+        # this tweaks behavior from clobbering to appending/extending
+        combined_spec, extend_keys = combine_specs(specs)
 
     # clobber the variant with anything in the config (stuff set via CLI flags or env vars)
     for k, v in config.variant.items():
@@ -142,6 +163,7 @@ def get_package_variants(recipedir_or_metadata, config=None):
             combined_spec[k].extend(v)
         else:
             combined_spec[k] = [v]
+
     validate_variant(combined_spec)
     return dict_of_lists_to_list_of_dicts(combined_spec)
 

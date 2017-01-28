@@ -56,3 +56,11 @@ def test_get_package_variants_from_dictionary_of_lists(testing_config):
     assert len(metadata) == 2
     assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
     assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
+
+
+def test_combine_variants():
+    v1 = {'python': '2.7.*', 'extend_keys': 'frank', 'frank': 'steve'}
+    v2 = {'python': '3.5.*', 'extend_keys': 'frank', 'frank': 'bruce'}
+    combined = variants.combine_variants(v1, v2)
+    assert combined['python'] == '3.5.*'
+    assert combined['frank'] == set(['steve', 'bruce'])

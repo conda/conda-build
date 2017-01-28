@@ -46,10 +46,6 @@ def test_create_config_with_subdir():
     assert config.host_platform == 'steve'
     assert config.host_subdir == 'steve-128'
 
-    config = Config(host_subdir='noarch')
-    assert config.host_platform == 'noarch'
-    assert config.host_subdir == 'noarch'
-
 
 def test_set_platform(config):
     config.host_platform = 'steve'

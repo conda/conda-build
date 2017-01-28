@@ -32,8 +32,8 @@ def render(recipe_path, config=None, variants=None, **kwargs):
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
-    metadata, _ = render_recipe(recipe_path, no_download_source=config.no_download_source, config=config,
-                         variants=variants)
+    metadata, _ = render_recipe(recipe_path, no_download_source=config.no_download_source,
+                                config=config, variants=variants)
     return metadata
 
 

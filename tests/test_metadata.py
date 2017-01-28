@@ -8,6 +8,7 @@ import pytest
 from conda_build.conda_interface import MatchSpec
 
 from conda_build.metadata import select_lines, handle_config_version, MetaData
+from conda_build import render
 from .utils import thisdir, metadata_dir
 
 
@@ -149,21 +150,24 @@ def test_clobber_section_data(testing_metadata):
 
 
 def test_build_bootstrap_env_by_name(testing_metadata):
-    assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
+    assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), \
+        testing_metadata.meta["requirements"]["build"]
     try:
         cmd = "conda create -y -n conda_build_bootstrap_test git"
         subprocess.check_call(cmd.split())
         testing_metadata.config.bootstrap = "conda_build_bootstrap_test"
         testing_metadata.final = False
         testing_metadata.parse_again()
-        assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
+        assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), \
+            testing_metadata.meta["requirements"]["build"]
     finally:
         cmd = "conda remove -y -n conda_build_bootstrap_test --all"
         subprocess.check_call(cmd.split())
 
 
 def test_build_bootstrap_env_by_path(testing_metadata):
-    assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
+    assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), \
+        testing_metadata.meta["requirements"]["build"]
     path = os.path.join(thisdir, "conda_build_bootstrap_test")
     try:
         cmd = "conda create -y -p {} git".format(path)
@@ -171,7 +175,8 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         testing_metadata.config.bootstrap = path
         testing_metadata.final = False
         testing_metadata.parse_again()
-        assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), testing_metadata.meta["requirements"]["build"]
+        assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), \
+            testing_metadata.meta["requirements"]["build"]
     finally:
         cmd = "conda remove -y -p {} --all".format(path)
         subprocess.check_call(cmd.split())
@@ -216,8 +221,9 @@ def test_compiler_metadata_cross_compiler():
 
 
 def test_hash_build_id(testing_metadata):
-    assert testing_metadata._hash_dependencies() == 'h7502'
-    assert testing_metadata.build_id() == 'py{}{}h7502_1'.format(sys.version_info.major,
+    testing_metadata = render.finalize_metadata(testing_metadata, testing_metadata.config.index)
+    assert testing_metadata._hash_dependencies() == 'h6127'
+    assert testing_metadata.build_id() == 'py{}{}h6127_1'.format(sys.version_info.major,
                                                               sys.version_info.minor)
 
 
@@ -241,20 +247,6 @@ def test_hash_build_id_key_order(testing_metadata):
 
 
 def test_hash_applies_to_custom_build_string(testing_metadata):
+    testing_metadata = render.finalize_metadata(testing_metadata, testing_metadata.config.index)
     testing_metadata.meta['build']['string'] = 'steve'
-    assert testing_metadata.build_id() == 'steveh7502'
-
-
-def test_disallow_leading_period_in_version(testing_metadata):
-    testing_metadata.meta['package']['version'] = '.ste.ve'
-    with pytest.raises(AssertionError):
-        testing_metadata.version()
-
-
-def test_disallow_dash_in_features(testing_metadata):
-    testing_metadata.meta['build']['features'] = ['abc']
-    testing_metadata.final = False
-    testing_metadata.parse_again()
-    with pytest.raises(ValueError):
-        testing_metadata.meta['build']['features'] = ['ab-c']
-        testing_metadata.parse_again()
+    assert testing_metadata.build_id() == 'steveh6127'

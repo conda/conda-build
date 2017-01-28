@@ -125,7 +125,7 @@ def test_git_describe_info_on_branch(testing_config):
     output = api.get_output_file_path(recipe_path)[0]
     _hash = api.render(recipe_path, config=testing_config)[0][0]._hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
-                             "git_describe_number_branch-1.20.2.0-{}_1_g82c6ba6.tar.bz2".format(_hash))
+                    "git_describe_number_branch-1.20.2.0-{}_1_g82c6ba6.tar.bz2".format(_hash))
     assert test_path == output
 
 
@@ -166,8 +166,8 @@ def test_output_build_path_git_source(testing_workdir, testing_config):
     output = api.get_output_file_path(recipe_path, config=testing_config)[0]
     _hash = api.render(recipe_path, config=testing_config)[0][0]._hash_dependencies()
     test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
-                             "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
-                                 sys.version_info.major, sys.version_info.minor, _hash))
+                    "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
+                        sys.version_info.major, sys.version_info.minor, _hash))
     assert output == test_path
 
 
@@ -363,6 +363,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
     testing_metadata.config.skip_existing = True
     testing_metadata.config.channel_urls = [url_path(output_dir)]
+
     api.build(testing_metadata)
 
     output, error = capfd.readouterr()
@@ -557,15 +558,19 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
             requirements,
             ('build', OrderedDict([
                 ('script',
-                 ['git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > %PREFIX%\\summaries.txt  # [win]',
-                  'git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > $PREFIX/summaries.txt   # [not win]'])
+                 ['git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > '
+                       '%PREFIX%\\summaries.txt  # [win]',
+                  'git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > '
+                       '$PREFIX/summaries.txt   # [not win]'])
             ])),
             ('test', OrderedDict([
                 ('commands',
-                 ['echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt        # [win]'.format(tag, tag),
-                  'fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt  # [win]',
-                  'echo absolute{}relative{} > $PREFIX/expected_summaries.txt          # [not win]'.format(tag, tag),
-                  'diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt  # [not win]']),
+                 ['echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt       # [win]'
+                      .format(tag, tag),
+                  'fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]',
+                  'echo absolute{}relative{} > $PREFIX/expected_summaries.txt         # [not win]'
+                      .format(tag, tag),
+                  'diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]'])
             ]))
         ])
 
@@ -579,7 +584,6 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
         output = api.get_output_file_path(testing_workdir)[0]
         assert ("relative_submodules-{}-".format(tag) in output)
         api.build(testing_workdir)
-
 
 
 def test_noarch(testing_workdir):
@@ -811,7 +815,6 @@ def test_remove_workdir_default(testing_config, caplog):
 def test_keep_workdir(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     api.build(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)
-    api.build(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)
     assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(testing_config.work_dir, '*'))
     testing_config.clean()
@@ -829,7 +832,7 @@ def test_workdir_removal_warning(testing_config, caplog):
 def test_workdir_removal_warning_no_remove(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
     api.build(recipe, config=testing_config, remove_work_dir=False)
-    assert "Not removing work directory after build" in caplog.text()
+    assert "Not removing work directory after build" in caplog.text
 
 
 @pytest.mark.skipif(not sys.platform.startswith('linux'),

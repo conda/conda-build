@@ -69,7 +69,7 @@ def testing_metadata(request, testing_config, testing_index):
     d['about']['summary'] = "a test package"
     testing_config.index = testing_index
     testing_config.variant = get_default_variants()[0]
-    return finalize_metadata(MetaData.fromdict(d, config=testing_config), index=testing_index)
+    return MetaData.fromdict(d, config=testing_config)
 
 
 @pytest.fixture(scope='function')

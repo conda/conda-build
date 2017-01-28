@@ -474,7 +474,7 @@ class MetaData(object):
     def disable_pip(self):
         return 'build' in self.meta and 'disable_pip' in self.meta['build']
 
-    def _append_metadata_sections(self, sections_file_or_dict, merge):
+    def append_metadata_sections(self, sections_file_or_dict, merge):
         """Append to or replace subsections to meta.yaml
 
         This is used to alter input recipes, so that a given requirement or
@@ -538,12 +538,12 @@ class MetaData(object):
                 clobber_sections_file = None
 
             if append_sections_file:
-                self._append_metadata_sections(append_sections_file, merge=True)
+                self.append_metadata_sections(append_sections_file, merge=True)
             if clobber_sections_file:
-                self._append_metadata_sections(clobber_sections_file, merge=False)
+                self.append_metadata_sections(clobber_sections_file, merge=False)
             if self.config.bootstrap:
                 dependencies = _get_dependencies_from_environment(self.config.bootstrap)
-                self._append_metadata_sections(dependencies, merge=True)
+                self.append_metadata_sections(dependencies, merge=True)
         except:
             raise
         finally:
@@ -564,7 +564,6 @@ class MetaData(object):
         """For dynamic determination of build or run reqs, based on configuration"""
         reqs = self.meta.get('requirements', {})
         run_reqs = reqs.get('run', [])
-        build_reqs = reqs.get('build', [])
         if bool(self.get_value('build/osx_is_app', False)) and self.config.platform == 'osx':
             run_reqs.append('python.app')
         self.meta['requirements'] = reqs
@@ -710,7 +709,7 @@ class MetaData(object):
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if self.get_value('build/noarch_python') or self.get_value('build/noarch'):
+                    if self.noarch:
                         continue
                     ms = handle_config_version(ms, ver, typ)
 
@@ -781,6 +780,10 @@ class MetaData(object):
             out = re.sub('h[0-9]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
         return out
 
+    @property
+    def noarch(self):
+        return self.get_value('build/noarch_python') or self.get_value('build/noarch')
+
     def dist(self):
         return '%s-%s-%s' % (self.name(), self.version(), self.build_id())
 
@@ -824,14 +827,16 @@ class MetaData(object):
             if value:
                 d[key] = value
 
-        build_noarch = self.get_value('build/noarch')
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch_python') or build_noarch:
+        if self.noarch:
             d['platform'] = d['arch'] = None
             d['subdir'] = 'noarch'
+            # These are new-style noarch settings.  the self.noarch setting can be True in 2 ways:
+            #    if noarch: True or if noarch_python: True.  This is disambiguation.
+            build_noarch = self.get_value('build/noarch')
             if build_noarch:
                 d['noarch'] = build_noarch
         if self.is_app():

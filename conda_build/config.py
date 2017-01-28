@@ -44,7 +44,6 @@ DEFAULTS = [Setting('activate', True),
             Setting('channel_urls', []),
             Setting('dirty', False),
             Setting('include_recipe', True),
-            Setting('noarch', False),
             Setting('no_download_source', False),
             Setting('override_channels', False),
             Setting('skip_existing', False),
@@ -141,11 +140,11 @@ class Config(object):
         # this is where we override any variant config files with the legacy CONDA_* vars
         #     or CLI params
         self.variant.update({'perl': env('perl', None),
-                   'lua': env('lua', None),
-                   'python': env('python', None),
-                   'numpy': env('numpy', None),
-                   'r_base': env('r_base', None),
-                   })
+                             'lua': env('lua', None),
+                             'python': env('python', None),
+                             'numpy': env('numpy', None),
+                             'r_base': env('r_base', None),
+                             })
         trim_empty_keys(self.variant)
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
@@ -198,10 +197,7 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        if self.host_platform == 'noarch' or self.noarch:
-            return 'noarch'
-        else:
-            return "-".join([self.host_platform, str(self.host_arch)])
+        return "-".join([self.host_platform, str(self.host_arch)])
 
     @host_subdir.setter
     def host_subdir(self, value):
@@ -390,10 +386,7 @@ class Config(object):
     @property
     def bldpkgs_dir(self):
         """ Dir where the package is saved. """
-        if self.noarch:
-            path = join(self.croot, "noarch")
-        else:
-            path = join(self.croot, self.host_subdir)
+        path = join(self.croot, self.host_subdir)
         _ensure_dir(path)
         return path
 
