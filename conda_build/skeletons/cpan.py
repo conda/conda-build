@@ -391,7 +391,7 @@ def latest_pkg_version(pkg):
     r = Resolve(get_index())
     try:
         pkg_list = sorted(r.get_pkgs(MatchSpec(pkg)))
-    except RuntimeError:
+    except:
         pkg_list = None
     if pkg_list:
         pkg_version = LooseVersion(pkg_list[-1].version)
