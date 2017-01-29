@@ -1276,7 +1276,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     if m.config.variant:
                         variant = combine_variants(variant, m.config.variant)
                     # deep copy a couple of the sensitive parts to decouple metadata objects
-                    m.config = copy.deepcopy(metadata.config)
+                    m.config = metadata.config.copy()
                     m.config.variant = variant
                     metadata_tuples.append((m, None, None))
             else:

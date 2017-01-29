@@ -3,6 +3,7 @@ Module to store conda build settings.
 '''
 from __future__ import absolute_import, division, print_function
 
+import copy
 from collections import namedtuple
 import logging
 import math
@@ -455,6 +456,11 @@ class Config(object):
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:
             rm_rf(folder)
+
+    def copy(self):
+        new = copy.copy(self)
+        new.variant = copy.deepcopy(self.variant)
+        return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
     def __enter__(self):

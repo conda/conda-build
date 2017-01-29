@@ -220,7 +220,7 @@ def distribute_variants(metadata, variants, index):
 
     for variant in variants:
         mv = copy.copy(metadata)
-        mv.config = copy.deepcopy(metadata.config)
+        mv.config = metadata.config.copy()
         mv.config.variant = combine_variants(variant, mv.config.variant)
 
         # TODO: may need to compute new build id, or at least remove any envs before building
@@ -282,7 +282,8 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    if m.needs_source_for_render:
+    if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
+                                      len(os.listdir(m.config.work_dir)) == 0):
         try_download(m, no_download_source=no_download_source)
 
     rendered_metadata = {}
