@@ -32,14 +32,14 @@ def test_api_output_yaml():
 
 def test_api_get_output_file_path():
     argspec = getargspec(api.get_output_file_path)
-    assert argspec.args == ['recipe_path_or_metadata', 'no_download_source', 'config']
-    assert argspec.defaults == (False, None)
+    assert argspec.args == ['recipe_path_or_metadata', 'no_download_source', 'config', 'variants']
+    assert argspec.defaults == (False, None, None)
 
 
 def test_api_check():
     argspec = getargspec(api.check)
-    assert argspec.args == ['recipe_path', 'no_download_source', 'config']
-    assert argspec.defaults == (False, None)
+    assert argspec.args == ['recipe_path', 'no_download_source', 'config', 'variants']
+    assert argspec.defaults == (False, None, None)
 
 
 def test_api_build():

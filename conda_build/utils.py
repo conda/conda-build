@@ -29,6 +29,7 @@ from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
+from .conda_interface import StringIO
 
 from conda_build.os_utils import external
 
@@ -756,7 +757,6 @@ class HashableDict(dict):
 @contextlib.contextmanager
 def capture():
     import sys
-    from cStringIO import StringIO
     oldout, olderr = sys.stdout, sys.stderr
     try:
         out = [StringIO(), StringIO()]

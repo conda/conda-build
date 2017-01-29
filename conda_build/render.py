@@ -217,7 +217,7 @@ def parse_or_try_download(metadata, no_download_source, variants, force_download
             outputs[final.build_id()] = (final, need_source_download, need_reparse_in_env)
     except exceptions.UnableToParseMissingSetuptoolsDependencies:
         outputs = [(metadata, need_source_download, need_reparse_in_env), ]
-    return outputs.values(), index
+    return list(outputs.values()), index
 
 
 def reparse(metadata, index):
@@ -252,7 +252,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
             need_cleanup = False
         else:
             print("Ignoring non-recipe: %s" % arg)
-            return
+            return None, None
     else:
         recipe_dir = abspath(arg)
         need_cleanup = False
