@@ -44,7 +44,7 @@ def output_yaml(metadata, file_path=None):
 
 
 def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None,
-                         **kwargs):
+                         variants=None, **kwargs):
     """Get output file paths for any packages that would be created by a recipe
 
     Both split packages (recipes with more than one ouptut) and build matrices,
@@ -56,12 +56,12 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
         metadata = [(recipe_path_or_metadata, None, None)]
     else:
         metadata, _ = render_recipe(recipe_path_or_metadata,
-                                 no_download_source=no_download_source,
-                                 config=config)
+                                    no_download_source=no_download_source,
+                                    variants=variants, config=config)
     return [bldpkg_path(m[0]) for m in metadata]
 
 
-def check(recipe_path, no_download_source=False, config=None, **kwargs):
+def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
     """Check validity of input recipe path
 
     Verifies that recipe can be completely rendered, and that fields of the rendered recipe are
@@ -70,7 +70,7 @@ def check(recipe_path, no_download_source=False, config=None, **kwargs):
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
     metadata, _ = render_recipe(recipe_path, no_download_source=no_download_source,
-                             config=config)
+                                config=config, variants=variants)
     return all(m[0].check_fields() for m in metadata)
 
 

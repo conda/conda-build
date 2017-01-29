@@ -267,9 +267,9 @@ compilers = {
 }
 
 runtimes = {
-    'vs2008': 'vs2008_runtime',
-    'vs2010': 'vs2010_runtime',
-    'vs2015': 'vs2015_runtime',
+    'vs2008': 'vc 9',
+    'vs2010': 'vc 10',
+    'vs2015': 'vc 14',
     'gfortran': 'libgfortran',
     'g++': 'libstdc++',
     'gcc': 'libgcc',

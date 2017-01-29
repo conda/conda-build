@@ -95,7 +95,9 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
     assert output.rstrip() == test_path, error
 
 
-def test_build_output_build_path_multiple_recipes(testing_workdir, testing_config, capfd):
+def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata,
+                                                  testing_config, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
     metadata = api.render(testing_workdir, config=testing_config)[0][0]
     skip_recipe = os.path.join(metadata_dir, "build_skip")
