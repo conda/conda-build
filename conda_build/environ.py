@@ -635,7 +635,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                                        clear_cache=clear_cache)
                         else:
                             raise
-                    elif 'lock' in str(exc):
+                    elif 'lock' in str(exc) or 'requires a minimum conda version' in str(exc):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config, subdir=subdir,

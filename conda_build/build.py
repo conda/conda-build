@@ -604,7 +604,6 @@ def bundle_conda(output, metadata, env, **kw):
                     cwd=metadata.config.host_prefix, env=env)
         files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
     tmp_metadata = copy.copy(metadata)
-    tmp_metadata.meta = copy.deepcopy(metadata.meta)
     tmp_metadata.meta['package']['name'] = output['name']
     requirements = tmp_metadata.meta.get('requirements', {})
     requirements['run'] = output.get('requirements', [])
@@ -1266,17 +1265,20 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 recipe_parent_dir = ""
                 to_build_recursive.append(metadata.name())
                 metadata_tuples = []
+                if metadata.config.index:
+                    index = metadata.config.index
+                else:
+                    index = None
+                metadata.config.index = None
                 for variant in variants:
                     m = copy.copy(metadata)
                     # the existing config variant has priority over the dynamically determined one.
                     if m.config.variant:
                         variant = combine_variants(variant, m.config.variant)
                     # deep copy a couple of the sensitive parts to decouple metadata objects
-                    m.meta = copy.deepcopy(metadata.meta)
                     m.config = copy.deepcopy(metadata.config)
                     m.config.variant = variant
                     metadata_tuples.append((m, None, None))
-                index = None
             else:
                 recipe_parent_dir = os.path.dirname(recipe)
                 recipe = recipe.rstrip("/").rstrip("\\")
