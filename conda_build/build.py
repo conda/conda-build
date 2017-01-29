@@ -174,6 +174,8 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     return data
 
 
+# TODO: this is mostly duplicated with the scheme of pin_run_as_build.  Could be refactored
+#     away, probably.
 def get_run_dists(m):
     prefix = join(envs_dirs[0], '_run')
     utils.rm_rf(prefix)
@@ -1317,7 +1319,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                 except IOError:
                                     # force the build string to line up - recomputing it would
                                     #    yield a different result
-                                    index_contents = utils.package_has_file(pkg, 'info/index.json')
+                                    index_contents = utils.package_has_file(pkg,
+                                                                        'info/index.json').decode()
                                     build_str = json.loads(index_contents)['build']
                                     build_meta = metadata.meta.get('build', {})
                                     build_meta['string'] = build_str

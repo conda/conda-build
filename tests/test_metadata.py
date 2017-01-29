@@ -8,7 +8,6 @@ import pytest
 from conda_build.conda_interface import MatchSpec
 
 from conda_build.metadata import select_lines, handle_config_version, MetaData
-from conda_build import render
 from .utils import thisdir, metadata_dir
 
 
@@ -221,10 +220,9 @@ def test_compiler_metadata_cross_compiler():
 
 
 def test_hash_build_id(testing_metadata):
-    testing_metadata = render.finalize_metadata(testing_metadata, testing_metadata.config.index)
-    assert testing_metadata._hash_dependencies() == 'h6127'
-    assert testing_metadata.build_id() == 'py{}{}h6127_1'.format(sys.version_info.major,
-                                                              sys.version_info.minor)
+    assert testing_metadata._hash_dependencies() == 'h4442'
+    assert testing_metadata.build_id() == 'py{}{}h4442_1'.format(sys.version_info.major,
+                                                                 sys.version_info.minor)
 
 
 def test_hash_build_id_key_order(testing_metadata):
@@ -247,6 +245,5 @@ def test_hash_build_id_key_order(testing_metadata):
 
 
 def test_hash_applies_to_custom_build_string(testing_metadata):
-    testing_metadata = render.finalize_metadata(testing_metadata, testing_metadata.config.index)
     testing_metadata.meta['build']['string'] = 'steve'
-    assert testing_metadata.build_id() == 'steveh6127'
+    assert testing_metadata.build_id() == 'steveh4442'

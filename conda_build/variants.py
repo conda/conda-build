@@ -1,6 +1,7 @@
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 
+import copy
 from itertools import product
 import os
 import sys
@@ -79,20 +80,22 @@ def combine_specs(specs):
            values (strings or integers), or collections (lists, tuples, sets).
     """
     extend_keys = DEFAULT_EXTEND_KEYS
-    extend_keys.extend([key for spec in specs for key in ensure_list(spec.get('extend_keys'))])
+    extend_keys.extend([key for spec in specs if spec
+                        for key in ensure_list(spec.get('extend_keys'))])
 
     values = {}
     # each spec is a dictionary.  Each subsequent spec replaces the previous one.
     #     Only the last one with the key stays.
     for spec in specs:
-        for k, v in spec.items():
-            if k in extend_keys:
-                values[k] = ensure_list(values.get(k, []))
-                values[k].extend(ensure_list(v))
-                # uniquify
-                values[k] = list(set(values[k]))
-            else:
-                values[k] = ensure_list(v)
+        if spec:
+            for k, v in spec.items():
+                if k in extend_keys:
+                    values[k] = ensure_list(values.get(k, []))
+                    values[k].extend(ensure_list(v))
+                    # uniquify
+                    values[k] = list(set(values[k]))
+                else:
+                    values[k] = ensure_list(v)
     return values, set(extend_keys)
 
 

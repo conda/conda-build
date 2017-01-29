@@ -471,6 +471,16 @@ class MetaData(object):
         self.config.disable_pip = self.disable_pip
 
     @property
+    def final(self):
+        return self.get_value('extra/final')
+
+    @final.setter
+    def final(self, boolean):
+        extra = self.meta.get('extra', {})
+        extra['final'] = boolean
+        self.meta['extra'] = extra
+
+    @property
     def disable_pip(self):
         return 'build' in self.meta and 'disable_pip' in self.meta['build']
 
@@ -568,7 +578,7 @@ class MetaData(object):
             run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self, config):
+    def parse_until_resolved(self):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again

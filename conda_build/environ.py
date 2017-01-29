@@ -15,9 +15,10 @@ import subprocess
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import root_dir, cc, symlink_conda
-from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError
+from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
 from .conda_interface import plan
 from .conda_interface import package_cache
+from .conda_interface import memoized
 
 from conda_build.os_utils import external
 from conda_build import utils
@@ -350,6 +351,7 @@ def meta_vars(meta, config):
     return d
 
 
+@memoized
 def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -435,6 +437,7 @@ def linux_vars(compiler_vars, prefix, config):
     }
 
 
+@memoized
 def system_vars(env_dict, prefix, config):
     d = dict()
     compiler_vars = defaultdict(text_type)
@@ -607,7 +610,8 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
                         plan.execute_actions(actions, index, verbose=config.debug)
-                except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError) as exc:
+                except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
+                        CondaError) as exc:
                     if (("too short in" in str(exc) or
                                'post-link failed for: openssl' in str(exc) or
                                 isinstance(exc, PaddingError)) and
@@ -641,6 +645,10 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                 # HACK: some of the time, conda screws up somehow and incomplete packages result.
                 #    Just retry.
                 except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+                    if isinstance(exc, AssertionError):
+                        pkg_dir = os.path.dirname(os.path.dirname(repr(exc)))
+                        if os.path.isdir(pkg_dir):
+                            utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                         create_env(prefix, specs, config=config, subdir=subdir,

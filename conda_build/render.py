@@ -24,7 +24,8 @@ from .conda_interface import PY3, UnsatisfiableError
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
-from conda_build.variants import get_package_variants, dict_of_lists_to_list_of_dicts
+from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
+                                  combine_variants)
 from conda_build.exceptions import UnsatisfiableVariantError, DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 
@@ -151,9 +152,7 @@ def finalize_metadata(m, index):
     return rendered_metadata
 
 
-def parse_or_try_download(metadata, no_download_source, variants, force_download=False):
-    log = logging.getLogger(__name__)
-    need_reparse_in_env = True
+def try_download(metadata, no_download_source, force_download=False):
     need_source_download = True
     if (force_download or (not no_download_source and metadata.needs_source_for_render)):
         # this try/catch is for when the tool to download source is actually in
@@ -177,48 +176,6 @@ def parse_or_try_download(metadata, no_download_source, variants, force_download
                          " downloading source.  Please fix the recipe, or don't use "
                          "no_download_source.")
 
-    if 'host' in metadata.get_section('requirements'):
-        metadata.config.has_separate_host_prefix = True
-
-    try:
-        # this additional parse ensures that jinja2 stuff is evaluated
-        metadata.parse_again(permit_undefined_jinja=True)
-        need_reparse_in_env = False
-
-        outputs = {}
-        index = get_build_index(metadata.config, metadata.config.build_subdir)
-        for variant in variants:
-            varmeta = copy.copy(metadata)
-            varmeta.config.variant = variant
-            if 'target_platform' in variant:
-                varmeta.config.host_subdir = variant['target_platform']
-            try:
-                varmeta.parse_until_resolved(config=varmeta.config)
-            except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-                log.warn("Need to create build environment to fully render this recipe.  Doing so.")
-                specs = [ms.spec for ms in metadata.ms_depends('build')]
-                environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
-                                subdir=metadata.config.build_subdir)
-                need_reparse_in_env = False
-
-            try:
-                # keys in variant are named after package, but config is still used for some things.
-                #    This overrides the config with the variant settings.  The initial config
-                #    overrides the variant, though, so the variant is only clobbering in the case
-                #    where no CONDA_PY variables are set, or no version args passed to config obj.
-                # computes hashes based on whatever the current specs are - not the final specs
-                #    This is a deduplication step.  Any variants that end up identical because a
-                #    given variant is not used in a recipe are effectively ignored.
-                final = reparse(varmeta, index)
-            except UnsatisfiableVariantError as e:
-                log.warn("Unsatisfiable variant: {}"
-                        "Error was {}".format(variant, e))
-                continue
-            outputs[final.build_id()] = (final, need_source_download, need_reparse_in_env)
-    except exceptions.UnableToParseMissingSetuptoolsDependencies:
-        outputs = [(metadata, need_source_download, need_reparse_in_env), ]
-    return list(outputs.values()), index
-
 
 def reparse(metadata, index):
     """Some things need to be parsed again after the build environment has been created
@@ -233,6 +190,60 @@ def reparse(metadata, index):
         # just pass the metadata through unfinalized
         pass
     return metadata
+
+
+def base_parse(metadata, index):
+    log = logging.getLogger(__name__)
+    if 'host' in metadata.get_section('requirements'):
+        metadata.config.has_separate_host_prefix = True
+    try:
+        metadata.parse_until_resolved()
+    except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
+        log.warn("Need to create build environment to fully render this recipe.  Doing so.")
+        specs = [ms.spec for ms in metadata.ms_depends('build')]
+        environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
+                        subdir=metadata.config.build_subdir)
+    try:
+        metadata = reparse(metadata, index)
+    except UnsatisfiableVariantError:
+        raise
+    except exceptions.UnableToParseMissingSetuptoolsDependencies:
+        raise
+    return metadata
+
+
+def distribute_variants(metadata, variants, index):
+    log = logging.getLogger(__name__)
+    rendered_metadata = {}
+    need_reparse_in_env = False
+    for variant in variants:
+        mv = copy.copy(metadata)
+        mv.config = copy.deepcopy(metadata.config)
+        mv.config.variant = combine_variants(variant, mv.config.variant)
+
+        # TODO: may need to compute new build id, or at least remove any envs before building
+        #    another variant
+
+        if 'target_platform' in variant:
+            mv.config.host_subdir = variant['target_platform']
+        if not need_reparse_in_env:
+            try:
+                mv = base_parse(mv, index)
+            except UnsatisfiableVariantError as e:
+                log.warn(str(e))
+                continue
+            except exceptions.UnableToParseMissingSetuptoolsDependencies:
+                need_reparse_in_env = True
+        need_source_download = bool(mv.meta.get('source')) and not mv.needs_source_for_render
+        # computes hashes based on whatever the current specs are - not the final specs
+        #    This is a deduplication step.  Any variants that end up identical because a
+        #    given variant is not used in a recipe are effectively ignored, though we still pay
+        #    the price to parse for that variant.
+        rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
+    # list of tuples.
+    # each tuple item is a tuple of 3 items:
+    #    metadata, need_download, need_reparse_in_env
+    return list(rendered_metadata.values())
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None):
@@ -269,15 +280,19 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m)
+    if m.needs_source_for_render:
+        try_download(m, no_download_source=no_download_source)
 
-    # list of tuples.
-    # each tuple item is a tuple of 3 items:
-    #    metadata, need_download, need_reparse_in_env
-    rendered_metadata, index = parse_or_try_download(m,
-                                              no_download_source=no_download_source,
-                                              variants=variants)
-    assert rendered_metadata, "whoops - there's supposed to be a recipe's metadata here..."
+    rendered_metadata = {}
+
+    if m.final:
+        rendered_metadata = [(m, False, False), ]
+        index = None
+    else:
+        variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m)
+        index = get_build_index(m.config, m.config.build_subdir)
+        rendered_metadata = distribute_variants(m, variants, index)
+
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 
