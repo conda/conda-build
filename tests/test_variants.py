@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 from conda_build import variants
 from conda_build import api
@@ -30,21 +29,19 @@ def test_later_spec_priority():
     assert len(combined_spec["python"]) == 2
 
 
-def test_get_package_variants_from_file(testing_config):
-    with tempfile.NamedTemporaryFile() as f:
-        fname = f.name
-        if hasattr(fname, 'encode'):
-            fname = fname.encode()
-        testing_config.variant_config_files = [fname]
-        testing_config.ignore_system_config = True
-        with open(fname, 'w') as inner_f:
-            yaml.dump(global_specs, inner_f)
-        metadata = api.render(os.path.join(thisdir, "variant_recipe"),
-                              no_download_source=False, config=testing_config)
+def test_get_package_variants_from_file(testing_workdir, testing_config):
+    with open('variant_example.yaml', 'w') as f:
+        yaml.dump(global_specs, f)
+    testing_config.variant_config_files = [os.path.join(testing_workdir, 'variant_example.yaml')]
+    testing_config.ignore_system_config = True
+    metadata = api.render(os.path.join(thisdir, "variant_recipe"),
+                            no_download_source=False, config=testing_config)
     # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
     assert len(metadata) == 2
-    assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
-    assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
+    assert sum('python 2.7' in req for (m, _, _) in metadata
+               for req in m.meta['requirements']['run']) == 1
+    assert sum('python 3.5' in req for (m, _, _) in metadata
+               for req in m.meta['requirements']['run']) == 1
 
 
 def test_get_package_variants_from_dictionary_of_lists(testing_config):
@@ -54,8 +51,10 @@ def test_get_package_variants_from_dictionary_of_lists(testing_config):
                           variants=global_specs)
     # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
     assert len(metadata) == 2
-    assert sum('python 2.7' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
-    assert sum('python 3.5' in req for (m, _, _) in metadata for req in m.meta['requirements']['run']) == 1
+    assert sum('python 2.7' in req for (m, _, _) in metadata
+               for req in m.meta['requirements']['run']) == 1
+    assert sum('python 3.5' in req for (m, _, _) in metadata
+               for req in m.meta['requirements']['run']) == 1
 
 
 def test_combine_variants():
