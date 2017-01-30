@@ -30,7 +30,7 @@ import encodings.idna  # NOQA
 
 # used to get version
 from .conda_interface import envs_dirs, env_path_backup_var_exists
-from .conda_interface import PY3
+from .conda_interface import PY3, cc
 from .conda_interface import prefix_placeholder, linked
 from .conda_interface import url_path
 from .conda_interface import TemporaryDirectory
@@ -363,35 +363,30 @@ def write_about_json(m):
             if value:
                 d[key] = value
 
-        bin_path = os.path.join(sys.prefix, "Scripts\\conda.exe" if utils.on_win else "bin/conda")
-
         # for sake of reproducibility, record some conda info
-        conda_info = subprocess.check_output([bin_path, 'info', '--json', '-s'])
-        if hasattr(conda_info, 'decode'):
-            conda_info = conda_info.decode(utils.codec)
-        conda_info = json.loads(conda_info)
         d['conda_version'] = conda_version
         d['conda_build_version'] = conda_build_version
         # conda env will be in most, but not necessarily all installations.
         #    Don't die if we don't see it.
-        if 'conda_env_version' in conda_info:
-            d['conda_env_version'] = conda_info['conda_env_version']
-        d['offline'] = conda_info['offline']
-        channels = conda_info['channels']
         stripped_channels = []
-        for channel in channels:
+        for channel in get_rc_urls() + list(m.config.channel_urls):
             stripped_channels.append(sanitize_channel(channel))
         d['channels'] = stripped_channels
+        evars = ['PATH', 'PYTHONPATH', 'PYTHONHOME', 'CONDA_DEFAULT_ENV',
+                 'CIO_TEST', 'CONDA_ENVS_PATH']
+
+        if cc.platform == 'linux':
+            evars.append('LD_LIBRARY_PATH')
+        elif cc.platform == 'osx':
+            evars.append('DYLD_LIBRARY_PATH')
+        d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
         # this information will only be present in conda 4.2.10+
         try:
-            d['conda_private'] = conda_info['conda_private']
-            d['env_vars'] = conda_info['env_vars']
-        except KeyError:
+            d['conda_private'] = cc.conda_private
+        except (KeyError, AttributeError):
             pass
-        pkgs = subprocess.check_output([bin_path, 'list', '-n', 'root', '--json'])
-        if hasattr(pkgs, 'decode'):
-            pkgs = pkgs.decode(utils.codec)
-        d['root_pkgs'] = json.loads(pkgs)
+        env = environ.Environment(cc.root_dir)
+        d['root_pkgs'] = env.package_specs()
         json.dump(d, fo, indent=2, sort_keys=True)
 
 

@@ -33,6 +33,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     import conda.base.context
     import conda.exceptions
     from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
+    from conda.models.channel import prioritize_channels
 
     from conda.base.constants import DEFAULT_CHANNELS  # NOQA
     get_prefix = partial(context_get_prefix, conda.base.context.context)
@@ -70,7 +71,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
 else:
-    from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
+    from conda.config import get_default_urls, non_x86_linux_machines, load_condarc, prioritize_channels  # NOQA
     from conda.cli.common import get_prefix  # NOQA
 
     arch_name = cc.arch_name

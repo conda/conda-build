@@ -1,7 +1,6 @@
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 
-import copy
 from itertools import product
 import os
 import sys
