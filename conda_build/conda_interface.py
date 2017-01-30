@@ -62,6 +62,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     CondaHTTPError = conda.exceptions.CondaHTTPError
     PackageNotFoundError = conda.exceptions.PackageNotFoundError
     UnsatisfiableError = conda.exceptions.UnsatisfiableError
+    CondaError = conda.exceptions.CondaError
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     conda.base.context.context.allow_softlinks = False
@@ -115,6 +116,9 @@ else:
     class UnsatisfiableError(Exception):
         pass
 
+    class CondaError(Exception):
+        pass
+
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
 
@@ -163,7 +167,6 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import CrossPlatformStLink
     CrossPlatformStLink = CrossPlatformStLink
     from conda.exports import dist_str_in_index
-    from conda.exports import CondaError
 else:
     from json import JSONEncoder
     from os import lstat
@@ -184,9 +187,6 @@ else:
 
         def __json__(self):
             return self.name
-
-    class CondaError(Exception):
-        pass
 
     class FileMode(Enum):
         """
