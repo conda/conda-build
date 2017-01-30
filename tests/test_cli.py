@@ -332,6 +332,15 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 
 
 @pytest.mark.serial
+def test_inspect_hash_input(testing_metadata, capfd):
+    output = api.build(testing_metadata)[0]
+    args = ['hash-inputs', output]
+    main_inspect.execute(args)
+    output, error = capfd.readouterr()
+    assert 'requirements' in output
+
+
+@pytest.mark.serial
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")

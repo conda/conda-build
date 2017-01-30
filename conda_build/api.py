@@ -205,7 +205,6 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     sources into expected conda recipe format."""
 
     version = getattr(config, "version", version)
-    #I dont now if these do anything
     if version:
         kwargs.update({'version': version})
     if recursive:
@@ -304,6 +303,16 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
         print("No packages found with binary prefixes shorter than %d characters."
                 % min_prefix_length)
     return len(prefix_lengths) == 0
+
+
+def inspect_hash_inputs(packages):
+    """Return dictionaries of data that created the hash value (h????) for the provided package(s)
+
+    Returns a dictionary with a key for each input package and a value of the dictionary loaded
+    from the package's info/hash_input.json file
+    """
+    from .inspect import get_hash_input
+    return get_hash_input(packages)
 
 
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,

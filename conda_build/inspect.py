@@ -7,9 +7,11 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+import json
 import logging
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename, isdir
+import os
 import re
 import sys
 import tempfile
@@ -20,7 +22,7 @@ from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linke
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join, rm_rf
+from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file
 
 
 def which_prefix(path):
@@ -315,3 +317,15 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
     if hasattr(output_string, 'decode'):
         output_string = output_string.decode('utf-8')
     return output_string
+
+
+def get_hash_input(packages):
+    hash_inputs = {}
+    for pkg in packages:
+        hash_input = package_has_file(pkg, 'info/hash_input.json')
+        pkgname = os.path.basename(pkg)[:-8]
+        if hash_input:
+            hash_inputs[pkgname] = json.loads(hash_input.decode())
+        else:
+            hash_inputs[pkgname] = "<no hash_input.json in file>"
+    return hash_inputs
