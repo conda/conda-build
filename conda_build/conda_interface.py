@@ -27,7 +27,6 @@ from conda.config import rc_path  # NOQA
 from conda.version import VersionOrder  # NOQA
 from enum import Enum
 
-import os
 
 if parse_version(conda.__version__) >= parse_version("4.2"):
     # conda 4.2.x
@@ -60,6 +59,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     CondaValueError = conda.exceptions.CondaValueError
     LockError = conda.exceptions.LockError
     CondaHTTPError = conda.exceptions.CondaHTTPError
+    CondaError = conda.exceptions.CondaError
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     conda.base.context.context.allow_softlinks = False
@@ -107,7 +107,7 @@ else:
     class CondaValueError(Exception):
         pass
 
-    class CondaHTTPError(Exception):
+    class CondaError(Exception):
         pass
 
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
@@ -158,7 +158,6 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import CrossPlatformStLink
     CrossPlatformStLink = CrossPlatformStLink
     from conda.exports import dist_str_in_index
-    from conda.exports import CondaError
 else:
     from json import JSONEncoder
     from os import lstat
@@ -179,9 +178,6 @@ else:
 
         def __json__(self):
             return self.name
-
-    class CondaError(Exception):
-        pass
 
     class FileMode(Enum):
         """
