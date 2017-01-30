@@ -25,7 +25,7 @@ from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
-                                  combine_variants)
+                                  combine_variants, get_default_variants)
 from conda_build.exceptions import UnsatisfiableVariantError, DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 
@@ -276,6 +276,8 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
     if config.set_build_id:
         # updates a unique build id if not already computed
         config.compute_build_id(os.path.basename(recipe_dir))
+    # initialize with the default system variant, for sake of selectors especially
+    config.variant = get_default_variants()[0]
     try:
         m = MetaData(recipe_dir, config=config)
     except exceptions.YamlParsingError as e:

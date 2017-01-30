@@ -132,9 +132,8 @@ def select_lines(data, namespace):
 Error: Invalid selector in meta.yaml line %d:
 %s
 ''' % (i + 1, line))
-                sys.exit(1)
-            continue
-        lines.append(line)
+        else:
+            lines.append(line)
     return '\n'.join(lines) + '\n'
 
 
