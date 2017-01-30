@@ -55,7 +55,8 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
-from conda_build.variants import set_language_env_vars, get_default_variants
+from conda_build.variants import (set_language_env_vars, get_default_variants,
+                                  dict_of_lists_to_list_of_dicts, get_package_variants)
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -1258,6 +1259,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 metadata_tuples = []
                 index = metadata.config.index if metadata.config.index else get_build_index(config,
                                                                                 config.build_subdir)
+                variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
+                            get_package_variants(metadata))
                 metadata_tuples = distribute_variants(metadata, variants, index)
             else:
                 recipe_parent_dir = os.path.dirname(recipe)
