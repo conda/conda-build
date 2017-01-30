@@ -30,6 +30,7 @@ from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import StringIO
+from .conda_interface import memoized
 
 from conda_build.os_utils import external
 
@@ -720,6 +721,7 @@ class LoggingContext(object):
         # implicit return of None => don't swallow exceptions
 
 
+@memoized
 def get_installed_packages(path):
     '''
     Scan all json files in 'path' and return a dictionary with their contents.

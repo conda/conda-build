@@ -9,7 +9,7 @@ import sys
 
 import jinja2
 
-from .conda_interface import PY3
+from .conda_interface import PY3, VersionOrder
 from .environ import get_dict as get_environ
 from .utils import get_installed_packages
 
@@ -205,30 +205,54 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
-def pin_compatible(config, package_name, package_table=None, permit_undefined_jinja=True):
+def increment_last_version(version_as_list):
+    last_version = version_as_list[-1]
+    try:
+        last_version = str(int(last_version) + 1)
+    except ValueError:
+        last_version = chr(ord(last_version) + 1)
+    return version_as_list[:-1] + [last_version]
+
+
+def pin_compatible(config, package_name, permit_undefined_jinja=True):
     """Query a compatibility database, or just guess about compatibility based on semantic
     versioning.  Returns string with guess about compatible pinning."""
     log = logging.getLogger(__name__)
-    packages = get_installed_packages(config.build_prefix)
+    version = get_installed_packages(config.build_prefix)[package_name]['version']
     compatibility = None
-    if packages.get(package_name):
-        version = packages[package_name]['version']
-        if package_table and package_name in package_table:
-            # Look up compatibilty in table - TODO: need to factor version into this somehow
-            compatibility = package_table[package_name]
+    # this will pin major version only unless someone specifies a more stringent pin
+    pin_places = 1
+    if (config.variant.get('compatible') and
+            package_name in config.variant['compatible']):
+        entry = config.variant['compatible'][package_name]
+        # can specify particular versions that may have different compatibility
+        if hasattr(entry, 'keys') and version in entry:
+            pin_places = len(entry[version].split('.'))
         else:
-            try:
-                log.info('Package %s does not have compatibilty entry.  Assuming semantic '
-                            'versioning style, and allowing bug-fix revisions.  '
-                            'Please add package to lookup table if necessary.', package_name)
-                versions = version.split('.')
-                compatibility = ">=" + version + "," + ".".join([versions[0], versions[1], '*'])
-            except IndexError:
-                raise RuntimeError('Package {} does not follow semantic versioning style.  '
-                                   'Please add package to lookup table for compatible '
-                                   'pinning.'.format(package_name))
+            pin_places = len(entry.split('.'))
+    else:
+        log.info('Package %s does not have a `compatible` entry in your variant.'
+        'Assuming semantic versioning style, and allowing minor revisions.  '
+        'Please add package to `compatible` dictionary in your variant if necessary.', package_name)
 
-    if not compatibility and not permit_undefined_jinja:
+    # this is the version split up into its component bits.
+    # There are two cases considered here (so far):
+    # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
+    # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
+    parsed_version = VersionOrder(version).version[1:]
+
+    compatibility = ">=" + version + ","
+
+    if len(parsed_version) > 1:
+        # the good ones
+        parsed_version = increment_last_version([str(v[0]) for v in parsed_version[:pin_places]])
+        compatibility += '<' + '.'.join((parsed_version))
+    else:
+        # the evil ones (JPEG)
+        parsed_version = increment_last_version([str(v) for v in parsed_version[0][:pin_places]])
+        compatibility += '<' + ''.join((parsed_version))
+
+    if not (compatibility and permit_undefined_jinja):
         raise RuntimeError("Could not get compatibility information for {} package.  Is the "
                             "build environment created?".format(package_name))
     return compatibility
