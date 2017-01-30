@@ -55,7 +55,7 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
-from conda_build.variants import set_language_env_vars, get_default_variants, combine_variants
+from conda_build.variants import set_language_env_vars, get_default_variants
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -1230,11 +1230,6 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     already_built = set()
     extra_help = ""
     built_packages = []
-
-    # here's where we set the default variant.  Mostly this applies when metadata is created
-    #    directly - rendering reads in file paths.
-    if not variants:
-        variants = get_default_variants()
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist

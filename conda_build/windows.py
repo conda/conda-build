@@ -111,8 +111,8 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append('set MSSdk=1')
 
     if not version:
-        if int(config.variant['python'].split()[0]) >= 3:
-            if int(config.variant['python'].split()[1]) < 5:
+        if int(config.variant['python'][0]) >= 3:
+            if int(config.variant['python'].split('.')[1]) < 5:
                 version = '10.0'
             version = '14.0'
         else:
