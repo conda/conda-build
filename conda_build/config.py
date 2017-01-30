@@ -256,7 +256,8 @@ class Config(object):
         return res
 
     def _get_lua(self, prefix):
-        binary_name = "luajit" if (self.variant['lua'] and "2" == self.variant['lua'][0]) else "lua"
+        lua_ver = self.variant.get('lua', get_default_variants()[0]['lua'])
+        binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
         if sys.platform == 'win32':
             res = join(prefix, '{}.exe'.format(binary_name))
         else:

@@ -27,6 +27,7 @@ from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
 from conda_build.index import get_build_index
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.variants import get_default_variants
 
 
 def get_npy_ver(config):
@@ -203,7 +204,8 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(config, m=None, prefix=None):
+def get_dict(config, m=None, prefix=None, for_env=True):
+    log = logging.getLogger(__name__)
     if not prefix:
         prefix = config.host_prefix
 
@@ -211,12 +213,9 @@ def get_dict(config, m=None, prefix=None):
     d = conda_build_vars(prefix, config)
 
     # languages
-    if 'python' in config.variant:
-        d.update(python_vars(config))
-    if 'perl' in config.variant:
-        d.update(perl_vars(config))
-    if 'lua' in config.variant:
-        d.update(lua_vars(config))
+    d.update(python_vars(config))
+    d.update(perl_vars(config))
+    d.update(lua_vars(config))
 
     if m:
         d.update(meta_vars(m, config))
@@ -228,7 +227,11 @@ def get_dict(config, m=None, prefix=None):
     d.update({feat.upper(): str(int(value)) for feat, value in
               feature_list})
 
-    d.update(**config.variant)
+    for k, v in config.variant.items():
+        if not for_env or k.upper() not in d:
+            d[k] = v
+        else:
+            log.debug("Omitting variable %s from env dictionary (already exists)", k)
 
     return d
 
@@ -264,36 +267,36 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config):
+    py_ver = config.variant.get('python', get_default_variants()[0]['python'])
     d = {
         'PYTHON': config.build_python,
-        'PY3K': str(int(config.variant['python'][0]) == 3),
+        'PY3K': str(int(py_ver[0]) == 3),
         'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
         'SP_DIR': utils.get_site_packages(config.build_prefix),
-        'PY_VER': '.'.join(config.variant['python'].split('.')[:2]),
-        'CONDA_PY': ''.join(config.variant['python'].split('.')[:2]),
+        'PY_VER': '.'.join(py_ver.split('.')[:2]),
+        'CONDA_PY': ''.join(py_ver.split('.')[:2]),
     }
 
-    # Only define these variables if '--numpy=X.Y' was provided,
-    # otherwise any attempt to use them should be an error.
-    if config.variant.get('numpy'):
-        d['NPY_VER'] = config.variant['numpy']
-        d['CONDA_NPY'] = ''.join(config.variant['numpy'].split('.')[:2])
+    np_ver = config.variant.get('numpy', get_default_variants()[0]['numpy'])
+    d['NPY_VER'] = '.'.join(np_ver.split('.')[:2])
+    d['CONDA_NPY'] = ''.join(np_ver.split('.')[:2])
     return d
 
 
 def perl_vars(config):
     return {
-        'PERL_VER': config.variant['perl'],
+        'PERL_VER': config.variant.get('perl', get_default_variants()[0]['perl']),
     }
 
 
 def lua_vars(config):
     lua = config.build_lua
+    lua_ver = config.variant.get('lua', get_default_variants()[0]['lua'])
     if lua:
         return {
             'LUA': lua,
             'LUA_INCLUDE_DIR': get_lua_include_dir(config),
-            'LUA_VER': config.variant['lua'],
+            'LUA_VER': lua_ver,
         }
     else:
         return {}

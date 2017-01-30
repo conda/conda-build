@@ -350,7 +350,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
     initial_metadata: Augment the context with values from this MetaData object.
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
-    ctx = get_environ(config=config, m=initial_metadata)
+    ctx = get_environ(config=config, m=initial_metadata, for_env=False)
     environ = dict(os.environ)
     environ.update(get_environ(config=config, m=initial_metadata))
 
