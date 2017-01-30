@@ -223,6 +223,7 @@ def distribute_variants(metadata, variants, index):
         # deep copy the sensitive parts to decouple metadata objects
         mv.config = metadata.config.copy()
         mv.config.variant = combine_variants(variant, mv.config.variant)
+        mv.final = False
 
         # TODO: may need to compute new build id, or at least remove any envs before building
         #    another variant
