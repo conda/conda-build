@@ -268,7 +268,7 @@ def python_vars(config):
         'PY3K': str(int(config.variant['python'][0]) == 3),
         'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
         'SP_DIR': utils.get_site_packages(config.build_prefix),
-        'PY_VER': config.variant['python'],
+        'PY_VER': '.'.join(config.variant['python'].split('.')[:2]),
         'CONDA_PY': ''.join(config.variant['python'].split('.')[:2]),
     }
 
