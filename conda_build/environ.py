@@ -647,9 +647,12 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                 #    Just retry.
                 except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
                     if isinstance(exc, AssertionError):
-                        pkg_dir = os.path.dirname(os.path.dirname(repr(exc)))
-                        if os.path.isdir(pkg_dir):
-                            utils.rm_rf(pkg_dir)
+                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                            pkg_dir = os.path.dirname(os.path.dirname(repr(exc)))
+                            log.warn("I think conda ended up with a partial extraction for %s.  "
+                                     "Removing the folder and retrying", pkg_dir)
+                            if os.path.isdir(pkg_dir):
+                                utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                         create_env(prefix, specs, config=config, subdir=subdir,
