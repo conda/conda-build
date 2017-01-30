@@ -6,6 +6,7 @@ import json
 import logging
 import multiprocessing
 import os
+import re
 import sys
 import warnings
 from collections import defaultdict
@@ -613,8 +614,8 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                         CondaError) as exc:
                     if (("too short in" in str(exc) or
-                               'post-link failed for: openssl' in str(exc) or
-                                isinstance(exc, PaddingError)) and
+                            re.search('post-link failed for: (?:[a-zA-Z]*::)?openssl', str(exc)) or
+                            isinstance(exc, PaddingError)) and
                             config.prefix_length > 80):
                         if config.prefix_length_fallback:
                             log.warn("Build prefix failed with prefix length %d",
