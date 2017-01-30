@@ -20,6 +20,7 @@ from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
                                HashableDict, trim_empty_keys)
 from conda_build.license_family import ensure_valid_license_family
+from conda_build.variants import get_default_variants
 
 try:
     import yaml
@@ -60,31 +61,27 @@ def ns_cfg(config):
         nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
 
-    py = config.variant.get('python')
-    if py:
-        py = int("".join(py.split('.')[:2]))
-        d.update(dict(py=py,
-                      py3k=bool(30 <= py < 40),
-                      py2k=bool(20 <= py < 30),
-                      py26=bool(py == 26),
-                      py27=bool(py == 27),
-                      py33=bool(py == 33),
-                      py34=bool(py == 34),
-                      py35=bool(py == 35),
-                      py36=bool(py == 36),))
+    py = config.variant.get('python', get_default_variants()[0]['python'])
+    py = int("".join(py.split('.')[:2]))
+    d.update(dict(py=py,
+                    py3k=bool(30 <= py < 40),
+                    py2k=bool(20 <= py < 30),
+                    py26=bool(py == 26),
+                    py27=bool(py == 27),
+                    py33=bool(py == 33),
+                    py34=bool(py == 34),
+                    py35=bool(py == 35),
+                    py36=bool(py == 36),))
 
-    np = config.variant.get('numpy')
-    if np:
-        d['np'] = int("".join(np.split('.')[:2]))
+    np = config.variant.get('numpy', get_default_variants()[0]['numpy'])
+    d['np'] = int("".join(np.split('.')[:2]))
 
-    pl = config.variant.get('perl')
-    if pl:
-        d['pl'] = pl
+    pl = config.variant.get('perl', get_default_variants()[0]['perl'])
+    d['pl'] = pl
 
-    lua = config.variant.get('lua')
-    if lua:
-        d['lua'] = lua
-        d['luajit'] = bool(lua[0] == "2")
+    lua = config.variant.get('lua', get_default_variants()[0]['lua'])
+    d['lua'] = lua
+    d['luajit'] = bool(lua[0] == "2")
 
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)

@@ -45,7 +45,8 @@ from .conda_interface import dist_str_in_index
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
-from conda_build.render import output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata
+from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
+                                distribute_variants)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -700,7 +701,7 @@ bundlers = {
 }
 
 
-def build(m, variant, index, post=None, need_source_download=True, need_reparse_in_env=False):
+def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False):
     '''
     Build the package with the specified metadata.
 
@@ -1260,20 +1261,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 recipe_parent_dir = ""
                 to_build_recursive.append(metadata.name())
                 metadata_tuples = []
-                if metadata.config.index:
-                    index = metadata.config.index
-                else:
-                    index = None
-                metadata.config.index = None
-                for variant in variants:
-                    m = copy.copy(metadata)
-                    # the existing config variant has priority over the dynamically determined one.
-                    if m.config.variant:
-                        variant = combine_variants(variant, m.config.variant)
-                    # deep copy a couple of the sensitive parts to decouple metadata objects
-                    m.config = metadata.config.copy()
-                    m.config.variant = variant
-                    metadata_tuples.append((m, None, None))
+                index = metadata.config.index if metadata.config.index else get_build_index(config,
+                                                                                config.build_subdir)
+                metadata_tuples = distribute_variants(metadata, variants, index)
             else:
                 recipe_parent_dir = os.path.dirname(recipe)
                 recipe = recipe.rstrip("/").rstrip("\\")
@@ -1298,12 +1288,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
 
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
-                    if not index:
-                        index = get_build_index(config, config.build_subdir)
                     if not metadata.final:
                         metadata = finalize_metadata(metadata, index)
-                    packages_from_this = build(metadata, variant=config.variant,
-                                               index=index, post=post,
+                    packages_from_this = build(metadata, index=index, post=post,
                                                need_source_download=need_source_download,
                                                need_reparse_in_env=need_reparse_in_env)
                     if not notest:
