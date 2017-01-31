@@ -664,6 +664,8 @@ def expand_globs(path_list, root_dir):
         if os.path.isdir(path):
             files.extend(os.path.join(root, f).replace(root_dir + os.path.sep, '')
                             for root, _, fs in os.walk(path) for f in fs)
+        elif os.path.isfile(path):
+            files.append(path.replace(root_dir + os.path.sep, ''))
         else:
             files.extend(f.replace(root_dir + os.path.sep, '') for f in glob(path))
     return files
