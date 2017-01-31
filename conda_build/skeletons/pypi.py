@@ -302,6 +302,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 all_urls=False, pypi_url='https://pypi.python.org/pypi', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
+                extra_specs=[],
                 pin_numpy=False):
     client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
@@ -359,7 +360,19 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         if is_url:
             d['version'] = 'UNKNOWN'
         else:
-            versions = sorted(client.package_releases(package, True), key=parse_version)
+            # need to treat hidden and visible packages separately.
+            # the behavior of PyPI XML API differs from the documentation in certain
+            # cases. See
+            # https://github.com/pypa/pypi-legacy/issues/189#issuecomment-275515861
+
+            sort_by_version = lambda l: sorted(l, key=parse_version)
+
+            hidden_versions = sort_by_version(client.package_releases(package, True))
+            visible_versions = sort_by_version(client.package_releases(package, False))
+
+            # this list of available versions is the union of hidden and visible ones.
+            versions = sort_by_version(set(hidden_versions + visible_versions))
+
             if version_compare:
                 version_compare(versions)
             if version:
@@ -368,7 +381,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                              % (version, package))
                 d['version'] = version
             else:
-                if not versions:
+                # select the most visible version from PyPI.
+                if not visible_versions:
                     # The xmlrpc interface is case sensitive, but the index itself
                     # is apparently not (the last time I checked,
                     # len(set(all_packages_lower)) == len(set(all_packages)))
@@ -380,14 +394,14 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                             del package_dicts[package]
                             continue
                     sys.exit("Error: Could not find any versions of package %s" % package)
-                if len(versions) > 1:
+                if len(visible_versions) > 1:
                     print("Warning, the following versions were found for %s" %
                           package)
-                    for ver in versions:
+                    for ver in visible_versions:
                         print(ver)
-                    print("Using %s" % versions[-1])
+                    print("Using %s" % visible_versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = versions[-1]
+                d['version'] = visible_versions[-1]
 
         data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(client,
                                                                         package,
@@ -404,7 +418,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
-                             noprompt, packages, config=config, setup_options=setup_options)
+                             noprompt, packages, extra_specs, config=config, setup_options=setup_options)
 
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -473,7 +487,8 @@ def add_parser(repos):
     )
     pypi.add_argument(
         "--version",
-        help="Version to use. Applies to all packages.",
+        help="""Version to use. Applies to all packages. If not specified the
+              lastest visible version on PyPI is used.""",
     )
     pypi.add_argument(
         "--all-urls",
@@ -508,8 +523,8 @@ def add_parser(repos):
     pypi.add_argument(
         "--version-compare",
         action='store_true',
-        help="""Compare the package version of the recipe with the one available
-        on PyPI."""
+        help="""Compare the package version of the recipe with all available
+        versions on PyPI."""
     )
     pypi.add_argument(
         "--python-version",
@@ -551,6 +566,13 @@ def add_parser(repos):
         action='store_true',
         help="Ensure that the generated recipe pins the version of numpy"
              "to CONDA_NPY."
+    )
+
+    pypi.add_argument(
+        "--extra-specs",
+        action='append',
+        default=[],
+        help="Extra specs for the build environment to extract the skeleton.",
     )
 
 
@@ -652,7 +674,7 @@ def version_compare(package, versions):
 
 def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
                          recursive, created_recipes, noarch_python, noprompt, packages,
-                         config, setup_options):
+                         extra_specs, config, setup_options):
 
     print("Downloading %s" % package)
 
@@ -661,6 +683,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           pypiurl=d['pypiurl'],
                           md5=d['md5'],
                           python_version=python_version,
+                          extra_specs=extra_specs,
                           setup_options=setup_options,
                           config=config)
 
@@ -895,7 +918,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_options):
+def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, config, setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
     # package uses distribute).  Our strategy is to download the package
@@ -922,7 +945,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_o
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version, config=config, setup_options=setup_options)
+        run_setuppy(src_dir, tempdir, python_version, extra_specs=extra_specs, config=config, setup_options=setup_options)
         try:
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
                 pkg_info = yaml.load(fn)
@@ -934,7 +957,7 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, config, setup_o
     return pkg_info
 
 
-def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
+def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_options):
     '''
     Patch distutils and then run setup.py in a subprocess.
 
@@ -948,6 +971,9 @@ def run_setuppy(src_dir, temp_dir, python_version, config, setup_options):
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:
             specs.append('numpy')
+
+    specs.extend(extra_specs)
+
     # Do everything in the build env in case the setup.py install goes
     # haywire.
     # TODO: Try with another version of Python if this one fails. Some

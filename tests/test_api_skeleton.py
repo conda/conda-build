@@ -103,3 +103,17 @@ def test_pypi_with_version_arg(testing_workdir):
     with open('prettytable/meta.yaml') as f:
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.7.2")
+
+def test_pypi_with_extra_specs(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/1697
+    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24')
+    with open('bigfile/meta.yaml') as f:
+        actual = yaml.load(f)
+        assert parse_version(actual['package']['version']) == parse_version("0.1.24")
+
+def test_pypi_with_version_inconsistency(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/189
+    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10')
+    with open('mpi4py_test/meta.yaml') as f:
+        actual = yaml.load(f)
+        assert parse_version(actual['package']['version']) == parse_version("0.0.10")
