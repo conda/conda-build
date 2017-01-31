@@ -11,7 +11,8 @@ import jinja2
 
 from .conda_interface import PY3, VersionOrder
 from .environ import get_dict as get_environ
-from .utils import get_installed_packages
+from .utils import get_installed_packages, ensure_list
+from .index import get_build_index
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -214,45 +215,47 @@ def increment_last_version(version_as_list):
     return version_as_list[:-1] + [last_version]
 
 
-def pin_compatible(config, package_name, permit_undefined_jinja=True):
-    """Query a compatibility database, or just guess about compatibility based on semantic
-    versioning.  Returns string with guess about compatible pinning."""
-    log = logging.getLogger(__name__)
-    version = get_installed_packages(config.build_prefix)[package_name]['version']
+def pin_compatible(config, package_name, upper_bound=None, pins=('p', ),
+                   permit_undefined_jinja=True):
+    """dynamically pin based on currently installed version.
+
+    only mandatory input is package_name.
+    upper_bound is the authoritative upper bound, if provided.  The lower bound is the the
+        currently installed version.
+    pin expressions can be any string separated by `.`
+        The effective pin is length of the string split on '.'.
+    """
     compatibility = None
-    # this will pin major version only unless someone specifies a more stringent pin
-    pin_places = 1
-    if (config.variant.get('compatible') and
-            package_name in config.variant['compatible']):
-        entry = config.variant['compatible'][package_name]
-        # can specify particular versions that may have different compatibility
-        if hasattr(entry, 'keys') and version in entry:
-            pin_places = len(entry[version].split('.'))
-        else:
-            pin_places = len(entry.split('.'))
-    else:
-        log.info('Package %s does not have a `compatible` entry in your variant.'
-        'Assuming semantic versioning style, and allowing minor revisions.  '
-        'Please add package to `compatible` dictionary in your variant if necessary.', package_name)
 
     # this is the version split up into its component bits.
     # There are two cases considered here (so far):
     # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
     # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-    parsed_version = VersionOrder(version).version[1:]
+    version = get_installed_packages(config.build_prefix).get(package_name, {}).get('version')
+    if version:
+        if upper_bound:
+            compatibility = ">=" + version + ","
+            compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+        else:
+            pins = ensure_list(pins)
+            if len(pins) == 1:
+                pins = [999, len(pins[0].split('.'))]
+            else:
+                pins = [len(p.split('.')) for p in pins]
+            parsed_version = VersionOrder(version).version[1:]
+            if len(parsed_version) > 1:
+                # the good ones
+                lower_version = '.'.join([str(v[0]) for v in parsed_version[:pins[0]]])
+                upper_version = '.'.join(increment_last_version([str(v[0])
+                                                    for v in parsed_version[:pins[1]]]))
+            else:
+                # the evil ones (JPEG)
+                lower_version = ''.join([str(v) for v in parsed_version[0][:pins[0]]])
+                upper_version = ''.join(increment_last_version([str(v)
+                                                    for v in parsed_version[0][:pins[1]]]))
+            compatibility = ">={0},<{1}".format(lower_version, upper_version)
 
-    compatibility = ">=" + version + ","
-
-    if len(parsed_version) > 1:
-        # the good ones
-        parsed_version = increment_last_version([str(v[0]) for v in parsed_version[:pin_places]])
-        compatibility += '<' + '.'.join((parsed_version))
-    else:
-        # the evil ones (JPEG)
-        parsed_version = increment_last_version([str(v) for v in parsed_version[0][:pin_places]])
-        compatibility += '<' + ''.join((parsed_version))
-
-    if not (compatibility and permit_undefined_jinja):
+    if not compatibility and not permit_undefined_jinja:
         raise RuntimeError("Could not get compatibility information for {} package.  Is the "
                             "build environment created?".format(package_name))
     return compatibility

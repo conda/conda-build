@@ -11,7 +11,7 @@ import yaml
 from conda_build.utils import ensure_list
 from conda_build.conda_interface import cc
 
-DEFAULT_EXTEND_KEYS = ['pin_run_as_build']
+DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'compatible']
 DEFAULT_VARIANTS = {
     'python': ['{0}.{1}.*'.format(sys.version_info.major, sys.version_info.minor)],
     'numpy': ['1.11.*'],
@@ -89,12 +89,22 @@ def combine_specs(specs):
         if spec:
             for k, v in spec.items():
                 if k in extend_keys:
-                    values[k] = ensure_list(values.get(k, []))
-                    values[k].extend(ensure_list(v))
-                    # uniquify
-                    values[k] = list(set(values[k]))
+                    # update dictionaries, extend lists
+                    if hasattr(v, 'keys'):
+                        if k in values and hasattr(values[k], 'keys'):
+                            values[k].update(v)
+                        else:
+                            values[k] = v
+                    else:
+                        values[k] = ensure_list(values.get(k, []))
+                        values[k].extend(ensure_list(v))
+                        # uniquify
+                        values[k] = list(set(values[k]))
                 else:
-                    values[k] = ensure_list(v)
+                    if hasattr(v, 'keys'):
+                        values[k] = v
+                    else:
+                        values[k] = ensure_list(v)
     return values, set(extend_keys)
 
 
@@ -134,12 +144,14 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
     if 'extend_keys' in combined:
         del combined['extend_keys']
 
-    extended_cols = ['extend_keys'] + list(extend_keys)
     dicts = []
-    dimensions = {k: v for k, v in combined.items() if k not in extended_cols}
+    dimensions = {k: v for k, v in combined.items() if k not in ['extend_keys'] + list(extend_keys)}
     for x in product(*dimensions.values()):
         remapped = dict(six.moves.zip(dimensions, x))
-        remapped.update({k: set(v) for k, v in combined.items() if k in extended_cols})
+        for col in list(extend_keys):
+            v = combined.get(col)
+            if v:
+                remapped[col] = v if hasattr(v, 'keys') else list(set(v))
         dicts.append(remapped)
     return dicts
 

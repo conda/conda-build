@@ -721,7 +721,6 @@ class LoggingContext(object):
         # implicit return of None => don't swallow exceptions
 
 
-@memoized
 def get_installed_packages(path):
     '''
     Scan all json files in 'path' and return a dictionary with their contents.
