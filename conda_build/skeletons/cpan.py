@@ -19,7 +19,7 @@ from conda_build.conda_interface import get_index
 from conda_build.conda_interface import TmpDownload, download
 from conda_build.conda_interface import MatchSpec, Resolve
 from conda_build.conda_interface import memoized
-from conda_build.conda_interface import CondaHTTPError
+from conda_build.conda_interface import CondaHTTPError, CondaError
 
 from conda_build.config import Config
 from conda_build.utils import on_win, check_call_env
@@ -555,7 +555,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
         # seemingly new in conda 4.3: HTTPErrors arise when we ask for something that is a
         #   perl module, but not a package.
         # See https://github.com/conda/conda-build/issues/1675
-        except CondaHTTPError:
+        except (CondaError, CondaHTTPError):
             continue
 
     return build_deps, run_deps, packages_to_append
