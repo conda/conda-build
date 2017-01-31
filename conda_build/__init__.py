@@ -36,7 +36,7 @@ class DuplicateFilter(object):
         self.msgs.add(record.msg)
         return rv
 
-handler = logging.StreamHandler()
+dedupe_handler = logging.StreamHandler()
 filt = DuplicateFilter()
-handler.addFilter(filt)
-logging.getLogger(__name__).addHandler(handler)
+dedupe_handler.addFilter(filt)
+logging.getLogger(__name__).addHandler(dedupe_handler)

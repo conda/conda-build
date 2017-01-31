@@ -43,17 +43,17 @@ def test_build_with_conda_not_on_path(testing_workdir):
     with put_bad_conda_on_path(testing_workdir):
         # using subprocess is not ideal, but it is the easiest way to ensure that PATH
         #    is altered the way we want here.
-        check_call_env('conda-build {0}'.format(os.path.join(metadata_dir, "python_run")).split(),
-                              env=os.environ)
+        check_call_env('conda-build {0} --no-anaconda-upload'.format(
+            os.path.join(metadata_dir, "python_run")).split(),
+                       env=os.environ)
 
 
 def test_build_add_channel():
     """This recipe requires the blinker package, which is only on conda-forge.
     This verifies that the -c argument works."""
 
-    args = ['--no-anaconda-upload', '-c', 'conda_build_test', '--no-activate',
-            '--no-anaconda-upload', os.path.join(metadata_dir,
-                                                 "_recipe_requiring_external_channel")]
+    args = ['-c', 'conda_build_test', '--no-activate', '--no-anaconda-upload',
+            os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
 

@@ -334,68 +334,36 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def handle_config_version(ms, ver, dep_type='run'):
-    """
-    'ms' is an instance of MatchSpec, and 'ver' is the version from the
-    configuration, e.g. for ms.name == 'python', ver = 26 or None,
-    return a (sometimes new) MatchSpec object
-    """
-    if ms.strictness == 3:
-        return ms
-
-    if ms.strictness == 2:
-        if ms.spec.split()[1] == 'x.x':
-            if ver is None:
-                raise RuntimeError("'%s' requires external setting" % ms.spec)
-            # (no return here - proceeds below)
-        else:  # regular version
-            return ms
-
-    # If we don't have a configured version, or we are dealing with a simple
-    # numpy runtime dependency; just use "numpy"/the name of the package as
-    # the specification. In practice this means that a recipe which just
-    # defines numpy as a runtime dependency will match any version of numpy
-    # at install time.
-    if ver is None or (dep_type == 'run' and ms.strictness == 1 and
-                       ms.name == 'numpy'):
-        return MatchSpec(ms.name)
-
-    ver = text_type(ver)
-    if '.' not in ver:
-        if ms.name == 'numpy':
-            ver = '%s.%s' % (ver[0], ver[1:])
-        else:
-            ver = '.'.join(ver)
-    return MatchSpec('%s %s*' % (ms.name, ver))
-
-
 def build_string_from_metadata(metadata):
     if metadata.meta.get('build', {}).get('string'):
         build_str = metadata.get_value('build/string')
     else:
         res = []
-        version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)(?:[\.\*])?')
-        for name, s in (('numpy', 'np'), ('python', 'py'),
-                        ('perl', 'pl'), ('lua', 'lua'),
-                        ('r', 'r'), ('r-base', 'r')):
+        log = logging.getLogger(__name__)
+        variant_pin_run_as_depends = metadata.config.variant.get('pin_run_as_depends', {})
+        # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
+        #    nice to get rid of this, since the hash supercedes that functionally, but not clear
+        #    whether anyone's tools depend on this file naming right now.
+        for s, names, places in (('py', 'python', 2), ('np', 'numpy', 2), ('pl', 'perl', 2),
+                                 ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3)):
             for ms in metadata.ms_depends('run'):
-                if ms.name == name:
-                    try:
-                        v = ms.spec.split()[1]
-                    except IndexError:
-                        if name not in ['numpy']:
+                for name in ensure_list(names):
+                    if ms.name == name:
+                        if name == 'numpy' and ('x.x' not in str(ms) and
+                                                'numpy' not in variant_pin_run_as_depends):
+                            continue
+                        log.warn("Deprecation notice: computing build string (like pyXY).  This "
+                                 "functionality has been replaced with the hash (h????), which"
+                                 " can be readily inpsected with `conda inspect hash-inputs "
+                                 "<pkg-name>`.  pyXY, npXYY and the like will go away in "
+                                 "conda-build 4.0.  Please adapt any code that depends on filenames"
+                                 " with pyXY, npXYY, etc.")
+                        if metadata.noarch == name or (metadata.get_value('build/noarch_python') and
+                                                    name == 'python'):
                             res.append(s)
-                        break
-                    # compound constraints and indeterminate specs can't isolate the right version.
-                    if any(i in v for i in ',|>!<'):
-                        continue
-                    if name not in ['perl', 'lua', 'r', 'r-base']:
-                        match = version_pat.match(v)
-                        if match:
-                            res.append(s + match.group(1) + match.group(2))
-                    else:
-                        res.append(s + v.strip('*'))
-                    break
+                        else:
+                            variant_version = metadata.config.variant.get(name, "")
+                            res.append(''.join([s] + variant_version.split('.')[:places]))
 
         features = ensure_list(metadata.get_value('build/features', []))
         if res:
@@ -717,7 +685,6 @@ class MetaData(object):
                 if ms.name == name:
                     if self.noarch:
                         continue
-                    ms = handle_config_version(ms, ver, typ)
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
@@ -740,6 +707,17 @@ class MetaData(object):
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
+
+        # filter build requirements for ones that should not be in the hash
+        requirements = composite.get('requirements', {})
+        build_reqs = requirements.get('build', [])
+        excludes = self.config.variant.get('exclude_from_build_hash', [])
+        pattern = re.compile('|'.join('{}[\s$]?'.format(exc) for exc in excludes))
+
+        build_reqs = [req for req in build_reqs if not pattern.match(req)]
+        requirements['build'] = build_reqs
+        composite['requirements'] = requirements
+
         # remove the build number from the hash, so that we can bump it without changing the hash
         if 'number' in composite['build']:
             del composite['build']['number']
@@ -1064,3 +1042,9 @@ class MetaData(object):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
                              "character in your recipe.")
+
+    def copy(self):
+        new = copy.copy(self)
+        new.config = self.config.copy()
+        new.meta = copy.deepcopy(self.meta)
+        return new

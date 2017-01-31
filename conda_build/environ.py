@@ -22,7 +22,7 @@ from .conda_interface import package_cache
 from .conda_interface import memoized
 
 from conda_build.os_utils import external
-from conda_build import utils
+from conda_build import utils, dedupe_handler
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
 from conda_build.index import get_build_index
@@ -206,6 +206,7 @@ def get_hg_build_info(repo):
 
 def get_dict(config, m=None, prefix=None, for_env=True):
     log = logging.getLogger(__name__)
+    log.addHandler(dedupe_handler)
     if not prefix:
         prefix = config.host_prefix
 
@@ -553,6 +554,17 @@ def get_conda_operation_locks(config):
     return locks
 
 
+spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s)([0-9a-zA-Z\.]+)(\s[0-9a-zA-Z\.]+)?")
+
+
+def _ensure_valid_spec(spec):
+    match = spec_needing_star_re.match(spec)
+    # ignore exact pins (would be a 3rd group)
+    if match and not match.group(3):
+        spec = spec_needing_star_re.sub(r"\1\2.*", spec)
+    return spec
+
+
 def get_install_actions(prefix, index, specs, config):
     if config.verbose:
         capture = contextlib.contextmanager(lambda: (yield))
@@ -563,6 +575,7 @@ def get_install_actions(prefix, index, specs, config):
         # this is hiding output like:
         #    Fetching package metadata ...........
         #    Solving package specifications: ..........
+        specs = [_ensure_valid_spec(spec) for spec in specs]
         with capture():
             try:
                 actions = plan.install_actions(prefix, index, specs)

@@ -600,7 +600,7 @@ def bundle_conda(output, metadata, env, **kw):
                     [os.path.join(metadata.path, output['script'])],
                     cwd=metadata.config.host_prefix, env=env)
         files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
-    tmp_metadata = copy.copy(metadata)
+    tmp_metadata = metadata.copy()
     tmp_metadata.meta['package']['name'] = output['name']
     requirements = tmp_metadata.meta.get('requirements', {})
     requirements['run'] = output.get('requirements', [])

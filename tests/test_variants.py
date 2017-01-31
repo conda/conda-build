@@ -21,7 +21,7 @@ def test_later_spec_priority():
     combined_spec, extend_keys = variants.combine_specs([global_specs, single_version])
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
-    assert extend_keys == {'pin_run_as_build', }
+    assert extend_keys == {'exclude_from_build_hash', 'pin_run_as_build', 'runtimes'}
 
     # keep keys that are not overwritten
     combined_spec, extend_keys = variants.combine_specs([single_version, no_numpy_version])
@@ -38,9 +38,9 @@ def test_get_package_variants_from_file(testing_workdir, testing_config):
                             no_download_source=False, config=testing_config)
     # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
     assert len(metadata) == 2
-    assert sum('python 2.7' in req for (m, _, _) in metadata
+    assert sum('python >=2.7,<2.8' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
-    assert sum('python 3.5' in req for (m, _, _) in metadata
+    assert sum('python >=3.5,<3.6' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
 
 
@@ -51,15 +51,18 @@ def test_get_package_variants_from_dictionary_of_lists(testing_config):
                           variants=global_specs)
     # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
     assert len(metadata) == 2
-    assert sum('python 2.7' in req for (m, _, _) in metadata
+    assert sum('python >=2.7,<2.8' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
-    assert sum('python 3.5' in req for (m, _, _) in metadata
+    assert sum('python >=3.5,<3.6' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
 
 
 def test_combine_variants():
-    v1 = {'python': '2.7.*', 'extend_keys': 'frank', 'frank': 'steve'}
-    v2 = {'python': '3.5.*', 'extend_keys': 'frank', 'frank': 'bruce'}
+    v1 = {'python': '2.7.*', 'extend_keys': ['dict', 'list'], 'list': 'steve',
+          'dict': {'some': 'value'}}
+    v2 = {'python': '3.5.*', 'list': 'frank', 'dict': {'some': 'other', 'test': 'value'}}
     combined = variants.combine_variants(v1, v2)
     assert combined['python'] == '3.5.*'
-    assert combined['frank'] == ['steve', 'bruce']
+    assert combined['list'] == ['steve', 'frank']
+    assert len(combined['dict']) == 2
+    assert combined['dict']['some'] == 'other'

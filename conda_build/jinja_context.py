@@ -9,10 +9,9 @@ import sys
 
 import jinja2
 
-from .conda_interface import PY3, VersionOrder
+from .conda_interface import PY3
 from .environ import get_dict as get_environ
-from .utils import get_installed_packages, ensure_list
-from .index import get_build_index
+from .utils import get_installed_packages, ensure_list, apply_pin_expressions
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -206,15 +205,6 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
-def increment_last_version(version_as_list):
-    last_version = version_as_list[-1]
-    try:
-        last_version = str(int(last_version) + 1)
-    except ValueError:
-        last_version = chr(ord(last_version) + 1)
-    return version_as_list[:-1] + [last_version]
-
-
 def pin_compatible(config, package_name, upper_bound=None, pins=('p', ),
                    permit_undefined_jinja=True):
     """dynamically pin based on currently installed version.
@@ -238,22 +228,7 @@ def pin_compatible(config, package_name, upper_bound=None, pins=('p', ),
             compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
         else:
             pins = ensure_list(pins)
-            if len(pins) == 1:
-                pins = [999, len(pins[0].split('.'))]
-            else:
-                pins = [len(p.split('.')) for p in pins]
-            parsed_version = VersionOrder(version).version[1:]
-            if len(parsed_version) > 1:
-                # the good ones
-                lower_version = '.'.join([str(v[0]) for v in parsed_version[:pins[0]]])
-                upper_version = '.'.join(increment_last_version([str(v[0])
-                                                    for v in parsed_version[:pins[1]]]))
-            else:
-                # the evil ones (JPEG)
-                lower_version = ''.join([str(v) for v in parsed_version[0][:pins[0]]])
-                upper_version = ''.join(increment_last_version([str(v)
-                                                    for v in parsed_version[0][:pins[1]]]))
-            compatibility = ">={0},<{1}".format(lower_version, upper_version)
+            compatibility = apply_pin_expressions(version, pins)
 
     if not compatibility and not permit_undefined_jinja:
         raise RuntimeError("Could not get compatibility information for {} package.  Is the "

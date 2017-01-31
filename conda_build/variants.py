@@ -11,14 +11,15 @@ import yaml
 from conda_build.utils import ensure_list
 from conda_build.conda_interface import cc
 
-DEFAULT_EXTEND_KEYS = ['pin_run_as_build']
+DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'runtimes', 'exclude_from_build_hash']
 DEFAULT_VARIANTS = {
-    'python': ['{0}.{1}.*'.format(sys.version_info.major, sys.version_info.minor)],
-    'numpy': ['1.11.*'],
-    'perl': ['5.22.2.*'],
-    'lua': ['5.2.*'],
-    'r_base': ['3.3.2.*'],
-    'pin_run_as_build': ['python']
+    'python': ['{0}.{1}'.format(sys.version_info.major, sys.version_info.minor)],
+    'numpy': ['1.11'],
+    'perl': ['5.22.2'],
+    'lua': ['5.2'],
+    'r_base': ['3.3.2'],
+    'pin_run_as_build': {'python': ('p.p', 'p.p')},
+    'exclude_from_build_hash': ['numpy', 'mkl'],
 }
 
 
@@ -174,7 +175,10 @@ def get_package_variants(recipedir_or_metadata, config=None):
     # clobber the variant with anything in the config (stuff set via CLI flags or env vars)
     for k, v in config.variant.items():
         if k in extend_keys:
-            combined_spec[k].extend(v)
+            if hasattr(combined_spec[k], 'keys'):
+                combined_spec[k].update(v)
+            else:
+                combined_spec[k].extend(v)
         else:
             combined_spec[k] = [v]
 

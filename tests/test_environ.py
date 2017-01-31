@@ -81,3 +81,11 @@ with open(fn, 'wb') as f:
 
     api.build(testing_metadata)
     assert "Falling back to legacy prefix" in caplog.text
+
+
+def test_ensure_valid_spec():
+    assert environ._ensure_valid_spec('python') == 'python'
+    assert environ._ensure_valid_spec('python 2.7') == 'python 2.7.*'
+    assert environ._ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
+    assert environ._ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
+    assert environ._ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'

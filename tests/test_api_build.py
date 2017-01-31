@@ -449,7 +449,7 @@ def test_numpy_setup_py_data(testing_config):
     _hash = api.render(recipe_path, config=testing_config, numpy="1.10")[0][0]._hash_dependencies()
     assert os.path.basename(api.get_output_file_path(recipe_path,
                             config=testing_config, numpy="1.10")[0]) == \
-                            "load_setup_py_test-1.0a1-np110py{0}{1}{2}_1.tar.bz2".format(
+                            "load_setup_py_test-1.0a1-py{0}{1}np110{2}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 

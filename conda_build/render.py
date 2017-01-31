@@ -82,13 +82,31 @@ def strip_channel(spec_str):
     return spec_str
 
 
+def get_pin_from_build(m, dep, build_dep_versions):
+    dep_name = dep.split()[0]
+    pin = None
+    version = build_dep_versions.get(dep_name) or m.config.variant.get(dep_name)
+    if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
+            not (dep_name == 'python' and m.noarch)):
+        pin = utils.apply_pin_expressions(version.split()[0],
+                                            m.config.variant['pin_run_as_build'][dep_name])
+    elif dep.startswith('numpy') and 'x.x' in dep:
+        if not build_dep_versions.get(dep_name):
+            raise ValueError("numpy x.x specified, but numpy not in build requirements.")
+        pin = utils.apply_pin_expressions(version.split()[0],
+                                            ('p.p', 'p.p'))
+    if pin:
+        dep = " ".join((dep_name, pin))
+    return dep
+
+
 def finalize_metadata(m, index):
     """Fully render a recipe.  Fill in versions for build dependencies."""
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
     #     be installed in the environment.
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
-    rendered_metadata = copy.copy(m)
+    rendered_metadata = m.copy()
     build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
 
     reset_index = False
@@ -106,15 +124,7 @@ def finalize_metadata(m, index):
     #     names to have this behavior.
     requirements = rendered_metadata.meta.get('requirements', {})
     run_deps = requirements.get('run', [])
-    versioned_run_deps = []
-    for dep in run_deps[:]:
-        dep_name = dep.split()[0]
-        if (dep_name in m.config.variant.get('pin_run_as_build', []) and
-                dep_name in build_dep_versions and
-                not (dep_name == 'python' and m.noarch)):
-            versioned_run_deps.append(" ".join((dep_name, build_dep_versions[dep_name])))
-        else:
-            versioned_run_deps.append(dep)
+    versioned_run_deps = [get_pin_from_build(m, dep, build_dep_versions) for dep in run_deps]
 
     rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
     for env, values in (('build', build_deps), ('run', versioned_run_deps)):
@@ -122,10 +132,10 @@ def finalize_metadata(m, index):
             requirements[env] = [strip_channel(dep) for dep in values]
     rendered_metadata.meta['requirements'] = requirements
 
-    if not rendered_metadata.meta.get('test'):
-        rendered_metadata.meta['test'] = {}
-    rendered_metadata.meta['test']['requires'] = (rendered_metadata.get_value('test/requires') +
-                                                  versioned_run_deps)
+    test_deps = rendered_metadata.get_value('test/requires')
+    if test_deps:
+        versioned_test_deps = [get_pin_from_build(m, dep, build_dep_versions) for dep in test_deps]
+        rendered_metadata.meta['test']['requires'] = versioned_test_deps
 
     # if source/path is relative, then the output package makes no sense at all.  The next
     #   best thing is to hard-code the absolute path.  This probably won't exist on any
@@ -219,7 +229,7 @@ def distribute_variants(metadata, variants, index):
     metadata.config.index = None
 
     for variant in variants:
-        mv = copy.copy(metadata)
+        mv = metadata.copy()
         # deep copy the sensitive parts to decouple metadata objects
         mv.config = metadata.config.copy()
         mv.config.variant = combine_variants(variant, mv.config.variant)
