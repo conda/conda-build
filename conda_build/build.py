@@ -881,6 +881,8 @@ def bundle_conda(output, metadata, config, env, **kw):
     # remove files from build prefix.  This is so that they can be included in other packages.  If
     #     we were to leave them in place, then later scripts meant to also include them may not.
     for f in files:
+        if not os.path.isabs(f):
+            f = os.path.abspath(os.path.normpath(os.path.join(metadata.config.build_prefix, f)))
         utils.rm_rf(f)
     return final_output
 
