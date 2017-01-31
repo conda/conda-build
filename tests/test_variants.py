@@ -21,7 +21,7 @@ def test_later_spec_priority():
     combined_spec, extend_keys = variants.combine_specs([global_specs, single_version])
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
-    assert extend_keys == set(['pin_run_as_build', 'compatible'])
+    assert extend_keys == {'pin_run_as_build', }
 
     # keep keys that are not overwritten
     combined_spec, extend_keys = variants.combine_specs([single_version, no_numpy_version])
@@ -63,13 +63,3 @@ def test_combine_variants():
     combined = variants.combine_variants(v1, v2)
     assert combined['python'] == '3.5.*'
     assert combined['frank'] == ['steve', 'bruce']
-
-
-def test_combine_variants_with_compatible():
-    v1 = {'compatible': {'abc': 'p.p'}}
-    v2 = {'compatible': {'abc': 'p', '123': 'p.p'}}
-    # abc should get clobbered.  123 should get added.
-    combined = variants.combine_variants(v1, v2)
-    assert 'compatible' in combined
-    assert combined['compatible']['abc'] == 'p'
-    assert combined['compatible']['123'] == 'p.p'
