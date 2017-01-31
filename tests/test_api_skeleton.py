@@ -5,12 +5,12 @@ import pytest
 import yaml
 
 from conda_build import api
-from .utils import testing_workdir, test_config
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', "8.1.2"),
                  ('r', 'cran', 'nmf', ""),
+                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ""),
                  ('perl', 'cpan', 'Moo', ""),
                  # ('lua', luarocks', 'LuaSocket'),
                  ]
@@ -20,11 +20,13 @@ repo_packages = [('', 'pypi', 'pip', "8.1.2"),
 def test_repo(prefix, repo, package, version, testing_workdir, test_config):
     api.skeletonize(package, repo, version=version, output_dir=testing_workdir, config=test_config)
     try:
-        package_name = "-".join([prefix, package]) if prefix else package
+        base_package, _ = os.path.splitext(os.path.basename(package))
+        package_name = "-".join([prefix, base_package]) if prefix else base_package
         assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))
     except:
         print(os.listdir(testing_workdir))
         raise
+
 
 def test_name_with_version_specified(testing_workdir, test_config):
     api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=test_config)
@@ -101,3 +103,17 @@ def test_pypi_with_version_arg(testing_workdir):
     with open('prettytable/meta.yaml') as f:
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.7.2")
+
+def test_pypi_with_extra_specs(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/1697
+    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24')
+    with open('bigfile/meta.yaml') as f:
+        actual = yaml.load(f)
+        assert parse_version(actual['package']['version']) == parse_version("0.1.24")
+
+def test_pypi_with_version_inconsistency(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/189
+    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10')
+    with open('mpi4py_test/meta.yaml') as f:
+        actual = yaml.load(f)
+        assert parse_version(actual['package']['version']) == parse_version("0.0.10")

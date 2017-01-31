@@ -15,8 +15,7 @@ from conda_build.metadata import MetaData
 from conda_build.utils import rm_rf, on_win
 from conda_build.conda_interface import LinkError, PaddingError, CondaError
 
-from .utils import (testing_workdir, test_config, test_metadata, metadata_dir,
-                    get_noarch_python_meta, put_bad_conda_on_path)
+from .utils import metadata_dir, get_noarch_python_meta, put_bad_conda_on_path
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -111,7 +110,6 @@ def test_env_creation_with_prefix_fallback_disabled():
 @pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
                                     " not length dependent"))
 def test_catch_openssl_legacy_short_prefix_error(test_metadata, caplog):
-    config = api.Config(anaconda_upload=False, verbose=True, python="2.6")
     test_metadata.config = api.get_or_merge_config(test_metadata.config, python='2.6')
     cmd = """
 import os
@@ -240,7 +238,8 @@ def test_create_info_files_json(testing_workdir, test_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "foo"]
 
-    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files,
+                                    files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
@@ -275,7 +274,8 @@ def test_create_info_files_json_no_inodes(testing_workdir, test_metadata):
     files_with_prefix = [("prefix/path", "text", "foo")]
     files = ["one", "two", "one_hl", "foo"]
 
-    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files, files_with_prefix)
+    build.create_info_files_json_v1(test_metadata, info_dir, testing_workdir, files,
+                                    files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
