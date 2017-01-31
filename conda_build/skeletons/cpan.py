@@ -413,6 +413,7 @@ def core_module_version(module, version, config):
     '''
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
+    print('Module is %s' % module)
     if version in [None, '']:
         version = LooseVersion(config.CONDA_PERL)
     else:
@@ -441,15 +442,20 @@ def core_module_version(module, version, config):
         output = subprocess.check_output(cmd)
         if hasattr(output, "decode"):
             output = output.decode('utf-8')
+        print("Output is %s" % output)
         # If it's in core...
         if 'perl v' in output:
             first_version = output.partition('perl v')[2].strip()
             first_version = LooseVersion(first_version)
+            print("there is a first version")
+            print(first_version)
+            print(version)
             # If it's newer than the specified version, return None
             if LooseVersion(first_version) > LooseVersion(version):
                 mod_version = None
             else:
                 mod_version = version
+            print('we made it here...')
         # If it's not, return None
         else:
             mod_version = None
