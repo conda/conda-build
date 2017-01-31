@@ -58,7 +58,7 @@ def execute(args):
         sys.exit()
 
     for package in args.packages:
-        api.skeletonize(package, args.repo, config=config)
+        api.skeletonize(package, args.repo, output_dir=args.output_dir, recursive=args.recursive, version=args.version, config=config)
 
 
 def main():
