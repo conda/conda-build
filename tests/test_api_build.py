@@ -609,11 +609,12 @@ def test_disable_pip(testing_config):
     recipe_path = os.path.join(metadata_dir, '_disable_pip')
     metadata = api.render(recipe_path, config=testing_config)[0][0]
 
-    metadata.meta['build']['script'] = 'python -c "import pip"'
+    metadata.meta['build']['script'] = 'python -c "import pip; print(pip.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(metadata)
 
-    metadata.meta['build']['script'] = 'python -c "import setuptools"'
+    metadata.meta['build']['script'] = ('python -c "import setuptools; '
+                                        'print(setuptools.__version__)"')
     with pytest.raises(subprocess.CalledProcessError):
         api.build(metadata)
 
@@ -861,3 +862,14 @@ def test_append_python_app_osx(testing_config):
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
     api.build(recipe, config=testing_config, channel_urls=('nexpy', ))
+
+
+def test_clobbering_manually_set_metadata_raises(testing_metadata, testing_workdir):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    metadata = api.render(testing_workdir)[0][0]
+    # make the package meta dict out of sync with file contents
+    metadata.meta['package']['name'] = 'steve'
+    # re-render happens as part of build.  We should see an error about clobbering our customized
+    #    meta dict
+    with pytest.raises(ValueError):
+        api.build(metadata)

@@ -927,16 +927,12 @@ can lead to packages that include their dependencies.""" % meta_files))
                         'files': files3 - files1,
                         'requirements': requirements}]
         else:
-            made_meta = False
-            for out in outputs:
-                if out.get('name') in requirements:
-                    requirements.extend(out.get('requirements', []))
-                    made_meta = True
-            else:
-                # make a metapackage for the top-level package, but only if a matching output name
-                #    is not explicitly provided
-                if made_meta and not any(m.name() in out.get('name', '') for out in outputs):
-                    outputs.append({'name': m.name(), 'requirements': requirements})
+            # make a metapackage for the top-level package if the top-level requirements
+            #     mention a subpackage,
+            uses_subpackage = any(out.get('name') in requirements for out in outputs)
+            # but only if a matching output name is not explicitly provided
+            if uses_subpackage and not any(m.name() == out.get('name', '') for out in outputs):
+                outputs.append({'name': m.name(), 'requirements': requirements})
 
         for output in outputs:
             built_package = bundlers[output.get('type', 'conda')](output, m, env)
@@ -1214,6 +1210,12 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
+def ensure_metadata_compatible_with_recipe(metadata):
+    test_meta = metadata.copy()
+    test_meta.final = False
+    test_meta.parse_again(raise_on_clobber=True)
+
+
 def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                need_source_download=True, need_reparse_in_env=False, variants=None):
 
@@ -1261,6 +1263,12 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                                                                 config.build_subdir)
                 variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
                             get_package_variants(metadata))
+                # this is essentially a check to make sure that if people set things on the metadata
+                #    object directly, then they get an error when reparsing the recipe would clobber
+                #    their changes.
+                ensure_metadata_compatible_with_recipe(metadata)
+                # This is where reparsing happens - we need to re-evaluate the meta.yaml for any
+                #    jinja2 templating
                 metadata_tuples = distribute_variants(metadata, variants, index)
             else:
                 recipe_parent_dir = os.path.dirname(recipe)

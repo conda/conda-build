@@ -13,6 +13,7 @@ from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
 from .conda_interface import envs_dirs
+from .conda_interface import string_types
 
 from conda_build import exceptions, filt
 from conda_build.features import feature_list
@@ -157,16 +158,58 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
-def _merge_or_update_values(base, new, merge):
+def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
     for key, value in new.items():
+        base_value = base.get(key, value)
         if hasattr(value, 'keys'):
-            return _merge_or_update_values(base[key], value, merge)
-        else:
+            base_value = _merge_or_update_values(base_value, value, merge,
+                                                 raise_on_clobber=raise_on_clobber)
+            base[key] = base_value
+        elif hasattr(value, '__iter__') and not isinstance(value, string_types):
             if merge:
-                base[key] += value
+                if base_value and base_value != value:
+                    base_value.extend(value)
+                base[key] = base_value
             else:
                 base[key] = value
+        else:
+            if base_value and merge and value != base_value and raise_on_clobber:
+                raise ValueError("Attempting to merge non-{list,dict} object ({0}).  Note that due "
+                                 "to parsing order, you can't change metadata attributes that are "
+                                 "also defined in meta.yaml.  Perhaps you want to add this"
+                                 " key/value to recipe_clobber.yaml, or use template variables with"
+                                 " variant settings instead?")
+            base[key] = value
     return base
+
+
+def _trim_None_strings(meta_dict):
+    log = logging.getLogger(__name__)
+    for key, value in meta_dict.items():
+        if not value:
+            del meta_dict[key]
+        if hasattr(value, 'keys'):
+            meta_dict[key] = _trim_None_strings(value)
+        elif value and hasattr(value, '__iter__') or isinstance(value, string_types):
+            if isinstance(value, string_types):
+                meta_dict[key] = None if 'None' in value else value
+            else:
+                # support lists of dicts (homogeneous)
+                keep = []
+                if hasattr(value[0], 'keys'):
+                    for d in value:
+                        trimmed_dict = _trim_None_strings(d)
+                        if trimmed_dict:
+                            keep.append(trimmed_dict)
+                # support lists of strings (homogeneous)
+                else:
+                    keep = [i for i in value if 'None' not in i]
+                meta_dict[key] = keep
+        else:
+            log.debug("found unrecognized data type in dictionary: {0}, type: {1}".format(value,
+                                                                                    type(value)))
+    trim_empty_keys(meta_dict)
+    return meta_dict
 
 
 def ensure_valid_noarch_value(meta):
@@ -248,12 +291,11 @@ def sanitize(meta):
     Sanitize the meta-data to remove aliases/handle deprecation
 
     """
-    # make a copy to avoid side-effects
-    meta = meta.copy()
     sanitize_funs = [('source', _git_clean), ]
     for section, func in sanitize_funs:
         if section in meta:
             meta[section] = func(meta[section])
+    _trim_None_strings(meta)
     return meta
 
 
@@ -420,17 +462,13 @@ class MetaData(object):
 
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
-        self.meta = parse("package:\n"
-                          "  name: uninitialized",
-                          path=self.meta_path,
-                          config=self.config)
+        self.meta = dict()
 
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.final = False
         self.parse_again(permit_undefined_jinja=True)
         self.config.disable_pip = self.disable_pip
 
@@ -448,7 +486,7 @@ class MetaData(object):
     def disable_pip(self):
         return 'build' in self.meta and 'disable_pip' in self.meta['build']
 
-    def append_metadata_sections(self, sections_file_or_dict, merge):
+    def append_metadata_sections(self, sections_file_or_dict, merge, raise_on_clobber=False):
         """Append to or replace subsections to meta.yaml
 
         This is used to alter input recipes, so that a given requirement or
@@ -461,9 +499,10 @@ class MetaData(object):
         else:
             with open(sections_file_or_dict) as configfile:
                 build_config = parse(configfile.read(), config=self.config)
-        _merge_or_update_values(self.meta, build_config, merge=merge)
+        _merge_or_update_values(self.meta, build_config, merge=merge,
+                                raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False):
+    def parse_again(self, permit_undefined_jinja=False, raise_on_clobber=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -489,9 +528,10 @@ class MetaData(object):
         try:
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
-                self.meta = parse(self._get_contents(permit_undefined_jinja),
-                                  config=self.config,
-                                  path=self.meta_path)
+                self.append_metadata_sections(parse(self._get_contents(permit_undefined_jinja),
+                                                    config=self.config,
+                                                    path=self.meta_path), merge=True,
+                                              raise_on_clobber=raise_on_clobber)
 
                 if (isfile(self.requirements_path) and
                         not self.meta['requirements']['run']):
@@ -512,12 +552,15 @@ class MetaData(object):
                 clobber_sections_file = None
 
             if append_sections_file:
-                self.append_metadata_sections(append_sections_file, merge=True)
+                self.append_metadata_sections(append_sections_file, merge=True,
+                                              raise_on_clobber=raise_on_clobber)
             if clobber_sections_file:
-                self.append_metadata_sections(clobber_sections_file, merge=False)
+                self.append_metadata_sections(clobber_sections_file, merge=False,
+                                              raise_on_clobber=raise_on_clobber)
             if self.config.bootstrap:
                 dependencies = _get_dependencies_from_environment(self.config.bootstrap)
-                self.append_metadata_sections(dependencies, merge=True)
+                self.append_metadata_sections(dependencies, merge=True,
+                                              raise_on_clobber=raise_on_clobber)
         except:
             raise
         finally:

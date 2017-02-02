@@ -226,7 +226,6 @@ def distribute_variants(metadata, variants, index):
     log = logging.getLogger(__name__)
     rendered_metadata = {}
     need_reparse_in_env = False
-    metadata.config.index = None
 
     for variant in variants:
         mv = metadata.copy()
