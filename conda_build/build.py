@@ -41,8 +41,8 @@ from .conda_interface import Resolve, MatchSpec, Unsatisfiable
 from .conda_interface import TemporaryDirectory
 from .conda_interface import get_rc_urls, get_local_urls
 from .conda_interface import VersionOrder
-from .conda_interface import (PaddingError, LinkError, CondaValueError, CondaError,
-                              NoPackagesFoundError, NoPackagesFound, LockError)
+from .conda_interface import (PaddingError, LinkError, CondaError, NoPackagesFoundError,
+                              NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
@@ -1206,6 +1206,7 @@ def warn_on_use_of_SRC_DIR(metadata):
                              "script, but these files have been deleted.  Please see the "
                              " documentation regarding the test/source_files meta.yaml section, "
                              "or pass the --no-remove-work-dir flag.")
+
 
 def test(recipedir_or_package_or_metadata, config, move_broken=True):
     '''

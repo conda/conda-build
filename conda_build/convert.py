@@ -10,7 +10,7 @@ Tools for converting conda packages
 """
 from __future__ import absolute_import, division, print_function
 
-from copy import deepcopy
+from copy import copy, deepcopy
 import json
 import os
 from os.path import abspath, expanduser, isdir, join
@@ -162,12 +162,14 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
     finally:
         t.close()
 
+
 def _check_paths_version(paths):
     """Verify that we can handle this version of a paths file"""
     # For now we only accept 1, but its possible v2 will still have the structure we need
     # If so just update this if statement.
     if paths['paths_version'] != 1:
         raise RuntimeError("Cannot handle info/paths.json paths_version other than 1")
+
 
 def _update_paths(paths, mapping_dict):
     """Given a paths file, update it such that old paths are replaced with new"""
@@ -177,10 +179,8 @@ def _update_paths(paths, mapping_dict):
             path['_path'] = mapping_dict[path['_path']]
     return updated_paths
 
-path_mapping_bat_proxy = [
-    (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
-    (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
-]
+path_mapping_bat_proxy = (re.compile(r'bin\/(.+?)(\.py[c]?)?$'),
+                           (r'Scripts/\1-script', r'Scripts/\1.bat'))
 
 path_mapping_unix_windows = [
     (r'lib/python(\d.\d)/', r'Lib/'),
@@ -254,7 +254,7 @@ def get_pure_py_file_map(t, platform):
 
     members = t.getmembers()
     file_map = {}
-    paths_mapping_dict = {} # keep track of what we change in files
+    paths_mapping_dict = {}  # keep track of what we change in files
     pathmember = None
     for member in members:
         # Update metadata
@@ -300,28 +300,43 @@ def get_pure_py_file_map(t, platform):
             file_map[oldpath] = member
 
         # Make Windows compatible entry-points
-        batseen = set()
         if source_type == 'unix' and dest_type == 'win':
-            for old, new in path_mapping_bat_proxy:
-                newpath = old.sub(new, oldpath)
-                if oldpath in batseen:
-                    break
-                if newpath != oldpath:
-                    newmember = tarfile.TarInfo(newpath)
-                    if PY3:
-                        data = bytes(BAT_PROXY.replace('\n', '\r\n'), 'ascii')
-                    else:
-                        data = BAT_PROXY.replace('\n', '\r\n')
-                    newmember.size = len(data)
-                    file_map[newpath] = newmember, bytes_io(data)
-                    batseen.add(oldpath)
-                    files.append(newpath)
+            old = path_mapping_bat_proxy[0]
+            for new in path_mapping_bat_proxy[1]:
+                match = old.match(oldpath)
+                if match:
+                    newpath = old.sub(new, oldpath)
+                    if newpath.endswith('-script'):
+                        if match.group(2):
+                            newpath = newpath + match.group(2)
+                        else:
+                            newpath = newpath + '.py'
+                    if newpath != oldpath:
+                        newmember = tarfile.TarInfo(newpath)
+                        if PY3:
+                            data = bytes(BAT_PROXY.replace('\n', '\r\n'), 'ascii')
+                        else:
+                            data = BAT_PROXY.replace('\n', '\r\n')
+                        newmember.size = len(data)
+                        file_map[newpath] = newmember, bytes_io(data)
+                        files.append(newpath)
+                        # crappy thing is that we're going from one file to two.
+                        if oldpath not in paths_mapping_dict:
+                            paths_mapping_dict[oldpath] = newpath
+                        else:
+                            # need to create a new entry for the second file.
+                            found_path = [p for p in paths['paths'] if p['_path'] == oldpath]
+                            assert len(found_path) == 1
+                            newdict = copy(found_path[0])
+                            newdict['_path'] = newpath
+                            paths['paths'].append(newdict)
 
     # Change paths.json the same way that we changed files
     if paths:
         updated_paths = _update_paths(paths, paths_mapping_dict)
         paths = json.dumps(updated_paths, sort_keys=True,
                            indent=4, separators=(',', ': '))
+    files = list(set(files))
     files = '\n'.join(sorted(files)) + '\n'
     if PY3:
         files = bytes(files, 'utf-8')

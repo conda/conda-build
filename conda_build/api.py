@@ -174,7 +174,6 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     sources into expected conda recipe format."""
 
     version = getattr(config, "version", version)
-    #I dont now if these do anything
     if version:
         kwargs.update({'version': version})
     if recursive:
