@@ -32,7 +32,6 @@ BAT_PROXY = """\
 @echo off
 set PYFILE=%~f0
 set PYFILE=%PYFILE:~0,-4%-script.py
-@SET "CONDA_EXE=%~dp0\..\Scripts\conda.exe"
 "%~dp0\..\python.exe" "%PYFILE%" %*
 """
 
@@ -257,6 +256,7 @@ def get_pure_py_file_map(t, platform):
     file_map = {}
     paths_mapping_dict = {}  # keep track of what we change in files
     pathmember = None
+
     for member in members:
         # Update metadata
         if member.path == 'info/index.json':
@@ -284,9 +284,6 @@ def get_pure_py_file_map(t, platform):
         oldpath = member.path
         for old, new in mapping:
             newpath = old.sub(new, oldpath)
-            if oldpath in file_map:
-                # Already been handled
-                break
             if newpath != oldpath:
                 newmember = deepcopy(member)
                 newmember.path = newpath
@@ -314,10 +311,13 @@ def get_pure_py_file_map(t, platform):
                             newpath = newpath + '.py'
                     if newpath != oldpath:
                         newmember = tarfile.TarInfo(newpath)
-                        if PY3:
-                            data = bytes(BAT_PROXY.replace('\n', '\r\n'), 'ascii')
+                        if newpath.endswith('.bat'):
+                            if PY3:
+                                data = bytes(BAT_PROXY.replace('\n', '\r\n'), 'ascii')
+                            else:
+                                data = BAT_PROXY.replace('\n', '\r\n')
                         else:
-                            data = BAT_PROXY.replace('\n', '\r\n')
+                            data = t.extractfile(member).read()
                         newmember.size = len(data)
                         file_map[newpath] = newmember, bytes_io(data)
                         files.append(newpath)

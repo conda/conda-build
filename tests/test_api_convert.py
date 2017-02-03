@@ -1,14 +1,12 @@
 import os
 import json
-import subprocess
 import tarfile
 
 import pytest
 
 from conda_build.conda_interface import download
 from conda_build import api
-from conda_build.build import create_env
-from conda_build.utils import package_has_file, on_win, conda_43
+from conda_build.utils import package_has_file, on_win
 
 from .utils import metadata_dir, assert_package_consistency
 
@@ -73,8 +71,12 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config, testing_work
         converted_fn = os.path.join(platform, os.path.basename(fn))
         assert package_has_file(converted_fn, "Scripts/test-script-manual-script.py")
         assert package_has_file(converted_fn, "Scripts/test-script-manual.bat")
-        assert package_has_file(converted_fn, "Scripts/test-script-setup-script.py")
-        assert package_has_file(converted_fn, "Scripts/test-script-setup.bat")
+        script_contents = package_has_file(converted_fn, "Scripts/test-script-setup-script.py")
+        assert script_contents
+        assert "Test script setup" in script_contents
+        bat_contents = package_has_file(converted_fn, "Scripts/test-script-setup.bat")
+        assert bat_contents
+        assert "set PYFILE" in bat_contents
         assert_package_consistency(converted_fn)
         paths_content = json.loads(package_has_file(converted_fn, 'info/paths.json').decode())
         paths_list = {f['_path'] for f in paths_content['paths']}
@@ -83,15 +85,3 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config, testing_work
 
         index = json.loads(package_has_file(converted_fn, 'info/index.json').decode())
         assert index['subdir'] == platform
-
-        # conda 4.3 uses paths.json.  This test makes sure that the converted package is
-        #      installable with conda 4.3
-        with open('.condarc', 'w') as f:
-            f.write("subdir: {}".format(platform))
-        if conda_43():
-            install_dir = platform + '-env'
-            os.environ["CONDA_SUBDIR"] = platform
-            p = subprocess.Popen('conda create -yp {} {}'.format(os.path.join(testing_workdir, install_dir),
-                                                  converted_fn).split(), env=os.environ)
-            out, err = p.communicate()
-            import ipdb; ipdb.set_trace()
