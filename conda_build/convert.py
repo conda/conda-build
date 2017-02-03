@@ -32,7 +32,8 @@ BAT_PROXY = """\
 @echo off
 set PYFILE=%~f0
 set PYFILE=%PYFILE:~0,-4%-script.py
-"%~f0\\..\\..\\python.exe" "%PYFILE%" %*
+@SET "CONDA_EXE=%~dp0\..\Scripts\conda.exe"
+"%~dp0\..\python.exe" "%PYFILE%" %*
 """
 
 libpy_pat = re.compile(
