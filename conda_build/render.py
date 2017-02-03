@@ -129,12 +129,13 @@ def finalize_metadata(m, index):
     rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
     for env, values in (('build', build_deps), ('run', versioned_run_deps)):
         if values:
-            requirements[env] = [strip_channel(dep) for dep in values]
+            requirements[env] = list({strip_channel(dep) for dep in values})
     rendered_metadata.meta['requirements'] = requirements
 
     test_deps = rendered_metadata.get_value('test/requires')
     if test_deps:
-        versioned_test_deps = [get_pin_from_build(m, dep, build_dep_versions) for dep in test_deps]
+        versioned_test_deps = list({get_pin_from_build(m, dep, build_dep_versions)
+                                    for dep in test_deps})
         rendered_metadata.meta['test']['requires'] = versioned_test_deps
 
     # if source/path is relative, then the output package makes no sense at all.  The next

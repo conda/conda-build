@@ -169,7 +169,7 @@ def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
             if merge:
                 if base_value and base_value != value:
                     base_value.extend(value)
-                base[key] = base_value
+                base[key] = list(set(base_value))
             else:
                 base[key] = value
         else:
@@ -382,7 +382,7 @@ def build_string_from_metadata(metadata):
     else:
         res = []
         log = logging.getLogger(__name__)
-        variant_pin_run_as_depends = metadata.config.variant.get('pin_run_as_depends', {})
+        variant_pin_run_as_depends = metadata.config.variant.get('pin_run_as_build', {})
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
@@ -528,10 +528,9 @@ class MetaData(object):
         try:
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
-                self.append_metadata_sections(parse(self._get_contents(permit_undefined_jinja),
-                                                    config=self.config,
-                                                    path=self.meta_path), merge=True,
-                                              raise_on_clobber=raise_on_clobber)
+                self.meta = parse(self._get_contents(permit_undefined_jinja),
+                                  config=self.config,
+                                  path=self.meta_path)
 
                 if (isfile(self.requirements_path) and
                         not self.meta['requirements']['run']):

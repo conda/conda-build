@@ -32,7 +32,7 @@ SUFFIX_MAP = {'PY': 'python',
 
 def parse_config_file(path):
     with open(path) as f:
-        content = yaml.load(f)
+        content = yaml.load(f, Loader=yaml.loader.BaseLoader)
     return content
 
 
