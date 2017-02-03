@@ -1,12 +1,14 @@
 import os
 import json
+import subprocess
 import tarfile
 
 import pytest
 
 from conda_build.conda_interface import download
 from conda_build import api
-from conda_build.utils import package_has_file, on_win
+from conda_build.build import create_env
+from conda_build.utils import package_has_file, on_win, conda_43
 
 from .utils import metadata_dir, assert_package_consistency
 
@@ -62,7 +64,7 @@ def test_convert_platform_to_others(testing_workdir, base_platform, package):
 
 @pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="we create the pkg to be converted in *nix; don't run on win.")
-def test_convert_from_unix_to_win_creates_entry_points(test_config):
+def test_convert_from_unix_to_win_creates_entry_points(test_config, testing_workdir):
     recipe_dir = os.path.join(metadata_dir, "entry_points")
     fn = api.get_output_file_path(recipe_dir, config=test_config)
     api.build(recipe_dir, config=test_config)
@@ -78,3 +80,18 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config):
         paths_list = {f['_path'] for f in paths_content['paths']}
         files = set(package_has_file(converted_fn, 'info/files').splitlines())
         assert files == paths_list
+
+        index = json.loads(package_has_file(converted_fn, 'info/index.json').decode())
+        assert index['subdir'] == platform
+
+        # conda 4.3 uses paths.json.  This test makes sure that the converted package is
+        #      installable with conda 4.3
+        with open('.condarc', 'w') as f:
+            f.write("subdir: {}".format(platform))
+        if conda_43():
+            install_dir = platform + '-env'
+            os.environ["CONDA_SUBDIR"] = platform
+            p = subprocess.Popen('conda create -yp {} {}'.format(os.path.join(testing_workdir, install_dir),
+                                                  converted_fn).split(), env=os.environ)
+            out, err = p.communicate()
+            import ipdb; ipdb.set_trace()
