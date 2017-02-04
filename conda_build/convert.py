@@ -11,6 +11,7 @@ Tools for converting conda packages
 from __future__ import absolute_import, division, print_function
 
 from copy import copy, deepcopy
+import csv
 import json
 import os
 from os.path import abspath, expanduser, isdir, join
@@ -257,6 +258,17 @@ def get_pure_py_file_map(t, platform):
     paths_mapping_dict = {}  # keep track of what we change in files
     pathmember = None
 
+    # is None when info/has_prefix does not exist
+    has_prefix_files = t.extractfile("info/has_prefix").read()
+    if has_prefix_files:
+        fieldnames = ['prefix', 'type', 'path']
+        csv_dialect = csv.Sniffer().sniff(has_prefix_files)
+        csv_dialect.lineterminator = '\n'
+        has_prefix_files = csv.DictReader(has_prefix_files.splitlines(), fieldnames=fieldnames,
+                                          dialect=csv_dialect)
+        # convenience: store list of dictionaries as map by path
+        has_prefix_files = {d['path']: d for d in has_prefix_files}
+
     for member in members:
         # Update metadata
         if member.path == 'info/index.json':
@@ -275,13 +287,13 @@ def get_pure_py_file_map(t, platform):
         elif member.path == 'info/paths.json':
             pathmember = deepcopy(member)
             continue
-        elif member.path == 'info/has_prefix':
-            if source_type == 'unix' and dest_type == 'win':
-                # has_prefix is not needed on Windows
-                file_map['info/has_prefix'] = None
 
         # Move paths
         oldpath = member.path
+        append_new_path_to_has_prefix = False
+        if has_prefix_files and oldpath in has_prefix_files:
+            append_new_path_to_has_prefix = True
+
         for old, new in mapping:
             newpath = old.sub(new, oldpath)
             if newpath != oldpath:
@@ -293,6 +305,8 @@ def get_pure_py_file_map(t, platform):
                 loc = files.index(oldpath)
                 files[loc] = newpath
                 paths_mapping_dict[oldpath] = newpath
+                if append_new_path_to_has_prefix:
+                    has_prefix_files[oldpath]['path'] = newpath
                 break
         else:
             file_map[oldpath] = member
@@ -318,6 +332,8 @@ def get_pure_py_file_map(t, platform):
                                 data = BAT_PROXY.replace('\n', '\r\n')
                         else:
                             data = t.extractfile(member).read()
+                            if append_new_path_to_has_prefix:
+                                has_prefix_files[oldpath]['path'] = newpath
                         newmember.size = len(data)
                         file_map[newpath] = newmember, bytes_io(data)
                         files.append(newpath)
@@ -348,6 +364,13 @@ def get_pure_py_file_map(t, platform):
     if pathmember:
         pathmember.size = len(paths)
         file_map['info/paths.json'] = pathmember, bytes_io(paths)
+    if has_prefix_files:
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames, dialect=csv_dialect)
+        writer.writerows(has_prefix_files.values())
+        member = t.getmember('info/has_prefix')
+        member.size = len(output.getvalue())
+        file_map['info/has_prefix'] = member, bytes_io(output.getvalue())
 
     return file_map
 

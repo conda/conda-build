@@ -1,3 +1,4 @@
+import csv
 import os
 import json
 import tarfile
@@ -73,10 +74,10 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config, testing_work
         assert package_has_file(converted_fn, "Scripts/test-script-manual.bat")
         script_contents = package_has_file(converted_fn, "Scripts/test-script-setup-script.py")
         assert script_contents
-        assert "Test script setup" in script_contents
+        assert "Test script setup" in script_contents.decode()
         bat_contents = package_has_file(converted_fn, "Scripts/test-script-setup.bat")
         assert bat_contents
-        assert "set PYFILE" in bat_contents
+        assert "set PYFILE" in bat_contents.decode()
         assert_package_consistency(converted_fn)
         paths_content = json.loads(package_has_file(converted_fn, 'info/paths.json').decode())
         paths_list = {f['_path'] for f in paths_content['paths']}
@@ -85,3 +86,16 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config, testing_work
 
         index = json.loads(package_has_file(converted_fn, 'info/index.json').decode())
         assert index['subdir'] == platform
+
+        has_prefix_files = package_has_file(converted_fn, "info/has_prefix")
+        fieldnames = ['prefix', 'type', 'path']
+        csv_dialect = csv.Sniffer().sniff(has_prefix_files)
+        csv_dialect.lineterminator = '\n'
+        has_prefix_files = csv.DictReader(has_prefix_files.splitlines(), fieldnames=fieldnames,
+                                          dialect=csv_dialect)
+        has_prefix_files = {d['path']: d for d in has_prefix_files}
+        assert len(has_prefix_files) == 4
+        assert 'Scripts/test-script-script.py' in has_prefix_files
+        assert 'Scripts/test-script-setup-script.py' in has_prefix_files
+        assert 'Scripts/test-script-manual-script.py' in has_prefix_files
+        assert 'Scripts/test-script-manual-postfix-script.py' in has_prefix_files
