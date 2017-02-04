@@ -37,3 +37,14 @@ def test_hardlinks_to_copies(testing_workdir):
 
     assert os.lstat('test1').st_nlink == 1
     assert os.lstat('test2').st_nlink == 1
+
+
+def test_postbuild_files_raise(testing_metadata, testing_workdir):
+    fn = 'buildstr', 'buildnum', 'version'
+    for f in fn:
+        with open(os.path.join(testing_metadata.config.work_dir,
+                               '__conda_{}__.txt'.format(f)), 'w') as fh:
+            fh.write('123')
+        with pytest.raises(ValueError) as exc:
+            post.get_build_metadata(testing_metadata)
+        assert f in str(exc)

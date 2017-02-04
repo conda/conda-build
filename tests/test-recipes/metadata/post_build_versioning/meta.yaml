@@ -1,5 +1,0 @@
-package:
-  name: post-build-versioning
-
-source:
-  path: ../../../../../conda_build_test_recipe
