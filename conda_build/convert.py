@@ -339,16 +339,11 @@ def get_pure_py_file_map(t, platform):
                         newmember.size = len(data)
                         file_map[newpath] = newmember, bytes_io(data)
                         files.append(newpath)
-                        # crappy thing is that we're going from one file to two.
-                        if oldpath not in paths_mapping_dict:
-                            paths_mapping_dict[oldpath] = newpath
-                        else:
-                            # need to create a new entry for the second file.
-                            found_path = [p for p in paths['paths'] if p['_path'] == oldpath]
-                            assert len(found_path) == 1
-                            newdict = copy(found_path[0])
-                            newdict['_path'] = newpath
-                            paths['paths'].append(newdict)
+                        found_path = [p for p in paths['paths'] if p['_path'] == oldpath]
+                        assert len(found_path) == 1
+                        newdict = copy(found_path[0])
+                        newdict['_path'] = newpath
+                        paths['paths'].append(newdict)
 
     # Change paths.json the same way that we changed files
     if paths:
