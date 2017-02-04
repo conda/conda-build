@@ -224,8 +224,7 @@ def convert(package_file, output_dir=".", show_imports=False, platforms=None, fo
     """Convert changes a package from one platform to another.  It applies only to things that are
     portable, such as pure python, or header-only C/C++ libraries."""
     from .convert import conda_convert
-    if not platforms:
-        platforms = []
+    platforms = _ensure_list(platforms)
     if package_file.endswith('tar.bz2'):
         return conda_convert(package_file, output_dir=output_dir, show_imports=show_imports,
                              platforms=platforms, force=force, verbose=verbose, quiet=quiet,

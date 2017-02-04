@@ -259,7 +259,9 @@ def get_pure_py_file_map(t, platform):
     pathmember = None
 
     # is None when info/has_prefix does not exist
-    has_prefix_files = t.extractfile("info/has_prefix").read()
+    has_prefix_files = None
+    if 'info/has_prefix' in t.getnames():
+        has_prefix_files = t.extractfile("info/has_prefix").read().decode()
     if has_prefix_files:
         fieldnames = ['prefix', 'type', 'path']
         csv_dialect = csv.Sniffer().sniff(has_prefix_files)
@@ -369,8 +371,11 @@ def get_pure_py_file_map(t, platform):
         writer = csv.DictWriter(output, fieldnames=fieldnames, dialect=csv_dialect)
         writer.writerows(has_prefix_files.values())
         member = t.getmember('info/has_prefix')
-        member.size = len(output.getvalue())
-        file_map['info/has_prefix'] = member, bytes_io(output.getvalue())
+        output_val = output.getvalue()
+        if hasattr(output_val, 'encode'):
+            output_val = output_val.encode()
+        member.size = len(output_val)
+        file_map['info/has_prefix'] = member, bytes_io(output_val)
 
     return file_map
 

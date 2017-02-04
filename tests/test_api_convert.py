@@ -81,13 +81,13 @@ def test_convert_from_unix_to_win_creates_entry_points(test_config, testing_work
         assert_package_consistency(converted_fn)
         paths_content = json.loads(package_has_file(converted_fn, 'info/paths.json').decode())
         paths_list = {f['_path'] for f in paths_content['paths']}
-        files = set(package_has_file(converted_fn, 'info/files').splitlines())
+        files = {p.decode() for p in package_has_file(converted_fn, 'info/files').splitlines()}
         assert files == paths_list
 
         index = json.loads(package_has_file(converted_fn, 'info/index.json').decode())
         assert index['subdir'] == platform
 
-        has_prefix_files = package_has_file(converted_fn, "info/has_prefix")
+        has_prefix_files = package_has_file(converted_fn, "info/has_prefix").decode()
         fieldnames = ['prefix', 'type', 'path']
         csv_dialect = csv.Sniffer().sniff(has_prefix_files)
         csv_dialect.lineterminator = '\n'
