@@ -844,3 +844,15 @@ def test_append_python_app_osx(test_config):
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
     api.build(recipe, config=test_config, channel_urls=('nexpy', ))
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
+def test_copy_read_only_file_with_xattr(test_config, testing_workdir):
+    src_recipe = os.path.join(metadata_dir, '_xattr_copy')
+    recipe = os.path.join(testing_workdir, '_xattr_copy')
+    copy_into(src_recipe, recipe)
+    # file is r/w for owner, but we change it to 400 after setting the attribute
+    ro_file = os.path.join(recipe, 'mode_400_file')
+    subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+    subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
+    api.build(recipe, config=test_config)

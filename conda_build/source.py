@@ -495,7 +495,6 @@ def provide(metadata, config, patch=True):
       - unpack
       - apply patches (if any)
     """
-
     if not os.path.isdir(config.build_folder):
         os.makedirs(config.build_folder)
     git = None

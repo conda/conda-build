@@ -41,6 +41,7 @@ else:
     import urllib
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
+    PermissionError = OSError
 
 
 # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
@@ -112,6 +113,26 @@ def try_acquire_locks(locks, timeout):
             lock.release()
 
 
+# with each of these, we are copying less metadata.  This seems to be necessary
+#   to cope with some shared filesystems with some virtual machine setups.
+#  See https://github.com/conda/conda-build/issues/1426
+def _copy_with_shell_fallback(src, dst):
+    is_copied = False
+    for func in (shutil.copy2, shutil.copy, shutil.copyfile):
+        try:
+            func(src, dst)
+            is_copied = True
+            break
+        except (IOError, OSError, PermissionError):
+            continue
+    if not is_copied:
+        try:
+            subprocess.check_call('cp -a {} {}'.format(src, dst), shell=True)
+        except subprocess.CalledProcessError as e:
+            if not os.path.isfile(dst):
+                raise OSError("Failed to copy {} to {}.  Error was: {}".format(src, dst, e))
+
+
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
     """Copy all the files and directories in src to the directory dst"""
     log = logging.getLogger(__name__)
@@ -150,16 +171,8 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
                 except OSError:
                     pass
 
-            # with each of these, we are copying less metadata.  This seems to be necessary
-            #   to cope with some shared filesystems with some virtual machine setups.
-            #  See https://github.com/conda/conda-build/issues/1426
             try:
-                shutil.copy2(src, dst_fn)
-            except OSError:
-                try:
-                    shutil.copy(src, dst_fn)
-                except OSError:
-                    shutil.copyfile(src, dst_fn)
+                _copy_with_shell_fallback(src, dst_fn)
             except shutil.Error:
                 log.debug("skipping %s - already exists in %s",
                             os.path.basename(src), dst)
@@ -198,13 +211,8 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
             elif os.path.isdir(s):
                 copytree(s, d, symlinks, ignore)
             else:
-                try:
-                    shutil.copy2(s, d)
-                except IOError:
-                    try:
-                        shutil.copy(s, d)
-                    except IOError:
-                        shutil.copyfile(s, d)
+                _copy_with_shell_fallback(s, d)
+
     return dst_lst
 
 
