@@ -118,7 +118,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, test_config):
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
-    assert 'conda-build-test-has-prefix_1' in data
+    assert 'conda-build-test-has-prefix-files_1' in data
 
 
 def test_build_no_build_id(testing_workdir, test_config):
