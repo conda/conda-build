@@ -19,6 +19,12 @@ matrix:
       env: $CONDA_VERSION=4.3.x
       os: osx
 
+
+addons:
+  apt:
+    packages:
+    - attr
+
 install:
   # show which shell we are running
   - ps -ef | grep $$
