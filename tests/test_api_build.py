@@ -856,3 +856,23 @@ def test_copy_read_only_file_with_xattr(test_config, testing_workdir):
     subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
     subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
     api.build(recipe, config=test_config)
+
+
+@pytest.mark.serial
+def test_env_creation_fail_exits_build(test_config):
+    recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
+    with pytest.raises(RuntimeError):
+        api.build(recipe, config=test_config)
+
+    recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
+    with pytest.raises(RuntimeError):
+        api.build(recipe, config=test_config)
+
+
+@pytest.mark.serial
+def test_recursion(test_config):
+    recipe = os.path.join(metadata_dir, '_recursive-build-two-layer')
+    api.build(recipe, config=test_config)
+
+    recipe = os.path.join(metadata_dir, '_recursive-build-two-packages')
+    api.build(recipe, config=test_config)

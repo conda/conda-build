@@ -1431,6 +1431,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     already_built = set()
     extra_help = ""
     built_packages = []
+    retried_recipes = []
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1492,6 +1493,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([recipe])
+            if recipe in retried_recipes:
+                raise RuntimeError("Can't build {0} due to environment creation error:\n"
+                                    .format(recipe) + error_str + "\n" + extra_help)
+            retried_recipes.append(recipe)
             for line in error_str.splitlines():
                 if not line.startswith('  - '):
                     continue
@@ -1499,7 +1504,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 pkg = pkg.strip().split(' ')[0]
 
                 if pkg in to_build_recursive:
-                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
+                    raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                        .format(recipe) + error_str + "\n" + extra_help)
 
                 if pkg in skip_names:
