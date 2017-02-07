@@ -353,7 +353,7 @@ def write_info_files_file(m, files, config):
                 fo.write(f + '\n')
 
 
-def write_package_metadata_json(m, config):
+def write_link_json(m, config):
     package_metadata = OrderedDict()
 
     noarch_type = m.get_value('build/noarch')
@@ -373,8 +373,11 @@ def write_package_metadata_json(m, config):
             preferred_env_dict["executable_paths"] = executable_paths
         package_metadata["preferred_env"] = preferred_env_dict
     if package_metadata:
+        # The original name of this file was info/package_metadata_version.json, but we've
+        #   now changed it to info/link.json.  Still, we must indefinitely keep the key name
+        #   package_metadata_version, or we break conda.
         package_metadata["package_metadata_version"] = 1
-        with open(os.path.join(config.info_dir, "package_metadata.json"), 'w') as fh:
+        with open(os.path.join(config.info_dir, "link.json"), 'w') as fh:
             fh.write(json.dumps(package_metadata, sort_keys=True, indent=2, separators=(',', ': ')))
 
 
@@ -488,7 +491,7 @@ def create_info_files(m, files, config, prefix):
 
     write_info_json(m, config)  # actually index.json
     write_about_json(m, config)
-    write_package_metadata_json(m, config)
+    write_link_json(m, config)
 
     write_info_files_file(m, files, config)
 
