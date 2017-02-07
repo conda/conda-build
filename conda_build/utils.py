@@ -127,7 +127,8 @@ def _copy_with_shell_fallback(src, dst):
             continue
     if not is_copied:
         try:
-            subprocess.check_call('cp -a {} {}'.format(src, dst), shell=True)
+            subprocess.check_call('cp -a {} {}'.format(src, dst), shell=True,
+                                  stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             if not os.path.isfile(dst):
                 raise OSError("Failed to copy {} to {}.  Error was: {}".format(src, dst, e))
