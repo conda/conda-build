@@ -47,7 +47,7 @@ from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
-from .conda_interface import dist_str_in_index
+from .conda_interface import dist_str_in_index, Dist
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -436,7 +436,10 @@ def write_info_json(m, config):
 # It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
 """ % (m.dist(), config.subdir))
-            for dist in sorted(dists + [m.dist()]):
+            dist = m.dist()
+            if hasattr(dists[0], 'version'):
+                dist = Dist(dist)
+            for dist in sorted(dists + [dist]):
                 fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':
             info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
