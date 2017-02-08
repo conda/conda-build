@@ -64,12 +64,12 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit matches expected commit
-        current_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H"],
-                                      env=env, stderr=stderr)
+        current_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H"],
+                                                env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
-        expected_tag_commit = subprocess.check_output(["git", "log", "-n1", "--format=%H",
-                                            expected_rev],
-                                            env=env, stderr=stderr)
+        expected_tag_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H",
+                                                      expected_rev],
+                                                     env=env, stderr=stderr)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
 
         if current_commit != expected_tag_commit:
@@ -77,8 +77,8 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
 
         # Verify correct remote url. Need to find the git cache directory,
         # and check the remote from there.
-        cache_details = subprocess.check_output(["git", "remote", "-v"], env=env,
-                                     stderr=stderr)
+        cache_details = utils.check_output_env(["git", "remote", "-v"], env=env,
+                                               stderr=stderr)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
 
@@ -87,13 +87,13 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
         try:
-            remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
-                                                      "remote", "-v"],
+            remote_details = utils.check_output_env(["git", "--git-dir", cache_dir,
+                                                     "remote", "-v"],
                                                      env=env, stderr=stderr)
         except subprocess.CalledProcessError:
             if sys.platform == 'win32' and cache_dir.startswith('/'):
                 cache_dir = utils.convert_unix_path_to_win(cache_dir)
-            remote_details = subprocess.check_output(["git", "--git-dir", cache_dir,
+            remote_details = utils.check_output_env(["git", "--git-dir", cache_dir,
                                                       "remote", "-v"],
                                                      env=env, stderr=stderr)
         remote_details = remote_details.decode('utf-8')
@@ -152,7 +152,7 @@ def get_git_info(repo, config):
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
     try:
-        output = subprocess.check_output(["git", "describe", "--tags", "--long", "HEAD"],
+        output = utils.check_output_env(["git", "describe", "--tags", "--long", "HEAD"],
                                          env=env, cwd=os.path.dirname(repo),
                                          stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
@@ -162,7 +162,7 @@ def get_git_info(repo, config):
             d.update(dict(zip(keys, parts)))
 
         # get the _full_ hash of the current HEAD
-        output = subprocess.check_output(["git", "rev-parse", "HEAD"],
+        output = utils.check_output_env(["git", "rev-parse", "HEAD"],
                                          env=env, cwd=os.path.dirname(repo),
                                          stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
@@ -191,7 +191,7 @@ def get_hg_build_info(repo):
     cmd = ["hg", "log", "--template",
            "{rev}|{node|short}|{latesttag}|{latesttagdistance}|{branch}",
            "--rev", "."]
-    output = subprocess.check_output(cmd, env=env, cwd=os.path.dirname(repo))
+    output = utils.check_output_env(cmd, env=env, cwd=os.path.dirname(repo))
     output = output.decode('utf-8')
     rev, short_id, tag, distance, branch = output.split('|')
     if tag != 'null':

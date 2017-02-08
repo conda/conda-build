@@ -882,3 +882,8 @@ def test_recursion_layers(test_config):
     """go two 'hops' - try to build a, but a needs b, so build b first, then come back to a"""
     recipe = os.path.join(metadata_dir, '_recursive-build-two-layer')
     api.build(recipe, config=test_config)
+
+
+def test_pin_depends(test_metadata):
+    test_metadata.meta['build']['pin_depends'] = 'record'
+    api.build(test_metadata)
