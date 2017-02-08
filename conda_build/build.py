@@ -1431,9 +1431,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             subprocess.call('del /s /q "{0}\\*.*" >nul 2>&1'.format(trash_dir), shell=True)
         # delete_trash(None)
 
-    already_built = set()
     extra_help = ""
     built_packages = []
+    retried_recipes = []
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1502,7 +1502,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 pkg = pkg.strip().split(' ')[0]
 
                 if pkg in to_build_recursive:
-                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n"
+                    raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                        .format(recipe) + error_str + "\n" + extra_help)
 
                 if pkg in skip_names:
@@ -1522,46 +1522,52 @@ packages, the other package needs to be rebuilt
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
                                        .format(recipe, e.pkgs) + "\n\n" + extra_help)
+            if retried_recipes.count(recipe) >= len(metadata.ms_depends('build')):
+                raise RuntimeError("Can't build {0} due to environment creation error:\n"
+                                    .format(recipe) + error_str + "\n" + extra_help)
+            retried_recipes.append(recipe)
             recipe_list.extendleft(add_recipes)
 
-        # outputs message, or does upload, depending on value of args.anaconda_upload
-        if post in [True, None]:
-            for f in built_packages:
-                # TODO: could probably use a better check for pkg type than this...
-                if f.endswith('.tar.bz2'):
-                    handle_anaconda_upload(f, config=config)
-                elif f.endswith('.whl'):
-                    handle_pypi_upload(f, config=config)
-                already_built.add(f)
-
+    if post in [True, None]:
+        # TODO: could probably use a better check for pkg type than this...
+        tarballs = [f for f in built_packages if f.endswith('.tar.bz2')]
+        wheels = [f for f in built_packages if f.endswith('.whl')]
+        handle_anaconda_upload(tarballs, config=config)
+        handle_pypi_upload(wheels, config=config)
     return built_packages
 
 
-def handle_anaconda_upload(path, config):
+def handle_anaconda_upload(paths, config):
     from conda_build.os_utils.external import find_executable
+
+    paths = utils.ensure_list(paths)
 
     upload = False
     # this is the default, for no explicit argument.
     # remember that anaconda_upload takes defaults from condarc
     if config.anaconda_upload is None:
         pass
+    elif config.token or config.user:
+        upload = True
     # rc file has uploading explicitly turned off
     elif config.anaconda_upload is False:
         print("# Automatic uploading is disabled")
+        upload = False
     else:
         upload = True
 
-    if config.token or config.user:
-        upload = True
-
     no_upload_message = """\
-# If you want to upload this package to anaconda.org later, type:
-#
-# $ anaconda upload %s
-#
+# If you want to upload package(s) to anaconda.org later, type:
+
+"""
+    for package in paths:
+        no_upload_message += "anaconda upload {}\n".format(package)
+
+    no_upload_message += """\
+
 # To have conda build upload to anaconda.org automatically, use
 # $ conda config --set anaconda_upload yes
-""" % path
+"""
     if not upload:
         print(no_upload_message)
         return
@@ -1574,7 +1580,6 @@ Error: cannot locate anaconda command (required for upload)
 # Try:
 # $ conda install anaconda-client
 ''')
-    print("Uploading to anaconda.org")
     cmd = [anaconda, ]
 
     if config.token:
@@ -1582,15 +1587,16 @@ Error: cannot locate anaconda command (required for upload)
     cmd.extend(['upload', '--force'])
     if config.user:
         cmd.extend(['--user', config.user])
-    cmd.append(path)
-    try:
-        subprocess.call(cmd)
-    except:
-        print(no_upload_message)
-        raise
+    for package in paths:
+        try:
+            print("Uploading {} to anaconda.org".format(os.path.basename(package)))
+            subprocess.call(cmd + [package])
+        except subprocess.CalledProcessError:
+            print(no_upload_message)
+            raise
 
 
-def handle_pypi_upload(f, config):
+def handle_pypi_upload(wheels, config):
     args = ['twine', 'upload', '--sign-with', config.sign_with, '--repository', config.repository]
     if config.user:
         args.extend(['--user', config.user])
@@ -1605,12 +1611,14 @@ def handle_pypi_upload(f, config):
     if config.repository:
         args.extend(['--repository', config.repository])
 
-    args.append(f)
-    try:
-        utils.check_call_env(args)
-    except:
-        logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
-                                         "  Is this package registered?")
+    wheels = utils.ensure_list(wheels)
+
+    for f in wheels:
+        try:
+            utils.check_call_env(args + [f])
+        except:
+            logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
+                                            "  Is this package registered?")
 
 
 def print_build_intermediate_warning(config):
