@@ -15,10 +15,6 @@ matrix:
     - python: '3.5'
       env: $CONDA_VERSION=4.3.x
       os: linux
-    - python: '2.7'
-      env: $CONDA_VERSION=4.3.x
-      os: osx
-
 
 addons:
   apt:
