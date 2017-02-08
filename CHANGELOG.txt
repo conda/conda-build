@@ -1,3 +1,25 @@
+2017-02-07 2.1.4:
+
+Enhancements:
+-------------
+
+* Allow relative paths for --croot option #1736
+
+Bug fixes:
+----------
+
+* Rename package_metadata.json file to link.json to more accurately reflect contents #1720
+* Fix converted packages from unix to Windows having broken entry points #1721
+* Fix an infinite loop when creating the test environment failed #1739
+* Fix conda 4.3 incompatibility with --pin-depends option #1740
+
+Contributors:
+
+* @gabm
+* @kalefranze
+* @msarahan
+
+
 2017-01-31 2.1.3:
 
 Enhancements:
