@@ -1,7 +1,9 @@
 import json
 import os
+import requests
 import subprocess
 import sys
+from getpass import getpass
 from git import Repo
 from jinja2 import Environment, FileSystemLoader
 
@@ -115,6 +117,25 @@ class Project(object):
         print("\n\nInstalling develop version of project...\n")
         if not run_cmd(cmd):
             raise Exception("See above for error")
+
+    def push_to_github(self):
+        print("\n\nCreating github repo...\n")
+        git_user = input("Enter github username: ")
+        git_pass = getpass("Enter github password: ")
+        r = requests.post("https://api.github.com/user/repos", auth=(git_user, git_pass),
+                          json={'name': self.name})
+        if not r.ok:
+            raise requests.exceptions.HTTPError(r.text)
+        repo = r.json()
+        remote_type = input("Do you have ssh setup with github?[y/n]")
+        remote_url = repo['ssh_url'] if remote_type == 'y' else repo['html_url']
+        cmd = ["git", "-C", self.project_path, "remote", "add", "origin", remote_url]
+        if not run_cmd(cmd):
+            raise Exception("See above for error")
+        cmd = ['git', '-C', self.project_path, 'push', '-u', 'origin', 'master']
+        if not run_cmd(cmd):
+            raise Exception("See above for error")
+        print("\n\nGitHub Repo: {}\n\n".format(repo['html_url']))
 
 
 def create_project_skeleton(project):

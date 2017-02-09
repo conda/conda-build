@@ -291,4 +291,4 @@ def init_project(name, path, conf=None):
     python_ver = input("Enter python version [2.7]: ") or '2.7'
     project.create_conda_env(python_ver)
     project.develop_install()
-    # ip.create_github_repo(project)
+    project.push_to_github()
