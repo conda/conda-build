@@ -1,6 +1,7 @@
+import json
 import os
 import subprocess
-import conda.cli.python_api as capi
+import sys
 from git import Repo
 from jinja2 import Environment, FileSystemLoader
 
@@ -26,6 +27,21 @@ def get_user_info(field):
         return r.strip()
 
 
+def run_cmd(cmd):
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=sys.stdout) 
+    p.wait()
+    return p.returncode == 0
+
+
+def get_conda_env_path(env_name):
+    envs = json.loads(subprocess.check_output(('conda', 'env', 'list', '--json')).decode('utf-8'))
+    print(envs)
+    envs = [e for e in envs['envs'] if e.endswith(env_name)]
+    print(env_name, ":", envs)
+    if len(envs) == 1:
+        return envs[0]
+    raise ValueError("Could not find environment path.")
+
 class Project(object):
 
     def __init__(self, name, path, conf=None):
@@ -35,6 +51,7 @@ class Project(object):
         self.module_path = os.path.join(self.project_path, name.replace('-', '_'))
         self.tests_path = os.path.join(self.project_path, 'tests')
         self.conda_recipe_path = os.path.join(self.project_path, 'conda-recipe')
+        self.env_path = None
         self.templates = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates/project')))
         self.author = conf.get('author') or get_user_info('name')
         self.email = conf.get('email') or get_user_info('email')
@@ -45,6 +62,8 @@ class Project(object):
             pass
         (self.templates.get_template('init.py')
          .stream().dump(os.path.join(self.module_path, '__init__.py')))
+        (self.templates.get_template('version.py')
+         .stream().dump(os.path.join(self.module_path, '_version.py')))
         (self.templates.get_template('setup.py')
          .stream(name=self.name, author=self.author, email=self.email)
          .dump(os.path.join(self.project_path, 'setup.py')))
@@ -79,10 +98,23 @@ class Project(object):
             self.init_git()
         self.repo.git.add(A=True)
         self.repo.index.commit("Initial commit by conda project!")
+        self.repo.create_tag("0.0.1", message='Initial tag by conda project!')
 
     def create_conda_env(self, python_ver):
-        cmd = "-n {} python={} ipython".format(self.name, python_ver)
-        capi.run_command(capi.Commands.CREATE, cmd)
+        cmd = ["conda", "create", "-y", "-n", self.name, 
+               "python={}".format(python_ver), "ipython"]
+        print("\n\nCreating conda environment...\n")
+        if not run_cmd(cmd):
+            raise Exception("See above for error")
+        self.env_path = get_conda_env_path(self.name)
+
+    def develop_install(self):
+        cmd = [os.path.join(self.env_path, "bin", "conda"), "develop", 
+               "-n", self.name, self.project_path]
+        print("\n\nInstalling develop version of project...\n")
+        if not run_cmd(cmd):
+            raise Exception("See above for error")
+
 
 def create_project_skeleton(project):
     os.mkdir(project.project_path)
