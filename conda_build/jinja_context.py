@@ -9,8 +9,10 @@ import sys
 
 import jinja2
 
-from .conda_interface import PY3
+from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
+from .index import get_build_index
+from .render import get_env_dependencies
 from .utils import get_installed_packages, ensure_list, apply_pin_expressions
 
 
@@ -205,7 +207,8 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
-def pin_compatible(config, package_name, upper_bound=None, pins=('p', ),
+@memoized
+def pin_compatible(m, config, package_name, upper_bound=None, pins=('p', ),
                    permit_undefined_jinja=True):
     """dynamically pin based on currently installed version.
 
@@ -216,19 +219,25 @@ def pin_compatible(config, package_name, upper_bound=None, pins=('p', ),
         The effective pin is length of the string split on '.'.
     """
     compatibility = None
+    if not config.index:
+        config.index = get_build_index(config, subdir=config.build_subdir)
 
     # this is the version split up into its component bits.
     # There are two cases considered here (so far):
     # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
     # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-    version = get_installed_packages(config.build_prefix).get(package_name, {}).get('version')
-    if version:
-        if upper_bound:
-            compatibility = ">=" + version + ","
-            compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
-        else:
-            pins = ensure_list(pins)
-            compatibility = apply_pin_expressions(version, pins)
+
+    versions = {p.split(' ')[0]: p.split(' ')[1]
+                for p in get_env_dependencies(m, 'build', config.variant, config.index)}
+    if versions:
+        version = versions[package_name]
+        if version:
+            if upper_bound:
+                compatibility = ">=" + version + ","
+                compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+            else:
+                pins = ensure_list(pins)
+                compatibility = apply_pin_expressions(version, pins)
 
     if not compatibility and not permit_undefined_jinja:
         raise RuntimeError("Could not get compatibility information for {} package.  Is the "
@@ -366,7 +375,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
         installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
-        pin_compatible=partial(pin_compatible, config,
+        pin_compatible=partial(pin_compatible, initial_metadata, config,
                                permit_undefined_jinja=permit_undefined_jinja),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 

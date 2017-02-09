@@ -1,6 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 import copy
+import hashlib
+import json
 import logging
 import os
 from os.path import isfile, join
@@ -186,8 +188,6 @@ def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
 def _trim_None_strings(meta_dict):
     log = logging.getLogger(__name__)
     for key, value in meta_dict.items():
-        if not value:
-            del meta_dict[key]
         if hasattr(value, 'keys'):
             meta_dict[key] = _trim_None_strings(value)
         elif value and hasattr(value, '__iter__') or isinstance(value, string_types):
@@ -528,9 +528,14 @@ class MetaData(object):
         try:
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
+                original_meta = copy.copy(self.meta)
                 self.meta = parse(self._get_contents(permit_undefined_jinja),
                                   config=self.config,
                                   path=self.meta_path)
+                # this is verifying that we are not clobbering any manually set metadata with
+                #   the contents of the recipe files
+                _merge_or_update_values(original_meta, self.meta, merge=True,
+                                        raise_on_clobber=True)
 
                 if (isfile(self.requirements_path) and
                         not self.meta['requirements']['run']):
@@ -782,9 +787,8 @@ class MetaData(object):
         # save only the first HASH_LENGTH characters - should be more than enough, since these only
         #    need to be unique within one version
         # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-        hash_ = 'h{hash_:0{length}d}'.format(length=self.config.hash_length,
-                                hash_=abs(hash(self._get_hash_dictionary())))[
-                                    :self.config.hash_length + 1]
+        hash_ = hashlib.sha1(json.dumps(self._get_hash_dictionary()).encode()).hexdigest()
+        hash_ = 'h{0}'.format(hash_)[:self.config.hash_length + 1]
         return hash_
 
     def build_id(self):
@@ -793,7 +797,7 @@ class MetaData(object):
             check_bad_chrs(out, 'build/string')
         else:
             out = build_string_from_metadata(self)
-        if not re.findall('h[0-9]{%s}' % self.config.hash_length, out):
+        if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
             ret = out.rsplit('_', 1)
             try:
                 int(ret[0])
@@ -803,7 +807,7 @@ class MetaData(object):
             if len(ret) > 1:
                 out = '_'.join([out] + ret[1:])
         else:
-            out = re.sub('h[0-9]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
+            out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
         return out
 
     @property

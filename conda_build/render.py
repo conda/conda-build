@@ -197,9 +197,9 @@ def reparse(metadata, index):
     metadata.parse_again(permit_undefined_jinja=False)
     try:
         metadata = finalize_metadata(metadata, index)
-    except DependencyNeedsBuildingError:
+    except DependencyNeedsBuildingError as e:
         # just pass the metadata through unfinalized
-        pass
+        raise UnsatisfiableVariantError(str(e))
     return metadata
 
 
@@ -207,13 +207,13 @@ def base_parse(metadata, index):
     log = logging.getLogger(__name__)
     if 'host' in metadata.get_section('requirements'):
         metadata.config.has_separate_host_prefix = True
-    try:
-        metadata.parse_until_resolved()
-    except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-        log.warn("Need to create build environment to fully render this recipe.  Doing so.")
-        specs = [ms.spec for ms in metadata.ms_depends('build')]
-        environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
-                        subdir=metadata.config.build_subdir)
+    # try:
+    metadata.parse_until_resolved()
+    # except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
+    #     log.warn("Need to create build environment to fully render this recipe.  Doing so.")
+    #     specs = [ms.spec for ms in metadata.ms_depends('build')]
+    #     environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
+    #                     subdir=metadata.config.build_subdir)
     try:
         metadata = reparse(metadata, index)
     except UnsatisfiableVariantError:
@@ -244,10 +244,14 @@ def distribute_variants(metadata, variants, index):
             try:
                 mv = base_parse(mv, index)
             except UnsatisfiableVariantError as e:
+                log.warn("skipping variant {} - unsatisfiable with currently configured "
+                         "channels".format(variant))
                 log.warn(str(e))
                 continue
             except exceptions.UnableToParseMissingSetuptoolsDependencies:
                 need_reparse_in_env = True
+            except:
+                raise
         need_source_download = bool(mv.meta.get('source')) and not mv.needs_source_for_render
         # computes hashes based on whatever the current specs are - not the final specs
         #    This is a deduplication step.  Any variants that end up identical because a
@@ -257,6 +261,8 @@ def distribute_variants(metadata, variants, index):
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
+    assert rendered_metadata, ("No satisfiable variants were resolved.  Please check your "
+                               "recipe and variant configuration.")
     return list(rendered_metadata.values())
 
 

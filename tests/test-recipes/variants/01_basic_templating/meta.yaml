@@ -1,0 +1,9 @@
+package:
+  name: abc
+  version: 1.0
+
+requirements:
+  build:
+    - something {{ something }}
+  run:
+    - something {{ something }}

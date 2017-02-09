@@ -1,9 +1,10 @@
 import os
 
+import pytest
+import yaml
+
 from conda_build import variants
 from conda_build import api
-
-import yaml
 
 global_specs = {"python": ["2.7.*", "3.5.*"],
                 "numpy": ["1.10.*", "1.11.*"]}
@@ -14,6 +15,7 @@ single_version = {"python": "2.7.*",
 no_numpy_version = {"python": ["2.7.*", "3.5.*"]}
 
 thisdir = os.path.dirname(__file__)
+recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
 
 
 def test_later_spec_priority():
@@ -46,6 +48,7 @@ def test_get_package_variants_from_file(testing_workdir, testing_config):
 
 def test_get_package_variants_from_dictionary_of_lists(testing_config):
     testing_config.ignore_system_config = True
+    # Note: variant is coming from up above: global_specs
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
                           no_download_source=False, config=testing_config,
                           variants=global_specs)
@@ -66,3 +69,26 @@ def test_combine_variants():
     assert combined['list'] == ['steve', 'frank']
     assert len(combined['dict']) == 2
     assert combined['dict']['some'] == 'other'
+
+
+def test_variant_with_numpy_not_pinned_reduces_matrix():
+    # variants are defined in yaml file in this folder
+    # there are two python versions and two numpy versions.  However, because numpy is not pinned,
+    #    the numpy dimensions should get collapsed.
+    recipe = os.path.join(recipe_dir, '03_numpy_matrix')
+    metadata = api.render(recipe)
+    assert len(metadata) == 2
+
+
+def test_pinning_in_build_requirements():
+    recipe = os.path.join(recipe_dir, '05_compatible')
+    metadata = api.render(recipe)[0][0]
+    build_requirements = metadata.meta['requirements']['build']
+    # make sure that everything in the build deps is exactly pinned
+    assert all(len(req.split(' ')) == 3 for req in build_requirements)
+
+def test_no_satisfiable_variants_raises_error():
+    recipe = os.path.join(recipe_dir, '01_basic_templating')
+    with pytest.raises(AssertionError) as e:
+        api.render(recipe)
+    assert "No satisfiable variants were resolved" in str(e)
