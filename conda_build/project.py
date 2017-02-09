@@ -64,6 +64,8 @@ class Project(object):
          .stream().dump(os.path.join(self.module_path, '__init__.py')))
         (self.templates.get_template('version.py')
          .stream().dump(os.path.join(self.module_path, '_version.py')))
+        (self.templates.get_template('versioneer.py')
+         .stream().dump(os.path.join(self.project_path, 'versioneer.py')))
         (self.templates.get_template('setup.py')
          .stream(name=self.name, author=self.author, email=self.email)
          .dump(os.path.join(self.project_path, 'setup.py')))
@@ -109,8 +111,7 @@ class Project(object):
         self.env_path = get_conda_env_path(self.name)
 
     def develop_install(self):
-        cmd = [os.path.join(self.env_path, "bin", "conda"), "develop", 
-               "-n", self.name, self.project_path]
+        cmd = [os.path.join(self.env_path, "bin", "pip"), "install", "-e", self.project_path]
         print("\n\nInstalling develop version of project...\n")
         if not run_cmd(cmd):
             raise Exception("See above for error")
