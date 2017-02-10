@@ -176,11 +176,9 @@ def test_compiler_metadata_cross_compiler():
 
 
 def test_hash_build_id(testing_metadata):
-    hash_value = str(abs(hash(testing_metadata._get_hash_dictionary())))[:4]
-    assert testing_metadata._hash_dependencies() == 'h{}'.format(hash_value)
-    assert testing_metadata.build_id() == 'py{}{}h{}_1'.format(sys.version_info.major,
-                                                               sys.version_info.minor,
-                                                               hash_value)
+    assert testing_metadata._hash_dependencies() == 'hfe63'
+    assert testing_metadata.build_id() == 'py{}{}hfe63_1'.format(sys.version_info.major,
+                                                               sys.version_info.minor)
 
 
 def test_hash_build_id_key_order(testing_metadata):
@@ -204,5 +202,4 @@ def test_hash_build_id_key_order(testing_metadata):
 
 def test_hash_applies_to_custom_build_string(testing_metadata):
     testing_metadata.meta['build']['string'] = 'steve'
-    hash_value = str(abs(hash(testing_metadata._get_hash_dictionary())))[:4]
-    assert testing_metadata.build_id() == 'steveh{}'.format(hash_value)
+    assert testing_metadata.build_id() == 'stevehfe63'

@@ -66,7 +66,7 @@ def test_combine_variants():
     v2 = {'python': '3.5.*', 'list': 'frank', 'dict': {'some': 'other', 'test': 'value'}}
     combined = variants.combine_variants(v1, v2)
     assert combined['python'] == '3.5.*'
-    assert combined['list'] == ['steve', 'frank']
+    assert set(combined['list']) == {'steve', 'frank'}
     assert len(combined['dict']) == 2
     assert combined['dict']['some'] == 'other'
 

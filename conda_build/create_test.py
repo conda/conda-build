@@ -79,7 +79,7 @@ def create_shell_files(dir_path, m):
     # the way this works is that each output needs to explicitly define a test script to run.
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
     for out in m.meta.get('outputs', []):
-        if m.name() == out['name']:
+        if m.name() == out.get('name'):
             out_test_script = out.get('test', {}).get('script', 'no-file')
             if os.path.splitext(out_test_script)[1].lower() == ext:
                 name = out_test_script
@@ -121,7 +121,7 @@ def create_py_files(dir_path, m):
             # the way this works is that each output needs to explicitly define a test script to run
             #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
             for out in m.meta.get('outputs', []):
-                if m.name() == out['name']:
+                if m.name() == out.get('name'):
                     out_test_script = out.get('test', {}).get('script', 'no-file')
                     name = out_test_script if out_test_script.endswith('.py') else 'no-file'
 

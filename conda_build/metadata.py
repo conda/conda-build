@@ -160,8 +160,16 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
+def _equivalent(base_value, value):
+    equivalent = value != base_value
+    if isinstance(value, string_types) and isinstance(base_value, string_types):
+        equivalent |= (os.path.abspath(os.path.normpath(value)) ==
+                       os.path.abspath(os.path.normpath(base_value)))
+    return equivalent
+
 def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
     for key, value in new.items():
+        assert not hasattr(key, 'keys'), key
         base_value = base.get(key, value)
         if hasattr(value, 'keys'):
             base_value = _merge_or_update_values(base_value, value, merge,
@@ -171,16 +179,20 @@ def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
             if merge:
                 if base_value and base_value != value:
                     base_value.extend(value)
-                base[key] = list(set(base_value))
+                try:
+                    base[key] = list(set(base_value))
+                except TypeError:
+                    base[key] = base_value
             else:
                 base[key] = value
         else:
-            if base_value and merge and value != base_value and raise_on_clobber:
-                raise ValueError("Attempting to merge non-{list,dict} object ({0}).  Note that due "
-                                 "to parsing order, you can't change metadata attributes that are "
-                                 "also defined in meta.yaml.  Perhaps you want to add this"
-                                 " key/value to recipe_clobber.yaml, or use template variables with"
-                                 " variant settings instead?")
+            if base_value and merge and not _equivalent(base_value, value) and raise_on_clobber:
+                raise ValueError("Attempting to merge non-list,non-dict object ({0}: {1} into "
+                                 "base {2}).  Note that due to parsing order, you can't change "
+                                 "metadata attributes that are also defined in meta.yaml.  "
+                                 "Perhaps you want to add this key/value to recipe_clobber.yaml, "
+                                 "or use template variables with variant settings instead?"
+                                 .format(key, value, base_value))
             base[key] = value
     return base
 
@@ -221,6 +233,11 @@ def ensure_valid_noarch_value(meta):
         raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
 
 
+def make_outputs_hashable(res):
+    if 'outputs' in res:
+        res['outputs'] = [HashableDict(out) for out in res['outputs']]
+
+
 def parse(data, config, path=None):
     data = select_lines(data, ns_cfg(config))
     res = yamlize(data)
@@ -237,6 +254,7 @@ def parse(data, config, path=None):
             raise RuntimeError("The %s field should be a dict, not %s in file %s." %
                                (field, res[field].__class__.__name__, path))
 
+    make_outputs_hashable(res)
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
     ensure_valid_noarch_value(res)
@@ -538,7 +556,7 @@ class MetaData(object):
                                         raise_on_clobber=True)
 
                 if (isfile(self.requirements_path) and
-                        not self.meta['requirements']['run']):
+                        not self.meta.get('requirements', {}).get('run', [])):
                     self.meta.setdefault('requirements', {})
                     run_requirements = specs_from_url(self.requirements_path)
                     self.meta['requirements']['run'] = run_requirements

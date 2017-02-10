@@ -208,7 +208,7 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
 
 
 @memoized
-def pin_compatible(m, config, package_name, upper_bound=None, pins=('p', ),
+def pin_compatible(m, package_name, upper_bound=None, pins=('p', ),
                    permit_undefined_jinja=True):
     """dynamically pin based on currently installed version.
 
@@ -219,8 +219,8 @@ def pin_compatible(m, config, package_name, upper_bound=None, pins=('p', ),
         The effective pin is length of the string split on '.'.
     """
     compatibility = None
-    if not config.index:
-        config.index = get_build_index(config, subdir=config.build_subdir)
+    if not m.config.index:
+        m.config.index = get_build_index(m.config, subdir=m.config.build_subdir)
 
     # this is the version split up into its component bits.
     # There are two cases considered here (so far):
@@ -228,9 +228,9 @@ def pin_compatible(m, config, package_name, upper_bound=None, pins=('p', ),
     # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
 
     versions = {p.split(' ')[0]: p.split(' ')[1]
-                for p in get_env_dependencies(m, 'build', config.variant, config.index)}
+                for p in get_env_dependencies(m, 'build', m.config.variant, m.config.index)}
     if versions:
-        version = versions[package_name]
+        version = versions.get(package_name)
         if version:
             if upper_bound:
                 compatibility = ">=" + version + ","
@@ -375,7 +375,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
         installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
-        pin_compatible=partial(pin_compatible, initial_metadata, config,
+        pin_compatible=partial(pin_compatible, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
