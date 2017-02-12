@@ -30,3 +30,24 @@ def test_rm_rf_does_not_follow_links(testing_config):
     assert os.path.isfile(bin_file_that_disappears)
     api.build(os.path.join(recipe_dir, 'conda'), config=testing_config)
     assert os.path.isfile(bin_file_that_disappears)
+
+
+def test_output_pkg_path_shows_all_subpackages(testing_metadata):
+    testing_metadata.meta['outputs'] = [{'name': 'a'}, {'name': 'b'}]
+    outputs = api.get_output_file_path(testing_metadata)
+    assert len(outputs) == 2
+
+
+def test_subpackage_version_provided(testing_metadata):
+    testing_metadata.meta['outputs'] = [{'name': 'a', 'version': '2.0'}]
+    outputs = api.get_output_file_path(testing_metadata)
+    assert len(outputs) == 1
+    assert "a-2.0-h" in outputs[0]
+
+
+def test_subpackage_independent_hash(testing_metadata):
+    testing_metadata.meta['outputs'] = [{'name': 'a', 'requirements': 'bzip2'}]
+    testing_metadata.meta['requirements']['run'] = ['a']
+    outputs = api.get_output_file_path(testing_metadata)
+    assert len(outputs) == 2
+    assert outputs[0][-15:] != outputs[1][-15:]

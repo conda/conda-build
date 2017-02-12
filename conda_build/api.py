@@ -60,7 +60,10 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
         metadata, _ = render_recipe(recipe_path_or_metadata,
                                     no_download_source=no_download_source,
                                     variants=variants, config=config)
-    return [bldpkg_path(m[0]) for m in metadata]
+    # first, render the parent recipe (potentially multiple outputs, depending on variants).
+    #    Next, loop over outputs that each metadata defines
+    return [bldpkg_path(output_meta) for (m, _, _) in metadata
+            for (_, output_meta) in m.get_output_metadata_set(None)]
 
 
 def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):

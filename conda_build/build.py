@@ -606,18 +606,15 @@ def bundle_conda(output, metadata, env, **kw):
                     [os.path.join(metadata.path, output['script'])],
                     cwd=metadata.config.host_prefix, env=env)
         files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
-    tmp_metadata = metadata.copy()
-    tmp_metadata.meta['package']['name'] = output['name']
-    requirements = tmp_metadata.meta.get('requirements', {})
-    requirements['run'] = output.get('requirements', [])
-    tmp_metadata.meta['requirements'] = requirements
 
-    output_filename = ('-'.join([output['name'], metadata.version(),
-                                 metadata.build_id()]) + '.tar.bz2')
+    output_metadata = metadata.get_output_metadata(output)
+
+    output_filename = output_metadata.dist() + '.tar.bz2'
     files = list(set(utils.expand_globs(files, metadata.config.host_prefix)))
-    files = filter_files(files, prefix=metadata.config.build_prefix)
-    info_files = create_info_files(tmp_metadata, files, prefix=metadata.config.host_prefix)
-    info_files = filter_files(info_files, prefix=metadata.config.build_prefix)
+    files = filter_files(files, prefix=output_metadata.config.build_prefix)
+    info_files = create_info_files(output_metadata, files,
+                                   prefix=output_metadata.config.host_prefix)
+    info_files = filter_files(info_files, prefix=output_metadata.config.build_prefix)
     for f in info_files:
         if f not in files:
             files.append(f)
@@ -924,24 +921,10 @@ can lead to packages that include their dependencies.""" % meta_files))
         files3 = prefix_files(prefix=m.config.host_prefix)
         fix_permissions(files3 - files1, m.config.host_prefix)
 
-        outputs = m.get_section('outputs')
-        # this is the old, default behavior: conda package, with difference between start
-        #    set of files and end set of files
-        requirements = m.get_value('requirements/run')
-        if not outputs:
-            outputs = [{'name': m.name(),
-                        'files': files3 - files1,
-                        'requirements': requirements}]
-        else:
-            # make a metapackage for the top-level package if the top-level requirements
-            #     mention a subpackage,
-            uses_subpackage = any(out.get('name') in requirements for out in outputs)
-            # but only if a matching output name is not explicitly provided
-            if uses_subpackage and not any(m.name() == out.get('name', '') for out in outputs):
-                outputs.append({'name': m.name(), 'requirements': requirements})
+        outputs = m.get_output_metadata_set(files3-files1)
 
-        for output in outputs:
-            built_package = bundlers[output.get('type', 'conda')](output, m, env)
+        for (output_dict, metadata) in outputs:
+            built_package = bundlers[output.get('type', 'conda')](output_dict, metadata, env)
             built_packages.append(built_package)
 
     else:
