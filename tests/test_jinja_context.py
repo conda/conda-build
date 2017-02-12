@@ -22,6 +22,15 @@ def test_pin_jpeg_style_minor(testing_metadata, mocker):
     assert pin == '>=9d,<9e'
 
 
+def test_pin_openssl_style_bugfix(testing_metadata, mocker):
+    get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
+    get_env_dependencies.return_value = ['openssl 1.0.2j 0']
+    pin = jinja_context.pin_compatible(testing_metadata, 'openssl', pins='p.p.p')
+    assert pin == '>=1.0.2j,<1.0.3'
+    pin = jinja_context.pin_compatible(testing_metadata, 'openssl', pins='p.p.p.p')
+    assert pin == '>=1.0.2j,<1.0.2k'
+
+
 def test_pin_major_minor(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3']

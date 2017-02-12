@@ -208,15 +208,16 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
 
 
 @memoized
-def pin_compatible(m, package_name, upper_bound=None, pins=('p', ),
+def pin_compatible(m, package_name, upper_bound=None, pins='x',
                    permit_undefined_jinja=True):
     """dynamically pin based on currently installed version.
 
     only mandatory input is package_name.
     upper_bound is the authoritative upper bound, if provided.  The lower bound is the the
         currently installed version.
-    pin expressions can be any string separated by `.`
-        The effective pin is length of the string split on '.'.
+    pin expressions are of the form 'x.x' - the number of pins is the number of x's separated
+        by ``.``.  You can pass one string to alter the upper bound, or two ('x.x', 'x.x') to
+        alter the lower and upper bounds
     """
     compatibility = None
     if not m.config.index:

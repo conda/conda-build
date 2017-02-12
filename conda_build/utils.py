@@ -819,30 +819,38 @@ def conda_43():
     return LooseVersion(conda_version) >= LooseVersion('4.3')
 
 
-def _increment_last_version(version_as_list):
-    last_version = version_as_list[-1]
+def _increment(version):
     try:
-        last_version = str(int(last_version) + 1)
+        last_version = str(int(version) + 1)
     except ValueError:
-        last_version = chr(ord(last_version) + 1)
-    return version_as_list[:-1] + [last_version]
+        last_version = chr(ord(version) + 1)
+    return last_version
 
 
 def apply_pin_expressions(version, pins=('p', )):
     pins = ensure_list(pins)
     if len(pins) == 1:
+        # 999 means practically infinite (exact) pinning, but does not include build string
         pins = [999, len(pins[0].split('.'))]
     else:
         pins = [len(p.split('.')) for p in pins]
     parsed_version = VersionOrder(version).version[1:]
-    if len(parsed_version) > 1:
-        # the good ones
-        lower_version = '.'.join([str(v[0]) for v in parsed_version[:pins[0]]])
-        upper_version = '.'.join(_increment_last_version([str(v[0])
-                                            for v in parsed_version[:pins[1]]]))
-    else:
-        # the evil ones (JPEG)
-        lower_version = ''.join([str(v) for v in parsed_version[0][:pins[0]]])
-        upper_version = ''.join(_increment_last_version([str(v)
-                                            for v in parsed_version[0][:pins[1]]]))
-    return ">={0},<{1}".format(lower_version, upper_version)
+    nesting_position = None
+    flat_list = []
+    for idx, item in enumerate(parsed_version):
+        if isinstance(item, list):
+            nesting_position = idx
+            flat_list.extend(item)
+        else:
+            flat_list.append(item)
+    versions = ['', '']
+    for p_idx, pin in enumerate(pins):
+        for v_idx, v in enumerate(flat_list[:pin]):
+            if p_idx == 1 and v_idx == pin - 1:
+                v = _increment(v)
+            versions[p_idx] += str(v)
+            if v_idx != nesting_position:
+                versions[p_idx] += '.'
+        if versions[p_idx][-1] == '.':
+            versions[p_idx] = versions[p_idx][:-1]
+    return ">={0},<{1}".format(*versions)
