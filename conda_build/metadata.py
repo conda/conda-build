@@ -1130,30 +1130,39 @@ class MetaData(object):
 
     def get_output_metadata(self, output):
         output_metadata = self.copy()
-        output_metadata.meta['package']['name'] = output['name']
+        output_metadata.meta['package']['name'] = output.get('name', self.name())
         requirements = output_metadata.meta.get('requirements', {})
         requirements['run'] = output.get('requirements', [])
         output_metadata.meta['requirements'] = requirements
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         return output_metadata
 
-    def get_output_metadata_set(self, files):
+    def get_output_metadata_set(self, files, permit_undefined_jinja=False):
         outputs = self.get_section('outputs')
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
         requirements = self.get_value('requirements/run')
-        if not outputs:
-            outputs = [{'name': self.name(),
-                        'files': files,
-                        'requirements': requirements}]
-            metadata = [self]
-        else:
-            # make a metapackage for the top-level package if the top-level requirements
-            #     mention a subpackage,
-            uses_subpackage = any(out.get('name') in requirements for out in outputs)
-            # but only if a matching output name is not explicitly provided
-            if uses_subpackage and not any(self.name() == out.get('name', '') for out in outputs):
-                outputs.append({'name': self.name(), 'requirements': requirements})
-            metadata = [self.get_output_metadata(output) for output in outputs]
+        try:
+            if not outputs:
+                outputs = [{'name': self.name(),
+                            'files': files,
+                            'requirements': requirements}]
+                metadata = [self]
+            else:
+                # make a metapackage for the top-level package if the top-level requirements
+                #     mention a subpackage,
+                uses_subpackage = any(out.get('name') in requirements for out in outputs)
+                # but only if a matching output name is not explicitly provided
+                if uses_subpackage and not any(self.name() == out.get('name', '')
+                                               for out in outputs):
+                    outputs.append({'name': self.name(), 'requirements': requirements,
+                                    'pin_downstream':
+                                        self.meta.get('build', {}).get('pin_downstream')})
+                metadata = [self.get_output_metadata(output) for output in outputs]
+        except SystemExit:
+            if not permit_undefined_jinja:
+                raise
+            outputs=[]
+            metadata=[]
         return list(six.moves.zip(outputs, metadata))

@@ -24,6 +24,7 @@ import tarfile
 
 from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
+from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file, check_output_env, conda_43)
 from conda_build.os_utils.external import find_executable
@@ -875,3 +876,15 @@ def test_append_python_app_osx(testing_config):
 #     #    meta dict
 #     with pytest.raises(ValueError):
 #         api.build(metadata)
+
+
+def test_pin_downstream(testing_metadata, testing_config):
+    outputs = api.build(os.path.join(metadata_dir, '_pin_downstream'), config=testing_config)
+    testing_metadata.meta['requirements']['build'] = ['test_has_pin_downstream']
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert 'a 1.0' in m.meta['requirements']['run']
+
+def test_pin_subpackage_exact(testing_config):
+    m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]
+    assert 'pin_downstream_subpkg 1.0 hbf21a9e_0' in m.meta['requirements']['run']

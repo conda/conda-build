@@ -246,12 +246,15 @@ def pin_compatible(m, package_name, upper_bound=None, pins='x',
     return compatibility
 
 
-def subpackage_pin(metadata, subpackage_name, pins='x', exact=False):
+def pin_subpackage(metadata, subpackage_name, pins='x', exact=False,
+                   permit_undefined_jinja=True):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe"""
-    output_metadata = metadata.get_output_metadata_set(None)
+    output_metadata = metadata.get_output_metadata_set(None,
+                                                    permit_undefined_jinja=permit_undefined_jinja)
+    pin = None
     for (output_dict, sp_m) in output_metadata:
         if sp_m.name() == subpackage_name:
             if exact:
@@ -285,10 +288,9 @@ compilers = {
         'cxx': 'g++',
         'fortran': 'gfortran',
     },
-    # TODO: Clang?  System clang, or compiled package?  Can handle either as package.
     'osx': {
-        'c': 'gcc',
-        'cxx': 'g++',
+        'c': 'clang',
+        'cxx': 'clang++',
         'fortran': 'gfortran',
     },
 }
@@ -300,6 +302,8 @@ runtimes = {
     'gfortran': 'libgfortran',
     'g++': 'libstdc++',
     'gcc': 'libgcc',
+    'clang': 'compiler-rt',
+    'clang++': 'libc++',
 }
 
 
@@ -393,7 +397,8 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
         pin_compatible=partial(pin_compatible, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja),
-        subpackage_pin=partial(subpackage_pin, initial_metadata),
+        pin_subpackage=partial(pin_subpackage, initial_metadata,
+                               permit_undefined_jinja=permit_undefined_jinja),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         runtime=partial(runtime, config=config,

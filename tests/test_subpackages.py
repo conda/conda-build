@@ -2,6 +2,7 @@ import os
 import pytest
 
 from conda_build import api
+from conda_build.render import finalize_metadata
 
 from .utils import subpackage_dir, is_valid_dir
 
@@ -51,3 +52,14 @@ def test_subpackage_independent_hash(testing_metadata):
     outputs = api.get_output_file_path(testing_metadata)
     assert len(outputs) == 2
     assert outputs[0][-15:] != outputs[1][-15:]
+
+
+def test_pin_downstream_in_subpackage(testing_metadata, testing_index):
+    p1 = testing_metadata.copy()
+    p1.meta['outputs'] = [{'name': 'has_pin_downstream', 'pin_downstream': 'bzip2 1.0'}]
+    api.build(p1)
+    p2 = testing_metadata.copy()
+    p2.meta['requirements']['build'] = ['has_pin_downstream']
+    p2.config.index = None
+    p2_final = finalize_metadata(p2, None)
+    assert 'bzip2 1.0' in p2_final.meta['requirements']['run']

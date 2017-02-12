@@ -159,8 +159,8 @@ def test_native_compiler_metadata_linux(testing_config, mocker):
 def test_native_compiler_metadata_osx(testing_config, mocker):
     testing_config._platform = 'osx'
     metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
-    assert 'gcc' in metadata.meta['requirements']['build']
-    assert 'g++' in metadata.meta['requirements']['build']
+    assert 'clang' in metadata.meta['requirements']['build']
+    assert 'clang++' in metadata.meta['requirements']['build']
     assert 'gfortran' in metadata.meta['requirements']['build']
 
 

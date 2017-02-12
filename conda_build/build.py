@@ -447,6 +447,22 @@ def get_entry_point_script_names(entry_point_scripts):
     return scripts
 
 
+def write_pin_downstream(m):
+    if not m.get_section('outputs'):
+        if 'pin_downstream' in m.meta.get('build', {}):
+            with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
+                for pin in utils.ensure_list(m.meta['build']['pin_downstream']):
+                    f.write(pin + "\n")
+    else:
+        # TODO: would be nicer to have a data structure that allowed direct lookup.
+        #    shouldn't be too bad here, the number of things should always be pretty small.
+        for (output_dict, out_m) in m.get_output_metadata_set(None):
+            if m.name() == out_m.name() and 'pin_downstream' in output_dict:
+                with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
+                    for pin in utils.ensure_list(output_dict['pin_downstream']):
+                        f.write(pin + "\n")
+
+
 def create_info_files(m, files, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
@@ -469,6 +485,7 @@ def create_info_files(m, files, prefix):
     write_info_json(m)  # actually index.json
     write_about_json(m)
     write_package_metadata_json(m)
+    write_pin_downstream(m)
 
     write_info_files_file(m, files)
 
@@ -924,7 +941,7 @@ can lead to packages that include their dependencies.""" % meta_files))
         outputs = m.get_output_metadata_set(files3-files1)
 
         for (output_dict, metadata) in outputs:
-            built_package = bundlers[output.get('type', 'conda')](output_dict, metadata, env)
+            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, metadata, env)
             built_packages.append(built_package)
 
     else:

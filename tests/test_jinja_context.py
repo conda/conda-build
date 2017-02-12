@@ -45,13 +45,13 @@ def test_pin_upper_bound(testing_metadata, mocker):
     assert pin == '>=1.2.3,<3.0'
 
 
-def test_subpackage_pin_exact(testing_metadata):
+def test_pin_subpackage_exact(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a'}]
-    pin = jinja_context.subpackage_pin(testing_metadata, 'a', exact=True)
+    pin = jinja_context.pin_subpackage(testing_metadata, 'a', exact=True)
     assert len(pin.split()) == 3
 
 
-def test_subpackage_pin_expression(testing_metadata):
+def test_pin_subpackage_expression(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a'}]
-    pin = jinja_context.subpackage_pin(testing_metadata, 'a')
+    pin = jinja_context.pin_subpackage(testing_metadata, 'a')
     assert len(pin.split()) == 2

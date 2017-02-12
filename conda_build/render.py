@@ -19,7 +19,7 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3, UnsatisfiableError
+from .conda_interface import PY3, UnsatisfiableError, plan, cc
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, _merge_or_update_values
@@ -72,10 +72,14 @@ def get_env_dependencies(m, env, variant, index=None):
     except UnsatisfiableError as e:
         # we'll get here if the environment is unsatisfiable
         raise DependencyNeedsBuildingError(e)
-    return actions_to_pins(actions) + subpackages
+
+    specs = actions_to_pins(actions)
+    return specs + subpackages
 
 
 def strip_channel(spec_str):
+    if hasattr(spec_str, 'decode'):
+        spec_str = spec_str.decode()
     if ':' in spec_str:
         spec_str = spec_str.split("::")[-1]
     return spec_str
@@ -99,14 +103,62 @@ def get_pin_from_build(m, dep, build_dep_versions):
     return dep
 
 
-def finalize_metadata(m, index):
+def get_upstream_pins(m, dependencies, index):
+    """Download packages from specs, then inspect each downloaded package for additional
+    downstream dependency specs.  Return these additional specs."""
+    actions = environ.get_install_actions(m.config.build_prefix, index, dependencies,
+                                            m.config)
+    additional_specs = []
+    linked_packages = actions['LINK']
+    # edit the plan to download all necessary packages
+    if 'LINK' in actions:
+        del actions['LINK']
+    if 'EXTRACT' in actions:
+        del actions['EXTRACT']
+    # this should be just downloading packages.  We don't need to extract them -
+    #    we read contents directly
+    if actions:
+        plan.execute_actions(actions, index, verbose=m.config.debug)
+        pkgs_dirs = cc.pkgs_dirs + [m.config.host_subdir]
+        for pkg in linked_packages:
+            for pkgs_dir in pkgs_dirs:
+                if hasattr(pkg, 'dist_name'):
+                    pkg = pkg.dist_name
+                else:
+                    pkg = pkg.split(' ')[0]
+
+                pkg_dir = os.path.join(pkgs_dir, pkg)
+                pkg_file = os.path.join(pkgs_dir, pkg + '.tar.bz2')
+                if os.path.isdir(pkg_dir):
+                    downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
+                    if os.path.isfile(downstream_file):
+                        additional_specs.extend(open(downstream_file).read().splitlines())
+                    break
+                elif os.path.isfile(pkg_file):
+                    extra_specs = utils.package_has_file(pkg_file, 'info/pin_downstream')
+                    if extra_specs:
+                        additional_specs.extend(extra_specs.splitlines())
+                    break
+            else:
+                raise RuntimeError("Didn't find expected package {} in package cache ({})"
+                                    .format(pkg, pkgs_dirs))
+
+    return additional_specs
+
+
+def finalize_metadata(m, index=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
     #     be installed in the environment.
+
+    if not index:
+        index = get_build_index(m.config, m.config.build_subdir)
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
     build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
+
+    extra_run_specs = get_upstream_pins(m, build_deps, index)
 
     reset_index = False
     if m.config.build_subdir != m.config.host_subdir:
@@ -124,6 +176,7 @@ def finalize_metadata(m, index):
     requirements = rendered_metadata.meta.get('requirements', {})
     run_deps = requirements.get('run', [])
     versioned_run_deps = [get_pin_from_build(m, dep, build_dep_versions) for dep in run_deps]
+    versioned_run_deps.extend(extra_run_specs)
 
     rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
     for env, values in (('build', build_deps), ('run', versioned_run_deps)):
