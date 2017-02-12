@@ -246,6 +246,21 @@ def pin_compatible(m, package_name, upper_bound=None, pins='x',
     return compatibility
 
 
+def subpackage_pin(metadata, subpackage_name, pins='x', exact=False):
+    """allow people to specify pinnings based on subpackages that are defined in the recipe.
+
+    For example, given a compiler package, allow it to specify either a compatible or exact
+    pinning on the runtime package that is also created by the compiler package recipe"""
+    output_metadata = metadata.get_output_metadata_set(None)
+    for (output_dict, sp_m) in output_metadata:
+        if sp_m.name() == subpackage_name:
+            if exact:
+                pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+            else:
+                pin = "{0} {1}".format(subpackage_name, apply_pin_expressions(sp_m.version(), pins))
+    return pin
+
+
 # map python version to default compiler on windows, to match upstream python
 #    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
 #    in the conda-build variant configuration
@@ -378,6 +393,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
         pin_compatible=partial(pin_compatible, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja),
+        subpackage_pin=partial(subpackage_pin, initial_metadata),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         runtime=partial(runtime, config=config,
