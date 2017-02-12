@@ -3,8 +3,7 @@ import os
 import pytest
 import yaml
 
-from conda_build import variants
-from conda_build import api
+from conda_build import api, exceptions, variants
 
 global_specs = {"python": ["2.7.*", "3.5.*"],
                 "numpy": ["1.10.*", "1.11.*"]}
@@ -89,6 +88,10 @@ def test_pinning_in_build_requirements():
 
 def test_no_satisfiable_variants_raises_error():
     recipe = os.path.join(recipe_dir, '01_basic_templating')
-    with pytest.raises(AssertionError) as e:
-        api.render(recipe)
-    assert "No satisfiable variants were resolved" in str(e)
+    with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
+        api.render(recipe, permit_unsatisfiable_variants=False)
+
+    # the packages are not installable anyway, so this should raise a valueerror when
+    #    permitting unsatisfiable variants (no satisfiable variants)
+    with pytest.raises(ValueError) as e:
+        api.render(recipe, permit_unsatisfiable_variants=True)

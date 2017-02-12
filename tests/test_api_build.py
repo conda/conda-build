@@ -605,18 +605,16 @@ def test_noarch(testing_workdir):
         assert (os.path.sep + "noarch" + os.path.sep not in output or noarch)
 
 
-def test_disable_pip(testing_config):
-    recipe_path = os.path.join(metadata_dir, '_disable_pip')
-    metadata = api.render(recipe_path, config=testing_config)[0][0]
-
-    metadata.meta['build']['script'] = 'python -c "import pip; print(pip.__version__)"'
+def test_disable_pip(testing_config, testing_metadata):
+    testing_metadata.disable_pip = True
+    testing_metadata.meta['build']['script'] = 'python -c "import pip; print(pip.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
-        api.build(metadata)
+        api.build(testing_metadata)
 
-    metadata.meta['build']['script'] = ('python -c "import setuptools; '
-                                        'print(setuptools.__version__)"')
+    testing_metadata.meta['build']['script'] = ('python -c "import setuptools; '
+                                                'print(setuptools.__version__)"')
     with pytest.raises(subprocess.CalledProcessError):
-        api.build(metadata)
+        api.build(testing_metadata)
 
 
 @pytest.mark.skipif(not sys.platform.startswith('linux'),
@@ -864,12 +862,16 @@ def test_append_python_app_osx(testing_config):
     api.build(recipe, config=testing_config, channel_urls=('nexpy', ))
 
 
-def test_clobbering_manually_set_metadata_raises(testing_metadata, testing_workdir):
-    api.output_yaml(testing_metadata, 'meta.yaml')
-    metadata = api.render(testing_workdir)[0][0]
-    # make the package meta dict out of sync with file contents
-    metadata.meta['package']['name'] = 'steve'
-    # re-render happens as part of build.  We should see an error about clobbering our customized
-    #    meta dict
-    with pytest.raises(ValueError):
-        api.build(metadata)
+# Not sure about this behavior.  Basically, people need to realize that if they start with a recipe from disk,
+#    they should not then alter the metadata object.  Later reparsing will clobber their edits to the object.
+# The complicated thing is that these edits are indistinguishable from Jinja2 templating doing its normal thing.
+
+# def test_clobbering_manually_set_metadata_raises(testing_metadata, testing_workdir):
+#     api.output_yaml(testing_metadata, 'meta.yaml')
+#     metadata = api.render(testing_workdir)[0][0]
+#     # make the package meta dict out of sync with file contents
+#     metadata.meta['package']['name'] = 'steve'
+#     # re-render happens as part of build.  We should see an error about clobbering our customized
+#     #    meta dict
+#     with pytest.raises(ValueError):
+#         api.build(metadata)

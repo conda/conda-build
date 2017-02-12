@@ -75,7 +75,7 @@ DEFAULTS = [Setting('activate', True),
             # variants
             Setting('variant_config_files', []),
             Setting('ignore_system_variants', False),
-            Setting('hash_length', 4),
+            Setting('hash_length', 7),
 
             # append/clobber metadata section data (for global usage.  Can also add files to
             #    recipe.)

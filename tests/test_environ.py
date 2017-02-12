@@ -89,3 +89,4 @@ def test_ensure_valid_spec():
     assert environ._ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
     assert environ._ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
     assert environ._ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
+    assert environ._ensure_valid_spec('numpy x.x') == 'numpy x.x'

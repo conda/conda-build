@@ -561,7 +561,10 @@ def _ensure_valid_spec(spec):
     match = spec_needing_star_re.match(spec)
     # ignore exact pins (would be a 3rd group)
     if match and not match.group(3):
-        spec = spec_needing_star_re.sub(r"\1\2.*", spec)
+        if 'numpy' in match.group(1) and match.group(2) == 'x.x':
+            spec = spec_needing_star_re.sub(r"\1\2", spec)
+        else:
+            spec = spec_needing_star_re.sub(r"\1\2.*", spec)
     return spec
 
 

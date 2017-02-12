@@ -20,8 +20,8 @@ def test_api_get_or_merge_config():
 
 def test_api_render():
     argspec = getargspec(api.render)
-    assert argspec.args == ['recipe_path', 'config', 'variants']
-    assert argspec.defaults == (None, None)
+    assert argspec.args == ['recipe_path', 'config', 'variants', 'permit_unsatisfiable_variants']
+    assert argspec.defaults == (None, None, True)
 
 
 def test_api_output_yaml():

@@ -32,7 +32,7 @@ class TarCheck(object):
         self.t.close()
 
     def info_files(self):
-        if re.search('pyh[0-9]{%d}_' % self.config.hash_length, self.build):
+        if re.search('pyh[0-9a-f]{%d}_' % self.config.hash_length, self.build):
             return
         lista = [p.strip().decode('utf-8') for p in
                  self.t.extractfile('info/files').readlines()]

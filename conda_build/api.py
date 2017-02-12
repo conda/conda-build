@@ -25,7 +25,8 @@ from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import conda_43 as _conda_43
 
 
-def render(recipe_path, config=None, variants=None, **kwargs):
+def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
+           **kwargs):
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
@@ -33,7 +34,8 @@ def render(recipe_path, config=None, variants=None, **kwargs):
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
     metadata, _ = render_recipe(recipe_path, no_download_source=config.no_download_source,
-                                config=config, variants=variants)
+                                config=config, variants=variants,
+                                permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     return metadata
 
 

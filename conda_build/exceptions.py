@@ -59,19 +59,19 @@ class VerifyError(CondaBuildException):
 
 
 class DependencyNeedsBuildingError(CondaBuildException):
-    def __init__(self, CondaException, *args, **kwargs):
-        self.packages = []
-        for line in str(CondaException).splitlines():
-            if not line.startswith('  - '):
-                continue
-            pkg = line.lstrip('  - ').split(' -> ')[-1]
-            pkg = pkg.strip().split(' ')[0]
-            self.packages.append(pkg)
-        self.message = str(CondaException)
+    def __init__(self, conda_exception=None, packages=None, *args, **kwargs):
+        if packages:
+            self.message = "Unsatisfiable dependencies: {}".format(packages)
+            self.packages = packages
+        else:
+            self.packages = packages or []
+            for line in str(conda_exception).splitlines():
+                if not line.startswith('  - '):
+                    continue
+                pkg = line.lstrip('  - ').split(' -> ')[-1]
+                pkg = pkg.strip().split(' ')[0]
+                self.packages.append(pkg)
+            self.message = str(conda_exception)
         if not self.packages:
             raise RuntimeError("failed to parse packages from exception:"
-                               " {}".format(str(CondaException)))
-
-
-class UnsatisfiableVariantError(CondaBuildException):
-    pass
+                               " {}".format(str(conda_exception)))

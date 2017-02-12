@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import codecs
 import copy
 import hashlib
 import json
@@ -17,7 +18,7 @@ from .conda_interface import specs_from_url
 from .conda_interface import envs_dirs
 from .conda_interface import string_types
 
-from conda_build import exceptions, filt
+from conda_build import exceptions, filt, utils
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
@@ -160,19 +161,22 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
-def _equivalent(base_value, value):
-    equivalent = value != base_value
+def _equivalent(base_value, value, path):
+    equivalent = value == base_value
     if isinstance(value, string_types) and isinstance(base_value, string_types):
-        equivalent |= (os.path.abspath(os.path.normpath(value)) ==
-                       os.path.abspath(os.path.normpath(base_value)))
+        if not os.path.isabs(base_value):
+            base_value = os.path.abspath(os.path.normpath(os.path.join(path, base_value)))
+        if not os.path.isabs(value):
+            value = os.path.abspath(os.path.normpath(os.path.join(path, value)))
+        equivalent |= base_value == value
     return equivalent
 
-def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
+def _merge_or_update_values(base, new, path, merge, raise_on_clobber=False):
+    log = logging.getLogger(__name__)
     for key, value in new.items():
-        assert not hasattr(key, 'keys'), key
         base_value = base.get(key, value)
         if hasattr(value, 'keys'):
-            base_value = _merge_or_update_values(base_value, value, merge,
+            base_value = _merge_or_update_values(base_value, value, path, merge,
                                                  raise_on_clobber=raise_on_clobber)
             base[key] = base_value
         elif hasattr(value, '__iter__') and not isinstance(value, string_types):
@@ -186,13 +190,10 @@ def _merge_or_update_values(base, new, merge, raise_on_clobber=False):
             else:
                 base[key] = value
         else:
-            if base_value and merge and not _equivalent(base_value, value) and raise_on_clobber:
-                raise ValueError("Attempting to merge non-list,non-dict object ({0}: {1} into "
-                                 "base {2}).  Note that due to parsing order, you can't change "
-                                 "metadata attributes that are also defined in meta.yaml.  "
-                                 "Perhaps you want to add this key/value to recipe_clobber.yaml, "
-                                 "or use template variables with variant settings instead?"
-                                 .format(key, value, base_value))
+            if (base_value and merge and not _equivalent(base_value, value, path) and
+                    raise_on_clobber):
+                log.debug('clobbering key {} (original value {}) with value {}'.format(key,
+                                                                            base_value, value))
             base[key] = value
     return base
 
@@ -502,7 +503,16 @@ class MetaData(object):
 
     @property
     def disable_pip(self):
-        return 'build' in self.meta and 'disable_pip' in self.meta['build']
+        return self.config.disable_pip or ('build' in self.meta and
+                                           'disable_pip' in self.meta['build'])
+
+    @disable_pip.setter
+    def disable_pip(self, value):
+        self.config.disable_pip = value
+        build = self.meta.get('build', {})
+        build['disable_pip'] = value
+        self.meta['build'] = build
+
 
     def append_metadata_sections(self, sections_file_or_dict, merge, raise_on_clobber=False):
         """Append to or replace subsections to meta.yaml
@@ -517,10 +527,10 @@ class MetaData(object):
         else:
             with open(sections_file_or_dict) as configfile:
                 build_config = parse(configfile.read(), config=self.config)
-        _merge_or_update_values(self.meta, build_config, merge=merge,
+        _merge_or_update_values(self.meta, build_config, self.path, merge=merge,
                                 raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False, raise_on_clobber=False):
+    def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -546,14 +556,9 @@ class MetaData(object):
         try:
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
-                original_meta = copy.copy(self.meta)
                 self.meta = parse(self._get_contents(permit_undefined_jinja),
                                   config=self.config,
                                   path=self.meta_path)
-                # this is verifying that we are not clobbering any manually set metadata with
-                #   the contents of the recipe files
-                _merge_or_update_values(original_meta, self.meta, merge=True,
-                                        raise_on_clobber=True)
 
                 if (isfile(self.requirements_path) and
                         not self.meta.get('requirements', {}).get('run', [])):
@@ -574,15 +579,12 @@ class MetaData(object):
                 clobber_sections_file = None
 
             if append_sections_file:
-                self.append_metadata_sections(append_sections_file, merge=True,
-                                              raise_on_clobber=raise_on_clobber)
+                self.append_metadata_sections(append_sections_file, merge=True)
             if clobber_sections_file:
-                self.append_metadata_sections(clobber_sections_file, merge=False,
-                                              raise_on_clobber=raise_on_clobber)
+                self.append_metadata_sections(clobber_sections_file, merge=False)
             if self.config.bootstrap:
                 dependencies = _get_dependencies_from_environment(self.config.bootstrap)
-                self.append_metadata_sections(dependencies, merge=True,
-                                              raise_on_clobber=raise_on_clobber)
+                self.append_metadata_sections(dependencies, merge=True)
         except:
             raise
         finally:
@@ -767,7 +769,7 @@ class MetaData(object):
             res.append(ms)
         return res
 
-    def _get_hash_dictionary(self):
+    def _get_hash_contents(self):
         sections = ['source', 'requirements', 'build']
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
@@ -795,7 +797,15 @@ class MetaData(object):
             if key in composite['requirements'] and not composite['requirements'].get(key):
                 del composite['requirements'][key]
         trim_empty_keys(composite)
-        return composite
+        file_paths = []
+
+        if self.path:
+            files = utils.rec_glob(self.path, "*")
+            file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
+            # exclude meta.yaml and meta.yaml.template, because the json dictionary captures them
+            file_paths = [f for f in file_paths if not f.startswith('meta.yaml')]
+
+        return composite, file_paths
 
     def _hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -805,8 +815,12 @@ class MetaData(object):
         # save only the first HASH_LENGTH characters - should be more than enough, since these only
         #    need to be unique within one version
         # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-        hash_ = hashlib.sha1(json.dumps(self._get_hash_dictionary()).encode()).hexdigest()
-        hash_ = 'h{0}'.format(hash_)[:self.config.hash_length + 1]
+        recipe_input, file_paths = self._get_hash_contents()
+        hash_ = hashlib.sha1(json.dumps(recipe_input).encode())
+        for recipe_file in file_paths:
+            with open(os.path.join(self.path, recipe_file), 'rb') as f:
+                hash_.update(f.read())
+        hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
         return hash_
 
     def build_id(self):

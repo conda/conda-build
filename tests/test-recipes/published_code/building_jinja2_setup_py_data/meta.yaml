@@ -12,4 +12,4 @@ source:
 
 requirements:
   build:
-    - python {{ PY_VER }}.*
+    - python {{ PY_VER }}

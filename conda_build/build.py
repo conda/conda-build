@@ -3,6 +3,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
 
+import codecs
 from collections import deque, OrderedDict
 import copy
 import fnmatch
@@ -245,9 +246,14 @@ def copy_license(m):
 
 
 def write_hash_input(m):
-    hash_input = m._get_hash_dictionary()
+    recipe_input, file_paths = m._get_hash_contents()
     with open(os.path.join(m.config.info_dir, 'hash_input.json'), 'w') as f:
-        json.dump(hash_input, f)
+        json.dump(recipe_input, f)
+
+    if m.config.include_recipe and m.include_recipe():
+        with codecs.open(os.path.join(m.config.info_dir, 'hash_input_files'), 'w', 'utf-8') as f:
+            for fname in file_paths:
+                f.write(fname + '\n')
 
 
 def get_files_with_prefix(m, files, prefix):
@@ -1210,12 +1216,6 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def ensure_metadata_compatible_with_recipe(metadata):
-    test_meta = metadata.copy()
-    test_meta.final = False
-    test_meta.parse_again(raise_on_clobber=True)
-
-
 def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                need_source_download=True, need_reparse_in_env=False, variants=None):
 
@@ -1263,13 +1263,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                                                                 config.build_subdir)
                 variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
                             get_package_variants(metadata))
-                # this is essentially a check to make sure that if people set things on the metadata
-                #    object directly, then they get an error when reparsing the recipe would clobber
-                #    their changes.
-                ensure_metadata_compatible_with_recipe(metadata)
+
                 # This is where reparsing happens - we need to re-evaluate the meta.yaml for any
                 #    jinja2 templating
-                metadata_tuples = distribute_variants(metadata, variants, index)
+                metadata_tuples = distribute_variants(metadata, variants, index,
+                                                      permit_unsatisfiable_variants=False)
             else:
                 recipe_parent_dir = os.path.dirname(recipe)
                 recipe = recipe.rstrip("/").rstrip("\\")
@@ -1281,7 +1279,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 # each tuple is:
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
-                metadata_tuples, index = render_recipe(recipe, config=config, variants=variants)
+                metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
+                                                       permit_unsatisfiable_variants=False)
             if not getattr(config, "noverify", False):
                 verifier = Verify()
                 ignore_scripts = config.ignore_recipe_verify_scripts if \

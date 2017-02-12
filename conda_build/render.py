@@ -22,11 +22,11 @@ import yaml
 from .conda_interface import PY3, UnsatisfiableError
 
 from conda_build import exceptions, utils, environ
-from conda_build.metadata import MetaData
+from conda_build.metadata import MetaData, _merge_or_update_values
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
                                   combine_variants)
-from conda_build.exceptions import UnsatisfiableVariantError, DependencyNeedsBuildingError
+from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 
 
@@ -71,8 +71,7 @@ def get_env_dependencies(m, env, variant, index=None):
         actions = environ.get_install_actions(prefix, index, dependencies, m.config)
     except UnsatisfiableError as e:
         # we'll get here if the environment is unsatisfiable
-        raise UnsatisfiableVariantError("Invalid variant: {}.  Led to unsatisfiable environment.\n"
-                                        "Error was: {}".format(variant, str(e)))
+        raise DependencyNeedsBuildingError(e)
     return actions_to_pins(actions) + subpackages
 
 
@@ -195,11 +194,7 @@ def reparse(metadata, index):
     sys.path.insert(0, metadata.config.build_prefix)
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
     metadata.parse_again(permit_undefined_jinja=False)
-    try:
-        metadata = finalize_metadata(metadata, index)
-    except DependencyNeedsBuildingError as e:
-        # just pass the metadata through unfinalized
-        raise UnsatisfiableVariantError(str(e))
+    metadata = finalize_metadata(metadata, index)
     return metadata
 
 
@@ -207,26 +202,22 @@ def base_parse(metadata, index):
     log = logging.getLogger(__name__)
     if 'host' in metadata.get_section('requirements'):
         metadata.config.has_separate_host_prefix = True
-    # try:
     metadata.parse_until_resolved()
-    # except (RuntimeError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-    #     log.warn("Need to create build environment to fully render this recipe.  Doing so.")
-    #     specs = [ms.spec for ms in metadata.ms_depends('build')]
-    #     environ.create_env(metadata.config.build_prefix, specs, config=metadata.config,
-    #                     subdir=metadata.config.build_subdir)
     try:
         metadata = reparse(metadata, index)
-    except UnsatisfiableVariantError:
+    except DependencyNeedsBuildingError:
         raise
     except exceptions.UnableToParseMissingSetuptoolsDependencies:
         raise
     return metadata
 
 
-def distribute_variants(metadata, variants, index):
+def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False):
     log = logging.getLogger(__name__)
     rendered_metadata = {}
     need_reparse_in_env = False
+    unsatisfiable_variants = []
+    packages_needing_building = set()
 
     for variant in variants:
         mv = metadata.copy()
@@ -243,10 +234,9 @@ def distribute_variants(metadata, variants, index):
         if not need_reparse_in_env:
             try:
                 mv = base_parse(mv, index)
-            except UnsatisfiableVariantError as e:
-                log.warn("skipping variant {} - unsatisfiable with currently configured "
-                         "channels".format(variant))
-                log.warn(str(e))
+            except DependencyNeedsBuildingError as e:
+                unsatisfiable_variants.append(variant)
+                packages_needing_building.update(set(e.packages))
                 continue
             except exceptions.UnableToParseMissingSetuptoolsDependencies:
                 need_reparse_in_env = True
@@ -261,12 +251,13 @@ def distribute_variants(metadata, variants, index):
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
-    assert rendered_metadata, ("No satisfiable variants were resolved.  Please check your "
-                               "recipe and variant configuration.")
+    if unsatisfiable_variants and not permit_unsatisfiable_variants:
+        raise DependencyNeedsBuildingError(packages=packages_needing_building)
     return list(rendered_metadata.values())
 
 
-def render_recipe(recipe_path, config, no_download_source=False, variants=None):
+def render_recipe(recipe_path, config, no_download_source=False, variants=None,
+                  permit_unsatisfiable_variants=True):
     arg = recipe_path
     # Don't use byte literals for paths in Python 2
     if not PY3:
@@ -312,7 +303,10 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None):
     else:
         variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m)
         index = get_build_index(m.config, m.config.build_subdir)
-        rendered_metadata = distribute_variants(m, variants, index)
+        rendered_metadata = distribute_variants(m, variants, index,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+        if not rendered_metadata:
+            raise ValueError("No variants were satisfiable - no valid recipes could be rendered.")
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)
