@@ -51,6 +51,9 @@ def get_env_dependencies(m, env, variant, index=None):
     if not index:
         index = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
     specs = [ms.spec for ms in m.ms_depends(env)]
+    # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
+    if env == 'build':
+        specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
     subpackages = []
     dependencies = []
     for spec in specs:
@@ -343,6 +346,9 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
+    if config.set_build_id:
+        m.config.compute_build_id(m.name(), reset=True)
+
     if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
                                       len(os.listdir(m.config.work_dir)) == 0):
         try_download(m, no_download_source=no_download_source)
@@ -400,6 +406,11 @@ def output_yaml(metadata, filename=None):
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:
+        if any(sep in filename for sep in ('\\', '/')):
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError:
+                pass
         with open(filename, "w") as f:
             f.write(output)
         return "Wrote yaml to %s" % filename

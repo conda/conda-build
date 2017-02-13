@@ -85,7 +85,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     api.build(recipe, config=testing_config)
 
 
-def test_token_upload(testing_workdir, test_metadata):
+def test_token_upload(testing_workdir, testing_metadata):
     folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
@@ -96,11 +96,11 @@ def test_token_upload(testing_workdir, test_metadata):
     with pytest.raises(NotFound):
         show.main(args)
 
-    test_metadata.meta['package']['name'] = '_'.join([test_metadata.name(), folder_uuid])
-    test_metadata.config.token = args.token
+    testing_metadata.meta['package']['name'] = '_'.join([testing_metadata.name(), folder_uuid])
+    testing_metadata.config.token = args.token
 
     # the folder with the test recipe to upload
-    api.build(test_metadata)
+    api.build(testing_metadata)
 
     # make sure that the package is available (should raise if it doesn't)
     show.main(args)
@@ -928,7 +928,7 @@ def test_recursion_layers(testing_config):
     api.build(recipe, config=testing_config)
 
 
-def test_pin_depends(test_metadata):
+def test_pin_depends(testing_metadata):
     """This is deprecated functionality - replaced by the more general variants pinning scheme"""
-    test_metadata.meta['build']['pin_depends'] = 'record'
-    api.build(test_metadata)
+    testing_metadata.meta['build']['pin_depends'] = 'record'
+    api.build(testing_metadata)

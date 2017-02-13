@@ -235,11 +235,6 @@ def ensure_valid_noarch_value(meta):
         raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
 
 
-def make_outputs_hashable(res):
-    if 'outputs' in res:
-        res['outputs'] = [HashableDict(out) for out in res['outputs']]
-
-
 def parse(data, config, path=None):
     data = select_lines(data, ns_cfg(config))
     res = yamlize(data)
@@ -256,7 +251,6 @@ def parse(data, config, path=None):
             raise RuntimeError("The %s field should be a dict, not %s in file %s." %
                                (field, res[field].__class__.__name__, path))
 
-    make_outputs_hashable(res)
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
     ensure_valid_noarch_value(res)
@@ -402,6 +396,8 @@ def build_string_from_metadata(metadata):
     else:
         res = []
         log = logging.getLogger(__name__)
+
+        build_pkg_names = [ms.name for ms in metadata.ms_depends('build')]
         variant_pin_run_as_depends = metadata.config.variant.get('pin_run_as_build', {})
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
@@ -410,9 +406,9 @@ def build_string_from_metadata(metadata):
                                  ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3)):
             for ms in metadata.ms_depends('run'):
                 for name in ensure_list(names):
-                    if ms.name == name:
-                        if name == 'numpy' and ('x.x' not in str(ms) and
-                                                'numpy' not in variant_pin_run_as_depends):
+                    if ms.name == name and name in build_pkg_names:
+                        # only append numpy when it is actually pinned
+                        if name == 'numpy' and (not hasattr(ms, 'version') or not ms.version):
                             continue
                         log.warn("Deprecation notice: computing build string (like pyXY).  This "
                                  "functionality has been replaced with the hash (h????), which"

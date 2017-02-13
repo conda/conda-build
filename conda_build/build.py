@@ -404,6 +404,8 @@ def write_about_json(m):
 
 
 def write_info_json(m):
+    log = logging.getLogger(__name__)
+
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
@@ -1052,29 +1054,30 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     for (metadata, _, _) in metadata_tuples:
         metadata.append_metadata_sections(hash_input, merge=False)
-        config.compute_build_id(metadata.name())
+        metadata.config.compute_build_id(metadata.name())
         environ.clean_pkg_cache(metadata.dist(), config)
-        create_files(config.test_dir, metadata)
+        # this is also copying tests/source_files from work_dir to testing workdir
+        create_files(metadata.config.test_dir, metadata)
         # Make Perl or Python-specific test files
         if metadata.name().startswith('perl-'):
-            pl_files = create_pl_files(config.test_dir, metadata)
+            pl_files = create_pl_files(metadata.config.test_dir, metadata)
             py_files = False
             lua_files = False
         else:
-            py_files = create_py_files(config.test_dir, metadata)
+            py_files = create_py_files(metadata.config.test_dir, metadata)
             pl_files = False
             lua_files = False
-        shell_files = create_shell_files(config.test_dir, metadata)
+        shell_files = create_shell_files(metadata.config.test_dir, metadata)
         if not (py_files or shell_files or pl_files or lua_files):
             print("Nothing to test for:", metadata.dist())
             continue
 
         print("TEST START:", metadata.dist())
 
-        if config.remove_work_dir:
+        if metadata.config.remove_work_dir:
             # Needs to come after create_files in case there's test/source_files
-            print("Deleting work directory,", config.work_dir)
-            utils.rm_rf(config.work_dir)
+            print("Deleting work directory,", metadata.config.work_dir)
+            utils.rm_rf(metadata.config.work_dir)
         else:
             log.warn("Not removing work directory after build.  Your package may depend on files "
                     "in the work directory that are not included with your package")
@@ -1098,44 +1101,45 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             # not sure how this shakes out
             specs += ['lua']
 
-        with utils.path_prepended(config.test_prefix):
+        with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=config, m=metadata, prefix=config.test_prefix))
+            env.update(environ.get_dict(config=metadata.config, m=metadata, prefix=config.test_prefix))
             env["CONDA_BUILD_STATE"] = "TEST"
             if env_path_backup_var_exists:
                 env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
-        if not config.activate:
+        if not metadata.config.activate:
             # prepend bin (or Scripts) directory
-            env = utils.prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
+            env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
 
         if utils.on_win:
-            env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
+            env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
         suffix = "bat" if utils.on_win else "sh"
-        test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
+        test_script = join(metadata.config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
         # we want subdir to match the target arch.  If we're running the test on the target arch,
         #     the build_subdir should be that match.  The host_subdir may not be, and would lead
         #     to unsatisfiable packages.
-        environ.create_env(config.test_prefix, specs, config=config, subdir=config.build_subdir)
+        environ.create_env(metadata.config.test_prefix, specs, config=metadata.config,
+                           subdir=metadata.config.build_subdir)
 
-        with utils.path_prepended(config.test_prefix):
+        with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=config, m=metadata, prefix=config.test_prefix))
+            env.update(environ.get_dict(config=metadata.config, m=metadata, prefix=metadata.config.test_prefix))
             env["CONDA_BUILD_STATE"] = "TEST"
             if env_path_backup_var_exists:
                 env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
-        if not config.activate:
+        if not metadata.config.activate:
             # prepend bin (or Scripts) directory
-            env = utils.prepend_bin_path(env, config.test_prefix, prepend_prefix=True)
+            env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
 
             if utils.on_win:
-                env['PATH'] = config.test_prefix + os.pathsep + env['PATH']
+                env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
         # set variables like CONDA_PY in the test environment
-        env.update(set_language_env_vars(config.variant))
+        env.update(set_language_env_vars(metadata.config.variant))
 
         # Python 2 Windows requires that envs variables be string, not unicode
         env = {str(key): str(value) for key, value in env.items()}
@@ -1143,36 +1147,36 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
         with open(test_script, 'w') as tf:
-            if config.activate:
+            if metadata.config.activate:
                 ext = ".bat" if utils.on_win else ""
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}" {squelch}\n'.format(
                     conda_root=utils.root_script_dir + os.path.sep,
                     source="call" if utils.on_win else "source",
                     ext=ext,
-                    test_env=config.test_prefix,
+                    test_env=metadata.config.test_prefix,
                     squelch=">nul 2>&1" if utils.on_win else "&> /dev/null"))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
                 tf.write("{python} -s {test_file}\n".format(
-                    python=config.test_python,
-                    test_file=join(config.test_dir, 'run_test.py')))
+                    python=metadata.config.test_python,
+                    test_file=join(metadata.config.test_dir, 'run_test.py')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if pl_files:
                 tf.write("{perl} {test_file}\n".format(
-                    perl=config.test_perl,
-                    test_file=join(config.test_dir, 'run_test.pl')))
+                    perl=metadata.config.test_perl,
+                    test_file=join(metadata.config.test_dir, 'run_test.pl')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if lua_files:
                 tf.write("{lua} {test_file}\n".format(
-                    lua=config.test_lua,
-                    test_file=join(config.test_dir, 'run_test.lua')))
+                    lua=metadata.config.test_lua,
+                    test_file=join(metadata.config.test_dir, 'run_test.lua')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if shell_files:
-                test_file = join(config.test_dir, 'run_test.' + suffix)
+                test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
                 if utils.on_win:
                     tf.write("call {test_file}\n".format(test_file=test_file))
                     if utils.on_win:
@@ -1186,10 +1190,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         else:
             cmd = [shell_path, '-x', '-e', test_script]
         try:
-            utils.check_call_env(cmd, env=env, cwd=config.test_dir)
+            utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
         except subprocess.CalledProcessError:
-            tests_failed(metadata, move_broken=move_broken, broken_dir=config.broken_dir,
-                         config=config)
+            tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
+                         config=metadata.config)
 
         if need_cleanup:
             utils.rm_rf(recipe_dir)
@@ -1244,6 +1248,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     built_packages = []
     retried_recipes = []
 
+    # this is primarily for exception handling.  It's OK that it gets clobbered by
+    #     the loop below.
+    metadata=None
+
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -1284,22 +1292,12 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 to_build_recursive.append(os.path.basename(recipe))
 
                 #    before downloading happens - or else we lose where downloads are
-                if config.set_build_id:
-                    config.compute_build_id(os.path.basename(recipe), reset=True)
+
                 # each tuple is:
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=False)
-            if not getattr(config, "noverify", False):
-                verifier = Verify()
-                ignore_scripts = config.ignore_recipe_verify_scripts if \
-                    config.ignore_recipe_verify_scripts else None
-                run_scripts = config.run_recipe_verify_scripts if \
-                    config.run_recipe_verify_scripts else None
-                for m_tuple in metadata_tuples:
-                    verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
-                                        rendered_meta=m_tuple[0].meta, recipe_dir=m_tuple[0].path)
 
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
@@ -1337,7 +1335,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             for pkg in e.packages:
                 if pkg in to_build_recursive:
                     raise RuntimeError("Can't build {0} due to environment creation error:\n"
-                                       .format(recipe) + error_str + "\n" + extra_help)
+                                       .format(recipe) + str(e.message) + "\n" + extra_help)
 
                 if pkg in skip_names:
                     to_build_recursive.append(pkg)
@@ -1357,9 +1355,9 @@ for Python 3.5 and needs to be rebuilt."""
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
                                        .format(recipe, e.packages) + "\n\n" + extra_help)
-            if retried_recipes.count(recipe) >= len(metadata.ms_depends('build')):
+            if not metadata or retried_recipes.count(recipe) >= len(metadata.ms_depends('build')):
                 raise RuntimeError("Can't build {0} due to environment creation error:\n"
-                                    .format(recipe) + error_str + "\n" + extra_help)
+                                    .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(recipe)
             recipe_list.extendleft(add_recipes)
 

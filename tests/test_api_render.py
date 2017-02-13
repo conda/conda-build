@@ -48,9 +48,9 @@ def test_render_yaml_output(testing_workdir, testing_config):
 
 def test_get_output_file_path(testing_workdir, testing_metadata):
     testing_metadata = render.finalize_metadata(testing_metadata, testing_metadata.config.index)
-    api.output_yaml(testing_metadata, 'meta.yaml')
+    api.output_yaml(testing_metadata, 'recipe/meta.yaml')
 
-    build_path = api.get_output_file_path(testing_workdir,
+    build_path = api.get_output_file_path(os.path.join(testing_workdir, 'recipe'),
                                           config=testing_metadata.config,
                                           no_download_source=True)[0]
     _hash = testing_metadata._hash_dependencies()

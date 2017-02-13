@@ -176,8 +176,9 @@ def test_compiler_metadata_cross_compiler():
 
 
 def test_hash_build_id(testing_metadata):
-    assert testing_metadata._hash_dependencies() == 'hfe63493'
-    assert testing_metadata.build_id() == 'py{}{}hfe63493_1'.format(sys.version_info.major,
+    testing_metadata.meta['requirements']['build'] = ['zlib 1.2.8 3']
+    assert testing_metadata._hash_dependencies() == 'hbcfeb9f'
+    assert testing_metadata.build_id() == 'hbcfeb9f_1'.format(sys.version_info.major,
                                                                sys.version_info.minor)
 
 
@@ -202,4 +203,5 @@ def test_hash_build_id_key_order(testing_metadata):
 
 def test_hash_applies_to_custom_build_string(testing_metadata):
     testing_metadata.meta['build']['string'] = 'steve'
-    assert testing_metadata.build_id() == 'stevehfe63493'
+    testing_metadata.meta['requirements']['build'] = ['zlib 1.2.8 3']
+    assert testing_metadata.build_id() == 'stevehbcfeb9f'
