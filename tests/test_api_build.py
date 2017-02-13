@@ -413,16 +413,16 @@ def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
 
 
 def test_debug_build_option(testing_metadata, caplog, capfd):
-    logging.basicConfig(level=logging.INFO)
     info_message = "INFO"
     debug_message = "DEBUG"
     testing_metadata.config.debug = False
     testing_metadata.config.verbose = False
-    api.build(testing_metadata)
-    # this comes from an info message
-    assert info_message in caplog.text
-    # this comes from a debug message
-    assert debug_message not in caplog.text
+    with caplog.atLevel(logging.INFO):
+        api.build(testing_metadata)
+        # this comes from an info message
+        assert info_message in caplog.text
+        # this comes from a debug message
+        assert debug_message not in caplog.text
 
     testing_metadata.config.debug = True
     api.build(testing_metadata)

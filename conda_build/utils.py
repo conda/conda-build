@@ -865,3 +865,16 @@ def apply_pin_expressions(version, pins=('p', )):
         if versions[p_idx][-1] == '.':
             versions[p_idx] = versions[p_idx][:-1]
     return ">={0},<{1}".format(*versions)
+
+
+def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
+                                                      '(.*[\\\\/])?\.git$',
+                                                      '(.*)?\.DS_Store.*',
+                                                      '(.*)?\.gitignore',
+                                                      '(.*)?\.gitmodules')):
+    """Remove things like .git from the list of files to be copied"""
+    for pattern in filter_patterns:
+        r = re.compile(pattern)
+        files_list = set(files_list) - set(filter(r.match, files_list))
+    return [f.replace(prefix + os.path.sep, '') for f in files_list
+            if not os.path.isdir(os.path.join(prefix, f))]

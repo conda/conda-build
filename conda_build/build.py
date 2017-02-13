@@ -612,16 +612,6 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
                   cls=EntityEncoder)
 
 
-def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
-                                                      '(.*)?\.DS_Store.*')):
-    """Remove things like .git from the list of files to be copied"""
-    for pattern in filter_patterns:
-        r = re.compile(pattern)
-        files_list = set(files_list) - set(filter(r.match, files_list))
-    return [f.replace(prefix + os.path.sep, '') for f in files_list
-            if not os.path.isdir(os.path.join(prefix, f))]
-
-
 def bundle_conda(output, metadata, env, **kw):
     files = output.get('files', [])
     if not files and output.get('script'):
@@ -638,10 +628,10 @@ def bundle_conda(output, metadata, env, **kw):
 
     output_filename = output_metadata.dist() + '.tar.bz2'
     files = list(set(utils.expand_globs(files, metadata.config.host_prefix)))
-    files = filter_files(files, prefix=output_metadata.config.build_prefix)
+    files = utils.filter_files(files, prefix=output_metadata.config.build_prefix)
     info_files = create_info_files(output_metadata, files,
                                    prefix=output_metadata.config.host_prefix)
-    info_files = filter_files(info_files, prefix=output_metadata.config.build_prefix)
+    info_files = utils.filter_files(info_files, prefix=output_metadata.config.build_prefix)
     for f in info_files:
         if f not in files:
             files.append(f)

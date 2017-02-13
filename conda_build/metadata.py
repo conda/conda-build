@@ -23,7 +23,7 @@ from conda_build import exceptions, filt, utils
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
-                               HashableDict, trim_empty_keys)
+                               HashableDict, trim_empty_keys, filter_files)
 from conda_build.license_family import ensure_valid_license_family
 from conda_build.variants import get_default_variants
 
@@ -801,6 +801,7 @@ class MetaData(object):
             file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
             # exclude meta.yaml and meta.yaml.template, because the json dictionary captures them
             file_paths = [f for f in file_paths if not f.startswith('meta.yaml')]
+            file_paths = sorted(filter_files(file_paths, self.path))
 
         return composite, file_paths
 
