@@ -499,7 +499,6 @@ def provide(metadata, patch=True):
       - unpack
       - apply patches (if any)
     """
-
     meta = metadata.get_section('source')
     if not os.path.isdir(metadata.config.build_folder):
         os.makedirs(metadata.config.build_folder)

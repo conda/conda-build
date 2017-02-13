@@ -13,6 +13,7 @@ from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
 from conda_build.utils import PY3
+from conda_build.conda_interface import subdir
 
 logging.basicConfig(level=logging.INFO)
 
@@ -20,8 +21,7 @@ epilog = """
 
 Tool to convert packages
 
-conda convert converts pure Python packages to other platforms, and converts
-Gohlke's .exe packages into conda packages.
+conda convert converts pure Python packages to other platforms.
 
 Packages are automatically organized in subdirectories according to platform,
 e.g.,
@@ -38,11 +38,6 @@ resulting package in the current directory (supposing a default Anaconda
 install on Mac OS X):
 
     conda convert package-1.0-py33.tar.bz2 -p win-64
-
-Convert a Gohlke .exe to a conda package, and add make it depend on numpy 1.8
-or higher:
-
-    conda convert cvxopt-1.1.7.win-amd64-py2.7.exe -d 'numpy >=1.8'
 
 """
 
@@ -67,7 +62,8 @@ all.""",
         dest='platforms',
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
-        help="Platform to convert the packages to."
+        help="Platform to convert the packages to.",
+        default=[subdir]
     )
     p.add_argument(
         "--dependencies", "-d",

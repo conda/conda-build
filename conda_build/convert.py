@@ -10,7 +10,8 @@ Tools for converting conda packages
 """
 from __future__ import absolute_import, division, print_function
 
-from copy import deepcopy
+from copy import copy, deepcopy
+import csv
 import json
 import os
 from os.path import abspath, expanduser, isdir, join
@@ -32,7 +33,7 @@ BAT_PROXY = """\
 @echo off
 set PYFILE=%~f0
 set PYFILE=%PYFILE:~0,-4%-script.py
-"%~f0\\..\\..\\python.exe" "%PYFILE%" %*
+"%~dp0\..\python.exe" "%PYFILE%" %*
 """
 
 libpy_pat = re.compile(
@@ -163,10 +164,24 @@ def tar_update(source, dest, file_map, verbose=True, quiet=False):
         t.close()
 
 
-path_mapping_bat_proxy = [
-    (re.compile(r'bin/(.*)(\.py)'), r'Scripts/\1.bat'),
-    (re.compile(r'bin/(.*)'), r'Scripts/\1.bat'),
-]
+def _check_paths_version(paths):
+    """Verify that we can handle this version of a paths file"""
+    # For now we only accept 1, but its possible v2 will still have the structure we need
+    # If so just update this if statement.
+    if paths['paths_version'] != 1:
+        raise RuntimeError("Cannot handle info/paths.json paths_version other than 1")
+
+
+def _update_paths(paths, mapping_dict):
+    """Given a paths file, update it such that old paths are replaced with new"""
+    updated_paths = deepcopy(paths)
+    for path in updated_paths['paths']:
+        if path['_path'] in mapping_dict:
+            path['_path'] = mapping_dict[path['_path']]
+    return updated_paths
+
+path_mapping_bat_proxy = (re.compile(r'bin\/(.+?)(\.py[c]?)?$'),
+                           (r'Scripts/\1-script', r'Scripts/\1.bat'))
 
 path_mapping_unix_windows = [
     (r'lib/python(\d.\d)/', r'Lib/'),
@@ -194,6 +209,11 @@ pyver_re = re.compile(r'python\s+(?:[<>=]*)(\d.\d)')
 
 def get_pure_py_file_map(t, platform):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+    try:
+        paths = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
+        _check_paths_version(paths)
+    except KeyError:
+        paths = None
     source_plat = info['platform']
     source_type = 'unix' if source_plat in {'osx', 'linux'} else 'win'
     dest_plat, dest_arch = platform.split('-')
@@ -237,6 +257,22 @@ def get_pure_py_file_map(t, platform):
 
     members = t.getmembers()
     file_map = {}
+    paths_mapping_dict = {}  # keep track of what we change in files
+    pathmember = None
+
+    # is None when info/has_prefix does not exist
+    has_prefix_files = None
+    if 'info/has_prefix' in t.getnames():
+        has_prefix_files = t.extractfile("info/has_prefix").read().decode()
+    if has_prefix_files:
+        fieldnames = ['prefix', 'type', 'path']
+        csv_dialect = csv.Sniffer().sniff(has_prefix_files)
+        csv_dialect.lineterminator = '\n'
+        has_prefix_files = csv.DictReader(has_prefix_files.splitlines(), fieldnames=fieldnames,
+                                          dialect=csv_dialect)
+        # convenience: store list of dictionaries as map by path
+        has_prefix_files = {d['path']: d for d in has_prefix_files}
+
     for member in members:
         # Update metadata
         if member.path == 'info/index.json':
@@ -252,18 +288,18 @@ def get_pure_py_file_map(t, platform):
             # We have to do this at the end when we have all the files
             filemember = deepcopy(member)
             continue
-        elif member.path == 'info/has_prefix':
-            if source_type == 'unix' and dest_type == 'win':
-                # has_prefix is not needed on Windows
-                file_map['info/has_prefix'] = None
+        elif member.path == 'info/paths.json':
+            pathmember = deepcopy(member)
+            continue
 
         # Move paths
         oldpath = member.path
+        append_new_path_to_has_prefix = False
+        if has_prefix_files and oldpath in has_prefix_files:
+            append_new_path_to_has_prefix = True
+
         for old, new in mapping:
             newpath = old.sub(new, oldpath)
-            if oldpath in file_map:
-                # Already been handled
-                break
             if newpath != oldpath:
                 newmember = deepcopy(member)
                 newmember.path = newpath
@@ -272,33 +308,71 @@ def get_pure_py_file_map(t, platform):
                 file_map[newpath] = newmember
                 loc = files.index(oldpath)
                 files[loc] = newpath
+                paths_mapping_dict[oldpath] = newpath
+                if append_new_path_to_has_prefix:
+                    has_prefix_files[oldpath]['path'] = newpath
                 break
         else:
             file_map[oldpath] = member
 
         # Make Windows compatible entry-points
-        batseen = set()
         if source_type == 'unix' and dest_type == 'win':
-            for old, new in path_mapping_bat_proxy:
-                newpath = old.sub(new, oldpath)
-                if oldpath in batseen:
-                    break
-                if newpath != oldpath:
-                    newmember = tarfile.TarInfo(newpath)
-                    if PY3:
-                        data = bytes(BAT_PROXY.replace('\n', '\r\n'), 'ascii')
-                    else:
-                        data = BAT_PROXY.replace('\n', '\r\n')
-                    newmember.size = len(data)
-                    file_map[newpath] = newmember, bytes_io(data)
-                    batseen.add(oldpath)
-                    files.append(newpath)
+            old = path_mapping_bat_proxy[0]
+            for new in path_mapping_bat_proxy[1]:
+                match = old.match(oldpath)
+                if match:
+                    newpath = old.sub(new, oldpath)
+                    if newpath.endswith('-script'):
+                        if match.group(2):
+                            newpath = newpath + match.group(2)
+                        else:
+                            newpath = newpath + '.py'
+                    if newpath != oldpath:
+                        newmember = tarfile.TarInfo(newpath)
+                        if newpath.endswith('.bat'):
+                            if PY3:
+                                data = bytes(BAT_PROXY.replace('\n', '\r\n'), 'ascii')
+                            else:
+                                data = BAT_PROXY.replace('\n', '\r\n')
+                        else:
+                            data = t.extractfile(member).read()
+                            if append_new_path_to_has_prefix:
+                                has_prefix_files[oldpath]['path'] = newpath
+                        newmember.size = len(data)
+                        file_map[newpath] = newmember, bytes_io(data)
+                        files.append(newpath)
+                        found_path = [p for p in paths['paths'] if p['_path'] == oldpath]
+                        assert len(found_path) == 1
+                        newdict = copy(found_path[0])
+                        newdict['_path'] = newpath
+                        paths['paths'].append(newdict)
 
+    # Change paths.json the same way that we changed files
+    if paths:
+        updated_paths = _update_paths(paths, paths_mapping_dict)
+        paths = json.dumps(updated_paths, sort_keys=True,
+                           indent=4, separators=(',', ': '))
+    files = list(set(files))
     files = '\n'.join(sorted(files)) + '\n'
     if PY3:
         files = bytes(files, 'utf-8')
+        if paths:
+            paths = bytes(paths, 'utf-8')
     filemember.size = len(files)
     file_map['info/files'] = filemember, bytes_io(files)
+    if pathmember:
+        pathmember.size = len(paths)
+        file_map['info/paths.json'] = pathmember, bytes_io(paths)
+    if has_prefix_files:
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames, dialect=csv_dialect)
+        writer.writerows(has_prefix_files.values())
+        member = t.getmember('info/has_prefix')
+        output_val = output.getvalue()
+        if hasattr(output_val, 'encode'):
+            output_val = output_val.encode()
+        member.size = len(output_val)
+        file_map['info/has_prefix'] = member, bytes_io(output_val)
 
     return file_map
 

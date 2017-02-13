@@ -89,8 +89,9 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     if not lock:
         lock = get_lock(dir_path)
 
+    locks = []
     if config.locking:
-        locks = [lock]
+        locks.append(lock)
 
     index = {}
 

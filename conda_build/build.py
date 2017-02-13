@@ -36,12 +36,14 @@ from .conda_interface import prefix_placeholder, linked
 from .conda_interface import url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
+from .conda_interface import (PaddingError, LinkError, CondaError, NoPackagesFoundError,
+                              NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
-from .conda_interface import dist_str_in_index
+from .conda_interface import dist_str_in_index, Dist
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -338,7 +340,7 @@ def write_info_files_file(m, files):
                 fo.write(f + '\n')
 
 
-def write_package_metadata_json(m):
+def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
@@ -357,8 +359,11 @@ def write_package_metadata_json(m):
             preferred_env_dict["executable_paths"] = executable_paths
         package_metadata["preferred_env"] = preferred_env_dict
     if package_metadata:
+        # The original name of this file was info/package_metadata_version.json, but we've
+        #   now changed it to info/link.json.  Still, we must indefinitely keep the key name
+        #   package_metadata_version, or we break conda.
         package_metadata["package_metadata_version"] = 1
-        with open(os.path.join(m.config.info_dir, "package_metadata.json"), 'w') as fh:
+        with open(os.path.join(m.config.info_dir, "link.json"), 'w') as fh:
             fh.write(json.dumps(package_metadata, sort_keys=True, indent=2, separators=(',', ': ')))
 
 
@@ -412,7 +417,10 @@ def write_info_json(m):
 # It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
 """ % (m.dist(), m.config.build_subdir))
-            for dist in sorted(dists + [m.dist()]):
+            dist = m.dist()
+            if hasattr(dists[0], 'version'):
+                dist = Dist(dist)
+            for dist in sorted(dists + [dist]):
                 fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
         if pin_depends == 'strict':
             info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
@@ -484,7 +492,7 @@ def create_info_files(m, files, prefix):
     write_hash_input(m)
     write_info_json(m)  # actually index.json
     write_about_json(m)
-    write_package_metadata_json(m)
+    write_link_json(m)
     write_pin_downstream(m)
 
     write_info_files_file(m, files)
@@ -690,6 +698,8 @@ def bundle_conda(output, metadata, env, **kw):
     # remove files from build prefix.  This is so that they can be included in other packages.  If
     #     we were to leave them in place, then later scripts meant to also include them may not.
     for f in files:
+        if not os.path.isabs(f):
+            f = os.path.abspath(os.path.normpath(os.path.join(metadata.config.build_prefix, f)))
         utils.rm_rf(f)
     return final_output
 
@@ -1230,9 +1240,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             subprocess.call('del /s /q "{0}\\*.*" >nul 2>&1'.format(trash_dir), shell=True)
         # delete_trash(None)
 
-    already_built = set()
     extra_help = ""
     built_packages = []
+    retried_recipes = []
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1326,8 +1336,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             original_recipe_list = copy.copy(recipe_list)
             for pkg in e.packages:
                 if pkg in to_build_recursive:
-                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n {1}"
-                                       .format(recipe, e.packages) + "\n" + extra_help)
+                    raise RuntimeError("Can't build {0} due to environment creation error:\n"
+                                       .format(recipe) + error_str + "\n" + extra_help)
 
                 if pkg in skip_names:
                     to_build_recursive.append(pkg)
@@ -1346,51 +1356,53 @@ for Python 3.5 and needs to be rebuilt."""
                         add_recipes.append(recipe_dir)
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
-                                       .format(recipe, e.packages) + "\n\n" + extra_help)
+                                       .format(recipe, e.pkgs) + "\n\n" + extra_help)
+            if retried_recipes.count(recipe) >= len(metadata.ms_depends('build')):
+                raise RuntimeError("Can't build {0} due to environment creation error:\n"
+                                    .format(recipe) + error_str + "\n" + extra_help)
+            retried_recipes.append(recipe)
             recipe_list.extendleft(add_recipes)
 
-            # we didn't add any recipes, so we don't expect to be able to fix this error.  Reraise.
-            if len(recipe_list) == len(original_recipe_list):
-                raise RuntimeError("could not build {}, aborting build".format(pkg))
-
-        # outputs message, or does upload, depending on value of args.anaconda_upload
-        if post in [True, None]:
-            for f in built_packages:
-                # TODO: could probably use a better check for pkg type than this...
-                if f.endswith('.tar.bz2'):
-                    handle_anaconda_upload(f, config=config)
-                elif f.endswith('.whl'):
-                    handle_pypi_upload(f, config=config)
-                already_built.add(f)
-
+    if post in [True, None]:
+        # TODO: could probably use a better check for pkg type than this...
+        tarballs = [f for f in built_packages if f.endswith('.tar.bz2')]
+        wheels = [f for f in built_packages if f.endswith('.whl')]
+        handle_anaconda_upload(tarballs, config=config)
+        handle_pypi_upload(wheels, config=config)
     return built_packages
 
 
-def handle_anaconda_upload(path, config):
+def handle_anaconda_upload(paths, config):
     from conda_build.os_utils.external import find_executable
+
+    paths = utils.ensure_list(paths)
 
     upload = False
     # this is the default, for no explicit argument.
     # remember that anaconda_upload takes defaults from condarc
     if config.anaconda_upload is None:
         pass
+    elif config.token or config.user:
+        upload = True
     # rc file has uploading explicitly turned off
     elif config.anaconda_upload is False:
         print("# Automatic uploading is disabled")
+        upload = False
     else:
         upload = True
 
-    if config.token or config.user:
-        upload = True
-
     no_upload_message = """\
-# If you want to upload this package to anaconda.org later, type:
-#
-# $ anaconda upload %s
-#
+# If you want to upload package(s) to anaconda.org later, type:
+
+"""
+    for package in paths:
+        no_upload_message += "anaconda upload {}\n".format(package)
+
+    no_upload_message += """\
+
 # To have conda build upload to anaconda.org automatically, use
 # $ conda config --set anaconda_upload yes
-""" % path
+"""
     if not upload:
         print(no_upload_message)
         return
@@ -1403,7 +1415,6 @@ Error: cannot locate anaconda command (required for upload)
 # Try:
 # $ conda install anaconda-client
 ''')
-    print("Uploading to anaconda.org")
     cmd = [anaconda, ]
 
     if config.token:
@@ -1411,15 +1422,16 @@ Error: cannot locate anaconda command (required for upload)
     cmd.extend(['upload', '--force'])
     if config.user:
         cmd.extend(['--user', config.user])
-    cmd.append(path)
-    try:
-        subprocess.call(cmd)
-    except:
-        print(no_upload_message)
-        raise
+    for package in paths:
+        try:
+            print("Uploading {} to anaconda.org".format(os.path.basename(package)))
+            subprocess.call(cmd + [package])
+        except subprocess.CalledProcessError:
+            print(no_upload_message)
+            raise
 
 
-def handle_pypi_upload(f, config):
+def handle_pypi_upload(wheels, config):
     args = ['twine', 'upload', '--sign-with', config.sign_with, '--repository', config.repository]
     if config.user:
         args.extend(['--user', config.user])
@@ -1434,12 +1446,14 @@ def handle_pypi_upload(f, config):
     if config.repository:
         args.extend(['--repository', config.repository])
 
-    args.append(f)
-    try:
-        utils.check_call_env(args)
-    except:
-        logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
-                                         "  Is this package registered?")
+    wheels = utils.ensure_list(wheels)
+
+    for f in wheels:
+        try:
+            utils.check_call_env(args + [f])
+        except:
+            logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
+                                            "  Is this package registered?")
 
 
 def print_build_intermediate_warning(config):

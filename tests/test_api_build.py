@@ -85,23 +85,22 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     api.build(recipe, config=testing_config)
 
 
-def test_token_upload(testing_workdir):
+def test_token_upload(testing_workdir, test_metadata):
     folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
-    args = AnacondaClientArgs(specs="conda_test_account/empty_sections_" + folder_uuid,
-                              token="co-79de533f-926f-4e5e-a766-d393e33ae98f",
+    args = AnacondaClientArgs(specs="conda_build_test/test_token_upload_" + folder_uuid,
+                              token="co-143399b8-276e-48db-b43f-4a3de839a024",
                               force=True)
 
     with pytest.raises(NotFound):
         show.main(args)
 
-    metadata = api.render(empty_sections, activate=False)[0][0]
-    metadata.meta['package']['name'] = '_'.join([metadata.name(), folder_uuid])
-    metadata.config.token = args.token
+    test_metadata.meta['package']['name'] = '_'.join([test_metadata.name(), folder_uuid])
+    test_metadata.config.token = args.token
 
     # the folder with the test recipe to upload
-    api.build(metadata)
+    api.build(test_metadata)
 
     # make sure that the package is available (should raise if it doesn't)
     show.main(args)
@@ -660,10 +659,10 @@ def test_noarch_python_with_tests(testing_config):
     api.build(recipe, config=testing_config)
 
 
-def test_noarch_python_1(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)
-    assert package_has_file(outputs[0], 'info/files') is not ''
-    extra = json.loads(package_has_file(outputs[0], 'info/package_metadata.json').decode())
+def test_noarch_python_1(test_config):
+    output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
+    assert package_has_file(output, 'info/files') is not ''
+    extra = json.loads(package_has_file(output, 'info/link.json').decode())
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']
@@ -680,7 +679,7 @@ def test_legacy_noarch_python(testing_config):
 def test_preferred_env(testing_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
     output = api.build(recipe, config=testing_config)[0]
-    extra = json.loads(package_has_file(output, 'info/package_metadata.json').decode())
+    extra = json.loads(package_has_file(output, 'info/link.json').decode())
     assert 'preferred_env' in extra
     assert 'name' in extra['preferred_env']
     assert 'executable_paths' in extra['preferred_env']
@@ -888,3 +887,48 @@ def test_pin_downstream(testing_metadata, testing_config):
 def test_pin_subpackage_exact(testing_config):
     m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]
     assert 'pin_downstream_subpkg 1.0 hbf21a9e_0' in m.meta['requirements']['run']
+
+
+@pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
+def test_copy_read_only_file_with_xattr(test_config, testing_workdir):
+    src_recipe = os.path.join(metadata_dir, '_xattr_copy')
+    recipe = os.path.join(testing_workdir, '_xattr_copy')
+    copy_into(src_recipe, recipe)
+    # file is r/w for owner, but we change it to 400 after setting the attribute
+    ro_file = os.path.join(recipe, 'mode_400_file')
+    subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+    subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
+    api.build(recipe, config=test_config)
+
+
+@pytest.mark.serial
+def test_env_creation_fail_exits_build(test_config):
+    recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
+    with pytest.raises(RuntimeError):
+        api.build(recipe, config=test_config)
+
+    recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
+    with pytest.raises(RuntimeError):
+        api.build(recipe, config=test_config)
+
+
+@pytest.mark.serial
+def test_recursion_packages(test_config):
+    """Two packages that need to be built are listed in the recipe
+
+    make sure that both get built before the one needing them gets built."""
+    recipe = os.path.join(metadata_dir, '_recursive-build-two-packages')
+    api.build(recipe, config=test_config)
+
+
+@pytest.mark.serial
+def test_recursion_layers(test_config):
+    """go two 'hops' - try to build a, but a needs b, so build b first, then come back to a"""
+    recipe = os.path.join(metadata_dir, '_recursive-build-two-layer')
+    api.build(recipe, config=test_config)
+
+
+def test_pin_depends(test_metadata):
+    """This is deprecated functionality - replaced by the more general variants pinning scheme"""
+    test_metadata.meta['build']['pin_depends'] = 'record'
+    api.build(test_metadata)

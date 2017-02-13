@@ -1,0 +1,6 @@
+package:
+  name: conda_build_test_xattr_copy
+  version: 1.0
+
+source:
+  path: .

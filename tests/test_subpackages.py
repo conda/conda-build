@@ -22,14 +22,16 @@ def test_autodetect_raises_on_invalid_extension(testing_config):
         api.build(os.path.join(subpackage_dir, '_invalid_script_extension'), config=testing_config)
 
 
-def test_rm_rf_does_not_follow_links(testing_config):
+# regression test for https://github.com/conda/conda-build/issues/1661
+def test_rm_rf_does_not_remove_relative_source_package_files(test_config, monkeypatch):
     recipe_dir = os.path.join(subpackage_dir, '_rm_rf_stays_within_prefix')
-    bin_file_that_disappears = os.path.join(recipe_dir, 'bin', 'lsfm')
+    monkeypatch.chdir(recipe_dir)
+    bin_file_that_disappears = os.path.join('bin', 'lsfm')
     if not os.path.isfile(bin_file_that_disappears):
         with open(bin_file_that_disappears, 'w') as f:
             f.write('weee')
     assert os.path.isfile(bin_file_that_disappears)
-    api.build(os.path.join(recipe_dir, 'conda'), config=testing_config)
+    api.build('conda', config=test_config)
     assert os.path.isfile(bin_file_that_disappears)
 
 

@@ -151,7 +151,7 @@ class Config(object):
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         croot = kwargs.get('croot')
         if croot:
-            self._croot = croot
+            self._croot = os.path.abspath(os.path.normpath(croot))
         else:
             # set default value (not actually None)
             self._croot = getattr(self, '_croot', None)

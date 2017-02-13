@@ -63,7 +63,7 @@ install:
   - pip install pytest-xdist pytest-catchlog pytest-env pytest-mock filelock pkginfo
   - set PATH
   - conda build --version
-  - call appveyor\setup_x64.bat
+  - call ci\appveyor\setup_x64.bat
   - copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
   # This is an extra repo that we clone for relative path entries
   - cmd: pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
