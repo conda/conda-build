@@ -120,8 +120,9 @@ def get_upstream_pins(m, dependencies, index):
     #    we read contents directly
     if actions:
         plan.execute_actions(actions, index, verbose=m.config.debug)
-        pkgs_dirs = cc.pkgs_dirs + [m.config.host_subdir]
+        pkgs_dirs = cc.pkgs_dirs + list(m.config.bldpkgs_dirs)
         for pkg in linked_packages:
+            pkg = strip_channel(pkg)
             for pkgs_dir in pkgs_dirs:
                 if hasattr(pkg, 'dist_name'):
                     pkg = pkg.dist_name

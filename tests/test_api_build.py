@@ -659,7 +659,7 @@ def test_noarch_python_with_tests(testing_config):
     api.build(recipe, config=testing_config)
 
 
-def test_noarch_python_1(test_config):
+def test_noarch_python_1(testing_config):
     output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
     assert package_has_file(output, 'info/files') is not ''
     extra = json.loads(package_has_file(output, 'info/link.json').decode())
@@ -890,7 +890,7 @@ def test_pin_subpackage_exact(testing_config):
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
-def test_copy_read_only_file_with_xattr(test_config, testing_workdir):
+def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
     src_recipe = os.path.join(metadata_dir, '_xattr_copy')
     recipe = os.path.join(testing_workdir, '_xattr_copy')
     copy_into(src_recipe, recipe)
@@ -898,34 +898,34 @@ def test_copy_read_only_file_with_xattr(test_config, testing_workdir):
     ro_file = os.path.join(recipe, 'mode_400_file')
     subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
     subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
-    api.build(recipe, config=test_config)
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.serial
-def test_env_creation_fail_exits_build(test_config):
+def test_env_creation_fail_exits_build(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
     with pytest.raises(RuntimeError):
-        api.build(recipe, config=test_config)
+        api.build(recipe, config=testing_config)
 
     recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
     with pytest.raises(RuntimeError):
-        api.build(recipe, config=test_config)
+        api.build(recipe, config=testing_config)
 
 
 @pytest.mark.serial
-def test_recursion_packages(test_config):
+def test_recursion_packages(testing_config):
     """Two packages that need to be built are listed in the recipe
 
     make sure that both get built before the one needing them gets built."""
     recipe = os.path.join(metadata_dir, '_recursive-build-two-packages')
-    api.build(recipe, config=test_config)
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.serial
-def test_recursion_layers(test_config):
+def test_recursion_layers(testing_config):
     """go two 'hops' - try to build a, but a needs b, so build b first, then come back to a"""
     recipe = os.path.join(metadata_dir, '_recursive-build-two-layer')
-    api.build(recipe, config=test_config)
+    api.build(recipe, config=testing_config)
 
 
 def test_pin_depends(test_metadata):

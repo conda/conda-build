@@ -323,9 +323,9 @@ def get_hash_input(packages):
     log = logging.getLogger(__name__)
     hash_inputs = {}
     for pkg in packages:
+        pkgname = os.path.basename(pkg)[:-8]
         hash_inputs[pkgname] = {}
         hash_input = package_has_file(pkg, 'info/hash_input.json')
-        pkgname = os.path.basename(pkg)[:-8]
         if hash_input:
             hash_inputs[pkgname]['recipe'] = json.loads(hash_input.decode())
         else:
