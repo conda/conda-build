@@ -106,6 +106,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
 def get_upstream_pins(m, dependencies, index):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
+    dependencies = [strip_channel(dep) for dep in dependencies]
     actions = environ.get_install_actions(m.config.build_prefix, index, dependencies,
                                             m.config)
     additional_specs = []
