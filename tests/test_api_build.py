@@ -447,10 +447,10 @@ def test_build_metadata_object(testing_metadata):
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
-    _hash = api.render(recipe_path, config=testing_config, numpy="1.10")[0][0]._hash_dependencies()
+    _hash = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]._hash_dependencies()
     assert os.path.basename(api.get_output_file_path(recipe_path,
-                            config=testing_config, numpy="1.10")[0]) == \
-                            "load_setup_py_test-1.0a1-py{0}{1}np110{2}_1.tar.bz2".format(
+                            config=testing_config, numpy="1.11")[0]) == \
+                            "load_setup_py_test-1.0a1-py{0}{1}np111{2}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
