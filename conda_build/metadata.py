@@ -814,7 +814,7 @@ class MetaData(object):
         #    need to be unique within one version
         # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
         recipe_input, file_paths = self._get_hash_contents()
-        hash_ = hashlib.sha1(json.dumps(recipe_input).encode())
+        hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
         for recipe_file in file_paths:
             with open(os.path.join(self.path, recipe_file), 'rb') as f:
                 hash_.update(f.read())
