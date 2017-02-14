@@ -6,9 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-import copy
 from locale import getpreferredencoding
-import logging
 import os
 from os.path import isdir, isfile, abspath
 import re
@@ -19,10 +17,10 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3, UnsatisfiableError, plan, cc, Dist, ProgressiveFetchExtract
+from .conda_interface import PY3, UnsatisfiableError, plan, cc, ProgressiveFetchExtract
 
 from conda_build import exceptions, utils, environ
-from conda_build.metadata import MetaData, _merge_or_update_values
+from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
                                   combine_variants)
@@ -123,24 +121,18 @@ def get_upstream_pins(m, dependencies, index):
     #    we read contents directly
     if actions:
         plan.execute_actions(actions, index, verbose=m.config.debug)
-        if utils.conda_43():
-            # TODO: this is a vile hack reaching into conda's internals.  Replace with proper
-            #    conda API when available.
-            pfe = ProgressiveFetchExtract(link_dists=[Dist(spec.replace(' ', '-'))
-                                                      for spec in dependencies],
-                                          index=index)
-            pfe.execute()
+
         pkgs_dirs = cc.pkgs_dirs + list(m.config.bldpkgs_dirs)
         for pkg in linked_packages:
-            pkg = strip_channel(pkg)
             for pkgs_dir in pkgs_dirs:
                 if hasattr(pkg, 'dist_name'):
-                    pkg = pkg.dist_name
+                    pkg_dist = pkg.dist_name
                 else:
-                    pkg = pkg.split(' ')[0]
+                    pkg = strip_channel(pkg)
+                    pkg_dist = pkg.split(' ')[0]
 
-                pkg_dir = os.path.join(pkgs_dir, pkg)
-                pkg_file = os.path.join(pkgs_dir, pkg + '.tar.bz2')
+                pkg_dir = os.path.join(pkgs_dir, pkg_dist)
+                pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
                 if os.path.isdir(pkg_dir):
                     downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
                     if os.path.isfile(downstream_file):
@@ -151,6 +143,24 @@ def get_upstream_pins(m, dependencies, index):
                     if extra_specs:
                         additional_specs.extend(extra_specs.splitlines())
                     break
+                elif utils.conda_43():
+                    # TODO: this is a vile hack reaching into conda's internals. Replace with proper
+                    #    conda API when available.
+                    try:
+                        pfe = ProgressiveFetchExtract(link_dists=[pkg],
+                                                    index=index)
+                        pfe.execute()
+                        for pkgs_dir in pkgs_dirs:
+                            pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
+                            if os.path.isfile(pkg_file):
+                                extra_specs = utils.package_has_file(pkg_file,
+                                                                     'info/pin_downstream')
+                                if extra_specs:
+                                    additional_specs.extend(extra_specs.splitlines())
+                                break
+                        break
+                    except KeyError:
+                        raise DependencyNeedsBuildingError(packages=[pkg.name])
             else:
                 raise RuntimeError("Didn't find expected package {} in package cache ({})"
                                     .format(pkg, pkgs_dirs))
@@ -264,7 +274,6 @@ def reparse(metadata, index):
 
 
 def base_parse(metadata, index):
-    log = logging.getLogger(__name__)
     if 'host' in metadata.get_section('requirements'):
         metadata.config.has_separate_host_prefix = True
     metadata.parse_until_resolved()
@@ -278,7 +287,6 @@ def base_parse(metadata, index):
 
 
 def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False):
-    log = logging.getLogger(__name__)
     rendered_metadata = {}
     need_reparse_in_env = False
     unsatisfiable_variants = []

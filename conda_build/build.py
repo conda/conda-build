@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 
 import codecs
 from collections import deque, OrderedDict
-import copy
 import fnmatch
 from glob import glob
 import io
@@ -36,8 +35,6 @@ from .conda_interface import prefix_placeholder, linked
 from .conda_interface import url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
-from .conda_interface import (PaddingError, LinkError, CondaError, NoPackagesFoundError,
-                              NoPackagesFound, LockError)
 from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
@@ -58,8 +55,8 @@ from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
-from conda_build.variants import (set_language_env_vars, get_default_variants,
-                                  dict_of_lists_to_list_of_dicts, get_package_variants)
+from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
+                                  get_package_variants)
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -404,8 +401,6 @@ def write_about_json(m):
 
 
 def write_info_json(m):
-    log = logging.getLogger(__name__)
-
     info_index = m.info_index()
     pin_depends = m.get_value('build/pin_depends')
     if pin_depends:
@@ -940,7 +935,7 @@ can lead to packages that include their dependencies.""" % meta_files))
         files3 = prefix_files(prefix=m.config.host_prefix)
         fix_permissions(files3 - files1, m.config.host_prefix)
 
-        outputs = m.get_output_metadata_set(files3-files1)
+        outputs = m.get_output_metadata_set(files3 - files1)
 
         for (output_dict, metadata) in outputs:
             built_package = bundlers[output_dict.get('type', 'conda')](output_dict, metadata, env)
@@ -1096,7 +1091,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=metadata.config, m=metadata, prefix=config.test_prefix))
+            env.update(environ.get_dict(config=metadata.config, m=metadata,
+                                        prefix=config.test_prefix))
             env["CONDA_BUILD_STATE"] = "TEST"
             if env_path_backup_var_exists:
                 env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
@@ -1109,7 +1105,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
         suffix = "bat" if utils.on_win else "sh"
-        test_script = join(metadata.config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
+        test_script = join(metadata.config.test_dir,
+                           "conda_test_runner.{suffix}".format(suffix=suffix))
 
         # we want subdir to match the target arch.  If we're running the test on the target arch,
         #     the build_subdir should be that match.  The host_subdir may not be, and would lead
@@ -1119,7 +1116,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=metadata.config, m=metadata, prefix=metadata.config.test_prefix))
+            env.update(environ.get_dict(config=metadata.config, m=metadata,
+                                        prefix=metadata.config.test_prefix))
             env["CONDA_BUILD_STATE"] = "TEST"
             if env_path_backup_var_exists:
                 env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
@@ -1243,7 +1241,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
 
     # this is primarily for exception handling.  It's OK that it gets clobbered by
     #     the loop below.
-    metadata=None
+    metadata = None
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1260,6 +1258,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
 
         try:
             recipe = recipe_list.popleft()
+            name = recipe.name() if hasattr(recipe, 'name') else recipe
+            clear_index = name in retried_recipes
             if hasattr(recipe, 'config'):
                 metadata = recipe
                 config = metadata.config
@@ -1270,6 +1270,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 recipe_parent_dir = ""
                 to_build_recursive.append(metadata.name())
                 metadata_tuples = []
+                if clear_index:
+                    metadata.config.index = None
+
                 index = metadata.config.index if metadata.config.index else get_build_index(config,
                                                                                 config.build_subdir)
                 variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
@@ -1284,11 +1287,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 recipe = recipe.rstrip("/").rstrip("\\")
                 to_build_recursive.append(os.path.basename(recipe))
 
-                #    before downloading happens - or else we lose where downloads are
-
                 # each tuple is:
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
+                if clear_index:
+                    config.index = None
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=False)
 
@@ -1323,8 +1326,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             skip_names = ['python', 'r']
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
-            recipe_list.extendleft([recipe])
-            original_recipe_list = copy.copy(recipe_list)
+            recipe_list.extendleft([metadata if metadata else recipe])
             for pkg in e.packages:
                 if pkg in to_build_recursive:
                     raise RuntimeError("Can't build {0} due to environment creation error:\n"

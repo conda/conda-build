@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import codecs
 import copy
 import hashlib
 import json
@@ -171,6 +170,7 @@ def _equivalent(base_value, value, path):
             value = os.path.abspath(os.path.normpath(os.path.join(path, value)))
         equivalent |= base_value == value
     return equivalent
+
 
 def _merge_or_update_values(base, new, path, merge, raise_on_clobber=False):
     log = logging.getLogger(__name__)
@@ -398,7 +398,6 @@ def build_string_from_metadata(metadata):
         log = logging.getLogger(__name__)
 
         build_pkg_names = [ms.name for ms in metadata.ms_depends('build')]
-        variant_pin_run_as_depends = metadata.config.variant.get('pin_run_as_build', {})
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
@@ -509,7 +508,6 @@ class MetaData(object):
         build = self.meta.get('build', {})
         build['disable_pip'] = value
         self.meta['build'] = build
-
 
     def append_metadata_sections(self, sections_file_or_dict, merge, raise_on_clobber=False):
         """Append to or replace subsections to meta.yaml
@@ -1160,6 +1158,6 @@ class MetaData(object):
         except SystemExit:
             if not permit_undefined_jinja:
                 raise
-            outputs=[]
-            metadata=[]
+            outputs = []
+            metadata = []
         return list(six.moves.zip(outputs, metadata))

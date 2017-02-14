@@ -171,6 +171,7 @@ def test_output_build_path_git_source(testing_workdir, testing_config):
     assert output == test_path
 
 
+@pytest.mark.serial
 def test_build_with_no_activate_does_not_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False,
               anaconda_upload=False)
@@ -890,7 +891,7 @@ def test_pin_downstream(testing_metadata, testing_config):
     testing_metadata.meta['requirements']['build'] = ['test_has_pin_downstream']
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert 'a 1.0' in m.meta['requirements']['run']
+    assert 'downstream_pinned_package 1.0' in m.meta['requirements']['run']
 
 def test_pin_subpackage_exact(testing_config):
     m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]

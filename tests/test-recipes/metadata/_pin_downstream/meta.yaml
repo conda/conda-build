@@ -4,4 +4,4 @@ package:
 
 build:
   pin_downstream:
-    - a 1.0
+    - downstream_pinned_package 1.0
