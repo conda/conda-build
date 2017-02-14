@@ -5,6 +5,7 @@
 from glob import glob
 import json
 import os
+import re
 import sys
 import yaml
 
@@ -413,7 +414,9 @@ def test_purge(testing_workdir, testing_metadata):
     outputs = api.build(testing_metadata)
     args = ['purge']
     main_build.execute(args)
-    assert not get_build_folders(testing_metadata.config.croot)
+    dirs = os.listdir(get_build_folders(testing_metadata.config.croot)[0])
+    folder_re = re.compile('[a-zA-Z_]+[0-9]+')
+    assert not any(folder_re.match(folder) for folder in dirs)
     assert all(os.path.isfile(fn) for fn in outputs)
 
 

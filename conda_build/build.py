@@ -1035,8 +1035,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             metadata_tuples, _ = render_recipe(recipe_dir, config=config)
 
             metadata = metadata_tuples[0][0]
-            if (metadata.meta.get('test') and metadata.meta['test'].get('source_files') and
-                    not os.listdir(config.work_dir)):
+            if (metadata.meta.get('test', {}).get('source_files') and
+                    not os.listdir(metadata.config.work_dir)):
                 source.provide(metadata)
         except IOError:
             raise IOError("Didn't find recipe in folder or package under test.  Can't test "
@@ -1045,7 +1045,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     for (metadata, _, _) in metadata_tuples:
         metadata.append_metadata_sections(hash_input, merge=False)
         metadata.config.compute_build_id(metadata.name())
-        environ.clean_pkg_cache(metadata.dist(), config)
+        environ.clean_pkg_cache(metadata.dist(), metadata.config)
         # this is also copying tests/source_files from work_dir to testing workdir
         create_files(metadata.config.test_dir, metadata)
         # Make Perl or Python-specific test files
@@ -1062,9 +1062,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             print("Nothing to test for:", metadata.dist())
             continue
 
-        print("TEST START:", metadata.dist())
+        # store this name to keep it consistent.  By changing files, we change the hash later.
+        #    It matches the build hash now, so let's keep it around.
+        test_package_name = metadata.dist()
+        print("TEST START:", test_package_name)
 
-        if metadata.config.remove_work_dir:
+        if metadata.config.remove_work_dir and os.listdir(metadata.config.work_dir):
             # Needs to come after create_files in case there's test/source_files
             print("Deleting work directory,", metadata.config.work_dir)
             utils.rm_rf(metadata.config.work_dir)
@@ -1188,7 +1191,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         if need_cleanup:
             utils.rm_rf(recipe_dir)
 
-        print("TEST END:", metadata.dist())
+        print("TEST END:", test_package_name)
     return True
 
 
@@ -1345,7 +1348,10 @@ for Python 3.5 and needs to be rebuilt."""
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
                                        .format(recipe, e.packages) + "\n\n" + extra_help)
-            if not metadata or retried_recipes.count(recipe) >= len(metadata.ms_depends('build')):
+            # if we failed to render due to unsatisfiable dependencies, we should only bail out
+            #    if we've already retried this recipe.
+            if (not metadata and retried_recipes.count(recipe) and
+                    retried_recipes.count(recipe) >= len(metadata.ms_depends('build'))):
                 raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(recipe)

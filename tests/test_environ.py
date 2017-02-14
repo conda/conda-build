@@ -25,10 +25,6 @@ def test_env_creation_with_short_prefix_does_not_deadlock(testing_workdir, caplo
                         set_build_id=False, _prefix_length=80)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     metadata = api.render(recipe_path, config=config)[0][0]
-    metadata.meta['package']['name'] = 'test_env_creation_with_short_prefix'
-    fn = api.get_output_file_path(metadata)[0]
-    if os.path.isfile(fn):
-        os.remove(fn)
     try:
         output = api.build(metadata)[0]
         assert not api.inspect_prefix_length(output, 255)
@@ -49,7 +45,6 @@ def test_env_creation_with_prefix_fallback_disabled():
                         prefix_length_fallback=False, _prefix_length=80)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     metadata = api.render(recipe_path, config=config)[0][0]
-    metadata.meta['package']['name'] = 'test_env_creation_with_short_prefix'
     fn = api.get_output_file_path(metadata)[0]
     if os.path.isfile(fn):
         os.remove(fn)

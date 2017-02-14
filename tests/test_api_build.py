@@ -14,7 +14,7 @@ import uuid
 # for version
 import conda
 
-from conda_build.conda_interface import PY3, url_path
+from conda_build.conda_interface import PY3, url_path, LinkError
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -808,16 +808,24 @@ def test_build_expands_wildcards(mocker, testing_workdir):
 @pytest.mark.serial
 def test_remove_workdir_default(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
-    api.build(recipe, config=testing_config)
-    assert not glob(os.path.join(testing_config.work_dir, '*'))
+    # make a metadata object - otherwise the build folder is computed within the build, but does
+    #    not alter the config object that is passed in.  This is by design - we always make copies
+    #    of the config object rather than edit it in place, so that variants don't clobber one another
+    metadata = api.render(recipe, config=testing_config)[0][0]
+    api.build(metadata)
+    assert not glob(os.path.join(metadata.config.work_dir, '*'))
 
 
 @pytest.mark.serial
 def test_keep_workdir(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
-    api.build(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)
+    # make a metadata object - otherwise the build folder is computed within the build, but does
+    #    not alter the config object that is passed in.  This is by design - we always make copies
+    #    of the config object rather than edit it in place, so that variants don't clobber one another
+    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)[0][0]
+    api.build(metadata)
     assert "Not removing work directory after build" in caplog.text
-    assert glob(os.path.join(testing_config.work_dir, '*'))
+    assert glob(os.path.join(metadata.config.work_dir, '*'))
     testing_config.clean()
 
 
@@ -904,11 +912,11 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
 @pytest.mark.serial
 def test_env_creation_fail_exits_build(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
-    with pytest.raises(RuntimeError):
+    with pytest.raises((RuntimeError, LinkError)):
         api.build(recipe, config=testing_config)
 
     recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
-    with pytest.raises(RuntimeError):
+    with pytest.raises((RuntimeError, LinkError)):
         api.build(recipe, config=testing_config)
 
 
