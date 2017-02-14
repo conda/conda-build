@@ -19,7 +19,7 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3, UnsatisfiableError, plan, cc
+from .conda_interface import PY3, UnsatisfiableError, plan, cc, Dist, ProgressiveFetchExtract
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, _merge_or_update_values
@@ -123,6 +123,13 @@ def get_upstream_pins(m, dependencies, index):
     #    we read contents directly
     if actions:
         plan.execute_actions(actions, index, verbose=m.config.debug)
+        if utils.conda_43():
+            # TODO: this is a vile hack reaching into conda's internals.  Replace with proper
+            #    conda API when available.
+            pfe = ProgressiveFetchExtract(link_dists=[Dist(spec.replace(' ', '-'))
+                                                      for spec in dependencies],
+                                          index=index)
+            pfe.execute()
         pkgs_dirs = cc.pkgs_dirs + list(m.config.bldpkgs_dirs)
         for pkg in linked_packages:
             pkg = strip_channel(pkg)

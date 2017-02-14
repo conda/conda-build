@@ -14,7 +14,7 @@ import uuid
 # for version
 import conda
 
-from conda_build.conda_interface import PY3, url_path, LinkError
+from conda_build.conda_interface import PY3, url_path, LinkError, CondaError
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -912,11 +912,11 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
 @pytest.mark.serial
 def test_env_creation_fail_exits_build(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
-    with pytest.raises((RuntimeError, LinkError)):
+    with pytest.raises((RuntimeError, LinkError, CondaError)):
         api.build(recipe, config=testing_config)
 
     recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
-    with pytest.raises((RuntimeError, LinkError)):
+    with pytest.raises((RuntimeError, LinkError, CondaError)):
         api.build(recipe, config=testing_config)
 
 

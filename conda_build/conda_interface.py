@@ -168,6 +168,7 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     CrossPlatformStLink = CrossPlatformStLink
     from conda.exports import dist_str_in_index
     from conda.models.dist import Dist
+    from conda.core.package_cache import ProgressiveFetchExtract
 else:
     from json import JSONEncoder
     from os import lstat
@@ -176,6 +177,9 @@ else:
     dist_str_in_index = lambda index, dist_str: dist_str in index
 
     class Dist(object):
+        pass
+
+    class ProgressiveFetchExtract(object):
         pass
 
     class PathType(Enum):
