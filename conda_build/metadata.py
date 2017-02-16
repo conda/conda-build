@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+import copy
 import os
 from os.path import isfile, join
 import re
+import six
 import sys
 
 from .conda_interface import iteritems, PY3, text_type
@@ -908,3 +910,53 @@ class MetaData(object):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
                              "character in your recipe.")
+
+    def copy(self):
+        new = copy.copy(self)
+        new.config = self.config.copy()
+        new.meta = copy.deepcopy(self.meta)
+        return new
+
+    def get_output_metadata(self, output):
+        output_metadata = self.copy()
+        output_metadata.meta['package']['name'] = output.get('name', self.name())
+        requirements = output_metadata.meta.get('requirements', {})
+        requirements['run'] = output.get('requirements', [])
+        output_metadata.meta['requirements'] = requirements
+        output_metadata.meta['package']['version'] = output.get('version') or self.version()
+        extra = self.meta.get('extra', {})
+        extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
+        output_metadata.meta['extra'] = extra
+        if 'outputs' in output_metadata.meta:
+            del output_metadata.meta['outputs']
+        return output_metadata
+
+    def get_output_metadata_set(self, files, permit_undefined_jinja=False):
+        outputs = self.get_section('outputs')
+
+        # this is the old, default behavior: conda package, with difference between start
+        #    set of files and end set of files
+        requirements = self.get_value('requirements/run')
+        try:
+            if not outputs:
+                outputs = [{'name': self.name(),
+                            'files': files,
+                            'requirements': requirements}]
+                metadata = [self]
+            else:
+                # make a metapackage for the top-level package if the top-level requirements
+                #     mention a subpackage,
+                uses_subpackage = any(out.get('name') in requirements for out in outputs)
+                # but only if a matching output name is not explicitly provided
+                if uses_subpackage and not any(self.name() == out.get('name', '')
+                                               for out in outputs):
+                    outputs.append({'name': self.name(), 'requirements': requirements,
+                                    'pin_downstream':
+                                        self.meta.get('build', {}).get('pin_downstream')})
+                metadata = [self.get_output_metadata(output) for output in outputs]
+        except SystemExit:
+            if not permit_undefined_jinja:
+                raise
+            outputs = []
+            metadata = []
+        return list(six.moves.zip(outputs, metadata))

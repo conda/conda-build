@@ -4,6 +4,7 @@ Module to store conda build settings.
 from __future__ import absolute_import, division, print_function
 
 from collections import namedtuple
+import copy
 import logging
 import math
 import os
@@ -405,6 +406,10 @@ class Config(object):
             logging.getLogger(__name__).info("--dirty flag not specified.  Removing build"
                                              " folder after successful build/test.\n")
             self.clean()
+
+    def copy(self):
+        new = copy.copy(self)
+        return new
 
 
 def get_or_merge_config(config, **kwargs):
