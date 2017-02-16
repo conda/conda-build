@@ -11,7 +11,7 @@ import yaml
 from conda_build.utils import ensure_list
 from conda_build.conda_interface import cc
 
-DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'runtimes', 'exclude_from_build_hash']
+DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'exclude_from_build_hash']
 DEFAULT_VARIANTS = {
     'python': ['{0}.{1}'.format(sys.version_info.major, sys.version_info.minor)],
     'numpy': ['1.11'],
