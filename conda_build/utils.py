@@ -249,6 +249,8 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
 _locations = {}
+_lock_folders = (os.path.join(root_dir, 'locks'),
+                 os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
 def get_lock(folder, timeout=90, filename=".conda_lock"):
@@ -263,15 +265,22 @@ def get_lock(folder, timeout=90, filename=".conda_lock"):
     lock_filename = base64.urlsafe_b64encode(b_location)[:20]
     if hasattr(lock_filename, 'decode'):
         lock_filename = lock_filename.decode()
-    locks_dir = os.path.join(root_dir, 'locks')
-    if not os.path.isdir(locks_dir):
-        os.makedirs(locks_dir)
-    lock_file = os.path.join(locks_dir, lock_filename)
-    if not os.path.isfile(lock_file):
-        with open(lock_file, 'a') as f:
-            f.write(location)
-    if location not in _locations:
-        _locations[location] = filelock.FileLock(lock_file, timeout)
+    for locks_dir in _lock_folders:
+        try:
+            if not os.path.isdir(locks_dir):
+                os.makedirs(locks_dir)
+            lock_file = os.path.join(locks_dir, lock_filename)
+            if not os.path.isfile(lock_file):
+                with open(lock_file, 'a') as f:
+                    f.write(location)
+            if location not in _locations:
+                _locations[location] = filelock.FileLock(lock_file, timeout)
+            break
+        except (OSError, IOError):
+            continue
+    else:
+        raise RuntimeError("Could not write locks folder to either system location ({0})"
+                           "or user location ({1}).  Aborting.".format(*_lock_folders))
     return _locations[location]
 
 
