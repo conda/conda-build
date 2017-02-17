@@ -190,6 +190,7 @@ class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(_IndentDumper, self).increase_indent(flow, False)
 
+
 yaml.add_representer(_MetaYaml, _represent_omap)
 if PY3:
     yaml.add_representer(str, _unicode_representer)

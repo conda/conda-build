@@ -45,7 +45,7 @@ install:
         conda info;
     fi
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
-  - conda install -q pyflakes conda-verify beautifulsoup4 chardet
+  - conda install -q pyflakes conda-verify beautifulsoup4 chardet pycrypto
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
