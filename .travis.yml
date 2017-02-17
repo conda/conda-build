@@ -2,17 +2,17 @@ language: python
 matrix:
   fast_finish: true
   include:
-    - python: '3.5'
+    - python: '3.6'
       env:
         - FLAKE8=true
       os: linux
     - python: '2.7'
       env: $CONDA_VERSION=4.2.x
       os: linux
-    - python: '3.5'
+    - python: '3.6'
       env: $CONDA_VERSION=4.2.x
       os: linux
-    - python: '3.5'
+    - python: '3.6'
       env: $CONDA_VERSION=4.3.x
       os: linux
 
@@ -45,7 +45,7 @@ install:
         conda info;
     fi
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
-  - conda install -q pyflakes conda-verify beautifulsoup4 chardet
+  - conda install -q pyflakes conda-verify beautifulsoup4 chardet pycrypto
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;

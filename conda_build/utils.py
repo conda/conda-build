@@ -533,6 +533,7 @@ def path_prepended(prefix):
     finally:
         os.environ['PATH'] = old_path
 
+
 bin_dirname = 'Scripts' if sys.platform == 'win32' else 'bin'
 
 entry_pat = re.compile('\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$')

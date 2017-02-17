@@ -138,6 +138,7 @@ class PyPIPackagesCompleter(Completer):
         client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
 
+
 pypi_example = """
 Examples:
 

@@ -267,6 +267,7 @@ def _git_clean(source_meta):
 
     return ret_meta
 
+
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {

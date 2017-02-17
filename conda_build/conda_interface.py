@@ -150,6 +150,7 @@ def which_prefix(path):
             return None
         prefix = dirname(prefix)
 
+
 if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import FileMode, PathType
     FileMode, PathType = FileMode, PathType
