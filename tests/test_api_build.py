@@ -887,3 +887,10 @@ def test_recursion_layers(test_config):
 def test_pin_depends(test_metadata):
     test_metadata.meta['build']['pin_depends'] = 'record'
     api.build(test_metadata)
+
+
+@pytest.mark.skipif(sys.platform != 'win32', reason=("spaces break openssl prefix "
+                                                     "replacement on *nix"))
+def test_croot_with_spaces(test_metadata, testing_workdir):
+    test_metadata.config.croot = os.path.join(testing_workdir, "space path")
+    api.build(test_metadata)

@@ -1348,19 +1348,19 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             # use pythonw for import tests when osx_is_app is set
             if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
                 test_python = test_python + 'w'
-            tf.write("{python} -s {test_file}\n".format(
+            tf.write('"{python}" -s "{test_file}"\n'.format(
                 python=config.test_python,
                 test_file=join(config.test_dir, 'run_test.py')))
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if pl_files:
-            tf.write("{perl} {test_file}\n".format(
+            tf.write('"{perl}" "{test_file}"\n'.format(
                 perl=config.test_perl,
                 test_file=join(config.test_dir, 'run_test.pl')))
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if lua_files:
-            tf.write("{lua} {test_file}\n".format(
+            tf.write('"{lua}" "{test_file}"\n'.format(
                 lua=config.test_lua,
                 test_file=join(config.test_dir, 'run_test.lua')))
             if utils.on_win:
@@ -1368,13 +1368,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         if shell_files:
             test_file = join(config.test_dir, 'run_test.' + suffix)
             if utils.on_win:
-                tf.write("call {test_file}\n".format(test_file=test_file))
+                tf.write('call "{test_file}"\n'.format(test_file=test_file))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             else:
                 # TODO: Run the test/commands here instead of in run_test.py
-                tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
-                                                                    test_file=test_file))
+                tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                       test_file=test_file))
 
     if utils.on_win:
         cmd = ['cmd.exe', "/d", "/c", test_script]
