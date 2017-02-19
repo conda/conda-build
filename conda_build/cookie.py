@@ -9,6 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 
 
 def get_project_path(name, path):
+    """Format project path."""
     path = os.path.abspath(os.path.expanduser(path))
     if not os.path.exists(path):
         raise ValueError("Path does not exist: {}".format(path))
@@ -21,6 +22,7 @@ def get_project_path(name, path):
 
 
 def get_user_info(field):
+    """Get user info from git config or input."""
     r = subprocess.Popen(['git', 'config', '--get', 'user.{}'.format(field)], stdout=subprocess.PIPE).communicate()[0]
     if r:
         return r.decode('utf-8').strip()
@@ -30,12 +32,14 @@ def get_user_info(field):
 
 
 def run_cmd(cmd):
+    """Run shell command and check if successful."""
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=sys.stdout) 
     p.wait()
     return p.returncode == 0
 
 
 def get_conda_env_path(env_name):
+    """Get conda environment path given environment name."""
     envs = json.loads(subprocess.check_output(('conda', 'env', 'list', '--json')).decode('utf-8'))
     print(envs)
     envs = [e for e in envs['envs'] if e.endswith(env_name)]
@@ -44,7 +48,9 @@ def get_conda_env_path(env_name):
         return envs[0]
     raise ValueError("Could not find environment path.")
 
+
 class Cookie(object):
+    """Cookie cutter class for creating new python projects."""
 
     def __init__(self, name, path, conf=None):
         self.name = name
@@ -60,6 +66,7 @@ class Cookie(object):
         self.repo = None
 
     def create_base_files(self, dryrun=None):
+        """Create all the template files for the project."""
         if dryrun:
             pass
         (self.templates.get_template('init.py')
@@ -95,9 +102,11 @@ class Cookie(object):
          .dump(os.path.join(self.project_path, 'README.md')))
 
     def init_git(self):
+        """Init git repository."""
         self.repo = Repo.init(self.project_path)
 
     def initial_commit(self):
+        """Make initial project commit."""
         if not self.repo:
             self.init_git()
         self.repo.git.add(A=True)
@@ -105,6 +114,7 @@ class Cookie(object):
         self.repo.create_tag("0.0.1", message='Initial tag by conda project!')
 
     def create_conda_env(self, python_ver):
+        """Create project's conda environment."""
         cmd = ["conda", "create", "-y", "-n", self.name, 
                "python={}".format(python_ver), "ipython"]
         print("\n\nCreating conda environment...\n")
@@ -113,6 +123,7 @@ class Cookie(object):
         self.env_path = get_conda_env_path(self.name)
 
     def develop_install(self):
+        """Install a development version of the project to the conda environment."""
         cmd = [os.path.join(self.env_path, "bin", "pip"), "install", "-e", self.project_path]
         print("\n\nInstalling develop version of project...\n")
         if not run_cmd(cmd):
