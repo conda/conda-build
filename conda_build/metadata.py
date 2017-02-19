@@ -106,6 +106,7 @@ def eval_selector(selector_string, namespace):
         return eval(selector_string, namespace, {})
     except NameError as e:
         missing_var = parseNameNotFound(e)
+        print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
         next_string = selector_string.replace(missing_var, "False")
         return eval_selector(next_string, namespace)
 
