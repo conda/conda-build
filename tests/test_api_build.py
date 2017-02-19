@@ -894,3 +894,7 @@ def test_pin_depends(test_metadata):
 def test_croot_with_spaces(test_metadata, testing_workdir):
     test_metadata.config.croot = os.path.join(testing_workdir, "space path")
     api.build(test_metadata)
+
+def test_unknown_selectors(test_config):
+    recipe = os.path.join(metadata_dir, 'unknown_selector')
+    api.build(recipe, config=test_config)
