@@ -44,7 +44,7 @@ def get_conda_env_path(env_name):
         return envs[0]
     raise ValueError("Could not find environment path.")
 
-class Project(object):
+class Cookie(object):
 
     def __init__(self, name, path, conf=None):
         self.name = name
@@ -54,7 +54,7 @@ class Project(object):
         self.tests_path = os.path.join(self.project_path, 'tests')
         self.conda_recipe_path = os.path.join(self.project_path, 'conda-recipe')
         self.env_path = None
-        self.templates = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates/project')))
+        self.templates = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), 'templates/cookie')))
         self.author = conf.get('author') or get_user_info('name')
         self.email = conf.get('email') or get_user_info('email')
         self.repo = None

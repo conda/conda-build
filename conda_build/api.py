@@ -20,7 +20,7 @@ import sys as _sys
 
 # make the Config class available in the api namespace
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
-from conda_build.project import Project, create_project_skeleton
+from conda_build.cookie import Cookie, create_project_skeleton
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 
@@ -284,11 +284,11 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         update_index(path, config, force=force, check_md5=check_md5, remove=remove)
 
 
-def init_project(name, path, conf=None):
-    project = Project(name, path, conf=conf)
-    create_project_skeleton(project)
-    project.initial_commit()
+def cut_project(name, path, conf=None):
+    cookie = Cookie(name, path, conf=conf)
+    create_project_skeleton(cookie)
+    cookie.initial_commit()
     python_ver = input("Enter python version [2.7]: ") or '2.7'
-    project.create_conda_env(python_ver)
-    project.develop_install()
-    project.push_to_github()
+    cookie.create_conda_env(python_ver)
+    cookie.develop_install()
+    cookie.push_to_github()

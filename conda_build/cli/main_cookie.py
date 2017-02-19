@@ -11,7 +11,7 @@ def parse_args(args):
 Tool for initializing a new python project. It takes care of setting up git, github, travisci,
 versioning, setup.py, and more."""
     subparsers = p.add_subparsers(dest="command")
-    init_p = subparsers.add_parser("init")
+    init_p = subparsers.add_parser("cut")
     init_p.add_argument('name', metavar='PROJECT_NAME',
                    help='name of project')
     init_p.add_argument('path', metavar='PROJECT_PATH',
@@ -23,8 +23,8 @@ versioning, setup.py, and more."""
 def execute(args):
     parser, args = parse_args(args)
     config = AttrDict(args.__dict__)
-    if args.command == 'init':
-        api.init_project(config.name, config.path, config)
+    if args.command == 'cut':
+        api.cut_project(config.name, config.path, config)
     else:
         parser.print_help()
         raise ValueError("Unknown command: {}".format(args.command))
