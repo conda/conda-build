@@ -13,7 +13,7 @@ from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
 from .index import get_build_index
 from .render import get_env_dependencies
-from .utils import get_installed_packages, ensure_list, apply_pin_expressions
+from .utils import get_installed_packages, apply_pin_expressions
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -208,7 +208,7 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
 
 
 @memoized
-def pin_compatible(m, package_name, upper_bound=None, pins='x',
+def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x', max_pin='x',
                    permit_undefined_jinja=True):
     """dynamically pin based on currently installed version.
 
@@ -216,8 +216,7 @@ def pin_compatible(m, package_name, upper_bound=None, pins='x',
     upper_bound is the authoritative upper bound, if provided.  The lower bound is the the
         currently installed version.
     pin expressions are of the form 'x.x' - the number of pins is the number of x's separated
-        by ``.``.  You can pass one string to alter the upper bound, or two ('x.x', 'x.x') to
-        alter the lower and upper bounds
+        by ``.``.
     """
     compatibility = None
     if not m.config.index:
@@ -231,14 +230,13 @@ def pin_compatible(m, package_name, upper_bound=None, pins='x',
     versions = {p.split(' ')[0]: p.split(' ')[1]
                 for p in get_env_dependencies(m, 'build', m.config.variant, m.config.index)}
     if versions:
-        version = versions.get(package_name)
+        version = lower_bound or versions.get(package_name)
         if version:
             if upper_bound:
-                compatibility = ">=" + version + ","
+                compatibility = ">=" + str(version) + ","
                 compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
             else:
-                pins = ensure_list(pins)
-                compatibility = apply_pin_expressions(version, pins)
+                compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
     if not compatibility and not permit_undefined_jinja:
         raise RuntimeError("Could not get compatibility information for {} package.  Is the "
@@ -246,7 +244,7 @@ def pin_compatible(m, package_name, upper_bound=None, pins='x',
     return compatibility
 
 
-def pin_subpackage(metadata, subpackage_name, pins='x', exact=False,
+def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x', exact=False,
                    permit_undefined_jinja=True):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
@@ -260,7 +258,8 @@ def pin_subpackage(metadata, subpackage_name, pins='x', exact=False,
             if exact:
                 pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
             else:
-                pin = "{0} {1}".format(subpackage_name, apply_pin_expressions(sp_m.version(), pins))
+                pin = "{0} {1}".format(subpackage_name, apply_pin_expressions(sp_m.version(),
+                                                                              min_pin, max_pin))
     return pin
 
 

@@ -838,13 +838,8 @@ def _increment(version):
     return last_version
 
 
-def apply_pin_expressions(version, pins=('p', )):
-    pins = ensure_list(pins)
-    if len(pins) == 1:
-        # 999 means practically infinite (exact) pinning, but does not include build string
-        pins = [999, len(pins[0].split('.'))]
-    else:
-        pins = [len(p.split('.')) for p in pins]
+def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
+    pins = [len(p.split('.')) for p in (min_pin, max_pin)]
     parsed_version = VersionOrder(version).version[1:]
     nesting_position = None
     flat_list = []
