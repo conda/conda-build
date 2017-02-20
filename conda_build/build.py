@@ -1046,12 +1046,14 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                                                                 no_download_source=False,
                                                                 force_download=True,
                                                                 config=config)
+            m.final = True
             assert not need_source_download, "Source download failed.  Please investigate."
             if m.uses_jinja:
                 print("BUILD START (revised):", m.dist())
 
         if need_reparse_in_env:
             reparse(m, config=config)
+            m.final = True
             print("BUILD START (revised):", m.dist())
 
         print("Package:", m.dist())

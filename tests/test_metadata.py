@@ -112,7 +112,8 @@ class HandleConfigVersionTests(unittest.TestCase):
 
 def test_disallow_leading_period_in_version(test_metadata):
     test_metadata.meta['package']['version'] = '.ste.ve'
-    with pytest.raises(AssertionError):
+    test_metadata.final = True
+    with pytest.raises(ValueError):
         test_metadata.version()
 
 

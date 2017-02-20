@@ -16,7 +16,8 @@ def main():
         source = yaml.load(fh)
 
     assert source['extra'] == {"custom": "metadata",
-                               "however": {"we": "want"}}
+                               "however": {"we": "want"},
+                               "final": True}
 
 
 if __name__ == '__main__':
