@@ -963,7 +963,12 @@ class MetaData(object):
                     outputs.append({'name': self.name(), 'requirements': requirements,
                                     'pin_downstream':
                                         self.meta.get('build', {}).get('pin_downstream')})
-                metadata = [self.get_output_metadata(output) for output in outputs]
+                for out in outputs:
+                    if (self.name() == out.get('name', '') and not (out.get('files') or
+                                                                    out.get('script'))):
+                        out['files'] = files
+                        requirements = requirements
+                    metadata = [self.get_output_metadata(output) for output in outputs]
         except SystemExit:
             if not permit_undefined_jinja:
                 raise

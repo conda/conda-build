@@ -120,7 +120,7 @@ class Config(object):
                   Setting('sign_with', 'gpg'),
                   Setting('identity', None),
                   Setting('config_file', None),
-                  Setting('repository', 'pypi'),
+                  Setting('repository', 'pypitest'),
 
                   Setting('ignore_recipe_verify_scripts',
                           cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),

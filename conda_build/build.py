@@ -1625,12 +1625,18 @@ def handle_pypi_upload(wheels, config):
 
     wheels = utils.ensure_list(wheels)
 
-    for f in wheels:
-        try:
-            utils.check_call_env(args + [f])
-        except:
-            logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
-                                            "  Is this package registered?")
+    if config.anaconda_upload:
+        for f in wheels:
+            print("Uploading {}".format(f))
+            try:
+                utils.check_call_env(args + [f])
+            except:
+                logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
+                                                "  Is this package registered?")
+                logging.getLogger(__name__).warn("Wheel file left in {}".format(f))
+
+    else:
+        print("anaconda_upload is not set.  Not uploading wheels: {}".format(wheels))
 
 
 def print_build_intermediate_warning(config):

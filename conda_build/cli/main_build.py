@@ -157,7 +157,7 @@ different sets of packages."""
         help="path to .pypirc file to use when uploading to pypi"
     )
     pypi_grp.add_argument(
-        '--repository', default='pypi',
+        '--repository', '-r', default='pypitest',
         help="PyPI repository to upload to"
     )
     p.add_argument(
