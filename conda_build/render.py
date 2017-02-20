@@ -315,7 +315,8 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 need_reparse_in_env = True
             except:
                 raise
-        need_source_download = bool(mv.meta.get('source')) and not mv.needs_source_for_render
+        need_source_download = (bool(mv.meta.get('source')) and not mv.needs_source_for_render and
+                                not os.listdir(mv.config.work_dir))
         # computes hashes based on whatever the current specs are - not the final specs
         #    This is a deduplication step.  Any variants that end up identical because a
         #    given variant is not used in a recipe are effectively ignored, though we still pay
