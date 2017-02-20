@@ -88,8 +88,10 @@ def ns_cfg(config):
 # - (?(2).*)$ means "allow trailing characters iff group 2 (#.*) was found."
 sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
+
 # this function extracts the variable name from a NameError exception, it has the form of:
-# "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets returned
+# "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets
+#    returned
 def parseNameNotFound(error):
     m = re.search('\'(.+?)\'', str(error))
     if len(m.groups()) == 1:
@@ -97,8 +99,10 @@ def parseNameNotFound(error):
     else:
         return ""
 
+
 # We evaluate the selector and return True (keep this line) or False (drop this line)
-# If we encounter a NameError (unknown variable in selector), then we replace it by False and re-run the evaluation
+# If we encounter a NameError (unknown variable in selector), then we replace it by False and
+#     re-run the evaluation
 def eval_selector(selector_string, namespace):
     try:
         # TODO: is there a way to do this without eval?  Eval allows arbitrary
@@ -109,6 +113,7 @@ def eval_selector(selector_string, namespace):
         print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
         next_string = selector_string.replace(missing_var, "False")
         return eval_selector(next_string, namespace)
+
 
 def select_lines(data, namespace):
     lines = []
