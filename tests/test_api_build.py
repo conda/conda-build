@@ -307,14 +307,6 @@ def test_pip_in_meta_yaml_fail(testing_workdir, test_config):
         assert "Received dictionary as spec." in str(exc)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="Windows doesn't show this error")
-def test_broken_conda_meta(testing_workdir, test_config):
-    with pytest.raises(SystemExit) as exc:
-        api.build(os.path.join(fail_dir, "conda-meta"), config=test_config)
-        assert "Error: Untracked file(s) ('conda-meta/nope',)" in str(exc)
-
-
 def test_recursive_fail(testing_workdir, test_config):
     with pytest.raises(RuntimeError) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=test_config)

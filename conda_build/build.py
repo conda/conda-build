@@ -188,8 +188,8 @@ def get_run_dists(m, config):
 
 
 def copy_recipe(m, config):
+    recipe_dir = join(config.info_dir, 'recipe')
     if config.include_recipe and m.include_recipe():
-        recipe_dir = join(config.info_dir, 'recipe')
         try:
             os.makedirs(recipe_dir)
         except:
@@ -212,6 +212,7 @@ def copy_recipe(m, config):
         rendered_metadata = copy.deepcopy(m)
         # fill in build versions used
         build_deps = []
+        # TODO: may be unnecessary after build_customization branch merge
         # we only care if we actually have build deps.  Otherwise, the environment will not be
         #    valid for inspection.
         if m.meta.get('requirements') and m.meta['requirements'].get('build'):
@@ -717,7 +718,8 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                     #    The reason why we treat the "minimum conda version" text this way is that
                     #    it occurs with info/files is missing.  That's also a symptom of these
                     #    weird I/O issues that happen with parallel conda-build jobs.
-                    elif 'lock' in str(exc) or 'requires a minimum conda version' in str(exc):
+                    elif ('lock' in str(exc) or 'requires a minimum conda version' in str(exc) or
+                          'Cannot link a source that does not exist' in str(exc)):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config,
@@ -800,6 +802,7 @@ to get the latest version.
 
 
 def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
+                                                      'conda-meta.*',
                                                       '(.*)?\.DS_Store.*')):
     """Remove things like .git from the list of files to be copied"""
     for pattern in filter_patterns:
@@ -809,30 +812,92 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
             if not os.path.isdir(os.path.join(prefix, f))]
 
 
+def post_process_files(m, initial_prefix_files):
+    get_build_metadata(m, config=m.config)
+    create_post_scripts(m, config=m.config)
+
+    if not is_noarch_python(m):
+        utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
+    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+
+    post_process(sorted(current_prefix_files - initial_prefix_files),
+                    prefix=m.config.build_prefix,
+                    config=m.config,
+                    preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
+                    noarch=m.get_value('build/noarch'),
+                    skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
+
+    # The post processing may have deleted some files (like easy-install.pth)
+    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    new_files = sorted(current_prefix_files - initial_prefix_files)
+    new_files = filter_files(new_files, prefix=m.config.build_prefix)
+    if any(m.config.meta_dir in join(m.config.build_prefix, f) for f in new_files):
+        meta_files = (tuple(f for f in new_files if m.config.meta_dir in
+                join(m.config.build_prefix, f)),)
+        sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
+This error usually comes from using conda in the build script.  Avoid doing this, as it
+can lead to packages that include their dependencies.""" % meta_files))
+    post_build(m, new_files, prefix=m.config.build_prefix, build_python=m.config.build_python,
+               croot=m.config.croot)
+
+    entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
+    if is_noarch_python(m):
+        pkg_files = [fi for fi in new_files if fi not in entry_point_script_names]
+    else:
+        pkg_files = new_files
+
+    # the legacy noarch
+    if m.get_value('build/noarch_python'):
+        noarch_python.transform(m, new_files, m.config.build_prefix)
+    # new way: build/noarch: python
+    elif is_noarch_python(m):
+        noarch_python.populate_files(m, pkg_files, m.config.build_prefix, entry_point_script_names)
+
+    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    new_files = current_prefix_files - initial_prefix_files
+    fix_permissions(new_files, m.config.build_prefix)
+
+    return new_files
+
+
 def bundle_conda(output, metadata, config, env, **kw):
+    log = logging.getLogger(__name__)
+    log.info('Packaging %s', metadata.dist())
     files = output.get('files', [])
     if not files and output.get('script'):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
-        initial_files_snapshot = prefix_files(config.build_prefix)
+        initial_files = prefix_files(config.build_prefix)
         utils.check_call_env(interpreter.split(' ') +
                     [os.path.join(metadata.path, output['script'])],
                     cwd=config.build_prefix, env=env)
-        files = prefix_files(config.build_prefix) - initial_files_snapshot
+    else:
+        # we exclude the list of files that we want to keep, so post-process picks them up as "new"
+        files = list(set(utils.expand_globs(files, config.build_prefix)))
+        initial_files = set(prefix_files(config.build_prefix)) - set(files)
+
+    files = post_process_files(metadata, initial_files)
+
     tmp_metadata = copy.deepcopy(metadata)
     tmp_metadata.meta['package']['name'] = output['name']
     tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
 
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  build_string_from_metadata(tmp_metadata)]) + '.tar.bz2')
-    files = list(set(utils.expand_globs(files, config.build_prefix)))
+    # first filter is so that info_files does not pick up ignored files
     files = filter_files(files, prefix=config.build_prefix)
-    info_files = create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
-    info_files = filter_files(info_files, prefix=config.build_prefix)
-    for f in info_files:
-        if f not in files:
-            files.append(f)
+    create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
+    test_dest_path = os.path.join(config.info_dir, 'recipe', 'run_test.py')
+    if output.get('test', {}).get('script'):
+        utils.copy_into(os.path.join(metadata.path, output['test']['script']),
+                        test_dest_path, config.timeout, locking=config.locking)
+    elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
+        # the test belongs to the parent recipe.  Don't include it in subpackages.
+        utils.rm_rf(test_dest_path)
+    # here we add the info files into the prefix, so we want to re-collect the files list
+    files = set(prefix_files(config.build_prefix)) - initial_files
+    files = filter_files(files, prefix=config.build_prefix)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -1065,77 +1130,15 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                         utils.check_call_env(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
-        if post:
-            with open(join(config.croot, 'prefix_files.txt'), 'r') as f:
-                files1 = set(f.read().splitlines())
+        with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
+            initial_files = set(f.read().splitlines())
 
-        get_build_metadata(m, config=config)
-        create_post_scripts(m, config=config)
-
-        if not is_noarch_python(m):
-            utils.create_entry_points(m.get_value('build/entry_points'), config=config)
-        files2 = prefix_files(prefix=config.build_prefix)
-
-        post_process(sorted(files2 - files1),
-                     prefix=config.build_prefix,
-                     config=config,
-                     preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                     noarch=m.get_value('build/noarch'),
-                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
-
-        # The post processing may have deleted some files (like easy-install.pth)
-        files2 = prefix_files(prefix=config.build_prefix)
-        if any(config.meta_dir in join(config.build_prefix, f) for f in files2 - files1):
-            meta_files = (tuple(f for f in files2 - files1 if config.meta_dir in
-                    join(config.build_prefix, f)),)
-            sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
-This error usually comes from using conda in the build script.  Avoid doing this, as it
-can lead to packages that include their dependencies.""" % meta_files))
-        post_build(m, sorted(files2 - files1),
-                    prefix=config.build_prefix,
-                    build_python=config.build_python,
-                    croot=config.croot)
-
-        entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
-        if is_noarch_python(m):
-            pkg_files = [fi for fi in sorted(files2 - files1) if fi not in entry_point_script_names]
-        else:
-            pkg_files = sorted(files2 - files1)
-
-        # the legacy noarch
-        if m.get_value('build/noarch_python'):
-            noarch_python.transform(m, sorted(files2 - files1), config.build_prefix)
-        # new way: build/noarch: python
-        elif is_noarch_python(m):
-            noarch_python.populate_files(
-                m, pkg_files, config.build_prefix, entry_point_script_names)
-
-        files3 = prefix_files(prefix=config.build_prefix)
-        fix_permissions(files3 - files1, config.build_prefix)
-
-        outputs = m.get_section('outputs')
-        # this is the old, default behavior: conda package, with difference between start
-        #    set of files and end set of files
-        requirements = m.get_value('requirements/run')
-        if not outputs:
-            outputs = [{'name': m.name(),
-                        'files': files3 - files1,
-                        'requirements': requirements}]
-        else:
-            made_meta = False
-            for out in outputs:
-                if out.get('name') in requirements:
-                    requirements.extend(out.get('requirements', []))
-                    made_meta = True
-            else:
-                # make a metapackage for the top-level package, but only if a matching output name
-                #    is not explicitly provided
-                if made_meta and not any(m.name() in out.get('name', '') for out in outputs):
-                    outputs.append({'name': m.name(), 'requirements': requirements})
+        files = prefix_files(prefix=m.config.build_prefix) - initial_files
+        outputs = m.get_output_metadata_set(files=files)
 
         output_folders = set()
-        for output in outputs:
-            built_package = bundlers[output.get('type', 'conda')](output, m, config, env)
+        for (output_dict, m) in outputs:
+            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, m, config, env)
             built_packages.append(built_package)
             output_folders.add(os.path.dirname(built_package))
 
@@ -1264,6 +1267,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     clean_pkg_cache(metadata.dist(), config)
 
+    test_package_name = (recipedir_or_package_or_metadata.dist()
+                         if hasattr(recipedir_or_package_or_metadata, 'dist')
+                         else recipedir_or_package_or_metadata)
+
     create_files(config.test_dir, metadata, config)
     # Make Perl or Python-specific test files
     if metadata.name().startswith('perl-'):
@@ -1276,10 +1283,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         lua_files = False
     shell_files = create_shell_files(config.test_dir, metadata, config)
     if not (py_files or shell_files or pl_files or lua_files):
-        print("Nothing to test for:", metadata.dist())
+        print("Nothing to test for:", test_package_name)
         return True
 
-    print("TEST START:", metadata.dist())
+    print("TEST START:", test_package_name)
 
     if config.remove_work_dir:
         # Needs to come after create_files in case there's test/source_files
@@ -1388,7 +1395,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 
-    print("TEST END:", metadata.dist())
+    print("TEST END:", test_package_name)
     return True
 
 
@@ -1491,7 +1498,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                             # IOError means recipe was not included with package. metadata instead
                             except IOError:
                                 test(metadata, config=config)
-                    built_packages.append(pkg)
+                        built_packages.append(pkg)
         except (NoPackagesFound, NoPackagesFoundError, Unsatisfiable, CondaError) as e:
             error_str = str(e)
             skip_names = ['python', 'r']
