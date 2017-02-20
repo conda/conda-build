@@ -164,6 +164,8 @@ def render_recipe(recipe_path, config, no_download_source=False):
 
     if need_cleanup:
         rm_rf(recipe_dir)
+    if not need_download or need_reparse_in_env:
+        m.final = True
 
     return m, need_download, need_reparse_in_env
 
