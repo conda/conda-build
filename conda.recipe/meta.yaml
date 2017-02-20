@@ -82,6 +82,10 @@ test:
   source_files:
     - tests
 
+outputs:
+  - type: wheel
+  - name: {{ PKG_NAME }}
+
 about:
   home: https://github.com/conda/conda-build
   license: BSD 3-clause
