@@ -970,7 +970,11 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
     :type temp_dir: str
     '''
-    specs = ['python %s*' % python_version, 'pyyaml', 'setuptools']
+    # TODO: we could make everyone's lives easier if we include packaging here, because setuptools
+    #    needs it in recent versions.  At time of writing, it is not a package in defaults, so this
+    #    actually breaks conda-build right now.  Omit it until packaging is on defaults.
+    # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
+    specs = ['python %s*' % python_version, 'pyyaml']
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:
@@ -983,9 +987,10 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
 
-    create_env(config.build_prefix, specs=specs,
-               clear_cache=False,
-               config=config)
+    if not os.path.isdir(config.build_prefix) or not os.listdir(config.build_prefix):
+        create_env(config.build_prefix, specs=specs,
+                clear_cache=False,
+                config=config)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)
