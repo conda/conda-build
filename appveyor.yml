@@ -55,7 +55,6 @@ install:
   - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet
   - conda install -q pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4
   - conda install -c conda-forge -q perl
-  - conda install -q conda=4.2
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
