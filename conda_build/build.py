@@ -772,8 +772,9 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        environ.create_env(m.config.build_prefix, specs, config=m.config,
-                           subdir=m.config.build_subdir, index=index)
+        if not m.config.dirty or not os.listdir(m.config.build_prefix):
+            environ.create_env(m.config.build_prefix, specs, config=m.config,
+                               subdir=m.config.build_subdir, index=index)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
