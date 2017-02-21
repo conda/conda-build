@@ -613,10 +613,15 @@ def bundle_conda(output, metadata, env, **kw):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
+        env_output = env.copy()
+        env_output['TOP_PKG_NAME'] = env['PKG_NAME']
+        env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
+        env_output['PKG_VERSION'] = metadata.version()
+        env_output['PKG_NAME'] = metadata.get_value('package/name')
         initial_files_snapshot = prefix_files(metadata.config.host_prefix)
         utils.check_call_env(interpreter.split(' ') +
                     [os.path.join(metadata.path, output['script'])],
-                    cwd=metadata.config.host_prefix, env=env)
+                    cwd=metadata.config.host_prefix, env=env_output)
         files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
 
     output_metadata = metadata.get_output_metadata(output)
@@ -772,8 +777,9 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        environ.create_env(m.config.build_prefix, specs, config=m.config,
-                           subdir=m.config.build_subdir, index=index)
+        if not m.config.dirty or not os.listdir(m.config.build_prefix):
+            environ.create_env(m.config.build_prefix, specs, config=m.config,
+                               subdir=m.config.build_subdir, index=index)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
