@@ -143,14 +143,15 @@ def render_recipe(recipe_path, config, no_download_source=False):
     if not isdir(recipe_dir):
         sys.exit("Error: no such directory: %s" % recipe_dir)
 
-    if config.set_build_id:
-        # updates a unique build id if not already computed
-        config.compute_build_id(os.path.basename(recipe_dir))
     try:
         m = MetaData(recipe_dir, config=config)
     except exceptions.YamlParsingError as e:
         sys.stderr.write(e.error_msg())
         sys.exit(1)
+
+    if config.set_build_id:
+        # updates a unique build id if not already computed
+        config.compute_build_id(m.name())
 
     m, need_download, need_reparse_in_env = parse_or_try_download(m,
                                                 no_download_source=no_download_source,
@@ -163,6 +164,8 @@ def render_recipe(recipe_path, config, no_download_source=False):
 
     if need_cleanup:
         rm_rf(recipe_dir)
+    if not need_download or need_reparse_in_env:
+        m.final = True
 
     return m, need_download, need_reparse_in_env
 
@@ -188,6 +191,7 @@ def _unicode_representer(dumper, uni):
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(_IndentDumper, self).increase_indent(flow, False)
+
 
 yaml.add_representer(_MetaYaml, _represent_omap)
 if PY3:

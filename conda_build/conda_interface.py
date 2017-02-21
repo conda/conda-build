@@ -150,6 +150,7 @@ def which_prefix(path):
             return None
         prefix = dirname(prefix)
 
+
 if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import FileMode, PathType
     FileMode, PathType = FileMode, PathType
@@ -158,12 +159,16 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     from conda.exports import CrossPlatformStLink
     CrossPlatformStLink = CrossPlatformStLink
     from conda.exports import dist_str_in_index
+    from conda.models.dist import Dist
 else:
     from json import JSONEncoder
     from os import lstat
     import os
 
     dist_str_in_index = lambda index, dist_str: dist_str in index
+
+    class Dist(object):
+        pass
 
     class PathType(Enum):
         """

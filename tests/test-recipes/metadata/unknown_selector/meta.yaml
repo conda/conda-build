@@ -1,0 +1,6 @@
+package:
+  name: unknown_selector_test
+  version: 1.0.0
+
+build:
+  skip: True #[unknown_selector]

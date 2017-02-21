@@ -4,6 +4,7 @@ Module to store conda build settings.
 from __future__ import absolute_import, division, print_function
 
 from collections import namedtuple
+import copy
 import logging
 import math
 import os
@@ -82,7 +83,7 @@ class Config(object):
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         croot = kwargs.get('croot')
         if croot:
-            self._croot = croot
+            self._croot = os.path.abspath(os.path.normpath(croot))
         else:
             # set default value (not actually None)
             self._croot = getattr(self, '_croot', None)
@@ -119,7 +120,7 @@ class Config(object):
                   Setting('sign_with', 'gpg'),
                   Setting('identity', None),
                   Setting('config_file', None),
-                  Setting('repository', 'pypi'),
+                  Setting('repository', 'pypitest'),
 
                   Setting('ignore_recipe_verify_scripts',
                           cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
@@ -405,6 +406,10 @@ class Config(object):
             logging.getLogger(__name__).info("--dirty flag not specified.  Removing build"
                                              " folder after successful build/test.\n")
             self.clean()
+
+    def copy(self):
+        new = copy.copy(self)
+        return new
 
 
 def get_or_merge_config(config, **kwargs):

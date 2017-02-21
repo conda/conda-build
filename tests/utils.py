@@ -98,7 +98,7 @@ def assert_package_consistency(package_path):
             errors.append("Duplicate files in info/has_prefix in %s" % package_path)
         prefix_not_in_files = prefix_path_set.difference(file_set)
         if len(prefix_not_in_files) > 0:
-            errors.append("The following files listed in info/prefix are missing "
+            errors.append("The following files listed in info/has_prefix are missing "
                           "from info/files: %s" % ', '.join(prefix_not_in_files))
 
     # Assert that no errors are detected

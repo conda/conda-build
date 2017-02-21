@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-from difflib import get_close_matches
 import re
 import string
 from conda_build import exceptions
@@ -14,11 +13,11 @@ GPL2
 GPL
 BSD
 MIT
-APACHE
+Apache
 PSF
-PUBLICDOMAIN
-PROPRIETARY
-OTHER
+Public-Domain
+Proprietary
+Other
 NONE
 """.split()
 
@@ -93,7 +92,7 @@ def guess_license_family(license_name=None,
     for family in recognized:
         if license_name in family:
             return family
-    return 'OTHER'
+    return 'Other'
 
 
 def ensure_valid_license_family(meta):
@@ -105,17 +104,3 @@ def ensure_valid_license_family(meta):
         raise RuntimeError(exceptions.indent(
             "about/license_family '%s' not allowed. Allowed families are %s." %
             (license_family, comma_join(sorted(allowed_license_families)))))
-
-
-def deprecated_guess_license_family(license_name, recognized=allowed_license_families):
-    """Deprecated guess of license_family from license
-
-    Use guess_license_family instead
-    """
-    # Tend towards the more clear GPL3 and away from the ambiguity of GPL2.
-    if 'GPL (>= 2)' in license_name or license_name == 'GPL':
-        return 'GPL3'
-    elif 'LGPL' in license_name:
-        return 'LGPL'
-    else:
-        return get_close_matches(license_name, recognized, 1, 0.0)[0]

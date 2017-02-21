@@ -1,3 +1,86 @@
+2017-02-20 2.1.5:
+
+Enhancements:
+-------------
+
+* don't crash on unknown selector.  Warn, but evaluate as False.  #1753
+* allow default conda packaging behavior for split package whose name matches top-level name, but lacks both ``files`` and ``script`` entry.  #1758
+
+
+Bug fixes:
+----------
+
+* unify license family text with Anaconda-Verify  #1744
+* apply post-processing to each split package, not just to post-build prefix files.  #1747
+* provide fallback lock directory in user's home folder.  Allows central installs.  #1749
+* fix quoting for test paths.  Allows croot with spaces.  #1750
+* fix pypi skeleton recursion #1754
+* fix assertion error about leading period when Jinja2 variables have default values  #1757
+* set default twine target to pypitest to avoid accidental uploads  #1758
+
+
+Contributors:
+-------------
+
+* @gabm
+* @msarahan
+
+
+2017-02-07 2.1.4:
+
+Enhancements:
+-------------
+
+* Allow relative paths for --croot option #1736
+
+Bug fixes:
+----------
+
+* Rename package_metadata.json file to link.json to more accurately reflect contents #1720
+* Fix converted packages from unix to Windows having broken entry points #1721
+* Fix an infinite loop when creating the test environment failed #1739
+* Fix conda 4.3 incompatibility with --pin-depends option #1740
+
+Contributors:
+
+* @gabm
+* @kalefranze
+* @msarahan
+
+
+2017-01-31 2.1.3:
+
+Enhancements:
+-------------
+
+* Add --extra-specs to conda skeleton.  Use when a package needs to be available in the temporary env that parses setup.py to make the skeleton.  #1697
+* Allow wheels as a source format  #1700
+* Allow github urls as CRAN skeleton sources  #1710
+
+Bug fixes:
+----------
+
+* exclude package/name field from uses_vcs_in_{meta,build} checks #1696
+* Fix conda convert wrt info/paths.json (for conda 4.3 compatibility)  #1701
+* update cpan skeleton to use newer API url, fix conda exception handling #1704
+* update R default version to 3.3.2  #1707
+* fix attribute error on exception handling (better fix on the way)  #1709
+* fix bundle_conda removing project files when conda recipe was in the source tree, and utilized relative paths  #1715
+* fix glob trying to interpret filenames that look like glob patterns  #1717
+
+
+Contributors:
+-------------
+
+* @ElliotJH
+* @jerowe
+* @kalefranz
+* @mingwandroid
+* @minrk
+* @msarahan
+* @rainwoodman
+
+
 2017-01-20 2.1.2:
 
 Enhancements:

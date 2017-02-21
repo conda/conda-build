@@ -640,7 +640,7 @@ def get_release_info(cpan_url, package, version, perl_version, config,
         try:
             new_rel_dict = get_cpan_api_url('{0}/release/{1}/{2}-{3}'.format(cpan_url,
                                                 author, package, version_str), colons=False)
-            new_rel_dict['version'] = new_rel_dict['version'].lstrip()
+            new_rel_dict['version'] = str(new_rel_dict['version']).lstrip()
         # Check if this is a core module, and don't die if it is
         except CondaHTTPError:
             core_version = core_module_version(orig_package, perl_version, config=config)

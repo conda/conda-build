@@ -1,0 +1,9 @@
+package:
+  name: conda-build-test-post-link-test-error
+  version: 1.0
+
+test:
+  requires:
+    - _post-link-fails
+  commands:
+    - echo 'weeee'

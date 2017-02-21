@@ -138,6 +138,7 @@ class PyPIPackagesCompleter(Completer):
         client = get_xmlrpc_client(getattr(args, 'pypi_url'))
         return [i.lower() for i in client.list_packages()]
 
+
 pypi_example = """
 Examples:
 
@@ -418,7 +419,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
-                             noprompt, packages, extra_specs, config=config, setup_options=setup_options)
+                             noprompt, packages, extra_specs, config=config,
+                             setup_options=setup_options)
 
         if d['import_tests'] == '':
             d['import_comment'] = '# '
@@ -918,7 +920,8 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, config, setup_options):
+def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, config,
+                setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
     # package uses distribute).  Our strategy is to download the package
@@ -945,7 +948,8 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, co
         print("working in %s" % tempdir)
         src_dir = get_dir(tempdir)
         # TODO: find args parameters needed by run_setuppy
-        run_setuppy(src_dir, tempdir, python_version, extra_specs=extra_specs, config=config, setup_options=setup_options)
+        run_setuppy(src_dir, tempdir, python_version, extra_specs=extra_specs, config=config,
+                    setup_options=setup_options)
         try:
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
                 pkg_info = yaml.load(fn)
@@ -966,7 +970,11 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
     :type temp_dir: str
     '''
-    specs = ['python %s*' % python_version, 'pyyaml', 'setuptools']
+    # TODO: we could make everyone's lives easier if we include packaging here, because setuptools
+    #    needs it in recent versions.  At time of writing, it is not a package in defaults, so this
+    #    actually breaks conda-build right now.  Omit it until packaging is on defaults.
+    # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
+    specs = ['python %s*' % python_version, 'pyyaml']
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:
@@ -979,9 +987,10 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     # TODO: Try with another version of Python if this one fails. Some
     # packages are Python 2 or Python 3 only.
 
-    create_env(config.build_prefix, specs=specs,
-               clear_cache=False,
-               config=config)
+    if not os.path.isdir(config.build_prefix) or not os.listdir(config.build_prefix):
+        create_env(config.build_prefix, specs=specs,
+                clear_cache=False,
+                config=config)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

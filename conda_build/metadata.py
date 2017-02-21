@@ -1,8 +1,10 @@
 from __future__ import absolute_import, division, print_function
 
+import copy
 import os
 from os.path import isfile, join
 import re
+import six
 import sys
 
 from .conda_interface import iteritems, PY3, text_type
@@ -89,6 +91,32 @@ def ns_cfg(config):
 sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 
+# this function extracts the variable name from a NameError exception, it has the form of:
+# "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets
+#    returned
+def parseNameNotFound(error):
+    m = re.search('\'(.+?)\'', str(error))
+    if len(m.groups()) == 1:
+        return m.group(1)
+    else:
+        return ""
+
+
+# We evaluate the selector and return True (keep this line) or False (drop this line)
+# If we encounter a NameError (unknown variable in selector), then we replace it by False and
+#     re-run the evaluation
+def eval_selector(selector_string, namespace):
+    try:
+        # TODO: is there a way to do this without eval?  Eval allows arbitrary
+        #    code execution.
+        return eval(selector_string, namespace, {})
+    except NameError as e:
+        missing_var = parseNameNotFound(e)
+        print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
+        next_string = selector_string.replace(missing_var, "False")
+        return eval_selector(next_string, namespace)
+
+
 def select_lines(data, namespace):
     lines = []
 
@@ -106,9 +134,7 @@ def select_lines(data, namespace):
         if m:
             cond = m.group(3)
             try:
-                # TODO: is there a way to do this without eval?  Eval allows arbitrary
-                #    code execution.
-                if eval(cond, namespace, {}):
+                if eval_selector(cond, namespace):
                     lines.append(m.group(1) + trailing_quote)
             except:
                 sys.exit('''\
@@ -267,6 +293,7 @@ def _git_clean(source_meta):
 
     return ret_meta
 
+
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
@@ -411,6 +438,16 @@ class MetaData(object):
         self.config.disable_pip = self.disable_pip
 
     @property
+    def final(self):
+        return self.get_value('extra/final')
+
+    @final.setter
+    def final(self, boolean):
+        extra = self.meta.get('extra', {})
+        extra['final'] = boolean
+        self.meta['extra'] = extra
+
+    @property
     def disable_pip(self):
         return 'build' in self.meta and 'disable_pip' in self.meta['build']
 
@@ -449,7 +486,7 @@ class MetaData(object):
         """For dynamic determination of build or run reqs, based on configuration"""
         reqs = self.meta.get('requirements', {})
         run_reqs = reqs.get('run', [])
-        build_reqs = reqs.get('build', [])
+        # build_reqs = reqs.get('build', [])
         if bool(self.get_value('build/osx_is_app', False)) and self.config.platform == 'osx':
             run_reqs.append('python.app')
         self.meta['requirements'] = reqs
@@ -555,8 +592,8 @@ class MetaData(object):
         if res is None:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         check_bad_chrs(res, 'package/version')
-        assert self.undefined_jinja_vars or not res.startswith('.'), "Fully-rendered version can't\
-        start with leading period -  got %s" % res
+        if self.final and res.startswith('.'):
+            raise ValueError("Fully-rendered version can't start with period -  got %s", res)
         return res
 
     def build_number(self):
@@ -883,3 +920,58 @@ class MetaData(object):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
                              "character in your recipe.")
+
+    def copy(self):
+        new = copy.copy(self)
+        new.config = self.config.copy()
+        new.meta = copy.deepcopy(self.meta)
+        return new
+
+    def get_output_metadata(self, output):
+        output_metadata = self.copy()
+        output_metadata.meta['package']['name'] = output.get('name', self.name())
+        requirements = output_metadata.meta.get('requirements', {})
+        requirements['run'] = output.get('requirements', [])
+        output_metadata.meta['requirements'] = requirements
+        output_metadata.meta['package']['version'] = output.get('version') or self.version()
+        extra = self.meta.get('extra', {})
+        extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
+        output_metadata.meta['extra'] = extra
+        if 'outputs' in output_metadata.meta:
+            del output_metadata.meta['outputs']
+        return output_metadata
+
+    def get_output_metadata_set(self, files, permit_undefined_jinja=False):
+        outputs = self.get_section('outputs')
+
+        # this is the old, default behavior: conda package, with difference between start
+        #    set of files and end set of files
+        requirements = self.get_value('requirements/run')
+        try:
+            if not outputs:
+                outputs = [{'name': self.name(),
+                            'files': files,
+                            'requirements': requirements}]
+                metadata = [self]
+            else:
+                # make a metapackage for the top-level package if the top-level requirements
+                #     mention a subpackage,
+                uses_subpackage = any(out.get('name') in requirements for out in outputs)
+                # but only if a matching output name is not explicitly provided
+                if uses_subpackage and not any(self.name() == out.get('name', '')
+                                               for out in outputs):
+                    outputs.append({'name': self.name(), 'requirements': requirements,
+                                    'pin_downstream':
+                                        self.meta.get('build', {}).get('pin_downstream')})
+                for out in outputs:
+                    if (self.name() == out.get('name', '') and not (out.get('files') or
+                                                                    out.get('script'))):
+                        out['files'] = files
+                        requirements = requirements
+                    metadata = [self.get_output_metadata(output) for output in outputs]
+        except SystemExit:
+            if not permit_undefined_jinja:
+                raise
+            outputs = []
+            metadata = []
+        return list(six.moves.zip(outputs, metadata))
