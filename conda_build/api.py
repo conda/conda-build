@@ -16,6 +16,7 @@ but only use those kwargs in config.  Config must change to support new features
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 
+import logging as _logging
 import sys as _sys
 
 # make the Config class available in the api namespace
@@ -85,6 +86,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     If recipe paths are provided, renders recipe before building.
     Tests built packages by default.  notest=True to skip test."""
+    log = _logging.getLogger(__name__)
 
     if post not in (True, False, None):
         raise ValueError("post must be boolean or None.  Did you forget to pass config by keyword?")
@@ -110,7 +112,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
         try:
             recipes.append(find_recipe(recipe))
         except IOError:
-            pass
+            log.error('invalid recipe path: {}'.format(recipe))
     metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
     recipes.extend(metadata)
     absolute_recipes = []
@@ -124,6 +126,8 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
                 raise ValueError("Path to recipe did not exist: {}".format(recipe))
             absolute_recipes.append(recipe)
 
+    if not absolute_recipes:
+        raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
                       need_source_download=need_source_download, config=config, variants=variants)
 

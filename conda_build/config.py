@@ -36,6 +36,7 @@ def _ensure_dir(path):
         except OSError:
             pass
 
+
 # we need this to be accessible to the CLI, so it needs to be more static.
 DEFAULT_PREFIX_LENGTH = 255
 
@@ -89,7 +90,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('sign_with', 'gpg'),
             Setting('identity', None),
             Setting('config_file', None),
-            Setting('repository', 'pypi'),
+            Setting('repository', 'pypitest'),
 
             Setting('ignore_recipe_verify_scripts',
                   cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
@@ -482,6 +483,7 @@ def get_or_merge_config(config, variant=None, **kwargs):
     if variant:
         config.variant.update(variant)
     return config
+
 
 # legacy exports for conda
 croot = Config().croot

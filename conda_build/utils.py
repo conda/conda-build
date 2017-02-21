@@ -26,7 +26,7 @@ import filelock
 
 from conda import __version__ as conda_version
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems
+from .conda_interface import PY3, iteritems, cc
 from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import StringIO
@@ -252,6 +252,8 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
 _locations = {}
+_lock_folders = (os.path.join(root_dir, 'locks'),
+                 os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
 def get_lock(folder, timeout=90, filename=".conda_lock"):
@@ -266,16 +268,39 @@ def get_lock(folder, timeout=90, filename=".conda_lock"):
     lock_filename = base64.urlsafe_b64encode(b_location)[:20]
     if hasattr(lock_filename, 'decode'):
         lock_filename = lock_filename.decode()
-    locks_dir = os.path.join(root_dir, 'locks')
-    if not os.path.isdir(locks_dir):
-        os.makedirs(locks_dir)
-    lock_file = os.path.join(locks_dir, lock_filename)
-    if not os.path.isfile(lock_file):
-        with open(lock_file, 'a') as f:
-            f.write(location)
-    if location not in _locations:
-        _locations[location] = filelock.FileLock(lock_file, timeout)
+    for locks_dir in _lock_folders:
+        try:
+            if not os.path.isdir(locks_dir):
+                os.makedirs(locks_dir)
+            lock_file = os.path.join(locks_dir, lock_filename)
+            if not os.path.isfile(lock_file):
+                with open(lock_file, 'a') as f:
+                    f.write(location)
+            if location not in _locations:
+                _locations[location] = filelock.FileLock(lock_file, timeout)
+            break
+        except (OSError, IOError):
+            continue
+    else:
+        raise RuntimeError("Could not write locks folder to either system location ({0})"
+                           "or user location ({1}).  Aborting.".format(*_lock_folders))
     return _locations[location]
+
+
+def get_conda_operation_locks(config=None):
+    locks = []
+    # locks enabled by default
+    if not config or config.locking:
+        cc.pkgs_dirs = cc.pkgs_dirs[:1]
+        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        for folder in locked_folders:
+            if not os.path.isdir(folder):
+                os.makedirs(folder)
+            lock = get_lock(folder, timeout=config.timeout if config else 90)
+            locks.append(lock)
+        # lock used to generally indicate a conda operation occurring
+        locks.append(get_lock('conda-operation', timeout=config.timeout if config else 90))
+    return locks
 
 
 def relative(f, d='lib'):
@@ -536,6 +561,7 @@ def path_prepended(prefix):
     finally:
         os.environ['PATH'] = old_path
 
+
 bin_dirname = 'Scripts' if sys.platform == 'win32' else 'bin'
 
 entry_pat = re.compile('\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$')
@@ -634,19 +660,21 @@ def print_skip_message(metadata):
 
 def package_has_file(package_path, file_path):
     try:
-        with tarfile.open(package_path) as t:
-            try:
-                # internal paths are always forward slashed on all platforms
-                file_path = file_path.replace('\\', '/')
-                text = t.extractfile(file_path).read()
-                return text
-            except KeyError:
-                return False
-            except OSError as e:
-                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
+        locks = get_conda_operation_locks()
+        with try_acquire_locks(locks, timeout=90):
+            with tarfile.open(package_path) as t:
+                try:
+                    # internal paths are always forward slashed on all platforms
+                    file_path = file_path.replace('\\', '/')
+                    text = t.extractfile(file_path).read()
+                    return text
+                except KeyError:
+                    return False
+                except OSError as e:
+                    raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
     except tarfile.ReadError:
         raise RuntimeError("Could not extract metadata from %s. "
-                           "File probably corrupt." % package_path)
+                            "File probably corrupt." % package_path)
 
 
 def ensure_list(arg):

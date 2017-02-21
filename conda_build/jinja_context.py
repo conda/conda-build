@@ -208,8 +208,8 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
 
 
 @memoized
-def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x', max_pin='x',
-                   permit_undefined_jinja=True):
+def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x',
+                   max_pin='x', permit_undefined_jinja=True):
     """dynamically pin based on currently installed version.
 
     only mandatory input is package_name.
@@ -294,17 +294,6 @@ compilers = {
     },
 }
 
-runtimes = {
-    'vs2008': 'vc 9',
-    'vs2010': 'vc 10',
-    'vs2015': 'vc 14',
-    'gfortran': 'libgfortran',
-    'g++': 'libstdc++',
-    'gcc': 'libgcc',
-    'clang': 'compiler-rt',
-    'clang++': 'libc++',
-}
-
 
 def _native_compiler(language, config):
     compiler = compilers[config.platform][language]
@@ -345,34 +334,6 @@ def compiler(language, config, permit_undefined_jinja=False):
     return compiler
 
 
-def runtime(language, config, permit_undefined_jinja=False):
-    """Support configuration of runtimes.  This is somewhat platform specific.
-
-    Native compilers never list their host - it is always implied.  Generally, they are
-    metapackages, pointing at a package that does specify the host.  These in turn may be
-    metapackages, pointing at a package where the host is the same as the target (both being the
-    native architecture).
-    """
-    native_compiler = _native_compiler(language, config)
-    language_compiler_key = '{}_compiler'.format(language)
-    # fall back to native if language-compiler is not explicitly set in variant
-    compiler = config.variant.get(language_compiler_key, native_compiler)
-    try:
-        if 'runtimes' in config.variant:
-            runtime = config.variant['runtimes'][compiler]
-        else:
-            runtime = runtimes[compiler]
-    except KeyError:
-        raise KeyError("Conda-build doesn't know which runtime goes with the {} compiler.  "
-                        "Please provide a 'runtimes' section in your variant configuration, "
-                        "with the key being your compiler, and the value being the runtime "
-                        "package name.".format(compiler))
-
-    if 'target_platform' in config.variant:
-        runtime = '_'.join([runtime, config.variant['target_platform']])
-    return runtime
-
-
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
     """
     Return a dictionary to use as context for jinja templates.
@@ -400,8 +361,6 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                permit_undefined_jinja=permit_undefined_jinja),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
-        runtime=partial(runtime, config=config,
-                         permit_undefined_jinja=permit_undefined_jinja),
         environ=environ)
     return ctx
 

@@ -18,7 +18,7 @@ DEFAULT_VARIANTS = {
     'perl': ['5.22.2'],
     'lua': ['5.2'],
     'r_base': ['3.3.2'],
-    'pin_run_as_build': {'python': ('p.p', 'p.p')},
+    'pin_run_as_build': {'python': {'min_pin': 'p.p', 'max_pin': 'p.p'}},
     'exclude_from_build_hash': ['numpy', 'mkl'],
 }
 

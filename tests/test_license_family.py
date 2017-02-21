@@ -1,5 +1,4 @@
-from conda_build.license_family import guess_license_family, deprecated_guess_license_family
-from conda_build.license_family import allowed_license_families
+from conda_build.license_family import guess_license_family, allowed_license_families
 
 
 def test_new_vs_previous_guesses_match():
@@ -8,26 +7,18 @@ def test_new_vs_previous_guesses_match():
     cens = "GPL (>= 3)"
     fam = guess_license_family(cens)
     assert fam == 'GPL3'
-    prev = deprecated_guess_license_family(cens)
-    assert fam == prev, 'new and deprecated guesses differ'
 
     cens = 'GNU Lesser General Public License'
     fam = guess_license_family(cens)
     assert fam == 'LGPL', 'guess_license_family({}) is {}'.format(cens, fam)
-    prev = deprecated_guess_license_family(cens)
-    assert fam == prev, 'new and deprecated guesses differ'
 
     cens = 'GNU General Public License some stuff then a 3 then stuff'
     fam = guess_license_family(cens)
     assert fam == 'GPL3', 'guess_license_family({}) is {}'.format(cens, fam)
-    prev = deprecated_guess_license_family(cens)
-    assert fam == prev, 'new and deprecated guesses differ'
 
     cens = 'Affero GPL'
     fam = guess_license_family(cens)
     assert fam == 'AGPL', 'guess_license_family({}) is {}'.format(cens, fam)
-    prev = deprecated_guess_license_family(cens)
-    assert fam == prev, 'new and deprecated guesses differ'
 
 
 def test_new_vs_previous_guess_differ_gpl():
@@ -40,9 +31,6 @@ def test_new_vs_previous_guess_differ_gpl():
     cens = "GPL"
     fam = guess_license_family(cens)
     assert fam == 'GPL'
-    prev = deprecated_guess_license_family(cens)
-    assert fam != prev, 'new and deprecated guesses are unexpectedly the same'
-    assert prev == 'GPL3'  # bizarre when GPL is an allowed license family
 
 
 def test_new_vs_previous_guess_differ_multiple_gpl():
@@ -50,14 +38,11 @@ def test_new_vs_previous_guess_differ_multiple_gpl():
 
     license = 'GPL-2 | GPL-3 | file LICENSE'
     New guess is GPL-3, which is the most accurate.
-    Previously, somehow PUBLICDOMAIN is closer than GPL2 or GPL3!
+    Previously, somehow Public-Domain is closer than GPL2 or GPL3!
     """
     cens = u'GPL-2 | GPL-3 | file LICENSE'
     fam = guess_license_family(cens)
     assert fam == 'GPL3', 'guess_license_family_from_index({}) is {}'.format(cens, fam)
-    prev = deprecated_guess_license_family(cens)
-    assert fam != prev, 'new and deprecated guesses are unexpectedly the same'
-    assert prev == 'PUBLICDOMAIN'
 
 
 def test_old_warnings_no_longer_fail():
@@ -143,12 +128,4 @@ def test_other():
                 u'Free software (X11 License)', u'Custom free software license'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'OTHER'
-
-if __name__ == '__main__':
-    #test_new_vs_previous_guesses_match()
-    #test_old_warnings_no_longer_fail()
-    #test_not_gpl2()
-    #test_other()
-    #test_gpl3()
-    test_gpl2()
+        assert fam == u'Other'

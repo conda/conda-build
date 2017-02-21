@@ -107,6 +107,32 @@ def ns_cfg(config):
 sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
 
 
+# this function extracts the variable name from a NameError exception, it has the form of:
+# "NameError: name 'var' is not defined", where var is the variable that is not defined. This gets
+#    returned
+def parseNameNotFound(error):
+    m = re.search('\'(.+?)\'', str(error))
+    if len(m.groups()) == 1:
+        return m.group(1)
+    else:
+        return ""
+
+
+# We evaluate the selector and return True (keep this line) or False (drop this line)
+# If we encounter a NameError (unknown variable in selector), then we replace it by False and
+#     re-run the evaluation
+def eval_selector(selector_string, namespace):
+    try:
+        # TODO: is there a way to do this without eval?  Eval allows arbitrary
+        #    code execution.
+        return eval(selector_string, namespace, {})
+    except NameError as e:
+        missing_var = parseNameNotFound(e)
+        print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
+        next_string = selector_string.replace(missing_var, "False")
+        return eval_selector(next_string, namespace)
+
+
 def select_lines(data, namespace):
     lines = []
 
@@ -124,9 +150,7 @@ def select_lines(data, namespace):
         if m:
             cond = m.group(3)
             try:
-                # TODO: is there a way to do this without eval?  Eval allows arbitrary
-                #    code execution.
-                if eval(cond, namespace, {}):
+                if eval_selector(cond, namespace):
                     lines.append(m.group(1) + trailing_quote)
             except:
                 sys.exit('''\
@@ -348,6 +372,7 @@ def _git_clean(source_meta):
         ret_meta.pop(key, None)
 
     return ret_meta
+
 
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
@@ -709,8 +734,8 @@ class MetaData(object):
         if res is None:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         check_bad_chrs(res, 'package/version')
-        assert self.undefined_jinja_vars or not res.startswith('.'), "Fully-rendered version can't\
-        start with leading period -  got %s" % res
+        if self.final and res.startswith('.'):
+            raise ValueError("Fully-rendered version can't start with period -  got %s", res)
         return res
 
     def build_number(self):
@@ -795,11 +820,17 @@ class MetaData(object):
         file_paths = []
 
         if self.path:
-            files = utils.rec_glob(self.path, "*")
-            file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
-            # exclude meta.yaml and meta.yaml.template, because the json dictionary captures them
-            file_paths = [f for f in file_paths if not f.startswith('meta.yaml')]
-            file_paths = sorted(filter_files(file_paths, self.path))
+            recorded_input_files = os.path.join(self.path, '..', 'hash_input_files')
+            if os.path.exists(recorded_input_files):
+                with open(recorded_input_files) as f:
+                    file_paths = f.read().splitlines()
+            else:
+                files = utils.rec_glob(self.path, "*")
+                file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
+                # exclude meta.yaml and meta.yaml.template, because the json dictionary captures
+                #    their content
+                file_paths = [f for f in file_paths if not f.startswith('meta.yaml')]
+                file_paths = sorted(filter_files(file_paths, self.path))
 
         return composite, file_paths
 
@@ -1130,6 +1161,10 @@ class MetaData(object):
         requirements['run'] = output.get('requirements', [])
         output_metadata.meta['requirements'] = requirements
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
+        extra = self.meta.get('extra', {})
+        extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
+        output_metadata.meta['extra'] = extra
+        output_metadata.final = False
         return output_metadata
 
     def get_output_metadata_set(self, files, permit_undefined_jinja=False):
@@ -1154,6 +1189,11 @@ class MetaData(object):
                     outputs.append({'name': self.name(), 'requirements': requirements,
                                     'pin_downstream':
                                         self.meta.get('build', {}).get('pin_downstream')})
+                for out in outputs:
+                    if (self.name() == out.get('name', '') and not (out.get('files') or
+                                                                    out.get('script'))):
+                        out['files'] = files
+                        requirements = requirements
                 metadata = [self.get_output_metadata(output) for output in outputs]
         except SystemExit:
             if not permit_undefined_jinja:

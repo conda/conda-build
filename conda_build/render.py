@@ -93,12 +93,11 @@ def get_pin_from_build(m, dep, build_dep_versions):
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
             not (dep_name == 'python' and m.noarch)):
         pin = utils.apply_pin_expressions(version.split()[0],
-                                            m.config.variant['pin_run_as_build'][dep_name])
+                                            **m.config.variant['pin_run_as_build'][dep_name])
     elif dep.startswith('numpy') and 'x.x' in dep:
         if not build_dep_versions.get(dep_name):
             raise ValueError("numpy x.x specified, but numpy not in build requirements.")
-        pin = utils.apply_pin_expressions(version.split()[0],
-                                            ('p.p', 'p.p'))
+        pin = utils.apply_pin_expressions(version.split()[0], min_pin='p.p', max_pin='p.p')
     if pin:
         dep = " ".join((dep_name, pin))
     return dep
@@ -409,6 +408,7 @@ def _unicode_representer(dumper, uni):
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(_IndentDumper, self).increase_indent(flow, False)
+
 
 yaml.add_representer(_MetaYaml, _represent_omap)
 if PY3:

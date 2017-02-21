@@ -22,7 +22,7 @@ def test_later_spec_priority():
     combined_spec, extend_keys = variants.combine_specs([global_specs, single_version])
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
-    assert extend_keys == {'exclude_from_build_hash', 'pin_run_as_build', 'runtimes'}
+    assert extend_keys == {'exclude_from_build_hash', 'pin_run_as_build'}
 
     # keep keys that are not overwritten
     combined_spec, extend_keys = variants.combine_specs([single_version, no_numpy_version])

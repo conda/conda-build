@@ -15,7 +15,7 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, cc, symlink_conda
+from .conda_interface import root_dir, cc, symlink_conda, pkgs_dirs
 from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
 from .conda_interface import plan
 from .conda_interface import package_cache
@@ -539,21 +539,6 @@ class Environment(object):
         return specs
 
 
-def get_conda_operation_locks(config):
-    locks = []
-    if config.locking:
-        cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
-        for folder in locked_folders:
-            if not os.path.isdir(folder):
-                os.makedirs(folder)
-            lock = utils.get_lock(folder, timeout=config.timeout)
-            locks.append(lock)
-        # lock used to generally indicate a conda operation occurring
-        locks.append(utils.get_lock('conda-operation', timeout=config.timeout))
-    return locks
-
-
 spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s)([0-9a-zA-Z\.]+)(\s[0-9a-zA-Z\.]+)?")
 
 
@@ -619,7 +604,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
 
             with utils.path_prepended(prefix):
                 if not locks:
-                    locks = get_conda_operation_locks(config)
+                    locks = utils.get_conda_operation_locks(config)
                 try:
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         if not index:
@@ -655,11 +640,28 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                                        clear_cache=clear_cache)
                         else:
                             raise
-                    elif 'lock' in str(exc) or 'requires a minimum conda version' in str(exc):
+                    elif 'lock' in str(exc):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                             create_env(prefix, specs, config=config, subdir=subdir,
                                     clear_cache=clear_cache, retry=retry + 1)
+                    elif ('requires a minimum conda version' in str(exc) or
+                          'link a source that does not' in str(exc)):
+                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                            pkg_dir = str(exc)
+                            while os.path.dirname(pkg_dir) not in pkgs_dirs:
+                                pkg_dir = os.path.dirname(pkg_dir)
+                            log.warn("I think conda ended up with a partial extraction for %s.  "
+                                     "Removing the folder and retrying", pkg_dir)
+                            if os.path.isdir(pkg_dir):
+                                utils.rm_rf(pkg_dir)
+                        if retry < config.max_env_retry:
+                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                            create_env(prefix, specs, config=config, subdir=subdir,
+                                    clear_cache=clear_cache, retry=retry + 1)
+                        else:
+                            log.error("Failed to create env, max retries exceeded.")
+                            raise
                     else:
                         raise
                 # HACK: some of the time, conda screws up somehow and incomplete packages result.

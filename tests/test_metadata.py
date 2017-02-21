@@ -71,7 +71,8 @@ test {{ JINJA_VAR[:2] }}
 
 def test_disallow_leading_period_in_version(testing_metadata):
     testing_metadata.meta['package']['version'] = '.ste.ve'
-    with pytest.raises(AssertionError):
+    testing_metadata.final = True
+    with pytest.raises(ValueError):
         testing_metadata.version()
 
 

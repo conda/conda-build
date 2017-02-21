@@ -1,3 +1,31 @@
+2017-02-20 2.1.5:
+
+Enhancements:
+-------------
+
+* don't crash on unknown selector.  Warn, but evaluate as False.  #1753
+* allow default conda packaging behavior for split package whose name matches top-level name, but lacks both ``files`` and ``script`` entry.  #1758
+
+
+Bug fixes:
+----------
+
+* unify license family text with Anaconda-Verify  #1744
+* apply post-processing to each split package, not just to post-build prefix files.  #1747
+* provide fallback lock directory in user's home folder.  Allows central installs.  #1749
+* fix quoting for test paths.  Allows croot with spaces.  #1750
+* fix pypi skeleton recursion #1754
+* fix assertion error about leading period when Jinja2 variables have default values  #1757
+* set default twine target to pypitest to avoid accidental uploads  #1758
+
+
+Contributors:
+-------------
+
+* @gabm
+* @msarahan
+
+
 2017-02-07 2.1.4:
 
 Enhancements:

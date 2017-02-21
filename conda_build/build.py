@@ -210,6 +210,7 @@ def copy_recipe(m):
             original_recipe = ""
 
         rendered = output_yaml(m)
+
         if not original_recipe or not open(original_recipe).read() == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
                 f.write("# This file created by conda-build {}\n".format(__version__))
@@ -482,15 +483,19 @@ def create_info_files(m, files, prefix):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    copy_recipe(m)
-    copy_readme(m)
-    copy_license(m)
-
     write_hash_input(m)
     write_info_json(m)  # actually index.json
     write_about_json(m)
     write_link_json(m)
     write_pin_downstream(m)
+
+    # just for lack of confusion, don't show outputs in final rendered recipes
+    if 'outputs' in m.meta:
+        del m.meta['outputs']
+
+    copy_recipe(m)
+    copy_readme(m)
+    copy_license(m)
 
     write_info_files_file(m, files)
 
@@ -607,29 +612,100 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
                   cls=EntityEncoder)
 
 
+def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
+                                                      'conda-meta.*',
+                                                      '(.*)?\.DS_Store.*')):
+    """Remove things like .git from the list of files to be copied"""
+    for pattern in filter_patterns:
+        r = re.compile(pattern)
+        files_list = set(files_list) - set(filter(r.match, files_list))
+    return [f.replace(prefix + os.path.sep, '') for f in files_list
+            if not os.path.isdir(os.path.join(prefix, f))]
+
+
+def post_process_files(m, initial_prefix_files):
+    get_build_metadata(m)
+    create_post_scripts(m)
+
+    if m.noarch != 'python':
+        utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
+    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+
+    post_process(sorted(current_prefix_files - initial_prefix_files),
+                    prefix=m.config.build_prefix,
+                    config=m.config,
+                    preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
+                    noarch=m.get_value('build/noarch'),
+                    skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
+
+    # The post processing may have deleted some files (like easy-install.pth)
+    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    new_files = sorted(current_prefix_files - initial_prefix_files)
+    new_files = filter_files(new_files, prefix=m.config.build_prefix)
+    if any(m.config.meta_dir in join(m.config.build_prefix, f) for f in new_files):
+        meta_files = (tuple(f for f in new_files if m.config.meta_dir in
+                join(m.config.build_prefix, f)),)
+        sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
+This error usually comes from using conda in the build script.  Avoid doing this, as it
+can lead to packages that include their dependencies.""" % meta_files))
+    post_build(m, new_files, prefix=m.config.build_prefix, build_python=m.config.build_python,
+               croot=m.config.croot)
+
+    entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
+    if m.noarch == 'python':
+        pkg_files = [fi for fi in new_files if fi not in entry_point_script_names]
+    else:
+        pkg_files = new_files
+
+    # the legacy noarch
+    if m.get_value('build/noarch_python'):
+        noarch_python.transform(m, new_files, m.config.build_prefix)
+    # new way: build/noarch: python
+    elif m.noarch == 'python':
+        noarch_python.populate_files(m, pkg_files, m.config.build_prefix, entry_point_script_names)
+
+    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    new_files = current_prefix_files - initial_prefix_files
+    fix_permissions(new_files, m.config.build_prefix)
+
+    return new_files
+
+
 def bundle_conda(output, metadata, env, **kw):
+    log = logging.getLogger(__name__)
+    log.info('Packaging %s', metadata.dist())
+
     files = output.get('files', [])
     if not files and output.get('script'):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
-        initial_files_snapshot = prefix_files(metadata.config.host_prefix)
+        initial_files = prefix_files(metadata.config.build_prefix)
         utils.check_call_env(interpreter.split(' ') +
                     [os.path.join(metadata.path, output['script'])],
-                    cwd=metadata.config.host_prefix, env=env)
-        files = prefix_files(metadata.config.host_prefix) - initial_files_snapshot
+                    cwd=metadata.config.build_prefix, env=env)
+    else:
+        # we exclude the list of files that we want to keep, so post-process picks them up as "new"
+        files = list(set(utils.expand_globs(files, metadata.config.build_prefix)))
+        initial_files = set(prefix_files(metadata.config.build_prefix)) - set(files)
 
-    output_metadata = metadata.get_output_metadata(output)
+    files = post_process_files(metadata, initial_files)
 
-    output_filename = output_metadata.dist() + '.tar.bz2'
-    files = list(set(utils.expand_globs(files, metadata.config.host_prefix)))
-    files = utils.filter_files(files, prefix=output_metadata.config.build_prefix)
-    info_files = create_info_files(output_metadata, files,
-                                   prefix=output_metadata.config.host_prefix)
-    info_files = utils.filter_files(info_files, prefix=output_metadata.config.build_prefix)
-    for f in info_files:
-        if f not in files:
-            files.append(f)
+    output_filename = ('-'.join([output['name'], metadata.version(),
+                                 metadata.build_id()]) + '.tar.bz2')
+    # first filter is so that info_files does not pick up ignored files
+    files = filter_files(files, prefix=metadata.config.build_prefix)
+    create_info_files(metadata, files, prefix=metadata.config.build_prefix)
+    test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test.py')
+    if output.get('test', {}).get('script'):
+        utils.copy_into(os.path.join(metadata.path, output['test']['script']),
+                        test_dest_path, metadata.config.timeout, locking=metadata.config.locking)
+    elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
+        # the test belongs to the parent recipe.  Don't include it in subpackages.
+        utils.rm_rf(test_dest_path)
+    # here we add the info files into the prefix, so we want to re-collect the files list
+    files = set(prefix_files(metadata.config.build_prefix)) - initial_files
+    files = filter_files(files, prefix=metadata.config.build_prefix)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -887,58 +963,16 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                         utils.check_call_env(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
-        if post:
-            with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
-                files1 = set(f.read().splitlines())
+        with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
+            initial_files = set(f.read().splitlines())
 
-        get_build_metadata(m)
-        create_post_scripts(m)
+        files = prefix_files(prefix=m.config.build_prefix) - initial_files
+        outputs = m.get_output_metadata_set(files=files)
 
-        if not m.noarch == 'python':
-            utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
-        files2 = prefix_files(prefix=m.config.host_prefix)
-
-        post_process(sorted(files2 - files1),
-                     prefix=m.config.host_prefix,
-                     config=m.config,
-                     preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                     noarch=m.get_value('build/noarch'),
-                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
-
-        # The post processing may have deleted some files (like easy-install.pth)
-        files2 = prefix_files(prefix=m.config.host_prefix)
-        if any(m.config.meta_dir in join(m.config.host_prefix, f) for f in files2 - files1):
-            meta_files = (tuple(f for f in files2 - files1 if m.config.meta_dir in
-                    join(m.config.host_prefix, f)),)
-            sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
-This error usually comes from using conda in the build script.  Avoid doing this, as it
-can lead to packages that include their dependencies.""" % meta_files))
-        post_build(m, sorted(files2 - files1),
-                    prefix=m.config.host_prefix,
-                    build_python=m.config.build_python,
-                    croot=m.config.croot)
-
-        entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
-        if m.noarch == 'python':
-            pkg_files = [fi for fi in sorted(files2 - files1) if fi not in entry_point_script_names]
-        else:
-            pkg_files = sorted(files2 - files1)
-
-        # the legacy noarch
-        if m.get_value('build/noarch_python'):
-            noarch_python.transform(m, sorted(files2 - files1), m.config.host_prefix)
-        # new way: build/noarch: python
-        elif m.noarch == 'python':
-            noarch_python.populate_files(
-                m, pkg_files, m.config.host_prefix, entry_point_script_names)
-
-        files3 = prefix_files(prefix=m.config.host_prefix)
-        fix_permissions(files3 - files1, m.config.host_prefix)
-
-        outputs = m.get_output_metadata_set(files3 - files1)
-
-        for (output_dict, metadata) in outputs:
-            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, metadata, env)
+        for (output_dict, m) in outputs:
+            if not m.final:
+                m = finalize_metadata(m, index)
+            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, m, env)
             built_packages.append(built_package)
 
     else:
@@ -1041,6 +1075,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         metadata.append_metadata_sections(hash_input, merge=False)
         metadata.config.compute_build_id(metadata.name())
         environ.clean_pkg_cache(metadata.dist(), metadata.config)
+
+        # store this name to keep it consistent.  By changing files, we change the hash later.
+        #    It matches the build hash now, so let's keep it around.
+        test_package_name = (recipedir_or_package_or_metadata.dist()
+                            if hasattr(recipedir_or_package_or_metadata, 'dist')
+                            else recipedir_or_package_or_metadata)
+
         # this is also copying tests/source_files from work_dir to testing workdir
         create_files(metadata.config.test_dir, metadata)
         # Make Perl or Python-specific test files
@@ -1054,12 +1095,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             lua_files = False
         shell_files = create_shell_files(metadata.config.test_dir, metadata)
         if not (py_files or shell_files or pl_files or lua_files):
-            print("Nothing to test for:", metadata.dist())
+            print("Nothing to test for:", test_package_name)
             continue
 
-        # store this name to keep it consistent.  By changing files, we change the hash later.
-        #    It matches the build hash now, so let's keep it around.
-        test_package_name = metadata.dist()
         print("TEST START:", test_package_name)
 
         if metadata.config.remove_work_dir and os.listdir(metadata.config.work_dir):
@@ -1149,19 +1187,19 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
-                tf.write("{python} -s {test_file}\n".format(
+                tf.write('"{python}" -s "{test_file}"\n'.format(
                     python=metadata.config.test_python,
                     test_file=join(metadata.config.test_dir, 'run_test.py')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if pl_files:
-                tf.write("{perl} {test_file}\n".format(
+                tf.write('"{perl}" "{test_file}"\n'.format(
                     perl=metadata.config.test_perl,
                     test_file=join(metadata.config.test_dir, 'run_test.pl')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if lua_files:
-                tf.write("{lua} {test_file}\n".format(
+                tf.write('"{lua}" "{test_file}"\n'.format(
                     lua=metadata.config.test_lua,
                     test_file=join(metadata.config.test_dir, 'run_test.lua')))
                 if utils.on_win:
@@ -1169,7 +1207,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             if shell_files:
                 test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
                 if utils.on_win:
-                    tf.write("call {test_file}\n".format(test_file=test_file))
+                    tf.write('call "{test_file}"\n'.format(test_file=test_file))
                     if utils.on_win:
                         tf.write("if errorlevel 1 exit 1\n")
                 else:
@@ -1185,7 +1223,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         except subprocess.CalledProcessError:
             tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
                          config=metadata.config)
-
         if need_cleanup:
             utils.rm_rf(recipe_dir)
 
@@ -1444,12 +1481,18 @@ def handle_pypi_upload(wheels, config):
 
     wheels = utils.ensure_list(wheels)
 
-    for f in wheels:
-        try:
-            utils.check_call_env(args + [f])
-        except:
-            logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
-                                            "  Is this package registered?")
+    if config.anaconda_upload:
+        for f in wheels:
+            print("Uploading {}".format(f))
+            try:
+                utils.check_call_env(args + [f])
+            except:
+                logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
+                                                "  Is this package registered?")
+                logging.getLogger(__name__).warn("Wheel file left in {}".format(f))
+
+    else:
+        print("anaconda_upload is not set.  Not uploading wheels: {}".format(wheels))
 
 
 def print_build_intermediate_warning(config):

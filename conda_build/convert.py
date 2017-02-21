@@ -180,6 +180,7 @@ def _update_paths(paths, mapping_dict):
             path['_path'] = mapping_dict[path['_path']]
     return updated_paths
 
+
 path_mapping_bat_proxy = (re.compile(r'bin\/(.+?)(\.py[c]?)?$'),
                            (r'Scripts/\1-script', r'Scripts/\1.bat'))
 

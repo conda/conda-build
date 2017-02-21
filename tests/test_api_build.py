@@ -310,15 +310,7 @@ def test_symlink_fail(testing_workdir, testing_config, capfd):
 def test_pip_in_meta_yaml_fail(testing_workdir, testing_config):
     with pytest.raises(ValueError) as exc:
         api.build(os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=testing_config)
-        assert "environment.yml" in str(exc)
-
-
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="Windows doesn't show this error")
-def test_broken_conda_meta(testing_workdir, testing_config):
-    with pytest.raises(SystemExit) as exc:
-        api.build(os.path.join(fail_dir, "conda-meta"), config=testing_config)
-        assert "Error: Untracked file(s) ('conda-meta/nope',)" in str(exc)
+    assert "environment.yml" in str(exc)
 
 
 def test_recursive_fail(testing_workdir, testing_config):
@@ -811,7 +803,8 @@ def test_remove_workdir_default(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
-    #    of the config object rather than edit it in place, so that variants don't clobber one another
+    #    of the config object rather than edit it in place, so that variants don't clobber one
+    #    another
     metadata = api.render(recipe, config=testing_config)[0][0]
     api.build(metadata)
     assert not glob(os.path.join(metadata.config.work_dir, '*'))
@@ -822,8 +815,10 @@ def test_keep_workdir(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
-    #    of the config object rather than edit it in place, so that variants don't clobber one another
-    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False, debug=True)[0][0]
+    #    of the config object rather than edit it in place, so that variants don't clobber one
+    #    another
+    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False,
+                          debug=True)[0][0]
     api.build(metadata)
     assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(metadata.config.work_dir, '*'))
@@ -864,16 +859,20 @@ def test_cross_compiler(testing_workdir, testing_config, caplog):
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
 def test_append_python_app_osx(testing_config):
-    """Recipes that use osx_is_app need to have python.app in their runtime requirements."""
-    recipe = os.path.join(metadata_dir, '_nexpy')
+    """Recipes that use osx_is_app need to have python.app in their runtime requirements.
+
+    conda-build will add it if it's missing."""
+    recipe = os.path.join(metadata_dir, '_osx_is_app_missing_python_app')
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
-    api.build(recipe, config=testing_config, channel_urls=('nexpy', ))
+    api.build(recipe, config=testing_config)
 
 
-# Not sure about this behavior.  Basically, people need to realize that if they start with a recipe from disk,
-#    they should not then alter the metadata object.  Later reparsing will clobber their edits to the object.
-# The complicated thing is that these edits are indistinguishable from Jinja2 templating doing its normal thing.
+# Not sure about this behavior. Basically, people need to realize that if they
+#    start with a recipe from disk, they should not then alter the metadata
+#    object. Later reparsing will clobber their edits to the object. The
+#    complicated thing is that these edits are indistinguishable from Jinja2
+#    templating doing its normal thing.
 
 # def test_clobbering_manually_set_metadata_raises(testing_metadata, testing_workdir):
 #     api.output_yaml(testing_metadata, 'meta.yaml')
@@ -887,11 +886,12 @@ def test_append_python_app_osx(testing_config):
 
 
 def test_pin_downstream(testing_metadata, testing_config):
-    outputs = api.build(os.path.join(metadata_dir, '_pin_downstream'), config=testing_config)
+    api.build(os.path.join(metadata_dir, '_pin_downstream'), config=testing_config)
     testing_metadata.meta['requirements']['build'] = ['test_has_pin_downstream']
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
     assert 'downstream_pinned_package 1.0' in m.meta['requirements']['run']
+
 
 def test_pin_subpackage_exact(testing_config):
     m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]
@@ -933,7 +933,7 @@ def test_recursion_packages(testing_config):
 @pytest.mark.serial
 def test_recursion_layers(testing_config):
     """go two 'hops' - try to build a, but a needs b, so build b first, then come back to a"""
-    recipe = os.path.join(metadata_dir, '_recursive-build-two-layer')
+    recipe = os.path.join(metadata_dir, '_recursive-build-two-layers')
     api.build(recipe, config=testing_config)
 
 
@@ -941,3 +941,15 @@ def test_pin_depends(testing_metadata):
     """This is deprecated functionality - replaced by the more general variants pinning scheme"""
     testing_metadata.meta['build']['pin_depends'] = 'record'
     api.build(testing_metadata)
+
+
+@pytest.mark.skipif(sys.platform != 'win32', reason=("spaces break openssl prefix "
+                                                     "replacement on *nix"))
+def test_croot_with_spaces(testing_metadata, testing_workdir):
+    testing_metadata.config.croot = os.path.join(testing_workdir, "space path")
+    api.build(testing_metadata)
+
+
+def test_unknown_selectors(testing_config):
+    recipe = os.path.join(metadata_dir, 'unknown_selector')
+    api.build(recipe, config=testing_config)
