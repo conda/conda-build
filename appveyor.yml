@@ -77,7 +77,7 @@ test_script:
   - mkdir C:\cbtmp
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
   - rd /S /Q C:\cbtmp
-  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --durations=15
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp

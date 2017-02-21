@@ -13,5 +13,5 @@ if [[ "$FLAKE8" == "true" ]]; then
     conda build conda.recipe --no-anaconda-upload -c conda-forge
 else
     $HOME/miniconda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests
-    $HOME/miniconda/bin/py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests
+    $HOME/miniconda/bin/py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --durations=15
 fi

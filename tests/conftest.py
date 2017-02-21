@@ -9,7 +9,7 @@ from conda_build.index import get_build_index
 from conda_build.conda_interface import subdir
 from conda_build.variants import get_default_variants
 from conda_build.metadata import MetaData
-from conda_build.utils import check_call_env, prepend_bin_path
+from conda_build.utils import check_call_env, prepend_bin_path, copy_into
 
 
 @pytest.fixture(scope='function')
@@ -32,7 +32,7 @@ def testing_workdir(tmpdir, request):
             files = profdir.listdir('*.prof') if profdir.isdir() else []
 
             for f in files:
-                f.rename(os.path.join(saved_path, 'prof', f.basename))
+                copy_into(str(f), os.path.join(saved_path, 'prof', f.basename))
         os.chdir(saved_path)
 
     request.addfinalizer(return_to_saved_path)
