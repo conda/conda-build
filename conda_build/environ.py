@@ -553,7 +553,8 @@ def _ensure_valid_spec(spec):
     return spec
 
 
-def get_install_actions(prefix, index, specs, config):
+def get_install_actions(prefix, index, specs, config, retries=0):
+    log = logging.getLogger(__name__)
     if config.verbose:
         capture = contextlib.contextmanager(lambda: (yield))
     else:
@@ -569,6 +570,30 @@ def get_install_actions(prefix, index, specs, config):
                 actions = plan.install_actions(prefix, index, specs)
             except NoPackagesFoundError as exc:
                 raise DependencyNeedsBuildingError(exc)
+            except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
+                    CondaError) as exc:
+                if 'lock' in str(exc):
+                    log.warn("failed to get install actions, retrying.  exception was: %s",
+                             str(exc))
+                elif ('requires a minimum conda version' in str(exc) or
+                        'link a source that does not' in str(exc)):
+                    locks = utils.get_conda_operation_locks(config)
+                    with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        pkg_dir = str(exc)
+                        while os.path.dirname(pkg_dir) not in pkgs_dirs:
+                            pkg_dir = os.path.dirname(pkg_dir)
+                        log.warn("I think conda ended up with a partial extraction for %s.  "
+                                    "Removing the folder and retrying", pkg_dir)
+                        if os.path.isdir(pkg_dir):
+                            utils.rm_rf(pkg_dir)
+                if retries < config.max_env_retry:
+                    log.warn("failed to get install actions, retrying.  exception was: %s",
+                             str(exc))
+                    actions = get_install_actions(prefix, index, specs, config,
+                                                    retries=retries + 1)
+                else:
+                    log.error("Failed to get install actions, max retries exceeded.")
+                    raise
         if config.disable_pip:
             actions['LINK'] = [spec for spec in actions['LINK']
                                 if not spec.startswith('pip-') and
