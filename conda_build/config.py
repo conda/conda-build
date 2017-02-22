@@ -110,8 +110,8 @@ class Config(object):
 
     def __init__(self, variant=None, **kwargs):
         super(Config, self).__init__()
-        # default variant is set in
-        self.variant = variant or get_default_variants()[0]
+        # default variant is set in render's distribute_variants
+        self.variant = variant or {}
         self.set_keys(**kwargs)
 
     def _set_attribute_from_kwargs(self, kwargs, attr, default):

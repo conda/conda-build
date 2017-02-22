@@ -50,7 +50,7 @@ def testing_index(request):
 @pytest.fixture(scope='function')
 def testing_config(testing_workdir, testing_index, request):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
-                  activate=False, debug=False, variant=get_default_variants()[0],
+                  activate=False, debug=False, variant=None,
                   indexes=testing_index)
 
 

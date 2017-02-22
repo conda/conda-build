@@ -799,9 +799,9 @@ class MetaData(object):
         requirements = composite.get('requirements', {})
         build_reqs = requirements.get('build', [])
         excludes = self.config.variant.get('exclude_from_build_hash', [])
-        pattern = re.compile('|'.join('{}[\s$]?'.format(exc) for exc in excludes))
-
-        build_reqs = [req for req in build_reqs if not pattern.match(req)]
+        if excludes:
+            pattern = re.compile('|'.join('{}[\s$]?'.format(exc) for exc in excludes))
+            build_reqs = [req for req in build_reqs if not pattern.match(req)]
         requirements['build'] = build_reqs
         composite['requirements'] = requirements
 
