@@ -1193,7 +1193,7 @@ class MetaData(object):
                     if (self.name() == out.get('name', '') and not (out.get('files') or
                                                                     out.get('script'))):
                         out['files'] = files
-                        requirements = requirements
+                        out['requirements'] = requirements
                 metadata = [self.get_output_metadata(output) for output in outputs]
         except SystemExit:
             if not permit_undefined_jinja:
