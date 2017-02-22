@@ -107,8 +107,10 @@ def get_upstream_pins(m, dependencies, index):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
     dependencies = [strip_channel(dep) for dep in dependencies]
-    actions = environ.get_install_actions(m.config.build_prefix, index, dependencies,
-                                            m.config)
+    # Add _tmp here to prevent creating the build_prefix too early. This is because, when
+    # dirty is set, we skip calling create_env if the folder already exists.
+    actions = environ.get_install_actions(m.config.build_prefix+"_tmp", index, dependencies,
+                                          m.config)
     additional_specs = []
     linked_packages = actions['LINK']
     # edit the plan to download all necessary packages
