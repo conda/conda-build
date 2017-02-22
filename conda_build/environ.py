@@ -293,14 +293,11 @@ def perl_vars(config):
 def lua_vars(config):
     lua = config.build_lua
     lua_ver = config.variant.get('lua', get_default_variants()[0]['lua'])
-    if lua:
-        return {
-            'LUA': lua,
-            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
-            'LUA_VER': lua_ver,
-        }
-    else:
-        return {}
+    return {
+        'LUA': lua,
+        'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+        'LUA_VER': lua_ver,
+    }
 
 
 def meta_vars(meta, config):

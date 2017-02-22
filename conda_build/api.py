@@ -16,7 +16,6 @@ but only use those kwargs in config.  Config must change to support new features
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 
-import logging as _logging
 import sys as _sys
 
 # make the Config class available in the api namespace

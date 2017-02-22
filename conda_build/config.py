@@ -135,17 +135,15 @@ class Config(object):
                 version = os.getenv(var) if os.getenv(var) else default
             elif isinstance(version, list) and len(version) == 1:
                 version = version[0]
-            if version and not version.endswith('*'):
-                version = version + '.*'
             return version
 
         # this is where we override any variant config files with the legacy CONDA_* vars
         #     or CLI params
-        self.variant.update({'perl': env('perl', None),
-                             'lua': env('lua', None),
-                             'python': env('python', None),
-                             'numpy': env('numpy', None),
-                             'r_base': env('r_base', None),
+        self.variant.update({'perl': env('perl', self.variant.get('perl')),
+                             'lua': env('lua', self.variant.get('lua')),
+                             'python': env('python', self.variant.get('python')),
+                             'numpy': env('numpy', self.variant.get('numpy')),
+                             'r_base': env('r_base', self.variant.get('r_base')),
                              })
         trim_empty_keys(self.variant)
 
