@@ -86,10 +86,6 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     If recipe paths are provided, renders recipe before building.
     Tests built packages by default.  notest=True to skip test."""
-    log = _logging.getLogger(__name__)
-
-    if post not in (True, False, None):
-        raise ValueError("post must be boolean or None.  Did you forget to pass config by keyword?")
 
     import os
     from conda_build.build import build_tree
@@ -112,7 +108,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
         try:
             recipes.append(find_recipe(recipe))
         except IOError:
-            log.error('invalid recipe path: {}'.format(recipe))
+            continue
     metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
     recipes.extend(metadata)
     absolute_recipes = []

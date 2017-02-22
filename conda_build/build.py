@@ -1295,7 +1295,6 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             config.anaconda_upload = False
         elif post:
             post = True
-            notest = True
             config.anaconda_upload = False
         else:
             post = None

@@ -697,6 +697,7 @@ def tmp_chdir(dest):
 
 
 def expand_globs(path_list, root_dir):
+    log = logging.getLogger(__name__)
     files = []
     for path in path_list:
         if not os.path.isabs(path):
@@ -707,7 +708,10 @@ def expand_globs(path_list, root_dir):
         elif os.path.isfile(path):
             files.append(path.replace(root_dir + os.path.sep, ''))
         else:
-            files.extend(f.replace(root_dir + os.path.sep, '') for f in glob(path))
+            glob_files = [f.replace(root_dir + os.path.sep, '') for f in glob(path)]
+            if not glob_files:
+                log.error('invalid recipe path: {}'.format(path))
+            files.extend(glob_files)
     return files
 
 
