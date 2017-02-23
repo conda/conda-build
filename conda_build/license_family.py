@@ -13,11 +13,11 @@ GPL2
 GPL
 BSD
 MIT
-Apache
+APACHE
 PSF
-Public-Domain
-Proprietary
-Other
+PUBLIC-DOMAIN
+PROPRIETARY
+OTHER
 NONE
 """.split()
 
