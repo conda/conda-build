@@ -47,9 +47,6 @@ else:
     PermissionError = OSError
 
 
-# elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
-from .conda_interface import rm_rf  # NOQA
-
 on_win = (sys.platform == 'win32')
 
 codec = getpreferredencoding() or 'utf-8'
@@ -648,8 +645,12 @@ def convert_path_for_cygwin_or_msys2(exe, path):
             msys2_cygwin = re.findall(b'(cygwin1.dll|msys-2.0.dll)', exe_binary)
             _posix_exes_cache[exe] = True if msys2_cygwin else False
     if _posix_exes_cache[exe]:
-        return check_output_env(['cygpath', '-u',
-                                 path]).splitlines()[0].decode(getpreferredencoding())
+        try:
+            path = check_output_env(['cygpath', '-u',
+                                     path]).splitlines()[0].decode(getpreferredencoding())
+        except WindowsError:
+            log = logging.getLogger(__name__)
+            log.debug('cygpath executable not found.  Passing native path.  This is OK for msys2.')
     return path
 
 
@@ -905,3 +906,16 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
         files_list = set(files_list) - set(filter(r.match, files_list))
     return [f.replace(prefix + os.path.sep, '') for f in files_list
             if not os.path.isdir(os.path.join(prefix, f))]
+
+
+def rm_rf(path):
+    # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
+    if on_win:
+        if os.path.exists(path):
+            if os.path.isfile(path):
+                subprocess.check_call('del "{}"'.format(path), shell=True)
+            else:
+                subprocess.check_call('rd "{}" /s /q'.format(path), shell=True)
+    else:
+        from conda_build import conda_interface
+        return conda_interface.rm_rf(path)

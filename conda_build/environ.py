@@ -568,8 +568,8 @@ def get_install_actions(prefix, index, specs, config, retries=0):
             except NoPackagesFoundError as exc:
                 raise DependencyNeedsBuildingError(exc)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                    CondaError) as exc:
-                if 'lock' in str(exc):
+                    CondaError, AssertionError) as exc:
+                if 'lock' in str(exc) or isinstance(exc, AssertionError):
                     log.warn("failed to get install actions, retrying.  exception was: %s",
                              str(exc))
                 elif ('requires a minimum conda version' in str(exc) or

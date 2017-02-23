@@ -1190,7 +1190,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     source="call" if utils.on_win else "source",
                     ext=ext,
                     test_env=metadata.config.test_prefix,
-                    squelch=">nul 2>&1" if utils.on_win else "&> /dev/null"))
+                    squelch=">NUL 2>&1" if utils.on_win else "&> /dev/null"))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
