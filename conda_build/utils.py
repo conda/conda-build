@@ -31,6 +31,8 @@ from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
+# used elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
+from .conda_interface import rm_rf  # NOQA
 
 from conda_build.os_utils import external
 
@@ -906,16 +908,3 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
         files_list = set(files_list) - set(filter(r.match, files_list))
     return [f.replace(prefix + os.path.sep, '') for f in files_list
             if not os.path.isdir(os.path.join(prefix, f))]
-
-
-def rm_rf(path):
-    # elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
-    if on_win:
-        if os.path.exists(path):
-            if os.path.isfile(path):
-                subprocess.check_call('del "{}"'.format(path), shell=True)
-            else:
-                subprocess.check_call('rd "{}" /s /q'.format(path), shell=True)
-    else:
-        from conda_build import conda_interface
-        return conda_interface.rm_rf(path)
