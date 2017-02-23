@@ -92,7 +92,7 @@ def guess_license_family(license_name=None,
     for family in recognized:
         if license_name in family:
             return family
-    return 'Other'
+    return 'OTHER'
 
 
 def ensure_valid_license_family(meta):

@@ -72,7 +72,7 @@ def test_old_warnings_no_longer_fail():
 
 def test_gpl2():
     licenses = {u'GPL-2', u'GPL-2 | file LICENSE',
-                u'GNU General Public License v2 or later (GPLv2+)'  }
+                u'GNU General Public License v2 or later (GPLv2+)'}
     for cens in licenses:
         fam = guess_license_family(cens)
         assert fam == u'GPL2'
@@ -128,4 +128,4 @@ def test_other():
                 u'Free software (X11 License)', u'Custom free software license'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'Other'
+        assert fam == u'OTHER'
