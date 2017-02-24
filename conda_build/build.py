@@ -141,7 +141,10 @@ def have_prefix_files(files, prefix):
             continue
 
         fi = open(path, 'rb+')
-        mm = mmap.mmap(fi.fileno(), 0)
+        try:
+            mm = mmap.mmap(fi.fileno(), 0)
+        except OSError:
+            mm = fi
 
         mode = 'binary' if mm.find(b'\x00') != -1 else 'text'
         if mode == 'text':
