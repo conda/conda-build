@@ -10,35 +10,19 @@ from collections import defaultdict
 import json
 import logging
 from operator import itemgetter
-from os.path import abspath, join, dirname, exists, basename, isdir
+from os.path import abspath, join, dirname, exists, basename
 import os
 import re
 import sys
 import tempfile
 
 from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linked_data, linked,
-                              get_index)
+                              get_index, which_prefix)
 
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file
-
-
-def which_prefix(path):
-    """
-    given the path (to a (presumably) conda installed file) return the
-    environment prefix in which the file in located
-    """
-    prefix = abspath(path)
-    while True:
-        if isdir(join(prefix, 'conda-meta')):
-            # we found the it, so let's return it
-            return prefix
-        if prefix == dirname(prefix):
-            # we cannot chop off any more directories, so we didn't find it
-            return None
-        prefix = dirname(prefix)
 
 
 def which_package(path):

@@ -150,14 +150,18 @@ def which_prefix(path):
     """
     from os.path import abspath, join, isdir, dirname
     prefix = abspath(path)
-    while True:
+    iteration = 0
+    while iteration < 20:
         if isdir(join(prefix, 'conda-meta')):
             # we found the it, so let's return it
-            return prefix
+            break
         if prefix == dirname(prefix):
             # we cannot chop off any more directories, so we didn't find it
-            return None
+            prefix = None
+            break
         prefix = dirname(prefix)
+        iteration += 1
+    return prefix
 
 
 if parse_version(conda.__version__) >= parse_version("4.3"):

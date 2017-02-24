@@ -578,9 +578,8 @@ def get_install_actions(prefix, index, specs, config, retries=0):
                     locks = utils.get_conda_operation_locks(config)
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = str(exc)
-                        max_folders = 20
                         folder = 0
-                        while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < max_folders:
+                        while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
                             pkg_dir = os.path.dirname(pkg_dir)
                             folder += 1
                         log.warn("I think conda ended up with a partial extraction for %s.  "
@@ -675,8 +674,10 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                           'link a source that does not' in str(exc)):
                         with utils.try_acquire_locks(locks, timeout=config.timeout):
                             pkg_dir = str(exc)
-                            while os.path.dirname(pkg_dir) not in pkgs_dirs:
+                            folder = 0
+                            while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
                                 pkg_dir = os.path.dirname(pkg_dir)
+                                folder += 1
                             log.warn("I think conda ended up with a partial extraction for %s.  "
                                      "Removing the folder and retrying", pkg_dir)
                             if os.path.isdir(pkg_dir):
