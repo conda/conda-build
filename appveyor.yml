@@ -55,7 +55,6 @@ install:
   - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet
   - conda install -q pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4
   - conda install -c conda-forge -q perl
-  - conda install -q conda=4.2
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
@@ -83,7 +82,7 @@ test_script:
   - mkdir C:\cbtmp
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
   - rd /S /Q C:\cbtmp
-  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --durations=15
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp

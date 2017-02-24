@@ -31,7 +31,7 @@ from conda_build.conda_interface import default_python
 
 from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env
 from conda_build.source import apply_patch
-from conda_build.build import create_env
+from conda_build.environ import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
@@ -989,8 +989,9 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     if not os.path.isdir(config.build_prefix) or not os.listdir(config.build_prefix):
         create_env(config.build_prefix, specs=specs,
-                clear_cache=False,
-                config=config)
+                   subdir=config.build_subdir,
+                   clear_cache=False,
+                   config=config)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

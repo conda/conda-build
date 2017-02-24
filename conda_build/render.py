@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 from locale import getpreferredencoding
 import os
 from os.path import isdir, isfile, abspath
+import re
 import subprocess
 import sys
 import tarfile
@@ -16,53 +17,15 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3
+from .conda_interface import PY3, UnsatisfiableError, plan, cc, ProgressiveFetchExtract
 
-from conda_build import exceptions, utils
+from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
-from conda_build.completers import all_versions, conda_version
-from conda_build.utils import rm_rf
-
-
-def set_language_env_vars(args, parser, config, execute=None):
-    """Given args passed into conda command, set language env vars"""
-    for lang in all_versions:
-        versions = getattr(args, lang)
-        if not versions:
-            continue
-        if versions == ['all']:
-            if all_versions[lang]:
-                versions = all_versions[lang]
-            else:
-                parser.error("'all' is not supported for --%s" % lang)
-        if len(versions) > 1:
-            for ver in versions[:]:
-                setattr(args, lang, [str(ver)])
-                if execute:
-                    execute(args, parser, config)
-                # This is necessary to make all combinations build.
-                setattr(args, lang, versions)
-            return
-        else:
-            version = versions[0]
-            if lang in ('python', 'numpy'):
-                version = int(version.replace('.', ''))
-            setattr(config, conda_version[lang], version)
-        if not len(str(version)) in (2, 3) and lang in ['python', 'numpy']:
-            if all_versions[lang]:
-                raise RuntimeError("%s must be major.minor, like %s, not %s" %
-                    (conda_version[lang], all_versions[lang][-1] / 10, version))
-            else:
-                raise RuntimeError("%s must be major.minor, not %s" %
-                    (conda_version[lang], version))
-
-    # Using --python, --numpy etc. is equivalent to using CONDA_PY, CONDA_NPY, etc.
-    # Auto-set those env variables
-    for var in conda_version.values():
-        if hasattr(config, var) and getattr(config, var):
-            # Set the env variable.
-            os.environ[var] = str(getattr(config, var))
+from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
+                                  combine_variants)
+from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.index import get_build_index
 
 
 def bldpkg_path(m):
@@ -73,24 +36,218 @@ def bldpkg_path(m):
     return os.path.join(os.path.dirname(m.config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
 
 
-def parse_or_try_download(metadata, no_download_source, config,
-                          force_download=False):
+def actions_to_pins(actions):
+    if utils.conda_43():
+        spec_name = lambda x: x.dist_name
+    else:
+        spec_name = lambda x: x
+    return [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
 
-    need_reparse_in_env = True
+
+def get_env_dependencies(m, env, variant, index=None):
+    dash_or_under = re.compile("[-_]")
+    if not index:
+        index = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
+    specs = [ms.spec for ms in m.ms_depends(env)]
+    # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
+    if env == 'build':
+        specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
+    subpackages = []
+    dependencies = []
+    for spec in specs:
+        is_subpackage = False
+        spec_name = spec.split()[0]
+        for entry in m.get_section('outputs'):
+            name = entry.get('name')
+            if name == spec_name:
+                subpackages.append(' '.join((name, m.version())))
+                is_subpackage = True
+        if not is_subpackage:
+            dependencies.append(spec)
+        for key, value in variant.items():
+            if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
+                dependencies.append(" ".join((spec_name, value)))
+    prefix = m.config.host_prefix if env == 'host' else m.config.build_prefix
+    try:
+        actions = environ.get_install_actions(prefix, index, dependencies, m.config)
+    except UnsatisfiableError as e:
+        # we'll get here if the environment is unsatisfiable
+        raise DependencyNeedsBuildingError(e)
+
+    specs = actions_to_pins(actions)
+    return specs + subpackages
+
+
+def strip_channel(spec_str):
+    if hasattr(spec_str, 'decode'):
+        spec_str = spec_str.decode()
+    if ':' in spec_str:
+        spec_str = spec_str.split("::")[-1]
+    return spec_str
+
+
+def get_pin_from_build(m, dep, build_dep_versions):
+    dep_name = dep.split()[0]
+    pin = None
+    version = build_dep_versions.get(dep_name) or m.config.variant.get(dep_name)
+    if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
+            not (dep_name == 'python' and m.noarch)):
+        pin = utils.apply_pin_expressions(version.split()[0],
+                                            **m.config.variant['pin_run_as_build'][dep_name])
+    elif dep.startswith('numpy') and 'x.x' in dep:
+        if not build_dep_versions.get(dep_name):
+            raise ValueError("numpy x.x specified, but numpy not in build requirements.")
+        pin = utils.apply_pin_expressions(version.split()[0], min_pin='p.p', max_pin='p.p')
+    if pin:
+        dep = " ".join((dep_name, pin))
+    return dep
+
+
+def get_upstream_pins(m, dependencies, index):
+    """Download packages from specs, then inspect each downloaded package for additional
+    downstream dependency specs.  Return these additional specs."""
+    dependencies = [strip_channel(dep) for dep in dependencies]
+    # Add _tmp here to prevent creating the build_prefix too early. This is because, when
+    # dirty is set, we skip calling create_env if the folder already exists.
+    actions = environ.get_install_actions(m.config.build_prefix + "_tmp", index, dependencies,
+                                          m.config)
+    additional_specs = []
+    linked_packages = actions['LINK']
+    # edit the plan to download all necessary packages
+    if 'LINK' in actions:
+        del actions['LINK']
+    if 'EXTRACT' in actions:
+        del actions['EXTRACT']
+    # this should be just downloading packages.  We don't need to extract them -
+    #    we read contents directly
+    if actions:
+        plan.execute_actions(actions, index, verbose=m.config.debug)
+
+        pkgs_dirs = cc.pkgs_dirs + list(m.config.bldpkgs_dirs)
+        for pkg in linked_packages:
+            for pkgs_dir in pkgs_dirs:
+                if hasattr(pkg, 'dist_name'):
+                    pkg_dist = pkg.dist_name
+                else:
+                    pkg = strip_channel(pkg)
+                    pkg_dist = pkg.split(' ')[0]
+
+                pkg_dir = os.path.join(pkgs_dir, pkg_dist)
+                pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
+                if os.path.isdir(pkg_dir):
+                    downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
+                    if os.path.isfile(downstream_file):
+                        additional_specs.extend(open(downstream_file).read().splitlines())
+                    break
+                elif os.path.isfile(pkg_file):
+                    extra_specs = utils.package_has_file(pkg_file, 'info/pin_downstream')
+                    if extra_specs:
+                        additional_specs.extend(extra_specs.splitlines())
+                    break
+                elif utils.conda_43():
+                    # TODO: this is a vile hack reaching into conda's internals. Replace with proper
+                    #    conda API when available.
+                    try:
+                        pfe = ProgressiveFetchExtract(link_dists=[pkg],
+                                                    index=index)
+                        pfe.execute()
+                        for pkgs_dir in pkgs_dirs:
+                            pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
+                            if os.path.isfile(pkg_file):
+                                extra_specs = utils.package_has_file(pkg_file,
+                                                                     'info/pin_downstream')
+                                if extra_specs:
+                                    additional_specs.extend(extra_specs.splitlines())
+                                break
+                        break
+                    except KeyError:
+                        raise DependencyNeedsBuildingError(packages=[pkg.name])
+            else:
+                raise RuntimeError("Didn't find expected package {} in package cache ({})"
+                                    .format(pkg, pkgs_dirs))
+
+    return additional_specs
+
+
+def finalize_metadata(m, index=None):
+    """Fully render a recipe.  Fill in versions for build dependencies."""
+    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
+    #     be installed in the environment.
+
+    if not index:
+        index = get_build_index(m.config, m.config.build_subdir)
+    build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
+    # optimization: we don't need the index after here, and copying them takes a lot of time.
+    rendered_metadata = m.copy()
+    build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
+
+    extra_run_specs = get_upstream_pins(m, build_deps, index)
+
+    reset_index = False
+    if m.config.build_subdir != m.config.host_subdir:
+        index = get_build_index(m.config, m.config.host_subdir)
+        reset_index = True
+
+    # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
+    #    To avoid confusion, any index passed around is always the native build platform.
+    if reset_index:
+        index = None
+
+    # here's where we pin run dependencies to their build time versions.  This happens based
+    #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
+    #     names to have this behavior.
+    requirements = rendered_metadata.meta.get('requirements', {})
+    run_deps = requirements.get('run', [])
+    versioned_run_deps = [get_pin_from_build(m, dep, build_dep_versions) for dep in run_deps]
+    versioned_run_deps.extend(extra_run_specs)
+
+    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
+    for env, values in (('build', build_deps), ('run', versioned_run_deps)):
+        if values:
+            requirements[env] = list({strip_channel(dep) for dep in values})
+    rendered_metadata.meta['requirements'] = requirements
+
+    test_deps = rendered_metadata.get_value('test/requires')
+    if test_deps:
+        versioned_test_deps = list({get_pin_from_build(m, dep, build_dep_versions)
+                                    for dep in test_deps})
+        rendered_metadata.meta['test']['requires'] = versioned_test_deps
+
+    # if source/path is relative, then the output package makes no sense at all.  The next
+    #   best thing is to hard-code the absolute path.  This probably won't exist on any
+    #   system other than the original build machine, but at least it will work there.
+    if m.meta.get('source'):
+        if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
+            rendered_metadata.meta['source']['path'] = os.path.normpath(
+                os.path.join(m.path, m.meta['source']['path']))
+        elif ('git_url' in m.meta['source'] and not (
+                # absolute paths are not relative paths
+                os.path.isabs(m.meta['source']['git_url']) or
+                # real urls are not relative paths
+                ":" in m.meta['source']['git_url'])):
+            rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                os.path.join(m.path, m.meta['source']['git_url']))
+
+    if not rendered_metadata.meta.get('build'):
+        rendered_metadata.meta['build'] = {}
+    # hard-code build string so that any future "renderings" can't go wrong based on user env
+    rendered_metadata.meta['build']['string'] = rendered_metadata.build_id()
+
+    rendered_metadata.final = True
+    rendered_metadata.config.index = index
+    return rendered_metadata
+
+
+def try_download(metadata, no_download_source, force_download=False):
     need_source_download = True
     if (force_download or (not no_download_source and metadata.needs_source_for_render)):
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not config.dirty or len(os.listdir(config.work_dir)) == 0:
-                source.provide(metadata, config=config)
-            if not metadata.get_section('source') or len(os.listdir(config.work_dir)) > 0:
+            if not metadata.config.dirty or len(os.listdir(metadata.config.work_dir)) == 0:
+                source.provide(metadata)
+            if not metadata.get_section('source') or len(os.listdir(metadata.config.work_dir)) > 0:
                 need_source_download = False
-            try:
-                metadata.parse_again(config=config, permit_undefined_jinja=False)
-                need_reparse_in_env = False
-            except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
-                pass  # we just don't alter the need_reparse_in_env variable
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
@@ -99,26 +256,83 @@ def parse_or_try_download(metadata, no_download_source, config,
 
     elif not metadata.get_section('source'):
         need_source_download = False
-        need_reparse_in_env = False
-    if not need_reparse_in_env:
-        try:
-            metadata.parse_until_resolved(config=config)
-        except exceptions.UnableToParseMissingSetuptoolsDependencies:
-            need_reparse_in_env = True
-    if metadata.get_value('build/noarch'):
-        config.noarch = True
-    return metadata, need_source_download, need_reparse_in_env
+
+    if need_source_download and no_download_source:
+        raise ValueError("no_download_source specified, but can't fully render recipe without"
+                         " downloading source.  Please fix the recipe, or don't use "
+                         "no_download_source.")
 
 
-def reparse(metadata, config):
+def reparse(metadata, index):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
-    sys.path.insert(0, config.build_prefix)
-    sys.path.insert(0, utils.get_site_packages(config.build_prefix))
-    metadata.parse_again(config=config, permit_undefined_jinja=False)
+    metadata.final = False
+    sys.path.insert(0, metadata.config.build_prefix)
+    sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
+    metadata.parse_again(permit_undefined_jinja=False)
+    metadata = finalize_metadata(metadata, index)
+    return metadata
 
 
-def render_recipe(recipe_path, config, no_download_source=False):
+def base_parse(metadata, index):
+    if 'host' in metadata.get_section('requirements'):
+        metadata.config.has_separate_host_prefix = True
+    metadata.parse_until_resolved()
+    try:
+        metadata = reparse(metadata, index)
+    except DependencyNeedsBuildingError:
+        raise
+    except exceptions.UnableToParseMissingSetuptoolsDependencies:
+        raise
+    return metadata
+
+
+def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False):
+    rendered_metadata = {}
+    need_reparse_in_env = False
+    unsatisfiable_variants = []
+    packages_needing_building = set()
+
+    for variant in variants:
+        mv = metadata.copy()
+        # deep copy the sensitive parts to decouple metadata objects
+        mv.config = metadata.config.copy()
+        mv.config.variant = combine_variants(variant, mv.config.variant)
+        mv.final = False
+
+        # TODO: may need to compute new build id, or at least remove any envs before building
+        #    another variant
+
+        if 'target_platform' in variant:
+            mv.config.host_subdir = variant['target_platform']
+        if not need_reparse_in_env:
+            try:
+                mv = base_parse(mv, index)
+            except DependencyNeedsBuildingError as e:
+                unsatisfiable_variants.append(variant)
+                packages_needing_building.update(set(e.packages))
+                continue
+            except exceptions.UnableToParseMissingSetuptoolsDependencies:
+                need_reparse_in_env = True
+            except:
+                raise
+        need_source_download = (bool(mv.meta.get('source')) and not mv.needs_source_for_render and
+                                not os.listdir(mv.config.work_dir))
+        # computes hashes based on whatever the current specs are - not the final specs
+        #    This is a deduplication step.  Any variants that end up identical because a
+        #    given variant is not used in a recipe are effectively ignored, though we still pay
+        #    the price to parse for that variant.
+        rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
+    # list of tuples.
+    # each tuple item is a tuple of 3 items:
+    #    metadata, need_download, need_reparse_in_env
+    if unsatisfiable_variants and not permit_unsatisfiable_variants:
+        raise DependencyNeedsBuildingError(packages=packages_needing_building)
+    return list(rendered_metadata.values())
+
+
+def render_recipe(recipe_path, config, no_download_source=False, variants=None,
+                  permit_unsatisfiable_variants=True):
     arg = recipe_path
     # Don't use byte literals for paths in Python 2
     if not PY3:
@@ -135,7 +349,7 @@ def render_recipe(recipe_path, config, no_download_source=False):
             need_cleanup = False
         else:
             print("Ignoring non-recipe: %s" % arg)
-            return
+            return None, None
     else:
         recipe_dir = abspath(arg)
         need_cleanup = False
@@ -150,24 +364,29 @@ def render_recipe(recipe_path, config, no_download_source=False):
         sys.exit(1)
 
     if config.set_build_id:
-        # updates a unique build id if not already computed
-        config.compute_build_id(m.name())
+        m.config.compute_build_id(m.name(), reset=True)
 
-    m, need_download, need_reparse_in_env = parse_or_try_download(m,
-                                                no_download_source=no_download_source,
-                                                config=config)
-    if need_download and no_download_source:
-        raise ValueError("no_download_source specified, but can't fully render recipe without"
-                         " downloading source.  Please fix the recipe, or don't use "
-                         "no_download_source.")
-    config.noarch = bool(m.get_value('build/noarch'))
+    if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
+                                      len(os.listdir(m.config.work_dir)) == 0):
+        try_download(m, no_download_source=no_download_source)
+
+    rendered_metadata = {}
+
+    if m.final:
+        rendered_metadata = [(m, False, False), ]
+        index = None
+    else:
+        variants = dict_of_lists_to_list_of_dicts(variants) if variants else get_package_variants(m)
+        index = get_build_index(m.config, m.config.build_subdir)
+        rendered_metadata = distribute_variants(m, variants, index,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+        if not rendered_metadata:
+            raise ValueError("No variants were satisfiable - no valid recipes could be rendered.")
 
     if need_cleanup:
-        rm_rf(recipe_dir)
-    if not need_download or need_reparse_in_env:
-        m.final = True
+        utils.rm_rf(recipe_dir)
 
-    return m, need_download, need_reparse_in_env
+    return rendered_metadata, index
 
 
 # Next bit of stuff is to support YAML output in the order we expect.
@@ -205,6 +424,11 @@ def output_yaml(metadata, filename=None):
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:
+        if any(sep in filename for sep in ('\\', '/')):
+            try:
+                os.makedirs(os.path.dirname(filename))
+            except OSError:
+                pass
         with open(filename, "w") as f:
             f.write(output)
         return "Wrote yaml to %s" % filename

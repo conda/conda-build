@@ -1,6 +1,6 @@
 package:
   name: conda-build-test-extra-metadata
-  version: 0.1
+  version: 1.0
 
 test:
   requires:

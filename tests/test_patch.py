@@ -23,7 +23,7 @@ def test_patch_strip_level(testing_workdir, monkeypatch):
     monkeypatch.chdir(testing_workdir)
 
 
-def test_patch(testing_workdir, test_config):
+def test_patch(testing_workdir, testing_config):
     with open('file-deletion.txt', 'w') as f:
         f.write('hello\n')
     with open('file-modification.txt', 'w') as f:
@@ -47,7 +47,7 @@ def test_patch(testing_workdir, test_config):
         f.write('-hello\n')
         f.write('+43770\n')
         f.close()
-        apply_patch('.', patchfile, test_config)
+        apply_patch('.', patchfile, testing_config)
         assert not os.path.exists('file-deletion.txt')
         assert os.path.exists('file-creation.txt')
         assert os.path.exists('file-modification.txt')

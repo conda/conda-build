@@ -1,0 +1,7 @@
+package:
+  name: test_has_pin_downstream
+  version: 1.0
+
+build:
+  pin_downstream:
+    - downstream_pinned_package 1.0

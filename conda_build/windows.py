@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import logging
 import os
 import sys
 from os.path import isdir, join, dirname, isfile
@@ -15,6 +16,7 @@ from .conda_interface import bits
 
 from conda_build import environ
 from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into
+from conda_build.variants import set_language_env_vars, get_default_variants
 
 
 assert sys.platform == 'win32'
@@ -86,6 +88,10 @@ def build_vcvarsall_vs_path(version):
 
 
 def msvc_env_cmd(bits, config, override=None):
+    log = logging.getLogger(__name__)
+    log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0.  "
+             "Use {{compiler('c')}} jinja2 in requirements/build or explicitly list compiler "
+             "package as build dependency instead.")
     arch_selector = 'x86' if bits == 32 else 'amd64'
 
     msvc_env_lines = []
@@ -105,10 +111,11 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append('set MSSdk=1')
 
     if not version:
-        if config.PY3K and config.use_MSVC2015:
+        py_ver = config.variant.get('python', get_default_variants()[0]['python'])
+        if int(py_ver[0]) >= 3:
+            if int(py_ver.split('.')[1]) < 5:
+                version = '10.0'
             version = '14.0'
-        elif config.PY3K:
-            version = '10.0'
         else:
             version = '9.0'
 
@@ -195,17 +202,20 @@ def msvc_env_cmd(bits, config, override=None):
     return '\n'.join(msvc_env_lines) + '\n'
 
 
-def build(m, bld_bat, config):
-    with path_prepended(config.build_prefix):
-        env = environ.get_dict(config=config, m=m)
+def build(m, bld_bat):
+    with path_prepended(m.config.build_prefix):
+        env = environ.get_dict(config=m.config, m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
+
+    # set variables like CONDA_PY in the test environment
+    env.update(set_language_env_vars(m.config.variant))
 
     for name in 'BIN', 'INC', 'LIB':
         path = env['LIBRARY_' + name]
         if not isdir(path):
             os.makedirs(path)
 
-    src_dir = config.work_dir
+    src_dir = m.config.work_dir
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
@@ -214,20 +224,20 @@ def build(m, bld_bat, config):
             fo.write('@echo on\n')
             for key, value in env.items():
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write(msvc_env_cmd(bits=bits, config=config,
+            fo.write(msvc_env_cmd(bits=bits, config=m.config,
                                   override=m.get_value('build/msvc_compiler', None)))
             # Reset echo on, because MSVC scripts might have turned it off
             fo.write('@echo on\n')
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
             fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
-            if config.activate:
+            if m.config.activate:
                 fo.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
                     conda_root=root_script_dir,
-                    prefix=config.build_prefix))
+                    prefix=m.config.build_prefix))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
         check_call_env(cmd, cwd=src_dir)
 
-    fix_staged_scripts(join(config.build_prefix, 'Scripts'))
+    fix_staged_scripts(join(m.config.build_prefix, 'Scripts'))

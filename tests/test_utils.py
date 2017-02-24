@@ -60,7 +60,7 @@ def test_merge_namespace_trees(namespace_setup):
     assert os.path.isfile(dep)
 
 
-def test_disallow_merge_conflicts(namespace_setup, test_config):
+def test_disallow_merge_conflicts(namespace_setup, testing_config):
     duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
     makefile(duplicate)
     with pytest.raises(IOError):
@@ -169,3 +169,16 @@ def test_expand_globs(testing_workdir):
             _f.write('weee')
     assert utils.expand_globs(files, testing_workdir) == files
     assert utils.expand_globs(['a*'], testing_workdir) == files
+
+
+def test_filter_files():
+    # Files that should be filtered out.
+    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
+    assert not utils.filter_files(files_list, '')
+
+    # Files that should *not* be filtered out.
+    # Example of valid 'x.git' directory:
+    #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
+    files_list = ['a', 'x.git/a', 'something/x.git/a',
+                  'x.git\\a', 'something\\x.git\\a']
+    assert len(utils.filter_files(files_list, '')) == len(files_list)

@@ -16,8 +16,7 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
-from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
-                                         get_render_parser, bldpkg_path)
+from conda_build.cli.main_render import RecipeCompleter, get_render_parser, bldpkg_path
 from conda_build.conda_interface import cc, add_parser_channels, url_path
 import conda_build.source as source
 from conda_build.utils import print_skip_message, LoggingContext
@@ -235,7 +234,8 @@ different sets of packages."""
 
 def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
-        metadata, _, _ = api.render(recipe, config=config)
+        metadata_tuples = api.render(recipe, config=config)
+    for (metadata, _, _) in metadata_tuples:
         if metadata.skip():
             print_skip_message(metadata)
         else:
@@ -243,9 +243,9 @@ def output_action(recipe, config):
 
 
 def source_action(recipe, config):
-    metadata, _, _ = api.render(recipe, config=config)
-    source.provide(metadata, config=config)
-    print('Source tree in:', config.work_dir)
+    metadata = api.render(recipe, config=config)[0][0]
+    source.provide(metadata)
+    print('Source tree in:', metadata.config.work_dir)
 
 
 def test_action(recipe, config):
@@ -262,7 +262,7 @@ def execute(args):
     build.check_external()
 
     # change globals in build module, see comment there as well
-    channel_urls = args.channel or ()
+    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
     config.channel_urls = []
 
     for url in channel_urls:
@@ -287,14 +287,12 @@ def execute(args):
         config.clean_pkgs()
         return
 
-    set_language_env_vars(args, parser, config=config, execute=execute)
-
     action = None
     if args.output:
         action = output_action
-        logging.basicConfig(level=logging.ERROR)
         config.verbose = False
         config.quiet = True
+        config.debug = False
     elif args.test:
         action = test_action
     elif args.source:
@@ -303,10 +301,7 @@ def execute(args):
         action = check_action
 
     if action:
-        for recipe in args.recipe:
-            action(recipe, config)
-        outputs = []
-
+        outputs = [action(recipe, config) for recipe in args.recipe]
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
                             notest=args.notest, already_built=None, config=config,

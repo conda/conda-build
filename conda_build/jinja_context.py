@@ -9,9 +9,11 @@ import sys
 
 import jinja2
 
-from .conda_interface import PY3
+from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
-from .metadata import select_lines, ns_cfg
+from .index import get_build_index
+from .render import get_env_dependencies
+from .utils import get_installed_packages, apply_pin_expressions
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -68,6 +70,8 @@ class FilteredLoader(jinja2.BaseLoader):
         self.config = config
 
     def get_source(self, environment, template):
+        # we have circular imports here.  Do a local import
+        from .metadata import select_lines, ns_cfg
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
         return select_lines(contents, ns_cfg(self.config)), filename, uptodate
@@ -203,6 +207,133 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
+@memoized
+def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x',
+                   max_pin='x', permit_undefined_jinja=True):
+    """dynamically pin based on currently installed version.
+
+    only mandatory input is package_name.
+    upper_bound is the authoritative upper bound, if provided.  The lower bound is the the
+        currently installed version.
+    pin expressions are of the form 'x.x' - the number of pins is the number of x's separated
+        by ``.``.
+    """
+    compatibility = None
+    if not m.config.index:
+        m.config.index = get_build_index(m.config, subdir=m.config.build_subdir)
+
+    # this is the version split up into its component bits.
+    # There are two cases considered here (so far):
+    # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
+    # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
+
+    versions = {p.split(' ')[0]: p.split(' ')[1]
+                for p in get_env_dependencies(m, 'build', m.config.variant, m.config.index)}
+    if versions:
+        version = lower_bound or versions.get(package_name)
+        if version:
+            if upper_bound:
+                compatibility = ">=" + str(version) + ","
+                compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+            else:
+                compatibility = apply_pin_expressions(version, min_pin, max_pin)
+
+    if not compatibility and not permit_undefined_jinja:
+        raise RuntimeError("Could not get compatibility information for {} package.  Is the "
+                            "build environment created?".format(package_name))
+    return compatibility
+
+
+def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x', exact=False,
+                   permit_undefined_jinja=True):
+    """allow people to specify pinnings based on subpackages that are defined in the recipe.
+
+    For example, given a compiler package, allow it to specify either a compatible or exact
+    pinning on the runtime package that is also created by the compiler package recipe"""
+    output_metadata = metadata.get_output_metadata_set(None,
+                                                    permit_undefined_jinja=permit_undefined_jinja)
+    pin = None
+    for (output_dict, sp_m) in output_metadata:
+        if sp_m.name() == subpackage_name:
+            if exact:
+                pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+            else:
+                pin = "{0} {1}".format(subpackage_name, apply_pin_expressions(sp_m.version(),
+                                                                              min_pin, max_pin))
+    return pin
+
+
+# map python version to default compiler on windows, to match upstream python
+#    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
+#    in the conda-build variant configuration
+compilers = {
+    'win': {
+        'c': {
+            '2.7': 'vs2008',
+            '3.3': 'vs2010',
+            '3.4': 'vs2010',
+            '3.5': 'vs2015',
+        },
+        'cxx': {
+            '2.7': 'vs2008',
+            '3.3': 'vs2010',
+            '3.4': 'vs2010',
+            '3.5': 'vs2015',
+        },
+        'fortran': 'gfortran',
+    },
+    'linux': {
+        'c': 'gcc',
+        'cxx': 'g++',
+        'fortran': 'gfortran',
+    },
+    'osx': {
+        'c': 'clang',
+        'cxx': 'clang++',
+        'fortran': 'gfortran',
+    },
+}
+
+
+def _native_compiler(language, config):
+    compiler = compilers[config.platform][language]
+    if hasattr(compiler, 'keys'):
+        compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
+    return compiler
+
+
+def compiler(language, config, permit_undefined_jinja=False):
+    """Support configuration of compilers.  This is somewhat platform specific.
+
+    Native compilers never list their host - it is always implied.  Generally, they are
+    metapackages, pointing at a package that does specify the host.  These in turn may be
+    metapackages, pointing at a package where the host is the same as the target (both being the
+    native architecture).
+    """
+    native_compiler = _native_compiler(language, config)
+    language_compiler_key = '{}_compiler'.format(language)
+    # fall back to native if language-compiler is not explicitly set in variant
+    compiler = config.variant.get(language_compiler_key, native_compiler)
+
+    # support cross compilers.  A cross-compiler package will have a name such as
+    #    gcc_host_target
+    #    gcc_centos5_centos5
+    #    gcc_centos7_centos5
+    #
+    # Note that the host needs to be part of the compiler.  Right now, that means that the compiler
+    #    needs to be defined in the variant - not just the native default
+    if 'target_platform' in config.variant:
+        if language_compiler_key in config.variant:
+            compiler = '_'.join([config.variant[language_compiler_key],
+                                 config.variant['target_platform']])
+        # This is not defined in early stages of parsing.  Let it by if permit_undefined_jinja set
+        elif not permit_undefined_jinja:
+            raise ValueError("{0} must be set in variant config in order to use target_platform."
+                             "  Please set it to the name of the package, including the host "
+                             "(e.g. gcc-centos5)".format(language_compiler_key))
+    return compiler
+
+
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
     """
     Return a dictionary to use as context for jinja templates.
@@ -210,7 +341,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
     initial_metadata: Augment the context with values from this MetaData object.
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
-    ctx = get_environ(config=config, m=initial_metadata)
+    ctx = get_environ(config=config, m=initial_metadata, for_env=False)
     environ = dict(os.environ)
     environ.update(get_environ(config=config, m=initial_metadata))
 
@@ -223,5 +354,25 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_npm=load_npm,
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
+        installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
+        pin_compatible=partial(pin_compatible, initial_metadata,
+                               permit_undefined_jinja=permit_undefined_jinja),
+        pin_subpackage=partial(pin_subpackage, initial_metadata,
+                               permit_undefined_jinja=permit_undefined_jinja),
+        compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
+
         environ=environ)
     return ctx
+
+
+def get_used_variants(recipe_metadata):
+    """because the functions in jinja_context don't directly used jinja variables, we need to teach
+    conda-build which ones are used, so that it can limit the build space based on what entries are
+    actually used."""
+    with open(recipe_metadata.meta_path) as f:
+        recipe_text = f.read()
+    used_variables = set()
+    for lang in 'c', 'cxx', 'fortran':
+        if re.search('compiler\([\\]?[\'"]{}[\\]?[\'"]\)'.format(lang), recipe_text):
+            used_variables.update(set(['{}_compiler'.format(lang), 'target_platform']))
+    return used_variables

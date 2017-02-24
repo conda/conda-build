@@ -1,0 +1,4 @@
+requirements:
+  build:
+    # git chosen here because it is independent of compiler on win
+    - git

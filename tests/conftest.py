@@ -5,8 +5,11 @@ import sys
 import pytest
 
 from conda_build.config import Config
+from conda_build.index import get_build_index
+from conda_build.conda_interface import subdir
+from conda_build.variants import get_default_variants
 from conda_build.metadata import MetaData
-from conda_build.utils import check_call_env, prepend_bin_path
+from conda_build.utils import check_call_env, prepend_bin_path, copy_into
 
 
 @pytest.fixture(scope='function')
@@ -29,7 +32,7 @@ def testing_workdir(tmpdir, request):
             files = profdir.listdir('*.prof') if profdir.isdir() else []
 
             for f in files:
-                f.rename(os.path.join(saved_path, 'prof', f.basename))
+                copy_into(str(f), os.path.join(saved_path, 'prof', f.basename))
         os.chdir(saved_path)
 
     request.addfinalizer(return_to_saved_path)
@@ -38,12 +41,21 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope='function')
-def test_config(testing_workdir, request):
-    return Config(croot=testing_workdir, anaconda_upload=False, verbose=True, activate=False)
+def testing_index(request):
+    index = get_build_index(config=Config(debug=False, verbose=False), subdir=subdir,
+                            clear_cache=True)
+    return index
 
 
 @pytest.fixture(scope='function')
-def test_metadata(request, test_config):
+def testing_config(testing_workdir, testing_index, request):
+    return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
+                  activate=False, debug=False, variant=None,
+                  indexes=testing_index)
+
+
+@pytest.fixture(scope='function')
+def testing_metadata(request, testing_config, testing_index):
     d = defaultdict(dict)
     d['package']['name'] = request.function.__name__
     d['package']['version'] = '1.0'
@@ -55,8 +67,9 @@ def test_metadata(request, test_config):
     d['about']['home'] = "sweet home"
     d['about']['license'] = "contract in blood"
     d['about']['summary'] = "a test package"
-
-    return MetaData.fromdict(d, config=test_config)
+    testing_config.index = testing_index
+    testing_config.variant = get_default_variants()[0]
+    return MetaData.fromdict(d, config=testing_config)
 
 
 @pytest.fixture(scope='function')
@@ -65,6 +78,7 @@ def testing_env(testing_workdir, request, monkeypatch):
 
     check_call_env(['conda', 'create', '-yq', '-p', env_path,
                     'python={0}'.format(".".join(sys.version.split('.')[:2]))])
-    monkeypatch.setenv('PATH', prepend_bin_path(os.environ.copy(), env_path, prepend_prefix=True)['PATH'])
+    monkeypatch.setenv('PATH', prepend_bin_path(os.environ.copy(), env_path,
+                                                prepend_prefix=True)['PATH'])
     # cleanup is done by just cleaning up the testing_workdir
     return env_path

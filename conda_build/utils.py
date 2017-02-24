@@ -5,6 +5,7 @@ from collections import defaultdict
 import contextlib
 import fnmatch
 from glob import glob
+import json
 from locale import getpreferredencoding
 import logging
 import operator
@@ -25,9 +26,13 @@ import filelock
 
 from conda import __version__ as conda_version
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems
+from .conda_interface import PY3, iteritems, cc
 from .conda_interface import root_dir
-from .conda_interface import string_types
+from .conda_interface import string_types, url_path, get_rc_urls
+from .conda_interface import StringIO
+from .conda_interface import VersionOrder
+# NOQA because it is not used in this file.
+from conda_build.conda_interface import rm_rf  # NOQA
 
 from conda_build.os_utils import external
 
@@ -43,9 +48,6 @@ else:
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
 
-
-# elsewhere, kept here for reduced duplication.  NOQA because it is not used in this file.
-from .conda_interface import rm_rf  # NOQA
 
 on_win = (sys.platform == 'win32')
 
@@ -282,6 +284,22 @@ def get_lock(folder, timeout=90, filename=".conda_lock"):
         raise RuntimeError("Could not write locks folder to either system location ({0})"
                            "or user location ({1}).  Aborting.".format(*_lock_folders))
     return _locations[location]
+
+
+def get_conda_operation_locks(config=None):
+    locks = []
+    # locks enabled by default
+    if not config or config.locking:
+        cc.pkgs_dirs = cc.pkgs_dirs[:1]
+        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        for folder in locked_folders:
+            if not os.path.isdir(folder):
+                os.makedirs(folder)
+            lock = get_lock(folder, timeout=config.timeout if config else 90)
+            locks.append(lock)
+        # lock used to generally indicate a conda operation occurring
+        locks.append(get_lock('conda-operation', timeout=config.timeout if config else 90))
+    return locks
 
 
 def relative(f, d='lib'):
@@ -629,8 +647,12 @@ def convert_path_for_cygwin_or_msys2(exe, path):
             msys2_cygwin = re.findall(b'(cygwin1.dll|msys-2.0.dll)', exe_binary)
             _posix_exes_cache[exe] = True if msys2_cygwin else False
     if _posix_exes_cache[exe]:
-        return check_output_env(['cygpath', '-u',
-                                 path]).splitlines()[0].decode(getpreferredencoding())
+        try:
+            path = check_output_env(['cygpath', '-u',
+                                     path]).splitlines()[0].decode(getpreferredencoding())
+        except WindowsError:
+            log = logging.getLogger(__name__)
+            log.debug('cygpath executable not found.  Passing native path.  This is OK for msys2.')
     return path
 
 
@@ -641,19 +663,21 @@ def print_skip_message(metadata):
 
 def package_has_file(package_path, file_path):
     try:
-        with tarfile.open(package_path) as t:
-            try:
-                # internal paths are always forward slashed on all platforms
-                file_path = file_path.replace('\\', '/')
-                text = t.extractfile(file_path).read()
-                return text
-            except KeyError:
-                return False
-            except OSError as e:
-                raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
+        locks = get_conda_operation_locks()
+        with try_acquire_locks(locks, timeout=90):
+            with tarfile.open(package_path) as t:
+                try:
+                    # internal paths are always forward slashed on all platforms
+                    file_path = file_path.replace('\\', '/')
+                    text = t.extractfile(file_path).read()
+                    return text
+                except KeyError:
+                    return False
+                except OSError as e:
+                    raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
     except tarfile.ReadError:
         raise RuntimeError("Could not extract metadata from %s. "
-                           "File probably corrupt." % package_path)
+                            "File probably corrupt." % package_path)
 
 
 def ensure_list(arg):
@@ -676,6 +700,7 @@ def tmp_chdir(dest):
 
 
 def expand_globs(path_list, root_dir):
+    log = logging.getLogger(__name__)
     files = []
     for path in path_list:
         if not os.path.isabs(path):
@@ -686,7 +711,10 @@ def expand_globs(path_list, root_dir):
         elif os.path.isfile(path):
             files.append(path.replace(root_dir + os.path.sep, ''))
         else:
-            files.extend(f.replace(root_dir + os.path.sep, '') for f in glob(path))
+            glob_files = [f.replace(root_dir + os.path.sep, '') for f in glob(path)]
+            if not glob_files:
+                log.error('invalid recipe path: {}'.format(path))
+            files.extend(glob_files)
     return files
 
 
@@ -739,7 +767,160 @@ class LoggingContext(object):
         # implicit return of None => don't swallow exceptions
 
 
+def get_installed_packages(path):
+    '''
+    Scan all json files in 'path' and return a dictionary with their contents.
+    Files are assumed to be in 'index.json' format.
+    '''
+    installed = dict()
+    for filename in glob(os.path.join(path, 'conda-meta', '*.json')):
+        with open(filename) as file:
+            data = json.load(file)
+            installed[data['name']] = data
+    return installed
+
+
+def _convert_lists_to_sets(_dict):
+    for k, v in _dict.items():
+        if hasattr(v, 'keys'):
+            _dict[k] = HashableDict(_convert_lists_to_sets(v))
+        elif hasattr(v, '__iter__') and not isinstance(v, string_types):
+            _dict[k] = sorted(list(set(v)))
+    return _dict
+
+
+class HashableDict(dict):
+    """use hashable frozen dictionaries for resources and resource types so that they can be in sets
+    """
+    def __init__(self, *args, **kwargs):
+        super(HashableDict, self).__init__(*args, **kwargs)
+        self = _convert_lists_to_sets(self)
+
+    def __hash__(self):
+        return hash(json.dumps(self, sort_keys=True))
+
+
+# http://stackoverflow.com/a/10743550/1170370
+@contextlib.contextmanager
+def capture():
+    import sys
+    oldout, olderr = sys.stdout, sys.stderr
+    try:
+        out = [StringIO(), StringIO()]
+        sys.stdout, sys.stderr = out
+        yield out
+    finally:
+        sys.stdout, sys.stderr = oldout, olderr
+        out[0] = out[0].getvalue()
+        out[1] = out[1].getvalue()
+
+
+# copied from conda; added in 4.3, not currently part of exported functionality
+@contextlib.contextmanager
+def env_var(name, value, callback=None):
+    # NOTE: will likely want to call reset_context() when using this function, so pass
+    #       it as callback
+    name, value = str(name), str(value)
+    saved_env_var = os.environ.get(name)
+    try:
+        os.environ[name] = value
+        if callback:
+            callback()
+        yield
+    finally:
+        if saved_env_var:
+            os.environ[name] = saved_env_var
+        else:
+            del os.environ[name]
+        if callback:
+            callback()
+
+
+def collect_channels(config, is_host=False):
+    urls = [url_path(config.croot)] + get_rc_urls() + ['local', ]
+    if config.channel_urls:
+        urls.extend(config.channel_urls)
+    # defaults has a very limited set of repo urls.  Omit it from the URL list so
+    #     that it doesn't fail.
+    if config.is_cross and is_host:
+        urls.remove('defaults')
+        urls.remove('local')
+    return urls
+
+
+def trim_empty_keys(dict_):
+    to_remove = set()
+    for k, v in dict_.items():
+        if hasattr(v, 'keys'):
+            trim_empty_keys(v)
+        if not v:
+            to_remove.add(k)
+    for k in to_remove:
+        del dict_[k]
+
+
 def conda_43():
     """Conda 4.3 broke compatibility in lots of new fun and exciting ways.  This function is for
     changing conda-build's behavior when conda 4.3 or higher is installed."""
     return LooseVersion(conda_version) >= LooseVersion('4.3')
+
+
+def _increment(version):
+    try:
+        last_version = str(int(version) + 1)
+    except ValueError:
+        last_version = chr(ord(version) + 1)
+    return last_version
+
+
+def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
+    pins = [len(p.split('.')) for p in (min_pin, max_pin)]
+    parsed_version = VersionOrder(version).version[1:]
+    nesting_position = None
+    flat_list = []
+    for idx, item in enumerate(parsed_version):
+        if isinstance(item, list):
+            nesting_position = idx
+            flat_list.extend(item)
+        else:
+            flat_list.append(item)
+    versions = ['', '']
+    for p_idx, pin in enumerate(pins):
+        for v_idx, v in enumerate(flat_list[:pin]):
+            if p_idx == 1 and v_idx == pin - 1:
+                v = _increment(v)
+            versions[p_idx] += str(v)
+            if v_idx != nesting_position:
+                versions[p_idx] += '.'
+        if versions[p_idx][-1] == '.':
+            versions[p_idx] = versions[p_idx][:-1]
+    return ">={0},<{1}".format(*versions)
+
+
+def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
+                                                      '(.*[\\\\/])?\.git$',
+                                                      '(.*)?\.DS_Store.*',
+                                                      '(.*)?\.gitignore',
+                                                      '(.*)?\.gitmodules')):
+    """Remove things like .git from the list of files to be copied"""
+    for pattern in filter_patterns:
+        r = re.compile(pattern)
+        files_list = set(files_list) - set(filter(r.match, files_list))
+    return [f.replace(prefix + os.path.sep, '') for f in files_list
+            if not os.path.isdir(os.path.join(prefix, f))]
+
+
+# def rm_rf(path):
+#     if on_win:
+#         # native windows delete is potentially much faster
+#         try:
+#             if os.path.isfile(path):
+#                 subprocess.check_call('del {}'.format(path), shell=True)
+#             elif os.path.isdir(path):
+#                 subprocess.check_call('rd /s /q {}'.format(path), shell=True)
+#             else:
+#                 pass
+#         except subprocess.CalledProcessError:
+#             return _rm_rf(path)
+#     else:
+#         return _rm_rf(path)

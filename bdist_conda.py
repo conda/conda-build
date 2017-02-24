@@ -266,19 +266,17 @@ class bdist_conda(install):
             install.run(self)
         else:
             super().run()
-        api.build(m, post=True)
-        api.test(m)
-        output_file = api.get_output_file_path(m)
+        output = api.build(m, post=True)[0]
         if self.anaconda_upload:
             class args:
                 anaconda_upload = self.anaconda_upload
-            handle_anaconda_upload(output_file, args)
+            handle_anaconda_upload(output, args)
         else:
             no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
 # $ anaconda upload %s
-""" % output_file
+""" % output
             print(no_upload_message)
 
 

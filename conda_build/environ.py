@@ -1,9 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
+import contextlib
+from glob import glob
 import json
 import logging
 import multiprocessing
 import os
+import re
 import sys
 import warnings
 from collections import defaultdict
@@ -12,38 +15,33 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, cc
+from .conda_interface import root_dir, cc, symlink_conda, pkgs_dirs
+from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
+from .conda_interface import plan
+from .conda_interface import package_cache
+from .conda_interface import memoized
 
 from conda_build.os_utils import external
-from conda_build import utils
+from conda_build import utils, dedupe_handler
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
-
-
-def get_perl_ver(config):
-    return str(config.CONDA_PERL)
-
-
-def get_lua_ver(config):
-    return str(config.CONDA_LUA)
-
-
-def get_py_ver(config):
-    return '.'.join(str(config.CONDA_PY))
+from conda_build.index import get_build_index
+from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.variants import get_default_variants
 
 
 def get_npy_ver(config):
-    if config.CONDA_NPY:
+    if config.variant['numpy']:
         # Convert int -> string, e.g.
         #   17 -> '1.7'
         #   110 -> '1.10'
-        conda_npy = str(config.CONDA_NPY)
+        conda_npy = str(config.variant['numpy'])
         return conda_npy[0] + '.' + conda_npy[1:]
     return ''
 
 
 def get_lua_include_dir(config):
-    return join(config.build_prefix, "include")
+    return join(config.host_prefix, "include")
 
 
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
@@ -206,9 +204,11 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(config, m=None, prefix=None):
+def get_dict(config, m=None, prefix=None, for_env=True):
+    log = logging.getLogger(__name__)
+    log.addHandler(dedupe_handler)
     if not prefix:
-        prefix = config.build_prefix
+        prefix = config.host_prefix
 
     # conda-build specific vars
     d = conda_build_vars(prefix, config)
@@ -228,6 +228,12 @@ def get_dict(config, m=None, prefix=None):
     d.update({feat.upper(): str(int(value)) for feat, value in
               feature_list})
 
+    for k, v in config.variant.items():
+        if not for_env or k.upper() not in d:
+            d[k] = v
+        else:
+            log.debug("Omitting variable %s from env dictionary (already exists)", k)
+
     return d
 
 
@@ -238,10 +244,21 @@ def conda_build_vars(prefix, config):
         'PYTHONNOUSERSITE': '1',
         'CONDA_DEFAULT_ENV': config.build_prefix,
         'ARCH': str(config.arch),
+        # This is the one that is most important for where people put artifacts that get bundled.
+        #     It is fed from our function argument, and can be any of:
+        #     1. Build prefix - when host requirements are not explicitly set,
+        #        then prefix = build prefix = host prefix
+        #     2. Host prefix - when host requirements are explicitly set, prefix = host prefix
+        #     3. Test prefix - during test runs, this points at the test prefix
         'PREFIX': prefix,
+        # This is for things that are specifically build tools.  Things that run on the build
+        #    platform, but probably should not be linked against, since they may not run on the
+        #    destination host platform
+        # It can be equivalent to config.host_prefix if the host section is not explicitly set.
+        'BUILD_PREFIX': config.build_prefix,
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
-        'SUBDIR': config.subdir,
+        'SUBDIR': config.host_subdir,
         'SRC_DIR': src_dir,
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
@@ -251,38 +268,36 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config):
+    py_ver = config.variant.get('python', get_default_variants()[0]['python'])
     d = {
         'PYTHON': config.build_python,
-        'PY3K': str(config.PY3K),
+        'PY3K': str(int(py_ver[0]) == 3),
         'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
         'SP_DIR': utils.get_site_packages(config.build_prefix),
-        'PY_VER': get_py_ver(config),
-        'CONDA_PY': str(config.CONDA_PY),
+        'PY_VER': '.'.join(py_ver.split('.')[:2]),
+        'CONDA_PY': ''.join(py_ver.split('.')[:2]),
     }
-    # Only define these variables if '--numpy=X.Y' was provided,
-    # otherwise any attempt to use them should be an error.
-    if get_npy_ver(config):
-        d['NPY_VER'] = get_npy_ver(config)
-        d['CONDA_NPY'] = str(config.CONDA_NPY)
+
+    np_ver = config.variant.get('numpy', get_default_variants()[0]['numpy'])
+    d['NPY_VER'] = '.'.join(np_ver.split('.')[:2])
+    d['CONDA_NPY'] = ''.join(np_ver.split('.')[:2])
     return d
 
 
 def perl_vars(config):
     return {
-        'PERL_VER': get_perl_ver(config),
+        'PERL_VER': config.variant.get('perl', get_default_variants()[0]['perl']),
     }
 
 
 def lua_vars(config):
     lua = config.build_lua
-    if lua:
-        return {
-            'LUA': lua,
-            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
-            'LUA_VER': get_lua_ver(config),
-        }
-    else:
-        return {}
+    lua_ver = config.variant.get('lua', get_default_variants()[0]['lua'])
+    return {
+        'LUA': lua,
+        'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+        'LUA_VER': lua_ver,
+    }
 
 
 def meta_vars(meta, config):
@@ -331,11 +346,14 @@ def meta_vars(meta, config):
     d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
     d['PKG_BUILDNUM'] = str(meta.build_number())
-    d['PKG_BUILD_STRING'] = str(meta.build_id())
+    if meta.final:
+        d['PKG_BUILD_STRING'] = str(meta.build_id())
     d['RECIPE_DIR'] = meta.path
+    d['RECIPE_HASH'] = meta._hash_dependencies()
     return d
 
 
+@memoized
 def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -403,13 +421,25 @@ def osx_vars(compiler_vars, config):
 
 
 def linux_vars(compiler_vars, prefix, config):
-    compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
+    # This is effectively saying "if any host env is installed, then prefer it over the build env"
+    if glob(os.path.join(config.host_prefix, '*')):
+        compiler_vars['LD_RUN_PATH'] = config.host_prefix + '/lib'
+    else:
+        compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
     if config.arch == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
-    return {}
+    return {
+        # There is also QEMU_SET_ENV, but that needs to be
+        # filtered so it only contains the result of `linux_vars`
+        # which, before this change was empty, and after it only
+        # contains other QEMU env vars.
+        'QEMU_LD_PREFIX': os.getenv('QEMU_LD_PREFIX'),
+        'QEMU_UNAME': os.getenv('QEMU_UNAME'),
+    }
 
 
+@memoized
 def system_vars(env_dict, prefix, config):
     d = dict()
     compiler_vars = defaultdict(text_type)
@@ -506,8 +536,214 @@ class Environment(object):
         return specs
 
 
-if __name__ == '__main__':
-    e = get_dict(cc)
-    for k in sorted(e):
-        assert isinstance(e[k], str), k
-        print('%s=%s' % (k, e[k]))
+spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s)([0-9a-zA-Z\.]+)(\s[0-9a-zA-Z\.]+)?")
+
+
+def _ensure_valid_spec(spec):
+    match = spec_needing_star_re.match(spec)
+    # ignore exact pins (would be a 3rd group)
+    if match and not match.group(3):
+        if 'numpy' in match.group(1) and match.group(2) == 'x.x':
+            spec = spec_needing_star_re.sub(r"\1\2", spec)
+        else:
+            spec = spec_needing_star_re.sub(r"\1\2.*", spec)
+    return spec
+
+
+def get_install_actions(prefix, index, specs, config, retries=0):
+    log = logging.getLogger(__name__)
+    if config.verbose:
+        capture = contextlib.contextmanager(lambda: (yield))
+    else:
+        capture = utils.capture
+    actions = {'LINK': []}
+    if specs:
+        # this is hiding output like:
+        #    Fetching package metadata ...........
+        #    Solving package specifications: ..........
+        specs = [_ensure_valid_spec(spec) for spec in specs]
+        with capture():
+            try:
+                actions = plan.install_actions(prefix, index, specs)
+            except NoPackagesFoundError as exc:
+                raise DependencyNeedsBuildingError(exc)
+            except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
+                    CondaError, AssertionError) as exc:
+                if 'lock' in str(exc):
+                    log.warn("failed to get install actions, retrying.  exception was: %s",
+                             str(exc))
+                elif ('requires a minimum conda version' in str(exc) or
+                        'link a source that does not' in str(exc) or
+                        isinstance(exc, AssertionError)):
+                    locks = utils.get_conda_operation_locks(config)
+                    with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        pkg_dir = str(exc)
+                        folder = 0
+                        while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
+                            pkg_dir = os.path.dirname(pkg_dir)
+                            folder += 1
+                        log.warn("I think conda ended up with a partial extraction for %s.  "
+                                    "Removing the folder and retrying", pkg_dir)
+                        if pkg_dir in pkgs_dirs and os.path.isdir(pkg_dir):
+                            utils.rm_rf(pkg_dir)
+                if retries < config.max_env_retry:
+                    log.warn("failed to get install actions, retrying.  exception was: %s",
+                             str(exc))
+                    actions = get_install_actions(prefix, index, specs, config,
+                                                    retries=retries + 1)
+                else:
+                    log.error("Failed to get install actions, max retries exceeded.")
+                    raise
+        if config.disable_pip:
+            actions['LINK'] = [spec for spec in actions['LINK']
+                                if not spec.startswith('pip-') and
+                                not spec.startswith('setuptools-')]
+    return actions
+
+
+def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=None, locks=None):
+    '''
+    Create a conda envrionment for the given prefix and specs.
+    '''
+    if config.debug:
+        logging.getLogger("conda_build").setLevel(logging.DEBUG)
+        external_logger_context = utils.LoggingContext(logging.DEBUG)
+    else:
+        logging.getLogger("conda_build").setLevel(logging.INFO)
+        external_logger_context = utils.LoggingContext(logging.ERROR)
+
+    with external_logger_context:
+        log = logging.getLogger(__name__)
+
+        if os.path.isdir(prefix):
+            utils.rm_rf(prefix)
+
+        specs = list(set(specs))
+        for feature, value in feature_list:
+            if value:
+                specs.append('%s@' % feature)
+
+        if specs:  # Don't waste time if there is nothing to do
+            log.debug("Creating environment in %s", prefix)
+            log.debug(str(specs))
+
+            with utils.path_prepended(prefix):
+                if not locks:
+                    locks = utils.get_conda_operation_locks(config)
+                try:
+                    with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        if not index:
+                            index = get_build_index(config=config, subdir=subdir)
+                        actions = get_install_actions(prefix, index, specs, config)
+                        plan.display_actions(actions, index)
+                        if utils.on_win:
+                            for k, v in os.environ.items():
+                                os.environ[k] = str(v)
+                        plan.execute_actions(actions, index, verbose=config.debug)
+                except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
+                        CondaError) as exc:
+                    if (("too short in" in str(exc) or
+                            re.search('post-link failed for: (?:[a-zA-Z]*::)?openssl', str(exc)) or
+                            isinstance(exc, PaddingError)) and
+                            config.prefix_length > 80):
+                        if config.prefix_length_fallback:
+                            log.warn("Build prefix failed with prefix length %d",
+                                     config.prefix_length)
+                            log.warn("Error was: ")
+                            log.warn(str(exc))
+                            log.warn("One or more of your package dependencies needs to be rebuilt "
+                                    "with a longer prefix length.")
+                            log.warn("Falling back to legacy prefix length of 80 characters.")
+                            log.warn("Your package will not install into prefixes > 80 characters.")
+                            config.prefix_length = 80
+
+                            # Set this here and use to create environ
+                            #   Setting this here is important because we use it below (symlink)
+                            prefix = config.build_prefix
+
+                            create_env(prefix, specs, config=config, subdir=subdir,
+                                       clear_cache=clear_cache)
+                        else:
+                            raise
+                    elif 'lock' in str(exc):
+                        if retry < config.max_env_retry:
+                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                            create_env(prefix, specs, config=config, subdir=subdir,
+                                    clear_cache=clear_cache, retry=retry + 1)
+                    elif ('requires a minimum conda version' in str(exc) or
+                          'link a source that does not' in str(exc)):
+                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                            pkg_dir = str(exc)
+                            folder = 0
+                            while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
+                                pkg_dir = os.path.dirname(pkg_dir)
+                                folder += 1
+                            log.warn("I think conda ended up with a partial extraction for %s.  "
+                                     "Removing the folder and retrying", pkg_dir)
+                            if os.path.isdir(pkg_dir):
+                                utils.rm_rf(pkg_dir)
+                        if retry < config.max_env_retry:
+                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                            create_env(prefix, specs, config=config, subdir=subdir,
+                                    clear_cache=clear_cache, retry=retry + 1)
+                        else:
+                            log.error("Failed to create env, max retries exceeded.")
+                            raise
+                    else:
+                        raise
+                # HACK: some of the time, conda screws up somehow and incomplete packages result.
+                #    Just retry.
+                except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+                    if isinstance(exc, AssertionError):
+                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                            pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
+                            log.warn("I think conda ended up with a partial extraction for %s.  "
+                                     "Removing the folder and retrying", pkg_dir)
+                            if os.path.isdir(pkg_dir):
+                                utils.rm_rf(pkg_dir)
+                    if retry < config.max_env_retry:
+                        log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                        create_env(prefix, specs, config=config, subdir=subdir,
+                                   clear_cache=clear_cache, retry=retry + 1)
+                    else:
+                        log.error("Failed to create env, max retries exceeded.")
+                        raise
+    if utils.on_win:
+        shell = "cmd.exe"
+    else:
+        shell = "bash"
+    symlink_conda(prefix, sys.prefix, shell)
+
+
+def clean_pkg_cache(dist, config):
+    pkgs_dirs = cc.pkgs_dirs[:1]
+    locks = []
+    if config.locking:
+        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in pkgs_dirs]
+    with utils.try_acquire_locks(locks, timeout=config.timeout):
+        rmplan = [
+            'RM_EXTRACTED {0} local::{0}'.format(dist),
+            'RM_FETCHED {0} local::{0}'.format(dist),
+        ]
+        plan.execute_plan(rmplan)
+
+        # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
+        #   Conda's cleanup is still necessary - it keeps track of its own in-memory
+        #   list of downloaded things.
+        for folder in cc.pkgs_dirs:
+            try:
+                assert not os.path.exists(os.path.join(folder, dist))
+                assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
+                for pkg_id in [dist, 'local::' + dist]:
+                    assert pkg_id not in package_cache()
+            except AssertionError:
+                log = logging.getLogger(__name__)
+                log.debug("Conda caching error: %s package remains in cache after removal", dist)
+                log.debug("manually removing to compensate")
+                cache = package_cache()
+                keys = [key for key in cache.keys() if dist in key]
+                for pkg_id in keys:
+                    if pkg_id in cache:
+                        del cache[pkg_id]
+                for entry in glob(os.path.join(folder, dist + '*')):
+                    utils.rm_rf(entry)

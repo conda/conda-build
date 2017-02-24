@@ -33,6 +33,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     import conda.base.context
     import conda.exceptions
     from conda.base.context import get_prefix as context_get_prefix, non_x86_linux_machines  # NOQA
+    from conda.models.channel import prioritize_channels
 
     from conda.base.constants import DEFAULT_CHANNELS  # NOQA
     get_prefix = partial(context_get_prefix, conda.base.context.context)
@@ -59,6 +60,8 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     CondaValueError = conda.exceptions.CondaValueError
     LockError = conda.exceptions.LockError
     CondaHTTPError = conda.exceptions.CondaHTTPError
+    PackageNotFoundError = conda.exceptions.PackageNotFoundError
+    UnsatisfiableError = conda.exceptions.UnsatisfiableError
     CondaError = conda.exceptions.CondaError
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
@@ -69,7 +72,7 @@ if parse_version(conda.__version__) >= parse_version("4.2"):
     env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
 
 else:
-    from conda.config import get_default_urls, non_x86_linux_machines, load_condarc  # NOQA
+    from conda.config import get_default_urls, non_x86_linux_machines, load_condarc, prioritize_channels  # NOQA
     from conda.cli.common import get_prefix  # NOQA
 
     arch_name = cc.arch_name
@@ -104,7 +107,13 @@ else:
     class NoPackagesFoundError(Exception):
         pass
 
+    class PackageNotFoundError(Exception):
+        pass
+
     class CondaValueError(Exception):
+        pass
+
+    class UnsatisfiableError(Exception):
         pass
 
     class CondaError(Exception):
@@ -141,14 +150,18 @@ def which_prefix(path):
     """
     from os.path import abspath, join, isdir, dirname
     prefix = abspath(path)
-    while True:
+    iteration = 0
+    while iteration < 20:
         if isdir(join(prefix, 'conda-meta')):
             # we found the it, so let's return it
-            return prefix
+            break
         if prefix == dirname(prefix):
             # we cannot chop off any more directories, so we didn't find it
-            return None
+            prefix = None
+            break
         prefix = dirname(prefix)
+        iteration += 1
+    return prefix
 
 
 if parse_version(conda.__version__) >= parse_version("4.3"):
@@ -160,6 +173,7 @@ if parse_version(conda.__version__) >= parse_version("4.3"):
     CrossPlatformStLink = CrossPlatformStLink
     from conda.exports import dist_str_in_index
     from conda.models.dist import Dist
+    from conda.core.package_cache import ProgressiveFetchExtract
 else:
     from json import JSONEncoder
     from os import lstat
@@ -168,6 +182,9 @@ else:
     dist_str_in_index = lambda index, dist_str: dist_str in index
 
     class Dist(object):
+        pass
+
+    class ProgressiveFetchExtract(object):
         pass
 
     class PathType(Enum):

@@ -2,10 +2,10 @@ from __future__ import absolute_import, division, print_function
 
 import json
 from os.path import basename
+import re
 import tarfile
 
 from conda_build.utils import codec
-from conda_build.conda_interface import subdir
 
 
 def dist_fn(fn):
@@ -18,11 +18,12 @@ def dist_fn(fn):
 
 
 class TarCheck(object):
-    def __init__(self, path):
+    def __init__(self, path, config):
         self.t = tarfile.open(path)
         self.paths = set(m.path for m in self.t.getmembers())
         self.dist = dist_fn(basename(path))
         self.name, self.version, self.build = self.dist.split('::', 1)[-1].rsplit('-', 2)
+        self.config = config
 
     def __enter__(self):
         return self
@@ -31,7 +32,7 @@ class TarCheck(object):
         self.t.close()
 
     def info_files(self):
-        if 'py_' in self.build:
+        if re.search('pyh[0-9a-f]{%d}_' % self.config.hash_length, self.build):
             return
         lista = [p.strip().decode('utf-8') for p in
                  self.t.extractfile('info/files').readlines()]
@@ -56,7 +57,7 @@ class TarCheck(object):
 
     def index_json(self):
         info = json.loads(self.t.extractfile('info/index.json').read().decode('utf-8'))
-        for varname in 'name', 'version', 'build':
+        for varname in 'name', 'version':
             if info[varname] != getattr(self, varname):
                 raise Exception('%s: %r != %r' % (varname, info[varname],
                                                   getattr(self, varname)))
@@ -79,24 +80,25 @@ class TarCheck(object):
                     break
         return prefix_length
 
-    def correct_subdir(self, subdir=subdir):
+    def correct_subdir(self):
         info = json.loads(self.t.extractfile('info/index.json').read().decode('utf-8'))
-        assert info['subdir'] in [subdir, 'noarch'], ("Incorrect subdir in package - expecting {0},"
-                                                      " got {1}".format(subdir, info['subdir']))
+        assert info['subdir'] in [self.config.host_subdir, 'noarch'], \
+            ("Inconsistent subdir in package - index.json expecting {0},"
+             " got {1}".format(self.config.host_subdir, info['subdir']))
 
 
-def check_all(path):
-    x = TarCheck(path)
+def check_all(path, config):
+    x = TarCheck(path, config)
     x.info_files()
     x.index_json()
     x.correct_subdir()
     x.t.close()
 
 
-def check_prefix_lengths(files, min_prefix_length=255):
+def check_prefix_lengths(files, config):
     lengths = {}
     for f in files:
-        length = TarCheck(f).prefix_length()
-        if length and length < min_prefix_length:
+        length = TarCheck(f, config).prefix_length()
+        if length and length < config.prefix_length:
             lengths[f] = length
     return lengths

@@ -109,8 +109,6 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
 
 
 def transform(m, files, prefix):
-    assert 'py_' in m.dist()
-
     bin_dir = join(prefix, 'bin')
     _force_dir(bin_dir)
 

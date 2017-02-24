@@ -12,6 +12,7 @@ def main():
     with open(info_file, 'r') as fh:
         info = json.load(fh)
 
+    # one without the version, and another with the version
     assert len(info['depends']) == 1
     assert info['depends'][0].startswith('python ')
 

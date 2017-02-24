@@ -25,12 +25,19 @@ sub_commands = [
     'skeleton',
 ]
 
-# Set default logging handler to avoid "No handler found" warnings.
-try:  # Python 2.7+
-    from logging import NullHandler
-except ImportError:
-    class NullHandler(logging.Handler):
-        def emit(self, record):
-            pass
 
-logging.getLogger(__name__).addHandler(NullHandler())
+# unclutter logs - show messages only once
+class DuplicateFilter(object):
+    def __init__(self):
+        self.msgs = set()
+
+    def filter(self, record):
+        rv = record.msg not in self.msgs
+        self.msgs.add(record.msg)
+        return rv
+
+
+dedupe_handler = logging.StreamHandler()
+filt = DuplicateFilter()
+dedupe_handler.addFilter(filt)
+logging.getLogger(__name__).addHandler(dedupe_handler)

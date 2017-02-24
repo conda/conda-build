@@ -7,36 +7,22 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+import json
 import logging
 from operator import itemgetter
-from os.path import abspath, join, dirname, exists, basename, isdir
+from os.path import abspath, join, dirname, exists, basename
+import os
 import re
 import sys
 import tempfile
 
 from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linked_data, linked,
-                              get_index)
+                              get_index, which_prefix)
 
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join, rm_rf
-
-
-def which_prefix(path):
-    """
-    given the path (to a (presumably) conda installed file) return the
-    environment prefix in which the file in located
-    """
-    prefix = abspath(path)
-    while True:
-        if isdir(join(prefix, 'conda-meta')):
-            # we found the it, so let's return it
-            return prefix
-        if prefix == dirname(prefix):
-            # we cannot chop off any more directories, so we didn't find it
-            return None
-        prefix = dirname(prefix)
+from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file
 
 
 def which_package(path):
@@ -315,3 +301,27 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
     if hasattr(output_string, 'decode'):
         output_string = output_string.decode('utf-8')
     return output_string
+
+
+def get_hash_input(packages):
+    log = logging.getLogger(__name__)
+    hash_inputs = {}
+    for pkg in packages:
+        pkgname = os.path.basename(pkg)[:-8]
+        hash_inputs[pkgname] = {}
+        hash_input = package_has_file(pkg, 'info/hash_input.json')
+        if hash_input:
+            hash_inputs[pkgname]['recipe'] = json.loads(hash_input.decode())
+        else:
+            hash_inputs[pkgname] = "<no hash_input.json in file>"
+        hash_input_files = package_has_file(pkg, 'info/hash_input_files')
+        hash_inputs[pkgname]['files'] = []
+        if hash_input_files:
+            for fname in hash_input_files.splitlines():
+                hash_inputs[pkgname]['files'].append(package_has_file(pkg,
+                                                            'info/recipe/{}'.format(fname)))
+        else:
+            log.warn('Package {} does not include recipe.  Full hash information is '
+                     'not reproducible.'.format(pkgname))
+
+    return hash_inputs

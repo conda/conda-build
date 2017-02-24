@@ -500,8 +500,8 @@ def make_hardlink_copy(path, prefix):
         utils.rm_rf(dest)
 
 
-def get_build_metadata(m, config):
-    src_dir = config.work_dir
+def get_build_metadata(m):
+    src_dir = m.config.work_dir
 
     if "build" not in m.meta:
         m.meta["build"] = {}
