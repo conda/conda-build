@@ -31,6 +31,8 @@ from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
+# NOQA because it is not used in this file.
+from conda_build.conda_interface import rm_rf  # NOQA
 
 from conda_build.os_utils import external
 
@@ -908,18 +910,17 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
             if not os.path.isdir(os.path.join(prefix, f))]
 
 
-def rm_rf(path):
-    if on_win:
-        try:
-            if os.path.isfile(path):
-                subprocess.check_call('del {}'.format(path), shell=True)
-            elif os.path.isdir(path):
-                subprocess.check_call('rd /s /q {}'.format(path), shell=True)
-            else:
-                pass
-        except subprocess.CalledProcessError:
-            log = logging.getLogger(__name__)
-            log.warn("Failed to delete file(s) at {}".format(path))
-    else:
-        from conda_build.conda_interface import rm_rf  as _rm_rf # NOQA
-        return _rm_rf(path)
+# def rm_rf(path):
+#     if on_win:
+#         # native windows delete is potentially much faster
+#         try:
+#             if os.path.isfile(path):
+#                 subprocess.check_call('del {}'.format(path), shell=True)
+#             elif os.path.isdir(path):
+#                 subprocess.check_call('rd /s /q {}'.format(path), shell=True)
+#             else:
+#                 pass
+#         except subprocess.CalledProcessError:
+#             return _rm_rf(path)
+#     else:
+#         return _rm_rf(path)
