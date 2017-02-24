@@ -269,12 +269,13 @@ def conda_build_vars(prefix, config):
 
 def python_vars(config):
     py_ver = config.variant.get('python', get_default_variants()[0]['python'])
+    py_ver = '.'.join(py_ver.split('.')[:2])
     d = {
         'PYTHON': config.build_python,
         'PY3K': str(int(py_ver[0]) == 3),
-        'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
-        'SP_DIR': utils.get_site_packages(config.build_prefix),
-        'PY_VER': '.'.join(py_ver.split('.')[:2]),
+        'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix, py_ver),
+        'SP_DIR': utils.get_site_packages(config.build_prefix, py_ver),
+        'PY_VER': py_ver,
         'CONDA_PY': ''.join(py_ver.split('.')[:2]),
     }
 
@@ -345,7 +346,7 @@ def meta_vars(meta, config):
     # use `get_value` to prevent early exit while name is still unresolved during rendering
     d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
-    d['PKG_BUILDNUM'] = str(meta.build_number())
+    d['PKG_BUILDNUM'] = str(meta.build_number() or 0)
     if meta.final:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
     d['RECIPE_DIR'] = meta.path

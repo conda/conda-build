@@ -13,3 +13,8 @@ source:
 requirements:
   build:
     - python {{ PY_VER }}
+
+extra:
+  # make sure that these are set
+  dummy: {{ STDLIB_DIR }}
+  dummy2: {{ SP_DIR }}

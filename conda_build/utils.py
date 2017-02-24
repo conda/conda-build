@@ -490,25 +490,16 @@ def path2url(path):
     return urlparse.urljoin('file:', urllib.pathname2url(path))
 
 
-def get_stdlib_dir(prefix):
+def get_stdlib_dir(prefix, py_ver):
     if sys.platform == 'win32':
-        stdlib_dir = os.path.join(prefix, 'Lib')
+        lib_dir = os.path.join(prefix, 'Lib')
     else:
-        lib_dir = os.path.join(prefix, 'lib')
-        stdlib_dir = glob(os.path.join(lib_dir, 'python[0-9\.]*'))
-        if not stdlib_dir:
-            stdlib_dir = ''
-        else:
-            stdlib_dir = stdlib_dir[0]
-    return stdlib_dir
+        lib_dir = os.path.join(prefix, 'lib', 'python{}'.format(py_ver))
+    return lib_dir
 
 
-def get_site_packages(prefix):
-    stdlib_dir = get_stdlib_dir(prefix)
-    sp = ''
-    if stdlib_dir:
-        sp = os.path.join(stdlib_dir, 'site-packages')
-    return sp
+def get_site_packages(prefix, py_ver):
+    return os.path.join(get_stdlib_dir(prefix, py_ver), 'site-packages')
 
 
 def get_build_folders(croot):

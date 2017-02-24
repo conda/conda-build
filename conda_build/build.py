@@ -932,27 +932,27 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                 import conda_build.windows as windows
                 windows.build(m, build_file)
             else:
-                build_file = join(m.path, 'build.sh')
+                work_file = join(m.config.work_dir, 'conda_build.sh')
+                with open(work_file, 'w') as bf:
+                    for k, v in env.items():
+                        bf.write('export {0}="{1}"\n'.format(k, v))
+                os.chmod(work_file, 0o766)
 
+                build_file = join(m.path, 'build.sh')
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(config=m.config, m=m)
                     env["CONDA_BUILD_STATE"] = "BUILD"
 
-                    # set variables like CONDA_PY in the test environment
-                    env.update(set_language_env_vars(m.config.variant))
-
-                    work_file = join(m.config.work_dir, 'conda_build.sh')
                     if script:
-                        with open(work_file, 'w') as bf:
                             bf.write(script)
                     if m.config.activate:
                         if isfile(build_file):
                             data = open(build_file).read()
                         else:
                             data = open(work_file).read()
-                        with open(work_file, 'w') as bf:
+                        with open(work_file, 'a') as bf:
                             bf.write('source "{conda_root}activate" "{build_prefix}" &> '
                                         '/dev/null\n'.format(conda_root=utils.root_script_dir +
                                                             os.path.sep,
@@ -962,12 +962,10 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                         if not isfile(work_file):
                             utils.copy_into(build_file, work_file, m.config.timeout,
                                             locking=m.config.locking)
-                    os.chmod(work_file, 0o766)
 
-                    if isfile(work_file):
-                        cmd = [shell_path, '-x', '-e', work_file]
-                        # this should raise if any problems occur while building
-                        utils.check_call_env(cmd, env=env, cwd=src_dir)
+                cmd = [shell_path, '-x', '-e', work_file]
+                # this should raise if any problems occur while building
+                utils.check_call_env(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
         with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
