@@ -87,6 +87,7 @@ def prefix_files(prefix):
             path = join(root, dn)
             if islink(path):
                 res.add(path[len(prefix) + 1:])
+    res = set(utils.expand_globs(res, prefix))
     return res
 
 
@@ -874,8 +875,9 @@ def bundle_conda(output, metadata, config, env, **kw):
                     cwd=config.build_prefix, env=env)
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        files = list(set(utils.expand_globs(files, config.build_prefix)))
-        initial_files = set(prefix_files(config.build_prefix)) - set(files)
+        keep_files = set(utils.expand_globs(files, config.build_prefix))
+        pfx_files = set(prefix_files(config.build_prefix))
+        initial_files = pfx_files - keep_files
 
     files = post_process_files(metadata, initial_files)
 
