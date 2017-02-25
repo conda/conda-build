@@ -5,6 +5,7 @@ from functools import partial
 from glob import glob
 import io
 import locale
+import logging
 import mmap
 import re
 import os
@@ -414,7 +415,11 @@ def fix_permissions(files, prefix):
         # ensure user and group can write and all can read
         new_mode = new_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH  # noqa
         if old_mode != new_mode:
-            lchmod(path, new_mode)
+            try:
+                lchmod(path, new_mode)
+            except (OSError, utils.PermissionError) as e:
+                log = logging.getLogger(__name__)
+                log.warn(str(e))
 
 
 def post_build(m, files, prefix, build_python, croot):
