@@ -790,7 +790,7 @@ class MetaData(object):
         return res
 
     def _get_hash_contents(self):
-        sections = ['source', 'requirements', 'build']
+        sections = ['source', 'requirements', 'build', 'outputs']
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
