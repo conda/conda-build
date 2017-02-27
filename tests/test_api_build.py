@@ -898,7 +898,7 @@ def test_pin_downstream(testing_metadata, testing_config):
 
 def test_pin_subpackage_exact(testing_config):
     m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]
-    assert 'pin_downstream_subpkg 1.0 hbf21a9e_0' in m.meta['requirements']['run']
+    assert 'pin_downstream_subpkg 1.0 h3bc04bd_0' in m.meta['requirements']['run']
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")

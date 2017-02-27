@@ -312,6 +312,7 @@ def compiler(language, config, permit_undefined_jinja=False):
     metapackages, pointing at a package where the host is the same as the target (both being the
     native architecture).
     """
+
     compiler = None
     native_compiler = _native_compiler(language, config)
     if config.variant:

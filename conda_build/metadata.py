@@ -790,10 +790,13 @@ class MetaData(object):
         return res
 
     def _get_hash_contents(self):
-        sections = ['source', 'requirements', 'build', 'outputs']
+        sections = ['source', 'requirements', 'build']
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
+        outputs = self.get_section('outputs')
+        if outputs:
+            composite.update({'outputs': [HashableDict(out) for out in outputs]})
 
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})

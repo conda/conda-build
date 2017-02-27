@@ -171,13 +171,14 @@ def get_upstream_pins(m, dependencies, index):
 
 def finalize_metadata(m, index=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
-    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
-    #     be installed in the environment.
+    m.parse_until_resolved()
 
     m.parse_until_resolved()
 
     if not index:
         index = get_build_index(m.config, m.config.build_subdir)
+    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
+    #     be installed in the environment.
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
