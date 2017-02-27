@@ -558,11 +558,11 @@ def get_install_actions(prefix, index, specs, config, retries=0):
     else:
         capture = utils.capture
     actions = {'LINK': []}
+    specs = [_ensure_valid_spec(spec) for spec in specs]
     if specs:
         # this is hiding output like:
         #    Fetching package metadata ...........
         #    Solving package specifications: ..........
-        specs = [_ensure_valid_spec(spec) for spec in specs]
         with capture():
             try:
                 actions = plan.install_actions(prefix, index, specs)
