@@ -171,10 +171,6 @@ def get_upstream_pins(m, dependencies, index):
 
 def finalize_metadata(m, index=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
-    m.parse_until_resolved()
-
-    m.parse_until_resolved()
-
     if not index:
         index = get_build_index(m.config, m.config.build_subdir)
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
@@ -273,6 +269,7 @@ def reparse(metadata, index):
     sys.path.insert(0, metadata.config.build_prefix)
     py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
+    metadata.parse_until_resolved()
     metadata = finalize_metadata(metadata, index)
     return metadata
 

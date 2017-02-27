@@ -671,6 +671,8 @@ def test_legacy_noarch_python(testing_config):
     assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
 
+@pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
+                   reason="bug in conda 4.3.x - https://github.com/conda/conda/issues/4740")
 def test_preferred_env(testing_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
     output = api.build(recipe, config=testing_config)[0]
