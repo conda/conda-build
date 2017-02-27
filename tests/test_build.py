@@ -45,7 +45,7 @@ def test_find_prefix_files(testing_workdir):
 
 
 def test_build_preserves_PATH(testing_workdir, testing_config, testing_index):
-    m = MetaData(os.path.join(metadata_dir, 'source_git'), config=testing_config)
+    m = api.render(os.path.join(metadata_dir, 'source_git'), config=testing_config)[0][0]
     ref_path = os.environ['PATH']
     build.build(m, index=testing_index)
     assert os.environ['PATH'] == ref_path

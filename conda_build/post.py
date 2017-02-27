@@ -89,7 +89,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
 def write_pth(egg_path, config):
     fn = basename(egg_path)
-    with open(join(utils.get_site_packages(config.build_prefix),
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    with open(join(utils.get_site_packages(config.build_prefix, py_ver),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
@@ -100,7 +101,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     itself
     """
     absfiles = [join(prefix, f) for f in files]
-    sp_dir = utils.get_site_packages(prefix)
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    sp_dir = utils.get_site_packages(prefix, py_ver)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i

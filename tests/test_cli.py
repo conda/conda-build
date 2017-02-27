@@ -353,11 +353,12 @@ def test_develop(testing_env):
     cwd = os.getcwd()
     args = ['-p', testing_env, extract_folder]
     main_develop.execute(args)
-    assert cwd in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read()
-
+    py_ver = '.'.join((str(sys.version_info.major), str(sys.version_info.minor)))
+    assert cwd in open(os.path.join(get_site_packages(testing_env, py_ver), 'conda.pth')).read()
     args = ['--uninstall', '-p', testing_env, extract_folder]
     main_develop.execute(args)
-    assert (cwd not in open(os.path.join(get_site_packages(testing_env), 'conda.pth')).read())
+    assert (cwd not in open(os.path.join(get_site_packages(testing_env, py_ver),
+                                         'conda.pth')).read())
 
 
 def test_convert(testing_workdir, testing_config):

@@ -164,7 +164,7 @@ def get_upstream_pins(m, dependencies, index):
                         raise DependencyNeedsBuildingError(packages=[pkg.name])
             else:
                 raise RuntimeError("Didn't find expected package {} in package cache ({})"
-                                    .format(pkg, pkgs_dirs))
+                                    .format(pkg_dist, pkgs_dirs))
 
     return additional_specs
 
@@ -268,7 +268,8 @@ def reparse(metadata, index):
     and activated."""
     metadata.final = False
     sys.path.insert(0, metadata.config.build_prefix)
-    sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix))
+    py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
+    sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
     metadata.parse_again(permit_undefined_jinja=False)
     metadata = finalize_metadata(metadata, index)
     return metadata
