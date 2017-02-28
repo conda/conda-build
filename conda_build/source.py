@@ -1,7 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import locale
-import logging
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath
 import re
@@ -15,7 +14,8 @@ from .conda_interface import hashsum_file
 from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
-                               check_output_env, check_call_env, convert_path_for_cygwin_or_msys2)
+                               check_output_env, check_call_env, convert_path_for_cygwin_or_msys2,
+                               get_logger)
 
 # legacy exports for conda
 from .config import Config as _Config
@@ -396,7 +396,7 @@ def get_repository_info(recipe_path):
                                              time.ctime(os.path.getmtime(
                                                  join(recipe_path, "meta.yaml"))))
     except CalledProcessError:
-        logging.getLogger(__name__).debug("Failed to checkout source in " + recipe_path)
+        get_logger(__name__).debug("Failed to checkout source in " + recipe_path)
         return "{}, last modified {}".format(recipe_path,
                                              time.ctime(os.path.getmtime(
                                                  join(recipe_path, "meta.yaml"))))

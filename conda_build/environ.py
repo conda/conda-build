@@ -22,7 +22,7 @@ from .conda_interface import package_cache
 from .conda_interface import memoized
 
 from conda_build.os_utils import external
-from conda_build import utils, dedupe_handler
+from conda_build import utils
 from conda_build.features import feature_list
 from conda_build.utils import prepend_bin_path, ensure_list
 from conda_build.index import get_build_index
@@ -46,7 +46,7 @@ def get_lua_include_dir(config):
 
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     env = os.environ.copy()
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     if config.verbose:
         stderr = None
     else:
@@ -135,7 +135,7 @@ def get_git_info(repo, config):
     :return:
     """
     d = {}
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
 
     if config.verbose:
         stderr = None
@@ -205,8 +205,7 @@ def get_hg_build_info(repo):
 
 
 def get_dict(config, m=None, prefix=None, for_env=True):
-    log = logging.getLogger(__name__)
-    log.addHandler(dedupe_handler)
+    log = utils.get_logger(__name__)
     if not prefix:
         prefix = config.host_prefix
 
@@ -552,7 +551,7 @@ def _ensure_valid_spec(spec):
 
 
 def get_install_actions(prefix, index, specs, config, retries=0):
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     if config.verbose:
         capture = contextlib.contextmanager(lambda: (yield))
     else:
@@ -607,14 +606,14 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
     Create a conda envrionment for the given prefix and specs.
     '''
     if config.debug:
-        logging.getLogger("conda_build").setLevel(logging.DEBUG)
+        utils.get_logger("conda_build").setLevel(logging.DEBUG)
         external_logger_context = utils.LoggingContext(logging.DEBUG)
     else:
-        logging.getLogger("conda_build").setLevel(logging.INFO)
+        utils.get_logger("conda_build").setLevel(logging.INFO)
         external_logger_context = utils.LoggingContext(logging.ERROR)
 
     with external_logger_context:
-        log = logging.getLogger(__name__)
+        log = utils.get_logger(__name__)
 
         if os.path.isdir(prefix):
             utils.rm_rf(prefix)
@@ -738,7 +737,7 @@ def clean_pkg_cache(dist, config):
                 for pkg_id in [dist, 'local::' + dist]:
                     assert pkg_id not in package_cache()
             except AssertionError:
-                log = logging.getLogger(__name__)
+                log = utils.get_logger(__name__)
                 log.debug("Conda caching error: %s package remains in cache after removal", dist)
                 log.debug("manually removing to compensate")
                 cache = package_cache()

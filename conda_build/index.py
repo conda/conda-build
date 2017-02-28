@@ -78,7 +78,7 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     :type check_md5: bool
     """
 
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
 
     log.debug("updating index in: %s", dir_path)
     if not os.path.isdir(dir_path):
@@ -174,7 +174,7 @@ def ensure_valid_channel(local_folder, subdir, config):
 
 
 def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     log.debug("Building new index for subdir '{}' with channels {}, condarc channels = {}".format(
         subdir, config.channel_urls, not omit_defaults))
     # priority: local by croot (can vary), then channels passed as args,

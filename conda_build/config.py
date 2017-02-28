@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 
 import copy
 from collections import namedtuple
-import logging
 import math
 import os
 from os.path import abspath, expanduser, join
@@ -16,7 +15,7 @@ from .conda_interface import root_dir, root_writable, cc
 from .conda_interface import binstar_upload
 from .variants import get_default_variants
 
-from .utils import get_build_folders, rm_rf, trim_empty_keys
+from .utils import get_build_folders, rm_rf, trim_empty_keys, get_logger
 
 on_win = (sys.platform == 'win32')
 
@@ -479,8 +478,8 @@ class Config(object):
 
     def __exit__(self, e_type, e_value, traceback):
         if not getattr(self, 'dirty') and e_type is None:
-            logging.getLogger(__name__).info("--dirty flag not specified.  Removing build"
-                                             " folder after successful build/test.\n")
+            get_logger(__name__).info("--dirty flag not specified.  Removing build"
+                                      " folder after successful build/test.\n")
             self.clean()
 
 

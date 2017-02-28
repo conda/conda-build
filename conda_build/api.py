@@ -16,7 +16,6 @@ but only use those kwargs in config.  Config must change to support new features
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 
-import logging as _logging
 import sys as _sys
 
 # make the Config class available in the api namespace
@@ -24,6 +23,7 @@ from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGT
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import conda_43 as _conda_43
+from conda_build.utils import get_logger as _get_logger
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
@@ -94,7 +94,7 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
     Both split packages (recipes with more than one ouptut) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
-    log = _logging.getLogger(__name__)
+    log = _get_logger(__name__)
     log.warn("deprecation warning: this function has been renamed to get_output_file_paths, "
              "to reflect that potentially multiple paths are returned.  This function will be "
              "removed in the conda-build 4.0 release.")

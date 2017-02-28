@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import copy
 import hashlib
 import json
-import logging
 import os
 from os.path import isfile, join
 import re
@@ -197,7 +196,7 @@ def _equivalent(base_value, value, path):
 
 
 def _merge_or_update_values(base, new, path, merge, raise_on_clobber=False):
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     for key, value in new.items():
         base_value = base.get(key, value)
         if hasattr(value, 'keys'):
@@ -224,7 +223,7 @@ def _merge_or_update_values(base, new, path, merge, raise_on_clobber=False):
 
 
 def _trim_None_strings(meta_dict):
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     for key, value in meta_dict.items():
         if hasattr(value, 'keys'):
             meta_dict[key] = _trim_None_strings(value)
@@ -420,7 +419,7 @@ def build_string_from_metadata(metadata):
         build_str = metadata.get_value('build/string')
     else:
         res = []
-        log = logging.getLogger(__name__)
+        log = utils.get_logger(__name__)
 
         build_pkg_names = [ms.name for ms in metadata.ms_depends('build')]
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
@@ -562,7 +561,7 @@ class MetaData(object):
         """
         assert not self.final, "modifying metadata after finalization"
 
-        log = logging.getLogger(__name__)
+        log = utils.get_logger(__name__)
         log.addFilter(filt)
 
         if isfile(self.requirements_path) and not self.get_value('requirements/run'):
