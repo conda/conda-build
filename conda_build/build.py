@@ -9,7 +9,6 @@ import fnmatch
 from glob import glob
 import io
 import json
-import logging
 import mmap
 import os
 from os.path import isdir, isfile, islink, join
@@ -676,7 +675,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 
 
 def bundle_conda(output, metadata, env, **kw):
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
 
     files = output.get('files', [])
@@ -821,7 +820,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         utils.print_skip_message(m)
         return []
 
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
 
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(config=m.config, m=m)
@@ -1025,7 +1024,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     :param m: Package's metadata.
     :type m: Metadata
     '''
-    log = logging.getLogger(__name__)
+    log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     need_cleanup = False
     hash_input = {}
@@ -1491,9 +1490,9 @@ def handle_pypi_upload(wheels, config):
             try:
                 utils.check_call_env(args + [f])
             except:
-                logging.getLogger(__name__).warn("wheel upload failed - is twine installed?"
+                utils.get_logger(__name__).warn("wheel upload failed - is twine installed?"
                                                 "  Is this package registered?")
-                logging.getLogger(__name__).warn("Wheel file left in {}".format(f))
+                utils.get_logger(__name__).warn("Wheel file left in {}".format(f))
 
     else:
         print("anaconda_upload is not set.  Not uploading wheels: {}".format(wheels))

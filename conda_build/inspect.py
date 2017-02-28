@@ -8,7 +8,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
 import json
-import logging
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename
 import os
@@ -22,7 +21,7 @@ from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linke
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file
+from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file, get_logger
 
 
 def which_package(path):
@@ -127,7 +126,7 @@ def replace_path(binary, path, prefix):
 
 def test_installable(channel='defaults'):
     success = True
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
     has_py = re.compile(r'py(\d)(\d)')
     for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
         log.info("######## Testing platform %s ########", platform)
@@ -222,8 +221,8 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 if path.startswith(prefix):
                     deps = list(which_package(path))
                     if len(deps) > 1:
-                        logging.getLogger(__name__).warn("Warning: %s comes from multiple "
-                                                         "packages: %s", path, comma_join(deps))
+                        get_logger(__name__).warn("Warning: %s comes from multiple "
+                                                  "packages: %s", path, comma_join(deps))
                     if not deps:
                         if exists(path):
                             depmap['untracked'].append((lib, path.split(prefix +
@@ -304,7 +303,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
 
 
 def get_hash_input(packages):
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
     hash_inputs = {}
     for pkg in packages:
         pkgname = os.path.basename(pkg)[:-8]

@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
 import os
 import sys
 from os.path import isdir, join, dirname, isfile
@@ -15,7 +14,7 @@ from distutils.msvc9compiler import Reg, WINSDK_BASE
 from .conda_interface import bits
 
 from conda_build import environ
-from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into
+from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into, get_logger
 from conda_build.variants import set_language_env_vars, get_default_variants
 
 
@@ -88,7 +87,7 @@ def build_vcvarsall_vs_path(version):
 
 
 def msvc_env_cmd(bits, config, override=None):
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
     log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0.  "
              "Use {{compiler('c')}} jinja2 in requirements/build or explicitly list compiler "
              "package as build dependency instead.")
