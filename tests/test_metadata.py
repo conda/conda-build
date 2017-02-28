@@ -151,17 +151,25 @@ def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
 
 def test_native_compiler_metadata_linux(testing_config, mocker):
     testing_config._platform = 'linux'
+    # this is a bit of a hack.  It ensures that the native compiler section gets populated.
+    # under ordinary circumstances, via api.render, we make sure that the variant is at least
+    #    populated with the default values.  By instantiating just MetaData, that doesn't hold.
+    testing_config.variant = {'dummy': 'abc'}
     metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
     assert 'gcc' in metadata.meta['requirements']['build']
-    assert 'g++' in metadata.meta['requirements']['build']
+    assert 'gxx' in metadata.meta['requirements']['build']
     assert 'gfortran' in metadata.meta['requirements']['build']
 
 
 def test_native_compiler_metadata_osx(testing_config, mocker):
     testing_config._platform = 'osx'
+    # this is a bit of a hack.  It ensures that the native compiler section gets populated.
+    # under ordinary circumstances, via api.render, we make sure that the variant is at least
+    #    populated with the default values.  By instantiating just MetaData, that doesn't hold.
+    testing_config.variant = {'dummy': 'abc'}
     metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
     assert 'clang' in metadata.meta['requirements']['build']
-    assert 'clang++' in metadata.meta['requirements']['build']
+    assert 'clangxx' in metadata.meta['requirements']['build']
     assert 'gfortran' in metadata.meta['requirements']['build']
 
 

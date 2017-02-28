@@ -16,6 +16,7 @@ but only use those kwargs in config.  Config must change to support new features
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 
+import logging as _logging
 import sys as _sys
 
 # make the Config class available in the api namespace
@@ -31,11 +32,17 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
        templates evaluated.
 
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
-    from conda_build.render import render_recipe
+    from conda_build.render import render_recipe, finalize_metadata
     config = get_or_merge_config(config, **kwargs)
-    metadata, _ = render_recipe(recipe_path, no_download_source=config.no_download_source,
-                                config=config, variants=variants,
-                                permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+    metadata_tuples, index = render_recipe(recipe_path,
+                                    no_download_source=config.no_download_source,
+                                    config=config, variants=variants,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+    metadata = [(finalize_metadata(m, index), download, reparse)
+                for (metadata, download, reparse) in metadata_tuples
+                for (output_dict, m) in metadata.get_output_metadata_set()
+                if output_dict.get('type') != 'wheel']
+
     return metadata
 
 
@@ -45,6 +52,41 @@ def output_yaml(metadata, file_path=None):
     return output_yaml(metadata, file_path)
 
 
+def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, config=None,
+                         variants=None, **kwargs):
+    """Get output file paths for any packages that would be created by a recipe
+
+    Both split packages (recipes with more than one ouptut) and build matrices,
+    created with variants, contribute to the list of file paths here.
+    """
+    from conda_build.render import bldpkg_path
+    from conda_build.conda_interface import string_types
+    config = get_or_merge_config(config, **kwargs)
+    if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
+                                                                       string_types):
+        list_of_metas = [hasattr(item[0], 'config') for item in recipe_path_or_metadata
+                        if len(item) == 3]
+        if list_of_metas and all(list_of_metas):
+            metadata = recipe_path_or_metadata
+    elif isinstance(recipe_path_or_metadata, string_types):
+        # first, render the parent recipe (potentially multiple outputs, depending on variants).
+        metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
+                            variants=variants, config=config)
+    else:
+        assert hasattr(recipe_path_or_metadata, 'config'), ("Expecting metadata object - got {}"
+                                                            .format(recipe_path_or_metadata))
+        metadata = [(recipe_path_or_metadata, None, None)]
+    #    Next, loop over outputs that each metadata defines
+    outs = []
+    for (m, _, _) in metadata:
+        if m.skip():
+            outs.append("Skipped: {} defines build/skip for this configuration."
+                        .format(m.path))
+        else:
+            outs.append(bldpkg_path(m))
+    return outs
+
+
 def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None,
                          variants=None, **kwargs):
     """Get output file paths for any packages that would be created by a recipe
@@ -52,18 +94,12 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
     Both split packages (recipes with more than one ouptut) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
-    from conda_build.render import render_recipe, bldpkg_path
-    config = get_or_merge_config(config, **kwargs)
-    if hasattr(recipe_path_or_metadata, 'config'):
-        metadata = [(recipe_path_or_metadata, None, None)]
-    else:
-        metadata, _ = render_recipe(recipe_path_or_metadata,
-                                    no_download_source=no_download_source,
-                                    variants=variants, config=config)
-    # first, render the parent recipe (potentially multiple outputs, depending on variants).
-    #    Next, loop over outputs that each metadata defines
-    return [bldpkg_path(output_meta) for (m, _, _) in metadata
-            for (_, output_meta) in m.get_output_metadata_set(None)]
+    log = _logging.getLogger(__name__)
+    log.warn("deprecation warning: this function has been renamed to get_output_file_paths, "
+             "to reflect that potentially multiple paths are returned.  This function will be "
+             "removed in the conda-build 4.0 release.")
+    return get_output_file_paths(recipe_path_or_metadata, no_download_source=no_download_source,
+                                 config=config, variants=variants, **kwargs)
 
 
 def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
@@ -72,10 +108,9 @@ def check(recipe_path, no_download_source=False, config=None, variants=None, **k
     Verifies that recipe can be completely rendered, and that fields of the rendered recipe are
     valid fields, with some value checking.
     """
-    from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
-    metadata, _ = render_recipe(recipe_path, no_download_source=no_download_source,
-                                config=config, variants=variants)
+    metadata = render(recipe_path, no_download_source=no_download_source,
+                      config=config, variants=variants)
     return all(m[0].check_fields() for m in metadata)
 
 

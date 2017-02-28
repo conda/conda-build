@@ -16,10 +16,10 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
-from conda_build.cli.main_render import RecipeCompleter, get_render_parser, bldpkg_path
+from conda_build.cli.main_render import RecipeCompleter, get_render_parser
 from conda_build.conda_interface import cc, add_parser_channels, url_path
 import conda_build.source as source
-from conda_build.utils import print_skip_message, LoggingContext
+from conda_build.utils import LoggingContext
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -235,11 +235,8 @@ different sets of packages."""
 def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
         metadata_tuples = api.render(recipe, config=config)
-    for (metadata, _, _) in metadata_tuples:
-        if metadata.skip():
-            print_skip_message(metadata)
-        else:
-            print(bldpkg_path(metadata))
+        paths = api.get_output_file_path(metadata_tuples)
+        print('\n'.join(paths))
 
 
 def source_action(recipe, config):

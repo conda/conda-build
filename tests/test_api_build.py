@@ -6,6 +6,7 @@ from collections import OrderedDict
 from glob import glob
 import logging
 import os
+import re
 import subprocess
 import sys
 import json
@@ -671,6 +672,8 @@ def test_legacy_noarch_python(testing_config):
     assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
 
+@pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
+                   reason="bug in conda 4.3.x - https://github.com/conda/conda/issues/4740")
 def test_preferred_env(testing_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
     output = api.build(recipe, config=testing_config)[0]
@@ -897,8 +900,10 @@ def test_pin_downstream(testing_metadata, testing_config):
 
 
 def test_pin_subpackage_exact(testing_config):
-    m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]
-    assert 'pin_downstream_subpkg 1.0 hbf21a9e_0' in m.meta['requirements']['run']
+    m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)
+    assert any(re.match(r'pin_downstream_subpkg 1.0 h[a-f0-9]{%s}_0' % testing_config.hash_length,
+                        req)
+              for _m in m for req in _m[0].meta['requirements']['run'])
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")

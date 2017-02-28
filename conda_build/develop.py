@@ -146,7 +146,8 @@ Error: environment does not exist: %s
     assert find_executable('python', prefix=prefix)
 
     # current environment's site-packages directory
-    sp_dir = get_site_packages(prefix)
+    sp_dir = get_site_packages(prefix, '.'.join((str(sys.version_info.major),
+                                                 str(sys.version_info.minor))))
 
     if type(recipe_dirs) == string_types:
         recipe_dirs = [recipe_dirs]

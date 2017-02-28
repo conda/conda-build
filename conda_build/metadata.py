@@ -794,6 +794,17 @@ class MetaData(object):
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
+        outputs = self.get_section('outputs')
+        if outputs:
+            outs = []
+            for out in outputs:
+                out = copy.copy(out)
+                # files are dynamically determined, and there's no way to match them at render time.
+                #    we need to exclude them from the hash.
+                if 'files' in out:
+                    del out['files']
+                outs.append(out)
+            composite.update({'outputs': [HashableDict(out) for out in outs]})
 
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})
@@ -1147,6 +1158,17 @@ class MetaData(object):
                             return vcs
         return None
 
+    @property
+    def uses_subpackage(self):
+        outputs = self.get_section('outputs')
+        in_reqs = any(out.get('name') in self.get_value('requirements/run') for out in outputs)
+        subpackage_pin = False
+        if not in_reqs and self.meta_path:
+            with open(self.meta_path) as f:
+                matches = re.findall(r"{{\s*pin_subpackage\(.*\)\s*}}", f.read())
+            subpackage_pin = len(matches) > 0
+        return in_reqs or subpackage_pin
+
     def validate_features(self):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
@@ -1167,11 +1189,13 @@ class MetaData(object):
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
         extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
+        if self.name() == output.get('name') and 'requirements' not in output:
+            output['requirements'] = requirements
         output_metadata.meta['extra'] = extra
         output_metadata.final = False
         return output_metadata
 
-    def get_output_metadata_set(self, files, permit_undefined_jinja=False):
+    def get_output_metadata_set(self, files=None, permit_undefined_jinja=False):
         outputs = self.get_section('outputs')
 
         # this is the old, default behavior: conda package, with difference between start
@@ -1186,17 +1210,17 @@ class MetaData(object):
             else:
                 # make a metapackage for the top-level package if the top-level requirements
                 #     mention a subpackage,
-                uses_subpackage = any(out.get('name') in requirements for out in outputs)
                 # but only if a matching output name is not explicitly provided
-                if uses_subpackage and not any(self.name() == out.get('name', '')
-                                               for out in outputs):
+                if self.uses_subpackage and not any(self.name() == out.get('name', '')
+                                                    for out in outputs):
                     outputs.append({'name': self.name(), 'requirements': requirements,
                                     'pin_downstream':
                                         self.meta.get('build', {}).get('pin_downstream')})
                 for out in outputs:
                     if (self.name() == out.get('name', '') and not (out.get('files') or
                                                                     out.get('script'))):
-                        out['files'] = files
+                        if files:
+                            out['files'] = files
                         out['requirements'] = requirements
                 metadata = [self.get_output_metadata(output) for output in outputs]
         except SystemExit:

@@ -57,12 +57,16 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
+            fi.seek(0)
         except UnicodeDecodeError:  # file is binary
             return
 
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
-        mm = mmap.mmap(fi.fileno(), 0)
+        try:
+            mm = mmap.mmap(fi.fileno(), 0)
+        except OSError:
+            mm = fi
         m = SHEBANG_PAT.match(mm)
 
         if not (m and b'python' in m.group()):
@@ -86,7 +90,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
 def write_pth(egg_path, config):
     fn = basename(egg_path)
-    with open(join(utils.get_site_packages(config.build_prefix),
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    with open(join(utils.get_site_packages(config.build_prefix, py_ver),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
@@ -97,7 +102,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     itself
     """
     absfiles = [join(prefix, f) for f in files]
-    sp_dir = utils.get_site_packages(prefix)
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    sp_dir = utils.get_site_packages(prefix, py_ver)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
