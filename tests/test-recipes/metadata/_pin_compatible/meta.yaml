@@ -5,5 +5,7 @@ package:
 requirements:
   build:
     - numpy  1.11.2
+    - python
   run:
     - numpy {{ pin_compatible('numpy') }}
+    - python

@@ -60,16 +60,18 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     created with variants, contribute to the list of file paths here.
     """
     from conda_build.render import bldpkg_path
+    from conda_build.conda_interface import string_types
     config = get_or_merge_config(config, **kwargs)
-    if hasattr(recipe_path_or_metadata, '__iter__'):
+    if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
+                                                                       string_types):
         list_of_metas = [hasattr(item[0], 'config') for item in recipe_path_or_metadata
                         if len(item) == 3]
         if list_of_metas and all(list_of_metas):
             metadata = recipe_path_or_metadata
-        else:
-            # first, render the parent recipe (potentially multiple outputs, depending on variants).
-            metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
-                                variants=variants, config=config)
+    elif isinstance(recipe_path_or_metadata, string_types):
+        # first, render the parent recipe (potentially multiple outputs, depending on variants).
+        metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
+                            variants=variants, config=config)
     else:
         assert hasattr(recipe_path_or_metadata, 'config'), ("Expecting metadata object - got {}"
                                                             .format(recipe_path_or_metadata))
