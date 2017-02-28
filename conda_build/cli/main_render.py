@@ -11,8 +11,7 @@ import sys
 
 from conda_build.conda_interface import ArgumentParser, add_parser_channels
 
-from conda_build import __version__
-from conda_build.render import render_recipe, bldpkg_path, output_yaml
+from conda_build import __version__, api
 from conda_build.completers import RecipeCompleter
 
 from conda_build.config import get_or_merge_config
@@ -137,16 +136,16 @@ def execute(args):
     variants = get_package_variants(args.recipe, config)
     set_language_env_vars(variants)
 
-    metadata_tuples, _ = render_recipe(args.recipe, config=config,
-                                       no_download_source=args.no_source)
+    metadata_tuples = api.render(args.recipe, config=config,
+                                 no_download_source=args.no_source)
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):
-            for (metadata, _, _) in metadata_tuples:
-                print(bldpkg_path(metadata))
+            paths = api.get_output_file_path(metadata_tuples)
+            print('\n'.join(paths))
     else:
         logging.basicConfig(level=logging.INFO)
-        for (metadata, _, _) in metadata_tuples:
-            print(output_yaml(metadata, args.file))
+        for (m, _, _) in metadata_tuples:
+            print(api.output_yaml(m, args.file))
 
 
 def main():

@@ -318,10 +318,10 @@ def get_hash_input(packages):
         hash_inputs[pkgname]['files'] = []
         if hash_input_files:
             for fname in hash_input_files.splitlines():
-                hash_inputs[pkgname]['files'].append(package_has_file(pkg,
-                                                            'info/recipe/{}'.format(fname)))
+                if hasattr(fname, 'decode'):
+                    fname = fname.decode()
+                hash_inputs[pkgname]['files'].append('info/recipe/{}'.format(fname))
         else:
             log.warn('Package {} does not include recipe.  Full hash information is '
                      'not reproducible.'.format(pkgname))
-
     return hash_inputs

@@ -250,10 +250,9 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe"""
-    output_metadata = metadata.get_output_metadata_set(None,
-                                                    permit_undefined_jinja=permit_undefined_jinja)
+    output_meta = metadata.get_output_metadata_set(permit_undefined_jinja=permit_undefined_jinja)
     pin = None
-    for (output_dict, sp_m) in output_metadata:
+    for (output_dict, sp_m) in output_meta:
         if sp_m.name() == subpackage_name:
             if permit_undefined_jinja and not sp_m.version():
                 break

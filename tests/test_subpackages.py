@@ -37,13 +37,15 @@ def test_rm_rf_does_not_remove_relative_source_package_files(testing_config, mon
 
 def test_output_pkg_path_shows_all_subpackages(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a'}, {'name': 'b'}]
-    outputs = api.get_output_file_path(testing_metadata)
+    out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
+    outputs = api.get_output_file_path([(m, None, None) for (_, m) in out_dicts_and_metadata])
     assert len(outputs) == 2
 
 
 def test_subpackage_version_provided(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a', 'version': '2.0'}]
-    outputs = api.get_output_file_path(testing_metadata)
+    out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
+    outputs = api.get_output_file_path([(m, None, None) for (_, m) in out_dicts_and_metadata])
     assert len(outputs) == 1
     assert "a-2.0-h" in outputs[0]
 
@@ -51,7 +53,9 @@ def test_subpackage_version_provided(testing_metadata):
 def test_subpackage_independent_hash(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a', 'requirements': 'bzip2'}]
     testing_metadata.meta['requirements']['run'] = ['a']
-    outputs = api.get_output_file_path(testing_metadata)
+    m = finalize_metadata(testing_metadata)
+    out_dicts_and_metadata = m.get_output_metadata_set()
+    outputs = api.get_output_file_path([(m, None, None) for (_, m) in out_dicts_and_metadata])
     assert len(outputs) == 2
     assert outputs[0][-15:] != outputs[1][-15:]
 
@@ -65,3 +69,11 @@ def test_pin_downstream_in_subpackage(testing_metadata, testing_index):
     p2.config.index = None
     p2_final = finalize_metadata(p2, None)
     assert 'bzip2 1.0' in p2_final.meta['requirements']['run']
+
+
+@pytest.mark.serial
+def test_hash_includes_recipe_files(testing_workdir, testing_config):
+    """Hash should include all files not specifically named in any output, plus the script for
+    a given output."""
+    recipe = os.path.join(subpackage_dir, 'script_install_files')
+    outputs = api.build(recipe, config=testing_config)
