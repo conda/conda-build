@@ -332,7 +332,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None,
-                  permit_unsatisfiable_variants=True):
+                  permit_unsatisfiable_variants=True, reset_build_id=True):
     arg = recipe_path
     # Don't use byte literals for paths in Python 2
     if not PY3:
@@ -364,7 +364,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         sys.exit(1)
 
     if config.set_build_id:
-        m.config.compute_build_id(m.name(), reset=True)
+        m.config.compute_build_id(m.name(), reset=reset_build_id)
 
     if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
                                       len(os.listdir(m.config.work_dir)) == 0):
