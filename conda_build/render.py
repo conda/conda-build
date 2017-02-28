@@ -109,7 +109,7 @@ def get_upstream_pins(m, dependencies, index):
     dependencies = [strip_channel(dep) for dep in dependencies]
     # Add _tmp here to prevent creating the build_prefix too early. This is because, when
     # dirty is set, we skip calling create_env if the folder already exists.
-    actions = environ.get_install_actions(m.config.build_prefix + "_tmp", index, dependencies,
+    actions = environ.get_install_actions(m.config.build_prefix[:-4] + "_tmp", index, dependencies,
                                           m.config)
     additional_specs = []
     linked_packages = actions['LINK']
@@ -171,11 +171,10 @@ def get_upstream_pins(m, dependencies, index):
 
 def finalize_metadata(m, index=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
-    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
-    #     be installed in the environment.
-
     if not index:
         index = get_build_index(m.config, m.config.build_subdir)
+    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
+    #     be installed in the environment.
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
@@ -270,7 +269,7 @@ def reparse(metadata, index):
     sys.path.insert(0, metadata.config.build_prefix)
     py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
-    metadata.parse_again(permit_undefined_jinja=False)
+    metadata.parse_until_resolved()
     metadata = finalize_metadata(metadata, index)
     return metadata
 

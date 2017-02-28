@@ -465,7 +465,7 @@ def write_pin_downstream(m):
     else:
         # TODO: would be nicer to have a data structure that allowed direct lookup.
         #    shouldn't be too bad here, the number of things should always be pretty small.
-        for (output_dict, out_m) in m.get_output_metadata_set(None):
+        for (output_dict, out_m) in m.get_output_metadata_set():
             if m.name() == out_m.name() and 'pin_downstream' in output_dict:
                 with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
                     for pin in utils.ensure_list(output_dict['pin_downstream']):

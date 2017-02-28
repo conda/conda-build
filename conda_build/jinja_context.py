@@ -239,8 +239,8 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
                 compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
     if not compatibility and not permit_undefined_jinja:
-        raise RuntimeError("Could not get compatibility information for {} package.  Is the "
-                            "build environment created?".format(package_name))
+        raise RuntimeError("Could not get compatibility information for {} package.  "
+                           "Is it one of your build dependencies?".format(package_name))
     return compatibility
 
 
@@ -250,11 +250,12 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe"""
-    output_metadata = metadata.get_output_metadata_set(None,
-                                                    permit_undefined_jinja=permit_undefined_jinja)
+    output_meta = metadata.get_output_metadata_set(permit_undefined_jinja=permit_undefined_jinja)
     pin = None
-    for (output_dict, sp_m) in output_metadata:
+    for (output_dict, sp_m) in output_meta:
         if sp_m.name() == subpackage_name:
+            if permit_undefined_jinja and not sp_m.version():
+                break
             if exact:
                 pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
             else:
@@ -284,12 +285,12 @@ compilers = {
     },
     'linux': {
         'c': 'gcc',
-        'cxx': 'g++',
+        'cxx': 'gxx',
         'fortran': 'gfortran',
     },
     'osx': {
         'c': 'clang',
-        'cxx': 'clang++',
+        'cxx': 'clangxx',
         'fortran': 'gfortran',
     },
 }
@@ -310,27 +311,19 @@ def compiler(language, config, permit_undefined_jinja=False):
     metapackages, pointing at a package where the host is the same as the target (both being the
     native architecture).
     """
-    native_compiler = _native_compiler(language, config)
-    language_compiler_key = '{}_compiler'.format(language)
-    # fall back to native if language-compiler is not explicitly set in variant
-    compiler = config.variant.get(language_compiler_key, native_compiler)
 
-    # support cross compilers.  A cross-compiler package will have a name such as
-    #    gcc_host_target
-    #    gcc_centos5_centos5
-    #    gcc_centos7_centos5
-    #
-    # Note that the host needs to be part of the compiler.  Right now, that means that the compiler
-    #    needs to be defined in the variant - not just the native default
-    if 'target_platform' in config.variant:
-        if language_compiler_key in config.variant:
-            compiler = '_'.join([config.variant[language_compiler_key],
-                                 config.variant['target_platform']])
-        # This is not defined in early stages of parsing.  Let it by if permit_undefined_jinja set
-        elif not permit_undefined_jinja:
-            raise ValueError("{0} must be set in variant config in order to use target_platform."
-                             "  Please set it to the name of the package, including the host "
-                             "(e.g. gcc-centos5)".format(language_compiler_key))
+    compiler = None
+    native_compiler = _native_compiler(language, config)
+    if config.variant:
+        language_compiler_key = '{}_compiler'.format(language)
+        # fall back to native if language-compiler is not explicitly set in variant
+        compiler = config.variant.get(language_compiler_key, native_compiler)
+
+        # support cross compilers.  A cross-compiler package will have a name such as
+        #    gcc_target
+        #    gcc_linux-cos5-64
+        if 'target_platform' in config.variant:
+            compiler = '_'.join((compiler, config.variant['target_platform']))
     return compiler
 
 
