@@ -22,6 +22,12 @@ DEFAULT_VARIANTS = {
     'exclude_from_build_hash': ['numpy', 'mkl'],
 }
 
+DEFAULT_PLATFORMS = {
+    'linux': 'linux-cos5-' + cc.arch_name,
+    'osx': 'osx-109-' + cc.arch_name,
+    'win': 'win-' + cc.arch_name,
+}
+
 
 SUFFIX_MAP = {'PY': 'python',
               'NPY': 'numpy',
@@ -215,6 +221,10 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
         specs = [DEFAULT_VARIANTS] + list(dict_or_list_of_dicts or [])
 
     combined, extend_keys = combine_specs(specs)
+
+    if not 'target_platform' in combined:
+        combined['target_platform'] = [DEFAULT_PLATFORMS[cc.platform] + str(cc.arch_name)]
+
     if 'extend_keys' in combined:
         del combined['extend_keys']
 
