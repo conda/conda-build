@@ -274,19 +274,6 @@ def reparse(metadata, index):
     return metadata
 
 
-def base_parse(metadata, index):
-    if 'host' in metadata.get_section('requirements'):
-        metadata.config.has_separate_host_prefix = True
-    metadata.parse_until_resolved()
-    try:
-        metadata = reparse(metadata, index)
-    except DependencyNeedsBuildingError:
-        raise
-    except exceptions.UnableToParseMissingSetuptoolsDependencies:
-        raise
-    return metadata
-
-
 def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False):
     rendered_metadata = {}
     need_reparse_in_env = False
@@ -307,17 +294,23 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
             mv.config.host_subdir = variant['target_platform']
         if not need_reparse_in_env:
             try:
-                mv = base_parse(mv, index)
+                mv.parse_until_resolved()
+                need_source_download = (bool(mv.meta.get('source')) and
+                                        not mv.needs_source_for_render and
+                                        not os.listdir(mv.config.work_dir))
+                mv = finalize_metadata(mv, index)
             except DependencyNeedsBuildingError as e:
                 unsatisfiable_variants.append(variant)
                 packages_needing_building.update(set(e.packages))
+                if permit_unsatisfiable_variants:
+                    rendered_metadata[mv.build_id()] = (mv, need_source_download,
+                                                        need_reparse_in_env)
                 continue
             except exceptions.UnableToParseMissingSetuptoolsDependencies:
                 need_reparse_in_env = True
             except:
                 raise
-        need_source_download = (bool(mv.meta.get('source')) and not mv.needs_source_for_render and
-                                not os.listdir(mv.config.work_dir))
+
         # computes hashes based on whatever the current specs are - not the final specs
         #    This is a deduplication step.  Any variants that end up identical because a
         #    given variant is not used in a recipe are effectively ignored, though we still pay

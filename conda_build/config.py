@@ -173,13 +173,31 @@ class Config(object):
 
     @property
     def arch(self):
-        """Always the native (build system) arch"""
+        """Always the native (build system) arch, except when pretending to be some
+        other platform"""
         return self._arch or cc.subdir.split('-')[-1]
+
+    @arch.setter
+    def arch(self, value):
+        log = get_logger(__name__)
+        log.warn("setting build arch.  This is only useful when pretending to be on another "
+                 "arch, such as for rendering necessary dependencies on a non-native arch."
+                 "  I trust that you know what you're doing.")
+        self._arch = str(value)
 
     @property
     def platform(self):
-        """Always the native (build system) OS"""
+        """Always the native (build system) OS, except when pretending to be some
+        other platform"""
         return self._platform or cc.platform
+
+    @platform.setter
+    def platform(self, value):
+        log = get_logger(__name__)
+        log.warn("setting build platform.  This is only useful when pretending to be on another "
+                 "platform, such as for rendering necessary dependencies on a non-native platform."
+                 "  I trust that you know what you're doing.")
+        self._platform = value
 
     @property
     def build_subdir(self):

@@ -141,6 +141,7 @@ def set_language_env_vars(variant):
 
 def all_unique(_list):
     seen = set()
+    item = None
     unique = not any(item in seen or seen.add(item) for _set in _list for item in _set)
     return unique or item
 
@@ -169,7 +170,7 @@ def _get_zip_key_set(combined_variant):
             # make sure that each key only occurs in one set
             key_sets = [set(group) for group in zip_keys]
             _all_unique = all_unique(key_sets)
-            if _all_unique != True:
+            if _all_unique is not True:
                 raise ValueError("All package in zip keys must belong to only one group.  "
                                 "'{}' is in more than one group.".format(_all_unique))
             for ks in key_sets:
@@ -242,19 +243,15 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
             v = combined.get(col)
             if v:
                 remapped[col] = v if hasattr(v, 'keys') else list(set(v))
-        del_keys = []
         # split out zipped keys
-        for k, v in remapped.items():
+        for k, v in remapped.copy().items():
             if isinstance(k, string_types) and isinstance(v, string_types):
                 keys = k.split(',')
                 values = v.split(',')
                 for (_k, _v) in zip(keys, values):
                     remapped[_k] = _v
                 if ',' in k:
-                    del_keys.append(k)
-        for k in del_keys:
-            del remapped[k]
-
+                    del remapped[k]
         dicts.append(remapped)
     return dicts
 

@@ -214,7 +214,8 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                                 platform=subdir)
             # HACK: defaults does not have the many subfolders we support.  Omit it and try again.
             except CondaHTTPError:
-                urls.remove('defaults')
+                if 'defaults' in urls:
+                    urls.remove('defaults')
                 index = get_index(channel_urls=urls,
                                 prepend=omit_defaults,
                                 use_local=True,
