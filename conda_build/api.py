@@ -33,16 +33,25 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
 
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from conda_build.render import render_recipe, finalize_metadata
+    from conda_build.exceptions import DependencyNeedsBuildingError
     config = get_or_merge_config(config, **kwargs)
     metadata_tuples, index = render_recipe(recipe_path,
                                     no_download_source=config.no_download_source,
                                     config=config, variants=variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-    metadata = [(finalize_metadata(m, index), download, reparse)
-                for (metadata, download, reparse) in metadata_tuples
-                for (output_dict, m) in metadata.get_output_metadata_set()
-                if output_dict.get('type') != 'wheel']
 
+    metadata = []
+    for (_m, download, reparse) in metadata_tuples:
+        for (output_dict, m) in _m.get_output_metadata_set():
+            if output_dict.get('type') != 'wheel':
+                try:
+                    m = finalize_metadata(m, index)
+                except DependencyNeedsBuildingError:
+                    log = _get_logger(__name__)
+                    log.warn("Could not finalize metadata due to missing dependencies.  "
+                             "If building, these should get built in order and it's OK to "
+                             "ignore this message..")
+                metadata.append((m, download, reparse))
     return metadata
 
 
