@@ -337,9 +337,13 @@ unxz is required to unarchive .xz source files.
 
         check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
-    t = tarfile.open(tarball, mode)
-    t.extractall(path=dir_path)
-    t.close()
+
+    try:
+        t = tarfile.open(tarball, mode)
+        t.extractall(path=dir_path)
+        t.close()
+    except tarfile.ReadError:
+        subprocess.check_call(['tar', '-x', '-v', '-p', '-f', tarball, '-C', dir_path])
 
 
 def unzip(zip_path, dir_path):
