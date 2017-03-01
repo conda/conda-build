@@ -9,7 +9,7 @@ import six
 import yaml
 
 from conda_build.utils import ensure_list
-from conda_build.conda_interface import cc
+from conda_build.conda_interface import cc, string_types
 
 DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'exclude_from_build_hash']
 DEFAULT_VARIANTS = {
@@ -132,6 +132,78 @@ def set_language_env_vars(variant):
     return env
 
 
+def all_unique(_list):
+    seen = set()
+    unique = not any(item in seen or seen.add(item) for _set in _list for item in _set)
+    return unique or item
+
+
+def _get_zip_key_type(zip_keys):
+    is_strings = all(isinstance(key, string_types) for key in zip_keys)
+    is_list_of_strings = all(hasattr(key, '__iter__') and not isinstance(key, string_types)
+                            for key in zip_keys)
+    return is_strings, is_list_of_strings
+
+
+def _get_zip_key_set(combined_variant):
+    """Used to exclude particular keys from the matrix"""
+    zip_keys = combined_variant.get('zip_keys')
+    key_set = set()
+    if zip_keys:
+        # zip keys can be either a collection of strings, or a collection of collections of strings
+        assert hasattr(zip_keys, '__iter__') and not isinstance(zip_keys, string_types), (
+                    "zip_keys must be uniformly a list of strings, or a list of lists of strings")
+        is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
+        assert is_strings or is_list_of_strings, ("zip_keys must be uniformly a list of strings, "
+                                                "or a list of lists of strings")
+        if is_strings:
+            key_set = set(zip_keys)
+        else:
+            # make sure that each key only occurs in one set
+            key_sets = [set(group) for group in zip_keys]
+            _all_unique = all_unique(key_sets)
+            if _all_unique != True:
+                raise ValueError("All package in zip keys must belong to only one group.  "
+                                "'{}' is in more than one group.".format(_all_unique))
+            for ks in key_sets:
+                key_set.update(ks)
+    # omit
+    key_set = {key for key in key_set if key in combined_variant}
+    return key_set
+
+
+def _get_zip_dict_of_lists(combined_variant, list_of_strings):
+    used_keys = [key for key in list_of_strings if key in combined_variant]
+    out = {}
+
+    if used_keys:
+        dict_key = ",".join(list_of_strings)
+        length = len(ensure_list(combined_variant[used_keys[0]]))
+        for key in used_keys:
+            if not len(ensure_list(combined_variant[key])) == length:
+                raise ValueError("zip field {} length does not match zip field {} length.  All zip "
+                                 "fields within a group must be the same length."
+                                 .format(used_keys[0], key))
+        values = list(zip(*[ensure_list(combined_variant[key]) for key in used_keys]))
+        values = [','.join(value) for value in values]
+        out = {dict_key: values}
+    return out
+
+
+def _get_zip_groups(combined_variant):
+    """returns a dictionary of dictionaries - each one is """
+    zip_keys = combined_variant.get('zip_keys')
+    groups = []
+    if zip_keys:
+        is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
+        if is_strings:
+            groups.append(_get_zip_dict_of_lists(combined_variant, zip_keys))
+        elif is_list_of_strings:
+            for group in zip_keys:
+                groups.append(_get_zip_dict_of_lists(combined_variant, group))
+    return groups
+
+
 def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
     # http://stackoverflow.com/a/5228294/1170370
     # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
@@ -146,13 +218,32 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
         del combined['extend_keys']
 
     dicts = []
-    dimensions = {k: v for k, v in combined.items() if k not in ['extend_keys'] + list(extend_keys)}
+    dimensions = {k: v for k, v in combined.items() if k not in (['extend_keys'] +
+                                                                 list(extend_keys) +
+                                                                 list(_get_zip_key_set(combined)))}
+    # here's where we add in the zipped dimensions
+    for group in _get_zip_groups(combined):
+        dimensions.update(group)
+
     for x in product(*dimensions.values()):
         remapped = dict(six.moves.zip(dimensions, x))
         for col in list(extend_keys):
             v = combined.get(col)
             if v:
                 remapped[col] = v if hasattr(v, 'keys') else list(set(v))
+        del_keys = []
+        # split out zipped keys
+        for k, v in remapped.items():
+            if isinstance(k, string_types) and isinstance(v, string_types):
+                keys = k.split(',')
+                values = v.split(',')
+                for (_k, _v) in zip(keys, values):
+                    remapped[_k] = _v
+                if ',' in k:
+                    del_keys.append(k)
+        for k in del_keys:
+            del remapped[k]
+
         dicts.append(remapped)
     return dicts
 
