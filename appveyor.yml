@@ -39,7 +39,7 @@ install:
   # these correspond to folder naming of miniconda installs on appveyor.  See
   # https://www.appveyor.com/docs/installed-software#python
   - if "%PYTHON_VERSION%" == "3.4" set "BASE_PYTHON_VERSION=3"
-  - if "%PYTHON_VERSION%" == "3.5" set "BASE_PYTHON_VERSION=35"
+  - if "%PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=36"
   - if "%PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
   # These are already installed on appveyor.  Update them.
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
