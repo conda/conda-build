@@ -81,7 +81,6 @@ def prefix_files(prefix):
             path = join(root, dn)
             if islink(path):
                 res.add(path[len(prefix) + 1:])
-    res = set(utils.expand_globs(res, prefix))
     return res
 
 
@@ -623,7 +622,8 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
     return [f.replace(prefix + os.path.sep, '') for f in files_list
-            if not os.path.isdir(os.path.join(prefix, f))]
+            if (not os.path.isdir(os.path.join(prefix, f)) or
+                os.path.islink(os.path.join(prefix, f)))]
 
 
 def post_process_files(m, initial_prefix_files):
@@ -696,7 +696,8 @@ def bundle_conda(output, metadata, env, **kw):
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.build_prefix))
         pfx_files = set(prefix_files(metadata.config.build_prefix))
-        initial_files = pfx_files - keep_files
+        initial_files = set(item for item in (pfx_files - keep_files)
+                            if not any(keep_file.startswith(item) for keep_file in keep_files))
 
     files = post_process_files(metadata, initial_files)
 
@@ -1065,7 +1066,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
 
-            metadata_tuples, _ = render_recipe(recipe_dir, config=config)
+            metadata_tuples, _ = render_recipe(recipe_dir, config=config, reset_build_id=False)
 
             metadata = metadata_tuples[0][0]
             if (metadata.meta.get('test', {}).get('source_files') and
@@ -1347,7 +1348,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                             if pkg.endswith('.tar.bz2'):
                                 # we only know how to test conda packages
                                 try:
-                                    test(pkg, config=config)
+                                    test(pkg, config=metadata.config)
                                 # IOError means recipe was not included with package. use metadata
                                 except IOError:
                                     # force the build string to line up - recomputing it would
