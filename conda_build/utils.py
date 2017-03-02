@@ -33,6 +33,7 @@ from .conda_interface import StringIO
 from .conda_interface import VersionOrder
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf  # NOQA
+import conda_build
 
 from conda_build.os_utils import external
 
@@ -138,7 +139,7 @@ def _copy_with_shell_fallback(src, dst):
 
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
     """Copy all the files and directories in src to the directory dst"""
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
     if isdir(src):
         merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking)
 
@@ -642,7 +643,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
             path = check_output_env(['cygpath', '-u',
                                      path]).splitlines()[0].decode(getpreferredencoding())
         except WindowsError:
-            log = logging.getLogger(__name__)
+            log = get_logger(__name__)
             log.debug('cygpath executable not found.  Passing native path.  This is OK for msys2.')
     return path
 
@@ -691,7 +692,7 @@ def tmp_chdir(dest):
 
 
 def expand_globs(path_list, root_dir):
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
     files = []
     for path in path_list:
         if not os.path.isabs(path):
@@ -915,3 +916,12 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
 #             return _rm_rf(path)
 #     else:
 #         return _rm_rf(path)
+
+def get_logger(name, dedupe=True):
+    log = logging.getLogger(name)
+    if dedupe:
+        dedupe_handler = logging.StreamHandler()
+        dedupe_handler.addFilter(conda_build.filt)
+        log.addHandler(dedupe_handler)
+
+    return log

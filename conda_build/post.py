@@ -5,7 +5,6 @@ from functools import partial
 from glob import glob
 import io
 import locale
-import logging
 import mmap
 import re
 import os
@@ -423,8 +422,8 @@ def fix_permissions(files, prefix):
         if old_mode != new_mode:
             try:
                 lchmod(path, new_mode)
-            except (OSError, PermissionError) as e:
-                log = logging.getLogger(__name__)
+            except (OSError, utils.PermissionError) as e:
+                log = utils.get_logger(__name__)
                 log.warn(str(e))
 
 
