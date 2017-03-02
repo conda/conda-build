@@ -86,6 +86,7 @@ def test_pinning_in_build_requirements():
     # make sure that everything in the build deps is exactly pinned
     assert all(len(req.split(' ')) == 3 for req in build_requirements)
 
+
 def test_no_satisfiable_variants_raises_error():
     recipe = os.path.join(recipe_dir, '01_basic_templating')
     with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
@@ -95,3 +96,35 @@ def test_no_satisfiable_variants_raises_error():
     #    permitting unsatisfiable variants (no satisfiable variants)
     with pytest.raises(ValueError) as e:
         api.render(recipe, permit_unsatisfiable_variants=True)
+
+
+def test_zip_fields():
+    """Zipping keys together allows people to tie different versions as sets of combinations."""
+    v = {'python': ['2.7', '3.5'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
+    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    assert len(ld) == 2
+    assert ld[0]['python'] == '2.7'
+    assert ld[0]['vc'] == '9'
+    assert ld[1]['python'] == '3.5'
+    assert ld[1]['vc'] == '14'
+
+    # allow duplication of values, but lengths of lists must always match
+    v = {'python': ['2.7', '2.7'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
+    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    assert len(ld) == 2
+    assert ld[0]['python'] == '2.7'
+    assert ld[0]['vc'] == '9'
+    assert ld[1]['python'] == '2.7'
+    assert ld[1]['vc'] == '14'
+
+    # mismatched lengths should raise an error
+    v = {'python': ['2.7', '3.5', '3.4'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
+    with pytest.raises(ValueError):
+        ld = variants.dict_of_lists_to_list_of_dicts(v)
+
+    # when one is completely missing, it's OK.  The zip_field for the set gets ignored.
+    v = {'python': ['2.7', '3.5'], 'zip_keys': [('python', 'vc')]}
+    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    assert len(ld) == 2
+    assert not 'vc' in ld[0].keys()
+    assert not 'vc' in ld[1].keys()
