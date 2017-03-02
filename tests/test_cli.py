@@ -415,9 +415,9 @@ def test_purge(testing_workdir, testing_metadata):
     outputs = api.build(testing_metadata)
     args = ['purge']
     main_build.execute(args)
-    dirs = os.listdir(get_build_folders(testing_metadata.config.croot)[0])
-    folder_re = re.compile('[a-zA-Z_]+[0-9]+')
-    assert not any(folder_re.match(folder) for folder in dirs)
+    dirs = get_build_folders(testing_metadata.config.croot)
+    assert not dirs
+    # make sure artifacts are kept - only temporary folders get nuked
     assert all(os.path.isfile(fn) for fn in outputs)
 
 
