@@ -1334,12 +1334,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if clear_index:
                     config.index = None
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
-                                                       permit_unsatisfiable_variants=False)
+                                                       permit_unsatisfiable_variants=True)
 
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
-                    if not metadata.final:
-                        metadata = finalize_metadata(metadata, index)
                     packages_from_this = build(metadata, index=index, post=post,
                                                need_source_download=need_source_download,
                                                need_reparse_in_env=need_reparse_in_env)
