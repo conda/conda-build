@@ -18,7 +18,7 @@ install_actions = install_actions
 if parse_version(CONDA_VERSION) >= parse_version("4.3"):
     from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.exports import untracked, walk_prefix  # NOQA
-    from conda.exports import MatchSpec, Resolve, normalized_version  # NOQA
+    from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
     from conda.exports import KEYS, KEYS_DIR, hash_file  # NOQA
     from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
     from conda.exports import get_index  # NOQA
@@ -39,7 +39,7 @@ if parse_version(CONDA_VERSION) >= parse_version("4.3"):
 else:
     from conda.fetch import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.misc import untracked, walk_prefix  # NOQA
-    from conda.resolve import MatchSpec, Resolve, normalized_version  # NOQA
+    from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
     from conda.signature import KEYS, KEYS_DIR, hash_file  # NOQA
     from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
     from conda.api import get_index  # NOQA
@@ -152,6 +152,10 @@ if parse_version(CONDA_VERSION) >= parse_version("4.2"):
     os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
     reset_context()
 
+    from conda.models.channel import get_conda_build_local_url
+    get_local_urls = lambda: list(get_conda_build_local_url()) or []
+    arch_name = context.arch_name
+
 else:
     from conda import config as cc
     from conda.config import non_x86_linux_machines  # NOQA
@@ -192,6 +196,9 @@ else:
 
     class CondaError(Exception):
         pass
+
+    get_local_urls = cc.get_local_urls
+    arch_name = cc.arch_name
 
 CondaError, CondaHTTPError, get_prefix, LinkError = CondaError, CondaHTTPError, get_prefix, LinkError
 LockError, non_x86_linux_machines, NoPackagesFoundError = LockError, non_x86_linux_machines, NoPackagesFoundError

@@ -29,9 +29,9 @@ import encodings.idna  # NOQA
 
 
 # used to get version
-from .conda_interface import cc
+from .conda_interface import pkgs_dirs
 from .conda_interface import envs_dirs, env_path_backup_var_exists, root_dir
-from .conda_interface import plan
+from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import get_index
 from .conda_interface import PY3
 from .conda_interface import package_cache
@@ -666,8 +666,8 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                 locks = []
                 try:
                     if config.locking:
-                        cc.pkgs_dirs = cc.pkgs_dirs[:1]
-                        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs)
+                        _pkgs_dirs = pkgs_dirs[:1]
+                        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs)
                         for folder in locked_folders:
                             if not os.path.isdir(folder):
                                 os.makedirs(folder)
@@ -681,15 +681,15 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
 
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         index = get_build_index(config=config, clear_cache=True)
-                        actions = plan.install_actions(prefix, index, specs)
+                        actions = install_actions(prefix, index, specs)
                         if config.disable_pip:
                             actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
                             actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
-                        plan.display_actions(actions, index)
+                        display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
-                        plan.execute_actions(actions, index, verbose=config.debug)
+                        execute_actions(actions, index, verbose=config.debug)
                         warn_on_old_conda_build(index=index)
                 except (SystemExit, PaddingError, LinkError, CondaError) as exc:
                     if (("too short in" in str(exc) or
@@ -1174,21 +1174,21 @@ def guess_interpreter(script_filename):
 
 
 def clean_pkg_cache(dist, config):
-    pkgs_dirs = cc.pkgs_dirs[:1]
+    _pkgs_dirs = pkgs_dirs[:1]
     locks = []
     if config.locking:
-        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in pkgs_dirs]
+        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in _pkgs_dirs]
     with utils.try_acquire_locks(locks, timeout=config.timeout):
         rmplan = [
             'RM_EXTRACTED {0} local::{0}'.format(dist),
             'RM_FETCHED {0} local::{0}'.format(dist),
         ]
-        plan.execute_plan(rmplan)
+        execute_plan(rmplan)
 
         # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
         #   Conda's cleanup is still necessary - it keeps track of its own in-memory
         #   list of downloaded things.
-        for folder in cc.pkgs_dirs:
+        for folder in _pkgs_dirs:
             try:
                 assert not os.path.exists(os.path.join(folder, dist))
                 assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))

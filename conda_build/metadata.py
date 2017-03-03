@@ -9,7 +9,7 @@ import sys
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import memoized, md5_file
-from .conda_interface import non_x86_linux_machines, platform, arch_name
+from .conda_interface import non_x86_linux_machines, cc_platform, arch_name
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
 
@@ -687,7 +687,7 @@ class MetaData(object):
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number() if self.build_number() else 0,
-            platform=platform,
+            platform=cc_platform,
             arch=arch_name,
             subdir=self.config.subdir,
             depends=sorted(' '.join(ms.spec.split())
