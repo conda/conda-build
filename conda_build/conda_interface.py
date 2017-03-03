@@ -12,8 +12,6 @@ from conda import __version__ as CONDA_VERSION
 from conda import plan
 plan = plan
 
-from conda import config as cc
-
 
 if parse_version(CONDA_VERSION) >= parse_version("4.3"):
     from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
@@ -135,20 +133,25 @@ if parse_version(CONDA_VERSION) >= parse_version("4.2"):
     from conda.base.context import context, get_prefix as context_get_prefix, reset_context
     binstar_upload = context.binstar_upload
     bits = context.bits
+    conda_private = context.conda_private
     default_python = context.default_python
     envs_dirs = context.envs_dirs
     pkgs_dirs = context.pkgs_dirs
+    cc_platform = context.platform
     root_dir = context.root_dir
     root_writable = context.root_writable
     subdir = context.subdir
+
     get_rc_urls = lambda: list(context.channels)
     get_prefix = partial(context_get_prefix, context)
+    cc_conda_build = context.conda_build
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
     reset_context()
 
 else:
+    from conda import config as cc
     from conda.config import non_x86_linux_machines  # NOQA
     from conda.cli.common import get_prefix  # NOQA
 
@@ -157,10 +160,15 @@ else:
     default_python = cc.default_python
     envs_dirs = cc.envs_dirs
     pkgs_dirs = cc.pkgs_dirs
+    cc_platform = cc.platform
     root_dir = cc.root_dir
     root_writable = cc.root_writable
     subdir = cc.subdir
     get_rc_urls = cc.get_rc_urls
+
+    cc_conda_build = cc.rc.get('conda-build', {})
+
+    del locals()['cc']
 
     class CondaHTTPError(Exception):
         pass

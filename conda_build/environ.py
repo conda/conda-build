@@ -13,8 +13,7 @@ from collections import defaultdict
 from os.path import join, normpath
 import subprocess
 
-# noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
-from .conda_interface import text_type, PY3  # noqa
+from .conda_interface import text_type, PY3
 from .conda_interface import root_dir, cc, symlink_conda, pkgs_dirs
 from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
 from .conda_interface import plan
@@ -29,6 +28,7 @@ from conda_build.index import get_build_index
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.variants import get_default_variants
 
+PY3 = PY3
 
 def get_npy_ver(config):
     if config.variant['numpy']:
@@ -716,10 +716,10 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
 
 
 def clean_pkg_cache(dist, config):
-    pkgs_dirs = cc.pkgs_dirs[:1]
+    _pkgs_dirs = pkgs_dirs[:1]
     locks = []
     if config.locking:
-        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in pkgs_dirs]
+        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in _pkgs_dirs]
     with utils.try_acquire_locks(locks, timeout=config.timeout):
         rmplan = [
             'RM_EXTRACTED {0} local::{0}'.format(dist),
@@ -730,7 +730,7 @@ def clean_pkg_cache(dist, config):
         # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
         #   Conda's cleanup is still necessary - it keeps track of its own in-memory
         #   list of downloaded things.
-        for folder in cc.pkgs_dirs:
+        for folder in _pkgs_dirs:
             try:
                 assert not os.path.exists(os.path.join(folder, dist))
                 assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
