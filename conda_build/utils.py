@@ -26,7 +26,7 @@ import filelock
 
 from conda import __version__ as conda_version
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems, cc
+from .conda_interface import PY3, StringIO, iteritems, cc
 from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import VersionOrder
@@ -47,12 +47,6 @@ else:
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    import StringIO
-
 
 on_win = (sys.platform == 'win32')
 

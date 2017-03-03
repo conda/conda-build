@@ -29,7 +29,7 @@ if parse_version(CONDA_VERSION) >= parse_version("4.3"):
     from conda.exports import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
                                rm_rf, symlink_conda, package_cache)  # NOQA
     from conda.exports import CondaSession  # NOQA
-    from conda.exports import (PY3,  input, iteritems, lchmod, string_types,  # NOQA
+    from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
                               text_type, TemporaryDirectory)  # NOQA
     from conda.exports import VersionOrder  # NOQA
     from conda.exports import dist_str_in_index
@@ -50,7 +50,7 @@ else:
     from conda.install import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
                                rm_rf, symlink_conda, package_cache)  # NOQA
     from conda.connection import CondaSession  # NOQA
-    from conda.compat import (PY3, input, iteritems, lchmod, string_types,  # NOQA
+    from conda.compat import (PY3, StringIO, input, iteritems, lchmod, string_types,  # NOQA
                               text_type, TemporaryDirectory)  # NOQA
     from conda.version import VersionOrder  # NOQA
 

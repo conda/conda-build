@@ -22,7 +22,7 @@ from requests.packages.urllib3.util.url import parse_url
 import yaml
 
 from conda_build.conda_interface import spec_from_line, Completer
-from conda_build.conda_interface import input, string_types, PY3
+from conda_build.conda_interface import input, string_types, PY3, StringIO
 from conda_build.conda_interface import CondaSession
 from conda_build.conda_interface import download, handle_proxy_407
 from conda_build.conda_interface import normalized_version
@@ -50,12 +50,6 @@ else:
     except ImportError:
         print(sys.path)
         raise
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    import StringIO
-
 
 # https://gist.github.com/chrisguitarguy/2354951
 
