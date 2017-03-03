@@ -87,15 +87,15 @@ def test_pinning_in_build_requirements():
     assert all(len(req.split(' ')) == 3 for req in build_requirements)
 
 
-def test_no_satisfiable_variants_raises_error():
+def test_no_satisfiable_variants_raises_error(caplog):
     recipe = os.path.join(recipe_dir, '01_basic_templating')
-    with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
+    with pytest.raises(exceptions.DependencyNeedsBuildingError):
         api.render(recipe, permit_unsatisfiable_variants=False)
 
-    # the packages are not installable anyway, so this should raise a valueerror when
-    #    permitting unsatisfiable variants (no satisfiable variants)
-    with pytest.raises(ValueError) as e:
-        api.render(recipe, permit_unsatisfiable_variants=True)
+    # the packages are not installable anyway, so this should show a warning that recipe can't
+    #   be finalized
+    api.render(recipe, permit_unsatisfiable_variants=True)
+    assert "Could not finalize metadata due to missing dependencies" in caplog.text
 
 
 def test_zip_fields():
@@ -126,5 +126,5 @@ def test_zip_fields():
     v = {'python': ['2.7', '3.5'], 'zip_keys': [('python', 'vc')]}
     ld = variants.dict_of_lists_to_list_of_dicts(v)
     assert len(ld) == 2
-    assert not 'vc' in ld[0].keys()
-    assert not 'vc' in ld[1].keys()
+    assert 'vc' not in ld[0].keys()
+    assert 'vc' not in ld[1].keys()

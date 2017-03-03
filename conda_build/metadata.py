@@ -509,6 +509,8 @@ class MetaData(object):
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
         self.parse_again(permit_undefined_jinja=True)
+        if 'host' in self.get_section('requirements'):
+            self.config.has_separate_host_prefix = True
         self.config.disable_pip = self.disable_pip
 
     @property

@@ -1308,7 +1308,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 #    before downloading happens - or else we lose where downloads are
                 if config.set_build_id:
                     config.compute_build_id(metadata.name(), reset=True)
-                recipe_parent_dir = ""
+                recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
                 metadata_tuples = []
                 if clear_index:
@@ -1334,12 +1334,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if clear_index:
                     config.index = None
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
-                                                       permit_unsatisfiable_variants=False)
+                                                       permit_unsatisfiable_variants=True)
 
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
-                    if not metadata.final:
-                        metadata = finalize_metadata(metadata, index)
                     packages_from_this = build(metadata, index=index, post=post,
                                                need_source_download=need_source_download,
                                                need_reparse_in_env=need_reparse_in_env)
@@ -1389,8 +1387,7 @@ for Python 3.5 and needs to be rebuilt."""
                                 "{0} first").format(pkg))
                         add_recipes.append(recipe_dir)
                 else:
-                    raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
-                                       .format(recipe, e.packages) + "\n\n" + extra_help)
+                    raise
             # if we failed to render due to unsatisfiable dependencies, we should only bail out
             #    if we've already retried this recipe.
             if (not metadata and retried_recipes.count(recipe) and
