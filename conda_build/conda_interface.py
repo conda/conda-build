@@ -138,7 +138,7 @@ if parse_version(CONDA_VERSION) >= parse_version("4.2"):
     conda_private = context.conda_private
     default_python = context.default_python
     envs_dirs = context.envs_dirs
-    pkgs_dirs = context.pkgs_dirs
+    pkgs_dirs = list(context.pkgs_dirs)
     cc_platform = context.platform
     root_dir = context.root_dir
     root_writable = context.root_writable
@@ -161,7 +161,7 @@ else:
     bits = cc.bits
     default_python = cc.default_python
     envs_dirs = cc.envs_dirs
-    pkgs_dirs = cc.pkgs_dirs
+    pkgs_dirs = list(cc.pkgs_dirs)
     cc_platform = cc.platform
     root_dir = cc.root_dir
     root_writable = cc.root_writable
