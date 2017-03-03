@@ -12,7 +12,7 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import root_dir, root_writable, cc, subdir, platform
+from .conda_interface import root_dir, root_writable, subdir, cc_platform, cc_conda_build
 from .conda_interface import string_types, binstar_upload
 
 from .utils import get_build_folders, rm_rf
@@ -104,7 +104,7 @@ class Config(object):
                   Setting('debug', False),
                   Setting('timeout', 90),
                   Setting('arch', subdir.split('-')[-1]),
-                  Setting('platform', platform),
+                  Setting('platform', cc_platform),
                   Setting('set_build_id', True),
                   Setting('disable_pip', False),
                   Setting('output_folder', None),
@@ -123,13 +123,13 @@ class Config(object):
                   Setting('repository', 'pypitest'),
 
                   Setting('ignore_recipe_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
+                          cc_conda_build.get('ignore_recipe_verify_scripts', [])),
                   Setting('ignore_package_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
+                          cc_conda_build.get('ignore_package_verify_scripts', [])),
                   Setting('run_recipe_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                          cc_conda_build.get('run_package_verify_scripts', [])),
                   Setting('run_package_verify_scripts',
-                          cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                          cc_conda_build.get('run_package_verify_scripts', [])),
                   ]
 
         # handle known values better than unknown (allow defaults)
@@ -159,7 +159,7 @@ class Config(object):
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv('CONDA_BLD_PATH')
-            _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+            _bld_root_rc = cc_conda_build.get('root-dir')
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:

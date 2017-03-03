@@ -12,7 +12,7 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, cc
+from .conda_interface import root_dir
 
 from conda_build.os_utils import external
 from conda_build import utils
@@ -504,10 +504,3 @@ class Environment(object):
             p, v, b = i['name'], i['version'], i['build']
             specs.append('{} {} {}'.format(p, v, b))
         return specs
-
-
-if __name__ == '__main__':
-    e = get_dict(cc)
-    for k in sorted(e):
-        assert isinstance(e[k], str), k
-        print('%s=%s' % (k, e[k]))

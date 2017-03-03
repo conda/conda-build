@@ -18,7 +18,7 @@ import conda_build.build as build
 import conda_build.utils as utils
 from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
                                          get_render_parser, bldpkg_path)
-from conda_build.conda_interface import cc, add_parser_channels, url_path
+from conda_build.conda_interface import add_parser_channels, url_path, binstar_upload
 import conda_build.source as source
 from conda_build.utils import print_skip_message, LoggingContext
 from conda_build.config import Config
@@ -46,14 +46,14 @@ different sets of packages."""
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='anaconda_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='anaconda_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-include-recipe",
