@@ -16,7 +16,7 @@ from conda import config as cc
 
 
 if parse_version(CONDA_VERSION) >= parse_version("4.3"):
-    from conda.exports import download, handle_proxy_407  # NOQA
+    from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.exports import untracked, walk_prefix  # NOQA
     from conda.exports import MatchSpec, Resolve, normalized_version  # NOQA
     from conda.exports import KEYS, KEYS_DIR, hash_file  # NOQA
@@ -37,7 +37,7 @@ if parse_version(CONDA_VERSION) >= parse_version("4.3"):
     from conda.models.dist import Dist
 
 else:
-    from conda.fetch import download, handle_proxy_407  # NOQA
+    from conda.fetch import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.misc import untracked, walk_prefix  # NOQA
     from conda.resolve import MatchSpec, Resolve, normalized_version  # NOQA
     from conda.signature import KEYS, KEYS_DIR, hash_file  # NOQA
@@ -59,6 +59,7 @@ else:
     class ProgressiveFetchExtract(object): pass
     class Dist(object): pass
 
+TmpDownload = TmpDownload
 download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix
 MatchSpec, Resolve, normalized_version = MatchSpec, Resolve, normalized_version
 KEYS, KEYS_DIR, hash_file = KEYS, KEYS_DIR, hash_file
