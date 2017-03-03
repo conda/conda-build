@@ -14,9 +14,9 @@ from os.path import join, normpath
 import subprocess
 
 from .conda_interface import text_type, PY3
-from .conda_interface import root_dir, cc, symlink_conda, pkgs_dirs
+from .conda_interface import root_dir, symlink_conda, pkgs_dirs
 from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
-from .conda_interface import plan
+from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import package_cache
 from .conda_interface import memoized
 
@@ -564,7 +564,7 @@ def get_install_actions(prefix, index, specs, config, retries=0):
         #    Solving package specifications: ..........
         with capture():
             try:
-                actions = plan.install_actions(prefix, index, specs)
+                actions = install_actions(prefix, index, specs)
             except NoPackagesFoundError as exc:
                 raise DependencyNeedsBuildingError(exc)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
@@ -635,11 +635,11 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                         if not index:
                             index = get_build_index(config=config, subdir=subdir)
                         actions = get_install_actions(prefix, index, specs, config)
-                        plan.display_actions(actions, index)
+                        display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
-                        plan.execute_actions(actions, index, verbose=config.debug)
+                        execute_actions(actions, index, verbose=config.debug)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                         CondaError) as exc:
                     if (("too short in" in str(exc) or
@@ -725,7 +725,7 @@ def clean_pkg_cache(dist, config):
             'RM_EXTRACTED {0} local::{0}'.format(dist),
             'RM_FETCHED {0} local::{0}'.format(dist),
         ]
-        plan.execute_plan(rmplan)
+        execute_plan(rmplan)
 
         # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
         #   Conda's cleanup is still necessary - it keeps track of its own in-memory

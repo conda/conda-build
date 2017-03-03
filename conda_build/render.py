@@ -17,7 +17,8 @@ import tempfile
 
 import yaml
 
-from .conda_interface import PY3, UnsatisfiableError, plan, ProgressiveFetchExtract, pkgs_dirs
+from .conda_interface import (PY3, UnsatisfiableError, execute_actions, ProgressiveFetchExtract,
+                              pkgs_dirs)
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
@@ -121,7 +122,7 @@ def get_upstream_pins(m, dependencies, index):
     # this should be just downloading packages.  We don't need to extract them -
     #    we read contents directly
     if actions:
-        plan.execute_actions(actions, index, verbose=m.config.debug)
+        execute_actions(actions, index, verbose=m.config.debug)
 
         _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
         for pkg in linked_packages:

@@ -9,8 +9,10 @@ from enum import Enum
 
 from conda import __version__ as CONDA_VERSION
 
-from conda import plan
-plan = plan
+
+from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
+install_actions = install_actions
 
 
 if parse_version(CONDA_VERSION) >= parse_version("4.3"):
