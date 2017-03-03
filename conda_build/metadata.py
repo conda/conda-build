@@ -379,7 +379,7 @@ def build_string_from_metadata(metadata):
                     ('perl', 'pl'), ('lua', 'lua'),
                     ('r', 'r'), ('r-base', 'r')):
         for ms in metadata.ms_depends():
-            if ms.name == name:
+            if ms.name.split(' ')[0] == name:
                 try:
                     v = ms.spec.split()[1]
                 except IndexError:
@@ -966,8 +966,9 @@ class MetaData(object):
                 for out in outputs:
                     if (self.name() == out.get('name', '') and not (out.get('files') or
                                                                     out.get('script'))):
-                        out['files'] = files
-                        requirements = requirements
+                        if files:
+                            out['files'] = files
+                        out['requirements'] = requirements
                     metadata = [self.get_output_metadata(output) for output in outputs]
         except SystemExit:
             if not permit_undefined_jinja:
