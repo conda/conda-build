@@ -887,6 +887,13 @@ def test_croot_with_spaces(test_metadata, testing_workdir):
     test_metadata.config.croot = os.path.join(testing_workdir, "space path")
     api.build(test_metadata)
 
+
 def test_unknown_selectors(test_config):
     recipe = os.path.join(metadata_dir, 'unknown_selector')
+    api.build(recipe, config=test_config)
+
+
+def test_extract_tarball_with_unicode_filename(test_config):
+    """See https://github.com/conda/conda-build/pull/1779"""
+    recipe = os.path.join(metadata_dir, '_unicode_in_tarball')
     api.build(recipe, config=test_config)
