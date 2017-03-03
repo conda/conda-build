@@ -9,7 +9,6 @@ from enum import Enum
 
 from conda import __version__ as CONDA_VERSION
 
-
 from conda.plan import display_actions, execute_actions, execute_plan, install_actions
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
@@ -75,6 +74,13 @@ text_type, TemporaryDirectory = text_type, TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
 dist_str_in_index, ProgressiveFetchExtract = dist_str_in_index, ProgressiveFetchExtract
 Dist = Dist
+
+
+if PY3:
+    import configparser  # NOQA
+else:
+    import ConfigParser as configparser  # NOQA
+configparser = configparser
 
 
 if parse_version(CONDA_VERSION) >= parse_version("4.3"):
