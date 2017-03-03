@@ -22,7 +22,7 @@ from requests.packages.urllib3.util.url import parse_url
 import yaml
 
 from conda_build.conda_interface import spec_from_line, Completer
-from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
+from conda_build.conda_interface import input, string_types, PY3
 from conda_build.conda_interface import CondaSession
 from conda_build.conda_interface import download, handle_proxy_407
 from conda_build.conda_interface import normalized_version
@@ -37,17 +37,24 @@ from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
 
 if PY3:
+    import configparser
     try:
         from xmlrpc.client import ServerProxy, Transport, ProtocolError
     except ImportError:
         print(sys.path)
         raise
 else:
+    import ConfigParser as configparser  # NOQA  # pragma: py3 no cover
     try:
         from xmlrpclib import ServerProxy, Transport, ProtocolError
     except ImportError:
         print(sys.path)
         raise
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    import StringIO
 
 
 # https://gist.github.com/chrisguitarguy/2354951
