@@ -56,7 +56,6 @@ from conda_build.render import (parse_or_try_download, output_yaml, bldpkg_path,
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
-from conda_build.metadata import build_string_from_metadata
 from conda_build.index import update_index
 from conda_build.create_test import (create_files, create_shell_files,
                                      create_py_files, create_pl_files)
@@ -881,15 +880,11 @@ def bundle_conda(output, metadata, config, env, **kw):
 
     files = post_process_files(metadata, initial_files)
 
-    tmp_metadata = copy.deepcopy(metadata)
-    tmp_metadata.meta['package']['name'] = output['name']
-    tmp_metadata.meta['requirements'] = {'run': output.get('requirements', [])}
-
     output_filename = ('-'.join([output['name'], metadata.version(),
-                                 build_string_from_metadata(tmp_metadata)]) + '.tar.bz2')
+                                 metadata.build_id()]) + '.tar.bz2')
     # first filter is so that info_files does not pick up ignored files
     files = filter_files(files, prefix=config.build_prefix)
-    create_info_files(tmp_metadata, files, config=config, prefix=config.build_prefix)
+    create_info_files(metadata, files, config=config, prefix=config.build_prefix)
     test_dest_path = os.path.join(config.info_dir, 'recipe', 'run_test.py')
     if output.get('test', {}).get('script'):
         utils.copy_into(os.path.join(metadata.path, output['test']['script']),
