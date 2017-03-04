@@ -56,11 +56,12 @@ else:
 
     dist_str_in_index = lambda index, dist_str: dist_str in index
 
-    class ProgressiveFetchExtract(object): pass
-    class Dist(object): pass
+    class ProgressiveFetchExtract(object): pass  # NOQA
+
+    class Dist(object): pass  # NOQA
 
 TmpDownload = TmpDownload
-download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix
+download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix  # NOQA
 MatchSpec, Resolve, normalized_version = MatchSpec, Resolve, normalized_version
 KEYS, KEYS_DIR, hash_file = KEYS, KEYS_DIR, hash_file
 human_bytes, hashsum_file, md5_file, memoized = human_bytes, hashsum_file, md5_file, memoized
@@ -68,9 +69,9 @@ unix_path_to_win, win_path_to_unix, url_path = unix_path_to_win, win_path_to_uni
 get_index, Completer, InstalledPackages = get_index, Completer, InstalledPackages
 add_parser_channels, add_parser_prefix = add_parser_channels, add_parser_prefix
 specs_from_args, spec_from_line, specs_from_url = specs_from_args, spec_from_line, specs_from_url
-is_linked, linked, linked_data, prefix_placeholder = is_linked, linked, linked_data, prefix_placeholder
+is_linked, linked, linked_data, prefix_placeholder = is_linked, linked, linked_data, prefix_placeholder  # NOQA
 rm_rf, symlink_conda, package_cache = rm_rf, symlink_conda, package_cache
-PY3,  input, iteritems, lchmod, string_types = PY3,  input, iteritems, lchmod, string_types
+PY3, input, iteritems, lchmod, string_types = PY3, input, iteritems, lchmod, string_types
 text_type, TemporaryDirectory = text_type, TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
 dist_str_in_index, ProgressiveFetchExtract = dist_str_in_index, ProgressiveFetchExtract
@@ -124,7 +125,6 @@ else:
             return JSONEncoder.default(self, obj)
 
 EntityEncoder, FileMode, PathType = EntityEncoder, FileMode, PathType
-
 
 
 if parse_version(CONDA_VERSION) >= parse_version("4.2"):
@@ -193,10 +193,9 @@ else:
     class CondaError(Exception):
         pass
 
-CondaError, CondaHTTPError, get_prefix, LinkError = CondaError, CondaHTTPError, get_prefix, LinkError
-LockError, non_x86_linux_machines, NoPackagesFoundError = LockError, non_x86_linux_machines, NoPackagesFoundError
+CondaError, CondaHTTPError, get_prefix, LinkError = CondaError, CondaHTTPError, get_prefix, LinkError  # NOQA
+LockError, non_x86_linux_machines, NoPackagesFoundError = LockError, non_x86_linux_machines, NoPackagesFoundError  # NOQA
 PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
-
 
 
 # work-around for python bug on Windows prior to python 3.2
@@ -289,7 +288,6 @@ class CrossPlatformStLink(object):
             cls.GetFileInformationByHandle.restype = BOOL
 
             cls._st_nlink = cls._windows_st_nlink
-
 
 
 class SignatureError(Exception):

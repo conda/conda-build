@@ -30,6 +30,7 @@ from conda_build.variants import get_default_variants
 
 PY3 = PY3
 
+
 def get_npy_ver(config):
     if config.variant['numpy']:
         # Convert int -> string, e.g.
