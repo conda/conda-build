@@ -1530,7 +1530,7 @@ packages, the other package needs to be rebuilt
                         add_recipes.append(recipe_dir)
                 else:
                     raise RuntimeError("Can't build {0} due to unsatisfiable dependencies:\n{1}"
-                                       .format(recipe, e.pkgs) + "\n\n" + extra_help)
+                                       .format(recipe, error_str) + "\n\n" + extra_help)
             if retried_recipes.count(recipe) >= len(metadata.ms_depends('build')):
                 raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                     .format(recipe) + error_str + "\n" + extra_help)
