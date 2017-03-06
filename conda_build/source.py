@@ -419,7 +419,7 @@ def _guess_patch_strip_level(filesstr, src_dir):
     src_dir = src_dir.encode(errors='ignore')
     for file in files:
         numslash = file.count(b'/')
-        maxlevel = numslash if not maxlevel else min(maxlevel, numslash)
+        maxlevel = numslash if maxlevel is None else min(maxlevel, numslash)
     if maxlevel == 0:
         patchlevel = 0
     else:
