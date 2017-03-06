@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import io
 import locale
 import logging
 import os
@@ -437,7 +438,7 @@ def _guess_patch_strip_level(filesstr, src_dir):
 def _get_patch_file_details(path):
     re_files = re.compile('^(?:---|\+\+\+) ([^\n\t]+)')
     files = set()
-    with open(path) as f:
+    with io.open(path, errors='ignore') as f:
         files = []
         first_line = True
         is_git_format = True
