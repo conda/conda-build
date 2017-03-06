@@ -28,6 +28,7 @@ from conda_build.utils import prepend_bin_path, ensure_list
 from conda_build.index import get_build_index
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.variants import get_default_variants
+from conda_build.utils import prepend_bin_path, ensure_list, path_prepended
 
 
 def get_npy_ver(config):
@@ -331,10 +332,11 @@ def meta_vars(meta, config):
         _x = False
 
         if git_url:
-            _x = verify_git_repo(git_dir,
-                                 git_url,
-                                 config,
-                                 meta.get_value('source/git_rev', 'HEAD'))
+            with path_prepended(config.build_prefix):
+                _x = verify_git_repo(git_dir,
+                                     git_url,
+                                     config,
+                                     meta.get_value('source/git_rev', 'HEAD'))
 
         if _x or meta.get_value('source/path'):
             d.update(get_git_info(git_dir, config))
