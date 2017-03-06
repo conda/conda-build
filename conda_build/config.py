@@ -264,62 +264,78 @@ class Config(object):
         return join(self.build_folder, '_b_env')
 
     @property
-    def _long_build_prefix(self):
-        placeholder_length = self.prefix_length - len(self._short_build_prefix)
+    def _short_test_prefix(self):
+        return join(self.build_folder, '_t_env')
+
+    def _long_prefix(self, base_prefix):
+        placeholder_length = self.prefix_length - len(base_prefix)
         placeholder = '_placehold'
         repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
-        placeholder = (self._short_build_prefix + repeats * placeholder)[:self.prefix_length]
-        return max(self._short_build_prefix, placeholder)
+        placeholder = (base_prefix + repeats * placeholder)[:self.prefix_length]
+        return max(base_prefix, placeholder)
 
     @property
     def build_prefix(self):
+        """The temporary folder where the build environment is created"""
         if on_win:
             return self._short_build_prefix
-        return self._long_build_prefix
+        return self._long_prefix(self._short_build_prefix)
 
     @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        return join(self.build_folder, '_t_env')
+        if on_win:
+            return self._short_test_prefix
+        return self._long_prefix(self._short_test_prefix)
 
     @property
     def build_python(self):
+        """Path to the python executable in the build environment"""
         return self._get_python(self.build_prefix)
 
     @property
     def test_python(self):
+        """Path to the python executable in the test environment"""
         return self._get_python(self.test_prefix)
 
     @property
     def build_perl(self):
+        """Path to the python executable in the build environment"""
         return self._get_perl(self.build_prefix)
 
     @property
     def test_perl(self):
+        """Path to the perl executable in the test environment"""
         return self._get_perl(self.test_prefix)
 
     @property
     def build_lua(self):
+        """Path to the lua executable in the build environment"""
         return self._get_lua(self.build_prefix)
 
     @property
     def test_lua(self):
+        """Path to the lua executable in the test environment"""
         return self._get_lua(self.test_prefix)
 
     @property
     def info_dir(self):
+        """Path to the info dir in the build prefix, where recipe metadata is stored"""
         path = join(self.build_prefix, 'info')
         _ensure_dir(path)
         return path
 
     @property
     def meta_dir(self):
+        """Path to the conda-meta dir in the build prefix, where package index json files are
+        stored"""
         path = join(self.build_prefix, 'conda-meta')
         _ensure_dir(path)
         return path
 
     @property
     def broken_dir(self):
+        """Where packages that fail the test phase are placed"""
         path = join(self.croot, "broken")
         _ensure_dir(path)
         return path
@@ -341,30 +357,36 @@ class Config(object):
 
     @property
     def src_cache(self):
+        """Where tarballs and zip files are downloaded and stored"""
         path = join(self.croot, 'src_cache')
         _ensure_dir(path)
         return path
 
     @property
     def git_cache(self):
+        """Where local clones of git sources are stored"""
         path = join(self.croot, 'git_cache')
         _ensure_dir(path)
         return path
 
     @property
     def hg_cache(self):
+        """Where local clones of hg sources are stored"""
         path = join(self.croot, 'hg_cache')
         _ensure_dir(path)
         return path
 
     @property
     def svn_cache(self):
+        """Where local checkouts of svn sources are stored"""
         path = join(self.croot, 'svn_cache')
         _ensure_dir(path)
         return path
 
     @property
     def work_dir(self):
+        """Where the source for the build is extracted/copied to.  If only a single folder is in
+        that folder, this function returns that level one deeper."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
         if os.path.isdir(path):
