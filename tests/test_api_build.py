@@ -830,11 +830,12 @@ def test_workdir_removal_warning_no_remove(test_config, caplog):
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
 def test_append_python_app_osx(test_config):
-    """Recipes that use osx_is_app need to have python.app in their runtime requirements."""
-    recipe = os.path.join(metadata_dir, '_nexpy')
+    """Recipes that use osx_is_app need to have python.app in their runtime requirements.
+    conda-build will add it if it's missing."""
+    recipe = os.path.join(metadata_dir, '_osx_is_app_missing_python_app')
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
-    api.build(recipe, config=test_config, channel_urls=('nexpy', ))
+    api.build(recipe, config=test_config)
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
