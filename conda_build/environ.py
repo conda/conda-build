@@ -214,9 +214,9 @@ def get_dict(config, m=None, prefix=None):
     d = conda_build_vars(prefix, config)
 
     # languages
-    d.update(python_vars(config))
-    d.update(perl_vars(config))
-    d.update(lua_vars(config))
+    d.update(python_vars(config, prefix))
+    d.update(perl_vars(config, prefix))
+    d.update(lua_vars(config, prefix))
 
     if m:
         d.update(meta_vars(m, config))
@@ -250,12 +250,12 @@ def conda_build_vars(prefix, config):
     }
 
 
-def python_vars(config):
+def python_vars(config, prefix):
     d = {
-        'PYTHON': config.build_python,
+        'PYTHON': config.python_bin(prefix),
         'PY3K': str(config.PY3K),
-        'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix),
-        'SP_DIR': utils.get_site_packages(config.build_prefix),
+        'STDLIB_DIR': utils.get_stdlib_dir(prefix),
+        'SP_DIR': utils.get_site_packages(prefix),
         'PY_VER': get_py_ver(config),
         'CONDA_PY': str(config.CONDA_PY),
     }
@@ -267,14 +267,15 @@ def python_vars(config):
     return d
 
 
-def perl_vars(config):
+def perl_vars(config, prefix):
     return {
+        'PERL': config.perl_bin(prefix),
         'PERL_VER': get_perl_ver(config),
     }
 
 
-def lua_vars(config):
-    lua = config.build_lua
+def lua_vars(config, prefix):
+    lua = config.lua_bin(prefix)
     if lua:
         return {
             'LUA': lua,

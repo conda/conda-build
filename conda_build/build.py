@@ -1317,8 +1317,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     create_env(config.test_prefix, specs, config=config)
 
     with utils.path_prepended(config.test_prefix):
-        env = dict(os.environ.copy())
-        env.update(environ.get_dict(config=config, m=metadata, prefix=config.test_prefix))
+        env = environ.get_dict(config=config, m=metadata, prefix=config.test_prefix)
         env["CONDA_BUILD_STATE"] = "TEST"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
@@ -1335,6 +1334,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     # Python 2 Windows requires that envs variables be string, not unicode
     env = {str(key): str(value) for key, value in env.items()}
+
     suffix = "bat" if utils.on_win else "sh"
     test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
@@ -1361,13 +1361,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 tf.write("if errorlevel 1 exit 1\n")
         if pl_files:
             tf.write('"{perl}" "{test_file}"\n'.format(
-                perl=config.test_perl,
+                perl=config.perl_bin(config.test_prefix),
                 test_file=join(config.test_dir, 'run_test.pl')))
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
         if lua_files:
             tf.write('"{lua}" "{test_file}"\n'.format(
-                lua=config.test_lua,
+                lua=config.lua_bin(config.test_prefix),
                 test_file=join(config.test_dir, 'run_test.lua')))
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
