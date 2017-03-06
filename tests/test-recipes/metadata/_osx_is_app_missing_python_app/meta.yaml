@@ -1,0 +1,18 @@
+package:
+  name: conda-build-test-osx-is-app-no-python-app
+  version: 1.0
+
+source:
+  path: ../../../../../conda_build_test_recipe
+
+build:
+  entry_points:
+    - test-script-manual = conda_build_test.manual_entry:main
+
+  osx_is_app: true
+
+requirements:
+  build:
+    - python
+  run:
+    - python
