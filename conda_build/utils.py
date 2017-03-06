@@ -321,7 +321,7 @@ unxz is required to unarchive .xz source files.
         check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
-    if not PY3 and on_win:
+    if not PY3:
         t.extractall(path=dir_path.encode(codec))
     else:
         t.extractall(path=dir_path)
