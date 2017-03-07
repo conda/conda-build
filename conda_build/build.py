@@ -829,24 +829,30 @@ def toposort(outputs):
        the correct files being present during the install and test procedures,
        provided they are run in this order.'''
     from conda.toposort import _toposort
-    # We only care about the packages built by this recipe.
-    these_packages = [output_d['name'] for output_d, _ in outputs]
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    these_packages = [output_d['name'] for output_d, _ in outputs
+                      if output_d.get('type', 'conda') == 'conda']
     topodict = dict()
     order = dict()
-    for idx, (_, output_m) in enumerate(outputs):
-        name = output_m.meta['package']['name']
-        order[name] = idx
-        topodict[name] = set()
-        for run_dep in output_m.get_value('requirements/run', []):
-            run_dep = run_dep.split(' ')[0]
-            if run_dep in these_packages:
-                topodict[name].update((run_dep,))
-    # Calculate the intradepedencies for each output. If we reset the initial
-    # files list instead this may not be necessary, but I am thinking that a
-    # filtering procedure would work better. This must be done before calling
-    # _toposort as it modifies topodict.
+    endorder = set()
     for idx, (output_d, output_m) in enumerate(outputs):
-        name = output_m.meta['package']['name']
+        if output_d.get('type', 'conda') == 'conda':
+            name = output_d['name']
+            order[name] = idx
+            topodict[name] = set()
+            for run_dep in output_m.get_value('requirements/run', []):
+                run_dep = run_dep.split(' ')[0]
+                if run_dep in these_packages:
+                    topodict[name].update((run_dep,))
+        else:
+            endorder.add(idx)
+    # Calculate the intradependencies for each conda package.  This
+    # must be done before calling _toposort as it modifies topodict.
+    for name in topodict:
+        idx = order[name]
+        output_d = outputs[idx][0]
+        assert name == output_d['name'], "toposort ordering bug."
         alldeps = set((name,))
         lastdeps = set()
         while lastdeps != alldeps:
@@ -856,7 +862,9 @@ def toposort(outputs):
                 alldeps |= topodict[dep]
         output_d['intradependencies'] = alldeps - set((name,))
     topo_order = list(_toposort(topodict))
-    return [outputs[order[t]] for t in topo_order]
+    result = [outputs[order[t]] for t in topo_order]
+    result.extend([outputs[o] for o in endorder])
+    return result
 
 
 def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False):
@@ -1030,33 +1038,35 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         outputs = toposort(outputs)
         outputs_idx = dict()
         for idx, (output_d, output_m) in enumerate(outputs):
-            outputs_idx[output_d['name']] = idx
+            if output_d.get('type', 'conda') == 'conda':
+                outputs_idx[output_d['name']] = idx
         intra_installed = set()
-        for (output_dict, m) in outputs:
+        for (output_d, m) in outputs:
             if not m.final:
                 m = finalize_metadata(m, index)
+            type = output_d.get('type', 'conda')
             # Manage the contents of build_prefix according to intradependencies:
             # We work out the difference between what the subsequent package needs
             # and what is currently installed, removing all nondependent packages
             # and extracting any previously removed dependencies.
-            for unwanted in intra_installed - output_dict['intradependencies']:
-                log.debug("intradeps: removing %s" % (unwanted))
-                for dep_file in outputs[outputs_idx[unwanted]][0]['checksums']:
-                    remove_prefix_file(dep_file, m.config.build_prefix)
-            intra_installed -= (intra_installed - output_dict['intradependencies'])
-            for needed in output_dict['intradependencies'] - intra_installed:
-                log.debug("intradeps: re-extracting %s" % (needed))
-                tarball = outputs[outputs_idx[needed]][0]['final_output']
-                with tarfile.open(tarball, 'r:bz2') as tf:
-                    members = [tf.getmember(dep_file) for dep_file in
-                               outputs[outputs_idx[needed]][0]['checksums']]
-                    tf.extractall(m.config.build_prefix, members)
-            intra_installed.update(output_dict['intradependencies'])
-            assert output_dict['intradependencies'] == intra_installed, "set logic gone bad."
-            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, m, env)
-            intra_installed.add(output_dict['name'])
-            built_packages.append(built_package)
-
+            if type == 'conda':
+                for unwanted in intra_installed - output_d['intradependencies']:
+                    log.debug("intradeps: removing %s" % (unwanted))
+                    for dep_file in outputs[outputs_idx[unwanted]][0]['checksums']:
+                        remove_prefix_file(dep_file, m.config.build_prefix)
+                intra_installed -= (intra_installed - output_d['intradependencies'])
+                for needed in output_d['intradependencies'] - intra_installed:
+                    log.debug("intradeps: re-extracting %s" % (needed))
+                    tarball = outputs[outputs_idx[needed]][0]['final_output']
+                    with tarfile.open(tarball, 'r:bz2') as tf:
+                        members = [tf.getmember(dep_file) for dep_file in
+                                   outputs[outputs_idx[needed]][0]['checksums']]
+                        tf.extractall(m.config.build_prefix, members)
+                intra_installed.update(output_d['intradependencies'])
+                assert output_d['intradependencies'] == intra_installed, "set logic gone bad."
+            built_packages.append(bundlers[type](output_d, m, env))
+            if type == 'conda':
+                intra_installed.add(output_d['name'])
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
