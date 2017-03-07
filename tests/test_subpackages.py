@@ -1,5 +1,6 @@
 import os
 import pytest
+import sys
 
 from conda_build import api
 from conda_build.render import finalize_metadata
@@ -76,4 +77,13 @@ def test_hash_includes_recipe_files(testing_workdir, testing_config):
     """Hash should include all files not specifically named in any output, plus the script for
     a given output."""
     recipe = os.path.join(subpackage_dir, 'script_install_files')
+    outputs = api.build(recipe, config=testing_config)
+
+
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="bash interpreter used to run install scripts")
+def test_intradependencies(testing_workdir, testing_config):
+    """Only necessary because for conda<4.3, the `r` channel was not in `defaults`"""
+    testing_config.channel_urls = ('r')
+    recipe = os.path.join(subpackage_dir, '_intradependencies')
     outputs = api.build(recipe, config=testing_config)
