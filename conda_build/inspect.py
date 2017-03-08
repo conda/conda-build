@@ -100,6 +100,13 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
 
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
+    dist_depmap = {}
+    for k, v in depmap.items():
+        if hasattr(k, 'dist_name'):
+            k = k.dist_name
+        dist_depmap[k] = v
+
+    depmap = dist_depmap
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
     all_deps = k if 'not found' not in depmap.keys() else k + ['system', 'not found']
     output_string = ""
