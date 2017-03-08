@@ -1077,7 +1077,11 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
 
 def guess_interpreter(script_filename):
-    extensions_to_run_commands = {'.sh': 'sh',
+    # -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
+    # Since the MSYS2 installation is probably a set of conda packages we do not
+    # need to worry about system environmental pollution here. For that reason I
+    # do not pass -l on other OSes.
+    extensions_to_run_commands = {'.sh': 'sh{}'.format(' -l' if utils.on_win else ''),
                                   '.bat': 'cmd /d /c',
                                   '.ps1': 'powershell -executionpolicy bypass -File',
                                   '.py': 'python'}
