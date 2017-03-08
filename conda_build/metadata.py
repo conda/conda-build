@@ -698,11 +698,11 @@ class MetaData(object):
             if value:
                 d[key] = value
 
-        build_noarch = self.get_value('build/noarch')
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
+        build_noarch = self.get_value('build/noarch')
         if self.get_value('build/noarch_python') or build_noarch:
             d['platform'] = d['arch'] = None
             d['subdir'] = 'noarch'
@@ -927,6 +927,34 @@ class MetaData(object):
         new.meta = copy.deepcopy(self.meta)
         return new
 
+    @property
+    def noarch(self):
+        return self.get_value('build/noarch')
+
+    @noarch.setter
+    def noarch(self, value):
+        build = self.meta.get('build', {})
+        build['noarch'] = value
+        self.meta['build'] = build
+        if not self.noarch_python and not value:
+            self.config.reset_platform()
+        elif value:
+            self.config.platform = 'noarch'
+
+    @property
+    def noarch_python(self):
+        return self.get_value('build/noarch_python')
+
+    @noarch_python.setter
+    def noarch_python(self, value):
+        build = self.meta.get('build', {})
+        build['noarch_python'] = value
+        self.meta['build'] = build
+        if not self.noarch and not value:
+            self.config.reset_platform()
+        elif value:
+            self.config.platform = 'noarch'
+
     def get_output_metadata(self, output):
         output_metadata = self.copy()
         output_metadata.meta['package']['name'] = output.get('name', self.name())
@@ -934,11 +962,13 @@ class MetaData(object):
         requirements['run'] = output.get('requirements', [])
         output_metadata.meta['requirements'] = requirements
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
-        extra = self.meta.get('extra', {})
-        extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
-        output_metadata.meta['extra'] = extra
-        if 'outputs' in output_metadata.meta:
-            del output_metadata.meta['outputs']
+        if self.name() != output_metadata.name():
+            extra = self.meta.get('extra', {})
+            extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
+                                      'version': self.version()}
+            output_metadata.meta['extra'] = extra
+        output_metadata.noarch = output.get('noarch')
+        output_metadata.noarch_python = output.get('noarch_python')
         return output_metadata
 
     def get_output_metadata_set(self, files, permit_undefined_jinja=False):
@@ -951,8 +981,9 @@ class MetaData(object):
             if not outputs:
                 outputs = [{'name': self.name(),
                             'files': files,
-                            'requirements': requirements}]
-                metadata = [self]
+                            'requirements': requirements,
+                            'noarch_python': self.get_value('build/noarch_python'),
+                            'noarch': self.get_value('build/noarch')}]
             else:
                 # make a metapackage for the top-level package if the top-level requirements
                 #     mention a subpackage,
@@ -960,16 +991,23 @@ class MetaData(object):
                 # but only if a matching output name is not explicitly provided
                 if uses_subpackage and not any(self.name() == out.get('name', '')
                                                for out in outputs):
+
                     outputs.append({'name': self.name(), 'requirements': requirements,
                                     'pin_downstream':
-                                        self.meta.get('build', {}).get('pin_downstream')})
-                for out in outputs:
-                    if (self.name() == out.get('name', '') and not (out.get('files') or
-                                                                    out.get('script'))):
-                        if files:
-                            out['files'] = files
-                        out['requirements'] = requirements
-                    metadata = [self.get_output_metadata(output) for output in outputs]
+                                        self.meta.get('build', {}).get('pin_downstream'),
+                                    'noarch_python': self.get_value('build/noarch_python'),
+                                    'noarch': self.get_value('build/noarch'),
+                                    })
+            for out in outputs:
+                if (self.name() == out.get('name', '') and not (out.get('files') or
+                                                                out.get('script'))):
+                    if files:
+                        out['files'] = files
+                    out['requirements'] = requirements
+                    out['noarch_python'] = out.get('noarch_python',
+                                                    self.get_value('build/noarch_python'))
+                    out['noarch'] = out.get('noarch', self.get_value('build/noarch'))
+                metadata = [self.get_output_metadata(output) for output in outputs]
         except SystemExit:
             if not permit_undefined_jinja:
                 raise

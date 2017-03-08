@@ -94,7 +94,6 @@ class Config(object):
                   Setting('channel_urls', []),
                   Setting('dirty', False),
                   Setting('include_recipe', True),
-                  Setting('noarch', False),
                   Setting('no_download_source', False),
                   Setting('override_channels', False),
                   Setting('skip_existing', False),
@@ -139,6 +138,13 @@ class Config(object):
         # dangle remaining keyword arguments as attributes on this class
         for name, value in kwargs.items():
             setattr(self, name, value)
+
+    @property
+    def noarch(self):
+        return self.platform == 'noarch'
+
+    def reset_platform(self):
+        self.platform = cc_platform
 
     @property
     def subdir(self):
@@ -290,33 +296,20 @@ class Config(object):
 
     @property
     def build_python(self):
-        """Path to the python executable in the build environment"""
-        return self._get_python(self.build_prefix)
+        return self.python_bin(self.build_prefix)
 
     @property
     def test_python(self):
-        """Path to the python executable in the test environment"""
-        return self._get_python(self.test_prefix)
+        return self.python_bin(self.test_prefix)
 
-    @property
-    def build_perl(self):
-        """Path to the python executable in the build environment"""
-        return self._get_perl(self.build_prefix)
+    def python_bin(self, prefix):
+        return self._get_python(prefix)
 
-    @property
-    def test_perl(self):
-        """Path to the perl executable in the test environment"""
-        return self._get_perl(self.test_prefix)
+    def perl_bin(self, prefix):
+        return self._get_perl(prefix)
 
-    @property
-    def build_lua(self):
-        """Path to the lua executable in the build environment"""
-        return self._get_lua(self.build_prefix)
-
-    @property
-    def test_lua(self):
-        """Path to the lua executable in the test environment"""
-        return self._get_lua(self.test_prefix)
+    def lua_bin(self, prefix):
+        return self._get_lua(prefix)
 
     @property
     def info_dir(self):

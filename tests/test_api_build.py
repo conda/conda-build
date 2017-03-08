@@ -363,7 +363,7 @@ def test_failed_tests_exit_build(testing_workdir, test_config):
     """https://github.com/conda/conda-build/issues/1112"""
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=test_config)
-        assert 'TESTS FAILED' in exc
+    assert 'TESTS FAILED' in str(exc)
 
 
 def test_requirements_txt_for_run_reqs(testing_workdir, test_config):
@@ -659,11 +659,9 @@ def test_noarch_python_1(test_config):
 
 
 def test_legacy_noarch_python(test_config):
-    recipe = os.path.join(metadata_dir, "_legacy_noarch_python")
-    fn = api.get_output_file_path(recipe, config=test_config)
+    output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"), config=test_config)[0]
     # make sure that the package is going into the noarch folder
-    assert os.path.basename(os.path.dirname(fn)) == 'noarch'
-    api.build(recipe, config=test_config)
+    assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
 
 def test_preferred_env(test_config):
