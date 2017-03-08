@@ -105,8 +105,6 @@ def parse_or_try_download(metadata, no_download_source, config,
             metadata.parse_until_resolved(config=config)
         except exceptions.UnableToParseMissingSetuptoolsDependencies:
             need_reparse_in_env = True
-    if metadata.get_value('build/noarch'):
-        config.noarch = True
     return metadata, need_source_download, need_reparse_in_env
 
 
@@ -160,7 +158,6 @@ def render_recipe(recipe_path, config, no_download_source=False):
         raise ValueError("no_download_source specified, but can't fully render recipe without"
                          " downloading source.  Please fix the recipe, or don't use "
                          "no_download_source.")
-    config.noarch = bool(m.get_value('build/noarch'))
 
     if need_cleanup:
         rm_rf(recipe_dir)

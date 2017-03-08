@@ -25,11 +25,15 @@ def get_perl_ver(config):
 
 
 def get_lua_ver(config):
-    return str(config.CONDA_LUA)
+    return config.CONDA_LUA
 
 
 def get_py_ver(config):
     return '.'.join(str(config.CONDA_PY))
+
+
+def get_r_ver(config):
+    return config.CONDA_R
 
 
 def get_npy_ver(config):

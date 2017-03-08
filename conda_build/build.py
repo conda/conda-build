@@ -57,8 +57,8 @@ import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 from conda_build.index import update_index
-from conda_build.create_test import (create_files, create_shell_files,
-                                     create_py_files, create_pl_files)
+from conda_build.create_test import (create_files, create_shell_files, create_r_files,
+                                     create_py_files, create_pl_files, create_lua_files)
 from conda_build.exceptions import indent
 from conda_build.features import feature_list
 
@@ -197,8 +197,6 @@ def copy_recipe(m, config):
 
         if os.path.isdir(m.path):
             for fn in os.listdir(m.path):
-                if fn.startswith('.'):
-                    continue
                 src_path = join(m.path, fn)
                 dst_path = join(recipe_dir, fn)
                 utils.copy_into(src_path, dst_path, timeout=config.timeout, locking=config.locking)
@@ -885,13 +883,15 @@ def bundle_conda(output, metadata, config, env, **kw):
     # first filter is so that info_files does not pick up ignored files
     files = filter_files(files, prefix=config.build_prefix)
     create_info_files(metadata, files, config=config, prefix=config.build_prefix)
-    test_dest_path = os.path.join(config.info_dir, 'recipe', 'run_test.py')
-    if output.get('test', {}).get('script'):
-        utils.copy_into(os.path.join(metadata.path, output['test']['script']),
-                        test_dest_path, config.timeout, locking=config.locking)
-    elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
-        # the test belongs to the parent recipe.  Don't include it in subpackages.
-        utils.rm_rf(test_dest_path)
+    for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
+        test_dest_path = os.path.join(config.info_dir, 'recipe', 'run_test' + ext)
+        script = output.get('test', {}).get('script')
+        if script and script.endswith(ext):
+            utils.copy_into(os.path.join(metadata.path, output['test']['script']),
+                            test_dest_path, config.timeout, locking=config.locking)
+        elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
+            # the test belongs to the parent recipe.  Don't include it in subpackages.
+            utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
     files = set(prefix_files(config.build_prefix)) - initial_files
     files = filter_files(files, prefix=config.build_prefix)
@@ -927,9 +927,9 @@ def bundle_conda(output, metadata, config, env, **kw):
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
         if config.output_folder:
-            output_folder = os.path.join(config.output_folder, config.subdir)
+            output_folder = os.path.join(config.output_folder, metadata.config.subdir)
         else:
-            output_folder = config.bldpkgs_dir
+            output_folder = metadata.config.bldpkgs_dir
         final_output = os.path.join(output_folder, output_filename)
         if os.path.isfile(final_output):
             os.remove(final_output)
@@ -1272,16 +1272,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     create_files(config.test_dir, metadata, config)
     # Make Perl or Python-specific test files
-    if metadata.name().startswith('perl-'):
-        pl_files = create_pl_files(config.test_dir, metadata)
-        py_files = False
-        lua_files = False
-    else:
-        py_files = create_py_files(config.test_dir, metadata)
-        pl_files = False
-        lua_files = False
+    pl_files = create_pl_files(config.test_dir, metadata)
+    py_files = create_py_files(config.test_dir, metadata)
+    r_files = create_r_files(config.test_dir, metadata)
+    lua_files = create_lua_files(config.test_dir, metadata)
     shell_files = create_shell_files(config.test_dir, metadata, config)
-    if not (py_files or shell_files or pl_files or lua_files):
+    if not any([py_files, shell_files, pl_files, lua_files, r_files]):
         print("Nothing to test for:", test_package_name)
         return True
 
@@ -1313,6 +1309,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     if lua_files:
         # not sure how this shakes out
         specs += ['lua %s.*' % environ.get_lua_ver(config)]
+    if r_files:
+        # not sure how this shakes out
+        specs += ['r-base %s.*' % environ.get_r_ver(config)]
 
     create_env(config.test_prefix, specs, config=config)
 
@@ -1371,6 +1370,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 test_file=join(config.test_dir, 'run_test.lua')))
             if utils.on_win:
                 tf.write("if errorlevel 1 exit 1\n")
+        if r_files:
+            tf.write('"{r}" "{test_file}"\n'.format(
+                r=config.r_bin(config.test_prefix),
+                test_file=join(config.test_dir, 'run_test.r')))
+            if utils.on_win:
+                tf.write("if errorlevel 1 exit 1\n")
         if shell_files:
             test_file = join(config.test_dir, 'run_test.' + suffix)
             if utils.on_win:
@@ -1381,7 +1386,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 # TODO: Run the test/commands here instead of in run_test.py
                 tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
                                                                        test_file=test_file))
-
     if utils.on_win:
         cmd = ['cmd.exe', "/d", "/c", test_script]
     else:

@@ -94,7 +94,6 @@ class Config(object):
                   Setting('channel_urls', []),
                   Setting('dirty', False),
                   Setting('include_recipe', True),
-                  Setting('noarch', False),
                   Setting('no_download_source', False),
                   Setting('override_channels', False),
                   Setting('skip_existing', False),
@@ -139,6 +138,13 @@ class Config(object):
         # dangle remaining keyword arguments as attributes on this class
         for name, value in kwargs.items():
             setattr(self, name, value)
+
+    @property
+    def noarch(self):
+        return self.platform == 'noarch'
+
+    def reset_platform(self):
+        self.platform = cc_platform
 
     @property
     def subdir(self):

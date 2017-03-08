@@ -103,82 +103,126 @@ def create_shell_files(dir_path, m, config):
     return has_tests
 
 
+def _create_test_files(dir_path, m, ext, comment_char='# '):
+    # the way this works is that each output needs to explicitly define a test script to run
+    #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
+    name = 'run_test' + ext
+    for out in m.meta.get('outputs', []):
+        if m.name() == out['name']:
+            out_test_script = out.get('test', {}).get('script', 'no-file')
+            if out_test_script.endswith(ext):
+                name = out_test_script
+                break
+
+    test_file = os.path.join(m.path, name)
+    out_file = join(dir_path, 'run_test' + ext)
+
+    if os.path.isfile(test_file):
+        with open(out_file, 'w') as fo:
+            fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
+            fo.write(header + '\n')
+            fo.write("print('===== testing package: %s =====')\n" % m.dist())
+
+            try:
+                with open(test_file) as fi:
+                    fo.write("print('running {0}')\n".format(name))
+                    fo.write("{0} --- {1} (begin) ---\n".format(comment_char, name))
+                    fo.write(fi.read())
+                    fo.write("{0} --- {1} (end) ---\n".format(comment_char, name))
+            except AttributeError:
+                fo.write("# tests were not packaged with this module, and cannot be run\n")
+            fo.write("\nprint('===== %s OK =====')\n" % m.dist())
+
+    return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
+
+
 def create_py_files(dir_path, m):
-    has_tests = False
-    with open(join(dir_path, 'run_test.py'), 'w') as fo:
-        fo.write("# tests for %s (this is a generated file)\n" % m.dist())
-        fo.write(header + '\n')
-        fo.write("print('===== testing package: %s =====')\n" % m.dist())
+    tf, tf_exists = _create_test_files(dir_path, m, '.py')
+    imports = ensure_list(m.get_value('test/imports', []))
+    for import_item in imports:
+        if (hasattr(import_item, 'keys') and 'lang' in import_item and
+                import_item['lang'] == 'python'):
+            imports = import_item['imports']
+            break
+    if imports:
+        with open(tf, 'a+') as fo:
+            for name in imports:
+                fo.write('print("import: %r")\n' % name)
+                fo.write('import %s\n' % name)
+                fo.write('\n')
+    return tf if (tf_exists or imports) else False
 
-        for name in ensure_list(m.get_value('test/imports', [])):
-            fo.write('print("import: %r")\n' % name)
-            fo.write('import %s\n' % name)
-            fo.write('\n')
-            has_tests = True
 
-        try:
-            name = 'run_test.py'
-            # the way this works is that each output needs to explicitly define a test script to run
-            #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
-            for out in m.meta.get('outputs', []):
-                if m.name() == out['name']:
-                    out_test_script = out.get('test', {}).get('script', 'no-file')
-                    name = out_test_script if out_test_script.endswith('.py') else 'no-file'
+def create_r_files(dir_path, m):
+    tf, tf_exists = _create_test_files(dir_path, m, '.r')
 
-            with open(join(m.path, name)) as fi:
-                fo.write("print('running run_test.py')\n")
-                fo.write("# --- run_test.py (begin) ---\n")
-                fo.write(fi.read())
-                fo.write("# --- run_test.py (end) ---\n")
-            has_tests = True
-        except IOError:
-            fo.write("# no run_test.py exists for this package\n")
-        except AttributeError:
-            fo.write("# tests were not packaged with this module, and cannot be run\n")
-        fo.write("\nprint('===== %s OK =====')\n" % m.dist())
-
-    return has_tests
+    imports = None
+    # two ways we can enable R import tests:
+    # 1. preface package name with r- and just list imports in test/imports
+    # 2. use list of dicts for test/imports, and have lang: 'r' set in one of those dicts
+    if m.name().startswith('r-'):
+        imports = ensure_list(m.get_value('test/imports', []))
+    else:
+        for import_item in ensure_list(m.get_value('test/imports', [])):
+            if (hasattr(import_item, 'keys') and 'lang' in import_item and
+                    import_item['lang'] == 'r'):
+                imports = import_item['imports']
+                break
+    if imports:
+        with open(tf, 'a+') as fo:
+            for name in imports:
+                fo.write('print("library(%r)")\n' % name)
+                fo.write('library(%s)\n' % name)
+                fo.write('\n')
+    return tf if (tf_exists or imports) else False
 
 
 def create_pl_files(dir_path, m):
-    has_tests = False
-    with open(join(dir_path, 'run_test.pl'), 'w') as fo:
-        print(r'# tests for %s (this is a generated file)' % m.dist(), file=fo)
-        print(r'print("===== testing package: %s =====\n");' % m.dist(),
-              file=fo)
-        print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
-              file=fo)
-        for name in m.get_value('test/imports'):
-            print(r'print("import: %s\n");' % name, file=fo)
-            print('use %s;\n' % name, file=fo)
-            # Don't try to print version for complex imports
-            if ' ' not in name:
-                print(("if (defined {0}->VERSION) {{\n" +
-                       "\tmy $given_version = {0}->VERSION;\n" +
-                       "\t$given_version =~ s/0+$//;\n" +
-                       "\tdie('Expected version ' . $expected_version . ' but" +
-                       " found ' . $given_version) unless ($expected_version " +
-                       "eq $given_version);\n" +
-                       "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
-                       "\n}}").format(name), file=fo)
-            has_tests = True
+    tf, tf_exists = _create_test_files(dir_path, m, '.pl')
+    imports = None
+    if m.name().startswith('perl-'):
+        imports = ensure_list(m.get_value('test/imports', []))
+    else:
+        for import_item in ensure_list(m.get_value('test/imports', [])):
+            if (hasattr(import_item, 'keys') and 'lang' in import_item and
+                    import_item['lang'] == 'perl'):
+                imports = import_item['imports']
+                break
+    if tf or imports:
+        with open(tf, 'a+') as fo:
+            print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
+                    file=fo)
+        if imports:
+            for name in imports:
+                print(r'print("import: %s\n");' % name, file=fo)
+                print('use %s;\n' % name, file=fo)
+                # Don't try to print version for complex imports
+                if ' ' not in name:
+                    print(("if (defined {0}->VERSION) {{\n" +
+                            "\tmy $given_version = {0}->VERSION;\n" +
+                            "\t$given_version =~ s/0+$//;\n" +
+                            "\tdie('Expected version ' . $expected_version . ' but" +
+                            " found ' . $given_version) unless ($expected_version " +
+                            "eq $given_version);\n" +
+                            "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
+                            "\n}}").format(name), file=fo)
+    return tf if (tf_exists or imports) else False
 
-        try:
-            name = 'run_test.pl'
 
-            # the way this works is that each output needs to explicitly define a test script to run
-            #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
-            for out in m.meta.get('outputs', []):
-                if m.name() == out['name']:
-                    out_test_script = out.get('test', {}).get('script', 'no-file')
-                    name = out_test_script if out_test_script.endswith('.pl') else 'no-file'
-            with open(join(m.path, name)) as fi:
-                print("# --- run_test.pl (begin) ---", file=fo)
-                fo.write(fi.read())
-                print("# --- run_test.pl (end) ---", file=fo)
-            has_tests = True
-        except IOError:
-            fo.write("# no run_test.pl exists for this package\n")
-        print('\nprint("===== %s OK =====\\n");' % m.dist(), file=fo)
-
-    return has_tests
+def create_lua_files(dir_path, m):
+    tf, tf_exists = _create_test_files(dir_path, m, '.lua')
+    imports = None
+    if m.name().startswith('lua-'):
+        imports = ensure_list(m.get_value('test/imports', []))
+    else:
+        for import_item in ensure_list(m.get_value('test/imports', [])):
+            if (hasattr(import_item, 'keys') and 'lang' in import_item and
+                    import_item['lang'] == 'lua'):
+                imports = import_item['imports']
+                break
+    if imports:
+        with open(tf, 'a+') as fo:
+            for name in imports:
+                print(r'print("require \"%s\"\n");' % name, file=fo)
+                print('require "%s"\n' % name, file=fo)
+    return tf if (tf_exists or imports) else False
