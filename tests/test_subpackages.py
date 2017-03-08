@@ -80,10 +80,9 @@ def test_hash_includes_recipe_files(testing_workdir, testing_config):
     outputs = api.build(recipe, config=testing_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="bash interpreter used to run install scripts")
 def test_intradependencies(testing_workdir, testing_config):
     """Only necessary because for conda<4.3, the `r` channel was not in `defaults`"""
     testing_config.channel_urls = ('r')
+    testing_config.activate = True
     recipe = os.path.join(subpackage_dir, '_intradependencies')
     outputs = api.build(recipe, config=testing_config)

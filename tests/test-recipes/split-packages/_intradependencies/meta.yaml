@@ -8,6 +8,7 @@ requirements:
   build:
     - python {{ python }}
     - r-base {{ r }}
+    - posix  # [win]
 
 outputs:
   - name: lib1intradependencies

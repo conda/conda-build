@@ -26,4 +26,4 @@ if [[ ! -d ${PREFIX}/bin ]]; then
   mkdir -p ${PREFIX}/bin
 fi
 
-${R} --slave --no-restore -e cat\(\"r1-intradependencies\n\"\) > ${PREFIX}/bin/r1-intradependencies
+${R} --slave --no-restore -e cat\(\'r1-intradependencies\'\) > ${PREFIX}/bin/r1-intradependencies
