@@ -562,18 +562,23 @@ def iter_entry_points(items):
 
 def create_entry_point(path, module, func, config):
     pyscript = PY_TMPL % {'module': module, 'func': func}
-    if sys.platform == 'win32':
-        with open(path + '-script.py', 'w') as fo:
-            if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
-                fo.write('#!python_d\n')
-            fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
-                  path + '.exe', config.timeout)
-    else:
+    if config.noarch:
         with open(path, 'w') as fo:
-            fo.write('#!%s\n' % config.build_python)
             fo.write(pyscript)
         os.chmod(path, 0o775)
+    else:
+        if sys.platform == 'win32':
+            with open(path + '-script.py', 'w') as fo:
+                if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
+                    fo.write('#!python_d\n')
+                fo.write(pyscript)
+            copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
+                    path + '.exe', config.timeout)
+        else:
+            with open(path, 'w') as fo:
+                fo.write('#!%s\n' % config.build_python)
+                fo.write(pyscript)
+            os.chmod(path, 0o775)
 
 
 def create_entry_points(items, config):
