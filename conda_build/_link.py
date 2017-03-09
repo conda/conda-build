@@ -77,6 +77,8 @@ def link_files(src_root, dst_root, files):
 # yanked from conda
 def replace_long_shebang(data):
     # this function only changes a shebang line if it exists and is greater than 127 characters
+    if hasattr(data, 'encode'):
+        data = data.encode()
     shebang_match = re.match(SHEBANG_REGEX, data, re.MULTILINE)
     if shebang_match:
         whole_shebang, executable, options = shebang_match.groups()
@@ -84,6 +86,8 @@ def replace_long_shebang(data):
             executable_name = executable.decode('utf-8').split('/')[-1]
             new_shebang = '#!/usr/bin/env %s%s' % (executable_name, options.decode('utf-8'))
             data = data.replace(whole_shebang, new_shebang.encode('utf-8'))
+    if hasattr(data, 'decode'):
+        data = data.decode()
     return data
 
 
