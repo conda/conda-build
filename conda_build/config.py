@@ -43,9 +43,9 @@ DEFAULT_PREFIX_LENGTH = 255
 SUBDIR_ALIASES = {
     'linux-cos5-x86_64': 'linux-64',
     'linux-cos5-x86': 'linux-32',
-    'osx-109-x86_64': 'osx-64,'
-    'win-x86_64': 'win-64,'
-    'win-x86': 'win-32,'
+    'osx-109-x86_64': 'osx-64',
+    'win-x86_64': 'win-64',
+    'win-x86': 'win-32',
 }
 
 Setting = namedtuple("ConfigSetting", "name, default")
