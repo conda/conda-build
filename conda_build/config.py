@@ -40,6 +40,15 @@ def _ensure_dir(path):
 # we need this to be accessible to the CLI, so it needs to be more static.
 DEFAULT_PREFIX_LENGTH = 255
 
+# translate our internal more meaningful subdirs to the ones that conda understands
+SUBDIR_ALIASES = {
+    'linux-cos5-x86_64': 'linux-64',
+    'linux-cos5-x86': 'linux-32',
+    'osx-109-x86_64': 'osx-64,'
+    'win-x86_64': 'win-64,'
+    'win-x86': 'win-32,'
+}
+
 Setting = namedtuple("ConfigSetting", "name, default")
 DEFAULTS = [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
@@ -197,10 +206,12 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        return "-".join([self.host_platform, str(self.host_arch)])
+        subdir = "-".join([self.host_platform, str(self.host_arch)])
+        return SUBDIR_ALIASES.get(subdir, subdir)
 
     @host_subdir.setter
     def host_subdir(self, value):
+        value = SUBDIR_ALIASES.get(value, value)
         values = value.split('-')
         self.host_platform = values[0]
         if len(values) > 1:
