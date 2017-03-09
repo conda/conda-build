@@ -151,7 +151,7 @@ if parse_version(CONDA_VERSION) >= parse_version("4.2"):
 
     get_rc_urls = lambda: list(context.channels)
     get_prefix = partial(context_get_prefix, context)
-    cc_conda_build = context.conda_build
+    cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
     os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
