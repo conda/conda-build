@@ -814,6 +814,7 @@ def post_process_files(m, initial_prefix_files):
     get_build_metadata(m, config=m.config)
     create_post_scripts(m, config=m.config)
 
+    # this is new-style noarch, with a value of 'python'
     if not is_noarch_python(m):
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
     current_prefix_files = prefix_files(prefix=m.config.build_prefix)
