@@ -1,0 +1,42 @@
+{% set version='1' %}
+
+package:
+  name: intradependencies
+  version: {{ version }}
+
+requirements:
+  build:
+    - python {{ python }}
+    - r-base {{ r }}
+    - posix  # [win]
+
+outputs:
+  - name: lib1intradependencies
+    script: install-lib1intradependencies.sh
+
+  - name: py1-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib1intradependencies', exact=True) }}
+      - r-base {{ r }}
+    script: install-py1-intradependencies.sh
+
+  - name: r1-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib1intradependencies', exact=True) }}
+      - python {{ python }}
+    script: install-r1-intradependencies.sh
+
+  - name: lib2intradependencies
+    script: install-lib2intradependencies.sh
+
+  - name: py2-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib2intradependencies', exact=True) }}
+      - r-base {{ r }}
+    script: install-py2-intradependencies.sh
+
+  - name: r2-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib2intradependencies', exact=True) }}
+      - python {{ python }}
+    script: install-r2-intradependencies.sh

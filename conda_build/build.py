@@ -502,7 +502,7 @@ def create_info_files(m, files, prefix):
     write_info_files_file(m, files)
 
     files_with_prefix = get_files_with_prefix(m, files, prefix)
-    create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
+    checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
     detect_and_record_prefix_files(m, files, prefix)
     write_no_link(m, files)
@@ -515,9 +515,10 @@ def create_info_files(m, files, prefix):
         utils.copy_into(join(m.path, m.get_value('app/icon')),
                         join(m.config.info_dir, 'icon.png'),
                         m.config.timeout, locking=m.config.locking)
-    return [f.replace(m.config.host_prefix + os.sep, '')
-            for root, _, _ in os.walk(m.config.info_dir)
-            for f in glob(os.path.join(root, '*'))]
+#    return [f.replace(m.config.host_prefix + os.sep, '')
+#            for root, _, _ in os.walk(m.config.info_dir)
+#            for f in glob(os.path.join(root, '*'))]
+    return checksums
 
 
 def get_short_path(m, target_file):
@@ -607,11 +608,18 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     }
 
     # don't create info/paths.json file if this is an old noarch package
-    if m.get_value('build/noarch_python', None):
-        return
-    with open(join(info_dir, 'paths.json'), "w") as files_json:
-        json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
-                  cls=EntityEncoder)
+    if not m.get_value('build/noarch_python', None):
+        with open(join(info_dir, 'paths.json'), "w") as files_json:
+            json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
+                      cls=EntityEncoder)
+
+    # Return a dict of file: sha1sum. We could (but currently do not)
+    # use this to detect overlap and mutated overlap.
+    checksums = dict()
+    for file in files_json_files:
+        checksums[file['_path']] = file['sha256']
+
+    return checksums
 
 
 def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
@@ -674,6 +682,12 @@ can lead to packages that include their dependencies.""" % meta_files))
     return new_files
 
 
+def remove_prefix_file(filepath, prefix):
+    if not os.path.isabs(filepath):
+        filepath = os.path.abspath(os.path.normpath(os.path.join(prefix, filepath)))
+    utils.rm_rf(filepath)
+
+
 def bundle_conda(output, metadata, env, **kw):
     log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
@@ -705,7 +719,7 @@ def bundle_conda(output, metadata, env, **kw):
                                  metadata.build_id()]) + '.tar.bz2')
     # first filter is so that info_files does not pick up ignored files
     files = filter_files(files, prefix=metadata.config.build_prefix)
-    create_info_files(metadata, files, prefix=metadata.config.build_prefix)
+    output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.build_prefix)
     test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test.py')
     if output.get('test', {}).get('script'):
         utils.copy_into(os.path.join(metadata.path, output['test']['script']),
@@ -757,6 +771,7 @@ def bundle_conda(output, metadata, env, **kw):
             os.remove(final_output)
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=metadata.config.locking)
+        output['final_output'] = final_output
 
     update_index(output_folder, config=metadata.config)
 
@@ -768,12 +783,12 @@ def bundle_conda(output, metadata, env, **kw):
             pass
         update_index(os.path.join(os.path.dirname(output_folder), 'noarch'), config=metadata.config)
 
-    # remove files from build prefix.  This is so that they can be included in other packages.  If
-    #     we were to leave them in place, then later scripts meant to also include them may not.
+    # remove info files from build prefix. We do not remove the actual package's files as subsequent
+    # builds may well need them. In other words, the caller manages the files in output['checksums']
     for f in files:
-        if not os.path.isabs(f):
-            f = os.path.abspath(os.path.normpath(os.path.join(metadata.config.build_prefix, f)))
-        utils.rm_rf(f)
+        if f not in output['checksums']:
+            remove_prefix_file(f, metadata.config.build_prefix)
+
     return final_output
 
 
@@ -803,6 +818,53 @@ bundlers = {
     'conda': bundle_conda,
     'wheel': bundle_wheel,
 }
+
+
+def toposort(outputs):
+    '''This function is used to work out the order to run the install scripts
+       for split packages based on any interdependencies. The result is just
+       a re-ordering of outputs such that we can run them in that order and
+       reset the initial set of files in the install prefix after each. This
+       will naturally lead to non-overlapping files in each package and also
+       the correct files being present during the install and test procedures,
+       provided they are run in this order.'''
+    from conda.toposort import _toposort
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    these_packages = [output_d['name'] for output_d, _ in outputs
+                      if output_d.get('type', 'conda') == 'conda']
+    topodict = dict()
+    order = dict()
+    endorder = set()
+    for idx, (output_d, output_m) in enumerate(outputs):
+        if output_d.get('type', 'conda') == 'conda':
+            name = output_d['name']
+            order[name] = idx
+            topodict[name] = set()
+            for run_dep in output_m.get_value('requirements/run', []):
+                run_dep = run_dep.split(' ')[0]
+                if run_dep in these_packages:
+                    topodict[name].update((run_dep,))
+        else:
+            endorder.add(idx)
+    # Calculate the intradependencies for each conda package.  This
+    # must be done before calling _toposort as it modifies topodict.
+    for name in topodict:
+        idx = order[name]
+        output_d = outputs[idx][0]
+        assert name == output_d['name'], "toposort ordering bug."
+        alldeps = set((name,))
+        lastdeps = set()
+        while lastdeps != alldeps:
+            new = alldeps - lastdeps
+            lastdeps = alldeps
+            for dep in new:
+                alldeps |= topodict[dep]
+        output_d['intradependencies'] = alldeps - set((name,))
+    topo_order = list(_toposort(topodict))
+    result = [outputs[order[t]] for t in topo_order]
+    result.extend([outputs[o] for o in endorder])
+    return result
 
 
 def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False):
@@ -973,13 +1035,38 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
         outputs = m.get_output_metadata_set(files=files)
-
-        for (output_dict, m) in outputs:
+        outputs = toposort(outputs)
+        outputs_idx = dict()
+        for idx, (output_d, output_m) in enumerate(outputs):
+            if output_d.get('type', 'conda') == 'conda':
+                outputs_idx[output_d['name']] = idx
+        intra_installed = set()
+        for (output_d, m) in outputs:
             if not m.final:
                 m = finalize_metadata(m, index)
-            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, m, env)
-            built_packages.append(built_package)
-
+            type = output_d.get('type', 'conda')
+            # Manage the contents of build_prefix according to intradependencies:
+            # We work out the difference between what the subsequent package needs
+            # and what is currently installed, removing all nondependent packages
+            # and extracting any previously removed dependencies.
+            if type == 'conda':
+                for unwanted in intra_installed - output_d['intradependencies']:
+                    log.debug("intradeps: removing %s" % (unwanted))
+                    for dep_file in outputs[outputs_idx[unwanted]][0]['checksums']:
+                        remove_prefix_file(dep_file, m.config.build_prefix)
+                intra_installed -= (intra_installed - output_d['intradependencies'])
+                for needed in output_d['intradependencies'] - intra_installed:
+                    log.debug("intradeps: re-extracting %s" % (needed))
+                    tarball = outputs[outputs_idx[needed]][0]['final_output']
+                    with tarfile.open(tarball, 'r:bz2') as tf:
+                        members = [tf.getmember(dep_file) for dep_file in
+                                   outputs[outputs_idx[needed]][0]['checksums']]
+                        tf.extractall(m.config.build_prefix, members)
+                intra_installed.update(output_d['intradependencies'])
+                assert output_d['intradependencies'] == intra_installed, "set logic gone bad."
+            built_packages.append(bundlers[type](output_d, m, env))
+            if type == 'conda':
+                intra_installed.add(output_d['name'])
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
@@ -988,7 +1075,11 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
 
 def guess_interpreter(script_filename):
-    extensions_to_run_commands = {'.sh': 'sh',
+    # -l is needed for MSYS2 as the login scripts set some env. vars (TMP, TEMP)
+    # Since the MSYS2 installation is probably a set of conda packages we do not
+    # need to worry about system environmental pollution here. For that reason I
+    # do not pass -l on other OSes.
+    extensions_to_run_commands = {'.sh': 'bash{}'.format(' -l' if utils.on_win else ''),
                                   '.bat': 'cmd /d /c',
                                   '.ps1': 'powershell -executionpolicy bypass -File',
                                   '.py': 'python'}

@@ -18,8 +18,15 @@ DEFAULT_VARIANTS = {
     'perl': ['5.22.2'],
     'lua': ['5.2'],
     'r_base': ['3.3.2'],
+    'cpu_optimization_target': ['nocona'],
     'pin_run_as_build': {'python': {'min_pin': 'p.p', 'max_pin': 'p.p'}},
     'exclude_from_build_hash': ['numpy', 'mkl'],
+}
+
+DEFAULT_PLATFORMS = {
+    'linux': 'linux-cos5-' + cc.arch_name,
+    'osx': 'osx-109-' + cc.arch_name,
+    'win': 'win-' + cc.arch_name,
 }
 
 
@@ -215,6 +222,10 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
         specs = [DEFAULT_VARIANTS] + list(dict_or_list_of_dicts or [])
 
     combined, extend_keys = combine_specs(specs)
+
+    if not 'target_platform' in combined:
+        combined['target_platform'] = [DEFAULT_PLATFORMS[cc.platform]]
+
     if 'extend_keys' in combined:
         del combined['extend_keys']
 
