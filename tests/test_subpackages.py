@@ -77,3 +77,9 @@ def test_hash_includes_recipe_files(testing_workdir, testing_config):
     a given output."""
     recipe = os.path.join(subpackage_dir, 'script_install_files')
     outputs = api.build(recipe, config=testing_config)
+
+
+def test_subpackage_variant_override(testing_config):
+    recipe = os.path.join(subpackage_dir, '_variant_override')
+    outputs = api.build(recipe, config=testing_config)
+    assert len(outputs) == 3

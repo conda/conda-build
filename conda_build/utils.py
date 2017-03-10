@@ -925,3 +925,41 @@ def get_logger(name, dedupe=True):
         log.addHandler(dedupe_handler)
 
     return log
+
+
+def _equivalent(base_value, value, path):
+    equivalent = value == base_value
+    if isinstance(value, string_types) and isinstance(base_value, string_types):
+        if not os.path.isabs(base_value):
+            base_value = os.path.abspath(os.path.normpath(os.path.join(path, base_value)))
+        if not os.path.isabs(value):
+            value = os.path.abspath(os.path.normpath(os.path.join(path, value)))
+        equivalent |= base_value == value
+    return equivalent
+
+
+def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
+    log = get_logger(__name__)
+    for key, value in new.items():
+        base_value = base.get(key, value)
+        if hasattr(value, 'keys'):
+            base_value = merge_or_update_dict(base_value, value, path, merge,
+                                              raise_on_clobber=raise_on_clobber)
+            base[key] = base_value
+        elif hasattr(value, '__iter__') and not isinstance(value, string_types):
+            if merge:
+                if base_value and base_value != value:
+                    base_value.extend(value)
+                try:
+                    base[key] = list(set(base_value))
+                except TypeError:
+                    base[key] = base_value
+            else:
+                base[key] = value
+        else:
+            if (base_value and merge and not _equivalent(base_value, value, path) and
+                    raise_on_clobber):
+                log.debug('clobbering key {} (original value {}) with value {}'.format(key,
+                                                                            base_value, value))
+            base[key] = value
+    return base
