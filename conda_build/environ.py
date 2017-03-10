@@ -536,7 +536,7 @@ class Environment(object):
         return specs
 
 
-spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s)([0-9a-zA-Z\.]+)(\s[0-9a-zA-Z\.]+)?")
+spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s+)([0-9a-zA-Z\.]+)(\s+[0-9a-zA-Z\.]+)?")
 
 
 def _ensure_valid_spec(spec):

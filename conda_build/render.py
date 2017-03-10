@@ -44,7 +44,7 @@ def actions_to_pins(actions):
     return [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
 
 
-def get_env_dependencies(m, env, variant, index=None):
+def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
     dash_or_under = re.compile("[-_]")
     if not index:
         index = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
@@ -54,19 +54,24 @@ def get_env_dependencies(m, env, variant, index=None):
         specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
     subpackages = []
     dependencies = []
+    # ones that get filtered from actual versioning, to exclude them from the hash calculation
+    append_specs = []
     for spec in specs:
-        is_subpackage = False
-        spec_name = spec.split()[0]
-        for entry in m.get_section('outputs'):
-            name = entry.get('name')
-            if name == spec_name:
-                subpackages.append(' '.join((name, m.version())))
-                is_subpackage = True
-        if not is_subpackage:
-            dependencies.append(spec)
-        for key, value in variant.items():
-            if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
-                dependencies.append(" ".join((spec_name, value)))
+        if not exclude_pattern or not exclude_pattern.match(spec):
+            is_subpackage = False
+            spec_name = spec.split()[0]
+            for entry in m.get_section('outputs'):
+                name = entry.get('name')
+                if name == spec_name:
+                    subpackages.append(' '.join((name, m.version())))
+                    is_subpackage = True
+            if not is_subpackage:
+                dependencies.append(spec)
+            for key, value in variant.items():
+                if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
+                    dependencies.append(" ".join((spec_name, value)))
+        else:
+            append_specs.append(spec)
     prefix = m.config.host_prefix if env == 'host' else m.config.build_prefix
     try:
         actions = environ.get_install_actions(prefix, index, dependencies, m.config)
@@ -75,7 +80,7 @@ def get_env_dependencies(m, env, variant, index=None):
         raise DependencyNeedsBuildingError(e)
 
     specs = actions_to_pins(actions)
-    return specs + subpackages
+    return specs + subpackages + append_specs
 
 
 def strip_channel(spec_str):
@@ -173,9 +178,16 @@ def finalize_metadata(m, index=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
     if not index:
         index = get_build_index(m.config, m.config.build_subdir)
+
+    exclude_pattern = None
+    excludes = m.config.variant.get('exclude_from_build_hash', [])
+    if excludes:
+        exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
+
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
     #     be installed in the environment.
-    build_deps = get_env_dependencies(m, 'build', m.config.variant, index)
+
+    build_deps = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
     build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
@@ -298,7 +310,6 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 need_source_download = (bool(mv.meta.get('source')) and
                                         not mv.needs_source_for_render and
                                         not os.listdir(mv.config.work_dir))
-                mv = finalize_metadata(mv, index)
             except DependencyNeedsBuildingError as e:
                 unsatisfiable_variants.append(variant)
                 packages_needing_building.update(set(e.packages))

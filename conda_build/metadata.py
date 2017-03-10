@@ -184,44 +184,6 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
-def _equivalent(base_value, value, path):
-    equivalent = value == base_value
-    if isinstance(value, string_types) and isinstance(base_value, string_types):
-        if not os.path.isabs(base_value):
-            base_value = os.path.abspath(os.path.normpath(os.path.join(path, base_value)))
-        if not os.path.isabs(value):
-            value = os.path.abspath(os.path.normpath(os.path.join(path, value)))
-        equivalent |= base_value == value
-    return equivalent
-
-
-def _merge_or_update_values(base, new, path, merge, raise_on_clobber=False):
-    log = utils.get_logger(__name__)
-    for key, value in new.items():
-        base_value = base.get(key, value)
-        if hasattr(value, 'keys'):
-            base_value = _merge_or_update_values(base_value, value, path, merge,
-                                                 raise_on_clobber=raise_on_clobber)
-            base[key] = base_value
-        elif hasattr(value, '__iter__') and not isinstance(value, string_types):
-            if merge:
-                if base_value and base_value != value:
-                    base_value.extend(value)
-                try:
-                    base[key] = list(set(base_value))
-                except TypeError:
-                    base[key] = base_value
-            else:
-                base[key] = value
-        else:
-            if (base_value and merge and not _equivalent(base_value, value, path) and
-                    raise_on_clobber):
-                log.debug('clobbering key {} (original value {}) with value {}'.format(key,
-                                                                            base_value, value))
-            base[key] = value
-    return base
-
-
 def _trim_None_strings(meta_dict):
     log = utils.get_logger(__name__)
     for key, value in meta_dict.items():
@@ -548,8 +510,8 @@ class MetaData(object):
         else:
             with open(sections_file_or_dict) as configfile:
                 build_config = parse(configfile.read(), config=self.config)
-        _merge_or_update_values(self.meta, build_config, self.path, merge=merge,
-                                raise_on_clobber=raise_on_clobber)
+        utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
+                                   raise_on_clobber=raise_on_clobber)
 
     def parse_again(self, permit_undefined_jinja=False):
         """Redo parsing for key-value pairs that are not initialized in the
@@ -812,8 +774,8 @@ class MetaData(object):
         build_reqs = requirements.get('build', [])
         excludes = self.config.variant.get('exclude_from_build_hash', [])
         if excludes:
-            pattern = re.compile('|'.join('{}[\s$]?'.format(exc) for exc in excludes))
-            build_reqs = [req for req in build_reqs if not pattern.match(req)]
+            exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
+            build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
         requirements['build'] = build_reqs
         composite['requirements'] = requirements
 
@@ -1194,6 +1156,12 @@ class MetaData(object):
             output['requirements'] = requirements
         output_metadata.meta['extra'] = extra
         output_metadata.final = False
+        # merge package-local variant extensions.  Only exclude_from_build_hash is
+        #   currently available.  The thought is that any version stuff should be in the config,
+        #   while pins can be done with jinja2 functions or variables instead of pin_run_as_build
+        variant_merge = {'exclude_from_build_hash': output.get('exclude_from_build_hash')}
+        utils.merge_or_update_dict(output_metadata.config.variant, variant_merge,
+                                   path=None, merge=True)
         return output_metadata
 
     def get_output_metadata_set(self, files=None, permit_undefined_jinja=False):

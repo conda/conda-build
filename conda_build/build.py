@@ -805,7 +805,8 @@ bundlers = {
 }
 
 
-def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False):
+def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False,
+          built_packages=None):
     '''
     Build the package with the specified metadata.
 
@@ -828,8 +829,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
     env["CONDA_BUILD_STATE"] = "BUILD"
     if env_path_backup_var_exists:
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
-
-    built_packages = []
 
     if post in [False, None]:
         if m.uses_jinja and (need_source_download or need_reparse_in_env):
@@ -967,6 +966,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
 
+    new_pkgs = []
     if post in [True, None]:
         with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
             initial_files = set(f.read().splitlines())
@@ -977,14 +977,14 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         for (output_dict, m) in outputs:
             if not m.final:
                 m = finalize_metadata(m, index)
-            built_package = bundlers[output_dict.get('type', 'conda')](output_dict, m, env)
-            built_packages.append(built_package)
-
+            if bldpkg_path(m) not in built_packages:
+                built_package = bundlers[output_dict.get('type', 'conda')](output_dict, m, env)
+                new_pkgs.append(built_package)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
     # return list of all package files emitted by this build
-    return built_packages
+    return new_pkgs
 
 
 def guess_interpreter(script_filename):
@@ -1335,12 +1335,12 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     config.index = None
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=True)
-
             with config:
                 for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
                     packages_from_this = build(metadata, index=index, post=post,
                                                need_source_download=need_source_download,
-                                               need_reparse_in_env=need_reparse_in_env)
+                                               need_reparse_in_env=need_reparse_in_env,
+                                               built_packages=built_packages)
                     if not notest:
                         for pkg in packages_from_this:
                             if pkg.endswith('.tar.bz2'):
