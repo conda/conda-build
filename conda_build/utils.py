@@ -866,7 +866,7 @@ def _increment(version):
 
 
 def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
-    pins = [len(p.split('.')) for p in (min_pin, max_pin)]
+    pins = [len(p.split('.')) if p else None for p in (min_pin, max_pin)]
     parsed_version = VersionOrder(version).version[1:]
     nesting_position = None
     flat_list = []
@@ -878,15 +878,20 @@ def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
             flat_list.append(item)
     versions = ['', '']
     for p_idx, pin in enumerate(pins):
-        for v_idx, v in enumerate(flat_list[:pin]):
-            if p_idx == 1 and v_idx == pin - 1:
-                v = _increment(v)
-            versions[p_idx] += str(v)
-            if v_idx != nesting_position:
-                versions[p_idx] += '.'
-        if versions[p_idx][-1] == '.':
-            versions[p_idx] = versions[p_idx][:-1]
-    return ">={0},<{1}".format(*versions)
+        if pin:
+            for v_idx, v in enumerate(flat_list[:pin]):
+                if p_idx == 1 and v_idx == pin - 1:
+                    v = _increment(v)
+                versions[p_idx] += str(v)
+                if v_idx != nesting_position:
+                    versions[p_idx] += '.'
+            if versions[p_idx][-1] == '.':
+                versions[p_idx] = versions[p_idx][:-1]
+    if versions[0]:
+        versions[0] = '>=' + versions[0]
+    if versions[1]:
+        versions[1] = '<' + versions[1]
+    return ','.join([v for v in versions if v])
 
 
 def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',

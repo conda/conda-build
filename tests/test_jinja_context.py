@@ -52,6 +52,20 @@ def test_pin_lower_bound(testing_metadata, mocker):
     assert pin == '>=1.0,<3.0'
 
 
+def test_pin_none_min(testing_metadata, mocker):
+    get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
+    get_env_dependencies.return_value = ['test 1.2.3']
+    pin = jinja_context.pin_compatible(testing_metadata, 'test', min_pin=None)
+    assert pin == '<2'
+
+
+def test_pin_none_max(testing_metadata, mocker):
+    get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
+    get_env_dependencies.return_value = ['test 1.2.3']
+    pin = jinja_context.pin_compatible(testing_metadata, 'test', max_pin=None)
+    assert pin == '>=1.2.3'
+
+
 def test_pin_subpackage_exact(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a'}]
     pin = jinja_context.pin_subpackage(testing_metadata, 'a', exact=True)
