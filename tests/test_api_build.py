@@ -336,7 +336,7 @@ def test_skip_existing(testing_workdir, testing_config, capfd):
     api.build(empty_sections, config=testing_config)
     api.build(empty_sections, config=testing_config, skip_existing=True)
     output, error = capfd.readouterr()
-    assert "is already built" in output
+    assert "are already built" in output
 
 
 @pytest.mark.serial
@@ -364,7 +364,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     api.build(testing_metadata)
 
     output, error = capfd.readouterr()
-    assert "is already built" in output
+    assert "are already built" in output
     assert url_path(testing_metadata.config.croot) in output
 
 

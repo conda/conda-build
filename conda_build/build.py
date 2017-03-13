@@ -45,7 +45,7 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants)
+                                distribute_variants, expand_outputs)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -771,7 +771,6 @@ def bundle_conda(output, metadata, env, **kw):
             os.remove(final_output)
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=metadata.config.locking)
-        output['final_output'] = final_output
 
     update_index(output_folder, config=metadata.config)
 
@@ -879,10 +878,13 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
     :type need_source_download: bool: if rendering failed to download source
     (due to missing tools), retry here after build env is populated
     '''
+    default_return = {}
+    if not built_packages:
+        built_packages = {}
 
     if m.skip():
         utils.print_skip_message(m)
-        return []
+        return default_return
 
     log = utils.get_logger(__name__)
 
@@ -928,15 +930,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         #     make people wait longer only to see an error
         warn_on_use_of_SRC_DIR(m)
 
-        if m.config.skip_existing:
-            package_location = is_package_built(m)
-            if package_location:
-                print(m.dist(),
-                        "is already built in {0}, skipping.".format(package_location))
-                return []
-
-        print("BUILD START:", m.dist())
-
         if m.config.has_separate_host_prefix:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
@@ -952,13 +945,23 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                 source.provide(m)
             m.final = False
             m.parse_until_resolved()
-            m = finalize_metadata(m, index)
-            if m.uses_jinja:
-                print("BUILD START (revised):", m.dist())
 
         elif need_reparse_in_env:
             m = reparse(m, index)
-            print("BUILD START (revised):", m.dist())
+
+        # this is the finalized metadata for the top-level recipe, not necessarily subpackages
+        #    We use it for examining
+        output_metas = expand_outputs([(m, None, None)], index)
+        package_locations = [bldpkg_path(m) for m, _, _ in output_metas]
+
+        if m.config.skip_existing:
+            package_locations = [is_package_built(m) for m, _, _ in output_metas]
+            if package_locations:
+                print("Packages for ", m.path or m.name(),
+                        "are already built in {0}, skipping.".format(package_locations))
+                return default_return
+
+        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -1028,7 +1031,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
 
-    new_pkgs = []
+    new_pkgs = default_return
     if post in [True, None]:
         with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
             initial_files = set(f.read().splitlines())
@@ -1053,22 +1056,26 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                 if type == 'conda':
                     for unwanted in intra_installed - output_d['intradependencies']:
                         log.debug("intradeps: removing %s" % (unwanted))
-                        for dep_file in outputs[outputs_idx[unwanted]][0]['checksums']:
+                        tarball = bldpkg_path(outputs[outputs_idx[unwanted]][1])
+                        unwanted_dict = (built_packages[tarball][0] if tarball in built_packages
+                                         else outputs[outputs_idx[unwanted]][0])
+                        for dep_file in unwanted_dict['checksums']:
                             remove_prefix_file(dep_file, m.config.build_prefix)
-                    intra_installed -= (intra_installed - output_d['intradependencies'])
+                    intra_installed -= (intra_installed - output_d.get('intradependencies', {}))
                     for needed in output_d['intradependencies'] - intra_installed:
                         log.debug("intradeps: re-extracting %s" % (needed))
-                        tarball = outputs[outputs_idx[needed]][0]['final_output']
+                        tarball = bldpkg_path(outputs[outputs_idx[needed]][1])
+                        needed_dict = (built_packages[tarball][0] if tarball in built_packages
+                                         else outputs[outputs_idx[needed]][0])
                         with tarfile.open(tarball, 'r:bz2') as tf:
                             members = [tf.getmember(dep_file) for dep_file in
-                                       outputs[outputs_idx[needed]][0]['checksums']]
+                                       needed_dict['checksums']]
                             tf.extractall(m.config.build_prefix, members)
-                intra_installed.update(output_d['intradependencies'])
-                assert output_d['intradependencies'] == intra_installed, "set logic gone bad."
-                built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
-                if type == 'conda':
+                    intra_installed.update(output_d['intradependencies'])
+                    assert output_d['intradependencies'] == intra_installed, "set logic gone bad."
                     intra_installed.add(output_d['name'])
-                new_pkgs.append(built_package)
+                built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
+                new_pkgs[built_package] = (output_d, m)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
@@ -1371,7 +1378,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         # delete_trash(None)
 
     extra_help = ""
-    built_packages = []
+    built_packages = {}
     retried_recipes = []
 
     # this is primarily for exception handling.  It's OK that it gets clobbered by
@@ -1428,32 +1435,32 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     config.index = None
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=True)
-            with config:
-                for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+            for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                with metadata.config:
                     packages_from_this = build(metadata, index=index, post=post,
-                                               need_source_download=need_source_download,
-                                               need_reparse_in_env=need_reparse_in_env,
-                                               built_packages=built_packages)
+                                            need_source_download=need_source_download,
+                                            need_reparse_in_env=need_reparse_in_env,
+                                            built_packages=built_packages)
                     if not notest:
-                        for pkg in packages_from_this:
+                        for pkg, dict_and_meta in packages_from_this.items():
                             if pkg.endswith('.tar.bz2'):
                                 # we only know how to test conda packages
                                 try:
                                     test(pkg, config=metadata.config)
-                                # IOError means recipe was not included with package. use metadata
-                                except IOError:
+                                # IOError means recipe not included with package. use metadata
+                                except (OSError, IOError):
                                     # force the build string to line up - recomputing it would
                                     #    yield a different result
                                     index_contents = utils.package_has_file(pkg,
-                                                                        'info/index.json').decode()
+                                                                'info/index.json').decode()
                                     build_str = json.loads(index_contents)['build']
-                                    build_meta = metadata.meta.get('build', {})
+                                    build_meta = dict_and_meta[1].meta.get('build', {})
                                     build_meta['string'] = build_str
-                                    metadata.meta['build'] = build_meta
-                                    test(metadata, config=metadata.config)
-                            built_packages.append(pkg)
+                                    dict_and_meta[1].meta['build'] = build_meta
+                                    test(dict_and_meta[1], config=metadata.config)
+                            built_packages.update({pkg: dict_and_meta})
                     else:
-                        built_packages.extend(packages_from_this)
+                        built_packages.update(packages_from_this)
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r']
             add_recipes = []
@@ -1496,7 +1503,7 @@ for Python 3.5 and needs to be rebuilt."""
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
-    return built_packages
+    return list(built_packages.keys())
 
 
 def handle_anaconda_upload(paths, config):

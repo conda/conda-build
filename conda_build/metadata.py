@@ -335,6 +335,12 @@ def _git_clean(source_meta):
     return ret_meta
 
 
+def _extract_requirements_text(recipe_text):
+    match = re.search(r'(^requirements:.*?)(test|extra|about|outputs|\Z)', recipe_text,
+                     flags=re.MULTILINE | re.DOTALL)
+    return match.group(1) if match else None
+
+
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
@@ -405,7 +411,10 @@ def build_string_from_metadata(metadata):
                                                     name == 'python'):
                             res.append(s)
                         else:
-                            variant_version = metadata.config.variant.get(name, "")
+                            for _n in ensure_list(names):
+                                variant_version = metadata.config.variant.get(_n, "")
+                                if variant_version:
+                                    break
                             res.append(''.join([s] + variant_version.split('.')[:places]))
 
         features = ensure_list(metadata.get_value('build/features', []))
@@ -766,6 +775,13 @@ class MetaData(object):
                 #    we need to exclude them from the hash.
                 if 'files' in out:
                     del out['files']
+                excludes = self.config.variant.get('exclude_from_build_hash', [])
+                requirements = out.get('requirements', [])
+                if excludes:
+                    exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
+                                                          for exc in excludes))
+                    requirements = [r for r in requirements if not exclude_pattern.match(r)]
+                out['requirements'] = requirements
                 outs.append(out)
             composite.update({'outputs': [HashableDict(out) for out in outs]})
 
@@ -790,10 +806,9 @@ class MetaData(object):
         for key in 'build', 'run':
             if key in composite['requirements'] and not composite['requirements'].get(key):
                 del composite['requirements'][key]
-        trim_empty_keys(composite)
-        file_paths = []
 
-        if self.path:
+        file_paths = []
+        if self.path and self.config.include_recipe and self.include_recipe():
             recorded_input_files = os.path.join(self.path, '..', 'hash_input_files')
             if os.path.exists(recorded_input_files):
                 with open(recorded_input_files) as f:
@@ -803,9 +818,13 @@ class MetaData(object):
                 file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
                 # exclude meta.yaml and meta.yaml.template, because the json dictionary captures
                 #    their content
-                file_paths = [f for f in file_paths if not f.startswith('meta.yaml')]
-                file_paths = sorted(filter_files(file_paths, self.path))
-
+                # never include run_test - these can be renamed from subpackages, or the top-level
+                #    and if they're part of the top-level only, there will be missing files in the
+                #    subpackage
+                file_paths = [f for f in file_paths if not (f.startswith('meta.yaml') or
+                                                            f.startswith('run_test'))]
+                file_paths = filter_files(file_paths, self.path)
+        trim_empty_keys(composite)
         return composite, file_paths
 
     def _hash_dependencies(self):
@@ -1124,13 +1143,20 @@ class MetaData(object):
     @property
     def uses_subpackage(self):
         outputs = self.get_section('outputs')
-        in_reqs = any(out.get('name') in self.get_value('requirements/run') for out in outputs)
+        in_reqs = False
+        for out in outputs:
+            if 'name' in out:
+                name_re = re.compile(r"^{}(\s|\Z|$)".format(out['name']))
+                in_reqs = any(name_re.match(req) for req in self.get_value('requirements/run'))
         subpackage_pin = False
         if not in_reqs and self.meta_path:
             with open(self.meta_path) as f:
-                matches = re.findall(r"{{\s*pin_subpackage\(.*\)\s*}}", f.read())
-            subpackage_pin = len(matches) > 0
-        return in_reqs or subpackage_pin
+                data = _extract_requirements_text(f.read())
+                if PY3 and hasattr(data, 'decode'):
+                    data = data.decode()
+                if data:
+                    subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
+        return in_reqs or bool(subpackage_pin)
 
     def validate_features(self):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):

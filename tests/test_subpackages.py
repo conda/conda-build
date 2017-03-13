@@ -54,8 +54,8 @@ def test_subpackage_version_provided(testing_metadata):
 def test_subpackage_independent_hash(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a', 'requirements': 'bzip2'}]
     testing_metadata.meta['requirements']['run'] = ['a']
-    m = finalize_metadata(testing_metadata)
-    out_dicts_and_metadata = m.get_output_metadata_set()
+    out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
+    assert len(out_dicts_and_metadata) == 2
     outputs = api.get_output_file_path([(m, None, None) for (_, m) in out_dicts_and_metadata])
     assert len(outputs) == 2
     assert outputs[0][-15:] != outputs[1][-15:]
@@ -91,4 +91,9 @@ def test_intradependencies(testing_workdir, testing_config):
     testing_config.channel_urls = ('r')
     testing_config.activate = True
     recipe = os.path.join(subpackage_dir, '_intradependencies')
+    # outputs = api.get_output_file_paths(recipe, config=testing_config)
+    # # 3 for each python (*2, 6 total), 1 for each lib (2 total), 1 for each R (2 total)
+    # assert len(outputs) == 10
     outputs = api.build(recipe, config=testing_config)
+    # 3 for each python (*2, 6 total), 1 for each lib (2 total), 1 for each R (2 total)
+    assert len(outputs) == 10

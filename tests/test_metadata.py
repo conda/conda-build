@@ -5,6 +5,7 @@ import sys
 import pytest
 
 from conda_build.metadata import select_lines, MetaData
+from conda_build import api
 from .utils import thisdir, metadata_dir
 
 
@@ -138,39 +139,35 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         subprocess.check_call(cmd.split())
 
 
-@pytest.mark.parametrize('py_ver', [('2.7', 'vs2008'),
-                                    ('3.4', 'vs2010'),
-                                    ('3.5', 'vs2015'), ])
+@pytest.mark.parametrize('py_ver', [('2.7', 'vs2008_win-x86_64'),
+                                    ('3.4', 'vs2010_win-x86_64'),
+                                    ('3.5', 'vs2015_win-x86_64'), ])
 def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
-    variant = {'python': py_ver[0]}
-    testing_config._platform = 'win'
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
-                        variant=variant)
+    testing_config.platform = 'win'
+    metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
+                          variants={'python': py_ver[0]})[0][0]
     assert py_ver[1] in metadata.meta['requirements']['build']
 
 
 def test_native_compiler_metadata_linux(testing_config, mocker):
-    testing_config._platform = 'linux'
+    testing_config.platform = 'linux'
     # this is a bit of a hack.  It ensures that the native compiler section gets populated.
     # under ordinary circumstances, via api.render, we make sure that the variant is at least
     #    populated with the default values.  By instantiating just MetaData, that doesn't hold.
-    testing_config.variant = {'dummy': 'abc'}
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
-    assert 'gcc' in metadata.meta['requirements']['build']
-    assert 'gxx' in metadata.meta['requirements']['build']
-    assert 'gfortran' in metadata.meta['requirements']['build']
+    metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
+                          config=testing_config)[0][0]
+    assert 'gcc_linux-cos5-x86_64' in metadata.meta['requirements']['build']
+    assert 'gxx_linux-cos5-x86_64' in metadata.meta['requirements']['build']
+    assert 'gfortran_linux-cos5-x86_64' in metadata.meta['requirements']['build']
 
 
 def test_native_compiler_metadata_osx(testing_config, mocker):
-    testing_config._platform = 'osx'
-    # this is a bit of a hack.  It ensures that the native compiler section gets populated.
-    # under ordinary circumstances, via api.render, we make sure that the variant is at least
-    #    populated with the default values.  By instantiating just MetaData, that doesn't hold.
-    testing_config.variant = {'dummy': 'abc'}
-    metadata = MetaData(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config)
-    assert 'clang' in metadata.meta['requirements']['build']
-    assert 'clangxx' in metadata.meta['requirements']['build']
-    assert 'gfortran' in metadata.meta['requirements']['build']
+    testing_config.platform = 'osx'
+    metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
+                          config=testing_config)[0][0]
+    assert 'clang_osx-109-x86_64' in metadata.meta['requirements']['build']
+    assert 'clangxx_osx-109-x86_64' in metadata.meta['requirements']['build']
+    assert 'gfortran_osx-109-x86_64' in metadata.meta['requirements']['build']
 
 
 def test_compiler_metadata_cross_compiler():

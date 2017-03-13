@@ -236,7 +236,7 @@ def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
         metadata_tuples = api.render(recipe, config=config)
         paths = api.get_output_file_path(metadata_tuples)
-        print('\n'.join(paths))
+        print('\n'.join(sorted(paths)))
 
 
 def source_action(recipe, config):
