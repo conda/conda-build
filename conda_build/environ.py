@@ -392,6 +392,7 @@ def windows_vars(prefix):
         'R': join(prefix, 'Scripts', 'R.exe'),
         'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/'))),
         'SYSTEMROOT': os.getenv('SYSTEMROOT'),
+        'WINDIR': os.getenv('WINDIR'),
     }
 
 
