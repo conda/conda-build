@@ -28,8 +28,9 @@ import encodings.idna  # NOQA
 
 
 # used to get version
-from .conda_interface import envs_dirs, env_path_backup_var_exists
-from .conda_interface import PY3, cc
+from .conda_interface import (envs_dirs, env_path_backup_var_exists, cc_platform, conda_private,
+                              root_dir)
+from .conda_interface import PY3
 from .conda_interface import prefix_placeholder, linked
 from .conda_interface import url_path
 from .conda_interface import TemporaryDirectory
@@ -388,17 +389,17 @@ def write_about_json(m):
         evars = ['PATH', 'PYTHONPATH', 'PYTHONHOME', 'CONDA_DEFAULT_ENV',
                  'CIO_TEST', 'CONDA_ENVS_PATH']
 
-        if cc.platform == 'linux':
+        if cc_platform == 'linux':
             evars.append('LD_LIBRARY_PATH')
-        elif cc.platform == 'osx':
+        elif cc_platform == 'osx':
             evars.append('DYLD_LIBRARY_PATH')
         d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
         # this information will only be present in conda 4.2.10+
         try:
-            d['conda_private'] = cc.conda_private
+            d['conda_private'] = conda_private
         except (KeyError, AttributeError):
             pass
-        env = environ.Environment(cc.root_dir)
+        env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
         json.dump(d, fo, indent=2, sort_keys=True)
 

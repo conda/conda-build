@@ -25,11 +25,10 @@ from distutils.version import LooseVersion
 import filelock
 
 from conda import __version__ as conda_version
-from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems, cc
+from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix, pkgs_dirs
+from .conda_interface import PY3, StringIO, iteritems
 from .conda_interface import root_dir
 from .conda_interface import string_types, url_path, get_rc_urls
-from .conda_interface import StringIO
 from .conda_interface import VersionOrder
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf  # NOQA
@@ -48,7 +47,6 @@ else:
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
-
 
 on_win = (sys.platform == 'win32')
 
@@ -291,8 +289,8 @@ def get_conda_operation_locks(config=None):
     locks = []
     # locks enabled by default
     if not config or config.locking:
-        cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        _pkgs_dirs = pkgs_dirs[:1]
+        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs) if config else []
         for folder in locked_folders:
             if not os.path.isdir(folder):
                 os.makedirs(folder)

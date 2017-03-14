@@ -15,8 +15,9 @@ import re
 import sys
 import tempfile
 
-from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linked_data, linked,
+from .conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
                               get_index, which_prefix)
+from .conda_interface import display_actions, install_actions
 
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
@@ -73,9 +74,9 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
         specs = specs_from_args(packages)
         index = get_index(channel_urls=channel_urls, prepend=prepend,
                           platform=platform, prefix=prefix)
-        actions = plan.install_actions(prefix, index, specs, pinned=False,
+        actions = install_actions(prefix, index, specs, pinned=False,
                                        minimal_hint=minimal_hint)
-        plan.display_actions(actions, index)
+        display_actions(actions, index)
         return actions
     finally:
         rm_rf(prefix)

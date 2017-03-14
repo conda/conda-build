@@ -11,7 +11,7 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import root_dir, root_writable, cc
+from .conda_interface import root_dir, root_writable, cc_conda_build, subdir, cc_platform
 from .conda_interface import binstar_upload
 from .variants import get_default_variants
 
@@ -101,13 +101,13 @@ DEFAULTS = [Setting('activate', True),
             Setting('repository', 'pypitest'),
 
             Setting('ignore_recipe_verify_scripts',
-                  cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
+                    cc_conda_build.get('ignore_recipe_verify_scripts', [])),
             Setting('ignore_package_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
+                    cc_conda_build.get('ignore_package_verify_scripts', [])),
             Setting('run_recipe_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                    cc_conda_build.get('run_package_verify_scripts', [])),
             Setting('run_package_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                    cc_conda_build.get('run_package_verify_scripts', [])),
             ]
 
 
@@ -175,7 +175,7 @@ class Config(object):
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or cc.subdir.split('-')[-1]
+        return self._arch or subdir.split('-')[-1]
 
     @arch.setter
     def arch(self, value):
@@ -189,7 +189,7 @@ class Config(object):
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or cc.platform
+        return self._platform or cc_platform
 
     @platform.setter
     def platform(self, value):
@@ -243,7 +243,7 @@ class Config(object):
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv('CONDA_BLD_PATH')
-            _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+            _bld_root_rc = cc_conda_build.get('root-dir')
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
@@ -424,7 +424,7 @@ class Config(object):
         """ Dirs where previous build packages might be. """
         # The first two *might* be the same, but might not, depending on if this is a cross-compile.
         #     cc.subdir should be the native platform, while self.subdir would be the host platform.
-        return {join(self.croot, self.host_subdir), join(self.croot, cc.subdir),
+        return {join(self.croot, self.host_subdir), join(self.croot, subdir),
                 join(self.croot, "noarch"), }
 
     @property
