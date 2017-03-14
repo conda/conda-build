@@ -226,7 +226,19 @@ different sets of packages."""
               " you package may depend on files that are not included in the package, and may pass"
               "tests, but ultimately fail on installed systems.")
     )
-
+    p.add_argument(
+        "--long-test-prefix", default=False, action="store_true",
+        help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
+              "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is off by "
+              "default in conda-build 2.x, but will be enabled by default in conda-build 3.0.")
+    )
+    p.add_argument(
+        "--no-long-test-prefix", dest="long_test_prefix", action="store_false",
+        help=("Do not use a long prefix for the test prefix, as well as the build prefix."
+              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  "
+              "This is currently the default behavior, and does not need to be set.  This will"
+              " change in conda-build 3.0 (long-test-prefix enabled by default)")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)
