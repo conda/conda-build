@@ -454,6 +454,53 @@ def _get_dependencies_from_environment(env_name_or_path):
     return {'requirements': {'build': bootstrap_requirements}}
 
 
+def toposort(outputs):
+    '''This function is used to work out the order to run the install scripts
+       for split packages based on any interdependencies. The result is just
+       a re-ordering of outputs such that we can run them in that order and
+       reset the initial set of files in the install prefix after each. This
+       will naturally lead to non-overlapping files in each package and also
+       the correct files being present during the install and test procedures,
+       provided they are run in this order.'''
+    from conda.toposort import _toposort
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    these_packages = [output_d['name'] for output_d, _ in outputs
+                      if output_d.get('type', 'conda') == 'conda']
+    topodict = dict()
+    order = dict()
+    endorder = set()
+    for idx, (output_d, output_m) in enumerate(outputs):
+        if output_d.get('type', 'conda') == 'conda':
+            name = output_d['name']
+            order[name] = idx
+            topodict[name] = set()
+            for run_dep in output_m.get_value('requirements/run', []):
+                run_dep = run_dep.split(' ')[0]
+                if run_dep in these_packages:
+                    topodict[name].update((run_dep,))
+        else:
+            endorder.add(idx)
+    # Calculate the intradependencies for each conda package.  This
+    # must be done before calling _toposort as it modifies topodict.
+    for name in topodict:
+        idx = order[name]
+        output_d = outputs[idx][0]
+        assert name == output_d['name'], "toposort ordering bug."
+        alldeps = set((name,))
+        lastdeps = set()
+        while lastdeps != alldeps:
+            new = alldeps - lastdeps
+            lastdeps = alldeps
+            for dep in new:
+                alldeps |= topodict[dep]
+        output_d['intradependencies'] = alldeps - set((name,))
+    topo_order = list(_toposort(topodict))
+    result = [outputs[order[t]] for t in topo_order]
+    result.extend([outputs[o] for o in endorder])
+    return result
+
+
 class MetaData(object):
     def __init__(self, path, config=None, variant=None):
 
@@ -825,7 +872,7 @@ class MetaData(object):
                                                             f.startswith('run_test'))]
                 file_paths = filter_files(file_paths, self.path)
         trim_empty_keys(composite)
-        return composite, file_paths
+        return composite, sorted(file_paths)
 
     def _hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -1223,4 +1270,4 @@ class MetaData(object):
                 raise
             outputs = []
             metadata = []
-        return list(six.moves.zip(outputs, metadata))
+        return toposort(list(six.moves.zip(outputs, metadata)))
