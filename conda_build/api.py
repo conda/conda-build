@@ -32,27 +32,14 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
        templates evaluated.
 
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
-    from conda_build.render import render_recipe, finalize_metadata
-    from conda_build.exceptions import DependencyNeedsBuildingError
+    from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
     metadata_tuples, index = render_recipe(recipe_path,
                                     no_download_source=config.no_download_source,
                                     config=config, variants=variants,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-
-    metadata = []
-    for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.get_output_metadata_set():
-            if output_dict.get('type') != 'wheel':
-                try:
-                    m = finalize_metadata(m, index)
-                except DependencyNeedsBuildingError:
-                    log = _get_logger(__name__)
-                    log.warn("Could not finalize metadata due to missing dependencies.  "
-                             "If building, these should get built in order and it's OK to "
-                             "ignore this message..")
-                metadata.append((m, download, reparse))
-    return metadata
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                    expand_output=True)
+    return metadata_tuples
 
 
 def output_yaml(metadata, file_path=None):
@@ -93,7 +80,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
                         .format(m.path))
         else:
             outs.append(bldpkg_path(m))
-    return outs
+    return sorted(list(set(outs)))
 
 
 def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None,
@@ -107,8 +94,9 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
     log.warn("deprecation warning: this function has been renamed to get_output_file_paths, "
              "to reflect that potentially multiple paths are returned.  This function will be "
              "removed in the conda-build 4.0 release.")
-    return set(get_output_file_paths(recipe_path_or_metadata, no_download_source=no_download_source,
-                                     config=config, variants=variants, **kwargs))
+    return get_output_file_paths(recipe_path_or_metadata,
+                                 no_download_source=no_download_source,
+                                 config=config, variants=variants, **kwargs)
 
 
 def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):

@@ -13,30 +13,44 @@ requirements:
 outputs:
   - name: lib1intradependencies
     script: install-lib1intradependencies.sh
+    exclude_from_build_hash:
+      - python
+      - r-base
 
   - name: py1-intradependencies
     requirements:
       - {{ pin_subpackage('lib1intradependencies', exact=True) }}
-      - r-base {{ r }}
+      - python {{ python }}
     script: install-py1-intradependencies.sh
+    exclude_from_build_hash:
+      - r-base
 
   - name: r1-intradependencies
     requirements:
       - {{ pin_subpackage('lib1intradependencies', exact=True) }}
-      - python {{ python }}
+      - r-base {{ r }}
     script: install-r1-intradependencies.sh
+    exclude_from_build_hash:
+      - python
 
   - name: lib2intradependencies
     script: install-lib2intradependencies.sh
+    exclude_from_build_hash:
+      - python
+      - r-base
 
   - name: py2-intradependencies
     requirements:
       - {{ pin_subpackage('lib2intradependencies', exact=True) }}
-      - r-base {{ r }}
+      - python {{ python }}
     script: install-py2-intradependencies.sh
+    exclude_from_build_hash:
+      - r-base
 
   - name: r2-intradependencies
     requirements:
       - {{ pin_subpackage('lib2intradependencies', exact=True) }}
-      - python {{ python }}
+      - r-base {{ r }}
     script: install-r2-intradependencies.sh
+    exclude_from_build_hash:
+      - python

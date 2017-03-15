@@ -212,7 +212,7 @@ def _get_zip_groups(combined_variant):
     return groups
 
 
-def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
+def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc.platform):
     # http://stackoverflow.com/a/5228294/1170370
     # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
     #                                            {'python': 3.5, 'numpy': 1.11}]
@@ -223,8 +223,8 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
 
     combined, extend_keys = combine_specs(specs)
 
-    if not 'target_platform' in combined:
-        combined['target_platform'] = [DEFAULT_PLATFORMS[cc.platform]]
+    if 'target_platform' not in combined:
+        combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
 
     if 'extend_keys' in combined:
         del combined['extend_keys']
@@ -259,10 +259,13 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts):
 def get_package_variants(recipedir_or_metadata, config=None):
     if hasattr(recipedir_or_metadata, 'config'):
         config = recipedir_or_metadata.config
+    if not config:
+        from conda_build.config import Config
+        config = Config()
     files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
                               ignore_system_config=config.ignore_system_variants)
 
-    specs = get_default_variants() + [parse_config_file(f) for f in files]
+    specs = get_default_variants(config.platform) + [parse_config_file(f) for f in files]
 
     # this is the override of the variants from files and args with values from CLI or env vars
     if config.variant:
@@ -282,8 +285,8 @@ def get_package_variants(recipedir_or_metadata, config=None):
             combined_spec[k] = [v]
 
     validate_variant(combined_spec)
-    return dict_of_lists_to_list_of_dicts(combined_spec)
+    return dict_of_lists_to_list_of_dicts(combined_spec, config.platform)
 
 
-def get_default_variants():
-    return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS)
+def get_default_variants(platform=cc.platform):
+    return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS, platform)

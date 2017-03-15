@@ -547,7 +547,8 @@ def _ensure_valid_spec(spec):
         if 'numpy' in match.group(1) and match.group(2) == 'x.x':
             spec = spec_needing_star_re.sub(r"\1\2", spec)
         else:
-            spec = spec_needing_star_re.sub(r"\1\2.*", spec)
+            if "*" not in spec:
+                spec = spec_needing_star_re.sub(r"\1\2.*", spec)
     return spec
 
 

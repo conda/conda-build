@@ -335,6 +335,12 @@ def _git_clean(source_meta):
     return ret_meta
 
 
+def _extract_requirements_text(recipe_text):
+    match = re.search(r'(^requirements:.*?)(test|extra|about|outputs|\Z)', recipe_text,
+                     flags=re.MULTILINE | re.DOTALL)
+    return match.group(1) if match else None
+
+
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
@@ -405,7 +411,14 @@ def build_string_from_metadata(metadata):
                                                     name == 'python'):
                             res.append(s)
                         else:
-                            variant_version = metadata.config.variant.get(name, "")
+                            pkg_names = list(ensure_list(names))
+                            pkg_names.extend([_n.replace('-', '_')
+                                              for _n in ensure_list(names) if '-' in _n])
+                            for _n in pkg_names:
+                                _n = _n.replace('-', '_')
+                                variant_version = metadata.config.variant.get(_n, "")
+                                if variant_version:
+                                    break
                             res.append(''.join([s] + variant_version.split('.')[:places]))
 
         features = ensure_list(metadata.get_value('build/features', []))
@@ -443,6 +456,53 @@ def _get_dependencies_from_environment(env_name_or_path):
     for package, data in bootstrap_metadata.items():
         bootstrap_requirements.append("%s %s %s" % (package, data['version'], data['build']))
     return {'requirements': {'build': bootstrap_requirements}}
+
+
+def toposort(outputs):
+    '''This function is used to work out the order to run the install scripts
+       for split packages based on any interdependencies. The result is just
+       a re-ordering of outputs such that we can run them in that order and
+       reset the initial set of files in the install prefix after each. This
+       will naturally lead to non-overlapping files in each package and also
+       the correct files being present during the install and test procedures,
+       provided they are run in this order.'''
+    from conda.toposort import _toposort
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    these_packages = [output_d['name'] for output_d, _ in outputs
+                      if output_d.get('type', 'conda') == 'conda']
+    topodict = dict()
+    order = dict()
+    endorder = set()
+    for idx, (output_d, output_m) in enumerate(outputs):
+        if output_d.get('type', 'conda') == 'conda':
+            name = output_d['name']
+            order[name] = idx
+            topodict[name] = set()
+            for run_dep in output_m.get_value('requirements/run', []):
+                run_dep = run_dep.split(' ')[0]
+                if run_dep in these_packages:
+                    topodict[name].update((run_dep,))
+        else:
+            endorder.add(idx)
+    # Calculate the intradependencies for each conda package.  This
+    # must be done before calling _toposort as it modifies topodict.
+    for name in topodict:
+        idx = order[name]
+        output_d = outputs[idx][0]
+        assert name == output_d['name'], "toposort ordering bug."
+        alldeps = set((name,))
+        lastdeps = set()
+        while lastdeps != alldeps:
+            new = alldeps - lastdeps
+            lastdeps = alldeps
+            for dep in new:
+                alldeps |= topodict[dep]
+        output_d['intradependencies'] = alldeps - set((name,))
+    topo_order = list(_toposort(topodict))
+    result = [outputs[order[t]] for t in topo_order]
+    result.extend([outputs[o] for o in endorder])
+    return result
 
 
 class MetaData(object):
@@ -766,6 +826,13 @@ class MetaData(object):
                 #    we need to exclude them from the hash.
                 if 'files' in out:
                     del out['files']
+                excludes = self.config.variant.get('exclude_from_build_hash', [])
+                requirements = out.get('requirements', [])
+                if excludes:
+                    exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
+                                                          for exc in excludes))
+                    requirements = [r for r in requirements if not exclude_pattern.match(r)]
+                out['requirements'] = requirements
                 outs.append(out)
             composite.update({'outputs': [HashableDict(out) for out in outs]})
 
@@ -790,10 +857,9 @@ class MetaData(object):
         for key in 'build', 'run':
             if key in composite['requirements'] and not composite['requirements'].get(key):
                 del composite['requirements'][key]
-        trim_empty_keys(composite)
-        file_paths = []
 
-        if self.path:
+        file_paths = []
+        if self.path and self.config.include_recipe and self.include_recipe():
             recorded_input_files = os.path.join(self.path, '..', 'hash_input_files')
             if os.path.exists(recorded_input_files):
                 with open(recorded_input_files) as f:
@@ -803,10 +869,14 @@ class MetaData(object):
                 file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
                 # exclude meta.yaml and meta.yaml.template, because the json dictionary captures
                 #    their content
-                file_paths = [f for f in file_paths if not f.startswith('meta.yaml')]
-                file_paths = sorted(filter_files(file_paths, self.path))
-
-        return composite, file_paths
+                # never include run_test - these can be renamed from subpackages, or the top-level
+                #    and if they're part of the top-level only, there will be missing files in the
+                #    subpackage
+                file_paths = [f for f in file_paths if not (f.startswith('meta.yaml') or
+                                                            f.startswith('run_test'))]
+                file_paths = filter_files(file_paths, self.path)
+        trim_empty_keys(composite)
+        return composite, sorted(file_paths)
 
     def _hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -1124,13 +1194,20 @@ class MetaData(object):
     @property
     def uses_subpackage(self):
         outputs = self.get_section('outputs')
-        in_reqs = any(out.get('name') in self.get_value('requirements/run') for out in outputs)
+        in_reqs = False
+        for out in outputs:
+            if 'name' in out:
+                name_re = re.compile(r"^{}(\s|\Z|$)".format(out['name']))
+                in_reqs = any(name_re.match(req) for req in self.get_value('requirements/run'))
         subpackage_pin = False
         if not in_reqs and self.meta_path:
             with open(self.meta_path) as f:
-                matches = re.findall(r"{{\s*pin_subpackage\(.*\)\s*}}", f.read())
-            subpackage_pin = len(matches) > 0
-        return in_reqs or subpackage_pin
+                data = _extract_requirements_text(f.read())
+                if PY3 and hasattr(data, 'decode'):
+                    data = data.decode()
+                if data:
+                    subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
+        return in_reqs or bool(subpackage_pin)
 
     def validate_features(self):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
@@ -1197,4 +1274,4 @@ class MetaData(object):
                 raise
             outputs = []
             metadata = []
-        return list(six.moves.zip(outputs, metadata))
+        return toposort(list(six.moves.zip(outputs, metadata)))

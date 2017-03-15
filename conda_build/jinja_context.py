@@ -321,7 +321,7 @@ def compiler(language, config, permit_undefined_jinja=False):
         # support cross compilers.  A cross-compiler package will have a name such as
         #    gcc_target
         #    gcc_linux-cos5-64
-        compiler = '_'.join([ compiler, config.variant['target_platform']])
+        compiler = '_'.join([compiler, config.variant['target_platform']])
     return compiler
 
 

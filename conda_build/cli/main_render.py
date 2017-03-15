@@ -141,7 +141,7 @@ def execute(args):
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):
             paths = api.get_output_file_path(metadata_tuples)
-            print('\n'.join(paths))
+            print('\n'.join(sorted(paths)))
     else:
         logging.basicConfig(level=logging.INFO)
         for (m, _, _) in metadata_tuples:
