@@ -145,6 +145,22 @@ def test_build_no_build_id(testing_workdir, test_config):
     assert 'has_prefix_files_1' not in data
 
 
+@pytest.mark.serial
+def test_build_multiple_recipes(test_metadata, testing_workdir, test_config):
+    """Test that building two recipes in one CLI call separates the build environment for each"""
+    os.makedirs('recipe1')
+    os.makedirs('recipe2')
+    api.output_yaml(test_metadata, 'recipe1/meta.yaml')
+    with open('recipe1/run_test.py', 'w') as f:
+        f.write("import os; assert 'test_build_multiple_recipes' in os.getenv('PREFIX')")
+    test_metadata.meta['package']['name'] = 'package2'
+    api.output_yaml(test_metadata, 'recipe2/meta.yaml')
+    with open('recipe2/run_test.py', 'w') as f:
+        f.write("import os; assert 'package2' in os.getenv('PREFIX')")
+    args = ['--no-anaconda-upload', 'recipe1', 'recipe2']
+    main_build.execute(args)
+
+
 def test_build_output_folder(testing_workdir, test_metadata, capfd):
     api.output_yaml(test_metadata, 'meta.yaml')
     with TemporaryDirectory() as tmp:
