@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+import io
 import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath
 import re
-from subprocess import Popen, PIPE, CalledProcessError
+from subprocess import CalledProcessError
 import sys
 import time
 
@@ -224,7 +225,7 @@ def git_source(metadata):
 
     git = external.find_executable('git')
     if not git:
-        sys.exit("Error: git is not installed")
+        sys.exit("Error: git is not installed in your root environment.")
 
     meta = metadata.get_section('source')
 
@@ -255,6 +256,18 @@ def git_info(config, fo=None):
     ''' Print info about a Git repo. '''
     assert isdir(config.work_dir)
 
+    git = external.find_executable('git')
+    if not git:
+        log = get_logger(__name__)
+        log.warn("git not installed in root environment.  Skipping recording of git info.")
+        return
+
+    if config.verbose:
+        stderr = None
+    else:
+        FNULL = open(os.devnull, 'w')
+        stderr = FNULL
+
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
     # properly execute without it.
     env = os.environ.copy()
@@ -264,16 +277,17 @@ def git_info(config, fo=None):
             ('git log -n1', True),
             ('git describe --tags --dirty', False),
             ('git status', True)]:
-        p = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, cwd=config.work_dir, env=env)
-        stdout, stderr = p.communicate()
+        try:
+            stdout = check_output_env(cmd.split(), stderr=stderr, cwd=config.work_dir, env=env)
+        except CalledProcessError as e:
+            if check_error:
+                raise Exception("git error: %s" % str(e))
         encoding = locale.getpreferredencoding()
         if not fo:
             encoding = sys.stdout.encoding
         encoding = encoding or 'utf-8'
-        stdout = stdout.decode(encoding, 'ignore')
-        stderr = stderr.decode(encoding, 'ignore')
-        if check_error and stderr and stderr.strip():
-            raise Exception("git error: %s" % stderr)
+        if hasattr(stdout, 'decode'):
+            stdout = stdout.decode(encoding, 'ignore')
         if fo:
             fo.write(u'==> %s <==\n' % cmd)
             if config.verbose:
@@ -441,7 +455,7 @@ def _guess_patch_strip_level(filesstr, src_dir):
 def _get_patch_file_details(path):
     re_files = re.compile('^(?:---|\+\+\+) ([^\n\t]+)')
     files = set()
-    with open(path) as f:
+    with io.open(path, errors='ignore') as f:
         files = []
         first_line = True
         is_git_format = True

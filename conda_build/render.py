@@ -273,7 +273,6 @@ def try_download(metadata, no_download_source, force_download=False):
 
     elif not metadata.get_section('source'):
         need_source_download = False
-
     if need_source_download and no_download_source:
         raise ValueError("no_download_source specified, but can't fully render recipe without"
                          " downloading source.  Please fix the recipe, or don't use "

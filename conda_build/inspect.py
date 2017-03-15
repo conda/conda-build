@@ -15,8 +15,9 @@ import re
 import sys
 import tempfile
 
-from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linked_data, linked,
+from .conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
                               get_index, which_prefix)
+from .conda_interface import display_actions, install_actions
 
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
@@ -73,9 +74,9 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
         specs = specs_from_args(packages)
         index = get_index(channel_urls=channel_urls, prepend=prepend,
                           platform=platform, prefix=prefix)
-        actions = plan.install_actions(prefix, index, specs, pinned=False,
-                                       minimal_hint=minimal_hint)
-        plan.display_actions(actions, index)
+        actions = install_actions(prefix, index, specs, pinned=False,
+                                  minimal_hint=minimal_hint)
+        display_actions(actions, index)
         return actions
     finally:
         rm_rf(prefix)
@@ -84,6 +85,13 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
 
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
+    dist_depmap = {}
+    for k, v in depmap.items():
+        if hasattr(k, 'dist_name'):
+            k = k.dist_name
+        dist_depmap[k] = v
+
+    depmap = dist_depmap
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
     all_deps = k if 'not found' not in depmap.keys() else k + ['system', 'not found']
     output_string = ""
@@ -214,6 +222,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
         depmap = defaultdict(list)
         pkgmap[pkg] = depmap
         depmap['not found'] = []
+        depmap['system'] = []
         for binary in linkages:
             for lib, path in linkages[binary]:
                 path = replace_path(binary, path, prefix) if path not in {'',

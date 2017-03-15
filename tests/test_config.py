@@ -34,8 +34,18 @@ def test_long_build_prefix_length(config):
     assert len(config.host_prefix) == config.prefix_length
 
 
+@pytest.mark.skipif(on_win, reason="Windows uses only the short prefix")
+def test_long_test_prefix_length(config):
+    assert not config.long_test_prefix
+    assert '_plac' not in config.test_prefix
+    config.long_test_prefix = True
+    config.prefix_length = 80
+    assert len(config.test_prefix) == config.prefix_length
+    config.prefix_length = 255
+    assert len(config.test_prefix) == config.prefix_length
+
+
 def test_build_id_at_end_of_long_build_prefix(config):
-    config.use_long_build_prefix = True
     build_id = 'test123'
     config.build_id = build_id
     assert build_id in config.host_prefix

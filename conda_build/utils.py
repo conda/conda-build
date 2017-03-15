@@ -42,6 +42,7 @@ if PY3:
     import urllib.request as urllib
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
+    PermissionError = PermissionError
 else:
     import urlparse
     import urllib
@@ -339,7 +340,10 @@ unxz is required to unarchive .xz source files.
         check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
-    t.extractall(path=dir_path)
+    if not PY3:
+        t.extractall(path=dir_path.encode(codec))
+    else:
+        t.extractall(path=dir_path)
     t.close()
 
 
@@ -568,16 +572,17 @@ def iter_entry_points(items):
 
 def create_entry_point(path, module, func, config):
     pyscript = PY_TMPL % {'module': module, 'func': func}
-    if sys.platform == 'win32':
+    if on_win:
         with open(path + '-script.py', 'w') as fo:
             if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
-                  path + '.exe', config.timeout)
+            copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
+                    path + '.exe', config.timeout)
     else:
         with open(path, 'w') as fo:
-            fo.write('#!%s\n' % config.build_python)
+            if not config.noarch:
+                fo.write('#!%s\n' % config.build_python)
             fo.write(pyscript)
         os.chmod(path, 0o775)
 

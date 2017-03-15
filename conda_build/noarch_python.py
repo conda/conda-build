@@ -1,10 +1,11 @@
-import os
 import io
-import sys
 import json
-import shutil
 import locale
+import logging
+import os
 from os.path import basename, dirname, isdir, join, isfile
+import shutil
+import sys
 
 ISWIN = sys.platform.startswith('win')
 
@@ -81,7 +82,9 @@ def handle_file(f, d, prefix):
     elif f.startswith(('Examples/', 'Examples\\')):
         d['Examples'].append(f[9:])
     else:
-        _error_exit("Error: Don't know how to handle file: %s" % f)
+        log = logging.getLogger(__name__)
+        log.warn("Don't know how to handle file: %s.  Omitting it from package." % f)
+        os.unlink(path)
 
 
 def populate_files(m, files, prefix, entry_point_scripts=None):

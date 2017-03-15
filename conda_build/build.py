@@ -31,7 +31,6 @@ import encodings.idna  # NOQA
 from .conda_interface import envs_dirs, env_path_backup_var_exists
 from .conda_interface import PY3, cc
 from .conda_interface import prefix_placeholder, linked
-from .conda_interface import url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
 from .conda_interface import text_type
@@ -39,6 +38,7 @@ from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
+from .conda_interface import url_path
 from .conda_interface import dist_str_in_index, Dist
 
 from conda_build import __version__
@@ -51,11 +51,11 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
 from conda_build.index import update_index
-from conda_build.create_test import (create_files, create_shell_files,
-                                     create_py_files, create_pl_files)
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
                                   get_package_variants)
+from conda_build.create_test import (create_files, create_shell_files, create_r_files,
+                                     create_py_files, create_pl_files, create_lua_files)
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -81,6 +81,7 @@ def prefix_files(prefix):
             path = join(root, dn)
             if islink(path):
                 res.add(path[len(prefix) + 1:])
+    res = set(utils.expand_globs(res, prefix))
     return res
 
 
@@ -198,8 +199,6 @@ def copy_recipe(m):
 
         if os.path.isdir(m.path):
             for fn in os.listdir(m.path):
-                if fn.startswith('.'):
-                    continue
                 src_path = join(m.path, fn)
                 dst_path = join(recipe_dir, fn)
                 utils.copy_into(src_path, dst_path, timeout=m.config.timeout,
@@ -608,36 +607,17 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     }
 
     # don't create info/paths.json file if this is an old noarch package
-    if not m.get_value('build/noarch_python', None):
+    if not m.noarch_python:
         with open(join(info_dir, 'paths.json'), "w") as files_json:
             json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
-                      cls=EntityEncoder)
-
-    # Return a dict of file: sha1sum. We could (but currently do not)
-    # use this to detect overlap and mutated overlap.
-    checksums = dict()
-    for file in files_json_files:
-        checksums[file['_path']] = file['sha256']
-
-    return checksums
-
-
-def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
-                                                      'conda-meta.*',
-                                                      '(.*)?\.DS_Store.*')):
-    """Remove things like .git from the list of files to be copied"""
-    for pattern in filter_patterns:
-        r = re.compile(pattern)
-        files_list = set(files_list) - set(filter(r.match, files_list))
-    return [f.replace(prefix + os.path.sep, '') for f in files_list
-            if (not os.path.isdir(os.path.join(prefix, f)) or
-                os.path.islink(os.path.join(prefix, f)))]
+                    cls=EntityEncoder)
 
 
 def post_process_files(m, initial_prefix_files):
     get_build_metadata(m)
     create_post_scripts(m)
 
+    # this is new-style noarch, with a value of 'python'
     if m.noarch != 'python':
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
     current_prefix_files = prefix_files(prefix=m.config.build_prefix)
@@ -652,7 +632,7 @@ def post_process_files(m, initial_prefix_files):
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = prefix_files(prefix=m.config.build_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    new_files = filter_files(new_files, prefix=m.config.build_prefix)
+    new_files = utils.filter_files(new_files, prefix=m.config.build_prefix)
     if any(m.config.meta_dir in join(m.config.build_prefix, f) for f in new_files):
         meta_files = (tuple(f for f in new_files if m.config.meta_dir in
                 join(m.config.build_prefix, f)),)
@@ -718,18 +698,22 @@ def bundle_conda(output, metadata, env, **kw):
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  metadata.build_id()]) + '.tar.bz2')
     # first filter is so that info_files does not pick up ignored files
-    files = filter_files(files, prefix=metadata.config.build_prefix)
+    files = utils.filter_files(files, prefix=metadata.config.build_prefix)
     output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.build_prefix)
-    test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test.py')
-    if output.get('test', {}).get('script'):
-        utils.copy_into(os.path.join(metadata.path, output['test']['script']),
-                        test_dest_path, metadata.config.timeout, locking=metadata.config.locking)
-    elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
-        # the test belongs to the parent recipe.  Don't include it in subpackages.
-        utils.rm_rf(test_dest_path)
+    create_info_files(metadata, files, config=metadata.config, prefix=metadata.config.build_prefix)
+    for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
+        test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
+        script = output.get('test', {}).get('script')
+        if script and script.endswith(ext):
+            utils.copy_into(os.path.join(metadata.path, output['test']['script']),
+                            test_dest_path, metadata.config.timeout,
+                            locking=metadata.config.locking)
+        elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
+            # the test belongs to the parent recipe.  Don't include it in subpackages.
+            utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
     files = set(prefix_files(metadata.config.build_prefix)) - initial_files
-    files = filter_files(files, prefix=metadata.config.build_prefix)
+    files = utils.filter_files(files, prefix=metadata.config.build_prefix)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -796,8 +780,12 @@ def bundle_wheel(output, metadata, env):
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
         wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
-        utils.copy_into(wheel_file, metadata.config.bldpkgs_dir, locking=metadata.config.locking)
-    return os.path.join(metadata.config.bldpkgs_dir, os.path.basename(wheel_file))
+        if metadata.config.output_folder:
+            output_folder = os.path.join(metadata.config.output_folder, metadata.config.subdir)
+        else:
+            output_folder = metadata.config.bldpkgs_dir
+        utils.copy_into(wheel_file, output_folder, locking=metadata.config.locking)
+    return os.path.join(output_folder, os.path.basename(wheel_file))
 
 
 def scan_metadata(path):
@@ -1140,20 +1128,15 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                             else recipedir_or_package_or_metadata)
 
         # this is also copying tests/source_files from work_dir to testing workdir
-        create_files(metadata.config.test_dir, metadata)
-        # Make Perl or Python-specific test files
-        if metadata.name().startswith('perl-'):
-            pl_files = create_pl_files(metadata.config.test_dir, metadata)
-            py_files = False
-            lua_files = False
-        else:
-            py_files = create_py_files(metadata.config.test_dir, metadata)
-            pl_files = False
-            lua_files = False
-        shell_files = create_shell_files(metadata.config.test_dir, metadata)
-        if not (py_files or shell_files or pl_files or lua_files):
+        create_files(config.test_dir, metadata, config)
+        pl_files = create_pl_files(config.test_dir, metadata)
+        py_files = create_py_files(config.test_dir, metadata)
+        r_files = create_r_files(config.test_dir, metadata)
+        lua_files = create_lua_files(config.test_dir, metadata)
+        shell_files = create_shell_files(config.test_dir, metadata, config)
+        if not any([py_files, shell_files, pl_files, lua_files, r_files]):
             print("Nothing to test for:", test_package_name)
-            continue
+            return True
 
         print("TEST START:", test_package_name)
 
@@ -1172,17 +1155,24 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         specs.extend(ms.spec for ms in metadata.ms_depends('run'))
         specs += utils.ensure_list(metadata.get_value('test/requires', []))
 
+        # add packages listed in the run environment and test/requires
+        specs.extend(ms.spec for ms in metadata.ms_depends('run'))
+        specs += utils.ensure_list(metadata.get_value('test/requires', []))
+
         if py_files:
             # as the tests are run by python, ensure that python is installed.
             # (If they already provided python as a run or test requirement,
             #  this won't hurt anything.)
-            specs += ['python']
+            specs += ['python %s.*' % environ.get_py_ver(config)]
         if pl_files:
             # as the tests are run by perl, we need to specify it
-            specs += ['perl']
+            specs += ['perl %s.*' % environ.get_perl_ver(config)]
         if lua_files:
             # not sure how this shakes out
-            specs += ['lua']
+            specs += ['lua %s.*' % environ.get_lua_ver(config)]
+        if r_files:
+            # not sure how this shakes out
+            specs += ['r-base %s.*' % environ.get_r_ver(config)]
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
@@ -1220,7 +1210,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         if not metadata.config.activate:
             # prepend bin (or Scripts) directory
             env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
-
             if utils.on_win:
                 env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
@@ -1282,7 +1271,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                          config=metadata.config)
         if need_cleanup:
             utils.rm_rf(recipe_dir)
-
         print("TEST END:", test_package_name)
     return True
 

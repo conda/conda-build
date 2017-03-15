@@ -30,6 +30,22 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.variants import get_default_variants
 
 
+def get_perl_ver(config):
+    return str(config.CONDA_PERL)
+
+
+def get_lua_ver(config):
+    return config.CONDA_LUA
+
+
+def get_py_ver(config):
+    return '.'.join(str(config.CONDA_PY))
+
+
+def get_r_ver(config):
+    return config.CONDA_R
+
+
 def get_npy_ver(config):
     if config.variant['numpy']:
         # Convert int -> string, e.g.
@@ -213,9 +229,9 @@ def get_dict(config, m=None, prefix=None, for_env=True):
     d = conda_build_vars(prefix, config)
 
     # languages
-    d.update(python_vars(config))
-    d.update(perl_vars(config))
-    d.update(lua_vars(config))
+    d.update(python_vars(config, prefix))
+    d.update(perl_vars(config, prefix))
+    d.update(lua_vars(config, prefix))
 
     if m:
         d.update(meta_vars(m, config))
@@ -266,16 +282,14 @@ def conda_build_vars(prefix, config):
     }
 
 
-def python_vars(config):
-    py_ver = config.variant.get('python', get_default_variants()[0]['python'])
-    py_ver = '.'.join(py_ver.split('.')[:2])
+def python_vars(config, prefix):
     d = {
-        'PYTHON': config.build_python,
-        'PY3K': str(int(py_ver[0]) == 3),
-        'STDLIB_DIR': utils.get_stdlib_dir(config.build_prefix, py_ver),
-        'SP_DIR': utils.get_site_packages(config.build_prefix, py_ver),
-        'PY_VER': py_ver,
-        'CONDA_PY': ''.join(py_ver.split('.')[:2]),
+        'PYTHON': config.python_bin(prefix),
+        'PY3K': str(config.PY3K),
+        'STDLIB_DIR': utils.get_stdlib_dir(prefix),
+        'SP_DIR': utils.get_site_packages(prefix),
+        'PY_VER': get_py_ver(config),
+        'CONDA_PY': str(config.CONDA_PY),
     }
 
     np_ver = config.variant.get('numpy', get_default_variants()[0]['numpy'])
@@ -284,20 +298,23 @@ def python_vars(config):
     return d
 
 
-def perl_vars(config):
+def perl_vars(config, prefix):
     return {
-        'PERL_VER': config.variant.get('perl', get_default_variants()[0]['perl']),
+        'PERL': config.perl_bin(prefix),
+        'PERL_VER': get_perl_ver(config),
     }
 
 
-def lua_vars(config):
-    lua = config.build_lua
-    lua_ver = config.variant.get('lua', get_default_variants()[0]['lua'])
-    return {
-        'LUA': lua,
-        'LUA_INCLUDE_DIR': get_lua_include_dir(config),
-        'LUA_VER': lua_ver,
-    }
+def lua_vars(config, prefix):
+    lua = config.lua_bin(prefix)
+    if lua:
+        return {
+            'LUA': lua,
+            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+            'LUA_VER': get_lua_ver(config),
+        }
+    else:
+        return {}
 
 
 def meta_vars(meta, config):

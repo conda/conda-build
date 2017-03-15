@@ -14,6 +14,7 @@ import time
 from .conda_interface import root_dir, root_writable, cc
 from .conda_interface import binstar_upload
 from .variants import get_default_variants
+from .conda_interface import cc_platform, cc_conda_build
 
 from .utils import get_build_folders, rm_rf, trim_empty_keys, get_logger
 
@@ -48,6 +49,7 @@ SUBDIR_ALIASES = {
     'win-x86': 'win-32',
 }
 
+
 Setting = namedtuple("ConfigSetting", "name, default")
 DEFAULTS = [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
@@ -67,6 +69,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('output_folder', None),
             Setting('prefix_length_fallback', True),
             Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
+            Setting('long_test_prefix', False),
             Setting('locking', True),
             Setting('max_env_retry', 3),
             Setting('remove_work_dir', True),
@@ -214,6 +217,20 @@ class Config(object):
         self._host_arch = value
 
     @property
+    def noarch(self):
+        return self.platform == 'noarch'
+
+    def reset_platform(self):
+        self.platform = cc_platform
+
+    @property
+    def subdir(self):
+        if self.platform == 'noarch':
+            return self.platform
+        else:
+            return "-".join([self.platform, str(self.arch)])
+
+    @property
     def host_platform(self):
         return self._host_platform or self.platform
 
@@ -243,7 +260,7 @@ class Config(object):
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv('CONDA_BLD_PATH')
-            _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+            _bld_root_rc = cc_conda_build.get('root-dir')
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
@@ -362,13 +379,26 @@ class Config(object):
         return self._long_host_prefix
 
     @property
+    def _short_test_prefix(self):
+        return join(self.build_folder, '_test_env')
+
+    def _long_prefix(self, base_prefix):
+        placeholder_length = self.prefix_length - len(base_prefix)
+        placeholder = '_placehold'
+        repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
+        placeholder = (base_prefix + repeats * placeholder)[:self.prefix_length]
+        return max(base_prefix, placeholder)
+
+    @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        return join(self.build_folder, '_test_env')
+        if on_win or not self.long_test_prefix:
+            return self._short_test_prefix
+        return self._long_prefix(self._short_test_prefix)
 
     @property
     def build_python(self):
-        return self._get_python(self.build_prefix)
+        return self.python_bin(self.build_prefix)
 
     @property
     def host_python(self):
@@ -376,38 +406,35 @@ class Config(object):
 
     @property
     def test_python(self):
-        return self._get_python(self.test_prefix)
+        return self.python_bin(self.test_prefix)
 
-    @property
-    def build_perl(self):
-        return self._get_perl(self.host_prefix)
+    def python_bin(self, prefix):
+        return self._get_python(prefix)
 
-    @property
-    def test_perl(self):
-        return self._get_perl(self.test_prefix)
+    def perl_bin(self, prefix):
+        return self._get_perl(prefix)
 
-    @property
-    def build_lua(self):
-        return self._get_lua(self.host_prefix)
-
-    @property
-    def test_lua(self):
-        return self._get_lua(self.test_prefix)
+    def lua_bin(self, prefix):
+        return self._get_lua(prefix)
 
     @property
     def info_dir(self):
-        path = join(self.host_prefix, 'info')
+        """Path to the info dir in the build prefix, where recipe metadata is stored"""
+        path = join(self.build_prefix, 'info')
         _ensure_dir(path)
         return path
 
     @property
     def meta_dir(self):
+        """Path to the conda-meta dir in the build prefix, where package index json files are
+        stored"""
         path = join(self.host_prefix, 'conda-meta')
         _ensure_dir(path)
         return path
 
     @property
     def broken_dir(self):
+        """Where packages that fail the test phase are placed"""
         path = join(self.croot, "broken")
         _ensure_dir(path)
         return path
@@ -429,30 +456,36 @@ class Config(object):
 
     @property
     def src_cache(self):
+        """Where tarballs and zip files are downloaded and stored"""
         path = join(self.croot, 'src_cache')
         _ensure_dir(path)
         return path
 
     @property
     def git_cache(self):
+        """Where local clones of git sources are stored"""
         path = join(self.croot, 'git_cache')
         _ensure_dir(path)
         return path
 
     @property
     def hg_cache(self):
+        """Where local clones of hg sources are stored"""
         path = join(self.croot, 'hg_cache')
         _ensure_dir(path)
         return path
 
     @property
     def svn_cache(self):
+        """Where local checkouts of svn sources are stored"""
         path = join(self.croot, 'svn_cache')
         _ensure_dir(path)
         return path
 
     @property
     def work_dir(self):
+        """Where the source for the build is extracted/copied to.  If only a single folder is in
+        that folder, this function returns that level one deeper."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
         if os.path.isdir(path):

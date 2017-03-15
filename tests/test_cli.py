@@ -5,7 +5,6 @@
 from glob import glob
 import json
 import os
-import re
 import sys
 import yaml
 
@@ -130,6 +129,16 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     assert 'conda-build-test-has-prefix-files_1' in data
 
 
+@pytest.mark.skipif(on_win, reason="prefix is always short on win.")
+def test_build_long_test_prefix_default_disabled(mocker, testing_workdir, testing_metadata):
+    recipe_path = os.path.join(metadata_dir, '_test_long_test_prefix')
+    args = [recipe_path, '--no-anaconda-upload']
+    with pytest.raises(SystemExit):
+        main_build.execute(args)
+    args.append('--long-test-prefix')
+    main_build.execute(args)
+
+
 def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
@@ -139,6 +148,22 @@ def test_build_no_build_id(testing_workdir, testing_config):
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
     assert 'has_prefix_files_1' not in data
+
+
+@pytest.mark.serial
+def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_config):
+    """Test that building two recipes in one CLI call separates the build environment for each"""
+    os.makedirs('recipe1')
+    os.makedirs('recipe2')
+    api.output_yaml(testing_metadata, 'recipe1/meta.yaml')
+    with open('recipe1/run_test.py', 'w') as f:
+        f.write("import os; assert 'test_build_multiple_recipes' in os.getenv('PREFIX')")
+    testing_metadata.meta['package']['name'] = 'package2'
+    api.output_yaml(testing_metadata, 'recipe2/meta.yaml')
+    with open('recipe2/run_test.py', 'w') as f:
+        f.write("import os; assert 'package2' in os.getenv('PREFIX')")
+    args = ['--no-anaconda-upload', 'recipe1', 'recipe2']
+    main_build.execute(args)
 
 
 def test_build_output_folder(testing_workdir, testing_metadata, capfd):
