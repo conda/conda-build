@@ -1494,6 +1494,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 config.run_recipe_verify_scripts else None
             verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                    rendered_meta=metadata.meta, recipe_dir=metadata.path)
+
+        if metadata.name() not in metadata.config.build_folder:
+            metadata.config.compute_build_id(metadata.name(), reset=True)
         try:
             with config:
                 packages_from_this = build(metadata, post=post,
