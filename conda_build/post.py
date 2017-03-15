@@ -57,12 +57,16 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
+            fi.seek(0)
         except UnicodeDecodeError:  # file is binary
             return
 
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
-        mm = mmap.mmap(fi.fileno(), 0)
+        try:
+            mm = mmap.mmap(fi.fileno(), 0)
+        except OSError:
+            mm = fi
         m = SHEBANG_PAT.match(mm)
 
         if not (m and b'python' in m.group()):

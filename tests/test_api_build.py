@@ -18,6 +18,7 @@ from conda_build.conda_interface import PY3, url_path
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from pkg_resources import parse_version
 import pytest
 import yaml
 import tarfile
@@ -25,7 +26,7 @@ import tarfile
 from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env, conda_43)
+                               package_has_file, check_output_env)
 from conda_build.os_utils.external import find_executable
 
 from .utils import metadata_dir, fail_dir, is_valid_dir, add_mangling
@@ -640,7 +641,8 @@ def test_about_json_content(test_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
-@pytest.mark.xfail(not conda_43(), reason="new noarch supported starting with conda 4.3")
+@pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
+                   reason="new noarch supported starting with conda 4.3.14")
 def test_noarch_python_with_tests(test_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     api.build(recipe, config=test_config)

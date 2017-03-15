@@ -109,6 +109,7 @@ class Config(object):
                   Setting('output_folder', None),
                   Setting('prefix_length_fallback', True),
                   Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
+                  Setting('long_test_prefix', False),
                   Setting('locking', True),
                   Setting('max_env_retry', 3),
                   Setting('remove_work_dir', True),
@@ -290,7 +291,7 @@ class Config(object):
     @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        if on_win:
+        if on_win or not self.long_test_prefix:
             return self._short_test_prefix
         return self._long_prefix(self._short_test_prefix)
 
