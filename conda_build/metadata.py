@@ -411,7 +411,11 @@ def build_string_from_metadata(metadata):
                                                     name == 'python'):
                             res.append(s)
                         else:
-                            for _n in ensure_list(names):
+                            pkg_names = list(ensure_list(names))
+                            pkg_names.extend([_n.replace('-', '_')
+                                              for _n in ensure_list(names) if '-' in _n])
+                            for _n in pkg_names:
+                                _n = _n.replace('-', '_')
                                 variant_version = metadata.config.variant.get(_n, "")
                                 if variant_version:
                                     break
