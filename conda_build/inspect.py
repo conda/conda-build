@@ -237,6 +237,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
         depmap = defaultdict(list)
         pkgmap[pkg] = depmap
         depmap['not found'] = []
+        depmap['system'] = []
         for binary in linkages:
             for lib, path in linkages[binary]:
                 path = replace_path(binary, path, prefix) if path not in {'',
