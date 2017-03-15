@@ -265,7 +265,12 @@ def get_pure_py_file_map(t, platform):
         has_prefix_files = t.extractfile("info/has_prefix").read().decode()
     if has_prefix_files:
         fieldnames = ['prefix', 'type', 'path']
-        csv_dialect = csv.Sniffer().sniff(has_prefix_files)
+        try:
+            csv_dialect = csv.Sniffer().sniff(has_prefix_files)
+        except csv.Error:
+            # should be a tab-delimited file.  Not completely sure whether text editors may have
+            #    replaced tabs with spaces, though
+            csv_dialect = csv.excel_tab
         csv_dialect.lineterminator = '\n'
         for attr in ('delimiter', 'quotechar'):
             if PY3 and hasattr(getattr(csv_dialect, attr), 'decode'):
