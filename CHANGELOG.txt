@@ -1,3 +1,32 @@
+2017-03-14 2.1.7:
+
+Enhancements:
+-------------
+
+* pass WINDIR env var through on Windows  #1837
+* make long test prefix an option (default disabled)  #1838
+
+
+Bug fixes:
+----------
+
+* monkeypatch ensure_use_local to avoid conda-build import clobbering conda CLI arguments  #1834
+* Fix context conda_build attr error with older conda  #1813
+* Fix legacy noarch shebang replacement code to account for long prefix paths #1813
+* properly initialize 'system' key in linkage inspecting #1839
+* backport try mmap from master #1764
+* fix wheel output not respecting --output-folder CLI argument #1838
+* catch csv dialect sniffing error, try to fallback to to excel_tab.  Might work? #1840
+
+
+Contributors:
+-------------
+
+* @kalefranz
+* @mcs07
+* @msarahan
+
+
 2017-03-08 2.1.6:
 
 Enhancements:
