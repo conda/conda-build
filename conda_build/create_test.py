@@ -5,6 +5,7 @@ Module to handle generating test files.
 from __future__ import absolute_import, division, print_function
 
 import glob
+import logging
 import os
 from os.path import join, exists, isdir
 import sys
@@ -63,8 +64,12 @@ def create_files(dir_path, m, config):
         if not files:
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
-            copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout,
-                      locking=config.locking)
+            try:
+                copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout,
+                        locking=config.locking)
+            except OSError as e:
+                log = logging.getLogger(__name__)
+                log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
         for ext in '.pyc', '.pyo':
             for f in get_ext_files(config.test_dir, ext):
                 os.remove(f)
