@@ -141,7 +141,10 @@ def have_prefix_files(files, prefix):
             continue
 
         fi = open(path, 'rb+')
-        mm = mmap.mmap(fi.fileno(), 0)
+        try:
+            mm = mmap.mmap(fi.fileno(), 0)
+        except OSError:
+            mm = fi
 
         mode = 'binary' if mm.find(b'\x00') != -1 else 'text'
         if mode == 'text':
@@ -961,8 +964,12 @@ def bundle_wheel(output, metadata, config, env):
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(config.work_dir):
         pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
         wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
-        utils.copy_into(wheel_file, config.bldpkgs_dir, locking=config.locking)
-    return os.path.join(config.bldpkgs_dir, os.path.basename(wheel_file))
+        if config.output_folder:
+            output_folder = os.path.join(config.output_folder, metadata.config.subdir)
+        else:
+            output_folder = metadata.config.bldpkgs_dir
+        utils.copy_into(wheel_file, output_folder, locking=config.locking)
+    return os.path.join(output_folder, os.path.basename(wheel_file))
 
 
 bundlers = {
