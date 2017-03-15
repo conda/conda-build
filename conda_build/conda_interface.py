@@ -9,6 +9,17 @@ from enum import Enum
 
 from conda import __version__ as CONDA_VERSION
 
+
+try:
+    # This monkey patch is addressed at #1825. The ensure_use_local is an outdated vestige
+    #   and no longer has any relevant effect.
+    import conda.cli.common
+    conda.cli.common.ensure_use_local = lambda x: None
+except ImportError:
+    # no need to patch if it doesn't exist
+    pass
+
+
 from conda.plan import display_actions, execute_actions, execute_plan, install_actions
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
