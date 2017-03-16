@@ -900,10 +900,11 @@ def test_pin_downstream(testing_metadata, testing_config):
 
 
 def test_pin_subpackage_exact(testing_config):
-    m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)[0][0]
+    recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
+    ms = api.render(recipe, config=testing_config)
     assert any(re.match(r'pin_downstream_subpkg 1.0 h[a-f0-9]{%s}_0' % testing_config.hash_length,
                         req)
-              for _m in m for req in _m[0].meta['requirements']['run'])
+              for (m, _, _) in ms for req in m.meta['requirements']['run'])
     api.build(recipe, config=testing_config)
 
 

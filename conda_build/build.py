@@ -707,7 +707,6 @@ def bundle_conda(output, metadata, env, **kw):
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.build_prefix)
     output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.build_prefix)
-    create_info_files(metadata, files, prefix=metadata.config.build_prefix)
     for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
         script = output.get('test', {}).get('script')
@@ -752,7 +751,8 @@ def bundle_conda(output, metadata, env, **kw):
                           metadata.config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
-        subdir = 'noarch' if metadata.noarch else metadata.config.host_subdir
+        subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
+                  else metadata.config.host_subdir)
         if metadata.config.output_folder:
             output_folder = os.path.join(metadata.config.output_folder, subdir)
         else:
@@ -900,14 +900,15 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         # this is the finalized metadata for the top-level recipe, not necessarily subpackages
         #    We use it for examining
         output_metas = expand_outputs([(m, None, None)], index)
-        package_locations = [bldpkg_path(m) for m, _, _ in output_metas]
 
         if m.config.skip_existing:
-            package_locations = [is_package_built(m) for m, _, _ in output_metas]
-            if package_locations:
+            package_locations = [is_package_built(om) for om, _, _ in output_metas]
+            if all(package_locations):
                 print("Packages for ", m.path or m.name(),
                         "are already built in {0}, skipping.".format(package_locations))
                 return default_return
+        else:
+            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
@@ -994,6 +995,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         for (output_d, m) in outputs:
             if not m.final:
                 m = finalize_metadata(m, index)
+            assert m.final, "output metadata for {} is not finalized".format(m.dist())
             if bldpkg_path(m) not in built_packages:
                 type = output_d.get('type', 'conda')
                 # Manage the contents of build_prefix according to intradependencies:
@@ -1204,7 +1206,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         #     the build_subdir should be that match.  The host_subdir may not be, and would lead
         #     to unsatisfiable packages.
         environ.create_env(metadata.config.test_prefix, specs, config=metadata.config,
-                           subdir=metadata.config.build_subdir)
+                           subdir=(metadata.config.build_subdir
+                                   if metadata.config.build_subdir != 'noarch'
+                                   else subdir))
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
