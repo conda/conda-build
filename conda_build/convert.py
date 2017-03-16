@@ -269,6 +269,10 @@ def get_pure_py_file_map(t, platform):
         fieldnames = ['prefix', 'type', 'path']
         csv_dialect = csv.Sniffer().sniff(has_prefix_files)
         csv_dialect.lineterminator = '\n'
+        if PY3 and hasattr(csv_dialect.delimiter, 'decode'):
+            csv_dialect.delimiter = csv_dialect.decode()
+        elif not PY3 and hasattr(csv_dialect.delimiter, 'encode'):
+            csv_dialect.delimiter = csv_dialect.encode()
         has_prefix_files = csv.DictReader(has_prefix_files.splitlines(), fieldnames=fieldnames,
                                           dialect=csv_dialect)
         # convenience: store list of dictionaries as map by path
