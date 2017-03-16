@@ -826,6 +826,10 @@ class MetaData(object):
                 #    we need to exclude them from the hash.
                 if 'files' in out:
                     del out['files']
+                # intradependencies are a build-time only book-keeping key
+                # and is not present until after toposort() has been called.
+                if 'intradependencies' in out:
+                    del out['intradependencies']
                 excludes = self.config.variant.get('exclude_from_build_hash', [])
                 requirements = out.get('requirements', [])
                 if excludes:
