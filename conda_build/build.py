@@ -1135,12 +1135,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                             else recipedir_or_package_or_metadata)
 
         # this is also copying tests/source_files from work_dir to testing workdir
-        create_files(config.test_dir, metadata)
-        pl_files = create_pl_files(config.test_dir, metadata)
-        py_files = create_py_files(config.test_dir, metadata)
-        r_files = create_r_files(config.test_dir, metadata)
-        lua_files = create_lua_files(config.test_dir, metadata)
-        shell_files = create_shell_files(config.test_dir, metadata)
+        create_files(metadata)
+        pl_files = create_pl_files(metadata)
+        py_files = create_py_files(metadata)
+        r_files = create_r_files(metadata)
+        lua_files = create_lua_files(metadata)
+        shell_files = create_shell_files(metadata)
         if not any([py_files, shell_files, pl_files, lua_files, r_files]):
             print("Nothing to test for:", test_package_name)
             return True

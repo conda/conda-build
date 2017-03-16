@@ -195,7 +195,7 @@ def _trim_None_strings(meta_dict):
             else:
                 # support lists of dicts (homogeneous)
                 keep = []
-                if hasattr(value[0], 'keys'):
+                if hasattr(next(iter(value)), 'keys'):
                     for d in value:
                         trimmed_dict = _trim_None_strings(d)
                         if trimmed_dict:
@@ -817,29 +817,29 @@ class MetaData(object):
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
-        outputs = self.get_section('outputs')
-        if outputs:
-            outs = []
-            for out in outputs:
-                out = copy.copy(out)
-                # files are dynamically determined, and there's no way to match them at render time.
-                #    we need to exclude them from the hash.
-                for key in ('files', 'noarch', 'noarch_python'):
-                    if key in out:
-                        del out[key]
-                # intradependencies are a build-time only book-keeping key
-                # and is not present until after toposort() has been called.
-                if 'intradependencies' in out:
-                    del out['intradependencies']
-                excludes = self.config.variant.get('exclude_from_build_hash', [])
-                requirements = out.get('requirements', [])
-                if excludes:
-                    exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
-                                                          for exc in excludes))
-                    requirements = [r for r in requirements if not exclude_pattern.match(r)]
-                out['requirements'] = requirements
-                outs.append(out)
-            composite.update({'outputs': [HashableDict(out) for out in outs]})
+        # outputs = self.get_section('outputs')
+        # if outputs:
+        #     outs = []
+        #     for out in outputs:
+        #         out = copy.copy(out)
+        #         # files are dynamically determined, and there's no way to match them at render time.
+        #         #    we need to exclude them from the hash.
+        #         for key in ('files', 'noarch', 'noarch_python'):
+        #             if key in out:
+        #                 del out[key]
+        #         # intradependencies are a build-time only book-keeping key
+        #         # and is not present until after toposort() has been called.
+        #         if 'intradependencies' in out:
+        #             del out['intradependencies']
+        #         excludes = self.config.variant.get('exclude_from_build_hash', [])
+        #         requirements = out.get('requirements', [])
+        #         if excludes:
+        #             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
+        #                                                   for exc in excludes))
+        #             requirements = [r for r in requirements if not exclude_pattern.match(r)]
+        #         out['requirements'] = requirements
+        #         outs.append(out)
+        #     composite.update({'outputs': [HashableDict(out) for out in outs]})
 
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})

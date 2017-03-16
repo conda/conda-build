@@ -39,7 +39,7 @@ def call_args(string):
 '''
 
 
-def create_files(dir_path, m):
+def create_files(m):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
@@ -51,7 +51,7 @@ def create_files(dir_path, m):
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(dir_path, fn), m.config.timeout, locking=m.config.locking)
+        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=m.config.locking)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(m.config.work_dir):
         source.provide(m)
@@ -76,7 +76,7 @@ def create_files(dir_path, m):
     return has_files
 
 
-def create_shell_files(dir_path, m):
+def create_shell_files(m):
     has_tests = False
     ext = '.bat' if sys.platform == 'win32' else '.sh'
     name = 'no-file'
@@ -93,22 +93,24 @@ def create_shell_files(dir_path, m):
         name = "run_test{}".format(ext)
 
     if exists(join(m.path, name)):
-        copy_into(join(m.path, name), dir_path, m.config.timeout, locking=m.config.locking)
+        copy_into(join(m.path, name), m.config.test_dir, m.config.timeout, locking=m.config.locking)
         has_tests = True
 
-    with open(join(dir_path, name), 'a') as f:
-        f.write('\n\n')
-        for cmd in ensure_list(m.get_value('test/commands', [])):
-            f.write(cmd)
-            f.write('\n')
-            if sys.platform == 'win32':
-                f.write("if errorlevel 1 exit 1\n")
-            has_tests = True
+    commands = ensure_list(m.get_value('test/commands', []))
+    if commands:
+        with open(join(m.config.test_dir, name), 'a') as f:
+            f.write('\n\n')
+            for cmd in commands:
+                f.write(cmd)
+                f.write('\n')
+                if sys.platform == 'win32':
+                    f.write("if errorlevel 1 exit 1\n")
+                has_tests = True
 
     return has_tests
 
 
-def _create_test_files(dir_path, m, ext, comment_char='# '):
+def _create_test_files(m, ext, comment_char='# '):
     # the way this works is that each output needs to explicitly define a test script to run
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
     name = 'run_test' + ext
@@ -120,7 +122,7 @@ def _create_test_files(dir_path, m, ext, comment_char='# '):
                 break
 
     test_file = os.path.join(m.path, name)
-    out_file = join(dir_path, 'run_test' + ext)
+    out_file = join(m.config.test_dir, 'run_test' + ext)
 
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
@@ -141,8 +143,8 @@ def _create_test_files(dir_path, m, ext, comment_char='# '):
     return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
 
 
-def create_py_files(dir_path, m):
-    tf, tf_exists = _create_test_files(dir_path, m, '.py')
+def create_py_files(m):
+    tf, tf_exists = _create_test_files(m, '.py')
     imports = ensure_list(m.get_value('test/imports', []))
     for import_item in imports:
         if (hasattr(import_item, 'keys') and 'lang' in import_item and
@@ -158,8 +160,8 @@ def create_py_files(dir_path, m):
     return tf if (tf_exists or imports) else False
 
 
-def create_r_files(dir_path, m):
-    tf, tf_exists = _create_test_files(dir_path, m, '.r')
+def create_r_files(m):
+    tf, tf_exists = _create_test_files(m, '.r')
 
     imports = None
     # two ways we can enable R import tests:
@@ -182,8 +184,8 @@ def create_r_files(dir_path, m):
     return tf if (tf_exists or imports) else False
 
 
-def create_pl_files(dir_path, m):
-    tf, tf_exists = _create_test_files(dir_path, m, '.pl')
+def create_pl_files(m):
+    tf, tf_exists = _create_test_files(m, '.pl')
     imports = None
     if m.name().startswith('perl-'):
         imports = ensure_list(m.get_value('test/imports', []))
@@ -214,8 +216,8 @@ def create_pl_files(dir_path, m):
     return tf if (tf_exists or imports) else False
 
 
-def create_lua_files(dir_path, m):
-    tf, tf_exists = _create_test_files(dir_path, m, '.lua')
+def create_lua_files(m):
+    tf, tf_exists = _create_test_files(m, '.lua')
     imports = None
     if m.name().startswith('lua-'):
         imports = ensure_list(m.get_value('test/imports', []))

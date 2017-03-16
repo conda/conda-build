@@ -12,7 +12,6 @@ from .utils import metadata_dir
 
 def test_package_test(testing_workdir, testing_config):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
-
     recipe = os.path.join(metadata_dir, 'has_prefix_files')
     outputs = api.build(recipe, config=testing_config, notest=True)
     api.test(outputs[0], config=testing_config)
