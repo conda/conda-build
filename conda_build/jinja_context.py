@@ -243,19 +243,14 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     return compatibility
 
 
-def pin_subpackage(metadata, subpackage_name, index, min_pin='x.x.x.x.x.x', max_pin='x',
+def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
                    exact=False, permit_undefined_jinja=True):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-
-    if not metadata.config.index:
-        metadata.config.index = get_build_index(metadata.config,
-                                                subdir=metadata.config.build_subdir)
-    output_meta = metadata.get_output_metadata_set(index=metadata.config.index,
-                                                   permit_undefined_jinja=permit_undefined_jinja)
+    output_meta = metadata.get_output_metadata_set(permit_undefined_jinja=permit_undefined_jinja)
     pin = None
     for (output_dict, sp_m) in output_meta:
         if sp_m.name() == subpackage_name:
