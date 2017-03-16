@@ -36,8 +36,9 @@ def test_long_build_prefix_length(config):
 
 @pytest.mark.skipif(on_win, reason="Windows uses only the short prefix")
 def test_long_test_prefix_length(config):
-    assert not config.long_test_prefix
-    assert '_plac' not in config.test_prefix
+    # defaults to True in conda-build 3.0+
+    assert config.long_test_prefix
+    assert '_plac' in config.test_prefix
     config.long_test_prefix = True
     config.prefix_length = 80
     assert len(config.test_prefix) == config.prefix_length

@@ -26,8 +26,8 @@ import filelock
 
 from conda import __version__ as conda_version
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems, cc
-from .conda_interface import root_dir
+from .conda_interface import PY3, iteritems
+from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
@@ -138,11 +138,11 @@ def _copy_with_shell_fallback(src, dst):
                 raise OSError("Failed to copy {} to {}.  Error was: {}".format(src, dst, e))
 
 
-def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
+def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clobber=False):
     """Copy all the files and directories in src to the directory dst"""
     log = get_logger(__name__)
     if isdir(src):
-        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking)
+        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking, clobber=clobber)
 
     else:
         if isdir(dst):
@@ -221,7 +221,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
-def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
+def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, clobber=False):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -237,7 +237,7 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
 
-    if existing:
+    if existing and not clobber:
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
@@ -292,8 +292,8 @@ def get_conda_operation_locks(config=None):
     locks = []
     # locks enabled by default
     if not config or config.locking:
-        cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        _pkgs_dirs = pkgs_dirs[:1]
+        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs) if config else []
         for folder in locked_folders:
             if not os.path.isdir(folder):
                 os.makedirs(folder)

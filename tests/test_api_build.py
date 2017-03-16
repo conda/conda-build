@@ -964,7 +964,7 @@ def test_unknown_selectors(testing_config):
     api.build(recipe, config=testing_config)
 
 
-def test_extract_tarball_with_unicode_filename(test_config):
+def test_extract_tarball_with_unicode_filename(testing_config):
     """See https://github.com/conda/conda-build/pull/1779"""
     recipe = os.path.join(metadata_dir, '_unicode_in_tarball')
-    api.build(recipe, config=test_config)
+    api.build(recipe, config=testing_config)

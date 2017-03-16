@@ -29,7 +29,7 @@ import encodings.idna  # NOQA
 
 # used to get version
 from .conda_interface import envs_dirs, env_path_backup_var_exists
-from .conda_interface import PY3, cc
+from .conda_interface import PY3
 from .conda_interface import prefix_placeholder, linked
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
@@ -39,6 +39,8 @@ from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
 from .conda_interface import url_path
+from .conda_interface import cc_platform, root_dir
+from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index, Dist
 
 from conda_build import __version__
@@ -190,27 +192,32 @@ def get_run_dists(m):
 
 
 def copy_recipe(m):
-    if m.config.include_recipe and m.include_recipe():
-        recipe_dir = join(m.config.info_dir, 'recipe')
+    output_metadata = m.copy()
+    if output_metadata.config.include_recipe and output_metadata.include_recipe():
+        recipe_dir = join(output_metadata.config.info_dir, 'recipe')
         try:
             os.makedirs(recipe_dir)
         except:
             pass
 
-        if os.path.isdir(m.path):
-            for fn in os.listdir(m.path):
-                src_path = join(m.path, fn)
+        if os.path.isdir(output_metadata.path):
+            for fn in os.listdir(output_metadata.path):
+                src_path = join(output_metadata.path, fn)
                 dst_path = join(recipe_dir, fn)
-                utils.copy_into(src_path, dst_path, timeout=m.config.timeout,
-                                locking=m.config.locking)
+                utils.copy_into(src_path, dst_path, timeout=output_metadata.config.timeout,
+                                locking=output_metadata.config.locking, clobber=True)
 
             # store the rendered meta.yaml file, plus information about where it came from
             #    and what version of conda-build created it
-            original_recipe = os.path.join(m.path, 'meta.yaml')
+            original_recipe = os.path.join(output_metadata.path, 'meta.yaml')
         else:
             original_recipe = ""
 
-        rendered = output_yaml(m)
+        # just for lack of confusion, don't show outputs in final rendered recipes
+        if 'outputs' in output_metadata.meta:
+            del output_metadata.meta['outputs']
+
+        rendered = output_yaml(output_metadata)
 
         if not original_recipe or not open(original_recipe).read() == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
@@ -222,7 +229,7 @@ def copy_recipe(m):
                 f.write(rendered)
             if original_recipe:
                 utils.copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
-                          timeout=m.config.timeout, locking=m.config.locking)
+                                timeout=m.config.timeout, locking=m.config.locking, clobber=True)
 
 
 def copy_readme(m):
@@ -387,17 +394,17 @@ def write_about_json(m):
         evars = ['PATH', 'PYTHONPATH', 'PYTHONHOME', 'CONDA_DEFAULT_ENV',
                  'CIO_TEST', 'CONDA_ENVS_PATH']
 
-        if cc.platform == 'linux':
+        if cc_platform == 'linux':
             evars.append('LD_LIBRARY_PATH')
-        elif cc.platform == 'osx':
+        elif cc_platform == 'osx':
             evars.append('DYLD_LIBRARY_PATH')
         d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
         # this information will only be present in conda 4.2.10+
         try:
-            d['conda_private'] = cc.conda_private
+            d['conda_private'] = conda_private
         except (KeyError, AttributeError):
             pass
-        env = environ.Environment(cc.root_dir)
+        env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
         json.dump(d, fo, indent=2, sort_keys=True)
 
@@ -479,7 +486,6 @@ def create_info_files(m, files, prefix):
     :param files: Paths to files to include in package
     :type files: list of str
     '''
-
     if utils.on_win:
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
@@ -489,10 +495,6 @@ def create_info_files(m, files, prefix):
     write_about_json(m)
     write_link_json(m)
     write_pin_downstream(m)
-
-    # just for lack of confusion, don't show outputs in final rendered recipes
-    if 'outputs' in m.meta:
-        del m.meta['outputs']
 
     copy_recipe(m)
     copy_readme(m)
@@ -514,9 +516,6 @@ def create_info_files(m, files, prefix):
         utils.copy_into(join(m.path, m.get_value('app/icon')),
                         join(m.config.info_dir, 'icon.png'),
                         m.config.timeout, locking=m.config.locking)
-#    return [f.replace(m.config.host_prefix + os.sep, '')
-#            for root, _, _ in os.walk(m.config.info_dir)
-#            for f in glob(os.path.join(root, '*'))]
     return checksums
 
 
@@ -612,6 +611,14 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
             json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
                     cls=EntityEncoder)
 
+    # Return a dict of file: sha1sum. We could (but currently do not)
+    # use this to detect overlap and mutated overlap.
+    checksums = dict()
+    for file in files_json_files:
+        checksums[file['_path']] = file['sha256']
+
+    return checksums
+
 
 def post_process_files(m, initial_prefix_files):
     get_build_metadata(m)
@@ -700,7 +707,7 @@ def bundle_conda(output, metadata, env, **kw):
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.build_prefix)
     output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.build_prefix)
-    create_info_files(metadata, files, config=metadata.config, prefix=metadata.config.build_prefix)
+    create_info_files(metadata, files, prefix=metadata.config.build_prefix)
     for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
         script = output.get('test', {}).get('script')
@@ -1128,12 +1135,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                             else recipedir_or_package_or_metadata)
 
         # this is also copying tests/source_files from work_dir to testing workdir
-        create_files(config.test_dir, metadata, config)
+        create_files(config.test_dir, metadata)
         pl_files = create_pl_files(config.test_dir, metadata)
         py_files = create_py_files(config.test_dir, metadata)
         r_files = create_r_files(config.test_dir, metadata)
         lua_files = create_lua_files(config.test_dir, metadata)
-        shell_files = create_shell_files(config.test_dir, metadata, config)
+        shell_files = create_shell_files(config.test_dir, metadata)
         if not any([py_files, shell_files, pl_files, lua_files, r_files]):
             print("Nothing to test for:", test_package_name)
             return True
@@ -1325,6 +1332,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     #     the loop below.
     metadata = None
 
+    used_build_folders = []
+
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
         if build_only:
@@ -1376,6 +1385,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=True)
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                if metadata.config.build_folder in used_build_folders:
+                    metadata.config.compute_build_id(metadata.name(), reset=True)
+                used_build_folders.append(metadata.config.build_folder)
                 with metadata.config:
                     packages_from_this = build(metadata, index=index, post=post,
                                             need_source_download=need_source_download,

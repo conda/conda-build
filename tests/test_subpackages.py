@@ -64,7 +64,8 @@ def test_subpackage_independent_hash(testing_metadata):
 def test_pin_downstream_in_subpackage(testing_metadata, testing_index):
     p1 = testing_metadata.copy()
     p1.meta['outputs'] = [{'name': 'has_pin_downstream', 'pin_downstream': 'bzip2 1.0'}]
-    api.build(p1)
+    output = api.build(p1)[0]
+    api.update_index(os.path.dirname(output), config=testing_metadata.config)
     p2 = testing_metadata.copy()
     p2.meta['requirements']['build'] = ['has_pin_downstream']
     p2.config.index = None

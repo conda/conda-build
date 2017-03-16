@@ -15,10 +15,10 @@ import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, cc, symlink_conda, pkgs_dirs
+from .conda_interface import root_dir, symlink_conda, pkgs_dirs
 from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
-from .conda_interface import plan
 from .conda_interface import package_cache
+from .conda_interface import install_actions, display_actions, execute_actions, execute_plan
 from .conda_interface import memoized
 
 from conda_build.os_utils import external
@@ -31,29 +31,29 @@ from conda_build.variants import get_default_variants
 
 
 def get_perl_ver(config):
-    return str(config.CONDA_PERL)
+    return '.'.join(config.variant.get('perl', get_default_variants()[0]['perl']).split('.')[:2])
 
 
 def get_lua_ver(config):
-    return config.CONDA_LUA
+    return '.'.join(config.variant.get('lua', get_default_variants()[0]['lua']).split('.')[:2])
 
 
 def get_py_ver(config):
-    return '.'.join(str(config.CONDA_PY))
+    return '.'.join(config.variant.get('python',
+                                       get_default_variants()[0]['python']).split('.')[:2])
 
 
 def get_r_ver(config):
-    return config.CONDA_R
+    return '.'.join(config.variant.get('r_base',
+                                       get_default_variants()[0]['r_base']).split('.')[:3])
 
 
 def get_npy_ver(config):
-    if config.variant['numpy']:
-        # Convert int -> string, e.g.
-        #   17 -> '1.7'
-        #   110 -> '1.10'
-        conda_npy = str(config.variant['numpy'])
-        return conda_npy[0] + '.' + conda_npy[1:]
-    return ''
+    conda_npy = str(config.variant.get('numpy') or get_default_variants()[0]['numpy']).split('.')
+    # Convert int -> string, e.g.
+    #   17 -> '1.7'
+    #   110 -> '1.10'
+    return conda_npy[0] + '.' + conda_npy[1:]
 
 
 def get_lua_include_dir(config):
@@ -283,13 +283,14 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config, prefix):
+    py_ver = get_py_ver(config)
     d = {
         'PYTHON': config.python_bin(prefix),
-        'PY3K': str(config.PY3K),
-        'STDLIB_DIR': utils.get_stdlib_dir(prefix),
-        'SP_DIR': utils.get_site_packages(prefix),
-        'PY_VER': get_py_ver(config),
-        'CONDA_PY': str(config.CONDA_PY),
+        'PY3K': str(int(py_ver[0]) >= 3),
+        'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
+        'SP_DIR': utils.get_site_packages(prefix, py_ver),
+        'PY_VER': py_ver,
+        'CONDA_PY': ''.join(py_ver.split('.')[:2]),
     }
 
     np_ver = config.variant.get('numpy', get_default_variants()[0]['numpy'])
@@ -583,7 +584,7 @@ def get_install_actions(prefix, index, specs, config, retries=0):
         #    Solving package specifications: ..........
         with capture():
             try:
-                actions = plan.install_actions(prefix, index, specs)
+                actions = install_actions(prefix, index, specs)
             except NoPackagesFoundError as exc:
                 raise DependencyNeedsBuildingError(exc)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
@@ -654,11 +655,11 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                         if not index:
                             index = get_build_index(config=config, subdir=subdir)
                         actions = get_install_actions(prefix, index, specs, config)
-                        plan.display_actions(actions, index)
+                        display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
-                        plan.execute_actions(actions, index, verbose=config.debug)
+                        execute_actions(actions, index, verbose=config.debug)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                         CondaError) as exc:
                     if (("too short in" in str(exc) or
@@ -735,21 +736,21 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
 
 
 def clean_pkg_cache(dist, config):
-    pkgs_dirs = cc.pkgs_dirs[:1]
+    _pkgs_dirs = pkgs_dirs[:1]
     locks = []
     if config.locking:
-        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in pkgs_dirs]
+        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in _pkgs_dirs]
     with utils.try_acquire_locks(locks, timeout=config.timeout):
         rmplan = [
             'RM_EXTRACTED {0} local::{0}'.format(dist),
             'RM_FETCHED {0} local::{0}'.format(dist),
         ]
-        plan.execute_plan(rmplan)
+        execute_plan(rmplan)
 
         # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
         #   Conda's cleanup is still necessary - it keeps track of its own in-memory
         #   list of downloaded things.
-        for folder in cc.pkgs_dirs:
+        for folder in pkgs_dirs:
             try:
                 assert not os.path.exists(os.path.join(folder, dist))
                 assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))

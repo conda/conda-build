@@ -11,10 +11,10 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import root_dir, root_writable, cc
+from .conda_interface import root_dir, root_writable
 from .conda_interface import binstar_upload
 from .variants import get_default_variants
-from .conda_interface import cc_platform, cc_conda_build
+from .conda_interface import cc_platform, cc_conda_build, subdir
 
 from .utils import get_build_folders, rm_rf, trim_empty_keys, get_logger
 
@@ -69,7 +69,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('output_folder', None),
             Setting('prefix_length_fallback', True),
             Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
-            Setting('long_test_prefix', False),
+            Setting('long_test_prefix', True),
             Setting('locking', True),
             Setting('max_env_retry', 3),
             Setting('remove_work_dir', True),
@@ -104,13 +104,13 @@ DEFAULTS = [Setting('activate', True),
             Setting('repository', 'pypitest'),
 
             Setting('ignore_recipe_verify_scripts',
-                  cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
+                  cc_conda_build.get('ignore_recipe_verify_scripts', [])),
             Setting('ignore_package_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
+                    cc_conda_build.get('ignore_package_verify_scripts', [])),
             Setting('run_recipe_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                    cc_conda_build.get('run_package_verify_scripts', [])),
             Setting('run_package_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                    cc_conda_build.get('run_package_verify_scripts', [])),
             ]
 
 
@@ -178,7 +178,7 @@ class Config(object):
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or cc.subdir.split('-')[-1]
+        return self._arch or subdir.split('-')[-1]
 
     @arch.setter
     def arch(self, value):
@@ -192,14 +192,16 @@ class Config(object):
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or cc.platform
+        return self._platform or cc_platform
 
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn("setting build platform.  This is only useful when pretending to be on another "
-                 "platform, such as for rendering necessary dependencies on a non-native platform."
-                 "  I trust that you know what you're doing.")
+        if 'noarch' not in (self._platform, value):
+            log.warn("setting build platform. This is only useful when "
+                    "pretending to be on another " "another platform, such as "
+                    "for rendering necessary dependencies on a non-native "
+                    "platform. I trust that you know what you're doing.")
         self._platform = value
 
     @property
@@ -221,7 +223,8 @@ class Config(object):
         return self.platform == 'noarch'
 
     def reset_platform(self):
-        self.platform = cc_platform
+        if not self.platform == cc_platform:
+            self.platform = cc_platform
 
     @property
     def subdir(self):
@@ -451,7 +454,7 @@ class Config(object):
         """ Dirs where previous build packages might be. """
         # The first two *might* be the same, but might not, depending on if this is a cross-compile.
         #     cc.subdir should be the native platform, while self.subdir would be the host platform.
-        return {join(self.croot, self.host_subdir), join(self.croot, cc.subdir),
+        return {join(self.croot, self.host_subdir), join(self.croot, subdir),
                 join(self.croot, "noarch"), }
 
     @property

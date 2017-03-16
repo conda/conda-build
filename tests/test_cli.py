@@ -130,13 +130,14 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
 
 
 @pytest.mark.skipif(on_win, reason="prefix is always short on win.")
-def test_build_long_test_prefix_default_disabled(mocker, testing_workdir, testing_metadata):
+def test_build_long_test_prefix_default_enabled(mocker, testing_workdir, testing_metadata):
     recipe_path = os.path.join(metadata_dir, '_test_long_test_prefix')
     args = [recipe_path, '--no-anaconda-upload']
+    main_build.execute(args)
+
+    args.append('--no-long-test-prefix')
     with pytest.raises(SystemExit):
         main_build.execute(args)
-    args.append('--long-test-prefix')
-    main_build.execute(args)
 
 
 def test_build_no_build_id(testing_workdir, testing_config):

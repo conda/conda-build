@@ -19,8 +19,10 @@ import tempfile
 
 import yaml
 
-from .conda_interface import (PY3, UnsatisfiableError, plan, cc, ProgressiveFetchExtract,
+from .conda_interface import (PY3, UnsatisfiableError, ProgressiveFetchExtract,
                               memoized, TemporaryDirectory)
+from .conda_interface import execute_actions
+from .conda_interface import pkgs_dirs
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
@@ -102,7 +104,8 @@ def get_pin_from_build(m, dep, build_dep_versions):
     pin = None
     version = build_dep_versions.get(dep_name) or m.config.variant.get(dep_name)
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
-            not (dep_name == 'python' and m.noarch)):
+            not (dep_name == 'python' and m.noarch) and
+            dep_name in build_dep_versions):
         pin = utils.apply_pin_expressions(version.split()[0],
                                             **m.config.variant['pin_run_as_build'][dep_name])
     elif dep.startswith('numpy') and 'x.x' in dep:
@@ -132,11 +135,11 @@ def get_upstream_pins(m, dependencies, index):
         # this should be just downloading packages.  We don't need to extract them -
         #    we read contents directly
         if actions:
-            plan.execute_actions(actions, index, verbose=m.config.debug)
+            execute_actions(actions, index, verbose=m.config.debug)
 
-            pkgs_dirs = cc.pkgs_dirs + list(m.config.bldpkgs_dirs)
+            _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
             for pkg in linked_packages:
-                for pkgs_dir in pkgs_dirs:
+                for pkgs_dir in _pkgs_dirs:
                     if hasattr(pkg, 'dist_name'):
                         pkg_dist = pkg.dist_name
                     else:
@@ -162,7 +165,7 @@ def get_upstream_pins(m, dependencies, index):
                             pfe = ProgressiveFetchExtract(link_dists=[pkg],
                                                         index=index)
                             pfe.execute()
-                            for pkgs_dir in pkgs_dirs:
+                            for pkgs_dir in _pkgs_dirs:
                                 pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
                                 if os.path.isfile(pkg_file):
                                     extra_specs = utils.package_has_file(pkg_file,
@@ -175,7 +178,7 @@ def get_upstream_pins(m, dependencies, index):
                             raise DependencyNeedsBuildingError(packages=[pkg.name])
                 else:
                     raise RuntimeError("Didn't find expected package {} in package cache ({})"
-                                        .format(pkg_dist, pkgs_dirs))
+                                        .format(pkg_dist, _pkgs_dirs))
 
     return additional_specs
 

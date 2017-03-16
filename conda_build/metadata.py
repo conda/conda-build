@@ -824,8 +824,9 @@ class MetaData(object):
                 out = copy.copy(out)
                 # files are dynamically determined, and there's no way to match them at render time.
                 #    we need to exclude them from the hash.
-                if 'files' in out:
-                    del out['files']
+                for key in ('files', 'noarch', 'noarch_python'):
+                    if key in out:
+                        del out[key]
                 # intradependencies are a build-time only book-keeping key
                 # and is not present until after toposort() has been called.
                 if 'intradependencies' in out:
@@ -854,10 +855,12 @@ class MetaData(object):
         if 'number' in composite['build']:
             del composite['build']['number']
         # remove the build string, so that hashes don't affect themselves
-        if 'string' in composite['build']:
-            del composite['build']['string']
+        for key in ('string', 'noarch', 'noarch_python'):
+            if key in composite['build']:
+                del composite['build'][key]
         if not composite['build']:
             del composite['build']
+
         for key in 'build', 'run':
             if key in composite['requirements'] and not composite['requirements'].get(key):
                 del composite['requirements'][key]
@@ -871,12 +874,11 @@ class MetaData(object):
             else:
                 files = utils.rec_glob(self.path, "*")
                 file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
-                # exclude meta.yaml and meta.yaml.template, because the json dictionary captures
-                #    their content
+                # exclude meta.yaml and , because the json dictionary captures their content
                 # never include run_test - these can be renamed from subpackages, or the top-level
                 #    and if they're part of the top-level only, there will be missing files in the
                 #    subpackage
-                file_paths = [f for f in file_paths if not (f.startswith('meta.yaml') or
+                file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
                                                             f.startswith('run_test'))]
                 file_paths = filter_files(file_paths, self.path)
         trim_empty_keys(composite)
@@ -1256,7 +1258,6 @@ class MetaData(object):
         output_metadata.meta['requirements'] = requirements
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
-        extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
         if self.name() == output.get('name') and 'requirements' not in output:
             output['requirements'] = requirements
         output_metadata.meta['extra'] = extra
@@ -1272,8 +1273,8 @@ class MetaData(object):
             extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
                                       'version': self.version()}
             output_metadata.meta['extra'] = extra
-        output_metadata.noarch = output.get('noarch')
-        output_metadata.noarch_python = output.get('noarch_python')
+        output_metadata.noarch = output.get('noarch', False)
+        output_metadata.noarch_python = output.get('noarch_python', False)
         return output_metadata
 
     def get_output_metadata_set(self, files=None, permit_undefined_jinja=False):

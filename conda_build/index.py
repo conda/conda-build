@@ -181,11 +181,9 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     #     then channels from config.
     if config.debug:
         log_context = partial(utils.LoggingContext, logging.DEBUG)
-    if config.verbose:
-        capture = contextlib.contextmanager(lambda: (yield))
+    elif config.verbose:
         log_context = partial(utils.LoggingContext, logging.INFO)
     else:
-        capture = utils.capture
         log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
 
     # Note on conda and indexes:
@@ -205,7 +203,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
 
     # silence output from conda about fetching index files
     with log_context():
-        with capture():
+        with utils.capture():
             try:
                 index = get_index(channel_urls=urls,
                                 prepend=not omit_defaults,
