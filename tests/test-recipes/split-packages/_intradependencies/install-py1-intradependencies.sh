@@ -10,7 +10,7 @@ fi
 
 # Ensure files from non-dependencies are *not* present.
 if [[ -f ${PREFIX}/lib/lib2intradependencies.so ]]; then
-  echo "ERROR: ${PREFIX}/lib/lib2intradependencies.so not found during install of ${PKG_NAME} and it is not a dependency"
+  echo "ERROR: ${PREFIX}/lib/lib2intradependencies.so found during install of ${PKG_NAME} and it is not a dependency"
   exit 1
 fi
 if [[ -f ${PREFIX}/bin/r2-intradependencies ]]; then
