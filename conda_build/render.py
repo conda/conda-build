@@ -20,7 +20,7 @@ import tempfile
 import yaml
 
 from .conda_interface import (PY3, UnsatisfiableError, ProgressiveFetchExtract,
-                              memoized, TemporaryDirectory)
+                              TemporaryDirectory)
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
 
@@ -60,7 +60,6 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
     subpackages = []
     dependencies = []
     # ones that get filtered from actual versioning, to exclude them from the hash calculation
-    append_specs = []
     for spec in specs:
         if not exclude_pattern or not exclude_pattern.match(spec):
             is_subpackage = False
@@ -75,8 +74,8 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
             for key, value in variant.items():
                 if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
                     dependencies.append(" ".join((spec_name, value)))
-        else:
-            append_specs.append(spec)
+        # else:
+        #     append_specs.append(spec)
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     with TemporaryDirectory(suffix=random_string) as tmpdir:
@@ -87,7 +86,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
             raise DependencyNeedsBuildingError(e)
 
     specs = actions_to_pins(actions)
-    return specs + subpackages + append_specs
+    return specs + subpackages
 
 
 def strip_channel(spec_str):
@@ -198,7 +197,6 @@ def finalize_metadata(m, index=None):
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
-    build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in build_deps}
 
     extra_run_specs = get_upstream_pins(m, build_deps, index)
 
@@ -217,7 +215,10 @@ def finalize_metadata(m, index=None):
     #     names to have this behavior.
     requirements = rendered_metadata.meta.get('requirements', {})
     run_deps = requirements.get('run', [])
-    versioned_run_deps = [get_pin_from_build(m, dep, build_dep_versions) for dep in run_deps]
+    full_build_deps = get_env_dependencies(m, 'build', m.config.variant, index,
+                                            exclude_pattern=None)
+    full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
+    versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
 
     rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
@@ -228,7 +229,7 @@ def finalize_metadata(m, index=None):
 
     test_deps = rendered_metadata.get_value('test/requires')
     if test_deps:
-        versioned_test_deps = list({get_pin_from_build(m, dep, build_dep_versions)
+        versioned_test_deps = list({get_pin_from_build(m, dep, full_build_dep_versions)
                                     for dep in test_deps})
         rendered_metadata.meta['test']['requires'] = versioned_test_deps
 
@@ -293,55 +294,67 @@ def reparse(metadata, index):
     return metadata
 
 
-def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False):
+def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False,
+                        subpackage_name_only=False):
     rendered_metadata = {}
     need_reparse_in_env = False
+    need_source_download = True
     unsatisfiable_variants = []
     packages_needing_building = set()
 
-    for variant in variants:
-        mv = metadata.copy()
-        # deep copy the sensitive parts to decouple metadata objects
-        mv.config = metadata.config.copy()
-        mv.config.variant = combine_variants(variant, mv.config.variant)
-        mv.final = False
+    # store these for reference later
+    metadata.config.variants = variants
 
-        # TODO: may need to compute new build id, or at least remove any envs before building
-        #    another variant
+    if variants:
+        for variant in variants:
+            mv = metadata.copy()
+            # deep copy the sensitive parts to decouple metadata objects
+            mv.config = metadata.config.copy()
+            mv.config.variant = combine_variants(variant, mv.config.variant)
+            mv.final = False
 
-        if 'target_platform' in variant:
-            mv.config.host_subdir = variant['target_platform']
-        if not need_reparse_in_env:
-            try:
-                mv.parse_until_resolved()
-                need_source_download = (bool(mv.meta.get('source')) and
-                                        not mv.needs_source_for_render and
-                                        not os.listdir(mv.config.work_dir))
-                # this is a bit wasteful.  We don't store the output here - we'll have to recompute
-                #    it later.  We don't store it, so that we can have per-subpackage exclusions
-                #    from the hash.  Since finalizing brings in *all* build-time packages, notest
-                #    just the ones from the recipe, it is impossible to remove them in the general
-                #    case.  Instead, we just leave the recipe unfinalized until then, so that by
-                #    excluding one higher-level package (e.g. python), we also won't include its
-                #    deps in the hash
-                finalize_metadata(mv, index)
-            except DependencyNeedsBuildingError as e:
-                unsatisfiable_variants.append(variant)
-                packages_needing_building.update(set(e.packages))
-                if permit_unsatisfiable_variants:
-                    rendered_metadata[mv.dist()] = (mv, need_source_download,
-                                                        need_reparse_in_env)
-                continue
-            except exceptions.UnableToParseMissingSetuptoolsDependencies:
-                need_reparse_in_env = True
-            except:
-                raise
+            # TODO: may need to compute new build id, or at least remove any envs before building
+            #    another variant
 
-        # computes hashes based on whatever the current specs are - not the final specs
-        #    This is a deduplication step.  Any variants that end up identical because a
-        #    given variant is not used in a recipe are effectively ignored, though we still pay
-        #    the price to parse for that variant.
-        rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
+            if 'target_platform' in variant:
+                mv.config.host_subdir = variant['target_platform']
+            if not need_reparse_in_env:
+                try:
+                    mv.parse_until_resolved(subpackage_name_only=subpackage_name_only)
+                    need_source_download = (bool(mv.meta.get('source')) and
+                                            not mv.needs_source_for_render and
+                                            not os.listdir(mv.config.work_dir))
+                    # this is a bit wasteful. We don't store the output here -
+                    #    we'll have to recompute it later. We don't store it,
+                    #    so that we can have per-subpackage exclusions from the
+                    #    hash. Since finalizing brings in *all* build-time
+                    #    packages, notest just the ones from the recipe, it is
+                    #    impossible to remove them in the general case.
+                    #    Instead, we just leave the recipe unfinalized until
+                    #    then, so that by excluding one higher-level package
+                    #    (e.g. python), we also won't include its deps in the
+                    #    hash
+                    if not subpackage_name_only:
+                        finalize_metadata(mv, index)
+                except DependencyNeedsBuildingError as e:
+                    unsatisfiable_variants.append(variant)
+                    packages_needing_building.update(set(e.packages))
+                    if permit_unsatisfiable_variants:
+                        rendered_metadata[mv.dist()] = (mv, need_source_download,
+                                                            need_reparse_in_env)
+                    continue
+                except exceptions.UnableToParseMissingSetuptoolsDependencies:
+                    need_reparse_in_env = True
+                except:
+                    raise
+
+            # computes hashes based on whatever the current specs are - not the final specs
+            #    This is a deduplication step.  Any variants that end up identical because a
+            #    given variant is not used in a recipe are effectively ignored, though we still pay
+            #    the price to parse for that variant.
+            rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
+    else:
+        rendered_metadata['base_recipe'] = (metadata, need_source_download, need_reparse_in_env)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
@@ -368,7 +381,14 @@ def expand_outputs(metadata_tuples, index):
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None,
-                  permit_unsatisfiable_variants=True, reset_build_id=True, expand_output=False):
+                  permit_unsatisfiable_variants=True, reset_build_id=True):
+    """Returns a list of tuples, each consisting of
+
+    (metadata-object, needs_download, needs_render_in_env)
+
+    You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
+    results returned here.)
+    """
     arg = recipe_path
     # Don't use byte literals for paths in Python 2
     if not PY3:
@@ -411,17 +431,16 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     if m.final:
         rendered_metadata = [(m, False, False), ]
         index = None
-    else:
-        variants = (dict_of_lists_to_list_of_dicts(variants, m.config.platform)
-                    if variants else get_package_variants(m, m.config))
-        index = get_build_index(m.config, m.config.build_subdir)
-        rendered_metadata = distribute_variants(m, variants, index,
-                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-        if not rendered_metadata:
-            raise ValueError("No variants were satisfiable - no valid recipes could be rendered.")
 
-    if expand_output:
-        rendered_metadata = expand_outputs(rendered_metadata, index)
+    else:
+        index = get_build_index(m.config, m.config.build_subdir)
+        # when building, we don't want to fully expand all outputs into metadata, only expand
+        #    whatever variants we have.
+        variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
+                    get_package_variants(m))
+        rendered_metadata = distribute_variants(m, variants, index,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                    subpackage_name_only=True)
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)

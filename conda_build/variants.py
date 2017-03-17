@@ -23,7 +23,7 @@ DEFAULT_VARIANTS = {
     'r_base': ['3.3.2'],
     'cpu_optimization_target': ['nocona'],
     'pin_run_as_build': {'python': {'min_pin': 'p.p', 'max_pin': 'p.p'}},
-    'exclude_from_build_hash': ['numpy', 'mkl'],
+    'exclude_from_build_hash': [],
 }
 
 DEFAULT_PLATFORMS = {

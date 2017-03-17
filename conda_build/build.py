@@ -462,19 +462,10 @@ def get_entry_point_script_names(entry_point_scripts):
 
 
 def write_pin_downstream(m):
-    if not m.get_section('outputs'):
-        if 'pin_downstream' in m.meta.get('build', {}):
-            with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
-                for pin in utils.ensure_list(m.meta['build']['pin_downstream']):
-                    f.write(pin + "\n")
-    else:
-        # TODO: would be nicer to have a data structure that allowed direct lookup.
-        #    shouldn't be too bad here, the number of things should always be pretty small.
-        for (output_dict, out_m) in m.get_output_metadata_set():
-            if m.name() == out_m.name() and 'pin_downstream' in output_dict:
-                with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
-                    for pin in utils.ensure_list(output_dict['pin_downstream']):
-                        f.write(pin + "\n")
+    if 'pin_downstream' in m.meta.get('build', {}):
+        with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
+            for pin in utils.ensure_list(m.meta['build']['pin_downstream']):
+                f.write(pin + "\n")
 
 
 def create_info_files(m, files, prefix):
@@ -816,7 +807,7 @@ bundlers = {
 
 
 def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False,
-          built_packages=None):
+          output_metas=None, built_packages=None):
     '''
     Build the package with the specified metadata.
 
@@ -830,6 +821,8 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
     default_return = {}
     if not built_packages:
         built_packages = {}
+    if not output_metas:
+        output_metas = []
 
     if m.skip():
         utils.print_skip_message(m)
@@ -897,10 +890,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         elif need_reparse_in_env:
             m = reparse(m, index)
-
-        # this is the finalized metadata for the top-level recipe, not necessarily subpackages
-        #    We use it for examining
-        output_metas = expand_outputs([(m, None, None)], index)
 
         if m.config.skip_existing:
             package_locations = [is_package_built(om) for om, _, _ in output_metas]
@@ -987,7 +976,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             initial_files = set(f.read().splitlines())
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
-        outputs = m.get_output_metadata_set(files=files)
+        outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
         outputs_idx = dict()
         for idx, (output_d, output_m) in enumerate(outputs):
             if output_d.get('type', 'conda') == 'conda':
@@ -997,6 +986,10 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             if not m.final:
                 m = finalize_metadata(m, index)
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
+
+            environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
+                               subdir=m.config.host_subdir)
+
             if bldpkg_path(m) not in built_packages:
                 type = output_d.get('type', 'conda')
                 # Manage the contents of build_prefix according to intradependencies:
@@ -1388,7 +1381,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if clear_index:
                     config.index = None
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
-                                                       permit_unsatisfiable_variants=True)
+                                                       permit_unsatisfiable_variants=False)
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
                 if metadata.config.build_folder in used_build_folders:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
@@ -1397,7 +1390,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     packages_from_this = build(metadata, index=index, post=post,
                                             need_source_download=need_source_download,
                                             need_reparse_in_env=need_reparse_in_env,
-                                            built_packages=built_packages)
+                                               built_packages=built_packages,
+                                               output_metas=metadata_tuples)
                     if not notest:
                         for pkg, dict_and_meta in packages_from_this.items():
                             if pkg.endswith('.tar.bz2'):

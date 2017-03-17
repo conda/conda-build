@@ -12,7 +12,7 @@ from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
 from .index import get_build_index
 from .render import get_env_dependencies
-from .utils import get_installed_packages, apply_pin_expressions, get_logger
+from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -244,23 +244,33 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
 
 
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
-                   exact=False, permit_undefined_jinja=True):
+                   exact=False, permit_undefined_jinja=True, name_only=False):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    output_meta = metadata.get_output_metadata_set(permit_undefined_jinja=permit_undefined_jinja)
-    pin = None
-    for (output_dict, sp_m) in output_meta:
-        if sp_m.name() == subpackage_name:
+    if name_only:
+        pin = subpackage_name
+    else:
+        assert hasattr(metadata, 'other_outputs')
+        outs = metadata.other_outputs
+        pin = None
+        key = (subpackage_name, HashableDict(metadata.config.variant))
+        if key in outs:
+            sp_m = outs[key][1]
+
             if permit_undefined_jinja and not sp_m.version():
-                break
-            if exact:
-                pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+                pin = None
             else:
-                pin = "{0} {1}".format(subpackage_name, apply_pin_expressions(sp_m.version(),
-                                                                              min_pin, max_pin))
+                if exact:
+                    pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+                else:
+                    pin = "{0} {1}".format(subpackage_name,
+                                            apply_pin_expressions(sp_m.version(), min_pin,
+                                                                    max_pin))
+        else:
+            pin = subpackage_name
     return pin
 
 
@@ -326,7 +336,8 @@ def compiler(language, config, permit_undefined_jinja=False):
     return compiler
 
 
-def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
+def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
+                      subpackage_name_only=False):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -350,7 +361,8 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         pin_compatible=partial(pin_compatible, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja),
         pin_subpackage=partial(pin_subpackage, initial_metadata,
-                               permit_undefined_jinja=permit_undefined_jinja),
+                               permit_undefined_jinja=permit_undefined_jinja,
+                               name_only=subpackage_name_only),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)

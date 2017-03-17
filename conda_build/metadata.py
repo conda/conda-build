@@ -530,7 +530,7 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True)
+        self.parse_again(permit_undefined_jinja=True, subpackage_name_only=True)
         if 'host' in self.get_section('requirements'):
             self.config.has_separate_host_prefix = True
         self.config.disable_pip = self.disable_pip
@@ -573,7 +573,7 @@ class MetaData(object):
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False):
+    def parse_again(self, permit_undefined_jinja=False, subpackage_name_only=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -599,7 +599,8 @@ class MetaData(object):
         try:
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
-                self.meta = parse(self._get_contents(permit_undefined_jinja),
+                self.meta = parse(self._get_contents(permit_undefined_jinja,
+                                                     subpackage_name_only=subpackage_name_only),
                                   config=self.config,
                                   path=self.meta_path)
 
@@ -632,6 +633,7 @@ class MetaData(object):
             raise
         finally:
             del os.environ["CONDA_BUILD_STATE"]
+            pass
         self.validate_features()
         self.ensure_no_pip_requirements()
 
@@ -652,23 +654,23 @@ class MetaData(object):
             run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self):
+    def parse_until_resolved(self, subpackage_name_only=False):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
         undefined_jinja_vars = ()
         # always parse again at least once.
-        self.parse_again(permit_undefined_jinja=True)
+        self.parse_again(permit_undefined_jinja=True, subpackage_name_only=subpackage_name_only)
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
-            self.parse_again(permit_undefined_jinja=True)
+            self.parse_again(permit_undefined_jinja=True, subpackage_name_only=subpackage_name_only)
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
         # always parse again at the end, too.
-        self.parse_again(permit_undefined_jinja=False)
+        self.parse_again(permit_undefined_jinja=False, subpackage_name_only=subpackage_name_only)
 
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
@@ -1017,7 +1019,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja):
+    def _get_contents(self, permit_undefined_jinja, subpackage_name_only=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1063,7 +1065,8 @@ class MetaData(object):
 
         env.globals.update(ns_cfg(self.config))
         env.globals.update(context_processor(self, path, config=self.config,
-                                             permit_undefined_jinja=permit_undefined_jinja))
+                                             permit_undefined_jinja=permit_undefined_jinja,
+                                             subpackage_name_only=subpackage_name_only))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1227,11 +1230,19 @@ class MetaData(object):
         elif value:
             self.config.platform = 'noarch'
 
-    def get_output_metadata(self, output):
+    def get_output_metadata(self, output, permit_unsatisfiable_variants=True):
         output_metadata = self.copy()
         output_metadata.meta['package']['name'] = output.get('name', self.name())
         requirements = output_metadata.meta.get('requirements', {})
-        requirements['run'] = output.get('requirements', [])
+        output_reqs = output.get('requirements', {})
+        if hasattr(output_reqs, 'keys'):
+            build_reqs = output_reqs.get('build', []) + requirements.get('build', [])
+            run_reqs = output_reqs.get('run', []) + requirements.get('run', [])
+        else:
+            build_reqs = output_reqs + requirements.get('build', [])
+            run_reqs = output_reqs + requirements.get('run', [])
+        requirements['build'] = build_reqs
+        requirements['run'] = run_reqs
         output_metadata.meta['requirements'] = requirements
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
@@ -1252,10 +1263,18 @@ class MetaData(object):
             output_metadata.meta['extra'] = extra
         output_metadata.noarch = output.get('noarch', False)
         output_metadata.noarch_python = output.get('noarch_python', False)
+        if 'pin_downstream' in output:
+            build = output_metadata.meta.get('build', {})
+            build['pin_downstream'] = output['pin_downstream']
+            output_metadata.meta['build'] = build
+        if 'outputs' in output_metadata.meta:
+            del output_metadata.meta['outputs']
         return output_metadata
 
-    def get_output_metadata_set(self, files=None, permit_undefined_jinja=False):
+    def get_output_metadata_set(self, files=None, permit_undefined_jinja=False,
+                                permit_unsatisfiable_variants=True):
         outputs = self.get_section('outputs')
+        metadata = []
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
@@ -1289,10 +1308,25 @@ class MetaData(object):
                     out['noarch_python'] = out.get('noarch_python',
                                                     self.get_value('build/noarch_python'))
                     out['noarch'] = out.get('noarch', self.get_value('build/noarch'))
-                metadata = [self.get_output_metadata(output) for output in outputs]
+                metadata.append(self.get_output_metadata(out, permit_unsatisfiable_variants))
         except SystemExit:
             if not permit_undefined_jinja:
                 raise
             outputs = []
             metadata = []
-        return toposort(list(six.moves.zip(outputs, metadata)))
+
+        render_order = toposort(list(six.moves.zip(outputs, metadata)))
+        outputs = {}
+        if hasattr(self.config, 'variants'):
+            for (output_d, metadata) in render_order:
+                for variant in self.config.variants:
+                    metadata.other_outputs = outputs
+                    # this reparses with the new outputs info, which should fill in any subpackage
+                    #    jinja2 funcs
+                    metadata.config.variant = variant
+                    metadata.parse_until_resolved()
+                    output_d = [out for out in metadata.meta['outputs']
+                                if out.get('name') == output_d['name']][0]
+                    fm = metadata.get_output_metadata(output_d, permit_unsatisfiable_variants=False)
+                    outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
+        return list(outputs.values())

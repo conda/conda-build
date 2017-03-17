@@ -138,9 +138,10 @@ def execute(args):
 
     metadata_tuples = api.render(args.recipe, config=config,
                                  no_download_source=args.no_source)
+
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):
-            paths = api.get_output_file_path(metadata_tuples)
+            paths = api.get_output_file_paths(metadata_tuples)
             print('\n'.join(sorted(paths)))
     else:
         logging.basicConfig(level=logging.INFO)
