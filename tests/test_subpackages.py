@@ -98,6 +98,7 @@ def test_intradependencies(testing_workdir, testing_config):
     # 2 * (2 * pythons, 1 * lib, 1 * R)
     assert len(outputs1) == 8
     outputs2 = api.build(recipe, config=testing_config)
+    assert len(outputs2) == 8
     outputs2_set = set([os.path.basename(p) for p in outputs2])
     assert outputs1_set == outputs2_set, 'pkgs differ :: get_output_file_paths()=%s but build()=%s' % (outputs1_set,
                                                                                                        outputs2_set)

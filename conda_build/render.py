@@ -49,7 +49,6 @@ def actions_to_pins(actions):
     return [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
 
 
-@memoized
 def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
     dash_or_under = re.compile("[-_]")
     if not index:

@@ -70,11 +70,11 @@ install:
 # Not a .NET project, we build package in the install step instead
 build: false
 
-cache:
-  - C:\\Miniconda3-x64 -> appveyor.yml
-  - C:\\Miniconda36-x64 -> appveyor.yml
-  - C:\\Miniconda-x64 -> appveyor.yml
-  - C:\\Miniconda -> appveyor.yml
+# cache:
+#   - C:\\Miniconda3-x64 -> appveyor.yml
+#   - C:\\Miniconda36-x64 -> appveyor.yml
+#   - C:\\Miniconda-x64 -> appveyor.yml
+#   - C:\\Miniconda -> appveyor.yml
 
 test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
