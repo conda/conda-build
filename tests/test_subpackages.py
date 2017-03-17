@@ -1,6 +1,6 @@
 import os
 import pytest
-import sys
+import re
 
 from conda_build import api
 from conda_build.render import finalize_metadata
@@ -88,13 +88,36 @@ def test_subpackage_variant_override(testing_config):
 
 
 def test_intradependencies(testing_workdir, testing_config):
-    """Only necessary because for conda<4.3, the `r` channel was not in `defaults`"""
+    # Only necessary because for conda<4.3, the `r` channel was not in `defaults`
     testing_config.channel_urls = ('r')
     testing_config.activate = True
     recipe = os.path.join(subpackage_dir, '_intradependencies')
-    # outputs = api.get_output_file_paths(recipe, config=testing_config)
-    # # 3 for each python (*2, 6 total), 1 for each lib (2 total), 1 for each R (2 total)
-    # assert len(outputs) == 10
-    outputs = api.build(recipe, config=testing_config)
-    # 3 for each python (*2, 6 total), 1 for each lib (2 total), 1 for each R (2 total)
-    assert len(outputs) == 10
+    outputs1 = api.get_output_file_paths(recipe, config=testing_config)
+    outputs1_set = set([os.path.basename(p) for p in outputs1])
+    # 2 * (2 * pythons, 1 * lib, 1 * R)
+    assert len(outputs1) == 8
+    outputs2 = api.build(recipe, config=testing_config)
+    outputs2_set = set([os.path.basename(p) for p in outputs2])
+    assert outputs1_set == outputs2_set, 'pkgs differ :: get_output_file_paths()=%s but build()=%s' % (outputs1_set,
+                                                                                                       outputs2_set)
+    pkg_hashes = api.inspect_hash_inputs(outputs2)
+    py_regex = re.compile('^python.*')
+    r_regex = re.compile('^r-base.*')
+    for pkg, hashes in pkg_hashes.items():
+        try:
+            reqs = hashes['recipe']['requirements']['build']
+        except:
+            reqs = []
+        # Assert that:
+        # 1. r-base does and python does not appear in the hash inspection for the R packages
+        if re.match('^r[0-9]-', pkg):
+            assert(not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m]))
+            assert (len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m]))
+        # 2. python does and r-base does not appear in the hash inspection for the Python packages
+        elif re.match('^py[0-9]-', pkg):
+            assert(not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m]))
+            assert(len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m]))
+        # 3. neither python nor r-base appear in the hash inspection for the lib packages
+        elif re.match('^lib[0-9]-', pkg):
+            assert(not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m]))
+            assert(not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m]))
