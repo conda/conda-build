@@ -1,6 +1,7 @@
 import os
 import pytest
 import re
+import sys
 
 from conda_build import api
 from conda_build.render import finalize_metadata
@@ -111,13 +112,13 @@ def test_intradependencies(testing_workdir, testing_config):
         # Assert that:
         # 1. r-base does and python does not appear in the hash inspection for the R packages
         if re.match('^r[0-9]-', pkg):
-            assert(not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m]))
-            assert (len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m]))
+            assert not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])
+            assert len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
         # 2. python does and r-base does not appear in the hash inspection for the Python packages
         elif re.match('^py[0-9]-', pkg):
-            assert(not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m]))
-            assert(len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m]))
+            assert not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
+            assert len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])
         # 3. neither python nor r-base appear in the hash inspection for the lib packages
         elif re.match('^lib[0-9]-', pkg):
-            assert(not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m]))
-            assert(not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m]))
+            assert not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
+            assert not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])

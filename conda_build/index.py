@@ -5,7 +5,6 @@ Functions related to creating repodata index files.
 from __future__ import absolute_import, division, print_function
 
 import bz2
-import contextlib
 from functools import partial
 import json
 import logging
