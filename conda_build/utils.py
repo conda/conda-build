@@ -702,7 +702,9 @@ def expand_globs(path_list, root_dir):
     for path in path_list:
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
-        if os.path.isdir(path):
+        if os.path.islink(path):
+            files.append(path.replace(root_dir + os.path.sep, ''))
+        elif os.path.isdir(path):
             files.extend(os.path.join(root, f).replace(root_dir + os.path.sep, '')
                             for root, _, fs in os.walk(path) for f in fs)
         elif os.path.isfile(path):
@@ -909,7 +911,8 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
     return [f.replace(prefix + os.path.sep, '') for f in files_list
-            if not os.path.isdir(os.path.join(prefix, f))]
+            if not os.path.isdir(os.path.join(prefix, f)) or
+            os.path.islink(os.path.join(prefix, f))]
 
 
 # def rm_rf(path):

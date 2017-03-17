@@ -640,6 +640,7 @@ def post_process_files(m, initial_prefix_files):
     current_prefix_files = prefix_files(prefix=m.config.build_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
     new_files = utils.filter_files(new_files, prefix=m.config.build_prefix)
+
     if any(m.config.meta_dir in join(m.config.build_prefix, f) for f in new_files):
         meta_files = (tuple(f for f in new_files if m.config.meta_dir in
                 join(m.config.build_prefix, f)),)
