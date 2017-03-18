@@ -990,7 +990,8 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
                                subdir=m.config.host_subdir)
 
-            if bldpkg_path(m) not in built_packages:
+            pkg_path = bldpkg_path(m)
+            if pkg_path not in built_packages and pkg_path not in new_pkgs:
                 type = output_d.get('type', 'conda')
                 # Manage the contents of build_prefix according to intradependencies:
                 # We work out the difference between what the subsequent package needs
