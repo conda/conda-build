@@ -485,20 +485,6 @@ def toposort(outputs):
                     topodict[name].update((run_dep,))
         else:
             endorder.add(idx)
-    # Calculate the intradependencies for each conda package.  This
-    # must be done before calling _toposort as it modifies topodict.
-    for name in topodict:
-        idx = order[name]
-        output_d = outputs[idx][0]
-        assert name == output_d['name'], "toposort ordering bug."
-        alldeps = set((name,))
-        lastdeps = set()
-        while lastdeps != alldeps:
-            new = alldeps - lastdeps
-            lastdeps = alldeps
-            for dep in new:
-                alldeps |= topodict[dep]
-        output_d['intradependencies'] = alldeps - set((name,))
     topo_order = list(_toposort(topodict))
     result = [outputs[order[t]] for t in topo_order]
     result.extend([outputs[o] for o in endorder])
