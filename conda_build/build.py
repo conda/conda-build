@@ -886,7 +886,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             with utils.path_prepended(m.config.build_prefix):
                 source.provide(m)
             m.final = False
-            m.parse_until_resolved()
+            m.parse_until_resolved(subpackage_name_only=True)
 
         elif need_reparse_in_env:
             m = reparse(m, index)
@@ -1388,8 +1388,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 used_build_folders.append(metadata.config.build_folder)
                 with metadata.config:
                     packages_from_this = build(metadata, index=index, post=post,
-                                            need_source_download=need_source_download,
-                                            need_reparse_in_env=need_reparse_in_env,
+                                               need_source_download=need_source_download,
+                                               need_reparse_in_env=need_reparse_in_env,
                                                built_packages=built_packages,
                                                output_metas=metadata_tuples)
                     if not notest:

@@ -20,6 +20,8 @@ from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFound
 from .conda_interface import package_cache
 from .conda_interface import install_actions, display_actions, execute_actions, execute_plan
 from .conda_interface import memoized
+from .conda_interface import MatchSpec
+
 
 from conda_build.os_utils import external
 from conda_build import utils
@@ -563,6 +565,8 @@ spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s+)([0-9a-zA-Z\.]+)(\s+[0-9a-
 
 
 def _ensure_valid_spec(spec):
+    if isinstance(spec, MatchSpec):
+        return spec
     match = spec_needing_star_re.match(spec)
     # ignore exact pins (would be a 3rd group)
     if match and not match.group(3):
