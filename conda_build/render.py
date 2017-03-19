@@ -31,7 +31,7 @@ from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of
                                   combine_variants)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
-from conda_build.jinja_context import pin_subpackage
+from conda_build.jinja_context import pin_subpackage_against_outputs
 
 
 def bldpkg_path(m):
@@ -182,7 +182,7 @@ def get_upstream_pins(m, dependencies, index):
     return additional_specs
 
 
-def finalize_metadata(m, index=None):
+def finalize_metadata(m, index=None, finalized_outputs=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
     if not index:
         index = get_build_index(m.config, m.config.build_subdir)
@@ -191,6 +191,9 @@ def finalize_metadata(m, index=None):
     excludes = m.config.variant.get('exclude_from_build_hash', [])
     if excludes:
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc) for exc in excludes))
+
+    if not finalized_outputs:
+        finalized_outputs = m.other_outputs
 
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
     #     be installed in the environment.
@@ -206,7 +209,8 @@ def finalize_metadata(m, index=None):
                 # Current problem here is that this will use other_outputs which has not been finalized ...
                 # Keeping track of finalized stuff myself may work, unless we can make other_outputs final
                 # from the get-go (which would involve source downloading at that time).
-                pin = pin_subpackage(m, subpackage_name, min_pin=min_pin, max_pin=max_pin, exact=exact)
+                key = (subpackage_name, utils.HashableDict(m.config.variant))
+                pin = pin_subpackage_against_outputs(key, finalized_outputs, min_pin, max_pin, exact, False)
                 m.meta['requirements'][typ][idx] = pin
 
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)

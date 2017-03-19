@@ -977,9 +977,12 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
         outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
+        finalized_outputs = dict()
         for (output_d, m) in outputs:
             if not m.final:
-                m = finalize_metadata(m, index)
+                m = finalize_metadata(m, index, finalized_outputs)
+                key = (output_d['name'], utils.HashableDict(m.config.variant))
+                finalized_outputs[key] = (output_d, m)
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
 
             pkg_path = bldpkg_path(m)
