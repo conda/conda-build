@@ -485,20 +485,6 @@ def toposort(outputs):
                     topodict[name].update((run_dep,))
         else:
             endorder.add(idx)
-    # Calculate the intradependencies for each conda package.  This
-    # must be done before calling _toposort as it modifies topodict.
-    for name in topodict:
-        idx = order[name]
-        output_d = outputs[idx][0]
-        assert name == output_d['name'], "toposort ordering bug."
-        alldeps = set((name,))
-        lastdeps = set()
-        while lastdeps != alldeps:
-            new = alldeps - lastdeps
-            lastdeps = alldeps
-            for dep in new:
-                alldeps |= topodict[dep]
-        output_d['intradependencies'] = alldeps - set((name,))
     topo_order = list(_toposort(topodict))
     result = [outputs[order[t]] for t in topo_order]
     result.extend([outputs[o] for o in endorder])
@@ -530,7 +516,7 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True, subpackage_name_only=True)
+        self.parse_again(permit_undefined_jinja=True, stringify_subpackage_pins=True)
         if 'host' in self.get_section('requirements'):
             self.config.has_separate_host_prefix = True
         self.config.disable_pip = self.disable_pip
@@ -573,7 +559,7 @@ class MetaData(object):
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False, subpackage_name_only=False):
+    def parse_again(self, permit_undefined_jinja=False, stringify_subpackage_pins=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -600,7 +586,7 @@ class MetaData(object):
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
                 self.meta = parse(self._get_contents(permit_undefined_jinja,
-                                                     subpackage_name_only=subpackage_name_only),
+                                                     stringify_subpackage_pins=stringify_subpackage_pins),
                                   config=self.config,
                                   path=self.meta_path)
 
@@ -654,23 +640,23 @@ class MetaData(object):
             run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self, subpackage_name_only=False):
+    def parse_until_resolved(self, stringify_subpackage_pins=False):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
         undefined_jinja_vars = ()
         # always parse again at least once.
-        self.parse_again(permit_undefined_jinja=True, subpackage_name_only=subpackage_name_only)
+        self.parse_again(permit_undefined_jinja=True, stringify_subpackage_pins=stringify_subpackage_pins)
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
-            self.parse_again(permit_undefined_jinja=True, subpackage_name_only=subpackage_name_only)
+            self.parse_again(permit_undefined_jinja=True, stringify_subpackage_pins=stringify_subpackage_pins)
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
         # always parse again at the end, too.
-        self.parse_again(permit_undefined_jinja=False, subpackage_name_only=subpackage_name_only)
+        self.parse_again(permit_undefined_jinja=False, stringify_subpackage_pins=stringify_subpackage_pins)
 
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
@@ -1019,7 +1005,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja, subpackage_name_only=False):
+    def _get_contents(self, permit_undefined_jinja, stringify_subpackage_pins=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1066,7 +1052,7 @@ class MetaData(object):
         env.globals.update(ns_cfg(self.config))
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
-                                             subpackage_name_only=subpackage_name_only))
+                                             stringify_subpackage_pins=stringify_subpackage_pins))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1253,9 +1239,9 @@ class MetaData(object):
         # merge package-local variant extensions.  Only exclude_from_build_hash is
         #   currently available.  The thought is that any version stuff should be in the config,
         #   while pins can be done with jinja2 functions or variables instead of pin_run_as_build
-        excludes = set(output_metadata.config.variant.get('exclude_from_build_hash', set()))
-        excludes.update(set(output.get('exclude_from_build_hash', set())))
-        output_metadata.config.variant['exclude_from_build_hash'] = list(excludes)
+        # excludes = set(output_metadata.config.variant.get('exclude_from_build_hash', set()))
+        # excludes.update(set(output.get('exclude_from_build_hash', set())))
+        # output_metadata.config.variant['exclude_from_build_hash'] = list(excludes)
         if self.name() != output_metadata.name():
             extra = self.meta.get('extra', {})
             extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
@@ -1324,7 +1310,7 @@ class MetaData(object):
                     # this reparses with the new outputs info, which should fill in any subpackage
                     #    jinja2 funcs
                     metadata.config.variant = variant
-                    metadata.parse_until_resolved()
+                    metadata.parse_until_resolved(stringify_subpackage_pins=True)
                     output_d = [out for out in metadata.meta['outputs']
                                 if out.get('name') == output_d['name']][0]
                     fm = metadata.get_output_metadata(output_d, permit_unsatisfiable_variants=False)

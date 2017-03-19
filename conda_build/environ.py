@@ -20,6 +20,8 @@ from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFound
 from .conda_interface import package_cache
 from .conda_interface import install_actions, display_actions, execute_actions, execute_plan
 from .conda_interface import memoized
+from .conda_interface import MatchSpec
+
 
 from conda_build.os_utils import external
 from conda_build import utils
@@ -77,8 +79,12 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
 
     env['GIT_DIR'] = git_dir
     try:
-        # Verify current commit matches expected commit
-        current_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H"],
+        # Verify current commit (minus our locally applied patches) matches expected commit
+        current_commit = utils.check_output_env(["git",
+                                                 "log",
+                                                 "-n1",
+                                                 "--format=%H",
+                                                 "HEAD"+"^"*config.git_commits_since_tag],
                                                 env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
         expected_tag_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H",
@@ -367,7 +373,6 @@ def meta_vars(meta, config):
     if meta.final:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
     d['RECIPE_DIR'] = meta.path
-    d['RECIPE_HASH'] = meta._hash_dependencies()
     return d
 
 
@@ -559,6 +564,8 @@ spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s+)([0-9a-zA-Z\.]+)(\s+[0-9a-
 
 
 def _ensure_valid_spec(spec):
+    if isinstance(spec, MatchSpec):
+        return spec
     match = spec_needing_star_re.match(spec)
     # ignore exact pins (would be a 3rd group)
     if match and not match.group(3):

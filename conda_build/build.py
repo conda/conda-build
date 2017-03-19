@@ -47,7 +47,7 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs)
+                                distribute_variants)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -886,7 +886,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             with utils.path_prepended(m.config.build_prefix):
                 source.provide(m)
             m.final = False
-            m.parse_until_resolved()
+            m.parse_until_resolved(stringify_subpackage_pins=True)
 
         elif need_reparse_in_env:
             m = reparse(m, index)
@@ -977,46 +977,18 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
         outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
-        outputs_idx = dict()
-        for idx, (output_d, output_m) in enumerate(outputs):
-            if output_d.get('type', 'conda') == 'conda':
-                outputs_idx[output_d['name']] = idx
-        intra_installed = set()
+        finalized_outputs = dict()
         for (output_d, m) in outputs:
             if not m.final:
-                m = finalize_metadata(m, index)
+                m = finalize_metadata(m, index, finalized_outputs)
+                key = (output_d['name'], utils.HashableDict(m.config.variant))
+                finalized_outputs[key] = (output_d, m)
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
 
-            environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
-                               subdir=m.config.host_subdir)
-
-            if bldpkg_path(m) not in built_packages:
-                type = output_d.get('type', 'conda')
-                # Manage the contents of build_prefix according to intradependencies:
-                # We work out the difference between what the subsequent package needs
-                # and what is currently installed, removing all nondependent packages
-                # and extracting any previously removed dependencies.
-                if type == 'conda':
-                    for unwanted in intra_installed - output_d['intradependencies']:
-                        log.debug("intradeps: removing %s" % (unwanted))
-                        tarball = bldpkg_path(outputs[outputs_idx[unwanted]][1])
-                        unwanted_dict = (built_packages[tarball][0] if tarball in built_packages
-                                         else outputs[outputs_idx[unwanted]][0])
-                        for dep_file in unwanted_dict['checksums']:
-                            remove_prefix_file(dep_file, m.config.build_prefix)
-                    intra_installed -= (intra_installed - output_d.get('intradependencies', {}))
-                    for needed in output_d['intradependencies'] - intra_installed:
-                        log.debug("intradeps: re-extracting %s" % (needed))
-                        tarball = bldpkg_path(outputs[outputs_idx[needed]][1])
-                        needed_dict = (built_packages[tarball][0] if tarball in built_packages
-                                         else outputs[outputs_idx[needed]][0])
-                        with tarfile.open(tarball, 'r:bz2') as tf:
-                            members = [tf.getmember(dep_file) for dep_file in
-                                       needed_dict['checksums']]
-                            tf.extractall(m.config.build_prefix, members)
-                    intra_installed.update(output_d['intradependencies'])
-                    assert output_d['intradependencies'] == intra_installed, "set logic gone bad."
-                    intra_installed.add(output_d['name'])
+            pkg_path = bldpkg_path(m)
+            if pkg_path not in built_packages and pkg_path not in new_pkgs:
+                environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
+                                   subdir=m.config.host_subdir)
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                 new_pkgs[built_package] = (output_d, m)
     else:
@@ -1388,8 +1360,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 used_build_folders.append(metadata.config.build_folder)
                 with metadata.config:
                     packages_from_this = build(metadata, index=index, post=post,
-                                            need_source_download=need_source_download,
-                                            need_reparse_in_env=need_reparse_in_env,
+                                               need_source_download=need_source_download,
+                                               need_reparse_in_env=need_reparse_in_env,
                                                built_packages=built_packages,
                                                output_metas=metadata_tuples)
                     if not notest:

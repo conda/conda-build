@@ -487,6 +487,7 @@ def apply_patch(src_dir, path, config, git=None):
         git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
         check_call_env([git, 'am', '--committer-date-is-author-date', path],
                        cwd=src_dir, stdout=None, env=git_env)
+        config.git_commits_since_tag+=1
     else:
         print('Applying patch: %r' % path)
         patch = external.find_executable('patch', config.build_prefix)
