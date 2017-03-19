@@ -58,7 +58,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
                          variants=None, **kwargs):
     """Get output file paths for any packages that would be created by a recipe
 
-    Both split packages (recipes with more than one ouptut) and build matrices,
+    Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
     from conda_build.render import bldpkg_path
@@ -96,7 +96,7 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
                          variants=None, **kwargs):
     """Get output file paths for any packages that would be created by a recipe
 
-    Both split packages (recipes with more than one ouptut) and build matrices,
+    Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
     log = _get_logger(__name__)

@@ -982,11 +982,10 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                 m = finalize_metadata(m, index)
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
 
-            environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
-                               subdir=m.config.host_subdir)
-
             pkg_path = bldpkg_path(m)
             if pkg_path not in built_packages and pkg_path not in new_pkgs:
+                environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
+                                   subdir=m.config.host_subdir)
                 type = output_d.get('type', 'conda')
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                 new_pkgs[built_package] = (output_d, m)
