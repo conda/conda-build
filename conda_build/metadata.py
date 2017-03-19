@@ -1239,9 +1239,9 @@ class MetaData(object):
         # merge package-local variant extensions.  Only exclude_from_build_hash is
         #   currently available.  The thought is that any version stuff should be in the config,
         #   while pins can be done with jinja2 functions or variables instead of pin_run_as_build
-        excludes = set(output_metadata.config.variant.get('exclude_from_build_hash', set()))
-        excludes.update(set(output.get('exclude_from_build_hash', set())))
-        output_metadata.config.variant['exclude_from_build_hash'] = list(excludes)
+        # excludes = set(output_metadata.config.variant.get('exclude_from_build_hash', set()))
+        # excludes.update(set(output.get('exclude_from_build_hash', set())))
+        # output_metadata.config.variant['exclude_from_build_hash'] = list(excludes)
         if self.name() != output_metadata.name():
             extra = self.meta.get('extra', {})
             extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
