@@ -95,6 +95,9 @@ DEFAULTS = [Setting('activate', True),
             Setting('clobber_sections_file', None),
             Setting('bootstrap', None),
 
+            # source provisioning.
+            Setting('git_commits_since_tag', 0),
+
             # pypi upload settings (twine)
             Setting('password', None),
             Setting('sign', False),

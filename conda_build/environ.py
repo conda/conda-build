@@ -77,8 +77,12 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
 
     env['GIT_DIR'] = git_dir
     try:
-        # Verify current commit matches expected commit
-        current_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H"],
+        # Verify current commit (minus our locally applied patches) matches expected commit
+        current_commit = utils.check_output_env(["git",
+                                                 "log",
+                                                 "-n1",
+                                                 "--format=%H",
+                                                 "HEAD"+"^"*config.git_commits_since_tag],
                                                 env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
         expected_tag_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H",
