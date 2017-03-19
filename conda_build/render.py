@@ -31,6 +31,7 @@ from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of
                                   combine_variants)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
+from conda_build.jinja_context import pin_subpackage
 
 
 def bldpkg_path(m):
@@ -193,6 +194,20 @@ def finalize_metadata(m, index=None):
 
     # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
     #     be installed in the environment.
+
+    for typ in ('run', 'build'):
+        for idx, spec in enumerate(m.get_value('requirements/'+typ, [])):
+            if '{{ pin_subpackage' in spec:
+                match = re.match(".*pin_subpackage\('(.*)',\smin_pin='(.*)',\smax_pin='(.*)',\sexact=(.*)\)", spec)
+                subpackage_name = match.group(1)
+                min_pin = match.group(2)
+                max_pin = match.group(3)
+                exact = match.group(4)
+                # Current problem here is that this will use other_outputs which has not been finalized ...
+                # Keeping track of finalized stuff myself may work, unless we can make other_outputs final
+                # from the get-go (which would involve source downloading at that time).
+                pin = pin_subpackage(m, subpackage_name, min_pin=min_pin, max_pin=max_pin, exact=exact)
+                m.meta['requirements'][typ][idx] = pin
 
     build_deps = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
