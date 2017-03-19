@@ -47,7 +47,7 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs)
+                                distribute_variants)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -886,7 +886,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             with utils.path_prepended(m.config.build_prefix):
                 source.provide(m)
             m.final = False
-            m.parse_until_resolved(subpackage_name_only=True)
+            m.parse_until_resolved(stringify_subpackage_pins=True)
 
         elif need_reparse_in_env:
             m = reparse(m, index)
@@ -986,7 +986,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             if pkg_path not in built_packages and pkg_path not in new_pkgs:
                 environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
                                    subdir=m.config.host_subdir)
-                type = output_d.get('type', 'conda')
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                 new_pkgs[built_package] = (output_d, m)
     else:

@@ -11,7 +11,6 @@ import jinja2
 from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
 from .index import get_build_index
-from .render import get_env_dependencies
 from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
 
 
@@ -244,14 +243,20 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
 
 
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
-                   exact=False, permit_undefined_jinja=True, name_only=False):
+                   exact=False, permit_undefined_jinja=True, stringify_subpackage_pins=False):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    if name_only:
-        pin = subpackage_name
+    if stringify_subpackage_pins:
+        # As close to leaving it unmodified as possible. I hope to be able to use the else: clause directly
+        # below later, once the exact name of subpackage in question has been determined (during toposort
+        # install).
+        return "\"{{{{ pin_subpackage('{}', min_pin='{}', max_pin='{}', exact={}) }}}}\"".format(subpackage_name,
+                                                                                                 min_pin,
+                                                                                                 max_pin,
+                                                                                                 exact)
     else:
         assert hasattr(metadata, 'other_outputs')
         outs = metadata.other_outputs
@@ -337,7 +342,7 @@ def compiler(language, config, permit_undefined_jinja=False):
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
-                      subpackage_name_only=False):
+                      stringify_subpackage_pins=False):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -362,7 +367,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                permit_undefined_jinja=permit_undefined_jinja),
         pin_subpackage=partial(pin_subpackage, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,
-                               name_only=subpackage_name_only),
+                               stringify_subpackage_pins=stringify_subpackage_pins),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)

@@ -295,7 +295,7 @@ def reparse(metadata, index):
 
 
 def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False,
-                        subpackage_name_only=False):
+                        stringify_subpackage_pins=False):
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
@@ -320,7 +320,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 mv.config.host_subdir = variant['target_platform']
             if not need_reparse_in_env:
                 try:
-                    mv.parse_until_resolved(subpackage_name_only=subpackage_name_only)
+                    mv.parse_until_resolved(stringify_subpackage_pins=stringify_subpackage_pins)
                     need_source_download = (bool(mv.meta.get('source')) and
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
@@ -334,7 +334,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                     #    then, so that by excluding one higher-level package
                     #    (e.g. python), we also won't include its deps in the
                     #    hash
-                    if not subpackage_name_only:
+                    if not stringify_subpackage_pins:
                         finalize_metadata(mv, index)
                 except DependencyNeedsBuildingError as e:
                     unsatisfiable_variants.append(variant)
@@ -440,7 +440,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                     get_package_variants(m))
         rendered_metadata = distribute_variants(m, variants, index,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    subpackage_name_only=True)
+                                    stringify_subpackage_pins=True)
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)
