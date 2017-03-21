@@ -988,7 +988,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     # packages are Python 2 or Python 3 only.
 
     if not os.path.isdir(config.build_prefix) or not os.listdir(config.build_prefix):
-        create_env(config.build_prefix, specs=specs,
+        create_env(config.build_prefix, specs_or_actions=specs,
                    subdir=config.build_subdir,
                    clear_cache=False,
                    config=config)

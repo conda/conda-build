@@ -976,6 +976,10 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
         outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
+
+        # subdir needs to always be some real platform - so ignore noarch.
+        subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
+                    m.config.subdir)
         for (output_d, m) in outputs:
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
             pkg_path = bldpkg_path(m)
@@ -984,13 +988,13 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                                       m.ms_depends('build'), m.config)
                 utils.trim_empty_keys(actions)
                 environ.create_env(m.config.host_prefix, actions, config=m.config,
-                                   subdir=m.config.host_subdir)
+                                   subdir=subdir)
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                 environ.remove_env(actions, index, m.config)
                 new_pkgs[built_package] = (output_d, m)
                 # must rebuild index because conda has no way to incrementally add our last
                 #    package to the index.
-                index = get_build_index(config=m.config, subdir=m.config.host_subdir,
+                index = get_build_index(config=m.config, subdir=subdir,
                                         clear_cache=True)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())

@@ -1218,45 +1218,55 @@ class MetaData(object):
             self.config.host_platform = 'noarch'
 
     def get_output_metadata(self, output):
-        output_metadata = self.copy()
-        output_metadata.meta['package']['name'] = output.get('name', self.name())
-        requirements = output_metadata.meta.get('requirements', {})
-        output_reqs = output.get('requirements', {})
-        if hasattr(output_reqs, 'keys'):
-            build_reqs = output_reqs.get('build', []) + requirements.get('build', [])
-            run_reqs = output_reqs.get('run', []) + requirements.get('run', [])
+        if self.name() == output.get('name'):
+            output_metadata = self
         else:
-            output_reqs = ensure_list(output_reqs)
-            build_reqs = output_reqs + requirements.get('build', [])
-            run_reqs = output_reqs + requirements.get('run', [])
-        requirements['build'] = build_reqs
-        requirements['run'] = run_reqs
-        output_metadata.meta['requirements'] = requirements
-        output_metadata.meta['package']['version'] = output.get('version') or self.version()
-        extra = self.meta.get('extra', {})
-        if self.name() == output.get('name') and 'requirements' not in output:
-            output['requirements'] = requirements
-        output_metadata.meta['extra'] = extra
-        output_metadata.final = False
-        # merge package-local variant extensions.  Only exclude_from_build_hash is
-        #   currently available.  The thought is that any version stuff should be in the config,
-        #   while pins can be done with jinja2 functions or variables instead of pin_run_as_build
-        # excludes = set(output_metadata.config.variant.get('exclude_from_build_hash', set()))
-        # excludes.update(set(output.get('exclude_from_build_hash', set())))
-        # output_metadata.config.variant['exclude_from_build_hash'] = list(excludes)
-        if self.name() != output_metadata.name():
+            output_metadata = self.copy()
+            output_metadata.meta['package']['name'] = output.get('name', self.name())
+            requirements = output_metadata.meta.get('requirements', {})
+            output_reqs = output.get('requirements', {})
+            if hasattr(output_reqs, 'keys'):
+                build_reqs = output_reqs.get('build', []) + requirements.get('build', [])
+                run_reqs = output_reqs.get('run', [])
+            else:
+                output_reqs = ensure_list(output_reqs)
+                build_reqs = output_reqs + requirements.get('build', [])
+                run_reqs = output_reqs
+            if 'name' in output:
+                # since we are copying reqs from the top-level package, which
+                #   can depend on subpackages, make sure that we filter out
+                #   subpackages so that they don't depend on themselves
+                subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
+                build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
+                run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
+
+            requirements['build'] = build_reqs
+            requirements['run'] = run_reqs
+            output_metadata.meta['requirements'] = requirements
+            output_metadata.meta['package']['version'] = output.get('version') or self.version()
             extra = self.meta.get('extra', {})
-            extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
-                                      'version': self.version()}
+            if self.name() == output.get('name') and 'requirements' not in output:
+                output['requirements'] = requirements
             output_metadata.meta['extra'] = extra
-        output_metadata.noarch = output.get('noarch', False)
-        output_metadata.noarch_python = output.get('noarch_python', False)
-        if 'pin_downstream' in output:
-            build = output_metadata.meta.get('build', {})
-            build['pin_downstream'] = output['pin_downstream']
-            output_metadata.meta['build'] = build
-        if 'outputs' in output_metadata.meta:
-            del output_metadata.meta['outputs']
+            output_metadata.final = False
+            if self.name() != output_metadata.name():
+                extra = self.meta.get('extra', {})
+                extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
+                                        'version': self.version()}
+                output_metadata.meta['extra'] = extra
+            output_metadata.noarch = output.get('noarch', False)
+            output_metadata.noarch_python = output.get('noarch_python', False)
+            # primarily for tests - make sure that we keep the platform consistent (setting noarch
+            #      would reset it)
+            if (not (output_metadata.noarch or output_metadata.noarch_python) and
+                    self.config.platform != output_metadata.config.platform):
+                output_metadata.config.platform = self.config.platform
+            if 'pin_downstream' in output:
+                build = output_metadata.meta.get('build', {})
+                build['pin_downstream'] = output['pin_downstream']
+                output_metadata.meta['build'] = build
+            if 'outputs' in output_metadata.meta:
+                del output_metadata.meta['outputs']
         return output_metadata
 
     def get_output_metadata_set(self, files=None, permit_undefined_jinja=False,
@@ -1281,7 +1291,6 @@ class MetaData(object):
                 # but only if a matching output name is not explicitly provided
                 if self.uses_subpackage and not any(self.name() == out.get('name', '')
                                                     for out in outputs):
-
                     outputs.append({'name': self.name(), 'requirements': requirements,
                                     'pin_downstream':
                                         self.meta.get('build', {}).get('pin_downstream'),

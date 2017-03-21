@@ -204,6 +204,8 @@ class Config(object):
                 "pretending to be on another " "another platform, such as "
                 "for rendering necessary dependencies on a non-native "
                 "platform. I trust that you know what you're doing.")
+        if value == 'noarch':
+            raise ValueError("config platform should never be noarch.  Set host_platform instead.")
         self._platform = value
 
     @property
