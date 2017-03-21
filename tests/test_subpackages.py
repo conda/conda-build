@@ -46,6 +46,7 @@ def test_output_pkg_path_shows_all_subpackages(testing_metadata):
 
 def test_subpackage_version_provided(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a', 'version': '2.0'}]
+    del testing_metadata.meta['requirements']
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     outputs = api.get_output_file_path([(m, None, None) for (_, m) in out_dicts_and_metadata])
     assert len(outputs) == 1

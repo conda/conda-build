@@ -361,8 +361,9 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 
 
 @pytest.mark.serial
-def test_inspect_hash_input(testing_metadata, capfd):
-    output = api.build(testing_metadata)[0]
+def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    output = api.build(testing_workdir)[0]
     args = ['hash-inputs', output]
     main_inspect.execute(args)
     output, error = capfd.readouterr()
@@ -438,7 +439,8 @@ def test_purge(testing_workdir, testing_metadata):
 
     It does not clear out build packages from folders like osx-64 or linux-64.
     """
-    outputs = api.build(testing_metadata)
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    outputs = api.build(testing_workdir)
     args = ['purge']
     main_build.execute(args)
     dirs = get_build_folders(testing_metadata.config.croot)
@@ -448,11 +450,12 @@ def test_purge(testing_workdir, testing_metadata):
 
 
 @pytest.mark.serial
-def test_purge_all(testing_metadata):
+def test_purge_all(testing_workdir, testing_metadata):
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
-    outputs = api.build(testing_metadata)
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    outputs = api.build(testing_workdir)
     args = ['purge-all', '--croot', testing_metadata.config.croot]
     main_build.execute(args)
     assert not get_build_folders(testing_metadata.config.croot)

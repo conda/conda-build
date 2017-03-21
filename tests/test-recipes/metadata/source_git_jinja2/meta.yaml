@@ -10,7 +10,7 @@ source:
 
 build:
   number: {{ GIT_DESCRIBE_NUMBER|int }}
-  string: py{{ CONDA_PY }}{{RECIPE_HASH}}_{{ GIT_DESCRIBE_NUMBER|int }}_g{{ GIT_FULL_HASH[:7] }}
+  string: py{{ CONDA_PY }}h1234567_{{ GIT_DESCRIBE_NUMBER|int }}_g{{ GIT_FULL_HASH[:7] }}
 
 requirements:
   build:

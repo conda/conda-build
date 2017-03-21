@@ -18,5 +18,6 @@ def main():
     assert depends[0] == 'numpy'
     assert depends[1] == 'python'
 
+
 if __name__ == '__main__':
     main()

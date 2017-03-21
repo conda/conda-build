@@ -15,5 +15,6 @@ def main():
     assert len(info['depends']) == 1
     assert info['depends'][0] == 'python', info['depends']
 
+
 if __name__ == '__main__':
     main()

@@ -24,6 +24,7 @@ from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_insta
                                HashableDict, trim_empty_keys, filter_files)
 from conda_build.license_family import ensure_valid_license_family
 from conda_build.variants import get_default_variants
+from conda_build.exceptions import DependencyNeedsBuildingError
 
 try:
     import yaml
@@ -516,7 +517,7 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True, stringify_subpackage_pins=True)
+        self.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
         if 'host' in self.get_section('requirements'):
             self.config.has_separate_host_prefix = True
         self.config.disable_pip = self.disable_pip
@@ -559,7 +560,7 @@ class MetaData(object):
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False, stringify_subpackage_pins=False):
+    def parse_again(self, permit_undefined_jinja=False, stub_subpackages=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -586,7 +587,7 @@ class MetaData(object):
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
                 self.meta = parse(self._get_contents(permit_undefined_jinja,
-                                                     stringify_subpackage_pins=stringify_subpackage_pins),
+                                                     stub_subpackages=stub_subpackages),
                                   config=self.config,
                                   path=self.meta_path)
 
@@ -640,23 +641,23 @@ class MetaData(object):
             run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self, stringify_subpackage_pins=False):
+    def parse_until_resolved(self, stub_subpackages=False):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
         undefined_jinja_vars = ()
         # always parse again at least once.
-        self.parse_again(permit_undefined_jinja=True, stringify_subpackage_pins=stringify_subpackage_pins)
+        self.parse_again(permit_undefined_jinja=True, stub_subpackages=stub_subpackages)
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
-            self.parse_again(permit_undefined_jinja=True, stringify_subpackage_pins=stringify_subpackage_pins)
+            self.parse_again(permit_undefined_jinja=True, stub_subpackages=stub_subpackages)
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
         # always parse again at the end, too.
-        self.parse_again(permit_undefined_jinja=False, stringify_subpackage_pins=stringify_subpackage_pins)
+        self.parse_again(permit_undefined_jinja=False, stub_subpackages=stub_subpackages)
 
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
@@ -1005,7 +1006,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja, stringify_subpackage_pins=False):
+    def _get_contents(self, permit_undefined_jinja, stub_subpackages=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1052,7 +1053,7 @@ class MetaData(object):
         env.globals.update(ns_cfg(self.config))
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
-                                             stringify_subpackage_pins=stringify_subpackage_pins))
+                                             stub_subpackages=stub_subpackages))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1200,7 +1201,7 @@ class MetaData(object):
         if not self.noarch_python and not value:
             self.config.reset_platform()
         elif value:
-            self.config.platform = 'noarch'
+            self.config.host_platform = 'noarch'
 
     @property
     def noarch_python(self):
@@ -1214,9 +1215,9 @@ class MetaData(object):
         if not self.noarch and not value:
             self.config.reset_platform()
         elif value:
-            self.config.platform = 'noarch'
+            self.config.host_platform = 'noarch'
 
-    def get_output_metadata(self, output, permit_unsatisfiable_variants=True):
+    def get_output_metadata(self, output):
         output_metadata = self.copy()
         output_metadata.meta['package']['name'] = output.get('name', self.name())
         requirements = output_metadata.meta.get('requirements', {})
@@ -1225,6 +1226,7 @@ class MetaData(object):
             build_reqs = output_reqs.get('build', []) + requirements.get('build', [])
             run_reqs = output_reqs.get('run', []) + requirements.get('run', [])
         else:
+            output_reqs = ensure_list(output_reqs)
             build_reqs = output_reqs + requirements.get('build', [])
             run_reqs = output_reqs + requirements.get('run', [])
         requirements['build'] = build_reqs
@@ -1259,12 +1261,13 @@ class MetaData(object):
 
     def get_output_metadata_set(self, files=None, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=True):
+        from .render import finalize_metadata
         outputs = self.get_section('outputs')
         metadata = []
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
-        requirements = self.get_value('requirements/run')
+        requirements = self.meta.get('requirements', {})
         try:
             if not outputs:
                 outputs = [{'name': self.name(),
@@ -1294,7 +1297,7 @@ class MetaData(object):
                     out['noarch_python'] = out.get('noarch_python',
                                                     self.get_value('build/noarch_python'))
                     out['noarch'] = out.get('noarch', self.get_value('build/noarch'))
-                metadata.append(self.get_output_metadata(out, permit_unsatisfiable_variants))
+                metadata.append(self.get_output_metadata(out))
         except SystemExit:
             if not permit_undefined_jinja:
                 raise
@@ -1303,16 +1306,31 @@ class MetaData(object):
 
         render_order = toposort(list(six.moves.zip(outputs, metadata)))
         outputs = {}
-        if hasattr(self.config, 'variants'):
-            for (output_d, metadata) in render_order:
-                for variant in self.config.variants:
-                    metadata.other_outputs = outputs
-                    # this reparses with the new outputs info, which should fill in any subpackage
-                    #    jinja2 funcs
-                    metadata.config.variant = variant
-                    metadata.parse_until_resolved(stringify_subpackage_pins=True)
-                    output_d = [out for out in metadata.meta['outputs']
-                                if out.get('name') == output_d['name']][0]
-                    fm = metadata.get_output_metadata(output_d, permit_unsatisfiable_variants=False)
+        for (output_d, metadata) in render_order:
+            for variant in (self.config.variants if hasattr(self.config, 'variants')
+                            else [self.config.variant]):
+                metadata.other_outputs = outputs
+                # this reparses with the new outputs info, which should fill in any subpackage
+                #    jinja2 funcs
+                metadata.config.variant = variant
+                metadata.parse_until_resolved(stub_subpackages=False)
+                for out in metadata.meta.get('outputs', []):
+                    if out.get('name') == output_d.get('name'):
+                        output_d = out
+                fm = metadata.get_output_metadata(output_d)
+
+                try:
+                    # we'll still filter out subpackages in finalize_metadata
+                    fm = finalize_metadata(fm, fm.config.index)
                     outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
+
+                except DependencyNeedsBuildingError as e:
+                    if not permit_unsatisfiable_variants:
+                        raise
+                    else:
+                        log = utils.get_logger(__name__)
+                        log.warn("Could not finalize metadata due to missing dependencies: {}"
+                                    .format(e.packages))
+
+                        outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
         return list(outputs.values())

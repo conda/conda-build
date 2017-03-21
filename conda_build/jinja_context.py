@@ -12,6 +12,7 @@ from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
 from .index import get_build_index
 from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
+from .render import get_env_dependencies
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -224,9 +225,8 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     # There are two cases considered here (so far):
     # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
     # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-
-    versions = {p.split(' ')[0]: p.split(' ')[1]
-                for p in get_env_dependencies(m, 'build', m.config.variant, m.config.index)}
+    pins, _ = get_env_dependencies(m, 'build', m.config.variant, m.config.index)
+    versions = {p.split(' ')[0]: p.split(' ')[1] for p in pins}
     if versions:
         version = lower_bound or versions.get(package_name)
         if version:
@@ -264,25 +264,20 @@ def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit
 
 
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
-                   exact=False, permit_undefined_jinja=True, stringify_subpackage_pins=False):
+                   exact=False, permit_undefined_jinja=True, stub_subpackages=False):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    if stringify_subpackage_pins:
-        # As close to leaving it unmodified as possible. I hope to be able to use the else: clause directly
-        # below later, once the exact name of subpackage in question has been determined (during toposort
-        # install).
-        return "\"{{{{ pin_subpackage('{}', min_pin='{}', max_pin='{}', exact={}) }}}}\"".format(subpackage_name,
-                                                                                                 min_pin,
-                                                                                                 max_pin,
-                                                                                                 exact)
+    if stub_subpackages:
+        pin = None
     else:
         assert hasattr(metadata, 'other_outputs')
         key = (subpackage_name, HashableDict(metadata.config.variant))
-        return pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin, exact,
-                                              permit_undefined_jinja)
+        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin, exact,
+                                             permit_undefined_jinja)
+    return pin
 
 
 # map python version to default compiler on windows, to match upstream python
@@ -348,7 +343,7 @@ def compiler(language, config, permit_undefined_jinja=False):
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
-                      stringify_subpackage_pins=False):
+                      stub_subpackages=False):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -373,7 +368,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                permit_undefined_jinja=permit_undefined_jinja),
         pin_subpackage=partial(pin_subpackage, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,
-                               stringify_subpackage_pins=stringify_subpackage_pins),
+                               stub_subpackages=stub_subpackages),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)

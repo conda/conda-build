@@ -584,6 +584,9 @@ def get_install_actions(prefix, index, specs, config, retries=0):
     else:
         capture = utils.capture
     actions = {'LINK': []}
+    for feature, value in feature_list:
+        if value:
+            specs.append('%s@' % feature)
     specs = [_ensure_valid_spec(spec) for spec in specs]
     if specs:
         # this is hiding output like:
@@ -591,7 +594,7 @@ def get_install_actions(prefix, index, specs, config, retries=0):
         #    Solving package specifications: ..........
         with capture():
             try:
-                actions = install_actions(prefix, index, specs)
+                actions = install_actions(prefix, index, specs, force=True)
             except NoPackagesFoundError as exc:
                 raise DependencyNeedsBuildingError(exc)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
@@ -628,7 +631,8 @@ def get_install_actions(prefix, index, specs, config, retries=0):
     return actions
 
 
-def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=None, locks=None):
+def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry=0,
+               index=None, locks=None):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -642,17 +646,12 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
     with external_logger_context:
         log = utils.get_logger(__name__)
 
-        if os.path.isdir(prefix):
-            utils.rm_rf(prefix)
+        # if os.path.isdir(prefix):
+        #     utils.rm_rf(prefix)
 
-        specs = list(set(specs))
-        for feature, value in feature_list:
-            if value:
-                specs.append('%s@' % feature)
-
-        if specs:  # Don't waste time if there is nothing to do
+        if specs_or_actions:  # Don't waste time if there is nothing to do
             log.debug("Creating environment in %s", prefix)
-            log.debug(str(specs))
+            log.debug(str(specs_or_actions))
 
             with utils.path_prepended(prefix):
                 if not locks:
@@ -661,7 +660,12 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         if not index:
                             index = get_build_index(config=config, subdir=subdir)
-                        actions = get_install_actions(prefix, index, specs, config)
+                        # input is a list - it's specs in MatchSpec format
+                        if not hasattr(specs_or_actions, 'keys'):
+                            specs = list(set(specs_or_actions))
+                            actions = get_install_actions(prefix, index, specs, config)
+                        else:
+                            actions = specs_or_actions
                         display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():
@@ -688,14 +692,14 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                             #   Setting this here is important because we use it below (symlink)
                             prefix = config.build_prefix
 
-                            create_env(prefix, specs, config=config, subdir=subdir,
+                            create_env(prefix, actions, config=config, subdir=subdir,
                                        clear_cache=clear_cache)
                         else:
                             raise
                     elif 'lock' in str(exc):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, specs, config=config, subdir=subdir,
+                            create_env(prefix, actions, config=config, subdir=subdir,
                                     clear_cache=clear_cache, retry=retry + 1)
                     elif ('requires a minimum conda version' in str(exc) or
                           'link a source that does not' in str(exc)):
@@ -711,7 +715,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                                 utils.rm_rf(pkg_dir)
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, specs, config=config, subdir=subdir,
+                            create_env(prefix, actions, config=config, subdir=subdir,
                                     clear_cache=clear_cache, retry=retry + 1)
                         else:
                             log.error("Failed to create env, max retries exceeded.")
@@ -730,7 +734,7 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
                                 utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                        create_env(prefix, specs, config=config, subdir=subdir,
+                        create_env(prefix, actions, config=config, subdir=subdir,
                                    clear_cache=clear_cache, retry=retry + 1)
                     else:
                         log.error("Failed to create env, max retries exceeded.")
@@ -740,6 +744,17 @@ def create_env(prefix, specs, config, subdir, clear_cache=True, retry=0, index=N
     else:
         shell = "bash"
     symlink_conda(prefix, sys.prefix, shell)
+
+
+def remove_env(install_actions, index, config):
+    if install_actions:
+        install_actions['UNLINK'] = install_actions['LINK']
+        del install_actions['LINK']
+        display_actions(install_actions, index)
+        if utils.on_win:
+            for k, v in os.environ.items():
+                os.environ[k] = str(v)
+        execute_actions(install_actions, index, verbose=config.debug)
 
 
 def clean_pkg_cache(dist, config):

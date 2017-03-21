@@ -74,14 +74,16 @@ def test_get_output_file_path_metadata_object(testing_metadata):
 def test_get_output_file_path_jinja2(testing_workdir, testing_config):
     # If this test does not raise, it's an indicator that the workdir is not
     #    being cleaned as it should.
+    recipe = os.path.join(metadata_dir, "source_git_jinja2")
 
     # First get metadata with a recipe that is known to need a download:
     with pytest.raises((ValueError, SystemExit)):
-        build_path = api.get_output_file_path(os.path.join(metadata_dir, "source_git_jinja2"),
+        build_path = api.get_output_file_path(recipe,
                                               config=testing_config,
                                               no_download_source=True)[0]
+
     metadata, need_download, need_reparse_in_env = api.render(
-        os.path.join(metadata_dir, "source_git_jinja2"),
+        recipe,
         config=testing_config,
         no_download_source=False)[0]
     build_path = api.get_output_file_path(metadata)[0]

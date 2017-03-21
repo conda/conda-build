@@ -40,12 +40,12 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                                     config=config, variants=variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
 
-    output_metas = []
+    output_metas = {}
     for meta, download, render_in_env in metadata_tuples:
         for _, om in meta.get_output_metadata_set(
                 permit_unsatisfiable_variants=permit_unsatisfiable_variants):
-            output_metas.append((om, download, render_in_env))
-    return output_metas
+            output_metas[om.dist()] = ((om, download, render_in_env))
+    return list(output_metas.values())
 
 
 def output_yaml(metadata, file_path=None):

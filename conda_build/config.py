@@ -200,11 +200,10 @@ class Config(object):
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        if 'noarch' not in (self._platform, value):
-            log.warn("setting build platform. This is only useful when "
-                    "pretending to be on another " "another platform, such as "
-                    "for rendering necessary dependencies on a non-native "
-                    "platform. I trust that you know what you're doing.")
+        log.warn("setting build platform. This is only useful when "
+                "pretending to be on another " "another platform, such as "
+                "for rendering necessary dependencies on a non-native "
+                "platform. I trust that you know what you're doing.")
         self._platform = value
 
     @property
@@ -223,7 +222,7 @@ class Config(object):
 
     @property
     def noarch(self):
-        return self.platform == 'noarch'
+        return self.host_platform == 'noarch'
 
     def reset_platform(self):
         if not self.platform == cc_platform:
@@ -231,10 +230,7 @@ class Config(object):
 
     @property
     def subdir(self):
-        if self.platform == 'noarch':
-            return self.platform
-        else:
-            return "-".join([self.platform, str(self.arch)])
+        return "-".join([self.platform, str(self.arch)])
 
     @property
     def host_platform(self):
@@ -246,7 +242,10 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        subdir = "-".join([self.host_platform, str(self.host_arch)])
+        if self.host_platform == 'noarch':
+            subdir = self.platform
+        else:
+            subdir = "-".join([self.host_platform, str(self.host_arch)])
         return SUBDIR_ALIASES.get(subdir, subdir)
 
     @host_subdir.setter
@@ -527,6 +526,8 @@ class Config(object):
     def copy(self):
         new = copy.copy(self)
         new.variant = copy.deepcopy(self.variant)
+        if hasattr(self, 'variants'):
+            new.variants = copy.deepcopy(self.variants)
         return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True

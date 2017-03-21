@@ -57,27 +57,6 @@ def test_env_creation_with_prefix_fallback_disabled():
                            subdir=subdir)
 
 
-@pytest.mark.serial
-@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
-                                    " not length dependent"))
-def test_catch_openssl_legacy_short_prefix_error(testing_metadata, caplog):
-    testing_metadata.config = api.get_or_merge_config(testing_metadata.config, python='2.6')
-    testing_metadata = reparse(testing_metadata, testing_metadata.config.index)
-    cmd = """
-import os
-
-prefix = os.environ['PREFIX']
-fn = os.path.join(prefix, 'binary-has-prefix')
-
-with open(fn, 'wb') as f:
-    f.write(prefix.encode('utf-8') + b'\x00\x00')
- """
-    testing_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
-
-    api.build(testing_metadata)
-    assert "Falling back to legacy prefix" in caplog.text
-
-
 def test_ensure_valid_spec():
     assert environ._ensure_valid_spec('python') == 'python'
     assert environ._ensure_valid_spec('python 2.7') == 'python 2.7.*'

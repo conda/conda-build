@@ -46,8 +46,8 @@ from .conda_interface import dist_str_in_index, Dist
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
-from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants)
+from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse,
+                                distribute_variants, expand_outputs)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -768,8 +768,7 @@ def bundle_conda(output, metadata, env, **kw):
     # remove info files from build prefix. We do not remove the actual package's files as subsequent
     # builds may well need them. In other words, the caller manages the files in output['checksums']
     for f in files:
-        if f not in output['checksums']:
-            remove_prefix_file(f, metadata.config.build_prefix)
+        remove_prefix_file(f, metadata.config.build_prefix)
 
     return final_output
 
@@ -807,7 +806,7 @@ bundlers = {
 
 
 def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False,
-          output_metas=None, built_packages=None):
+          built_packages=None):
     '''
     Build the package with the specified metadata.
 
@@ -821,8 +820,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
     default_return = {}
     if not built_packages:
         built_packages = {}
-    if not output_metas:
-        output_metas = []
 
     if m.skip():
         utils.print_skip_message(m)
@@ -886,10 +883,12 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             with utils.path_prepended(m.config.build_prefix):
                 source.provide(m)
             m.final = False
-            m.parse_until_resolved(stringify_subpackage_pins=True)
+            m.parse_until_resolved(stub_subpackages=True)
 
         elif need_reparse_in_env:
             m = reparse(m, index)
+
+        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)], index)
 
         if m.config.skip_existing:
             package_locations = [is_package_built(om) for om, _, _ in output_metas]
@@ -977,20 +976,22 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
         outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
-        finalized_outputs = dict()
         for (output_d, m) in outputs:
-            if not m.final:
-                m = finalize_metadata(m, index, finalized_outputs)
-                key = (output_d['name'], utils.HashableDict(m.config.variant))
-                finalized_outputs[key] = (output_d, m)
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
-
             pkg_path = bldpkg_path(m)
             if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                environ.create_env(m.config.host_prefix, m.ms_depends('build'), config=m.config,
+                actions = environ.get_install_actions(m.config.host_prefix, index,
+                                                      m.ms_depends('build'), m.config)
+                utils.trim_empty_keys(actions)
+                environ.create_env(m.config.host_prefix, actions, config=m.config,
                                    subdir=m.config.host_subdir)
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
+                environ.remove_env(actions, index, m.config)
                 new_pkgs[built_package] = (output_d, m)
+                # must rebuild index because conda has no way to incrementally add our last
+                #    package to the index.
+                index = get_build_index(config=m.config, subdir=m.config.host_subdir,
+                                        clear_cache=True)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
@@ -1362,8 +1363,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     packages_from_this = build(metadata, index=index, post=post,
                                                need_source_download=need_source_download,
                                                need_reparse_in_env=need_reparse_in_env,
-                                               built_packages=built_packages,
-                                               output_metas=metadata_tuples)
+                                               built_packages=built_packages)
                     if not notest:
                         for pkg, dict_and_meta in packages_from_this.items():
                             if pkg.endswith('.tar.bz2'):

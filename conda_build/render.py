@@ -28,10 +28,10 @@ from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
-                                  combine_variants)
+                                  combine_variants, conform_variants_to_value)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
-from conda_build.jinja_context import pin_subpackage_against_outputs
+# from conda_build.jinja_context import pin_subpackage_against_outputs
 
 
 def bldpkg_path(m):
@@ -60,6 +60,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
         specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
     subpackages = []
     dependencies = []
+    pass_through_deps = []
     # ones that get filtered from actual versioning, to exclude them from the hash calculation
     for spec in specs:
         if not exclude_pattern or not exclude_pattern.match(spec):
@@ -75,10 +76,11 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
             for key, value in variant.items():
                 if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
                     dependencies.append(" ".join((spec_name, value)))
-        # else:
-        #     append_specs.append(spec)
+        elif exclude_pattern.match(spec):
+            pass_through_deps.append(spec)
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
+    dependencies = list(set(dependencies))
     with TemporaryDirectory(suffix=random_string) as tmpdir:
         try:
             actions = environ.get_install_actions(tmpdir, index, dependencies, m.config)
@@ -87,7 +89,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
             raise DependencyNeedsBuildingError(e)
 
     specs = actions_to_pins(actions)
-    return specs + subpackages
+    return specs + subpackages + pass_through_deps, actions
 
 
 def strip_channel(spec_str):
@@ -116,68 +118,62 @@ def get_pin_from_build(m, dep, build_dep_versions):
     return dep
 
 
-def get_upstream_pins(m, dependencies, index):
+def get_upstream_pins(m, actions, index):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
-    dependencies = [strip_channel(dep) for dep in dependencies]
-    random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                            for _ in range(10))
-    with TemporaryDirectory(suffix=random_string) as tmpdir:
-        actions = environ.get_install_actions(tmpdir, index, dependencies,
-                                            m.config)
-        additional_specs = []
-        linked_packages = actions['LINK']
-        # edit the plan to download all necessary packages
-        for key in ('LINK', 'EXTRACT', 'UNLINK'):
-            if key in actions:
-                del actions[key]
-        # this should be just downloading packages.  We don't need to extract them -
-        #    we read contents directly
-        if actions:
-            execute_actions(actions, index, verbose=m.config.debug)
+    additional_specs = []
+    linked_packages = actions['LINK']
+    # edit the plan to download all necessary packages
+    for key in ('LINK', 'EXTRACT', 'UNLINK'):
+        if key in actions:
+            del actions[key]
+    # this should be just downloading packages.  We don't need to extract them -
+    #    we read contents directly
+    if actions:
+        execute_actions(actions, index, verbose=m.config.debug)
 
-            _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
-            for pkg in linked_packages:
-                for pkgs_dir in _pkgs_dirs:
-                    if hasattr(pkg, 'dist_name'):
-                        pkg_dist = pkg.dist_name
-                    else:
-                        pkg = strip_channel(pkg)
-                        pkg_dist = pkg.split(' ')[0]
-
-                    pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-                    pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
-                    if os.path.isdir(pkg_dir):
-                        downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
-                        if os.path.isfile(downstream_file):
-                            additional_specs.extend(open(downstream_file).read().splitlines())
-                        break
-                    elif os.path.isfile(pkg_file):
-                        extra_specs = utils.package_has_file(pkg_file, 'info/pin_downstream')
-                        if extra_specs:
-                            additional_specs.extend(extra_specs.splitlines())
-                        break
-                    elif utils.conda_43():
-                        # TODO: this is a vile hack reaching into conda's internals. Replace with
-                        #    proper conda API when available.
-                        try:
-                            pfe = ProgressiveFetchExtract(link_dists=[pkg],
-                                                        index=index)
-                            pfe.execute()
-                            for pkgs_dir in _pkgs_dirs:
-                                pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
-                                if os.path.isfile(pkg_file):
-                                    extra_specs = utils.package_has_file(pkg_file,
-                                                                        'info/pin_downstream')
-                                    if extra_specs:
-                                        additional_specs.extend(extra_specs.splitlines())
-                                    break
-                            break
-                        except KeyError:
-                            raise DependencyNeedsBuildingError(packages=[pkg.name])
+        _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
+        for pkg in linked_packages:
+            for pkgs_dir in _pkgs_dirs:
+                if hasattr(pkg, 'dist_name'):
+                    pkg_dist = pkg.dist_name
                 else:
-                    raise RuntimeError("Didn't find expected package {} in package cache ({})"
-                                        .format(pkg_dist, _pkgs_dirs))
+                    pkg = strip_channel(pkg)
+                    pkg_dist = pkg.split(' ')[0]
+
+                pkg_dir = os.path.join(pkgs_dir, pkg_dist)
+                pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
+                if os.path.isdir(pkg_dir):
+                    downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
+                    if os.path.isfile(downstream_file):
+                        additional_specs.extend(open(downstream_file).read().splitlines())
+                    break
+                elif os.path.isfile(pkg_file):
+                    extra_specs = utils.package_has_file(pkg_file, 'info/pin_downstream')
+                    if extra_specs:
+                        additional_specs.extend(extra_specs.splitlines())
+                    break
+                elif utils.conda_43():
+                    # TODO: this is a vile hack reaching into conda's internals. Replace with
+                    #    proper conda API when available.
+                    try:
+                        pfe = ProgressiveFetchExtract(link_dists=[pkg],
+                                                    index=index)
+                        pfe.execute()
+                        for pkgs_dir in _pkgs_dirs:
+                            pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
+                            if os.path.isfile(pkg_file):
+                                extra_specs = utils.package_has_file(pkg_file,
+                                                                    'info/pin_downstream')
+                                if extra_specs:
+                                    additional_specs.extend(extra_specs.splitlines())
+                                break
+                        break
+                    except KeyError:
+                        raise DependencyNeedsBuildingError(packages=[pkg.name])
+            else:
+                raise RuntimeError("Didn't find expected package {} in package cache ({})"
+                                    .format(pkg_dist, _pkgs_dirs))
 
     return additional_specs
 
@@ -188,36 +184,20 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
         index = get_build_index(m.config, m.config.build_subdir)
 
     exclude_pattern = None
-    excludes = m.config.variant.get('exclude_from_build_hash', [])
-    if excludes:
-        exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc) for exc in excludes))
+    excludes = set(m.config.variant.get('exclude_from_build_hash', []))
+    output_excludes = set()
+    if hasattr(m, 'other_outputs'):
+        output_excludes = set(name for (name, variant) in m.other_outputs.keys())
 
-    if not finalized_outputs:
-        finalized_outputs = m.other_outputs
+    if excludes or output_excludes:
+        exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+                                          for exc in excludes | output_excludes))
 
-    # these are obtained from a sort of dry-run of conda.  These are the actual packages that would
-    #     be installed in the environment.
-
-    for typ in ('run', 'build'):
-        for idx, spec in enumerate(m.get_value('requirements/'+typ, [])):
-            if '{{ pin_subpackage' in spec:
-                match = re.match(".*pin_subpackage\('(.*)',\smin_pin='(.*)',\smax_pin='(.*)',\sexact=(.*)\)", spec)
-                subpackage_name = match.group(1)
-                min_pin = match.group(2)
-                max_pin = match.group(3)
-                exact = match.group(4)
-                # Current problem here is that this will use other_outputs which has not been finalized ...
-                # Keeping track of finalized stuff myself may work, unless we can make other_outputs final
-                # from the get-go (which would involve source downloading at that time).
-                key = (subpackage_name, utils.HashableDict(m.config.variant))
-                pin = pin_subpackage_against_outputs(key, finalized_outputs, min_pin, max_pin, exact, False)
-                m.meta['requirements'][typ][idx] = pin
-
-    build_deps = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
+    build_deps, actions = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
 
-    extra_run_specs = get_upstream_pins(m, build_deps, index)
+    extra_run_specs = get_upstream_pins(m, actions, index)
 
     reset_index = False
     if m.config.build_subdir != m.config.host_subdir:
@@ -234,8 +214,11 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
     #     names to have this behavior.
     requirements = rendered_metadata.meta.get('requirements', {})
     run_deps = requirements.get('run', [])
-    full_build_deps = get_env_dependencies(m, 'build', m.config.variant, index,
-                                            exclude_pattern=None)
+    if output_excludes:
+        exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+                                          for exc in output_excludes))
+    full_build_deps, _ = get_env_dependencies(m, 'build', m.config.variant, index,
+                                              exclude_pattern=exclude_pattern)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
@@ -314,12 +297,17 @@ def reparse(metadata, index):
 
 
 def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False,
-                        stringify_subpackage_pins=False):
+                        stub_subpackages=False):
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
     unsatisfiable_variants = []
     packages_needing_building = set()
+
+    # don't bother distributing python if it's a noarch package
+    if metadata.noarch or metadata.noarch_python:
+        conform_dict = {'python': variants[0]['python']}
+        variants = conform_variants_to_value(variants, conform_dict)
 
     # store these for reference later
     metadata.config.variants = variants
@@ -327,58 +315,68 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
     if variants:
         for variant in variants:
             mv = metadata.copy()
-            # deep copy the sensitive parts to decouple metadata objects
-            mv.config = metadata.config.copy()
-            mv.config.variant = combine_variants(variant, mv.config.variant)
-            mv.final = False
 
-            # TODO: may need to compute new build id, or at least remove any envs before building
-            #    another variant
+            # this determines which variants were used, and thus which ones should be locked for
+            #     future rendering
+            mv.final = False
+            mv.config.variant = {}
+            mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
+            vars_in_recipe = mv.undefined_jinja_vars
+            vars_in_recipe = {k: variant.get(k) for k in vars_in_recipe}
+            conform_dict = {}
+
+            mv.config.variant = combine_variants(variant, mv.config.variant)
+
+            for (key, version) in vars_in_recipe.items():
+                for dep in mv.ms_depends('build') + mv.ms_depends('run'):
+                    key = key.replace("-", "[-_]")
+                    if key == 'python' or (key in variant and
+                                    re.search(r"^{0}\s+{1}".format(key, variant[key]), str(dep))):
+                        # We use this variant in the top-level recipe.
+                        # constrain the stored variants to only this version in the output
+                        #     variant mapping
+                        conform_dict[key] = version
+
+            mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
+            # this is populated during the output phase, but must exist during rendering
+            # mv.other_outputs = {}
 
             if 'target_platform' in variant:
                 mv.config.host_subdir = variant['target_platform']
             if not need_reparse_in_env:
                 try:
-                    mv.parse_until_resolved(stringify_subpackage_pins=stringify_subpackage_pins)
+                    mv.parse_until_resolved(stub_subpackages=stub_subpackages)
                     need_source_download = (bool(mv.meta.get('source')) and
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
-                    # this is a bit wasteful. We don't store the output here -
-                    #    we'll have to recompute it later. We don't store it,
-                    #    so that we can have per-subpackage exclusions from the
-                    #    hash. Since finalizing brings in *all* build-time
-                    #    packages, notest just the ones from the recipe, it is
-                    #    impossible to remove them in the general case.
-                    #    Instead, we just leave the recipe unfinalized until
-                    #    then, so that by excluding one higher-level package
-                    #    (e.g. python), we also won't include its deps in the
-                    #    hash
-                    if not stringify_subpackage_pins:
-                        finalize_metadata(mv, index)
+                    fm = finalize_metadata(mv, index)
+                    rendered_metadata[fm.dist()] = (mv, need_source_download,
+                                                    need_reparse_in_env)
                 except DependencyNeedsBuildingError as e:
                     unsatisfiable_variants.append(variant)
                     packages_needing_building.update(set(e.packages))
                     if permit_unsatisfiable_variants:
                         rendered_metadata[mv.dist()] = (mv, need_source_download,
-                                                            need_reparse_in_env)
+                                                        need_reparse_in_env)
                     continue
                 except exceptions.UnableToParseMissingSetuptoolsDependencies:
                     need_reparse_in_env = True
                 except:
                     raise
-
-            # computes hashes based on whatever the current specs are - not the final specs
-            #    This is a deduplication step.  Any variants that end up identical because a
-            #    given variant is not used in a recipe are effectively ignored, though we still pay
-            #    the price to parse for that variant.
-            rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
+            else:
+                # computes hashes based on whatever the current specs are - not the final specs
+                #    This is a deduplication step.  Any variants that end up identical because a
+                #    given variant is not used in a recipe are effectively ignored, though we still
+                #    pay the price to parse for that variant.
+                rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
     else:
         rendered_metadata['base_recipe'] = (metadata, need_source_download, need_reparse_in_env)
+
+    if unsatisfiable_variants and not permit_unsatisfiable_variants:
+        raise DependencyNeedsBuildingError(packages=packages_needing_building)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
-    if unsatisfiable_variants and not permit_unsatisfiable_variants:
-        raise DependencyNeedsBuildingError(packages=packages_needing_building)
     return list(rendered_metadata.values())
 
 
@@ -459,7 +457,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                     get_package_variants(m))
         rendered_metadata = distribute_variants(m, variants, index,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    stringify_subpackage_pins=True)
+                                    stub_subpackages=True)
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)
