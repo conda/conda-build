@@ -390,6 +390,7 @@ def windows_vars(prefix):
         'HOMEPATH': os.getenv('HOMEPATH'),
         'LOCALAPPDATA': os.getenv('LOCALAPPDATA'),
         'LOGONSERVER': os.getenv('LOGONSERVER'),
+        'NUMBER_OF_PROCESSORS': os.getenv('NUMBER_OF_PROCESSORS'),
         'PATHEXT': os.getenv('PATHEXT'),
         'ProgramData': os.getenv('ProgramData'),
         'ProgramFiles': os.getenv('ProgramFiles'),
