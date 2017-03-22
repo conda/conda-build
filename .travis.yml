@@ -1,3 +1,4 @@
+sudo: required
 os: linux
 language: python
 python:
@@ -23,13 +24,14 @@ matrix:
         - CONDA_VERSION=4.2.x
       python: 3.6
 
-addons:
-  apt:
-    packages:
-    - attr
+# addons:
+#   apt:
+#     packages:
+#     - attr
 
 install:
   # show which shell we are running
+  - sudo apt-get install -y attr
   - ps -ef | grep $$
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -78,8 +80,6 @@ notifications:
 
 git:
   depth: 10000
-
-sudo: false
 
 after_success:
   - pip install codecov
