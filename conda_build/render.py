@@ -193,6 +193,13 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in excludes | output_excludes))
 
+    build_reqs = m.meta.get('requirements', {}).get('build', [])
+    # if python is in the build specs, but doesn't have a specific associated
+    #    version, make sure to add one
+    if build_reqs and 'python' in build_reqs:
+        build_reqs.append('python {}'.format(m.config.variant['python']))
+        m.meta['requirements']['build'] = build_reqs
+
     build_deps, actions = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
@@ -336,6 +343,10 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
                     conform_dict[key] = variant[key]
 
+            build_reqs = mv.meta.get('requirements', {}).get('build', [])
+            if 'python' in build_reqs:
+                conform_dict['python'] = variant['python']
+
             mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
             # reset this to our current variant to go ahead
             mv.config.variant = variant
@@ -350,12 +361,11 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                                             not os.listdir(mv.config.work_dir))
                     # if python is in the build specs, but doesn't have a specific associated
                     #    version, make sure to add one
-                    build_reqs = mv.meta.get('requirements', {}).get('build', [])
                     if build_reqs and 'python' in build_reqs:
                         build_reqs.append('python {}'.format(mv.config.variant['python']))
                         mv.meta['requirements']['build'] = build_reqs
                     fm = finalize_metadata(mv, index)
-                    rendered_metadata[fm.dist()] = (mv, need_source_download,
+                    rendered_metadata[fm.dist()] = (fm, need_source_download,
                                                     need_reparse_in_env)
                 except DependencyNeedsBuildingError as e:
                     unsatisfiable_variants.append(variant)

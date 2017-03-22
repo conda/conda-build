@@ -10,7 +10,7 @@ import six
 import sys
 
 from .conda_interface import iteritems, PY3, text_type
-from .conda_interface import memoized, md5_file
+from .conda_interface import md5_file
 from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
@@ -162,7 +162,6 @@ Error: Invalid selector in meta.yaml line %d:
     return '\n'.join(lines) + '\n'
 
 
-@memoized
 def yamlize(data):
     try:
         return yaml.load(data, Loader=BaseLoader)
@@ -492,6 +491,7 @@ def output_dict_from_top_level_meta(m, files=None):
                 'pin_downstream': m.meta.get('build', {}).get('pin_downstream'),
                 'noarch_python': m.get_value('build/noarch_python'),
                 'noarch': m.get_value('build/noarch'),
+                'type': 'conda',
                 }
     if files:
         output_d['files'] = files
@@ -1237,7 +1237,10 @@ class MetaData(object):
             output_metadata = self
         else:
             output_metadata = self.copy()
-            output_metadata.meta['package']['name'] = output.get('name', self.name())
+            name = output.get('name', self.name())
+            if 'type' in output and output['type'] != 'conda':
+                name = name + '_' + output['type']
+            output_metadata.meta['package']['name'] = name
             requirements = output_metadata.meta.get('requirements', {})
             output_reqs = output.get('requirements', {})
             if hasattr(output_reqs, 'keys'):
@@ -1320,39 +1323,46 @@ class MetaData(object):
             metadata = []
 
         render_order = toposort(list(six.moves.zip(outputs, metadata)))
+        non_conda_packages = []
         outputs = {}
         for (output_d, metadata) in render_order:
             if metadata.final:
-                # doesn't matter what the key is - we won't be using it in subdeps, because things
-                #    are already final.
+                # doesn't matter what the key is - we won't be using it in subdeps, because
+                #    things are already final.
                 outputs[metadata.name()] = (output_d, metadata)
             else:
                 for variant in (self.config.variants if hasattr(self.config, 'variants')
                                 else [self.config.variant]):
                     metadata.other_outputs = outputs
-                    # this reparses with the new outputs info, which should fill in any subpackage
-                    #    jinja2 funcs
+                    # this reparses with the new outputs info, which should fill in any
+                    #    subpackage jinja2 funcs
                     metadata.config.variant = variant
                     metadata.parse_until_resolved(stub_subpackages=False)
                     for out in metadata.meta.get('outputs', []):
                         if out.get('name') == output_d.get('name'):
-                            output_d = out
+                            utils.merge_or_update_dict(output_d, out, "", merge=False)
                             break
                     fm = metadata.get_output_metadata(output_d)
 
                     try:
                         # we'll still filter out subpackages in finalize_metadata
                         fm = finalize_metadata(fm, fm.config.index)
-                        outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
+                        if not output_d.get('type') or output_d.get('type') == 'conda':
+                            outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
+                        else:
+                            # for wheels and other non-conda packages, just append them at the end.
+                            #    no deduplication with hashes currently.
+                            # hard part about including any part of output_d
+                            #    outside of this func is that it is harder to
+                            #    obtain an exact match elsewhere
+                            non_conda_packages.append((output_d, fm))
 
                     except DependencyNeedsBuildingError as e:
                         if not permit_unsatisfiable_variants:
                             raise
                         else:
                             log = utils.get_logger(__name__)
-                            log.warn("Could not finalize metadata due to missing dependencies: {}"
-                                        .format(e.packages))
-
+                            log.warn("Could not finalize metadata due to missing dependencies: "
+                                        "{}".format(e.packages))
                             outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
-
-        return list(outputs.values())
+        return list(outputs.values()) + non_conda_packages
