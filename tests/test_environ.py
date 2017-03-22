@@ -5,7 +5,6 @@ import pytest
 from conda_build import environ, api
 from conda_build.conda_interface import PaddingError, LinkError, CondaError, subdir
 from conda_build.utils import on_win
-from conda_build.render import reparse
 
 from .utils import metadata_dir
 
@@ -29,8 +28,8 @@ def test_env_creation_with_short_prefix_does_not_deadlock(testing_workdir, caplo
         output = api.build(metadata)[0]
         assert not api.inspect_prefix_length(output, 255)
         config.prefix_length = 255
-        environ.create_env(config.build_prefix, specs=["python", metadata.name()], config=config,
-                           subdir=subdir)
+        environ.create_env(config.build_prefix, specs_or_actions=["python", metadata.name()],
+                           config=config, subdir=subdir)
     except:
         raise
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text
@@ -53,8 +52,8 @@ def test_env_creation_with_prefix_fallback_disabled():
         output = api.build(metadata)[0]
         assert not api.inspect_prefix_length(output, 255)
         config.prefix_length = 255
-        environ.create_env(config.build_prefix, specs=["python", metadata.name()], config=config,
-                           subdir=subdir)
+        environ.create_env(config.build_prefix, specs_or_actions=["python", metadata.name()],
+                           config=config, subdir=subdir)
 
 
 def test_ensure_valid_spec():

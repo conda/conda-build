@@ -3,7 +3,7 @@
 # Ensure we are in a git repo
 [ -d .git ]
 git describe
-[ "$(git describe)" = 1.20.2-1-g47279de ]
+[ "$(git describe)" = 1.20.2 ]
 
 # check if GIT_* variables are defined
 for i in GIT_DESCRIBE_TAG GIT_DESCRIBE_NUMBER GIT_DESCRIBE_HASH GIT_FULL_HASH

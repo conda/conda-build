@@ -28,7 +28,7 @@ from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
-                                  combine_variants, conform_variants_to_value)
+                                  conform_variants_to_value)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
@@ -313,6 +313,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
     metadata.config.variants = variants
 
     if variants:
+        recipe_requirements = metadata.extract_requirements_text()
         for variant in variants:
             mv = metadata.copy()
 
@@ -321,25 +322,23 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
             mv.final = False
             mv.config.variant = {}
             mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
-            vars_in_recipe = mv.undefined_jinja_vars
-            vars_in_recipe = {k: variant.get(k) for k in vars_in_recipe}
+            vars_in_recipe = set(mv.undefined_jinja_vars)
             conform_dict = {}
 
-            mv.config.variant = combine_variants(variant, mv.config.variant)
-
-            for (key, version) in vars_in_recipe.items():
-                for dep in mv.ms_depends('build') + mv.ms_depends('run'):
-                    key = key.replace("-", "[-_]")
-                    if key == 'python' or (key in variant and
-                                    re.search(r"^{0}\s+{1}".format(key, variant[key]), str(dep))):
-                        # We use this variant in the top-level recipe.
-                        # constrain the stored variants to only this version in the output
-                        #     variant mapping
-                        conform_dict[key] = version
+            for key in vars_in_recipe:
+                if PY3 and hasattr(recipe_requirements, 'decode'):
+                    recipe_requirements = recipe_requirements.decode()
+                elif not PY3 and hasattr(recipe_requirements, 'encode'):
+                    recipe_requirements = recipe_requirements.encode()
+                # We use this variant in the top-level recipe.
+                # constrain the stored variants to only this version in the output
+                #     variant mapping
+                if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
+                    conform_dict[key] = variant[key]
 
             mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
-            # this is populated during the output phase, but must exist during rendering
-            # mv.other_outputs = {}
+            # reset this to our current variant to go ahead
+            mv.config.variant = variant
 
             if 'target_platform' in variant:
                 mv.config.host_subdir = variant['target_platform']

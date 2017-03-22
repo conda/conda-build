@@ -336,12 +336,6 @@ def _git_clean(source_meta):
     return ret_meta
 
 
-def _extract_requirements_text(recipe_text):
-    match = re.search(r'(^requirements:.*?)(test|extra|about|outputs|\Z)', recipe_text,
-                     flags=re.MULTILINE | re.DOTALL)
-    return match.group(1) if match else None
-
-
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
@@ -1160,6 +1154,18 @@ class MetaData(object):
                             return vcs
         return None
 
+    def extract_requirements_text(self):
+        text = ""
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                recipe_text = f.read()
+            if PY3 and hasattr(recipe_text, 'decode'):
+                recipe_text = recipe_text.decode()
+            match = re.search(r'(^requirements:.*?)(test|extra|about|outputs|\Z)', recipe_text,
+                            flags=re.MULTILINE | re.DOTALL)
+            text = match.group(1) if match else ""
+        return text
+
     @property
     def uses_subpackage(self):
         outputs = self.get_section('outputs')
@@ -1170,10 +1176,7 @@ class MetaData(object):
                 in_reqs = any(name_re.match(req) for req in self.get_value('requirements/run'))
         subpackage_pin = False
         if not in_reqs and self.meta_path:
-            with open(self.meta_path) as f:
-                data = _extract_requirements_text(f.read())
-                if PY3 and hasattr(data, 'decode'):
-                    data = data.decode()
+                data = self.extract_requirements_text()
                 if data:
                     subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
         return in_reqs or bool(subpackage_pin)
@@ -1316,30 +1319,37 @@ class MetaData(object):
         render_order = toposort(list(six.moves.zip(outputs, metadata)))
         outputs = {}
         for (output_d, metadata) in render_order:
-            for variant in (self.config.variants if hasattr(self.config, 'variants')
-                            else [self.config.variant]):
-                metadata.other_outputs = outputs
-                # this reparses with the new outputs info, which should fill in any subpackage
-                #    jinja2 funcs
-                metadata.config.variant = variant
-                metadata.parse_until_resolved(stub_subpackages=False)
-                for out in metadata.meta.get('outputs', []):
-                    if out.get('name') == output_d.get('name'):
-                        output_d = out
-                fm = metadata.get_output_metadata(output_d)
+            if metadata.final:
+                # doesn't matter what the key is - we won't be using it in subdeps, because things
+                #    are already final.
+                outputs[metadata.name()] = (output_d, metadata)
+            else:
+                for variant in (self.config.variants if hasattr(self.config, 'variants')
+                                else [self.config.variant]):
+                    metadata.other_outputs = outputs
+                    # this reparses with the new outputs info, which should fill in any subpackage
+                    #    jinja2 funcs
+                    metadata.config.variant = variant
+                    metadata.parse_until_resolved(stub_subpackages=False)
+                    for out in metadata.meta.get('outputs', []):
+                        if out.get('name') == output_d.get('name'):
+                            output_d = out
+                            break
+                    fm = metadata.get_output_metadata(output_d)
 
-                try:
-                    # we'll still filter out subpackages in finalize_metadata
-                    fm = finalize_metadata(fm, fm.config.index)
-                    outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
+                    try:
+                        # we'll still filter out subpackages in finalize_metadata
+                        fm = finalize_metadata(fm, fm.config.index)
+                        outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
 
-                except DependencyNeedsBuildingError as e:
-                    if not permit_unsatisfiable_variants:
-                        raise
-                    else:
-                        log = utils.get_logger(__name__)
-                        log.warn("Could not finalize metadata due to missing dependencies: {}"
-                                    .format(e.packages))
+                    except DependencyNeedsBuildingError as e:
+                        if not permit_unsatisfiable_variants:
+                            raise
+                        else:
+                            log = utils.get_logger(__name__)
+                            log.warn("Could not finalize metadata due to missing dependencies: {}"
+                                        .format(e.packages))
 
-                        outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
+                            outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
+
         return list(outputs.values())
