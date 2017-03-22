@@ -486,6 +486,18 @@ def toposort(outputs):
     return result
 
 
+def output_dict_from_top_level_meta(m, files=None):
+    requirements = m.meta.get('requirements', {})
+    output_d = {'name': m.name(), 'requirements': requirements,
+                'pin_downstream': m.meta.get('build', {}).get('pin_downstream'),
+                'noarch_python': m.get_value('build/noarch_python'),
+                'noarch': m.get_value('build/noarch'),
+                }
+    if files:
+        output_d['files'] = files
+    return output_d
+
+
 class MetaData(object):
     def __init__(self, path, config=None, variant=None):
 
@@ -1161,8 +1173,8 @@ class MetaData(object):
                 recipe_text = f.read()
             if PY3 and hasattr(recipe_text, 'decode'):
                 recipe_text = recipe_text.decode()
-            match = re.search(r'(^requirements:.*?)(test|extra|about|outputs|\Z)', recipe_text,
-                            flags=re.MULTILINE | re.DOTALL)
+            match = re.search(r'(^requirements:.*?)(^test:|^extra:|^about:|^outputs:|\Z)',
+                              recipe_text, flags=re.MULTILINE | re.DOTALL)
             text = match.group(1) if match else ""
         return text
 
@@ -1275,37 +1287,28 @@ class MetaData(object):
     def get_output_metadata_set(self, files=None, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=True):
         from .render import finalize_metadata
+
         outputs = self.get_section('outputs')
         metadata = []
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
-        requirements = self.meta.get('requirements', {})
         try:
             if not outputs:
-                outputs = [{'name': self.name(),
-                            'files': files,
-                            'requirements': requirements,
-                            'noarch_python': self.get_value('build/noarch_python'),
-                            'noarch': self.get_value('build/noarch')}]
+                outputs = [output_dict_from_top_level_meta(self, files)]
             else:
                 # make a metapackage for the top-level package if the top-level requirements
                 #     mention a subpackage,
                 # but only if a matching output name is not explicitly provided
                 if self.uses_subpackage and not any(self.name() == out.get('name', '')
                                                     for out in outputs):
-                    outputs.append({'name': self.name(), 'requirements': requirements,
-                                    'pin_downstream':
-                                        self.meta.get('build', {}).get('pin_downstream'),
-                                    'noarch_python': self.get_value('build/noarch_python'),
-                                    'noarch': self.get_value('build/noarch'),
-                                    })
+                    outputs.append(output_dict_from_top_level_meta(self, files))
             for out in outputs:
                 if (self.name() == out.get('name', '') and not (out.get('files') or
                                                                 out.get('script'))):
                     if files:
                         out['files'] = files
-                    out['requirements'] = requirements
+                    out['requirements'] = self.meta.get('requirements', {})
                     out['noarch_python'] = out.get('noarch_python',
                                                     self.get_value('build/noarch_python'))
                     out['noarch'] = out.get('noarch', self.get_value('build/noarch'))

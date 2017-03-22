@@ -1,8 +1,6 @@
-{% set version='1' %}
-
 package:
   name: intradependencies
-  version: {{ version }}
+  version: 1.0
 
 requirements:
   build:

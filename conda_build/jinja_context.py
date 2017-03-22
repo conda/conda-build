@@ -271,7 +271,7 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
     pinning on the runtime package that is also created by the compiler package recipe
     """
     if stub_subpackages:
-        pin = None
+        pin = subpackage_name
     else:
         assert hasattr(metadata, 'other_outputs')
         key = (subpackage_name, HashableDict(metadata.config.variant))

@@ -24,14 +24,11 @@ def test_env_creation_with_short_prefix_does_not_deadlock(testing_workdir, caplo
                         set_build_id=False, _prefix_length=80)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     metadata = api.render(recipe_path, config=config)[0][0]
-    try:
-        output = api.build(metadata)[0]
-        assert not api.inspect_prefix_length(output, 255)
-        config.prefix_length = 255
-        environ.create_env(config.build_prefix, specs_or_actions=["python", metadata.name()],
-                           config=config, subdir=subdir)
-    except:
-        raise
+    output = api.build(metadata)[0]
+    assert not api.inspect_prefix_length(output, 255)
+    config.prefix_length = 255
+    environ.create_env(config.build_prefix, specs_or_actions=["python", metadata.name()],
+                        config=config, subdir=subdir)
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text
 
 

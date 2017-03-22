@@ -691,6 +691,7 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                             # Set this here and use to create environ
                             #   Setting this here is important because we use it below (symlink)
                             prefix = config.build_prefix
+                            actions['PREFIX'] = prefix
 
                             create_env(prefix, actions, config=config, subdir=subdir,
                                        clear_cache=clear_cache)

@@ -124,3 +124,19 @@ def test_intradependencies(testing_workdir, testing_config):
         elif re.match('^lib[0-9]-', pkg):
             assert not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
             assert not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])
+
+
+def test_git_in_output_version(testing_config):
+    recipe = os.path.join(subpackage_dir, '_git_in_output_version')
+    outputs = api.build(recipe, config=testing_config)
+    assert len(outputs) == 1
+    assert os.path.basename(outputs[0]).startswith("git_version-1.21.11-h")
+
+
+def test_intradep_with_templated_output_name(testing_config):
+    recipe = os.path.join(subpackage_dir, '_intradep_with_templated_output_name')
+    metadata = api.render(recipe, config=testing_config)
+    assert len(metadata) == 3
+    expected_names = {'test_templated_subpackage_name', 'templated_subpackage_nameabc',
+                      'depends_on_templated'}
+    assert set((m.name() for (m, _, _) in metadata)) == expected_names

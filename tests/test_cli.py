@@ -455,8 +455,10 @@ def test_purge_all(testing_workdir, testing_metadata):
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
     api.output_yaml(testing_metadata, 'meta.yaml')
-    outputs = api.build(testing_workdir)
-    args = ['purge-all', '--croot', testing_metadata.config.croot]
-    main_build.execute(args)
-    assert not get_build_folders(testing_metadata.config.croot)
-    assert not any(os.path.isfile(fn) for fn in outputs)
+    with TemporaryDirectory() as tmpdir:
+        testing_metadata.config.croot = tmpdir
+        outputs = api.build(testing_workdir, config=testing_metadata.config)
+        args = ['purge-all', '--croot', tmpdir]
+        main_build.execute(args)
+        assert not get_build_folders(testing_metadata.config.croot)
+        assert not any(os.path.isfile(fn) for fn in outputs)
