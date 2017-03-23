@@ -71,22 +71,6 @@ else:
     shell_path = '/bin/bash'
 
 
-def prefix_files(prefix):
-    '''
-    Returns a set of all files in prefix.
-    '''
-    res = set()
-    for root, dirs, files in os.walk(prefix):
-        for fn in files:
-            res.add(join(root, fn)[len(prefix) + 1:])
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path[len(prefix) + 1:])
-    res = set(utils.expand_globs(res, prefix))
-    return res
-
-
 def create_post_scripts(m):
     '''
     Create scripts to run after build step
@@ -618,7 +602,7 @@ def post_process_files(m, initial_prefix_files):
     # this is new-style noarch, with a value of 'python'
     if m.noarch != 'python':
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
-    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
 
     post_process(sorted(current_prefix_files - initial_prefix_files),
                     prefix=m.config.build_prefix,
@@ -628,7 +612,7 @@ def post_process_files(m, initial_prefix_files):
                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
     # The post processing may have deleted some files (like easy-install.pth)
-    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
     new_files = utils.filter_files(new_files, prefix=m.config.build_prefix)
 
@@ -654,7 +638,7 @@ can lead to packages that include their dependencies.""" % meta_files))
     elif m.noarch == 'python':
         noarch_python.populate_files(m, pkg_files, m.config.build_prefix, entry_point_script_names)
 
-    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
     new_files = current_prefix_files - initial_prefix_files
     fix_permissions(new_files, m.config.build_prefix)
 
@@ -676,7 +660,7 @@ def bundle_conda(output, metadata, env, **kw):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
-        initial_files = prefix_files(metadata.config.build_prefix)
+        initial_files = utils.prefix_files(metadata.config.build_prefix)
         env_output = env.copy()
         env_output['TOP_PKG_NAME'] = env['PKG_NAME']
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
@@ -688,7 +672,7 @@ def bundle_conda(output, metadata, env, **kw):
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.build_prefix))
-        pfx_files = set(prefix_files(metadata.config.build_prefix))
+        pfx_files = set(utils.prefix_files(metadata.config.build_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item) for keep_file in keep_files))
 
@@ -710,7 +694,7 @@ def bundle_conda(output, metadata, env, **kw):
             # the test belongs to the parent recipe.  Don't include it in subpackages.
             utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
-    files = set(prefix_files(metadata.config.build_prefix)) - initial_files
+    files = set(utils.prefix_files(metadata.config.build_prefix)) - initial_files
     files = utils.filter_files(files, prefix=metadata.config.build_prefix)
 
     # lock the output directory while we build this file
@@ -895,19 +879,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         elif need_reparse_in_env:
             m = reparse(m, index)
 
-        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)], index)
-
-        if m.config.skip_existing:
-            package_locations = [is_package_built(om) for om, _, _ in output_metas]
-            if all(package_locations):
-                print("Packages for ", m.path or m.name(),
-                        "are already built in {0}, skipping.".format(package_locations))
-                return default_return
-        else:
-            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
-
-        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
-
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
         src_dir = m.config.work_dir
@@ -918,7 +889,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             os.makedirs(src_dir)
 
         utils.rm_rf(m.config.info_dir)
-        files1 = prefix_files(prefix=m.config.host_prefix)
+        files1 = utils.prefix_files(prefix=m.config.host_prefix)
         for pat in m.always_include_files():
             has_matches = False
             for f in set(files1):
@@ -932,6 +903,19 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         with open(join(m.config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
+
+        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)], index)
+
+        if m.config.skip_existing:
+            package_locations = [is_package_built(om) for om, _, _ in output_metas]
+            if all(package_locations):
+                print("Packages for ", m.path or m.name(),
+                        "are already built in {0}, skipping.".format(package_locations))
+                return default_return
+        else:
+            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
+
+        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
         # Use script from recipe?
         script = utils.ensure_list(m.get_value('build/script', None))
@@ -978,11 +962,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
     new_pkgs = default_return
     if post in [True, None]:
-        with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
-            initial_files = set(f.read().splitlines())
-
-        files = prefix_files(prefix=m.config.build_prefix) - initial_files
-        outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
+        outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
 
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else

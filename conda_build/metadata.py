@@ -1295,7 +1295,7 @@ class MetaData(object):
                 del output_metadata.meta['outputs']
         return output_metadata
 
-    def get_output_metadata_set(self, files=None, permit_undefined_jinja=False,
+    def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=True):
         from .render import finalize_metadata
 
@@ -1304,6 +1304,14 @@ class MetaData(object):
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
+
+        prefix_file_list = join(self.config.croot, 'prefix_files.txt')
+        if os.path.isfile(prefix_file_list):
+            with open(prefix_file_list) as f:
+                initial_files = set(f.read().splitlines())
+        else:
+            initial_files = set()
+        files = utils.prefix_files(prefix=self.config.build_prefix) - initial_files
         try:
             if not outputs:
                 outputs = [output_dict_from_top_level_meta(self, files)]
@@ -1317,8 +1325,7 @@ class MetaData(object):
             for out in outputs:
                 if (self.name() == out.get('name', '') and not (out.get('files') or
                                                                 out.get('script'))):
-                    if files:
-                        out['files'] = files
+                    out['files'] = files
                     out['requirements'] = self.meta.get('requirements', {})
                     out['noarch_python'] = out.get('noarch_python',
                                                     self.get_value('build/noarch_python'))

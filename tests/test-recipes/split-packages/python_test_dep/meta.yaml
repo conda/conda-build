@@ -1,0 +1,16 @@
+package:
+  name: test_python_in_test_specs
+  version: 1.0
+
+test:
+  requires:
+    - python
+    - numpy
+
+outputs:
+  - name: py_dep_1
+    requirements:
+      - python {{ python }}
+    script: test_thingie.py
+    test:
+      script: test_thingie.py
