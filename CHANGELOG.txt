@@ -1,3 +1,35 @@
+2017-03-22 3.0.0alpha0:
+
+This is a complete revolution in the dynamic rendering capabilities of conda-build.  More information is in the docs PR at https://github.com/conda/conda-docs/pull/414.  There will be a blog post soon, perhaps coupled with a screencast.
+
+Enhancements:
+-------------
+
+* greatly extended Jinja2 templating capabilities  #1585
+* record environment variables at top of build.sh, similar to what is done with bld.bat in win.  #1765
+
+Bug fixes:
+----------
+
+* fix symlinks to folders in packaging  #1775
+* fix detection of patch level when maxlevel=0  #1796
+* properly copy permissions when extracting zip files  #1855
+* Add more important Windows environment variables to the test environment  #1859, #1863
+
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @pkgw
+* @stuarteberg
+* @ukoethe
+* @wulmer
+
+
 2017-03-14 2.1.7:
 
 Enhancements:
