@@ -1153,16 +1153,16 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             # as the tests are run by python, ensure that python is installed.
             # (If they already provided python as a run or test requirement,
             #  this won't hurt anything.)
-            specs += ['python %s.*' % environ.get_py_ver(config)]
+            specs += ['python']
         if pl_files:
             # as the tests are run by perl, we need to specify it
-            specs += ['perl %s.*' % environ.get_perl_ver(config)]
+            specs += ['perl']
         if lua_files:
             # not sure how this shakes out
-            specs += ['lua %s.*' % environ.get_lua_ver(config)]
+            specs += ['lua']
         if r_files:
             # not sure how this shakes out
-            specs += ['r-base %s.*' % environ.get_r_ver(config)]
+            specs += ['r-base']
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
