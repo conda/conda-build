@@ -960,8 +960,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
 
-    environ.remove_env(actions, index, m.config)
-
     new_pkgs = default_return
     if post in [True, None]:
         outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
