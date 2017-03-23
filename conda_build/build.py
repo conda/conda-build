@@ -777,7 +777,10 @@ def bundle_wheel(output, metadata, env):
     import pip
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
-        wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
+        wheel_files = glob(os.path.join(tmpdir, "*.whl"))
+        if not wheel_files:
+            raise RuntimeError("Wheel creation failed.  Please see output above to debug.")
+        wheel_file = wheel_files[0]
         if metadata.config.output_folder:
             output_folder = os.path.join(metadata.config.output_folder, metadata.config.subdir)
         else:
@@ -826,6 +829,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         return default_return
 
     log = utils.get_logger(__name__)
+    actions = []
 
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(config=m.config, m=m)
@@ -861,7 +865,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     "your mercurial actions outside of your build script.")
 
         actions = environ.get_install_actions(m.config.build_prefix, index,
-                                                m.ms_depends('build'), m.config)
+                                              m.ms_depends('build'), m.config)
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, actions, config=m.config,
@@ -972,8 +976,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
 
-    environ.remove_env(actions, index, m.config)
-
     new_pkgs = default_return
     if post in [True, None]:
         with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
@@ -985,13 +987,16 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
                     m.config.subdir)
+
+        if actions:
+            environ.remove_env(actions, index, m.config)
+
         for (output_d, m) in outputs:
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
             pkg_path = bldpkg_path(m)
             if pkg_path not in built_packages and pkg_path not in new_pkgs:
                 actions = environ.get_install_actions(m.config.host_prefix, index,
                                                       m.ms_depends('build'), m.config)
-                utils.trim_empty_keys(actions)
                 environ.create_env(m.config.host_prefix, actions, config=m.config,
                                    subdir=subdir)
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
@@ -1096,7 +1101,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             metadata = metadata_tuples[0][0]
             if (metadata.meta.get('test', {}).get('source_files') and
                     not os.listdir(metadata.config.work_dir)):
-                source.provide(metadata)
+                try_download(metadata, no_download_source=False)
         except IOError:
             raise IOError("Didn't find recipe in folder or package under test.  Can't test "
                           "this after exiting build.")
@@ -1350,7 +1355,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 config = metadata.config
                 # this code is duplicated below because we need to be sure that the build id is set
                 #    before downloading happens - or else we lose where downloads are
-                if config.set_build_id:
+                if config.set_build_id and metadata.name() not in config.build_id:
                     config.compute_build_id(metadata.name(), reset=True)
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())

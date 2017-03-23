@@ -538,7 +538,7 @@ def provide(metadata, patch=True):
         # careful here: we set test path to be outside of conda-build root in setup.cfg.
         #    If you don't do that, this is a recursive function
         copy_into(path, metadata.config.work_dir, metadata.config.timeout,
-                  locking=metadata.config.locking)
+                  locking=metadata.config.locking, clobber=True)
     else:  # no source
         if not isdir(metadata.config.work_dir):
             os.makedirs(metadata.config.work_dir)
