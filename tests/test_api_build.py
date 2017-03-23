@@ -372,7 +372,7 @@ def test_failed_tests_exit_build(testing_workdir, testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
     with pytest.raises(SystemExit) as exc:
         api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
-        assert 'TESTS FAILED' in exc
+    assert 'TESTS FAILED' in str(exc)
 
 
 def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
@@ -900,10 +900,12 @@ def test_pin_downstream(testing_metadata, testing_config):
 
 
 def test_pin_subpackage_exact(testing_config):
-    m = api.render(os.path.join(metadata_dir, '_pin_subpackage_exact'), config=testing_config)
+    recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
+    ms = api.render(recipe, config=testing_config)
     assert any(re.match(r'pin_downstream_subpkg 1.0 h[a-f0-9]{%s}_0' % testing_config.hash_length,
                         req)
-              for _m in m for req in _m[0].meta['requirements']['run'])
+              for (m, _, _) in ms for req in m.meta['requirements']['run'])
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
@@ -960,4 +962,10 @@ def test_croot_with_spaces(testing_metadata, testing_workdir):
 
 def test_unknown_selectors(testing_config):
     recipe = os.path.join(metadata_dir, 'unknown_selector')
+    api.build(recipe, config=testing_config)
+
+
+def test_extract_tarball_with_unicode_filename(testing_config):
+    """See https://github.com/conda/conda-build/pull/1779"""
+    recipe = os.path.join(metadata_dir, '_unicode_in_tarball')
     api.build(recipe, config=testing_config)

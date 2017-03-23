@@ -24,9 +24,9 @@ requirements:
   run:
     - beautifulsoup4
     - chardet
-    - conda  >=4.1
-    - contextlib2   # [py<34]
+    - conda  >=4.3
     - conda-verify
+    - contextlib2   # [py<34]
     - enum34        # [py<34]
     - filelock
     - futures       # [py<3]

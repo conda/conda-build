@@ -34,12 +34,20 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from conda_build.render import render_recipe
     config = get_or_merge_config(config, **kwargs)
+
     metadata_tuples, index = render_recipe(recipe_path,
                                     no_download_source=config.no_download_source,
                                     config=config, variants=variants,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    expand_output=True)
-    return metadata_tuples
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+
+    output_metas = {}
+    for meta, download, render_in_env in metadata_tuples:
+        for od, om in meta.get_output_metadata_set(
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants):
+            # only show conda packages right now
+            if 'type' not in od or od['type'] == 'conda':
+                output_metas[om.dist()] = ((om, download, render_in_env))
+    return list(output_metas.values())
 
 
 def output_yaml(metadata, file_path=None):
@@ -52,7 +60,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
                          variants=None, **kwargs):
     """Get output file paths for any packages that would be created by a recipe
 
-    Both split packages (recipes with more than one ouptut) and build matrices,
+    Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
     from conda_build.render import bldpkg_path
@@ -62,8 +70,11 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
                                                                        string_types):
         list_of_metas = [hasattr(item[0], 'config') for item in recipe_path_or_metadata
                         if len(item) == 3]
+
         if list_of_metas and all(list_of_metas):
             metadata = recipe_path_or_metadata
+        else:
+            raise ValueError("received mixed list of metas: {}".format(recipe_path_or_metadata))
     elif isinstance(recipe_path_or_metadata, string_types):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
@@ -87,7 +98,7 @@ def get_output_file_path(recipe_path_or_metadata, no_download_source=False, conf
                          variants=None, **kwargs):
     """Get output file paths for any packages that would be created by a recipe
 
-    Both split packages (recipes with more than one ouptut) and build matrices,
+    Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
     log = _get_logger(__name__)

@@ -5,7 +5,6 @@ import pytest
 from conda_build import environ, api
 from conda_build.conda_interface import PaddingError, LinkError, CondaError, subdir
 from conda_build.utils import on_win
-from conda_build.render import reparse
 
 from .utils import metadata_dir
 
@@ -25,14 +24,11 @@ def test_env_creation_with_short_prefix_does_not_deadlock(testing_workdir, caplo
                         set_build_id=False, _prefix_length=80)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     metadata = api.render(recipe_path, config=config)[0][0]
-    try:
-        output = api.build(metadata)[0]
-        assert not api.inspect_prefix_length(output, 255)
-        config.prefix_length = 255
-        environ.create_env(config.build_prefix, specs=["python", metadata.name()], config=config,
-                           subdir=subdir)
-    except:
-        raise
+    output = api.build(metadata)[0]
+    assert not api.inspect_prefix_length(output, 255)
+    config.prefix_length = 255
+    environ.create_env(config.build_prefix, specs_or_actions=["python", metadata.name()],
+                        config=config, subdir=subdir)
     assert 'One or more of your package dependencies needs to be rebuilt' in caplog.text
 
 
@@ -53,29 +49,8 @@ def test_env_creation_with_prefix_fallback_disabled():
         output = api.build(metadata)[0]
         assert not api.inspect_prefix_length(output, 255)
         config.prefix_length = 255
-        environ.create_env(config.build_prefix, specs=["python", metadata.name()], config=config,
-                           subdir=subdir)
-
-
-@pytest.mark.serial
-@pytest.mark.skipif(on_win, reason=("Windows binary prefix replacement (for pip exes)"
-                                    " not length dependent"))
-def test_catch_openssl_legacy_short_prefix_error(testing_metadata, caplog):
-    testing_metadata.config = api.get_or_merge_config(testing_metadata.config, python='2.6')
-    testing_metadata = reparse(testing_metadata, testing_metadata.config.index)
-    cmd = """
-import os
-
-prefix = os.environ['PREFIX']
-fn = os.path.join(prefix, 'binary-has-prefix')
-
-with open(fn, 'wb') as f:
-    f.write(prefix.encode('utf-8') + b'\x00\x00')
- """
-    testing_metadata.meta['build']['script'] = 'python -c "{0}"'.format(cmd)
-
-    api.build(testing_metadata)
-    assert "Falling back to legacy prefix" in caplog.text
+        environ.create_env(config.build_prefix, specs_or_actions=["python", metadata.name()],
+                           config=config, subdir=subdir)
 
 
 def test_ensure_valid_spec():

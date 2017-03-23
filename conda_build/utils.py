@@ -26,8 +26,8 @@ import filelock
 
 from conda import __version__ as conda_version
 from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems, cc
-from .conda_interface import root_dir
+from .conda_interface import PY3, iteritems
+from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
@@ -42,6 +42,7 @@ if PY3:
     import urllib.request as urllib
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
+    PermissionError = PermissionError
 else:
     import urlparse
     import urllib
@@ -137,11 +138,11 @@ def _copy_with_shell_fallback(src, dst):
                 raise OSError("Failed to copy {} to {}.  Error was: {}".format(src, dst, e))
 
 
-def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
+def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clobber=False):
     """Copy all the files and directories in src to the directory dst"""
     log = get_logger(__name__)
     if isdir(src):
-        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking)
+        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking, clobber=clobber)
 
     else:
         if isdir(dst):
@@ -220,7 +221,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
-def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
+def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, clobber=False):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -236,7 +237,7 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
 
-    if existing:
+    if existing and not clobber:
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
@@ -291,8 +292,8 @@ def get_conda_operation_locks(config=None):
     locks = []
     # locks enabled by default
     if not config or config.locking:
-        cc.pkgs_dirs = cc.pkgs_dirs[:1]
-        locked_folders = cc.pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        _pkgs_dirs = pkgs_dirs[:1]
+        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs) if config else []
         for folder in locked_folders:
             if not os.path.isdir(folder):
                 os.makedirs(folder)
@@ -339,7 +340,10 @@ unxz is required to unarchive .xz source files.
         check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
-    t.extractall(path=dir_path)
+    if not PY3:
+        t.extractall(path=dir_path.encode(codec))
+    else:
+        t.extractall(path=dir_path)
     t.close()
 
 
@@ -568,16 +572,17 @@ def iter_entry_points(items):
 
 def create_entry_point(path, module, func, config):
     pyscript = PY_TMPL % {'module': module, 'func': func}
-    if sys.platform == 'win32':
+    if on_win:
         with open(path + '-script.py', 'w') as fo:
             if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-        copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
-                  path + '.exe', config.timeout)
+            copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
+                    path + '.exe', config.timeout)
     else:
         with open(path, 'w') as fo:
-            fo.write('#!%s\n' % config.build_python)
+            if not config.noarch:
+                fo.write('#!%s\n' % config.build_python)
             fo.write(pyscript)
         os.chmod(path, 0o775)
 
@@ -697,7 +702,9 @@ def expand_globs(path_list, root_dir):
     for path in path_list:
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
-        if os.path.isdir(path):
+        if os.path.islink(path):
+            files.append(path.replace(root_dir + os.path.sep, ''))
+        elif os.path.isdir(path):
             files.extend(os.path.join(root, f).replace(root_dir + os.path.sep, '')
                             for root, _, fs in os.walk(path) for f in fs)
         elif os.path.isfile(path):
@@ -898,13 +905,15 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
                                                       '(.*[\\\\/])?\.git$',
                                                       '(.*)?\.DS_Store.*',
                                                       '(.*)?\.gitignore',
+                                                      'conda-meta.*',
                                                       '(.*)?\.gitmodules')):
     """Remove things like .git from the list of files to be copied"""
     for pattern in filter_patterns:
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
     return [f.replace(prefix + os.path.sep, '') for f in files_list
-            if not os.path.isdir(os.path.join(prefix, f))]
+            if not os.path.isdir(os.path.join(prefix, f)) or
+            os.path.islink(os.path.join(prefix, f))]
 
 
 # def rm_rf(path):

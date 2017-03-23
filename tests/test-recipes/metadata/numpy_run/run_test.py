@@ -16,7 +16,8 @@ def main():
     depends = sorted(info['depends'])
     # With no version
     assert depends[0] == 'numpy'
-    assert depends[1].startswith('python ')
+    assert depends[1] == 'python'
+
 
 if __name__ == '__main__':
     main()

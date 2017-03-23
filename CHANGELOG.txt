@@ -1,3 +1,69 @@
+2017-03-14 2.1.7:
+
+Enhancements:
+-------------
+
+* pass WINDIR env var through on Windows  #1837
+* make long test prefix an option (default disabled)  #1838
+
+
+Bug fixes:
+----------
+
+* monkeypatch ensure_use_local to avoid conda-build import clobbering conda CLI arguments  #1834
+* Fix context conda_build attr error with older conda  #1813
+* Fix legacy noarch shebang replacement code to account for long prefix paths #1813
+* properly initialize 'system' key in linkage inspecting #1839
+* backport try mmap from master #1764
+* fix wheel output not respecting --output-folder CLI argument #1838
+* catch csv dialect sniffing error, try to fallback to to excel_tab.  Might work? #1840
+
+
+Contributors:
+-------------
+
+* @kalefranz
+* @mcs07
+* @msarahan
+
+
+2017-03-08 2.1.6:
+
+Enhancements:
+-------------
+
+* tests on linux/mac now use 255-character prefix when creating test environment  #1799
+* allow test/imports for R and lua packages #1806
+
+Bug fixes:
+----------
+
+* Fix case comparison in license_family.py  #1761
+* Fix symlinked folders not being included in packages  #1770
+* Fix extraction of tarballs containing unicode filenames  #1779, #1804
+* fix unicode in delimiter for noarch py_file_map  #1789
+* Clean up conda interface #1791
+* Confine conda-build 2.1.x to conda >4.1,<=4.3  #1792
+* fix detection of patch strip level when maxlevel = 0  #1796
+* fix attribute error in exception handling for missing dependencies  #1800
+* fix osx python_app test for python 3.6  #1801
+* don't die when unicode found in patch files  #1802
+* clarify error messaging when git is not found  #1803
+* fix shebangs in entry point scripts using legacy noarch_python #1806
+* fix test environment variables being set to build prefix values #1806
+* fix inspect linkages breaking due to conda index keys changing to different objects in conda 4.3  #1810
+
+
+Contributors:
+-------------
+
+* @gbrener
+* @kalefranz
+* @msarahan
+* @pkgw
+* @stuertz
+
+
 2017-02-20 2.1.5:
 
 Enhancements:

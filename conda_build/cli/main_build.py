@@ -17,7 +17,7 @@ import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
 from conda_build.cli.main_render import RecipeCompleter, get_render_parser
-from conda_build.conda_interface import cc, add_parser_channels, url_path
+from conda_build.conda_interface import add_parser_channels, url_path, binstar_upload
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config
@@ -45,14 +45,14 @@ different sets of packages."""
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='anaconda_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='anaconda_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-include-recipe",
@@ -225,7 +225,17 @@ different sets of packages."""
               " you package may depend on files that are not included in the package, and may pass"
               "tests, but ultimately fail on installed systems.")
     )
-
+    p.add_argument(
+        "--long-test-prefix", default=True, action="store_false",
+        help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
+              "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
+              "default in conda-build 3.0+")
+    )
+    p.add_argument(
+        "--no-long-test-prefix", dest="long_test_prefix", action="store_false",
+        help=("Do not use a long prefix for the test prefix, as well as the build prefix."
+              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  ")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)

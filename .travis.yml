@@ -5,22 +5,22 @@ python:
   - 3.6
 env:
   - CONDA_VERSION=4.3.x
-  - CONDA_VERSION=4.2.x
+  - CONDA_VERSION=4.4.x
 matrix:
   fast_finish: true
   exclude:
     - python: 2.7
-      env: CONDA_VERSION=4.3.x
+      env: CONDA_VERSION=4.4.x
   include:
     - python: 3.6
       env:
         - FLAKE8=true
-        - CONDA_VERSION=4.2.x
+        - CONDA_VERSION=4.3.x
       os: linux
   allow_failures:
     - env:
         - FLAKE8=true
-        - CONDA_VERSION=4.2.x
+        - CONDA_VERSION=4.3.x
       python: 3.6
 
 addons:

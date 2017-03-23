@@ -145,15 +145,12 @@ def test_build_bootstrap_env_by_path(testing_metadata):
 def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
     testing_config.platform = 'win'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
-                          variants={'python': py_ver[0]})[0][0]
+                          variants={'python': py_ver[0], 'target_platform': 'win-x86_64'})[0][0]
     assert py_ver[1] in metadata.meta['requirements']['build']
 
 
 def test_native_compiler_metadata_linux(testing_config, mocker):
     testing_config.platform = 'linux'
-    # this is a bit of a hack.  It ensures that the native compiler section gets populated.
-    # under ordinary circumstances, via api.render, we make sure that the variant is at least
-    #    populated with the default values.  By instantiating just MetaData, that doesn't hold.
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config)[0][0]
     assert 'gcc_linux-cos5-x86_64' in metadata.meta['requirements']['build']

@@ -4,8 +4,8 @@ package:
 
 requirements:
   run:
-    - my_script_subpackage
-    - my_script_subpackage_shell
+    - {{ pin_subpackage('my_script_subpackage') }}
+    - {{ pin_subpackage('my_script_subpackage_shell') }}
 
 outputs:
   - name: my_script_subpackage

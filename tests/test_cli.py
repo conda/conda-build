@@ -5,7 +5,6 @@
 from glob import glob
 import json
 import os
-import re
 import sys
 import yaml
 
@@ -130,6 +129,17 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     assert 'conda-build-test-has-prefix-files_1' in data
 
 
+@pytest.mark.skipif(on_win, reason="prefix is always short on win.")
+def test_build_long_test_prefix_default_enabled(mocker, testing_workdir, testing_metadata):
+    recipe_path = os.path.join(metadata_dir, '_test_long_test_prefix')
+    args = [recipe_path, '--no-anaconda-upload']
+    main_build.execute(args)
+
+    args.append('--no-long-test-prefix')
+    with pytest.raises(SystemExit):
+        main_build.execute(args)
+
+
 def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
@@ -139,6 +149,22 @@ def test_build_no_build_id(testing_workdir, testing_config):
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
     assert 'has_prefix_files_1' not in data
+
+
+@pytest.mark.serial
+def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_config):
+    """Test that building two recipes in one CLI call separates the build environment for each"""
+    os.makedirs('recipe1')
+    os.makedirs('recipe2')
+    api.output_yaml(testing_metadata, 'recipe1/meta.yaml')
+    with open('recipe1/run_test.py', 'w') as f:
+        f.write("import os; assert 'test_build_multiple_recipes' in os.getenv('PREFIX')")
+    testing_metadata.meta['package']['name'] = 'package2'
+    api.output_yaml(testing_metadata, 'recipe2/meta.yaml')
+    with open('recipe2/run_test.py', 'w') as f:
+        f.write("import os; assert 'package2' in os.getenv('PREFIX')")
+    args = ['--no-anaconda-upload', 'recipe1', 'recipe2']
+    main_build.execute(args)
 
 
 def test_build_output_folder(testing_workdir, testing_metadata, capfd):
@@ -335,8 +361,9 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 
 
 @pytest.mark.serial
-def test_inspect_hash_input(testing_metadata, capfd):
-    output = api.build(testing_metadata)[0]
+def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    output = api.build(testing_workdir)[0]
     args = ['hash-inputs', output]
     main_inspect.execute(args)
     output, error = capfd.readouterr()
@@ -412,7 +439,8 @@ def test_purge(testing_workdir, testing_metadata):
 
     It does not clear out build packages from folders like osx-64 or linux-64.
     """
-    outputs = api.build(testing_metadata)
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    outputs = api.build(testing_workdir)
     args = ['purge']
     main_build.execute(args)
     dirs = get_build_folders(testing_metadata.config.croot)
@@ -422,12 +450,15 @@ def test_purge(testing_workdir, testing_metadata):
 
 
 @pytest.mark.serial
-def test_purge_all(testing_metadata):
+def test_purge_all(testing_workdir, testing_metadata):
     """
     purge-all clears out build folders as well as build packages in the osx-64 folders and such
     """
-    outputs = api.build(testing_metadata)
-    args = ['purge-all', '--croot', testing_metadata.config.croot]
-    main_build.execute(args)
-    assert not get_build_folders(testing_metadata.config.croot)
-    assert not any(os.path.isfile(fn) for fn in outputs)
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    with TemporaryDirectory() as tmpdir:
+        testing_metadata.config.croot = tmpdir
+        outputs = api.build(testing_workdir, config=testing_metadata.config)
+        args = ['purge-all', '--croot', tmpdir]
+        main_build.execute(args)
+        assert not get_build_folders(testing_metadata.config.croot)
+        assert not any(os.path.isfile(fn) for fn in outputs)

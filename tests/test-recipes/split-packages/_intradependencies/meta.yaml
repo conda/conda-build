@@ -1,56 +1,41 @@
-{% set version='1' %}
-
 package:
   name: intradependencies
-  version: {{ version }}
+  version: 1.0
 
 requirements:
   build:
-    - python {{ python }}
-    - r-base {{ r }}
+    # the purpose of these dependencies is to disallow empty requirements from making the tests
+    #    pass when they would otherwise fail.  Empty requirements hide lack of finalization.
     - posix  # [win]
+    - git    # [not win]
 
 outputs:
   - name: lib1intradependencies
     script: install-lib1intradependencies.sh
-    exclude_from_build_hash:
-      - python
-      - r-base
 
   - name: py1-intradependencies
     requirements:
       - {{ pin_subpackage('lib1intradependencies', exact=True) }}
       - python {{ python }}
     script: install-py1-intradependencies.sh
-    exclude_from_build_hash:
-      - r-base
 
   - name: r1-intradependencies
     requirements:
       - {{ pin_subpackage('lib1intradependencies', exact=True) }}
       - r-base {{ r }}
     script: install-r1-intradependencies.sh
-    exclude_from_build_hash:
-      - python
 
   - name: lib2intradependencies
     script: install-lib2intradependencies.sh
-    exclude_from_build_hash:
-      - python
-      - r-base
 
   - name: py2-intradependencies
     requirements:
       - {{ pin_subpackage('lib2intradependencies', exact=True) }}
       - python {{ python }}
     script: install-py2-intradependencies.sh
-    exclude_from_build_hash:
-      - r-base
 
   - name: r2-intradependencies
     requirements:
       - {{ pin_subpackage('lib2intradependencies', exact=True) }}
       - r-base {{ r }}
     script: install-r2-intradependencies.sh
-    exclude_from_build_hash:
-      - python

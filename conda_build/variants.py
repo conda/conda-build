@@ -8,8 +8,11 @@ import sys
 import six
 import yaml
 
-from conda_build.utils import ensure_list
-from conda_build.conda_interface import cc, string_types
+from conda_build.utils import ensure_list, HashableDict
+from conda_build.conda_interface import string_types
+from conda_build.conda_interface import arch_name
+from conda_build.conda_interface import cc_conda_build
+from conda_build.conda_interface import cc_platform
 
 DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'exclude_from_build_hash']
 DEFAULT_VARIANTS = {
@@ -20,13 +23,13 @@ DEFAULT_VARIANTS = {
     'r_base': ['3.3.2'],
     'cpu_optimization_target': ['nocona'],
     'pin_run_as_build': {'python': {'min_pin': 'p.p', 'max_pin': 'p.p'}},
-    'exclude_from_build_hash': ['numpy', 'mkl'],
+    'exclude_from_build_hash': ['numpy'],
 }
 
 DEFAULT_PLATFORMS = {
-    'linux': 'linux-cos5-' + cc.arch_name,
-    'osx': 'osx-109-' + cc.arch_name,
-    'win': 'win-' + cc.arch_name,
+    'linux': 'linux-cos5-' + arch_name,
+    'osx': 'osx-109-' + arch_name,
+    'win': 'win-' + arch_name,
 }
 
 
@@ -64,8 +67,8 @@ def find_config_files(metadata_or_path, additional_files=None, ignore_system_con
         recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
 
     if not ignore_system_config:
-        if hasattr(cc, "conda_build_config") and getattr(cc, "conda_build_config"):
-            system_path = cc.conda_build_config
+        if cc_conda_build.get('config_file'):
+            system_path = cc_conda_build['config_file']
         else:
             system_path = os.path.join(os.path.expanduser('~'), "conda_build_config.yaml")
         if os.path.isfile(system_path):
@@ -212,7 +215,7 @@ def _get_zip_groups(combined_variant):
     return groups
 
 
-def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc.platform):
+def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
     # http://stackoverflow.com/a/5228294/1170370
     # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
     #                                            {'python': 3.5, 'numpy': 1.11}]
@@ -256,6 +259,16 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc.platform):
     return dicts
 
 
+def conform_variants_to_value(list_of_dicts, dict_of_values):
+    """We want to remove some variability sometimes.  For example, when Python is used by the
+    top-level recipe, we do not want a further matrix for the outputs.  This function reduces
+    the variability of the variant set."""
+    for d in list_of_dicts:
+        for k, v in dict_of_values.items():
+            d[k] = v
+    return list(set([HashableDict(d) for d in list_of_dicts]))
+
+
 def get_package_variants(recipedir_or_metadata, config=None):
     if hasattr(recipedir_or_metadata, 'config'):
         config = recipedir_or_metadata.config
@@ -288,5 +301,5 @@ def get_package_variants(recipedir_or_metadata, config=None):
     return dict_of_lists_to_list_of_dicts(combined_spec, config.platform)
 
 
-def get_default_variants(platform=cc.platform):
+def get_default_variants(platform=cc_platform):
     return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS, platform)

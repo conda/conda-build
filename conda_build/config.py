@@ -11,9 +11,10 @@ from os.path import abspath, expanduser, join
 import sys
 import time
 
-from .conda_interface import root_dir, root_writable, cc
+from .conda_interface import root_dir, root_writable
 from .conda_interface import binstar_upload
 from .variants import get_default_variants
+from .conda_interface import cc_platform, cc_conda_build, subdir
 
 from .utils import get_build_folders, rm_rf, trim_empty_keys, get_logger
 
@@ -48,6 +49,7 @@ SUBDIR_ALIASES = {
     'win-x86': 'win-32',
 }
 
+
 Setting = namedtuple("ConfigSetting", "name, default")
 DEFAULTS = [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
@@ -67,6 +69,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('output_folder', None),
             Setting('prefix_length_fallback', True),
             Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
+            Setting('long_test_prefix', True),
             Setting('locking', True),
             Setting('max_env_retry', 3),
             Setting('remove_work_dir', True),
@@ -92,6 +95,9 @@ DEFAULTS = [Setting('activate', True),
             Setting('clobber_sections_file', None),
             Setting('bootstrap', None),
 
+            # source provisioning.
+            Setting('git_commits_since_tag', 0),
+
             # pypi upload settings (twine)
             Setting('password', None),
             Setting('sign', False),
@@ -101,13 +107,13 @@ DEFAULTS = [Setting('activate', True),
             Setting('repository', 'pypitest'),
 
             Setting('ignore_recipe_verify_scripts',
-                  cc.rc.get('conda-build', {}).get('ignore_recipe_verify_scripts', [])),
+                  cc_conda_build.get('ignore_recipe_verify_scripts', [])),
             Setting('ignore_package_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('ignore_package_verify_scripts', [])),
+                    cc_conda_build.get('ignore_package_verify_scripts', [])),
             Setting('run_recipe_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                    cc_conda_build.get('run_package_verify_scripts', [])),
             Setting('run_package_verify_scripts',
-                    cc.rc.get('conda-build', {}).get('run_package_verify_scripts', [])),
+                    cc_conda_build.get('run_package_verify_scripts', [])),
             ]
 
 
@@ -175,7 +181,7 @@ class Config(object):
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or cc.subdir.split('-')[-1]
+        return self._arch or subdir.split('-')[-1]
 
     @arch.setter
     def arch(self, value):
@@ -189,14 +195,17 @@ class Config(object):
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or cc.platform
+        return self._platform or cc_platform
 
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn("setting build platform.  This is only useful when pretending to be on another "
-                 "platform, such as for rendering necessary dependencies on a non-native platform."
-                 "  I trust that you know what you're doing.")
+        log.warn("setting build platform. This is only useful when "
+                "pretending to be on another " "another platform, such as "
+                "for rendering necessary dependencies on a non-native "
+                "platform. I trust that you know what you're doing.")
+        if value == 'noarch':
+            raise ValueError("config platform should never be noarch.  Set host_platform instead.")
         self._platform = value
 
     @property
@@ -214,6 +223,18 @@ class Config(object):
         self._host_arch = value
 
     @property
+    def noarch(self):
+        return self.host_platform == 'noarch'
+
+    def reset_platform(self):
+        if not self.platform == cc_platform:
+            self.platform = cc_platform
+
+    @property
+    def subdir(self):
+        return "-".join([self.platform, str(self.arch)])
+
+    @property
     def host_platform(self):
         return self._host_platform or self.platform
 
@@ -223,7 +244,10 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        subdir = "-".join([self.host_platform, str(self.host_arch)])
+        if self.host_platform == 'noarch':
+            subdir = self.platform
+        else:
+            subdir = "-".join([self.host_platform, str(self.host_arch)])
         return SUBDIR_ALIASES.get(subdir, subdir)
 
     @host_subdir.setter
@@ -243,7 +267,7 @@ class Config(object):
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv('CONDA_BLD_PATH')
-            _bld_root_rc = cc.rc.get('conda-build', {}).get('root-dir')
+            _bld_root_rc = cc_conda_build.get('root-dir')
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
@@ -362,13 +386,26 @@ class Config(object):
         return self._long_host_prefix
 
     @property
+    def _short_test_prefix(self):
+        return join(self.build_folder, '_test_env')
+
+    def _long_prefix(self, base_prefix):
+        placeholder_length = self.prefix_length - len(base_prefix)
+        placeholder = '_placehold'
+        repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
+        placeholder = (base_prefix + repeats * placeholder)[:self.prefix_length]
+        return max(base_prefix, placeholder)
+
+    @property
     def test_prefix(self):
         """The temporary folder where the test environment is created"""
-        return join(self.build_folder, '_test_env')
+        if on_win or not self.long_test_prefix:
+            return self._short_test_prefix
+        return self._long_prefix(self._short_test_prefix)
 
     @property
     def build_python(self):
-        return self._get_python(self.build_prefix)
+        return self.python_bin(self.build_prefix)
 
     @property
     def host_python(self):
@@ -376,38 +413,35 @@ class Config(object):
 
     @property
     def test_python(self):
-        return self._get_python(self.test_prefix)
+        return self.python_bin(self.test_prefix)
 
-    @property
-    def build_perl(self):
-        return self._get_perl(self.host_prefix)
+    def python_bin(self, prefix):
+        return self._get_python(prefix)
 
-    @property
-    def test_perl(self):
-        return self._get_perl(self.test_prefix)
+    def perl_bin(self, prefix):
+        return self._get_perl(prefix)
 
-    @property
-    def build_lua(self):
-        return self._get_lua(self.host_prefix)
-
-    @property
-    def test_lua(self):
-        return self._get_lua(self.test_prefix)
+    def lua_bin(self, prefix):
+        return self._get_lua(prefix)
 
     @property
     def info_dir(self):
-        path = join(self.host_prefix, 'info')
+        """Path to the info dir in the build prefix, where recipe metadata is stored"""
+        path = join(self.build_prefix, 'info')
         _ensure_dir(path)
         return path
 
     @property
     def meta_dir(self):
+        """Path to the conda-meta dir in the build prefix, where package index json files are
+        stored"""
         path = join(self.host_prefix, 'conda-meta')
         _ensure_dir(path)
         return path
 
     @property
     def broken_dir(self):
+        """Where packages that fail the test phase are placed"""
         path = join(self.croot, "broken")
         _ensure_dir(path)
         return path
@@ -424,35 +458,41 @@ class Config(object):
         """ Dirs where previous build packages might be. """
         # The first two *might* be the same, but might not, depending on if this is a cross-compile.
         #     cc.subdir should be the native platform, while self.subdir would be the host platform.
-        return {join(self.croot, self.host_subdir), join(self.croot, cc.subdir),
+        return {join(self.croot, self.host_subdir), join(self.croot, subdir),
                 join(self.croot, "noarch"), }
 
     @property
     def src_cache(self):
+        """Where tarballs and zip files are downloaded and stored"""
         path = join(self.croot, 'src_cache')
         _ensure_dir(path)
         return path
 
     @property
     def git_cache(self):
+        """Where local clones of git sources are stored"""
         path = join(self.croot, 'git_cache')
         _ensure_dir(path)
         return path
 
     @property
     def hg_cache(self):
+        """Where local clones of hg sources are stored"""
         path = join(self.croot, 'hg_cache')
         _ensure_dir(path)
         return path
 
     @property
     def svn_cache(self):
+        """Where local checkouts of svn sources are stored"""
         path = join(self.croot, 'svn_cache')
         _ensure_dir(path)
         return path
 
     @property
     def work_dir(self):
+        """Where the source for the build is extracted/copied to.  If only a single folder is in
+        that folder, this function returns that level one deeper."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
         if os.path.isdir(path):
@@ -488,6 +528,8 @@ class Config(object):
     def copy(self):
         new = copy.copy(self)
         new.variant = copy.deepcopy(self.variant)
+        if hasattr(self, 'variants'):
+            new.variants = copy.deepcopy(self.variants)
         return new
 
     # context management - automatic cleanup if self.dirty or self.keep_old_work is not True
