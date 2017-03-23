@@ -349,7 +349,8 @@ unxz is required to unarchive .xz source files.
 
 def unzip(zip_path, dir_path):
     z = zipfile.ZipFile(zip_path)
-    for name in z.namelist():
+    for info in z.infolist():
+        name = info.filename
         if name.endswith('/'):
             continue
         path = join(dir_path, *name.split('/'))
@@ -358,6 +359,9 @@ def unzip(zip_path, dir_path):
             os.makedirs(dp)
         with open(path, 'wb') as fo:
             fo.write(z.read(name))
+        unix_attributes = info.external_attr >> 16
+        if unix_attributes:
+            os.chmod(path, unix_attributes)
     z.close()
 
 
