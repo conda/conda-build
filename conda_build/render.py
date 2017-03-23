@@ -6,6 +6,7 @@
 
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
 from locale import getpreferredencoding
 import os
 from os.path import isdir, isfile, abspath
@@ -397,7 +398,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
 
 def expand_outputs(metadata_tuples, index):
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
-    expanded_outputs = {}
+    expanded_outputs = OrderedDict()
     for (_m, download, reparse) in metadata_tuples:
         for (output_dict, m) in _m.get_output_metadata_set():
             if output_dict.get('type') != 'wheel':

@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
 import copy
 import hashlib
 import json
@@ -1324,7 +1325,7 @@ class MetaData(object):
 
         render_order = toposort(list(six.moves.zip(outputs, metadata)))
         non_conda_packages = []
-        outputs = {}
+        outputs = OrderedDict()
         for (output_d, metadata) in render_order:
             if metadata.final:
                 # doesn't matter what the key is - we won't be using it in subdeps, because
