@@ -10,7 +10,7 @@ import os
 from os.path import join, exists, isdir
 import sys
 
-from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list
+from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_rf
 from conda_build import source
 
 
@@ -48,10 +48,12 @@ def create_files(m):
     True if it has.
     """
     has_files = False
+    rm_rf(m.config.test_dir)
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=m.config.locking)
+        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=m.config.locking,
+                  clobber=True)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(m.config.work_dir):
         source.provide(m)
