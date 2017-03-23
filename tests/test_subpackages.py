@@ -75,12 +75,12 @@ def test_pin_downstream_in_subpackage(testing_metadata, testing_index):
     assert 'bzip2 1.0' in p2_final.meta['requirements']['run']
 
 
-@pytest.mark.serial
-def test_hash_includes_recipe_files(testing_workdir, testing_config):
-    """Hash should include all files not specifically named in any output, plus the script for
-    a given output."""
-    recipe = os.path.join(subpackage_dir, 'script_install_files')
-    outputs = api.build(recipe, config=testing_config)
+# @pytest.mark.serial
+# def test_hash_includes_recipe_files(testing_workdir, testing_config):
+#     """Hash should include all files not specifically named in any output, plus the script for
+#     a given output."""
+#     recipe = os.path.join(subpackage_dir, 'script_install_files')
+#     outputs = api.build(recipe, config=testing_config)
 
 
 def test_subpackage_variant_override(testing_config):
