@@ -10,7 +10,7 @@ from locale import getpreferredencoding
 import logging
 import operator
 import os
-from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath
+from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath, islink
 import re
 import stat
 import subprocess
@@ -981,3 +981,19 @@ def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
                                                                             base_value, value))
             base[key] = value
     return base
+
+
+def prefix_files(prefix):
+    '''
+    Returns a set of all files in prefix.
+    '''
+    res = set()
+    for root, dirs, files in os.walk(prefix):
+        for fn in files:
+            res.add(join(root, fn)[len(prefix) + 1:])
+        for dn in dirs:
+            path = join(root, dn)
+            if islink(path):
+                res.add(path[len(prefix) + 1:])
+    res = set(expand_globs(res, prefix))
+    return res

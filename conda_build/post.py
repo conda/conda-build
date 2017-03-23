@@ -226,8 +226,7 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
 
 
 def find_lib(link, prefix, path=None):
-    from conda_build.build import prefix_files
-    files = prefix_files(prefix)
+    files = utils.prefix_files(prefix)
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1:])
         if link not in files:
