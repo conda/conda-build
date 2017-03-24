@@ -35,15 +35,13 @@ from conda_build.conda_interface import Completer
 from conda_build.license_family import allowed_license_families, guess_license_family
 
 CRAN_META = """\
-{{% set name = '{cran_packagename}' %}}
 {{% set version = '{cran_version}' %}}
-{{% set sha256 = '{sha256}' %}}
 
 {{% set posix = 'm2-' if win else '' %}}
 {{% set native = 'm2w64-' if win else '' %}}
 
 package:
-  name: r-{{{{ name|lower }}}}
+  name: {packagename}
   version: {{{{ version|replace("-", "_") }}}}
 
 source:
@@ -586,14 +584,13 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             sha256 = hashlib.sha256()
             print("Downloading source from {}".format(package_url))
             sha256.update(urlopen(package_url).read())
-            d['hash_entry'] = 'sha256: {{ sha256 }}'
-            d['sha256'] = sha256.hexdigest()
+            d['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
 
-            d['filename'] = filename.format('{{ name }}', '{{ version }}')
+            d['filename'] = filename.format(package, '{{ version }}')
             if archive:
                 d['cranurl'] = (INDENT + contrib_url +
                     d['filename'] + INDENT + contrib_url +
-                    'Archive/{{ name }}/' + d['filename'])
+                    'Archive/{}/'.format(package) + d['filename'])
             else:
                 d['cranurl'] = ' ' + cran_url + 'src/contrib/' + d['filename']
 
