@@ -7,39 +7,22 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
-import logging
+import json
 from operator import itemgetter
-from os.path import abspath, join, dirname, exists, basename, isdir
+from os.path import abspath, join, dirname, exists, basename
+import os
 import re
 import sys
 import tempfile
 
-from .conda_interface import (iteritems, specs_from_args, plan, is_linked, linked_data, linked,
-                              get_index)
+from .conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
+                              get_index, which_prefix)
+from .conda_interface import display_actions, install_actions
 
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join, rm_rf
-
-
-log = logging.getLogger(__file__)
-
-
-def which_prefix(path):
-    """
-    given the path (to a (presumably) conda installed file) return the
-    environment prefix in which the file in located
-    """
-    prefix = abspath(path)
-    while True:
-        if isdir(join(prefix, 'conda-meta')):
-            # we found the it, so let's return it
-            return prefix
-        if prefix == dirname(prefix):
-            # we cannot chop off any more directories, so we didn't find it
-            return None
-        prefix = dirname(prefix)
+from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file, get_logger
 
 
 def which_package(path):
@@ -91,9 +74,9 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
         specs = specs_from_args(packages)
         index = get_index(channel_urls=channel_urls, prepend=prepend,
                           platform=platform, prefix=prefix)
-        actions = plan.install_actions(prefix, index, specs, pinned=False,
-                                       minimal_hint=minimal_hint)
-        plan.display_actions(actions, index)
+        actions = install_actions(prefix, index, specs, pinned=False,
+                                  minimal_hint=minimal_hint)
+        display_actions(actions, index)
         return actions
     finally:
         rm_rf(prefix)
@@ -102,6 +85,13 @@ def check_install(packages, platform=None, channel_urls=(), prepend=True,
 
 def print_linkages(depmap, show_files=False):
     # Print system and not found last
+    dist_depmap = {}
+    for k, v in depmap.items():
+        if hasattr(k, 'dist_name'):
+            k = k.dist_name
+        dist_depmap[k] = v
+
+    depmap = dist_depmap
     k = sorted(set(depmap.keys()) - {'system', 'not found'})
     all_deps = k if 'not found' not in depmap.keys() else k + ['system', 'not found']
     output_string = ""
@@ -144,6 +134,7 @@ def replace_path(binary, path, prefix):
 
 def test_installable(channel='defaults'):
     success = True
+    log = get_logger(__name__)
     has_py = re.compile(r'py(\d)(\d)')
     for platform in ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']:
         log.info("######## Testing platform %s ########", platform)
@@ -231,6 +222,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
         depmap = defaultdict(list)
         pkgmap[pkg] = depmap
         depmap['not found'] = []
+        depmap['system'] = []
         for binary in linkages:
             for lib, path in linkages[binary]:
                 path = replace_path(binary, path, prefix) if path not in {'',
@@ -238,8 +230,8 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 if path.startswith(prefix):
                     deps = list(which_package(path))
                     if len(deps) > 1:
-                        log.warn("Warning: %s comes from multiple packages: %s", path,
-                                 comma_join(deps))
+                        get_logger(__name__).warn("Warning: %s comes from multiple "
+                                                  "packages: %s", path, comma_join(deps))
                     if not deps:
                         if exists(path):
                             depmap['untracked'].append((lib, path.split(prefix +
@@ -317,3 +309,27 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
     if hasattr(output_string, 'decode'):
         output_string = output_string.decode('utf-8')
     return output_string
+
+
+def get_hash_input(packages):
+    log = get_logger(__name__)
+    hash_inputs = {}
+    for pkg in packages:
+        pkgname = os.path.basename(pkg)[:-8]
+        hash_inputs[pkgname] = {}
+        hash_input = package_has_file(pkg, 'info/hash_input.json')
+        if hash_input:
+            hash_inputs[pkgname]['recipe'] = json.loads(hash_input.decode())
+        else:
+            hash_inputs[pkgname] = "<no hash_input.json in file>"
+        hash_input_files = package_has_file(pkg, 'info/hash_input_files')
+        hash_inputs[pkgname]['files'] = []
+        if hash_input_files:
+            for fname in hash_input_files.splitlines():
+                if hasattr(fname, 'decode'):
+                    fname = fname.decode()
+                hash_inputs[pkgname]['files'].append('info/recipe/{}'.format(fname))
+        else:
+            log.warn('Package {} does not include recipe.  Full hash information is '
+                     'not reproducible.'.format(pkgname))
+    return hash_inputs

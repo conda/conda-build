@@ -1,0 +1,6 @@
+c_compiler:
+  - vs2008
+  - vs2015
+runtimes:
+  vs2008: vc 9
+  vs2015: vc 14

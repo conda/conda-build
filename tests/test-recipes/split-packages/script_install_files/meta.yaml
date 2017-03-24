@@ -2,6 +2,9 @@ package:
   name: split_packages_script_install_files
   version: 1.0
 
+source:
+  path: ../../test-package
+
 requirements:
   run:
     - my_script_subpackage
@@ -13,3 +16,5 @@ outputs:
     test:
       script: test_subpackage1.py
       script_interpreter: python
+  # this is to make sure that wheel doesn't pick up a crazy file list
+  - type: wheel

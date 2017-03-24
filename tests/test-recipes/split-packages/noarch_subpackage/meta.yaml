@@ -4,8 +4,8 @@ package:
 
 requirements:
   run:
-    - pkg_subpackage
-    - pkg_subpackage_python_noarch
+    - {{ pin_subpackage('pkg_subpackage') }}
+    - {{ pin_subpackage('pkg_subpackage_python_noarch') }}
 
 outputs:
   - name: pkg_subpackage

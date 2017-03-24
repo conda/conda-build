@@ -404,7 +404,7 @@ def get_package_metadata(cran_url, package, session):
 
 
 def get_latest_git_tag(config):
-    p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
+    p = subprocess.Popen(['git', 'describe', '--tags', '--abbrev=0'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
@@ -476,7 +476,8 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
 
         if is_github_url:
             rm_rf(config.work_dir)
-            source.git_source({'git_url': package}, '.', config=config)
+            m = metadata.MetaData.fromdict({'source': {'git_url': package}}, config=config)
+            source.git_source(m)
             git_tag = git_tag[0] if git_tag else get_latest_git_tag(config)
             p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, cwd=config.work_dir)

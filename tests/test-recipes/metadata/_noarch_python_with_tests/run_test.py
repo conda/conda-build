@@ -1,10 +1,11 @@
+from glob import glob
 import os
 import subprocess
 
 import noarch_python_test_package
 
 pkgs_dir = os.path.abspath(os.path.join(os.environ["ROOT"], 'pkgs'))
-pkg_dir = os.path.join(pkgs_dir, 'noarch_python_test_package-1.0-py_0')
+pkg_dir = glob(os.path.join(pkgs_dir, 'noarch_python_test_package-1.0-pyh*_0'))[0]
 
 assert os.path.isdir(pkg_dir)
 

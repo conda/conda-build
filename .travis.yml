@@ -1,72 +1,77 @@
+os: linux
 language: python
+python:
+  - 2.7
+  - 3.6
+env:
+  - CONDA_VERSION=4.3.x
+  - CONDA_VERSION=4.4.x
 matrix:
+  fast_finish: true
+  exclude:
+    - python: 2.7
+      env: CONDA_VERSION=4.4.x
   include:
-    - python: '2.7'
-      os: linux
-    - python: '3.5'
-      os: linux
-    - python: '3.5'
-      env: CANARY=true
-      os: linux
-    - python: '3.5'
-      env: CONDA=4.1
-      os: linux
-    - python: '3.5'
+    - python: 3.6
       env:
         - FLAKE8=true
+        - CONDA_VERSION=4.3.x
       os: linux
+  allow_failures:
+    - env:
+        - FLAKE8=true
+        - CONDA_VERSION=4.3.x
+      python: 3.6
+
+addons:
+  apt:
+    packages:
+    - attr
 
 install:
+  # show which shell we are running
+  - ps -ef | grep $$
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
     else
       wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
+  - mkdir $HOME/miniconda/locks
+  # make central lock directory not writable to simulate central "all-users" install
+  - chmod -w $HOME/miniconda/locks
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
   - conda update -q --all
-  - if [[ "$CANARY" == "true" ]]; then
-      conda install -y -q -c conda-canary conda;
-      conda config --set always_yes yes;
-    else
-      if [ -n "$CONDA" ]; then
-        conda install -y --no-deps conda=${CONDA};
-      fi
+  - if [ -n "$CONDA_VERSION" ]; then
+        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
+        pushd conda;
+        $HOME/miniconda/bin/python utils/setup-testing.py install;
+        popd;
+        hash -r;
+        conda info;
     fi
-
-  - conda install -q anaconda-client requests=2.11.1 filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION pyflakes=1.1 conda-verify
+  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
+  - conda install -q pyflakes conda-verify beautifulsoup4 chardet pycrypto
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
     else
       conda install -c conda-forge -q perl;
       conda install -q pytest pip pytest-cov numpy mock;
-      $HOME/miniconda/bin/pip install pytest-xdist pytest-capturelog pytest-mock;
+      $HOME/miniconda/bin/pip install pytest-xdist pytest-catchlog pytest-mock;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
     fi
   - pip install --no-deps .
   - conda info -a
+  # HACK: seem to be having issues getting MKL downloaded.  Force it to be there.
+  - curl -L https://repo.continuum.io/pkgs/free/linux-64/mkl-11.3.3-0.tar.bz2 -o ~/miniconda/pkgs/mkl-11.3.3-0.tar.bz2
+  - conda index ~/miniconda/pkgs
 
-script:
-  # flake8 and bdist_conda test together
-  - if [[ "$FLAKE8" == "true" ]]; then
-      flake8 .;
-      cp bdist_conda.py $HOME/miniconda/lib/python${TRAVIS_PYTHON_VERSION}/distutils/command;
-      pushd tests/bdist-recipe && python setup.py bdist_conda && popd;
-      conda build --help;
-      conda build conda.recipe --no-anaconda-upload -c conda-forge;
-      conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION;
-      source activate _cbtest;
-      conda install $(conda render --output conda.recipe);
-      conda install filelock;
-      conda build conda.recipe --no-anaconda-upload -c conda-forge;
-    else
-      $HOME/miniconda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests;
-      $HOME/miniconda/bin/py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests;
-    fi
+script: ./ci/travis/run.sh
 
 notifications:
     flowdock: ef3821a08a791106512ccfc04c92eccb

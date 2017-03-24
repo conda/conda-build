@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+import sys
+print(sys.version)
+
+
+# binary data which might be present in a test script, to ensure we don't get encoding errors
+# while generating an executable on Windows.
+# This particular chunk was extracted from bottom of the "waf-script" file generated during build, see #1632
+#==>
+#BZh91AY&SYî?llvþÿ°#.Óÿÿÿÿÿÿÿÿÿÿÿ??Y@Â?%H4à?b<g^è?#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.#.ù??d\?mÏ?
+
+

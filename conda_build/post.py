@@ -56,12 +56,16 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
+            fi.seek(0)
         except UnicodeDecodeError:  # file is binary
             return
 
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
-        mm = mmap.mmap(fi.fileno(), 0)
+        try:
+            mm = mmap.mmap(fi.fileno(), 0)
+        except OSError:
+            mm = fi
         m = SHEBANG_PAT.match(mm)
 
         if not (m and b'python' in m.group()):
@@ -71,7 +75,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
     encoding = sys.stdout.encoding or 'utf8'
 
-    py_exec = ('/bin/bash ' + prefix + '/bin/python.app'
+    py_exec = ('/bin/bash ' + prefix + '/bin/pythonw'
                if sys.platform == 'darwin' and osx_is_app else
                prefix + '/bin/' + basename(build_python))
     new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
@@ -85,7 +89,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
 def write_pth(egg_path, config):
     fn = basename(egg_path)
-    with open(join(utils.get_site_packages(config.build_prefix),
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    with open(join(utils.get_site_packages(config.build_prefix, py_ver),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
@@ -96,7 +101,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     itself
     """
     absfiles = [join(prefix, f) for f in files]
-    sp_dir = utils.get_site_packages(prefix)
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    sp_dir = utils.get_site_packages(prefix, py_ver)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
@@ -120,7 +126,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                     # from another installed dependency
                     if os.path.exists(join(sp_dir, fn)):
                         try:
-                            utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout)
+                            utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout,
+                                            locking=config.locking)
                             utils.rm_rf(join(egg_path, fn))
                         except IOError as e:
                             fn = os.path.basename(str(e).split()[-1])
@@ -176,6 +183,8 @@ def rm_pyc(files, prefix):
 
 
 def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
+    if not os.path.isfile(python_exe):
+        return
     compile_files = []
     skip_compile_pyc_n = [os.path.normpath(skip) for skip in skip_compile_pyc]
     skipped_files = set()
@@ -217,8 +226,7 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
 
 
 def find_lib(link, prefix, path=None):
-    from conda_build.build import prefix_files
-    files = prefix_files(prefix)
+    files = utils.prefix_files(prefix)
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1:])
         if link not in files:
@@ -411,7 +419,11 @@ def fix_permissions(files, prefix):
         # ensure user and group can write and all can read
         new_mode = new_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH  # noqa
         if old_mode != new_mode:
-            lchmod(path, new_mode)
+            try:
+                lchmod(path, new_mode)
+            except (OSError, utils.PermissionError) as e:
+                log = utils.get_logger(__name__)
+                log.warn(str(e))
 
 
 def post_build(m, files, prefix, build_python, croot):
@@ -427,7 +439,7 @@ def post_build(m, files, prefix, build_python, croot):
     binary_relocation = m.binary_relocation()
     if not binary_relocation:
         print("Skipping binary relocation logic")
-    osx_is_app = bool(m.get_value('build/osx_is_app', False))
+    osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
 
     check_symlinks(files, prefix, croot)
 
@@ -497,8 +509,8 @@ def make_hardlink_copy(path, prefix):
         utils.rm_rf(dest)
 
 
-def get_build_metadata(m, config):
-    src_dir = config.work_dir
+def get_build_metadata(m):
+    src_dir = m.config.work_dir
 
     if "build" not in m.meta:
         m.meta["build"] = {}

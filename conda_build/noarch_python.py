@@ -1,12 +1,11 @@
-import os
 import io
-import sys
 import json
-import shutil
 import locale
+import logging
+import os
 from os.path import basename, dirname, isdir, join, isfile
-
-from conda_build.post import SHEBANG_PAT
+import shutil
+import sys
 
 ISWIN = sys.platform.startswith('win')
 
@@ -56,7 +55,7 @@ def handle_file(f, d, prefix):
 
     # The presence of .so indicated this is not a noarch package
     elif f.endswith(('.so', '.dll', '.pyd', '.exe', '.dylib')):
-        if f.endswith('.exe') and (isfile(f[:-4] + '-script.py') or
+        if f.endswith('.exe') and (isfile(os.path.join(prefix, f[:-4] + '-script.py')) or
                                    basename(f[:-4]) in d['python-scripts']):
             os.unlink(path)  # this is an entry point with a matching xx-script.py
             return
@@ -83,7 +82,9 @@ def handle_file(f, d, prefix):
     elif f.startswith(('Examples/', 'Examples\\')):
         d['Examples'].append(f[9:])
     else:
-        _error_exit("Error: Don't know how to handle file: %s" % f)
+        log = logging.getLogger(__name__)
+        log.warn("Don't know how to handle file: %s.  Omitting it from package." % f)
+        os.unlink(path)
 
 
 def populate_files(m, files, prefix, entry_point_scripts=None):
@@ -111,8 +112,6 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
 
 
 def transform(m, files, prefix):
-    assert 'py_' in m.dist()
-
     bin_dir = join(prefix, 'bin')
     _force_dir(bin_dir)
 

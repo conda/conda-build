@@ -1,0 +1,10 @@
+package:
+  name: test_has_pin_downstream
+  version: 1.0
+
+requirements:
+  run:
+    - {{ pin_subpackage('pin_downstream_subpkg', exact=True) }}
+
+outputs:
+  - name: pin_downstream_subpkg

@@ -1,0 +1,10 @@
+package:
+  name: test_uses_src_dir
+  version: 1.0
+
+source:
+  path: ../../test-package
+
+test:
+  requires:
+    - python

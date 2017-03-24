@@ -6,20 +6,20 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\tools\\appveyor\\run_with_env.cmd"
 
   matrix:
-    - PYTHON: "C:\\Python35_64"
-      PYTHON_VERSION: "3.5"
+    - PYTHON: "C:\\Miniconda36-x64"
+      PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Python27_64"
+    - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Python34_64"
+    - PYTHON: "C:\\Miniconda3-x64"
       PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Python35_32"
-      PYTHON_VERSION: "3.5"
+    - PYTHON: "C:\\Miniconda36"
+      PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "32"
 
 init:
@@ -39,29 +39,30 @@ install:
   # these correspond to folder naming of miniconda installs on appveyor.  See
   # https://www.appveyor.com/docs/installed-software#python
   - if "%PYTHON_VERSION%" == "3.4" set "BASE_PYTHON_VERSION=3"
-  - if "%PYTHON_VERSION%" == "3.5" set "BASE_PYTHON_VERSION=35"
+  - if "%PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=36"
   - if "%PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
   # These are already installed on appveyor.  Update them.
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - conda config --set always_yes yes
   - conda update -q conda
+  - conda config --set auto_update_conda no
   - conda info
   - python -c "import sys; print(sys.version)"
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda update -q --all
-  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests=2.11.1 contextlib2
-  - conda install -q pyflakes=1.1 pycrypto posix m2-git anaconda-client numpy conda-verify
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet
+  - conda install -q pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4
   - conda install -c conda-forge -q perl
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
   - pip install --no-deps .
-  - pip install pytest-xdist pytest-capturelog pytest-env pytest-mock filelock pkginfo
+  - pip install pytest-xdist pytest-catchlog pytest-env pytest-mock filelock pkginfo
   - set PATH
   - conda build --version
-  - call appveyor\setup_x64.bat
+  - call ci\appveyor\setup_x64.bat
   - copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
   # This is an extra repo that we clone for relative path entries
   - cmd: pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
@@ -69,12 +70,19 @@ install:
 # Not a .NET project, we build package in the install step instead
 build: false
 
+# cache:
+#   - C:\\Miniconda3-x64 -> appveyor.yml
+#   - C:\\Miniconda36-x64 -> appveyor.yml
+#   - C:\\Miniconda-x64 -> appveyor.yml
+#   - C:\\Miniconda -> appveyor.yml
+
 test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
   - mkdir C:\cbtmp
-  - py.test -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
-  - py.test -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
+  - rd /S /Q C:\cbtmp
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --durations=15
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp

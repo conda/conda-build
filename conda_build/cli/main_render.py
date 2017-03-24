@@ -11,12 +11,12 @@ import sys
 
 from conda_build.conda_interface import ArgumentParser, add_parser_channels
 
-from conda_build import __version__
-from conda_build.render import render_recipe, set_language_env_vars, bldpkg_path, output_yaml
-from conda_build.completers import (RecipeCompleter, PythonVersionCompleter, RVersionsCompleter,
-                                    LuaVersionsCompleter, NumPyVersionCompleter)
-from conda_build.config import Config
-from conda_build.utils import silence_loggers
+from conda_build import __version__, api
+from conda_build.completers import RecipeCompleter
+
+from conda_build.config import get_or_merge_config
+from conda_build.variants import get_package_variants, set_language_env_vars
+from conda_build.utils import LoggingContext
 
 on_win = (sys.platform == 'win32')
 
@@ -52,47 +52,55 @@ source to try fill in related template variables.",
     p.add_argument(
         '--python',
         action="append",
-        help="""Set the Python version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    PythonVersionCompleter() if '.' in i],
-        metavar="PYTHON_VER",
-        choices=PythonVersionCompleter(),
+        help="Set the Python version used by conda build.",
     )
     p.add_argument(
         '--perl',
         action="append",
-        help="""Set the Perl version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
-        metavar="PERL_VER",
+        help="Set the Perl version used by conda build.",
     )
     p.add_argument(
         '--numpy',
         action="append",
-        help="""Set the NumPy version used by conda build. Can be passed
-        multiple times to build against multiple versions. Can be 'all' to
-    build against all known versions (%r)""" % [i for i in
-    NumPyVersionCompleter() if '.' in i],
-        metavar="NUMPY_VER",
-        choices=NumPyVersionCompleter(),
+        help="Set the NumPy version used by conda build.",
     )
     p.add_argument(
         '--R',
         action="append",
-        help="""Set the R version used by conda build. Can be passed
-        multiple times to build against multiple versions.""",
-        metavar="R_VER",
-        choices=RVersionsCompleter(),
+        help="""Set the R version used by conda build.""",
+        dest="r_base"
     )
     p.add_argument(
         '--lua',
         action="append",
-        help="Set the Lua version used by conda build. Can be passed"
-        "multiple times to build against multiple versions (%r)." %
-        [i for i in LuaVersionsCompleter()],
-        metavar="LUA_VER",
-        choices=LuaVersionsCompleter(),
+        help="Set the Lua version used by conda build.",
     )
+    p.add_argument(
+        '--bootstrap',
+        help="""Provide initial configuration in addition to recipe.
+        Can be a path to or name of an environment, which will be emulated
+        in the package.""",
+    )
+    p.add_argument(
+        '--append-file',
+        help="""Append data in meta.yaml with fields from this file.  Jinja2 is not done
+        on appended fields""",
+        dest='append_sections_file',
+    )
+    p.add_argument(
+        '--clobber-file',
+        help="""Clobber data in meta.yaml with fields from this file.  Jinja2 is not done
+        on clobbered fields.""",
+        dest='clobber_sections_file',
+    )
+    p.add_argument(
+        '-m', '--variant-config-files',
+        dest='variant_config_files',
+        action="append",
+        help="""Additional variant config files to add.  These yaml files can contain
+        keys such as `c_compiler` and `target_platform` to form a build matrix."""
+    )
+
     add_parser_channels(p)
     return p
 
@@ -124,17 +132,21 @@ def parse_args(args):
 def execute(args):
     p, args = parse_args(args)
 
-    config = Config()
-    set_language_env_vars(args, p, config)
+    config = get_or_merge_config(None, **args.__dict__)
+    variants = get_package_variants(args.recipe, config)
+    set_language_env_vars(variants)
 
-    metadata, _, _ = render_recipe(args.recipe, no_download_source=args.no_source, config=config)
+    metadata_tuples = api.render(args.recipe, config=config,
+                                 no_download_source=args.no_source)
+
     if args.output:
-        logging.basicConfig(level=logging.ERROR)
-        silence_loggers(show_warnings_and_errors=False)
-        print(bldpkg_path(metadata))
+        with LoggingContext(logging.CRITICAL + 1):
+            paths = api.get_output_file_paths(metadata_tuples)
+            print('\n'.join(sorted(paths)))
     else:
         logging.basicConfig(level=logging.INFO)
-        print(output_yaml(metadata, args.file))
+        for (m, _, _) in metadata_tuples:
+            print(api.output_yaml(m, args.file))
 
 
 def main():

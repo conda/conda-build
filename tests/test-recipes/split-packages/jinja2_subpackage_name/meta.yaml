@@ -4,7 +4,7 @@ package:
 
 requirements:
   run:
-    - {{ PKG_NAME }}_subpackage
+    - {{ pin_subpackage( PKG_NAME ~ "_subpackage") }}
 
 outputs:
   - name: {{ PKG_NAME }}_subpackage

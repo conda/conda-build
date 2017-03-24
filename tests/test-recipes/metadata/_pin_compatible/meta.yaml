@@ -1,0 +1,11 @@
+package:
+  name: test_pin_compatible_semver
+  version: 1.0
+
+requirements:
+  build:
+    - numpy  1.11.2
+    - python
+  run:
+    - numpy {{ pin_compatible('numpy') }}
+    - python

@@ -22,17 +22,21 @@ requirements:
   build:
     - python
   run:
+    - beautifulsoup4
+    - chardet
+    - conda  >=4.3
     - conda-verify
-    - conda  >=4.1
-    - contextlib2   [py<34]
+    - contextlib2   # [py<34]
+    - enum34        # [py<34]
     - filelock
+    - futures       # [py<3]
     - jinja2
-    - patchelf      [linux]
+    - patchelf      # [linux]
+    - pkginfo
     - pycrypto
     - python
     - pyyaml
-    - pkginfo
-    - enum34        [py<34]
+    - six
 
 test:
   requires:
@@ -78,6 +82,10 @@ test:
     - conda_build
   source_files:
     - tests
+
+outputs:
+  - type: wheel
+  - name: {{ PKG_NAME }}
 
 about:
   home: https://github.com/conda/conda-build

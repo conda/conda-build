@@ -7,15 +7,18 @@ package:
 
 requirements:
   run:
-    - my_script_subpackage
-    - my_script_subpackage_2
+    - {{ pin_subpackage('my_script_subpackage') }}
+    - {{ pin_subpackage('my_script_subpackage_2') }}
 
 outputs:
   - name: my_script_subpackage
     requirements:
+      - python
       - cython
   - name: my_script_subpackage_2
     requirements:
+      - python
       - click
 
 # tests are in run_test.py, and they check that the packages above are both installed
+#    Note that run_test.py should only actually apply as tests for the implicit metapackage

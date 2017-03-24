@@ -8,8 +8,8 @@ package:
 
 requirements:
   run:
-    - my_script_subpackage
-    - my_script_subpackage_2
+    - {{ pin_subpackage('my_script_subpackage') }}
+    - {{ pin_subpackage('my_script_subpackage_2') }}
 
 outputs:
   - name: my_script_subpackage

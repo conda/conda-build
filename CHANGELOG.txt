@@ -1,3 +1,344 @@
+2017-03-23 3.0.0alpha1:
+
+Bug fixes:
+----------
+
+* remove build and test envs after each packaging step, to avoid unsatisfiable errors  #1866
+* remove version pins from requirements added by run_test files (again avoid unsatisfiable errors)  #1866
+* fix prefix file detection picking up too many files due to env recreation  #1866
+* fix missing r_bin, make run_test.r scripts work  #1869
+
+Contributors:
+-------------
+
+* @msarahan
+
+2017-03-22 3.0.0alpha0:
+
+This is a complete revolution in the dynamic rendering capabilities of conda-build.  More information is in the docs PR at https://github.com/conda/conda-docs/pull/414.  There will be a blog post soon, perhaps coupled with a screencast.
+
+Enhancements:
+-------------
+
+* greatly extended Jinja2 templating capabilities  #1585
+* record environment variables at top of build.sh, similar to what is done with bld.bat in win.  #1765
+
+Bug fixes:
+----------
+
+* fix symlinks to folders in packaging  #1775
+* fix detection of patch level when maxlevel=0  #1796
+* properly copy permissions when extracting zip files  #1855
+* Add more important Windows environment variables to the test environment  #1859, #1863
+
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @pkgw
+* @stuarteberg
+* @ukoethe
+* @wulmer
+
+
+2017-03-14 2.1.7:
+
+Enhancements:
+-------------
+
+* pass WINDIR env var through on Windows  #1837
+* make long test prefix an option (default disabled)  #1838
+
+
+Bug fixes:
+----------
+
+* monkeypatch ensure_use_local to avoid conda-build import clobbering conda CLI arguments  #1834
+* Fix context conda_build attr error with older conda  #1813
+* Fix legacy noarch shebang replacement code to account for long prefix paths #1813
+* properly initialize 'system' key in linkage inspecting #1839
+* backport try mmap from master #1764
+* fix wheel output not respecting --output-folder CLI argument #1838
+* catch csv dialect sniffing error, try to fallback to to excel_tab.  Might work? #1840
+
+
+Contributors:
+-------------
+
+* @kalefranz
+* @mcs07
+* @msarahan
+
+
+2017-03-08 2.1.6:
+
+Enhancements:
+-------------
+
+* tests on linux/mac now use 255-character prefix when creating test environment  #1799
+* allow test/imports for R and lua packages #1806
+
+Bug fixes:
+----------
+
+* Fix case comparison in license_family.py  #1761
+* Fix symlinked folders not being included in packages  #1770
+* Fix extraction of tarballs containing unicode filenames  #1779, #1804
+* fix unicode in delimiter for noarch py_file_map  #1789
+* Clean up conda interface #1791
+* Confine conda-build 2.1.x to conda >4.1,<=4.3  #1792
+* fix detection of patch strip level when maxlevel = 0  #1796
+* fix attribute error in exception handling for missing dependencies  #1800
+* fix osx python_app test for python 3.6  #1801
+* don't die when unicode found in patch files  #1802
+* clarify error messaging when git is not found  #1803
+* fix shebangs in entry point scripts using legacy noarch_python #1806
+* fix test environment variables being set to build prefix values #1806
+* fix inspect linkages breaking due to conda index keys changing to different objects in conda 4.3  #1810
+
+
+Contributors:
+-------------
+
+* @gbrener
+* @kalefranz
+* @msarahan
+* @pkgw
+* @stuertz
+
+
+2017-02-20 2.1.5:
+
+Enhancements:
+-------------
+
+* don't crash on unknown selector.  Warn, but evaluate as False.  #1753
+* allow default conda packaging behavior for split package whose name matches top-level name, but lacks both ``files`` and ``script`` entry.  #1758
+
+
+Bug fixes:
+----------
+
+* unify license family text with Anaconda-Verify  #1744
+* apply post-processing to each split package, not just to post-build prefix files.  #1747
+* provide fallback lock directory in user's home folder.  Allows central installs.  #1749
+* fix quoting for test paths.  Allows croot with spaces.  #1750
+* fix pypi skeleton recursion #1754
+* fix assertion error about leading period when Jinja2 variables have default values  #1757
+* set default twine target to pypitest to avoid accidental uploads  #1758
+
+
+Contributors:
+-------------
+
+* @gabm
+* @msarahan
+
+
+2017-02-07 2.1.4:
+
+Enhancements:
+-------------
+
+* Allow relative paths for --croot option #1736
+
+Bug fixes:
+----------
+
+* Rename package_metadata.json file to link.json to more accurately reflect contents #1720
+* Fix converted packages from unix to Windows having broken entry points #1721
+* Fix an infinite loop when creating the test environment failed #1739
+* Fix conda 4.3 incompatibility with --pin-depends option #1740
+
+Contributors:
+
+* @gabm
+* @kalefranze
+* @msarahan
+
+
+2017-01-31 2.1.3:
+
+Enhancements:
+-------------
+
+* Add --extra-specs to conda skeleton.  Use when a package needs to be available in the temporary env that parses setup.py to make the skeleton.  #1697
+* Allow wheels as a source format  #1700
+* Allow github urls as CRAN skeleton sources  #1710
+
+Bug fixes:
+----------
+
+* exclude package/name field from uses_vcs_in_{meta,build} checks #1696
+* Fix conda convert wrt info/paths.json (for conda 4.3 compatibility)  #1701
+* update cpan skeleton to use newer API url, fix conda exception handling #1704
+* update R default version to 3.3.2  #1707
+* fix attribute error on exception handling (better fix on the way)  #1709
+* fix bundle_conda removing project files when conda recipe was in the source tree, and utilized relative paths  #1715
+* fix glob trying to interpret filenames that look like glob patterns  #1717
+
+
+Contributors:
+-------------
+
+* @ElliotJH
+* @jerowe
+* @kalefranz
+* @mingwandroid
+* @minrk
+* @msarahan
+* @rainwoodman
+
+
+2017-01-20 2.1.2:
+
+Enhancements:
+-------------
+
+* iron out compatibility with conda 4.3 #1667
+* pytest improvements for a cleaner CI experience #1686 #1687
+
+Bug fixes:
+----------
+
+* Avoid trailing semicolon in MSYS2_ARG_CONV_EXCL variable setting #1651
+* filter .git directories more strictly (keep x.git folders, not .git) #1657
+* fix 404's killing CPAN skeleton with newer conda versions #1667
+* use pythonw to run tests on OSX when osx_is_app is defined in meta.yaml #1669
+* ignore obnoxious .DS_Store files when packaging  #1670
+* fix --source argument to download source specified in meta.yaml #1671
+* fix slashes in file prefix replacement on Windows #1680
+* fix multiple source url fallbacks (handle CondaHTTPErrors) #1683
+* fix bizarre encoding errors on Windows with projects that embed binary in setup files #1685
+* fix CPAN JSON file encoding issue on windows #1688
+* revise retry when conda is missing files from a package #1690
+
+Contributors:
+-------------
+
+* @dfroger
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @nicoddemus
+* @pkgw
+
+
+2017-01-12 2.1.1:
+
+Bug fixes:
+----------
+
+* Fix package conversion consistency, wrt entry points #1609
+* Fix about.json contents regarding development versions of conda/conda-build #1625
+* Fix Appveyor for testing against source branches of conda #1628
+* Raise exception when SRC_DIR is used in tests, but meta.yaml has no test/source_files entry.  SRC_DIR points at test work folder at test time, for minimal needed changes to recipes - just add test/source_files entry with desired files.  #1630
+* Fix features list not allowed to be None in bdist_conda #1636
+* Fix undefined reference to locks in copy_into #1637
+* Fix version comparison in cpan skeleton #1638
+* Add dependency on beautifulsoup4 and chardet to better support strangely encoded text files.  #1641
+* Fix not-yet-fully-rendered versions starting with . from raising exception #1644
+* Consolidate _check_call and check_call_env in utils.  Fix coercion to string that was missing in latter.  #1645
+
+Contributors:
+-------------
+
+* @gomyhr
+* @jakirkham
+* @kalefranz
+* @msarahan
+
+2017-01-02 2.1.0:
+
+(includes changes since 2.0.12, including those already listed under 2.1.0beta1)
+
+Enhancements:
+-------------
+
+* Consolidate package metadata from extra.json and noarch.json into package_metadata.json #1535 #1539
+* finalize paths.json, (formerly files.json), which supersedes the older separate files for tracking file data #1535
+* Support output of multiple packages from one recipe #1576
+* Support output of wheels #1576
+* Add ``--prefix-length`` to conda-build.  This allows one to set the prefix length manually.  It should be used sparingly, preferring creation of a temporary folder on non-encrypted locations, and setting ``--croot`` to that temporary folder.  #1579
+* Add ``--no-prefix-length-fallback`` option to conda-build, to fail builds that encounter short prefixes, rather than falling back to the short prefix #1579
+* Change CRAN-skeleton to follow conda-forge style #1596
+* Allow relative paths to files in source/url field #1614
+
+Bug fixes:
+----------
+
+* Rework locks to be more robust #1540
+* Call make_hardlink_copy on Windows to prevent conda failures #1575
+* Delete the work folder before running the test suite.  Exposes faulty links to source files more easily.  #1581
+* Add support for Python 3.6 in selector expressions #1592
+* Don't try to compile pyc files when python is not installed in the build env #1593
+* Fix a function call leading to corrupted meta.yaml output #1589
+* Fix logger to be package-local.  Fixes logger output not showing up.  #1583
+* Disallow leading periods in package version  #1594
+* Fix reference to undefined need_source_download #1595
+* Disallow - in feature names, to avoid conflicts with conda's handling of package names #1600
+* Remove help text about passing multiple --python options or "all" - this has been broken for some time.  Replacement coming in 3.0.0.  #1610
+* Fix clobbering of no_link variable.  #1611
+* Fix index when --output-folder is specified #1613
+* Fix python_d.exe incompatibility with conda 4.3 #1615
+
+Contributors:
+-------------
+
+* @asmeurer
+* @hajs
+* @johanneskoester
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @mwiebe
+* @soapy1
+
+
+
+2016-12-20 2.1.0beta1:
+
+Enhancements:
+-------------
+
+* Consolidate package metadata from extra.json and noarch.json into package_metadata.json #1535 #1539
+* finalize paths.json, (formerly files.json), which supersedes the older separate files for tracking file data #1535
+* Support output of multiple packages from one recipe #1576
+* Support output of wheels #1576
+* Add ``--prefix-length`` to conda-build.  This allows one to set the prefix length manually.  It should be used sparingly, preferring creation of a temporary folder on non-encrypted locations, and setting ``--croot`` to that temporary folder.  #1579
+* Add ``--no-prefix-length-fallback`` option to conda-build, to fail builds that encounter short prefixes, rather than falling back to the short prefix #1579
+* Change CRAN-skeleton to follow conda-forge style #1596
+
+Bug fixes:
+----------
+
+* Rework locks to be more robust #1540
+* Call make_hardlink_copy on Windows to prevent conda failures #1575
+* Delete the work folder before running the test suite.  Exposes faulty links to source files more easily.  #1581
+* Add support for Python 3.6 in selector expressions #1592
+* Don't try to compile pyc files when python is not installed in the build env #1593
+* Fix a function call leading to corrupted meta.yaml output #1589
+* Fix logger to be package-local.  Fixes logger output not showing up.  #1583
+* Disallow leading periods in package version  #1594
+* Fix reference to undefined need_source_download #1595
+* Disallow - in feature names, to avoid conflicts with conda's handling of package names #1600
+
+Contributors:
+-------------
+
+* @asmeurer
+* @hajs
+* @johanneskoester
+* @kalefranz
+* @mingwandroid
+* @msarahan
+* @mwiebe
+* @soapy1
+
 2016-12-12 2.0.12:
 
 Enhancements:

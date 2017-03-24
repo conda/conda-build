@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
 import base64
-import logging
 import os
 from os.path import isfile, join, isdir
 import shutil
 import sys
 
 from .conda_interface import KEYS, KEYS_DIR, hash_file
+from conda_build import utils
 
 try:
     from Crypto import Random
@@ -20,8 +20,6 @@ Error: could not import Crypto (required for "conda sign").
 
     $ conda install -n root pycrypto
 """)
-
-log = logging.getLogger(__file__)
 
 
 def keygen(name, size=2048):
@@ -103,6 +101,7 @@ def verify(path):
     It raises SignatureError when the signature file, or the public key
     does not exist.
     """
+    log = utils.get_logger(__name__)
     sig_path = path + '.sig'
     if not isfile(sig_path):
         log.error("signature does not exist: %s", sig_path)

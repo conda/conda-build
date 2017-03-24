@@ -1,0 +1,41 @@
+package:
+  name: intradependencies
+  version: 1.0
+
+requirements:
+  build:
+    # the purpose of these dependencies is to disallow empty requirements from making the tests
+    #    pass when they would otherwise fail.  Empty requirements hide lack of finalization.
+    - posix  # [win]
+    - git    # [not win]
+
+outputs:
+  - name: lib1intradependencies
+    script: install-lib1intradependencies.sh
+
+  - name: py1-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib1intradependencies', exact=True) }}
+      - python {{ python }}
+    script: install-py1-intradependencies.sh
+
+  - name: r1-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib1intradependencies', exact=True) }}
+      - r-base {{ r }}
+    script: install-r1-intradependencies.sh
+
+  - name: lib2intradependencies
+    script: install-lib2intradependencies.sh
+
+  - name: py2-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib2intradependencies', exact=True) }}
+      - python {{ python }}
+    script: install-py2-intradependencies.sh
+
+  - name: r2-intradependencies
+    requirements:
+      - {{ pin_subpackage('lib2intradependencies', exact=True) }}
+      - r-base {{ r }}
+    script: install-r2-intradependencies.sh
