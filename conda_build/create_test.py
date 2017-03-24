@@ -143,8 +143,8 @@ def _create_test_files(dir_path, m, ext, comment_char='# '):
 
 def create_py_files(dir_path, m):
     tf, tf_exists = _create_test_files(dir_path, m, '.py')
-    imports = ensure_list(m.get_value('test/imports', []))
-    for import_item in imports:
+    imports = None
+    for import_item in ensure_list(m.get_value('test/imports', [])):
         if (hasattr(import_item, 'keys') and 'lang' in import_item and
                 import_item['lang'] == 'python'):
             imports = import_item['imports']
@@ -197,20 +197,20 @@ def create_pl_files(dir_path, m):
         with open(tf, 'a+') as fo:
             print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
                     file=fo)
-        if imports:
-            for name in imports:
-                print(r'print("import: %s\n");' % name, file=fo)
-                print('use %s;\n' % name, file=fo)
-                # Don't try to print version for complex imports
-                if ' ' not in name:
-                    print(("if (defined {0}->VERSION) {{\n" +
-                            "\tmy $given_version = {0}->VERSION;\n" +
-                            "\t$given_version =~ s/0+$//;\n" +
-                            "\tdie('Expected version ' . $expected_version . ' but" +
-                            " found ' . $given_version) unless ($expected_version " +
-                            "eq $given_version);\n" +
-                            "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
-                            "\n}}").format(name), file=fo)
+            if imports:
+                for name in imports:
+                    print(r'print("import: %s\n");' % name, file=fo)
+                    print('use %s;\n' % name, file=fo)
+                    # Don't try to print version for complex imports
+                    if ' ' not in name:
+                        print(("if (defined {0}->VERSION) {{\n" +
+                                "\tmy $given_version = {0}->VERSION;\n" +
+                                "\t$given_version =~ s/0+$//;\n" +
+                                "\tdie('Expected version ' . $expected_version . ' but" +
+                                " found ' . $given_version) unless ($expected_version " +
+                                "eq $given_version);\n" +
+                                "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
+                                "\n}}").format(name), file=fo)
     return tf if (tf_exists or imports) else False
 
 
