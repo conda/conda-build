@@ -254,11 +254,13 @@ class bdist_conda(install):
             d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
         d = dict(d)
+        self.config.dirty = True
         m = MetaData.fromdict(d, config=self.config)
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
         m.config.set_build_id = False
         api.build(m, build_only=True)
+        self.config = m.config
         # prevent changes in the build ID from here, so that we're working in the same prefix
         # Do the install
         if not PY3:
@@ -268,6 +270,7 @@ class bdist_conda(install):
             super().run()
         api.build(m, post=True)
         api.test(m)
+        m.config.clean()
         output_file = api.get_output_file_path(m)
         if self.anaconda_upload:
             class args:
