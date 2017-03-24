@@ -44,11 +44,14 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
+    specs = []
     if utils.conda_43():
         spec_name = lambda x: x.dist_name
     else:
         spec_name = lambda x: x
-    return [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
+    if 'LINK' in actions:
+        specs = [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
+    return specs
 
 
 def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
@@ -123,7 +126,7 @@ def get_upstream_pins(m, actions, index):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
     additional_specs = []
-    linked_packages = actions['LINK']
+    linked_packages = actions.get('LINK', [])
     # edit the plan to download all necessary packages
     for key in ('LINK', 'EXTRACT', 'UNLINK'):
         if key in actions:
@@ -268,24 +271,21 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
     return rendered_metadata
 
 
-def try_download(metadata, no_download_source, force_download=False):
-    need_source_download = True
-    if (force_download or (not no_download_source and metadata.needs_source_for_render)):
+def try_download(metadata, no_download_source):
+    need_source_download = (metadata.get_section('source') and
+                            len(os.listdir(metadata.config.work_dir)) == 0)
+    if need_source_download and not no_download_source:
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
-            if not metadata.config.dirty or len(os.listdir(metadata.config.work_dir)) == 0:
-                source.provide(metadata)
-            if not metadata.get_section('source') or len(os.listdir(metadata.config.work_dir)) > 0:
-                need_source_download = False
+            source.provide(metadata)
+            need_source_download = len(os.listdir(metadata.config.work_dir)) > 0
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
             print("Error was: ")
             print(error)
 
-    elif not metadata.get_section('source'):
-        need_source_download = False
     if need_source_download and no_download_source:
         raise ValueError("no_download_source specified, but can't fully render recipe without"
                          " downloading source.  Please fix the recipe, or don't use "

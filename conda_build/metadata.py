@@ -1105,14 +1105,18 @@ class MetaData(object):
 
     @property
     def uses_setup_py_in_meta(self):
-        with open(self.meta_path) as f:
-            meta_text = f.read()
+        meta_text = ""
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                meta_text = f.read()
         return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
     def uses_regex_in_meta(self):
-        with open(self.meta_path) as f:
-            meta_text = f.read()
+        meta_text = ""
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                meta_text = f.read()
         return "load_file_regex" in meta_text
 
     @property
@@ -1133,17 +1137,20 @@ class MetaData(object):
         """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
+        vcs = None
         vcs_types = ["git", "svn", "hg"]
         # We would get here if we use Jinja2 templating, but specify source with path.
-        with open(self.meta_path) as f:
-            metayaml = f.read()
-            for vcs in vcs_types:
-                matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
-                if len(matches) > 0 and vcs != self.meta['package']['name']:
-                    if vcs == "hg":
-                        vcs = "mercurial"
-                    return vcs
-        return None
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                metayaml = f.read()
+                for _vcs in vcs_types:
+                    matches = re.findall(r"{}_[^\.\s\'\"]+".format(_vcs.upper()), metayaml)
+                    if len(matches) > 0 and _vcs != self.meta['package']['name']:
+                        if _vcs == "hg":
+                            _vcs = "mercurial"
+                        vcs = _vcs
+                        break
+        return vcs
 
     @property
     def uses_vcs_in_build(self):
@@ -1288,7 +1295,7 @@ class MetaData(object):
                 del output_metadata.meta['outputs']
         return output_metadata
 
-    def get_output_metadata_set(self, files=None, permit_undefined_jinja=False,
+    def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=True):
         from .render import finalize_metadata
 
@@ -1297,6 +1304,14 @@ class MetaData(object):
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
+
+        prefix_file_list = join(self.config.croot, 'prefix_files.txt')
+        if os.path.isfile(prefix_file_list):
+            with open(prefix_file_list) as f:
+                initial_files = set(f.read().splitlines())
+        else:
+            initial_files = set()
+        files = utils.prefix_files(prefix=self.config.build_prefix) - initial_files
         try:
             if not outputs:
                 outputs = [output_dict_from_top_level_meta(self, files)]
@@ -1310,8 +1325,7 @@ class MetaData(object):
             for out in outputs:
                 if (self.name() == out.get('name', '') and not (out.get('files') or
                                                                 out.get('script'))):
-                    if files:
-                        out['files'] = files
+                    out['files'] = files
                     out['requirements'] = self.meta.get('requirements', {})
                     out['noarch_python'] = out.get('noarch_python',
                                                     self.get_value('build/noarch_python'))

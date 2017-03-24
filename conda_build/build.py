@@ -47,7 +47,7 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse,
-                                distribute_variants, expand_outputs)
+                                distribute_variants, expand_outputs, try_download)
 import conda_build.os_utils.external as external
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
@@ -69,22 +69,6 @@ if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
     shell_path = '/bin/bash'
-
-
-def prefix_files(prefix):
-    '''
-    Returns a set of all files in prefix.
-    '''
-    res = set()
-    for root, dirs, files in os.walk(prefix):
-        for fn in files:
-            res.add(join(root, fn)[len(prefix) + 1:])
-        for dn in dirs:
-            path = join(root, dn)
-            if islink(path):
-                res.add(path[len(prefix) + 1:])
-    res = set(utils.expand_globs(res, prefix))
-    return res
 
 
 def create_post_scripts(m):
@@ -618,7 +602,7 @@ def post_process_files(m, initial_prefix_files):
     # this is new-style noarch, with a value of 'python'
     if m.noarch != 'python':
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
-    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
 
     post_process(sorted(current_prefix_files - initial_prefix_files),
                     prefix=m.config.build_prefix,
@@ -628,7 +612,7 @@ def post_process_files(m, initial_prefix_files):
                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
     # The post processing may have deleted some files (like easy-install.pth)
-    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
     new_files = utils.filter_files(new_files, prefix=m.config.build_prefix)
 
@@ -654,7 +638,7 @@ can lead to packages that include their dependencies.""" % meta_files))
     elif m.noarch == 'python':
         noarch_python.populate_files(m, pkg_files, m.config.build_prefix, entry_point_script_names)
 
-    current_prefix_files = prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
     new_files = current_prefix_files - initial_prefix_files
     fix_permissions(new_files, m.config.build_prefix)
 
@@ -676,7 +660,7 @@ def bundle_conda(output, metadata, env, **kw):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
-        initial_files = prefix_files(metadata.config.build_prefix)
+        initial_files = utils.prefix_files(metadata.config.build_prefix)
         env_output = env.copy()
         env_output['TOP_PKG_NAME'] = env['PKG_NAME']
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
@@ -688,7 +672,7 @@ def bundle_conda(output, metadata, env, **kw):
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.build_prefix))
-        pfx_files = set(prefix_files(metadata.config.build_prefix))
+        pfx_files = set(utils.prefix_files(metadata.config.build_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item) for keep_file in keep_files))
 
@@ -710,7 +694,7 @@ def bundle_conda(output, metadata, env, **kw):
             # the test belongs to the parent recipe.  Don't include it in subpackages.
             utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
-    files = set(prefix_files(metadata.config.build_prefix)) - initial_files
+    files = set(utils.prefix_files(metadata.config.build_prefix)) - initial_files
     files = utils.filter_files(files, prefix=metadata.config.build_prefix)
 
     # lock the output directory while we build this file
@@ -777,7 +761,10 @@ def bundle_wheel(output, metadata, env):
     import pip
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
-        wheel_file = glob(os.path.join(tmpdir, "*.whl"))[0]
+        wheel_files = glob(os.path.join(tmpdir, "*.whl"))
+        if not wheel_files:
+            raise RuntimeError("Wheel creation failed.  Please see output above to debug.")
+        wheel_file = wheel_files[0]
         if metadata.config.output_folder:
             output_folder = os.path.join(metadata.config.output_folder, metadata.config.subdir)
         else:
@@ -826,6 +813,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         return default_return
 
     log = utils.get_logger(__name__)
+    actions = []
 
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(config=m.config, m=m)
@@ -860,9 +848,11 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
+        actions = environ.get_install_actions(m.config.build_prefix, index,
+                                              m.ms_depends('build'), m.config)
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
-            environ.create_env(m.config.build_prefix, specs, config=m.config,
+            environ.create_env(m.config.build_prefix, actions, config=m.config,
                                subdir=m.config.build_subdir, index=index)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
@@ -876,30 +866,18 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             environ.create_env(m.config.host_prefix, specs, config=m.config,
                                subdir=m.config.host_subdir)
 
+        # Execute any commands fetching the source (e.g., git) in the _build environment.
+        # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
+        # dependencies.
+
+        with utils.path_prepended(m.config.build_prefix):
+            try_download(m, no_download_source=False)
         if need_source_download:
-            # Execute any commands fetching the source (e.g., git) in the _build environment.
-            # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
-            # dependencies.
-            with utils.path_prepended(m.config.build_prefix):
-                source.provide(m)
             m.final = False
             m.parse_until_resolved(stub_subpackages=True)
 
         elif need_reparse_in_env:
             m = reparse(m, index)
-
-        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)], index)
-
-        if m.config.skip_existing:
-            package_locations = [is_package_built(om) for om, _, _ in output_metas]
-            if all(package_locations):
-                print("Packages for ", m.path or m.name(),
-                        "are already built in {0}, skipping.".format(package_locations))
-                return default_return
-        else:
-            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
-
-        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -911,7 +889,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             os.makedirs(src_dir)
 
         utils.rm_rf(m.config.info_dir)
-        files1 = prefix_files(prefix=m.config.host_prefix)
+        files1 = utils.prefix_files(prefix=m.config.host_prefix)
         for pat in m.always_include_files():
             has_matches = False
             for f in set(files1):
@@ -925,6 +903,19 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         with open(join(m.config.croot, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
+
+        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)], index)
+
+        if m.config.skip_existing:
+            package_locations = [is_package_built(om) for om, _, _ in output_metas]
+            if all(package_locations):
+                print("Packages for ", m.path or m.name(),
+                        "are already built in {0}, skipping.".format(package_locations))
+                return default_return
+        else:
+            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
+
+        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
         # Use script from recipe?
         script = utils.ensure_list(m.get_value('build/script', None))
@@ -971,22 +962,21 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
     new_pkgs = default_return
     if post in [True, None]:
-        with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
-            initial_files = set(f.read().splitlines())
-
-        files = prefix_files(prefix=m.config.build_prefix) - initial_files
-        outputs = m.get_output_metadata_set(files=files, permit_unsatisfiable_variants=False)
+        outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
 
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
                     m.config.subdir)
+
+        if actions:
+            environ.remove_env(actions, index, m.config)
+
         for (output_d, m) in outputs:
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
             pkg_path = bldpkg_path(m)
             if pkg_path not in built_packages and pkg_path not in new_pkgs:
                 actions = environ.get_install_actions(m.config.host_prefix, index,
                                                       m.ms_depends('build'), m.config)
-                utils.trim_empty_keys(actions)
                 environ.create_env(m.config.host_prefix, actions, config=m.config,
                                    subdir=subdir)
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
@@ -1091,7 +1081,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             metadata = metadata_tuples[0][0]
             if (metadata.meta.get('test', {}).get('source_files') and
                     not os.listdir(metadata.config.work_dir)):
-                source.provide(metadata)
+                try_download(metadata, no_download_source=False)
         except IOError:
             raise IOError("Didn't find recipe in folder or package under test.  Can't test "
                           "this after exiting build.")
@@ -1143,16 +1133,16 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             # as the tests are run by python, ensure that python is installed.
             # (If they already provided python as a run or test requirement,
             #  this won't hurt anything.)
-            specs += ['python %s.*' % environ.get_py_ver(config)]
+            specs += ['python']
         if pl_files:
             # as the tests are run by perl, we need to specify it
-            specs += ['perl %s.*' % environ.get_perl_ver(config)]
+            specs += ['perl']
         if lua_files:
             # not sure how this shakes out
-            specs += ['lua %s.*' % environ.get_lua_ver(config)]
+            specs += ['lua']
         if r_files:
             # not sure how this shakes out
-            specs += ['r-base %s.*' % environ.get_r_ver(config)]
+            specs += ['r-base']
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
@@ -1176,10 +1166,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         # we want subdir to match the target arch.  If we're running the test on the target arch,
         #     the build_subdir should be that match.  The host_subdir may not be, and would lead
         #     to unsatisfiable packages.
-        environ.create_env(metadata.config.test_prefix, specs, config=metadata.config,
-                           subdir=(metadata.config.build_subdir
-                                   if metadata.config.build_subdir != 'noarch'
-                                   else subdir))
+        subdir = (metadata.config.build_subdir if metadata.config.build_subdir != 'noarch'
+                  else subdir)
+        index = get_build_index(metadata.config, subdir)
+        actions = environ.get_install_actions(metadata.config.test_prefix, index,
+                                                specs, metadata.config)
+        environ.create_env(metadata.config.test_prefix, actions, config=metadata.config,
+                           subdir=subdir)
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())
@@ -1204,43 +1197,53 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
         with open(test_script, 'w') as tf:
-            if metadata.config.activate:
+            if config.activate:
                 ext = ".bat" if utils.on_win else ""
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}" {squelch}\n'.format(
                     conda_root=utils.root_script_dir + os.path.sep,
                     source="call" if utils.on_win else "source",
                     ext=ext,
-                    test_env=metadata.config.test_prefix,
-                    squelch=">NUL 2>&1" if utils.on_win else "&> /dev/null"))
+                    test_env=config.test_prefix,
+                    squelch=">nul 2>&1" if utils.on_win else "&> /dev/null"))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
+                test_python = config.test_python
+                # use pythonw for import tests when osx_is_app is set
+                if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
+                    test_python = test_python + 'w'
                 tf.write('"{python}" -s "{test_file}"\n'.format(
-                    python=metadata.config.test_python,
-                    test_file=join(metadata.config.test_dir, 'run_test.py')))
+                    python=config.test_python,
+                    test_file=join(config.test_dir, 'run_test.py')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if pl_files:
                 tf.write('"{perl}" "{test_file}"\n'.format(
-                    perl=metadata.config.test_perl,
-                    test_file=join(metadata.config.test_dir, 'run_test.pl')))
+                    perl=config.perl_bin(config.test_prefix),
+                    test_file=join(config.test_dir, 'run_test.pl')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if lua_files:
                 tf.write('"{lua}" "{test_file}"\n'.format(
-                    lua=metadata.config.test_lua,
-                    test_file=join(metadata.config.test_dir, 'run_test.lua')))
+                    lua=config.lua_bin(config.test_prefix),
+                    test_file=join(config.test_dir, 'run_test.lua')))
+                if utils.on_win:
+                    tf.write("if errorlevel 1 exit 1\n")
+            if r_files:
+                tf.write('"{r}" "{test_file}"\n'.format(
+                    r=config.r_bin(config.test_prefix),
+                    test_file=join(config.test_dir, 'run_test.r')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if shell_files:
-                test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
+                test_file = join(config.test_dir, 'run_test.' + suffix)
                 if utils.on_win:
                     tf.write('call "{test_file}"\n'.format(test_file=test_file))
                     if utils.on_win:
                         tf.write("if errorlevel 1 exit 1\n")
                 else:
                     # TODO: Run the test/commands here instead of in run_test.py
-                    tf.write("{shell_path} -x -e {test_file}\n".format(shell_path=shell_path,
+                    tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
                                                                         test_file=test_file))
         if utils.on_win:
             cmd = ['cmd.exe', "/d", "/c", test_script]
@@ -1253,6 +1256,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                          config=metadata.config)
         if need_cleanup:
             utils.rm_rf(recipe_dir)
+        environ.remove_env(actions, index, config)
         print("TEST END:", test_package_name)
     return True
 
@@ -1306,8 +1310,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     # this is primarily for exception handling.  It's OK that it gets clobbered by
     #     the loop below.
     metadata = None
+    metadata_tuples = []
 
-    used_build_folders = []
+    has_exception = set()
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1330,7 +1335,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 config = metadata.config
                 # this code is duplicated below because we need to be sure that the build id is set
                 #    before downloading happens - or else we lose where downloads are
-                if config.set_build_id:
+                if config.set_build_id and metadata.name() not in config.build_id:
                     config.compute_build_id(metadata.name(), reset=True)
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
@@ -1360,37 +1365,38 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=False)
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
-                if metadata.config.build_folder in used_build_folders:
+                if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
-                used_build_folders.append(metadata.config.build_folder)
-                with metadata.config:
-                    packages_from_this = build(metadata, index=index, post=post,
-                                               need_source_download=need_source_download,
-                                               need_reparse_in_env=need_reparse_in_env,
-                                               built_packages=built_packages)
-                    if not notest:
-                        for pkg, dict_and_meta in packages_from_this.items():
-                            if pkg.endswith('.tar.bz2'):
-                                # we only know how to test conda packages
-                                try:
-                                    test(pkg, config=metadata.config)
-                                # IOError means recipe not included with package. use metadata
-                                except (OSError, IOError):
-                                    # force the build string to line up - recomputing it would
-                                    #    yield a different result
-                                    index_contents = utils.package_has_file(pkg,
-                                                                'info/index.json').decode()
-                                    build_str = json.loads(index_contents)['build']
-                                    build_meta = dict_and_meta[1].meta.get('build', {})
-                                    build_meta['string'] = build_str
-                                    dict_and_meta[1].meta['build'] = build_meta
-                                    test(dict_and_meta[1], config=metadata.config)
-                            built_packages.update({pkg: dict_and_meta})
-                    else:
-                        built_packages.update(packages_from_this)
+
+                packages_from_this = build(metadata, index=index, post=post,
+                                            need_source_download=need_source_download,
+                                            need_reparse_in_env=need_reparse_in_env,
+                                            built_packages=built_packages)
+                if not notest:
+                    for pkg, dict_and_meta in packages_from_this.items():
+                        if pkg.endswith('.tar.bz2'):
+                            # we only know how to test conda packages
+                            try:
+                                test(pkg, config=metadata.config)
+                            # IOError means recipe not included with package. use metadata
+                            except (OSError, IOError):
+                                # force the build string to line up - recomputing it would
+                                #    yield a different result
+                                index_contents = utils.package_has_file(pkg,
+                                                            'info/index.json').decode()
+                                build_str = json.loads(index_contents)['build']
+                                build_meta = dict_and_meta[1].meta.get('build', {})
+                                build_meta['string'] = build_str
+                                dict_and_meta[1].meta['build'] = build_meta
+                                test(dict_and_meta[1], config=metadata.config)
+                        built_packages.update({pkg: dict_and_meta})
+                else:
+                    built_packages.update(packages_from_this)
         except DependencyNeedsBuildingError as e:
-            skip_names = ['python', 'r']
+            skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
             add_recipes = []
+            if metadata:
+                has_exception.add(metadata.dist())
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([metadata if metadata else recipe])
             for pkg in e.packages:
@@ -1423,6 +1429,10 @@ for Python 3.5 and needs to be rebuilt."""
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(recipe)
             recipe_list.extendleft(add_recipes)
+        finally:
+            for (m, _, _) in metadata_tuples:
+                if not getattr(m.config, 'dirty') and not m.dist() in has_exception:
+                    m.config.clean()
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...

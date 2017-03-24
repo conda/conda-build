@@ -655,6 +655,7 @@ def get_install_actions(prefix, index, specs, config, retries=0):
             actions['LINK'] = [spec for spec in actions['LINK']
                                 if not spec.startswith('pip-') and
                                 not spec.startswith('setuptools-')]
+    utils.trim_empty_keys(actions)
     return actions
 
 

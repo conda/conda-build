@@ -11,9 +11,7 @@ import sys
 import pytest
 
 from conda_build import build, api
-from conda_build.metadata import MetaData
-from conda_build.utils import rm_rf, on_win
-from conda_build.conda_interface import LinkError, PaddingError, CondaError
+from conda_build.utils import on_win
 
 from .utils import metadata_dir, put_bad_conda_on_path, get_noarch_python_meta, put_bad_conda_on_path
 
