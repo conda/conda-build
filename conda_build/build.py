@@ -650,9 +650,6 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
     with external_logger_context:
         log = logging.getLogger(__name__)
 
-        if os.path.isdir(prefix):
-            utils.rm_rf(prefix)
-
         specs = list(specs)
         for feature, value in feature_list:
             if value:
@@ -1084,7 +1081,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
             if not has_matches:
                 log.warn("Glob %s from always_include_files does not match any files", pat)
         # Save this for later
-        with open(join(config.croot, 'prefix_files.txt'), 'w') as f:
+        with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
@@ -1137,7 +1134,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                         utils.check_call_env(cmd, env=env, cwd=src_dir)
 
     if post in [True, None]:
-        with open(join(m.config.croot, 'prefix_files.txt'), 'r') as f:
+        with open(join(m.config.build_folder, 'prefix_files.txt'), 'r') as f:
             initial_files = set(f.read().splitlines())
 
         files = prefix_files(prefix=m.config.build_prefix) - initial_files
@@ -1495,7 +1492,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             verifier.verify_recipe(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                    rendered_meta=metadata.meta, recipe_dir=metadata.path)
 
-        if metadata.name() not in metadata.config.build_folder:
+        if metadata.name() not in metadata.config.build_folder and metadata.config.set_build_id:
             metadata.config.compute_build_id(metadata.name(), reset=True)
         try:
             with config:
