@@ -312,7 +312,7 @@ compilers = {
 }
 
 
-def _native_compiler(language, config):
+def native_compiler(language, config):
     compiler = compilers[config.platform][language]
     if hasattr(compiler, 'keys'):
         compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
@@ -329,11 +329,11 @@ def compiler(language, config, permit_undefined_jinja=False):
     """
 
     compiler = None
-    native_compiler = _native_compiler(language, config)
+    nc = native_compiler(language, config)
     if config.variant:
         language_compiler_key = '{}_compiler'.format(language)
         # fall back to native if language-compiler is not explicitly set in variant
-        compiler = config.variant.get(language_compiler_key, native_compiler)
+        compiler = config.variant.get(language_compiler_key, nc)
 
         # support cross compilers.  A cross-compiler package will have a name such as
         #    gcc_target

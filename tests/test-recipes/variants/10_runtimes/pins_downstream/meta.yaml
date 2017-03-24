@@ -1,0 +1,11 @@
+package:
+  name: pins_downstream
+  version: 1.0
+
+build:
+  pin_downstream:
+    - bzip2  {{ pin_compatible('bzip2') }}
+
+requirements:
+  build:
+    - bzip2

@@ -344,6 +344,16 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
                     conform_dict[key] = variant[key]
 
+            compiler_matches = re.findall(r"compiler\([\'\"](.*)[\'\"].*\)",
+                                         recipe_requirements)
+            if compiler_matches:
+                from conda_build.jinja_context import native_compiler
+                for match in compiler_matches:
+                    compiler_key = '{}_compiler'.format(match)
+                    conform_dict[compiler_key] = variant.get(compiler_key,
+                                            native_compiler(match, metadata.config))
+                    conform_dict['target_platform'] = variant['target_platform']
+
             build_reqs = mv.meta.get('requirements', {}).get('build', [])
             if 'python' in build_reqs:
                 conform_dict['python'] = variant['python']
