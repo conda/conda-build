@@ -1197,6 +1197,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
 
         with open(test_script, 'w') as tf:
+            if not utils.on_win:
+                tf.write('set -x -e\n')
             if config.activate:
                 ext = ".bat" if utils.on_win else ""
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}" {squelch}\n'.format(
@@ -1230,7 +1232,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if r_files:
-                tf.write('"{r}" "{test_file}"\n'.format(
+                tf.write('"{r}" CMD BATCH "{test_file}"\n'.format(
                     r=config.r_bin(config.test_prefix),
                     test_file=join(config.test_dir, 'run_test.r')))
                 if utils.on_win:
@@ -1254,6 +1256,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         except subprocess.CalledProcessError:
             tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
                          config=metadata.config)
+            raise
         if need_cleanup:
             utils.rm_rf(recipe_dir)
         environ.remove_env(actions, index, config)
@@ -1389,6 +1392,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                 build_meta['string'] = build_str
                                 dict_and_meta[1].meta['build'] = build_meta
                                 test(dict_and_meta[1], config=metadata.config)
+                            except subprocess.CalledProcessError:
+                                has_exception.add(metadata.dist())
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)

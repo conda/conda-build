@@ -129,7 +129,7 @@ def _create_test_files(m, ext, comment_char='# '):
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
             fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
-            fo.write(header + '\n')
+            # fo.write(header + '\n')
             fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
             try:
