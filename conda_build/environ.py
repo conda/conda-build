@@ -157,14 +157,16 @@ def get_git_info(repo, config):
 
     try:
         output = utils.check_output_env(["git", "describe", "--tags", "--long", "HEAD"],
-                                         env=env, cwd=os.path.dirname(repo),
-                                         stderr=stderr).splitlines()[0]
+                                        env=env, cwd=os.path.dirname(repo),
+                                        stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
-
         parts = output.rsplit('-', 2)
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
+    except subprocess.CalledProcessError:
+        log.warn("Failed to obtain git tag information.  Are you using annotated tags?")
 
+    try:
         # get the _full_ hash of the current HEAD
         output = utils.check_output_env(["git", "rev-parse", "HEAD"],
                                          env=env, cwd=os.path.dirname(repo),
@@ -172,17 +174,17 @@ def get_git_info(repo, config):
         output = output.decode('utf-8')
 
         d['GIT_FULL_HASH'] = output
-        # set up the build string
-        if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
-            d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
-                                                d["GIT_DESCRIBE_HASH"])
-
-        # issues on Windows with the next line of the command prompt being recorded here.
-        assert not any("\n" in value for value in d.values())
-
     except subprocess.CalledProcessError as error:
-        log.warn("Error obtaining git information in get_git_info.  Error was: ")
+        log.warn("Error obtaining git commit information.  Error was: ")
         log.warn(str(error))
+
+    # set up the build string
+    if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
+        d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
+                                            d["GIT_DESCRIBE_HASH"])
+
+    # issues on Windows with the next line of the command prompt being recorded here.
+    assert not any("\n" in value for value in d.values())
     return d
 
 
