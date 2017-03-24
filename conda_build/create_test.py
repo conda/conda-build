@@ -14,31 +14,6 @@ from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list
 from conda_build import source
 
 
-header = '''
-from __future__ import absolute_import, division, print_function
-
-import sys
-import subprocess
-from distutils.spawn import find_executable
-import shlex
-
-
-def call_args(string):
-    args = shlex.split(string)
-    arg0 = args[0]
-    args[0] = find_executable(arg0)
-    if not args[0]:
-        sys.exit("Command not found: '%s'" % arg0)
-
-    try:
-        subprocess.check_call(args)
-    except subprocess.CalledProcessError:
-        sys.exit('Error: command failed: %s' % ' '.join(args))
-
-# --- end header
-'''
-
-
 def create_files(dir_path, m, config):
     """
     Create the test files for pkg in the directory given.  The resulting
@@ -125,7 +100,6 @@ def _create_test_files(dir_path, m, ext, comment_char='# '):
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
             fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
-            fo.write(header + '\n')
             fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
             try:
