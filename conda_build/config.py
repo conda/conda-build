@@ -317,9 +317,9 @@ class Config(object):
 
     def _get_r(self, prefix):
         if sys.platform == 'win32':
-            res = join(prefix, 'R.exe')
+            res = join(prefix, 'Scripts', 'R.exe')
         else:
-            res = join(prefix, 'bin/R')
+            res = join(prefix, 'bin', 'R')
         return res
 
     def compute_build_id(self, package_name, reset=False):
