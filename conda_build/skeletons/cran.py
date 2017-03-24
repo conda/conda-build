@@ -10,6 +10,12 @@ from os.path import join, exists, isfile, basename, isdir
 import re
 import subprocess
 import sys
+import hashlib
+
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 import requests
 import yaml
@@ -31,6 +37,7 @@ from conda_build.license_family import allowed_license_families, guess_license_f
 CRAN_META = """\
 {{% set name = '{cran_packagename}' %}}
 {{% set version = '{cran_version}' %}}
+{{% set sha256 = '{sha256}' %}}
 
 {{% set posix = 'm2-' if win else '' %}}
 {{% set native = 'm2w64-' if win else '' %}}
@@ -44,9 +51,7 @@ source:
   {url_key} {cranurl}
   {git_url_key} {git_url}
   {git_tag_key} {git_tag}
-  # You can add a hash for the file here, like md5 or sha1
-  # md5: 49448ba4863157652311cc5ea4fea3ea
-  # sha1: 3bcfbee008276084cbb37a2b453963c61176a322
+  {hash_entry}
   # patches:
    # List any patch files here
    # - fix.patch
@@ -547,6 +552,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['fn_key'] = ''
             d['git_url_key'] = 'git_url:'
             d['git_tag_key'] = 'git_tag:'
+            d['hash_entry'] = '# You can add a hash for the file here, like md5, sha1 or sha256'
             d['filename'] = ''
             d['cranurl'] = ''
             d['git_url'] = url
@@ -558,6 +564,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['git_tag_key'] = ''
             d['git_url'] = ''
             d['git_tag'] = ''
+            d['hash_entry'] = ''
 
         if version:
             d['version'] = version
@@ -570,10 +577,21 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             sys.exit(not version_compare(dir_path, d['conda_version']))
 
         if not is_github_url:
-            d['filename'] = "{{ name }}_{{ version }}.tar.gz"
+            filename = '{}_{}.tar.gz'
+            contrib_url = cran_url + 'src/contrib/'
+            package_url = contrib_url + filename.format(package, d['cran_version'])
+
+            # calculate sha256 by downloading source
+            sha256 = hashlib.sha256()
+            print("Downloading source from {}".format(package_url))
+            sha256.update(urlopen(package_url).read())
+            d['hash_entry'] = 'sha256: {{ sha256 }}'
+            d['sha256'] = sha256.hexdigest()
+
+            d['filename'] = filename.format('{{ name }}', '{{ version }}')
             if archive:
-                d['cranurl'] = (INDENT + cran_url + 'src/contrib/' +
-                    d['filename'] + INDENT + cran_url + 'src/contrib/' +
+                d['cranurl'] = (INDENT + contrib_url +
+                    d['filename'] + INDENT + contrib_url +
                     'Archive/{{ name }}/' + d['filename'])
             else:
                 d['cranurl'] = ' ' + cran_url + 'src/contrib/' + d['filename']
@@ -594,6 +612,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['home_comment'] = ''
             d['homeurl'] = ' ' + yaml_quote_string(cran_package['URL'])
         else:
+            # use CRAN page as homepage if nothing has been specified
             d['home_comment'] = ''
             d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
