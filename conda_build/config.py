@@ -315,6 +315,13 @@ class Config(object):
             res = join(prefix, 'bin/{}'.format(binary_name))
         return res
 
+    def _get_r(self, prefix):
+        if sys.platform == 'win32':
+            res = join(prefix, 'R.exe')
+        else:
+            res = join(prefix, 'bin/R')
+        return res
+
     def compute_build_id(self, package_name, reset=False):
         if self.set_build_id and (not self._build_id or reset):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
@@ -423,6 +430,9 @@ class Config(object):
 
     def lua_bin(self, prefix):
         return self._get_lua(prefix)
+
+    def r_bin(self, prefix):
+        return self._get_r(prefix)
 
     @property
     def info_dir(self):
