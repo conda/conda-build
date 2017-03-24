@@ -531,7 +531,8 @@ def provide(metadata, config, patch=True):
             print("Copying %s to %s" % (path, config.work_dir))
         # careful here: we set test path to be outside of conda-build root in setup.cfg.
         #    If you don't do that, this is a recursive function
-        copy_into(path, config.work_dir, config.timeout, locking=config.locking)
+        copy_into(path, config.work_dir, config.timeout, symlinks=True,
+                  locking=config.locking)
     else:  # no source
         if not isdir(config.work_dir):
             os.makedirs(config.work_dir)
