@@ -361,10 +361,11 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
                     # if python is in the build specs, but doesn't have a specific associated
-                    #    version, make sure to add one
+                    #    version, make sure to add one to newly parsed 'requirements/build'.
                     if build_reqs and 'python' in build_reqs:
-                        build_reqs.append('python {}'.format(mv.config.variant['python']))
-                        mv.meta['requirements']['build'] = build_reqs
+                        python_version = 'python {}'.format(mv.config.variant['python'])
+                        mv.meta['requirements']['build'] = [python_version if re.match('^python(?:$| .*)', pkg) else pkg
+                                                            for pkg in mv.meta['requirements']['build']]
                     fm = finalize_metadata(mv, index)
                     rendered_metadata[fm.dist()] = (fm, need_source_download,
                                                     need_reparse_in_env)
