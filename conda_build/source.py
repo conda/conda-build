@@ -70,10 +70,15 @@ def download_to_cache(metadata):
         else:  # no break
             raise RuntimeError("Could not download %s" % fn)
 
-    for tp in 'md5', 'sha1', 'sha256':
-        if meta.get(tp) and hashsum_file(path, tp) != meta[tp]:
-            raise RuntimeError("%s mismatch: '%s' != '%s'" %
-                               (tp.upper(), hashsum_file(path, tp), meta[tp]))
+    for tp in ('md5', 'sha1', 'sha256'):
+        try:
+            expected_hash = meta[tp]
+            hashed = hashsum_file(path, tp)
+            if expected_hash != hashed:
+                raise RuntimeError("%s mismatch: '%s' != '%s'" %
+                           (tp.upper(), hashed, expected_hash))
+        except KeyError:
+            continue
 
     return path
 
