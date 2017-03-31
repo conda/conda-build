@@ -584,7 +584,7 @@ def create_entry_point(path, module, func, config):
         'module': module, 'func': func, 'import_name': import_name}
     if on_win:
         with open(path + '-script.py', 'w') as fo:
-            if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
+            if os.path.isfile(os.path.join(config.host_prefix, 'python_d.exe')):
                 fo.write('#!python_d\n')
             fo.write(pyscript)
             copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
@@ -600,7 +600,7 @@ def create_entry_point(path, module, func, config):
 def create_entry_points(items, config):
     if not items:
         return
-    bin_dir = join(config.build_prefix, bin_dirname)
+    bin_dir = join(config.host_prefix, bin_dirname)
     if not isdir(bin_dir):
         os.mkdir(bin_dir)
     for cmd, module, func in iter_entry_points(items):

@@ -1311,7 +1311,7 @@ class MetaData(object):
                 initial_files = set(f.read().splitlines())
         else:
             initial_files = set()
-        files = utils.prefix_files(prefix=om.config.build_prefix) - initial_files
+        files = utils.prefix_files(prefix=om.config.host_prefix) - initial_files
         try:
             if not outputs:
                 outputs = [output_dict_from_top_level_meta(om, files)]

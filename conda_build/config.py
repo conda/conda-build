@@ -437,7 +437,7 @@ class Config(object):
     @property
     def info_dir(self):
         """Path to the info dir in the build prefix, where recipe metadata is stored"""
-        path = join(self.build_prefix, 'info')
+        path = join(self.host_prefix, 'info')
         _ensure_dir(path)
         return path
 
