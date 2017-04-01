@@ -436,7 +436,7 @@ def write_no_link(m, files):
 def get_entry_point_script_names(entry_point_scripts):
     scripts = []
     for entry_point in entry_point_scripts:
-        cmd = entry_point[:entry_point.find("= ")].strip()
+        cmd = entry_point[:entry_point.find("=")].strip()
         if utils.on_win:
             scripts.append("Scripts\\%s-script.py" % cmd)
             scripts.append("Scripts\\%s.exe" % cmd)
