@@ -1162,10 +1162,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         test_script = join(metadata.config.test_dir,
                            "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        # we want subdir to match the target arch.  If we're running the test on the target arch,
-        #     the build_subdir should be that match.  The host_subdir may not be, and would lead
-        #     to unsatisfiable packages.
-        subdir = (metadata.config.build_subdir if metadata.config.build_subdir != 'noarch'
+        # In the future, we will need to support testing cross compiled packages on physical hardware.
+        #     until then it is expected that something like QEMU or Wine will be used on the build
+        #     machine, therefore, for now, we use host_subdir.
+        subdir = (metadata.config.host_subdir if metadata.config.host_subdir != 'noarch'
                   else subdir)
         index = get_build_index(metadata.config, subdir)
         actions = environ.get_install_actions(metadata.config.test_prefix, index,
@@ -1258,7 +1258,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             raise
         if need_cleanup:
             utils.rm_rf(recipe_dir)
-        environ.remove_env(actions, index, config)
+        utils.rm_rf(metadata.config.test_prefix)
         print("TEST END:", test_package_name)
     return True
 
