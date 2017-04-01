@@ -1125,10 +1125,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         specs.extend(ms.spec for ms in metadata.ms_depends('run'))
         specs += utils.ensure_list(metadata.get_value('test/requires', []))
 
-        # add packages listed in the run environment and test/requires
-        specs.extend(ms.spec for ms in metadata.ms_depends('run'))
-        specs += utils.ensure_list(metadata.get_value('test/requires', []))
-
         if py_files:
             # as the tests are run by python, ensure that python is installed.
             # (If they already provided python as a run or test requirement,
