@@ -505,7 +505,7 @@ def get_short_path(m, target_file):
             return target_file.replace("Scripts", "python-scripts")
         else:
             return target_file
-    elif m.noarch:
+    elif m.get_value('build/noarch_python', None):
         return None
     else:
         return target_file
