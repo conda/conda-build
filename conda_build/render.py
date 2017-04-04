@@ -85,7 +85,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     dependencies = list(set(dependencies))
-    with TemporaryDirectory(suffix=random_string) as tmpdir:
+    with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
             actions = environ.get_install_actions(tmpdir, index, dependencies, m.config)
         except UnsatisfiableError as e:

@@ -269,7 +269,7 @@ class bdist_conda(install):
         else:
             super().run()
         output = api.build(m, post=True)[0]
-        api.test(m)
+        api.test(output, config=m.config)
         m.config.clean()
         if self.anaconda_upload:
             class args:
