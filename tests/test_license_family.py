@@ -1,4 +1,5 @@
-from conda_build.license_family import guess_license_family, allowed_license_families
+from conda_build.license_family import guess_license_family, allowed_license_families, ensure_valid_license_family
+import pytest
 
 
 def test_new_vs_previous_guesses_match():
@@ -129,3 +130,11 @@ def test_other():
     for cens in licenses:
         fam = guess_license_family(cens)
         assert fam == u'OTHER'
+
+
+def test_ensure_valid_family(testing_metadata):
+    testing_metadata.meta['about']['license_family'] = 'public-domain'
+    ensure_valid_license_family(testing_metadata.meta)
+    with pytest.raises(RuntimeError):
+        testing_metadata.meta['about']['license_family'] = 'local H'
+        ensure_valid_license_family(testing_metadata.meta)

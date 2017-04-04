@@ -14,31 +14,6 @@ from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_
 from conda_build import source
 
 
-header = '''
-from __future__ import absolute_import, division, print_function
-
-import sys
-import subprocess
-from distutils.spawn import find_executable
-import shlex
-
-
-def call_args(string):
-    args = shlex.split(string)
-    arg0 = args[0]
-    args[0] = find_executable(arg0)
-    if not args[0]:
-        sys.exit("Command not found: '%s'" % arg0)
-
-    try:
-        subprocess.check_call(args)
-    except subprocess.CalledProcessError:
-        sys.exit('Error: command failed: %s' % ' '.join(args))
-
-# --- end header
-'''
-
-
 def create_files(m):
     """
     Create the test files for pkg in the directory given.  The resulting
@@ -129,7 +104,6 @@ def _create_test_files(m, ext, comment_char='# '):
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
             fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
-            # fo.write(header + '\n')
             fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
             try:
@@ -147,12 +121,28 @@ def _create_test_files(m, ext, comment_char='# '):
 
 def create_py_files(m):
     tf, tf_exists = _create_test_files(m, '.py')
-    imports = ensure_list(m.get_value('test/imports', []))
-    for import_item in imports:
-        if (hasattr(import_item, 'keys') and 'lang' in import_item and
-                import_item['lang'] == 'python'):
-            imports = import_item['imports']
-            break
+
+    # Ways in which we can mark imports as none python imports
+    # 1. preface package name with r-, lua- or perl-
+    # 2. use list of dicts for test/imports, and have lang set in those dicts
+    pkg_name = m.name()
+    likely_r_pkg = pkg_name.startswith('r-')
+    likely_lua_pkg = pkg_name.startswith('lua-')
+    likely_perl_pkg = pkg_name.startswith('perl-')
+    likely_non_python_pkg = likely_r_pkg or likely_lua_pkg or likely_perl_pkg
+
+    if likely_non_python_pkg:
+        imports = ensure_list(m.get_value('test/imports', []))
+        for import_item in imports:
+            # add any imports specifically marked as python
+            if (hasattr(import_item, 'keys') and 'lang' in import_item and
+                    import_item['lang'] == 'python'):
+                imports = import_item['imports']
+                break
+    else:
+        imports = ensure_list(m.get_value('test/imports', []))
+        imports = [item for item in imports if (not hasattr(item, 'keys') or
+                                                'lang' in item and item['lang'] == 'python')]
     if imports:
         with open(tf, 'a+') as fo:
             for name in imports:
@@ -201,20 +191,20 @@ def create_pl_files(m):
         with open(tf, 'a+') as fo:
             print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
                     file=fo)
-        if imports:
-            for name in imports:
-                print(r'print("import: %s\n");' % name, file=fo)
-                print('use %s;\n' % name, file=fo)
-                # Don't try to print version for complex imports
-                if ' ' not in name:
-                    print(("if (defined {0}->VERSION) {{\n" +
-                            "\tmy $given_version = {0}->VERSION;\n" +
-                            "\t$given_version =~ s/0+$//;\n" +
-                            "\tdie('Expected version ' . $expected_version . ' but" +
-                            " found ' . $given_version) unless ($expected_version " +
-                            "eq $given_version);\n" +
-                            "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
-                            "\n}}").format(name), file=fo)
+            if imports:
+                for name in imports:
+                    print(r'print("import: %s\n");' % name, file=fo)
+                    print('use %s;\n' % name, file=fo)
+                    # Don't try to print version for complex imports
+                    if ' ' not in name:
+                        print(("if (defined {0}->VERSION) {{\n" +
+                                "\tmy $given_version = {0}->VERSION;\n" +
+                                "\t$given_version =~ s/0+$//;\n" +
+                                "\tdie('Expected version ' . $expected_version . ' but" +
+                                " found ' . $given_version) unless ($expected_version " +
+                                "eq $given_version);\n" +
+                                "\tprint('\tusing version ' . {0}->VERSION . '\n');\n" +
+                                "\n}}").format(name), file=fo)
     return tf if (tf_exists or imports) else False
 
 

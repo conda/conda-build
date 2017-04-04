@@ -1,3 +1,35 @@
+2017-03-24 2.1.8:
+
+Enhancements:
+-------------
+
+* use symlinks when copying files from files sources to improve performance  #1867
+
+Bug fixes:
+----------
+
+
+* reset build folder for each built package (fixes building multiple recipes in one command)  #1842
+* wrap copy of test/source_files so that errors don't prevent a successful build  #1843
+* Restore permissions when extracting from zipfiles  #1855
+* pass through several Windows-specific environment variables  #1859, #1862
+* python 2 os.environ string type compatibility fix  #1861
+* fix indentation breaking perl package testing  #1872
+* reduce scope of git try/except block so that GIT_FULL_HASH is available even if tags are not.  #1873
+* fix license family comparison, especially for public-domain  #1875
+* Remove python header being added to all run_test.* files  #1876
+
+Contributors:
+-------------
+
+* @abretaud
+* @jjhelmus
+* @mingwandroid
+* @msarahan
+* @stuertz
+* @wulmer
+
+
 2017-03-23 3.0.0alpha1:
 
 Bug fixes:
@@ -31,7 +63,6 @@ Bug fixes:
 * properly copy permissions when extracting zip files  #1855
 * Add more important Windows environment variables to the test environment  #1859, #1863
 
-
 Contributors:
 -------------
 
@@ -43,6 +74,7 @@ Contributors:
 * @stuarteberg
 * @ukoethe
 * @wulmer
+
 
 
 2017-03-14 2.1.7:

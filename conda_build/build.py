@@ -900,7 +900,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             if not has_matches:
                 log.warn("Glob %s from always_include_files does not match any files", pat)
         # Save this for later
-        with open(join(m.config.croot, 'prefix_files.txt'), 'w') as f:
+        with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
@@ -967,10 +967,8 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
                     m.config.subdir)
-
         if actions:
             environ.remove_env(actions, index, m.config)
-
         for (output_d, m) in outputs:
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
             pkg_path = bldpkg_path(m)
