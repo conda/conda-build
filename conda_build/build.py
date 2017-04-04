@@ -505,7 +505,7 @@ def get_short_path(m, target_file):
             return target_file.replace("Scripts", "python-scripts")
         else:
             return target_file
-    elif m.noarch:
+    elif m.get_value('build/noarch_python', None):
         return None
     else:
         return target_file
@@ -1120,10 +1120,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
         get_build_metadata(metadata)
         specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
-
-        # add packages listed in the run environment and test/requires
-        specs.extend(ms.spec for ms in metadata.ms_depends('run'))
-        specs += utils.ensure_list(metadata.get_value('test/requires', []))
 
         # add packages listed in the run environment and test/requires
         specs.extend(ms.spec for ms in metadata.ms_depends('run'))
