@@ -12,7 +12,6 @@ import sys
 from conda_build.conda_interface import ArgumentParser, add_parser_channels
 
 from conda_build import __version__, api
-from conda_build.completers import RecipeCompleter
 
 from conda_build.config import get_or_merge_config
 from conda_build.variants import get_package_variants, set_language_env_vars
@@ -116,7 +115,6 @@ def parse_args(args):
     p.add_argument(
         'recipe',
         metavar='RECIPE_PATH',
-        choices=RecipeCompleter(),
         help="Path to recipe directory.",
     )
     # this is here because we have a different default than build

@@ -16,8 +16,8 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
-from conda_build.cli.main_render import RecipeCompleter, get_render_parser
 from conda_build.conda_interface import add_parser_channels, url_path, binstar_upload
+from conda_build.cli.main_render import get_render_parser
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config
@@ -94,7 +94,6 @@ different sets of packages."""
         'recipe',
         metavar='RECIPE_PATH',
         nargs='+',
-        choices=RecipeCompleter(),
         help="Path to recipe directory.  Pass 'purge' here to clean the "
         "work and test intermediates.",
     )

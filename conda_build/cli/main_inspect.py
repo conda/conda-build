@@ -8,8 +8,7 @@ import logging
 from pprint import pprint
 import sys
 
-from conda_build.conda_interface import (ArgumentParser, add_parser_prefix, InstalledPackages,
-                                         get_prefix)
+from conda_build.conda_interface import ArgumentParser, add_parser_prefix, get_prefix
 
 from conda_build import api
 
@@ -47,7 +46,7 @@ libraries that ought to be dependent conda packages.  """
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer = InstalledPackages
+    )
     linkages.add_argument(
         '--untracked',
         action='store_true',
@@ -90,7 +89,7 @@ package.
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer = InstalledPackages
+    )
     objects.add_argument(
         '--untracked',
         action='store_true',

@@ -21,7 +21,7 @@ import requests
 from requests.packages.urllib3.util.url import parse_url
 import yaml
 
-from conda_build.conda_interface import spec_from_line, Completer
+from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
 from conda_build.conda_interface import CondaSession
 from conda_build.conda_interface import download, handle_proxy_407
@@ -125,18 +125,6 @@ class RequestsTransport(Transport):
         """
         scheme = 'https' if self.use_https else 'http'
         return '%s://%s/%s' % (scheme, host, handler)
-
-
-class PyPIPackagesCompleter(Completer):
-    def __init__(self, prefix, parsed_args, **kwargs):
-        self.prefix = prefix
-        self.parsed_args = parsed_args
-
-    def _get_items(self):
-        from conda_build.pypi import get_xmlrpc_client
-        args = self.parsed_args
-        client = get_xmlrpc_client(getattr(args, 'pypi_url'))
-        return [i.lower() for i in client.list_packages()]
 
 
 pypi_example = """
@@ -481,7 +469,7 @@ def add_parser(repos):
         nargs='+',
         help="""PyPi packages to create recipe skeletons for.
                 You can also specify package[extra,...] features.""",
-    ).completer = PyPIPackagesCompleter
+    )
     pypi.add_argument(
         "--output-dir",
         help="Directory to write recipes to (default: %(default)s).",
