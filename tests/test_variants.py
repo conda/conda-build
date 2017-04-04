@@ -128,3 +128,9 @@ def test_zip_fields():
     assert len(ld) == 2
     assert 'vc' not in ld[0].keys()
     assert 'vc' not in ld[1].keys()
+
+
+def test_cross_compilers():
+    recipe = os.path.join(recipe_dir, '09_cross')
+    outputs = api.get_output_file_paths(recipe)
+    assert len(outputs) == 3

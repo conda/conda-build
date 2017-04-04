@@ -1301,36 +1301,37 @@ class MetaData(object):
 
         outputs = self.get_section('outputs')
         metadata = []
+        om = self.copy()
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
 
-        prefix_file_list = join(self.config.croot, 'prefix_files.txt')
+        prefix_file_list = join(om.config.build_folder, 'prefix_files.txt')
         if os.path.isfile(prefix_file_list):
             with open(prefix_file_list) as f:
                 initial_files = set(f.read().splitlines())
         else:
             initial_files = set()
-        files = utils.prefix_files(prefix=self.config.build_prefix) - initial_files
+        files = utils.prefix_files(prefix=om.config.build_prefix) - initial_files
         try:
             if not outputs:
-                outputs = [output_dict_from_top_level_meta(self, files)]
+                outputs = [output_dict_from_top_level_meta(om, files)]
             else:
                 # make a metapackage for the top-level package if the top-level requirements
                 #     mention a subpackage,
                 # but only if a matching output name is not explicitly provided
-                if self.uses_subpackage and not any(self.name() == out.get('name', '')
+                if om.uses_subpackage and not any(om.name() == out.get('name', '')
                                                     for out in outputs):
-                    outputs.append(output_dict_from_top_level_meta(self, files))
+                    outputs.append(output_dict_from_top_level_meta(om, files))
             for out in outputs:
-                if (self.name() == out.get('name', '') and not (out.get('files') or
+                if (om.name() == out.get('name', '') and not (out.get('files') or
                                                                 out.get('script'))):
                     out['files'] = files
-                    out['requirements'] = self.meta.get('requirements', {})
+                    out['requirements'] = om.meta.get('requirements', {})
                     out['noarch_python'] = out.get('noarch_python',
-                                                    self.get_value('build/noarch_python'))
-                    out['noarch'] = out.get('noarch', self.get_value('build/noarch'))
-                metadata.append(self.get_output_metadata(out))
+                                                    om.get_value('build/noarch_python'))
+                    out['noarch'] = out.get('noarch', om.get_value('build/noarch'))
+                metadata.append(om.get_output_metadata(out))
         except SystemExit:
             if not permit_undefined_jinja:
                 raise
@@ -1346,8 +1347,8 @@ class MetaData(object):
                 #    things are already final.
                 outputs[metadata.name()] = (output_d, metadata)
             else:
-                for variant in (self.config.variants if hasattr(self.config, 'variants')
-                                else [self.config.variant]):
+                for variant in (om.config.variants if hasattr(om.config, 'variants')
+                                else [om.config.variant]):
                     metadata.other_outputs = outputs
                     # this reparses with the new outputs info, which should fill in any
                     #    subpackage jinja2 funcs

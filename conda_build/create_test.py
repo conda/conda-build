@@ -14,31 +14,6 @@ from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_
 from conda_build import source
 
 
-header = '''
-from __future__ import absolute_import, division, print_function
-
-import sys
-import subprocess
-from distutils.spawn import find_executable
-import shlex
-
-
-def call_args(string):
-    args = shlex.split(string)
-    arg0 = args[0]
-    args[0] = find_executable(arg0)
-    if not args[0]:
-        sys.exit("Command not found: '%s'" % arg0)
-
-    try:
-        subprocess.check_call(args)
-    except subprocess.CalledProcessError:
-        sys.exit('Error: command failed: %s' % ' '.join(args))
-
-# --- end header
-'''
-
-
 def create_files(m):
     """
     Create the test files for pkg in the directory given.  The resulting
@@ -129,7 +104,6 @@ def _create_test_files(m, ext, comment_char='# '):
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
             fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
-            # fo.write(header + '\n')
             fo.write("print('===== testing package: %s =====')\n" % m.dist())
 
             try:
@@ -158,8 +132,8 @@ def create_py_files(m):
     likely_non_python_pkg = likely_r_pkg or likely_lua_pkg or likely_perl_pkg
 
     if likely_non_python_pkg:
-        imports = []
-        for import_item in ensure_list(m.get_value('test/imports', [])):
+        imports = ensure_list(m.get_value('test/imports', []))
+        for import_item in imports:
             # add any imports specifically marked as python
             if (hasattr(import_item, 'keys') and 'lang' in import_item and
                     import_item['lang'] == 'python'):
@@ -167,13 +141,8 @@ def create_py_files(m):
                 break
     else:
         imports = ensure_list(m.get_value('test/imports', []))
-        for import_item in ensure_list(m.get_value('test/imports', [])):
-            # remove any imports specifically marked as not python
-            if (hasattr(import_item, 'keys') and 'lang' in import_item and
-                    import_item['lang'] != 'python'):
-                for imp in import_item['imports']:
-                    imports.remove(imp)
-
+        imports = [item for item in imports if (not hasattr(item, 'keys') or
+                                                'lang' in item and item['lang'] == 'python')]
     if imports:
         with open(tf, 'a+') as fo:
             for name in imports:

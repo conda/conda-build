@@ -85,7 +85,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     dependencies = list(set(dependencies))
-    with TemporaryDirectory(suffix=random_string) as tmpdir:
+    with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
             actions = environ.get_install_actions(tmpdir, index, dependencies, m.config)
         except UnsatisfiableError as e:
@@ -331,8 +331,9 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
             mv.config.variant = {}
             mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
             vars_in_recipe = set(mv.undefined_jinja_vars)
-            conform_dict = {}
 
+            mv.config.variant = variant
+            conform_dict = {}
             for key in vars_in_recipe:
                 if PY3 and hasattr(recipe_requirements, 'decode'):
                     recipe_requirements = recipe_requirements.decode()
@@ -343,6 +344,16 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 #     variant mapping
                 if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
                     conform_dict[key] = variant[key]
+
+            compiler_matches = re.findall(r"compiler\([\'\"](.*)[\'\"].*\)",
+                                         recipe_requirements)
+            if compiler_matches:
+                from conda_build.jinja_context import native_compiler
+                for match in compiler_matches:
+                    compiler_key = '{}_compiler'.format(match)
+                    conform_dict[compiler_key] = variant.get(compiler_key,
+                                            native_compiler(match, mv.config))
+                    conform_dict['target_platform'] = variant['target_platform']
 
             build_reqs = mv.meta.get('requirements', {}).get('build', [])
             if 'python' in build_reqs:
@@ -364,8 +375,9 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                     #    version, make sure to add one to newly parsed 'requirements/build'.
                     if build_reqs and 'python' in build_reqs:
                         python_version = 'python {}'.format(mv.config.variant['python'])
-                        mv.meta['requirements']['build'] = [python_version if re.match('^python(?:$| .*)', pkg) else pkg
-                                                            for pkg in mv.meta['requirements']['build']]
+                        mv.meta['requirements']['build'] = [
+                            python_version if re.match('^python(?:$| .*)', pkg) else pkg
+                            for pkg in mv.meta['requirements']['build']]
                     fm = finalize_metadata(mv, index)
                     rendered_metadata[fm.dist()] = (fm, need_source_download,
                                                     need_reparse_in_env)

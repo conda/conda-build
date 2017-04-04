@@ -5,5 +5,3 @@ package:
 requirements:
   build:
     - {{ compiler('c') }}
-  run:
-    - {{ runtime('c') }}

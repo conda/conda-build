@@ -1,6 +1,5 @@
 c_compiler:
-  - gcc_linux-64
-
+  - gcc
 target_platform:
   - linux-64
   - linux-cos5-64
