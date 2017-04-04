@@ -165,7 +165,8 @@ if parse_version(CONDA_VERSION) >= parse_version("4.2"):
     cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
     # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-    os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
+    # HINT: Keep the str() for py2 running on windows, see https://github.com/conda/conda-build/issues/1865
+    os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
     reset_context()
 
     from conda.models.channel import get_conda_build_local_url
