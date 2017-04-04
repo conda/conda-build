@@ -489,6 +489,7 @@ def linux_vars(compiler_vars, prefix, config):
         # contains other QEMU env vars.
         'QEMU_LD_PREFIX': os.getenv('QEMU_LD_PREFIX'),
         'QEMU_UNAME': os.getenv('QEMU_UNAME'),
+        'DEJAGNU': os.getenv('DEJAGNU'),
     }
 
 

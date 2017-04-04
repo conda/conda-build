@@ -31,7 +31,6 @@ from conda_build import source, metadata
 from conda_build.config import Config
 from conda_build.utils import rm_rf
 from conda_build.conda_interface import text_type, iteritems
-from conda_build.conda_interface import Completer
 from conda_build.license_family import allowed_license_families, guess_license_family
 
 CRAN_META = """\
@@ -198,20 +197,6 @@ VERSION_DEPENDENCY_REGEX = re.compile(
 )
 
 
-class CRANPackagesCompleter(Completer):
-    def __init__(self, prefix, parsed_args):
-        self.prefix = prefix
-        self.parsed_args = parsed_args
-
-    def _get_items(self):
-        args = self.parsed_args
-        cran_url = getattr(args, 'cran_url', 'https://cran.r-project.org/')
-        output_dir = getattr(args, 'output_dir', '.')
-        cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
-        return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
-            in cran_metadata]
-
-
 def package_exists(package_name):
     # TODO: how can we get cran to spit out package presence?
     # available.packages() is probably a start, but no channels are working on mac right now?
@@ -233,7 +218,7 @@ def add_parser(repos):
         "packages",
         nargs='+',
         help="""CRAN packages to create recipe skeletons for.""",
-    ).completer = CRANPackagesCompleter
+    )
     cran.add_argument(
         "--output-dir",
         help="Directory to write recipes to (default: %(default)s).",

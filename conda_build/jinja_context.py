@@ -134,6 +134,17 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
         '__file__': setup_file,
     }
     if os.path.isfile(setup_file):
+        try:
+            from setuptools.config import read_configuration
+        except ImportError:
+            pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
+        else:
+            setup_cfg = os.path.join(os.path.dirname(setup_file), 'setup.cfg')
+            if os.path.isfile(setup_cfg):
+                # read_configuration returns a dict of dicts. Each dict (keys: 'metadata',
+                # 'options'), if present, provides keyword arguments for the setup function.
+                for kwargs in read_configuration(setup_cfg).values():
+                    _setuptools_data.update(kwargs)
         code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
         exec(code, ns, ns)
     else:
