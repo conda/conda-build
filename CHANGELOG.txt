@@ -1,9 +1,31 @@
+20170-04-04 2.1.9:
+
+Enhancements:
+-------------
+
+* calculate checksum and simplify cran skeleton  #1879
+* backport usage of symlinks for speed from master branch  #1881
+
+Bug fixes:
+----------
+
+* fix import tests not being run, test this functionality  #1897
+
+Contributors:
+-------------
+
+* @isuruf
+* @jjhelmus
+* @johanneskoester
+* @msarahan
+
 2017-03-24 2.1.8:
 
 Enhancements:
 -------------
 
 * use symlinks when copying files from files sources to improve performance  #1867
+
 
 Bug fixes:
 ----------
