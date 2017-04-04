@@ -86,7 +86,6 @@ def prefix_files(prefix):
             path = join(root, dn)
             if islink(path):
                 res.add(path[len(prefix) + 1:])
-    res = set(utils.expand_globs(res, prefix))
     return res
 
 
@@ -807,7 +806,8 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
     return [f.replace(prefix + os.path.sep, '') for f in files_list
-            if not os.path.isdir(os.path.join(prefix, f))]
+            if (not os.path.isdir(os.path.join(prefix, f)) or
+                os.path.islink(os.path.join(prefix, f)))]
 
 
 def post_process_files(m, initial_prefix_files):
@@ -875,7 +875,8 @@ def bundle_conda(output, metadata, config, env, **kw):
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, config.build_prefix))
         pfx_files = set(prefix_files(config.build_prefix))
-        initial_files = pfx_files - keep_files
+        initial_files = set(item for item in (pfx_files - keep_files)
+                            if not any(keep_file.startswith(item) for keep_file in keep_files))
 
     files = post_process_files(metadata, initial_files)
 
