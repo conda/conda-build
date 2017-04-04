@@ -117,12 +117,28 @@ def _create_test_files(dir_path, m, ext, comment_char='# '):
 
 def create_py_files(dir_path, m):
     tf, tf_exists = _create_test_files(dir_path, m, '.py')
-    imports = None
-    for import_item in ensure_list(m.get_value('test/imports', [])):
-        if (hasattr(import_item, 'keys') and 'lang' in import_item and
-                import_item['lang'] == 'python'):
-            imports = import_item['imports']
-            break
+
+    # Ways in which we can mark imports as none python imports
+    # 1. preface package name with r-, lua- or perl-
+    # 2. use list of dicts for test/imports, and have lang set in those dicts
+    pkg_name = m.name()
+    likely_r_pkg = pkg_name.startswith('r-')
+    likely_lua_pkg = pkg_name.startswith('lua-')
+    likely_perl_pkg = pkg_name.startswith('perl-')
+    likely_non_python_pkg = likely_r_pkg or likely_lua_pkg or likely_perl_pkg
+
+    if likely_non_python_pkg:
+        imports = ensure_list(m.get_value('test/imports', []))
+        for import_item in imports:
+            # add any imports specifically marked as python
+            if (hasattr(import_item, 'keys') and 'lang' in import_item and
+                    import_item['lang'] == 'python'):
+                imports = import_item['imports']
+                break
+    else:
+        imports = ensure_list(m.get_value('test/imports', []))
+        imports = [item for item in imports if (not hasattr(item, 'keys') or
+                                                'lang' in item and item['lang'] == 'python')]
     if imports:
         with open(tf, 'a+') as fo:
             for name in imports:

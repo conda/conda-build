@@ -47,6 +47,7 @@ install:
   - conda update -q --all
   - if [ -n "$CONDA_VERSION" ]; then
         rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
         pushd conda;
         $HOME/miniconda/bin/python utils/setup-testing.py install;
