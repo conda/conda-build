@@ -331,8 +331,9 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
             mv.config.variant = {}
             mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
             vars_in_recipe = set(mv.undefined_jinja_vars)
-            conform_dict = {}
 
+            mv.config.variant = variant
+            conform_dict = {}
             for key in vars_in_recipe:
                 if PY3 and hasattr(recipe_requirements, 'decode'):
                     recipe_requirements = recipe_requirements.decode()
@@ -351,7 +352,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                 for match in compiler_matches:
                     compiler_key = '{}_compiler'.format(match)
                     conform_dict[compiler_key] = variant.get(compiler_key,
-                                            native_compiler(match, metadata.config))
+                                            native_compiler(match, mv.config))
                     conform_dict['target_platform'] = variant['target_platform']
 
             build_reqs = mv.meta.get('requirements', {}).get('build', [])
