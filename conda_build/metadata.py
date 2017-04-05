@@ -723,6 +723,10 @@ class MetaData(object):
             elif value.lower() in falses:
                 value = False
 
+        if default_structs.get(field, None) is list and type(value) is not list:
+            raise ValueError("Metadata field '{}' has wrong type: expected list, got '{}'"
+                             .format(field, type(value).__name__))
+
         return value
 
     def check_fields(self):
