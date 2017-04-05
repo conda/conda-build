@@ -1,4 +1,43 @@
-20170-04-04 2.1.9:
+2017-04-05 3.0.0alpha2
+
+Breaking changes:
+-----------------
+
+* Support for post-build metadata (__conda_version__.txt and the like) has been removed.
+
+Enhancements:
+-------------
+
+* use symlinks when copying to improve performance  #1867
+* load setup.cfg data in load_setup_py_data  #1878
+* calculate checksum and simplify cran skeleton  #1879
+
+Bug fixes:
+----------
+
+* fix R's binary path on Windows  #1870
+* remove tab completion on CLI for compatibility with conda 4.4  #1795
+* reduce scope of git try/except block so that GIT_FULL_HASH is available, even if tags are not  #1873
+* Fix "compiler" jinja2 looping, so that it is respected in subpackages #1874
+* Fix license family comparison - case matching  #1875
+* Fix inspect linkages when multiple packages contain a library  #1884
+* avoid unnecessary computation of hashing  #1888
+* fix python imports not being run in test phase  #1896
+* fix path omission in paths.json for noarch packages  #1895
+
+Contributors:
+-------------
+
+* @abretaud
+* @groutr
+* @jjhelmus
+* @kalefranz
+* @ma-ba
+* @mingwandroid
+* @msarahan
+
+
+2017-04-04 2.1.9:
 
 Enhancements:
 -------------
