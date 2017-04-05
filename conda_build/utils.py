@@ -58,12 +58,16 @@ on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, 'Scripts' if on_win else 'bin')
 
 
-PY_TMPL = """\
-if __name__ == '__main__':
-    import sys
-    import %(module)s
+PY_TMPL = """
+# -*- coding: utf-8 -*-
+import re
+import sys
 
-    sys.exit(%(module)s.%(func)s())
+from %(module)s import %(import_name)s
+
+if __name__ == '__main__':
+    sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
+    sys.exit(%(func)s())
 """
 
 
@@ -575,7 +579,9 @@ def iter_entry_points(items):
 
 
 def create_entry_point(path, module, func, config):
-    pyscript = PY_TMPL % {'module': module, 'func': func}
+    import_name = func.split('.')[0]
+    pyscript = PY_TMPL % {
+        'module': module, 'func': func, 'import_name': import_name}
     if on_win:
         with open(path + '-script.py', 'w') as fo:
             if os.path.isfile(os.path.join(config.build_prefix, 'python_d.exe')):
