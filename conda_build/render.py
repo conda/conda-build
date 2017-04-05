@@ -116,7 +116,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
     elif dep.startswith('numpy') and 'x.x' in dep:
         if not build_dep_versions.get(dep_name):
             raise ValueError("numpy x.x specified, but numpy not in build requirements.")
-        pin = utils.apply_pin_expressions(version.split()[0], min_pin='p.p', max_pin='p.p')
+        pin = utils.apply_pin_expressions(version.split()[0], min_pin='x.x', max_pin='x.x')
     if pin:
         dep = " ".join((dep_name, pin))
     return dep
@@ -189,6 +189,11 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
 
     exclude_pattern = None
     excludes = set(m.config.variant.get('exclude_from_build_hash', []))
+
+    for key in m.config.variant.get('pin_run_as_build', {}).keys():
+        if key in excludes:
+            excludes.remove(key)
+
     output_excludes = set()
     if hasattr(m, 'other_outputs'):
         output_excludes = set(name for (name, variant) in m.other_outputs.keys())

@@ -9,7 +9,7 @@ def main():
     with open(info_file, 'r') as fh:
         info = json.load(fh)
 
-    assert len(info['depends']) == 0
+    assert len(info['depends']) == 0, info['depends']
 
 if __name__ == '__main__':
     main()

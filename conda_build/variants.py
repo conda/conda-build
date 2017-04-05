@@ -22,7 +22,7 @@ DEFAULT_VARIANTS = {
     'lua': ['5.2'],
     'r_base': ['3.3.2'],
     'cpu_optimization_target': ['nocona'],
-    'pin_run_as_build': {'python': {'min_pin': 'p.p', 'max_pin': 'p.p'}},
+    'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
     'exclude_from_build_hash': ['numpy'],
 }
 

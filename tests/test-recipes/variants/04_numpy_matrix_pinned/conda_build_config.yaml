@@ -7,5 +7,5 @@ numpy:
 
 pin_run_as_build:
   numpy:
-    min_pin: 'p.p.p'
-    max_pin: 'p.p'
+    min_pin: 'x.x.x'
+    max_pin: 'x.x'
