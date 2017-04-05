@@ -6,8 +6,8 @@ r:
 
 pin_run_as_build:
   python:
-    min_pin: 'p.p'
-    max_pin: 'p.p'
+    min_pin: 'x.x'
+    max_pin: 'x.x'
   r-base:
-    min_pin: 'p.p.p'
-    max_pin: 'p.p.p'
+    min_pin: 'x.x.x'
+    max_pin: 'x.x.x'
