@@ -969,3 +969,11 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     """See https://github.com/conda/conda-build/pull/1779"""
     recipe = os.path.join(metadata_dir, '_unicode_in_tarball')
     api.build(recipe, config=testing_config)
+
+
+def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
+    recipe = os.path.join(fail_dir, 'recursive-build')
+    m = api.render(recipe, config=testing_config)[0][0]
+    with pytest.raises(RuntimeError):
+        api.build(m)
+    assert os.listdir(m.config.build_folder)
