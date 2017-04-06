@@ -1309,7 +1309,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     metadata = None
     metadata_tuples = []
 
-    has_exception = set()
+    # set this to false whenever everything has succeeded.
+    has_exception = True
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1391,11 +1392,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
+            has_exception = False
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
             add_recipes = []
-            if metadata:
-                has_exception.add(metadata.dist())
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([metadata if metadata else recipe])
             for pkg in e.packages:
@@ -1430,7 +1430,7 @@ for Python 3.5 and needs to be rebuilt."""
             recipe_list.extendleft(add_recipes)
         finally:
             for (m, _, _) in metadata_tuples:
-                if not getattr(m.config, 'dirty') and not m.dist() in has_exception:
+                if not getattr(m.config, 'dirty') and not has_exception:
                     m.config.clean()
 
     if post in [True, None]:
