@@ -1,7 +1,0 @@
-package:
-  name: test_has_run_exports
-  version: 1.0
-
-build:
-  run_exports:
-    - downstream_pinned_package 1.0

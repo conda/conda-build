@@ -817,7 +817,7 @@ class MetaData(object):
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})
         build_reqs = requirements.get('build', [])
-        excludes = self.config.variant.get('exclude_from_build_hash', [])
+        excludes = self.config.variant.get('ignore_version', [])
         if excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]

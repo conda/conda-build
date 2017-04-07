@@ -14,7 +14,7 @@ from conda_build.conda_interface import arch_name
 from conda_build.conda_interface import cc_conda_build
 from conda_build.conda_interface import cc_platform
 
-DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'exclude_from_build_hash']
+DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'ignore_version']
 DEFAULT_VARIANTS = {
     'python': ['{0}.{1}'.format(sys.version_info.major, sys.version_info.minor)],
     'numpy': ['1.11'],
@@ -23,7 +23,7 @@ DEFAULT_VARIANTS = {
     'r_base': ['3.3.2'],
     'cpu_optimization_target': ['nocona'],
     'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
-    'exclude_from_build_hash': ['numpy'],
+    'ignore_version': [],
 }
 
 DEFAULT_PLATFORMS = {

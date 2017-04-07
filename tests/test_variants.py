@@ -22,7 +22,7 @@ def test_later_spec_priority():
     combined_spec, extend_keys = variants.combine_specs([global_specs, single_version])
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
-    assert extend_keys == {'exclude_from_build_hash', 'pin_run_as_build'}
+    assert extend_keys == {'ignore_version', 'pin_run_as_build'}
 
     # keep keys that are not overwritten
     combined_spec, extend_keys = variants.combine_specs([single_version, no_numpy_version])
@@ -31,8 +31,10 @@ def test_later_spec_priority():
 
 
 def test_get_package_variants_from_file(testing_workdir, testing_config):
+    variants = global_specs.copy()
+    variants['ignore_version'] = ['numpy']
     with open('variant_example.yaml', 'w') as f:
-        yaml.dump(global_specs, f)
+        yaml.dump(variants, f)
     testing_config.variant_config_files = [os.path.join(testing_workdir, 'variant_example.yaml')]
     testing_config.ignore_system_config = True
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
@@ -47,10 +49,12 @@ def test_get_package_variants_from_file(testing_workdir, testing_config):
 
 def test_get_package_variants_from_dictionary_of_lists(testing_config):
     testing_config.ignore_system_config = True
+    variants = global_specs.copy()
+    variants['ignore_version'] = ['numpy']
     # Note: variant is coming from up above: global_specs
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
                           no_download_source=False, config=testing_config,
-                          variants=global_specs)
+                          variants=variants)
     # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
     assert len(metadata) == 2
     assert sum('python >=2.7,<2.8' in req for (m, _, _) in metadata

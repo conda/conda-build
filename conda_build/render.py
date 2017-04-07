@@ -81,7 +81,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
                 if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
-            pass_through_deps.append(spec)
+            pass_through_deps.append(spec.split(' ')[0])
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     dependencies = list(set(dependencies))
@@ -188,7 +188,7 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
         index = get_build_index(m.config, m.config.build_subdir)
 
     exclude_pattern = None
-    excludes = set(m.config.variant.get('exclude_from_build_hash', []))
+    excludes = set(m.config.variant.get('ignore_version', []))
 
     for key in m.config.variant.get('pin_run_as_build', {}).keys():
         if key in excludes:
