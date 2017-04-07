@@ -445,10 +445,10 @@ def get_entry_point_script_names(entry_point_scripts):
     return scripts
 
 
-def write_pin_downstream(m):
-    if 'pin_downstream' in m.meta.get('build', {}):
-        with open(os.path.join(m.config.info_dir, 'pin_downstream'), 'w') as f:
-            for pin in utils.ensure_list(m.meta['build']['pin_downstream']):
+def write_run_exports(m):
+    if 'run_exports' in m.meta.get('build', {}):
+        with open(os.path.join(m.config.info_dir, 'run_exports'), 'w') as f:
+            for pin in utils.ensure_list(m.meta['build']['run_exports']):
                 f.write(pin + "\n")
 
 
@@ -469,7 +469,7 @@ def create_info_files(m, files, prefix):
     write_info_json(m)  # actually index.json
     write_about_json(m)
     write_link_json(m)
-    write_pin_downstream(m)
+    write_run_exports(m)
 
     copy_recipe(m)
     copy_readme(m)

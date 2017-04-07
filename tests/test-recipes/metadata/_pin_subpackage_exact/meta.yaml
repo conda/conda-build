@@ -1,10 +1,10 @@
 package:
-  name: test_has_pin_downstream
+  name: test_has_run_exports
   version: 1.0
 
 requirements:
   run:
-    - {{ pin_subpackage('pin_downstream_subpkg', exact=True) }}
+    - {{ pin_subpackage('run_exports_subpkg', exact=True) }}
 
 outputs:
-  - name: pin_downstream_subpkg
+  - name: run_exports_subpkg

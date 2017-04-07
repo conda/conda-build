@@ -148,12 +148,12 @@ def get_upstream_pins(m, actions, index):
                 pkg_dir = os.path.join(pkgs_dir, pkg_dist)
                 pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
                 if os.path.isdir(pkg_dir):
-                    downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
+                    downstream_file = os.path.join(pkg_dir, 'info/run_exports')
                     if os.path.isfile(downstream_file):
                         additional_specs.extend(open(downstream_file).read().splitlines())
                     break
                 elif os.path.isfile(pkg_file):
-                    extra_specs = utils.package_has_file(pkg_file, 'info/pin_downstream')
+                    extra_specs = utils.package_has_file(pkg_file, 'info/run_exports')
                     if extra_specs:
                         additional_specs.extend(extra_specs.splitlines())
                     break
@@ -168,7 +168,7 @@ def get_upstream_pins(m, actions, index):
                             pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
                             if os.path.isfile(pkg_file):
                                 extra_specs = utils.package_has_file(pkg_file,
-                                                                    'info/pin_downstream')
+                                                                    'info/run_exports')
                                 if extra_specs:
                                     additional_specs.extend(extra_specs.splitlines())
                                 break

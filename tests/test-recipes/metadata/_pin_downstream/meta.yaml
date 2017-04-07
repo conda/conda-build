@@ -1,7 +1,7 @@
 package:
-  name: test_has_pin_downstream
+  name: test_has_run_exports
   version: 1.0
 
 build:
-  pin_downstream:
+  run_exports:
     - downstream_pinned_package 1.0
