@@ -1305,7 +1305,6 @@ class MetaData(object):
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
-
         prefix_file_list = join(om.config.build_folder, 'prefix_files.txt')
         if os.path.isfile(prefix_file_list):
             with open(prefix_file_list) as f:
