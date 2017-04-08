@@ -1,3 +1,24 @@
+2017-04-08 3.0.0alpha3
+
+Enhancements:
+-------------
+
+* Check that files are executable when finding them #1899
+
+Bug fixes:
+----------
+
+* standardize entry point script template to match pip  #1908
+* fix cleanup happening even when build fails  #1909
+* fix bin/conda getting included in conda-build release tarballs  #1913
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @msarahan
+* @tatome
+
 2017-04-05 3.0.0alpha2
 
 Breaking changes:
