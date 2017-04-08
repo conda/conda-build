@@ -880,8 +880,10 @@ def bundle_conda(output, metadata, config, env, **kw):
 
     files = post_process_files(metadata, initial_files)
 
-    assert 'bin/conda' not in files and 'Scripts/conda.exe' not in files, ("Bug in conda-build has "
-        "included conda binary in package.  Please report this on the conda-build issue tracker.")
+    if output.get('name') and output.get('name') != 'conda':
+        assert 'bin/conda' not in files and 'Scripts/conda.exe' not in files, ("Bug in conda-build "
+            "has included conda binary in package. Please report this on the conda-build issue "
+            "tracker.")
 
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  metadata.build_id()]) + '.tar.bz2')
