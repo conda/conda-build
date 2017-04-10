@@ -999,9 +999,10 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
                                                                sub_host_ms_deps, m.config)
                     environ.create_env(m.config.host_prefix, host_actions, config=m.config,
-                                       subdir=m.config.host_subdir)
+                                       subdir=subdir)
                 else:
-                    assert not sub_host_ms_deps, "Have host deps ({}) without a host_index".format(sub_host_ms_deps)
+                    assert not sub_host_ms_deps, ("Have host deps ({}) without a host_index"
+                                                  .format(sub_host_ms_deps))
                 sub_build_ms_deps = m.ms_depends('build')
                 build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                             sub_build_ms_deps, m.config)
@@ -1191,9 +1192,10 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         test_script = join(metadata.config.test_dir,
                            "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        # In the future, we will need to support testing cross compiled packages on physical hardware.
-        #     until then it is expected that something like QEMU or Wine will be used on the build
-        #     machine, therefore, for now, we use host_subdir.
+        # In the future, we will need to support testing cross compiled
+        #     packages on physical hardware. until then it is expected that
+        #     something like QEMU or Wine will be used on the build machine,
+        #     therefore, for now, we use host_subdir.
         subdir = (metadata.config.host_subdir if metadata.config.host_subdir != 'noarch'
                   else subdir)
         index = get_build_index(metadata.config, subdir)
