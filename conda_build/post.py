@@ -51,7 +51,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     if os.stat(path).st_size == 0:
         return
 
-    with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
+    with io.open(path, encoding=locale.getpreferredencoding(), mode='r') as fi:
         try:
             data = fi.read(100)
             fi.seek(0)
@@ -63,7 +63,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         try:
             mm = mmap.mmap(fi.fileno(), 0)
         except OSError:
-            mm = fi
+            mm = fi.read()
         m = SHEBANG_PAT.match(mm)
 
         if not (m and b'python' in m.group()):

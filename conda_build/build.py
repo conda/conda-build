@@ -124,9 +124,9 @@ def have_prefix_files(files, prefix):
 
         fi = open(path, 'rb+')
         try:
-            mm = mmap.mmap(fi.fileno(), 0)
+            mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
         except OSError:
-            mm = fi
+            mm = fi.read()
 
         mode = 'binary' if mm.find(b'\x00') != -1 else 'text'
         if mode == 'text':
@@ -138,7 +138,7 @@ def have_prefix_files(files, prefix):
                 mm.close()
                 fi.close()
                 fi = open(path, 'rb+')
-                mm = mmap.mmap(fi.fileno(), 0)
+                mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
         if mm.find(prefix_bytes) != -1:
             yield (prefix, mode, f)
         if utils.on_win and mm.find(forward_slash_prefix_bytes) != -1:
