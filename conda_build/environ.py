@@ -771,11 +771,13 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                     else:
                         log.error("Failed to create env, max retries exceeded.")
                         raise
-    if utils.on_win:
-        shell = "cmd.exe"
-    else:
-        shell = "bash"
-    symlink_conda(prefix, sys.prefix, shell)
+    # We must not symlink conda across different platforms when cross-compiling.
+    if os.path.basename(prefix) == '_build_env' or not config.has_separate_host_prefix:
+        if utils.on_win:
+            shell = "cmd.exe"
+        else:
+            shell = "bash"
+        symlink_conda(prefix, sys.prefix, shell)
 
 
 def remove_env(install_actions, index, config):

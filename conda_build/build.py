@@ -602,27 +602,27 @@ def post_process_files(m, initial_prefix_files):
     # this is new-style noarch, with a value of 'python'
     if m.noarch != 'python':
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
-    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
 
     post_process(sorted(current_prefix_files - initial_prefix_files),
-                    prefix=m.config.build_prefix,
+                    prefix=m.config.host_prefix,
                     config=m.config,
                     preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
                     noarch=m.get_value('build/noarch'),
                     skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
     # The post processing may have deleted some files (like easy-install.pth)
-    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
-    new_files = utils.filter_files(new_files, prefix=m.config.build_prefix)
+    new_files = utils.filter_files(new_files, prefix=m.config.host_prefix)
 
-    if any(m.config.meta_dir in join(m.config.build_prefix, f) for f in new_files):
+    if any(m.config.meta_dir in join(m.config.host_prefix, f) for f in new_files):
         meta_files = (tuple(f for f in new_files if m.config.meta_dir in
-                join(m.config.build_prefix, f)),)
+                join(m.config.host_prefix, f)),)
         sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
 This error usually comes from using conda in the build script.  Avoid doing this, as it
 can lead to packages that include their dependencies.""" % meta_files))
-    post_build(m, new_files, prefix=m.config.build_prefix, build_python=m.config.build_python,
+    post_build(m, new_files, prefix=m.config.host_prefix, build_python=m.config.build_python,
                croot=m.config.croot)
 
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
@@ -633,14 +633,14 @@ can lead to packages that include their dependencies.""" % meta_files))
 
     # the legacy noarch
     if m.get_value('build/noarch_python'):
-        noarch_python.transform(m, new_files, m.config.build_prefix)
+        noarch_python.transform(m, new_files, m.config.host_prefix)
     # new way: build/noarch: python
     elif m.noarch == 'python':
-        noarch_python.populate_files(m, pkg_files, m.config.build_prefix, entry_point_script_names)
+        noarch_python.populate_files(m, pkg_files, m.config.host_prefix, entry_point_script_names)
 
-    current_prefix_files = utils.prefix_files(prefix=m.config.build_prefix)
+    current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
     new_files = current_prefix_files - initial_prefix_files
-    fix_permissions(new_files, m.config.build_prefix)
+    fix_permissions(new_files, m.config.host_prefix)
 
     return new_files
 
@@ -660,7 +660,7 @@ def bundle_conda(output, metadata, env, **kw):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])
-        initial_files = utils.prefix_files(metadata.config.build_prefix)
+        initial_files = utils.prefix_files(metadata.config.host_prefix)
         env_output = env.copy()
         env_output['TOP_PKG_NAME'] = env['PKG_NAME']
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
@@ -668,11 +668,11 @@ def bundle_conda(output, metadata, env, **kw):
         env_output['PKG_NAME'] = metadata.get_value('package/name')
         utils.check_call_env(interpreter.split(' ') +
                     [os.path.join(metadata.path, output['script'])],
-                             cwd=metadata.config.build_prefix, env=env_output)
+                             cwd=metadata.config.host_prefix, env=env_output)
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        keep_files = set(utils.expand_globs(files, metadata.config.build_prefix))
-        pfx_files = set(utils.prefix_files(metadata.config.build_prefix))
+        keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
+        pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file == item for keep_file in keep_files))
 
@@ -686,8 +686,8 @@ def bundle_conda(output, metadata, env, **kw):
     output_filename = ('-'.join([output['name'], metadata.version(),
                                  metadata.build_id()]) + '.tar.bz2')
     # first filter is so that info_files does not pick up ignored files
-    files = utils.filter_files(files, prefix=metadata.config.build_prefix)
-    output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.build_prefix)
+    files = utils.filter_files(files, prefix=metadata.config.host_prefix)
+    output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
     for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
         script = output.get('test', {}).get('script')
@@ -699,8 +699,8 @@ def bundle_conda(output, metadata, env, **kw):
             # the test belongs to the parent recipe.  Don't include it in subpackages.
             utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
-    files = set(utils.prefix_files(metadata.config.build_prefix)) - initial_files
-    files = utils.filter_files(files, prefix=metadata.config.build_prefix)
+    files = set(utils.prefix_files(metadata.config.host_prefix)) - initial_files
+    files = utils.filter_files(files, prefix=metadata.config.host_prefix)
 
     # lock the output directory while we build this file
     # create the tarball in a temporary directory to minimize lock time
@@ -754,10 +754,10 @@ def bundle_conda(output, metadata, env, **kw):
             pass
         update_index(os.path.join(os.path.dirname(output_folder), 'noarch'), config=metadata.config)
 
-    # remove info files from build prefix. We do not remove the actual package's files as subsequent
+    # remove info files from host prefix. We do not remove the actual package's files as subsequent
     # builds may well need them. In other words, the caller manages the files in output['checksums']
     for f in files:
-        remove_prefix_file(f, metadata.config.build_prefix)
+        remove_prefix_file(f, metadata.config.host_prefix)
 
     return final_output
 
@@ -818,7 +818,9 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         return default_return
 
     log = utils.get_logger(__name__)
-    actions = []
+    host_actions = []
+    host_index = {}
+    build_actions = []
 
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(config=m.config, m=m)
@@ -853,23 +855,33 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        actions = environ.get_install_actions(m.config.build_prefix, index,
-                                              m.ms_depends('build'), m.config)
+        # This must be done before "environ.create_env(m.config.build_prefix..)" as otherwise,
+        # if it excepts due to needing to build some dependencies, the build_prefix does
+        # not get cleaned out and that causes clobbers and failure to figure out the newly
+        # installed files at packaging-time.
+        host_ms_deps = None
+        build_ms_deps = None
+        if m.config.has_separate_host_prefix:
+            if VersionOrder(conda_version) < VersionOrder('4.3.2'):
+                raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
+            host_index = get_build_index(m.config, m.config.host_subdir)
+            host_ms_deps = m.ms_depends('host')
+            host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
+                                                       host_ms_deps, m.config)
+            environ.create_env(m.config.host_prefix, host_actions, config=m.config,
+                               subdir=m.config.host_subdir)
+
+        build_ms_deps = m.ms_depends('build')
+        build_actions = environ.get_install_actions(m.config.build_prefix, index,
+                                                    build_ms_deps, m.config)
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
-            environ.create_env(m.config.build_prefix, actions, config=m.config,
+            environ.create_env(m.config.build_prefix, build_actions, config=m.config,
                                subdir=m.config.build_subdir, index=index)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
         warn_on_use_of_SRC_DIR(m)
-
-        if m.config.has_separate_host_prefix:
-            if VersionOrder(conda_version) < VersionOrder('4.3.2'):
-                raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
-            specs = [ms.spec for ms in m.ms_depends('host')]
-            environ.create_env(m.config.host_prefix, specs, config=m.config,
-                               subdir=m.config.host_subdir)
 
         # Execute any commands fetching the source (e.g., git) in the _build environment.
         # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
@@ -972,22 +984,40 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
                     m.config.subdir)
-        if actions:
-            environ.remove_env(actions, index, m.config)
+        if host_actions:
+            environ.remove_env(host_actions, host_index, m.config)
+            host_actions = []
+        if build_actions:
+            environ.remove_env(build_actions, index, m.config)
+            build_actions = []
         for (output_d, m) in outputs:
             assert m.final, "output metadata for {} is not finalized".format(m.dist())
             pkg_path = bldpkg_path(m)
             if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                actions = environ.get_install_actions(m.config.host_prefix, index,
-                                                      m.ms_depends('build'), m.config)
-                environ.create_env(m.config.host_prefix, actions, config=m.config,
-                                   subdir=subdir)
+                sub_host_ms_deps = m.ms_depends('host')
+                if host_index:
+                    host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
+                                                               sub_host_ms_deps, m.config)
+                    environ.create_env(m.config.host_prefix, host_actions, config=m.config,
+                                       subdir=subdir)
+                else:
+                    assert not sub_host_ms_deps, ("Have host deps ({}) without a host_index"
+                                                  .format(sub_host_ms_deps))
+                sub_build_ms_deps = m.ms_depends('build')
+                build_actions = environ.get_install_actions(m.config.build_prefix, index,
+                                                            sub_build_ms_deps, m.config)
+                environ.create_env(m.config.build_prefix, build_actions, config=m.config,
+                                   subdir=m.config.build_subdir)
                 built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
-                environ.remove_env(actions, index, m.config)
+                environ.remove_env(host_actions, host_index, m.config)
+                environ.remove_env(build_actions, index, m.config)
                 new_pkgs[built_package] = (output_d, m)
                 # must rebuild index because conda has no way to incrementally add our last
                 #    package to the index.
-                index = get_build_index(config=m.config, subdir=subdir,
+                if host_index:
+                    host_index = get_build_index(config=m.config, subdir=m.config.host_subdir,
+                                                clear_cache=True)
+                index = get_build_index(config=m.config, subdir=m.config.build_subdir,
                                         clear_cache=True)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -1162,10 +1192,11 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         test_script = join(metadata.config.test_dir,
                            "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        # we want subdir to match the target arch.  If we're running the test on the target arch,
-        #     the build_subdir should be that match.  The host_subdir may not be, and would lead
-        #     to unsatisfiable packages.
-        subdir = (metadata.config.build_subdir if metadata.config.build_subdir != 'noarch'
+        # In the future, we will need to support testing cross compiled
+        #     packages on physical hardware. until then it is expected that
+        #     something like QEMU or Wine will be used on the build machine,
+        #     therefore, for now, we use host_subdir.
+        subdir = (metadata.config.host_subdir if metadata.config.host_subdir != 'noarch'
                   else subdir)
         index = get_build_index(metadata.config, subdir)
         actions = environ.get_install_actions(metadata.config.test_prefix, index,
@@ -1258,7 +1289,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             raise
         if need_cleanup:
             utils.rm_rf(recipe_dir)
-        environ.remove_env(actions, index, config)
+        utils.rm_rf(metadata.config.test_prefix)
         print("TEST END:", test_package_name)
     return True
 
@@ -1431,7 +1462,7 @@ for Python 3.5 and needs to be rebuilt."""
                     retried_recipes.count(recipe) >= len(metadata.ms_depends('build'))):
                 raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
-            retried_recipes.append(recipe)
+            retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
         finally:
             for (m, _, _) in metadata_tuples:
