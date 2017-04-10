@@ -30,8 +30,6 @@ if sys.platform.startswith('linux'):
 elif sys.platform == 'darwin':
     from conda_build.os_utils import macho
 
-SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
-
 
 def is_obj(path):
     assert sys.platform != 'win32'
@@ -51,6 +49,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     if os.stat(path).st_size == 0:
         return
 
+    bytes_ = False
+
     with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
@@ -58,30 +58,41 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         except UnicodeDecodeError:  # file is binary
             return
 
+        SHEBANG_PAT = re.compile(r'^#!.+$', re.M)
+
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
         try:
             mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
         except OSError:
             mm = fi.read()
-        m = SHEBANG_PAT.match(mm)
+        try:
+            m = SHEBANG_PAT.match(mm)
+        except TypeError:
+            SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
+            bytes_ = True
+            m = SHEBANG_PAT.match(mm)
 
-        if not (m and b'python' in m.group()):
+        python_str = b'python' if bytes_ else 'python'
+
+        if not (m and python_str in m.group()):
             return
 
         data = mm[:]
 
-    encoding = sys.stdout.encoding or 'utf8'
-
-    py_exec = ('/bin/bash ' + prefix + '/bin/pythonw'
+    py_exec = '#!' + ('/bin/bash ' + prefix + '/bin/pythonw'
                if sys.platform == 'darwin' and osx_is_app else
                prefix + '/bin/' + os.path.basename(build_python))
-    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
+    if bytes_ and hasattr(py_exec, 'encode'):
+        py_exec = py_exec.encode()
+    new_data = SHEBANG_PAT.sub(py_exec, data, count=1)
     if new_data == data:
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        fo.write(new_data.decode(encoding))
+        if hasattr(new_data, 'decode') and utils.PY3:
+            new_data = new_data.decode()
+        fo.write(new_data)
     os.chmod(path, 0o775)
 
 
