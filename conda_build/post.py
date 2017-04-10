@@ -51,7 +51,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     if os.stat(path).st_size == 0:
         return
 
-    with io.open(path, encoding=locale.getpreferredencoding(), mode='r') as fi:
+    with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
             fi.seek(0)
@@ -61,7 +61,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
         try:
-            mm = mmap.mmap(fi.fileno(), 0)
+            mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
         except OSError:
             mm = fi.read()
         m = SHEBANG_PAT.match(mm)
