@@ -819,6 +819,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
 
     log = utils.get_logger(__name__)
     host_actions = []
+    host_index = {}
     build_actions = []
 
     with utils.path_prepended(m.config.build_prefix):
@@ -860,7 +861,6 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
-        host_index = {}
         if m.config.has_separate_host_prefix:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
