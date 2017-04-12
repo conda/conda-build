@@ -245,8 +245,9 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 if path.startswith(prefix):
                     deps = list(which_package(path))
                     if len(deps) > 1:
+                        deps_str = [str(dep) for dep in deps]
                         logging.getLogger(__name__).warn("Warning: %s comes from multiple "
-                                                         "packages: %s", path, comma_join(deps))
+                                                  "packages: %s", path, comma_join(deps_str))
                     if not deps:
                         if exists(path):
                             depmap['untracked'].append((lib, path.split(prefix +
