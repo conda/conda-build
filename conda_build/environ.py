@@ -223,6 +223,7 @@ def get_dict(config, m=None, prefix=None):
     d.update(python_vars(config, prefix))
     d.update(perl_vars(config, prefix))
     d.update(lua_vars(config, prefix))
+    d.update(r_vars(config, prefix))
 
     if m:
         d.update(meta_vars(m, config))
@@ -257,39 +258,58 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config, prefix):
-    d = {
-        'PYTHON': config.python_bin(prefix),
-        'PY3K': str(config.PY3K),
-        'STDLIB_DIR': utils.get_stdlib_dir(prefix),
-        'SP_DIR': utils.get_site_packages(prefix),
-        'PY_VER': get_py_ver(config),
-        'CONDA_PY': str(config.CONDA_PY),
-    }
+    vars = {}
+    if os.path.isfile(config.python_bin(prefix)):
+        vars.update({
+            'PYTHON': config.python_bin(prefix),
+            'PY3K': str(config.PY3K),
+            'STDLIB_DIR': utils.get_stdlib_dir(prefix),
+            'SP_DIR': utils.get_site_packages(prefix),
+            'PY_VER': get_py_ver(config),
+            'CONDA_PY': str(config.CONDA_PY),
+        })
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
     if get_npy_ver(config):
-        d['NPY_VER'] = get_npy_ver(config)
-        d['CONDA_NPY'] = str(config.CONDA_NPY)
-    return d
+        vars['NPY_VER'] = get_npy_ver(config)
+        vars['CONDA_NPY'] = str(config.CONDA_NPY)
+    return vars
 
 
 def perl_vars(config, prefix):
-    return {
-        'PERL': config.perl_bin(prefix),
-        'PERL_VER': get_perl_ver(config),
-    }
+    vars = {}
+    if os.path.isfile(config.perl_bin(prefix)):
+        vars.update({
+            'PERL': config.perl_bin(prefix),
+            'PERL_VER': get_perl_ver(config),
+            'CONDA_PERL': str(config.CONDA_PERL),
+        })
+    return vars
 
 
 def lua_vars(config, prefix):
+    vars = {}
     lua = config.lua_bin(prefix)
-    if lua:
-        return {
+    if os.path.isfile(lua):
+        vars.update({
             'LUA': lua,
             'LUA_INCLUDE_DIR': get_lua_include_dir(config),
             'LUA_VER': get_lua_ver(config),
-        }
-    else:
-        return {}
+            'CONDA_LUA': str(config.CONDA_LUA),
+        })
+    return vars
+
+
+def r_vars(config, prefix):
+    vars = {}
+    r = config.r_bin(prefix)
+    if os.path.isfile(r):
+        vars.update({
+            'R': r,
+            'R_VER': get_r_ver(config),
+            'CONDA_R': str(config.CONDA_R),
+        })
+    return vars
 
 
 def meta_vars(meta, config):
