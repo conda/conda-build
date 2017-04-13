@@ -736,7 +736,8 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
 
     # ensure prefix exists, even if empty, i.e. when specs are empty
     if not isdir(prefix):
-        os.makedirs(prefix)
+        os.makedirs(join(prefix, 'conda-meta'))
+        open(join(prefix, 'conda-meta', 'history'), 'a').close()
     if utils.on_win:
         shell = "cmd.exe"
     else:
