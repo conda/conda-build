@@ -1,3 +1,4 @@
+echo "Running real file"
 # the real file
 sh $PREFIX/test/weee
 
