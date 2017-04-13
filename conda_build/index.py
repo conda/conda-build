@@ -17,6 +17,7 @@ from .conda_interface import PY3, md5_file
 
 def read_index_tar(tar_path, config, lock):
     """ Returns the index.json dict inside the given package tarball. """
+    locks = []
     if config.locking:
         locks = [lock]
     with try_acquire_locks(locks, config.timeout):
@@ -38,6 +39,7 @@ def write_repodata(repodata, dir_path, lock, config=None):
     if not config:
         import conda_build.config
         config = conda_build.config.config
+    locks = []
     if config.locking:
         locks = [lock]
     with try_acquire_locks(locks, config.timeout):

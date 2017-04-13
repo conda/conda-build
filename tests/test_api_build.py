@@ -919,3 +919,10 @@ def test_only_lua_env(test_config):
     test_config.prefix_length = 80
     test_config.set_build_id = False
     api.build(recipe, config=test_config)
+
+
+@pytest.mark.serial
+def test_no_locking(test_config):
+    recipe = os.path.join(metadata_dir, 'source_git_jinja2')
+    api.update_index(os.path.join(test_config.croot, test_config.subdir), config=test_config)
+    api.build(recipe, config=test_config, locking=False)
