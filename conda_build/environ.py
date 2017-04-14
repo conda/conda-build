@@ -780,17 +780,6 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
         symlink_conda(prefix, sys.prefix, shell)
 
 
-def remove_env(install_actions, index, config):
-    if install_actions:
-        install_actions['UNLINK'] = install_actions['LINK']
-        del install_actions['LINK']
-        display_actions(install_actions, index)
-        if utils.on_win:
-            for k, v in os.environ.items():
-                os.environ[k] = str(v)
-        execute_actions(install_actions, index, verbose=config.debug)
-
-
 def clean_pkg_cache(dist, config):
     _pkgs_dirs = pkgs_dirs[:1]
     locks = []

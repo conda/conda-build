@@ -142,10 +142,36 @@ def _copy_with_shell_fallback(src, dst):
                 raise OSError("Failed to copy {} to {}.  Error was: {}".format(src, dst, e))
 
 
+def get_prefix_replacement_paths(src, dst):
+    ssplit = src.split(os.path.sep)
+    dsplit = dst.split(os.path.sep)
+    while ssplit and ssplit[-1] == dsplit[-1]:
+        del ssplit[-1]
+        del dsplit[-1]
+    return os.path.join(*ssplit), os.path.join(*dsplit)
+
+
 def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clobber=False):
     """Copy all the files and directories in src to the directory dst"""
     log = get_logger(__name__)
-    if isdir(src):
+    if symlinks and islink(src):
+        try:
+            os.makedirs(os.path.dirname(dst))
+        except OSError:
+            pass
+        if os.path.lexists(dst):
+            os.remove(dst)
+        src_base, dst_base = get_prefix_replacement_paths(src, dst)
+        src_target = os.readlink(src)
+        src_replaced = src_target.replace(src_base, dst_base)
+        os.symlink(src_replaced, dst)
+        try:
+            st = os.lstat(src)
+            mode = stat.S_IMODE(st.st_mode)
+            os.lchmod(dst, mode)
+        except:
+            pass  # lchmod not available
+    elif isdir(src):
         merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking, clobber=clobber)
 
     else:
