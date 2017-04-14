@@ -31,7 +31,7 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env)
 from conda_build.os_utils.external import find_executable
 
-from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
+from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
