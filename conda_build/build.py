@@ -876,7 +876,8 @@ def bundle_conda(output, metadata, config, env, **kw):
         keep_files = set(utils.expand_globs(files, config.build_prefix))
         pfx_files = set(prefix_files(config.build_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
-                            if not any(keep_file == item for keep_file in keep_files))
+                            if not any(keep_file.startswith(item + os.path.sep)
+                                       for keep_file in keep_files))
 
     files = post_process_files(metadata, initial_files)
 

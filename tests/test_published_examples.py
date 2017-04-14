@@ -2,8 +2,9 @@ import os
 
 import pytest
 
-from conda_build import api
-from .utils import metadata_dir, is_valid_dir, check_call_env
+from conda_build import api, utils
+from .utils import metadata_dir, is_valid_dir
+
 
 published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code')
 
@@ -11,9 +12,9 @@ published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code
 def test_skeleton_pypi(testing_workdir):
     """published in docs at http://conda.pydata.org/docs/build_tutorials/pkgs.html"""
     cmd = 'conda skeleton pypi pyinstrument'
-    check_call_env(cmd.split())
+    utils.check_call_env(cmd.split())
     cmd = 'conda build pyinstrument'
-    check_call_env(cmd.split())
+    utils.check_call_env(cmd.split())
 
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(published_examples)
