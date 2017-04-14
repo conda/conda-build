@@ -297,11 +297,11 @@ def test_installable(channel='defaults'):
 
 
 def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all_packages=False,
-                     show_files=False, groupby='package'):
+                     show_files=False, groupby='package', sysroot=''):
     from .inspect import inspect_linkages
     packages = _ensure_list(packages)
     return inspect_linkages(packages, prefix=prefix, untracked=untracked, all_packages=all_packages,
-                            show_files=show_files, groupby=groupby)
+                            show_files=show_files, groupby=groupby, sysroot=sysroot)
 
 
 def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):

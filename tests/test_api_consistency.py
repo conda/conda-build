@@ -91,8 +91,8 @@ def test_api_installable():
 def test_api_inspect_linkages():
     argspec = getargspec(api.inspect_linkages)
     assert argspec.args == ['packages', 'prefix', 'untracked', 'all_packages',
-                            'show_files', 'groupby']
-    assert argspec.defaults == (sys.prefix, False, False, False, 'package')
+                            'show_files', 'groupby', 'sysroot']
+    assert argspec.defaults == (sys.prefix, False, False, False, 'package', '')
 
 
 def test_api_inspect_objects():

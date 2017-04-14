@@ -189,7 +189,7 @@ def _underlined_text(text):
 
 
 def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
-                     all_packages=False, show_files=False, groupby="package"):
+                     all_packages=False, show_files=False, groupby="package", sysroot=""):
     pkgmap = {}
 
     installed = _installed(prefix)
@@ -218,7 +218,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
             obj_files = get_untracked_obj_files(prefix)
         else:
             obj_files = get_package_obj_files(dist, prefix)
-        linkages = get_linkages(obj_files, prefix)
+        linkages = get_linkages(obj_files, prefix, sysroot)
         depmap = defaultdict(list)
         pkgmap[pkg] = depmap
         depmap['not found'] = []
