@@ -5,6 +5,7 @@ import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath
 import re
+import shutil
 from subprocess import CalledProcessError
 import sys
 import time
@@ -16,7 +17,7 @@ from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2,
-                               get_logger)
+                               get_logger, rm_rf)
 
 # legacy exports for conda
 from .config import Config as _Config
@@ -36,26 +37,25 @@ else:
 git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
 
 
-def download_to_cache(metadata):
+def download_to_cache(cache_folder, recipe_path, source_dict):
     ''' Download a source to the local cache. '''
-    print('Source cache directory is: %s' % metadata.config.src_cache)
-    if not isdir(metadata.config.src_cache):
-        os.makedirs(metadata.config.src_cache)
-    meta = metadata.get_section('source')
+    print('Source cache directory is: %s' % cache_folder)
+    if not isdir(cache_folder):
+        os.makedirs(cache_folder)
 
-    fn = meta['fn'] if 'fn' in meta else basename(meta['url'])
-    path = join(metadata.config.src_cache, fn)
+    fn = source_dict['fn'] if 'fn' in source_dict else basename(source_dict['url'])
+    path = join(cache_folder, fn)
     if isfile(path):
         print('Found source in cache: %s' % fn)
     else:
         print('Downloading source to cache: %s' % fn)
-        if not isinstance(meta['url'], list):
-            meta['url'] = [meta['url']]
+        if not isinstance(source_dict['url'], list):
+            source_dict['url'] = [source_dict['url']]
 
-        for url in meta['url']:
+        for url in source_dict['url']:
             if "://" not in url:
                 if not os.path.isabs(url):
-                    url = os.path.normpath(os.path.join(metadata.path, url))
+                    url = os.path.normpath(os.path.join(recipe_path, url))
                 url = url_path(url)
             try:
                 print("Downloading %s" % url)
@@ -72,7 +72,7 @@ def download_to_cache(metadata):
 
     for tp in ('md5', 'sha1', 'sha256'):
         try:
-            expected_hash = meta[tp]
+            expected_hash = source_dict[tp]
             hashed = hashsum_file(path, tp)
             if expected_hash != hashed:
                 raise RuntimeError("%s mismatch: '%s' != '%s'" %
@@ -83,33 +83,50 @@ def download_to_cache(metadata):
     return path
 
 
-def unpack(meta):
-    ''' Uncompress a downloaded source. '''
-    src_path = download_to_cache(meta)
+def hoist_single_extracted_folder(nested_folder):
+    """Moves all files/folders one level up.
 
-    if not isdir(meta.config.work_dir):
-        os.makedirs(meta.config.work_dir)
-    if meta.config.verbose:
+    This is for when your archive extracts into its own folder, so that we don't need to
+    know exactly what that folder is called."""
+    flist = os.listdir(nested_folder)
+    parent = os.path.dirname(nested_folder)
+    for thing in flist:
+        shutil.move(os.path.join(nested_folder, thing), os.path.join(parent, thing))
+    rm_rf(nested_folder)
+
+
+def unpack(source_dict, src_dir, cache_folder, recipe_path, verbose=False,
+           timeout=90, locking=True):
+    ''' Uncompress a downloaded source. '''
+    src_path = download_to_cache(cache_folder, recipe_path, source_dict)
+
+    if not isdir(src_dir):
+        os.makedirs(src_dir)
+    if verbose:
         print("Extracting download")
     if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
             '.tar', 'tar.z')):
-        tar_xf(src_path, meta.config.work_dir)
+        tar_xf(src_path, src_dir)
     elif src_path.lower().endswith('.zip'):
-        unzip(src_path, meta.config.work_dir)
+        unzip(src_path, src_dir)
     elif src_path.lower().endswith('.whl'):
         # copy wheel itself *and* unpack it
         # This allows test_files or about.license_file to locate files in the wheel,
         # as well as `pip install name-version.whl` as install command
-        unzip(src_path, meta.config.work_dir)
-        copy_into(src_path, meta.config.work_dir, meta.config.timeout, locking=meta.config.locking)
+        unzip(src_path, src_dir)
+        copy_into(src_path, src_dir, timeout, locking=locking)
     else:
         # In this case, the build script will need to deal with unpacking the source
         print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-        copy_into(src_path, meta.config.work_dir, meta.config.timeout, locking=meta.config.locking)
+        copy_into(src_path, src_dir, timeout, locking=locking)
+    flist = os.listdir(src_dir)
+    folder = os.path.join(src_dir, flist[0])
+    if len(flist) == 1 and os.path.isdir(folder):
+        hoist_single_extracted_folder(folder)
 
 
-def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config, git_ref=None,
-                                  git_depth=-1, is_top_level=True):
+def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
+                                  git_depth=-1, is_top_level=True, verbose=True):
     """ Mirror (and checkout) a Git repository recursively.
 
         It's not possible to use `git submodule` on a bare
@@ -125,7 +142,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         folders unless steps are taken to prevent that.
     """
 
-    if config.verbose:
+    if verbose:
         stdout = None
         stderr = None
     else:
@@ -133,9 +150,9 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         stdout = FNULL
         stderr = FNULL
 
-    if not mirror_dir.startswith(config.git_cache + os.sep):
+    if not mirror_dir.startswith(git_cache + os.sep):
         sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
-                 % (mirror_dir, config.git_cache))
+                 % (mirror_dir, git_cache))
 
     # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
     git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir)
@@ -182,7 +199,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
         if git_url.startswith('.'):
             output = check_output_env([git, "rev-parse", checkout], stdout=stdout, stderr=stderr)
             checkout = output.decode('utf-8')
-        if config.verbose:
+        if verbose:
             print('checkout: %r' % checkout)
         if checkout:
             check_call_env([git, 'checkout', checkout],
@@ -206,41 +223,41 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, config
             submod_url = urljoin(git_url + '/', submod_rel_path)
             submod_mirror_dir = os.path.normpath(
                 os.path.join(mirror_dir, submod_rel_path))
-            if config.verbose:
+            if verbose:
                 print('Relative submodule %s found: url is %s, submod_mirror_dir is %s' % (
                       submod_name, submod_url, submod_mirror_dir))
             with TemporaryDirectory() as temp_checkout_dir:
                 git_mirror_checkout_recursive(git, submod_mirror_dir, temp_checkout_dir, submod_url,
-                                              config, git_ref, git_depth, False)
+                                              git_cache=git_cache, git_ref=git_ref,
+                                              git_depth=git_depth, is_top_level=False,
+                                              verbose=verbose)
 
     if is_top_level:
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
         check_call_env([git, 'submodule', 'update', '--init',
                     '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
-        git_info(config)
-    if not config.verbose:
+        git_info(checkout_dir, verbose=verbose)
+    if not verbose:
         FNULL.close()
 
 
-def git_source(metadata):
+def git_source(source_dict, git_cache, src_dir, recipe_path, verbose=True):
     ''' Download a source from a Git repo (or submodule, recursively) '''
-    if not isdir(metadata.config.git_cache):
-        os.makedirs(metadata.config.git_cache)
+    if not isdir(git_cache):
+        os.makedirs(git_cache)
 
     git = external.find_executable('git')
     if not git:
         sys.exit("Error: git is not installed in your root environment.")
 
-    meta = metadata.get_section('source')
-
-    git_url = meta['git_url']
-    git_depth = int(meta.get('git_depth', -1))
-    git_ref = meta.get('git_rev', 'HEAD')
+    git_url = source_dict['git_url']
+    git_depth = int(source_dict.get('git_depth', -1))
+    git_ref = source_dict.get('git_rev', 'HEAD')
 
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
-        git_url = abspath(normpath(os.path.join(metadata.path, git_url)))
+        git_url = abspath(normpath(os.path.join(recipe_path, git_url)))
         if sys.platform == 'win32':
             git_dn = git_url.replace(':', '_')
         else:
@@ -250,16 +267,16 @@ def git_source(metadata):
         if git_dn.startswith(os.sep):
             git_dn = git_dn[1:]
         git_dn = git_dn.replace(':', '_')
-    mirror_dir = join(metadata.config.git_cache, git_dn)
+    mirror_dir = join(git_cache, git_dn)
     git_mirror_checkout_recursive(
-        git, mirror_dir, metadata.config.work_dir, git_url, metadata.config, git_ref, git_depth,
-        True)
+        git, mirror_dir, src_dir, git_url, git_cache=git_cache, git_ref=git_ref,
+        git_depth=git_depth, is_top_level=True, verbose=verbose)
     return git
 
 
-def git_info(config, fo=None):
+def git_info(src_dir, verbose=True, fo=None):
     ''' Print info about a Git repo. '''
-    assert isdir(config.work_dir)
+    assert isdir(src_dir)
 
     git = external.find_executable('git')
     if not git:
@@ -267,7 +284,7 @@ def git_info(config, fo=None):
         log.warn("git not installed in root environment.  Skipping recording of git info.")
         return
 
-    if config.verbose:
+    if verbose:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
@@ -276,14 +293,14 @@ def git_info(config, fo=None):
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
     # properly execute without it.
     env = os.environ.copy()
-    env['GIT_DIR'] = join(config.work_dir, '.git')
+    env['GIT_DIR'] = join(src_dir, '.git')
     env = {str(key): str(value) for key, value in env.items()}
     for cmd, check_error in [
             ('git log -n1', True),
             ('git describe --tags --dirty', False),
             ('git status', True)]:
         try:
-            stdout = check_output_env(cmd.split(), stderr=stderr, cwd=config.work_dir, env=env)
+            stdout = check_output_env(cmd.split(), stderr=stderr, cwd=src_dir, env=env)
         except CalledProcessError as e:
             if check_error:
                 raise Exception("git error: %s" % str(e))
@@ -295,17 +312,17 @@ def git_info(config, fo=None):
             stdout = stdout.decode(encoding, 'ignore')
         if fo:
             fo.write(u'==> %s <==\n' % cmd)
-            if config.verbose:
+            if verbose:
                 fo.write(stdout + u'\n')
         else:
-            if config.verbose:
+            if verbose:
                 print(u'==> %s <==\n' % cmd)
                 safe_print_unicode(stdout + u'\n')
 
 
-def hg_source(metadata):
+def hg_source(source_dict, src_dir, hg_cache, verbose):
     ''' Download a source from Mercurial repo. '''
-    if metadata.config.verbose:
+    if verbose:
         stdout = None
         stderr = None
     else:
@@ -313,83 +330,72 @@ def hg_source(metadata):
         stdout = FNULL
         stderr = FNULL
 
-    meta = metadata.get_section('source')
-
-    hg = external.find_executable('hg', metadata.config.build_prefix)
-    if not hg:
-        sys.exit('Error: hg not installed')
-    hg_url = meta['hg_url']
-    if not isdir(metadata.config.hg_cache):
-        os.makedirs(metadata.config.hg_cache)
+    hg_url = source_dict['hg_url']
+    if not isdir(hg_cache):
+        os.makedirs(hg_cache)
     hg_dn = hg_url.split(':')[-1].replace('/', '_')
-    cache_repo = join(metadata.config.hg_cache, hg_dn)
+    cache_repo = join(hg_cache, hg_dn)
     if isdir(cache_repo):
-        check_call_env([hg, 'pull'], cwd=cache_repo, stdout=stdout, stderr=stderr)
+        check_call_env(['hg', 'pull'], cwd=cache_repo, stdout=stdout, stderr=stderr)
     else:
-        check_call_env([hg, 'clone', hg_url, cache_repo], stdout=stdout, stderr=stderr)
+        check_call_env(['hg', 'clone', hg_url, cache_repo], stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now clone in to work directory
-    update = meta.get('hg_tag') or 'tip'
-    if metadata.config.verbose:
+    update = source_dict.get('hg_tag') or 'tip'
+    if verbose:
         print('checkout: %r' % update)
 
-    check_call_env([hg, 'clone', cache_repo, metadata.config.work_dir], stdout=stdout,
+    check_call_env(['hg', 'clone', cache_repo, src_dir], stdout=stdout,
                    stderr=stderr)
-    check_call_env([hg, 'update', '-C', update], cwd=metadata.config.work_dir, stdout=stdout,
+    check_call_env(['hg', 'update', '-C', update], cwd=src_dir, stdout=stdout,
                    stderr=stderr)
 
-    if not metadata.config.verbose:
+    if not verbose:
         FNULL.close()
 
-    return metadata.config.work_dir
+    return src_dir
 
 
-def svn_source(metadata):
+def svn_source(source_dict, src_dir, svn_cache, verbose=True, timeout=90, locking=True):
     ''' Download a source from SVN repo. '''
-    if metadata.config.verbose:
+    if verbose:
         stdout = None
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
         stdout = FNULL
         stderr = FNULL
-
-    meta = metadata.get_section('source')
 
     def parse_bool(s):
         return str(s).lower().strip() in ('yes', 'true', '1', 'on')
 
-    svn = external.find_executable('svn', metadata.config.build_prefix)
-    if not svn:
-        sys.exit("Error: svn is not installed")
-    svn_url = meta['svn_url']
-    svn_revision = meta.get('svn_rev') or 'head'
-    svn_ignore_externals = parse_bool(meta.get('svn_ignore_externals') or 'no')
-    if not isdir(metadata.config.svn_cache):
-        os.makedirs(metadata.config.svn_cache)
+    svn_url = source_dict['svn_url']
+    svn_revision = source_dict.get('svn_rev') or 'head'
+    svn_ignore_externals = parse_bool(source_dict.get('svn_ignore_externals') or 'no')
+    if not isdir(svn_cache):
+        os.makedirs(svn_cache)
     svn_dn = svn_url.split(':', 1)[-1].replace('/', '_').replace(':', '_')
-    cache_repo = join(metadata.config.svn_cache, svn_dn)
+    cache_repo = join(svn_cache, svn_dn)
     if svn_ignore_externals:
         extra_args = ['--ignore-externals']
     else:
         extra_args = []
     if isdir(cache_repo):
-        check_call_env([svn, 'up', '-r', svn_revision] + extra_args, cwd=cache_repo,
+        check_call_env(['svn', 'up', '-r', svn_revision] + extra_args, cwd=cache_repo,
                        stdout=stdout, stderr=stderr)
     else:
-        check_call_env([svn, 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo],
+        check_call_env(['svn', 'co', '-r', svn_revision] + extra_args + [svn_url, cache_repo],
                        stdout=stdout, stderr=stderr)
         assert isdir(cache_repo)
 
     # now copy into work directory
-    copy_into(cache_repo, metadata.config.work_dir, metadata.config.timeout, symlinks=True,
-              locking=metadata.config.locking)
+    copy_into(cache_repo, src_dir, timeout, symlinks=True, locking=locking)
 
-    if not metadata.config.verbose:
+    if not verbose:
         FNULL.close()
 
-    return metadata.config.work_dir
+    return src_dir
 
 
 def get_repository_info(recipe_path):
@@ -526,32 +532,46 @@ def provide(metadata, patch=True):
 
     meta = metadata.get_section('source')
 
-    if any(k in meta for k in ('fn', 'url')):
-        unpack(metadata)
-    elif 'git_url' in meta:
-        git = git_source(metadata)
-    # build to make sure we have a work directory with source in it.  We want to make sure that
-    #    whatever version that is does not interfere with the test we run next.
-    elif 'hg_url' in meta:
-        hg_source(metadata)
-    elif 'svn_url' in meta:
-        svn_source(metadata)
-    elif 'path' in meta:
-        path = normpath(abspath(join(metadata.path, metadata.get_value('source/path'))))
-        if metadata.config.verbose:
-            print("Copying %s to %s" % (path, metadata.config.work_dir))
-        # careful here: we set test path to be outside of conda-build root in setup.cfg.
-        #    If you don't do that, this is a recursive function
-        copy_into(path, metadata.config.work_dir, metadata.config.timeout, symlinks=True,
-                  locking=metadata.config.locking, clobber=True)
-    else:  # no source
-        if not isdir(metadata.config.work_dir):
-            os.makedirs(metadata.config.work_dir)
+    if hasattr(meta, 'keys'):
+        dicts = [meta]
+    else:
+        dicts = meta
 
-    if patch:
-        src_dir = metadata.config.work_dir
-        patches = ensure_list(meta.get('patches', []))
-        for patch in patches:
-            apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
+    for source_dict in dicts:
+        folder = source_dict.get('folder')
+        src_dir = (os.path.join(metadata.config.work_dir, folder) if folder else
+                   metadata.config.work_dir)
+        if any(k in source_dict for k in ('fn', 'url')):
+            unpack(source_dict, src_dir, metadata.config.src_cache, recipe_path=metadata.path,
+                   verbose=metadata.config.verbose, timeout=metadata.config.timeout,
+                   locking=metadata.config.locking)
+        elif 'git_url' in source_dict:
+            git = git_source(source_dict, metadata.config.git_cache, src_dir, metadata.path,
+                             verbose=metadata.config.verbose)
+        # build to make sure we have a work directory with source in it.  We want to make sure that
+        #    whatever version that is does not interfere with the test we run next.
+        elif 'hg_url' in source_dict:
+            hg_source(source_dict, src_dir, metadata.config.hg_cache,
+                      verbose=metadata.config.verbose)
+        elif 'svn_url' in source_dict:
+            svn_source(source_dict, src_dir, metadata.config.svn_cache,
+                       verbose=metadata.config.verbose, timeout=metadata.config.timeout,
+                       locking=metadata.config.locking)
+        elif 'path' in source_dict:
+            path = normpath(abspath(join(metadata.path, metadata.get_value('source/path'))))
+            if metadata.config.verbose:
+                print("Copying %s to %s" % (path, src_dir))
+            # careful here: we set test path to be outside of conda-build root in setup.cfg.
+            #    If you don't do that, this is a recursive function
+            copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
+                    locking=metadata.config.locking, clobber=True)
+        else:  # no source
+            if not isdir(src_dir):
+                os.makedirs(src_dir)
+
+        if patch:
+            patches = ensure_list(source_dict.get('patches', []))
+            for patch in patches:
+                apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
 
     return metadata.config.work_dir

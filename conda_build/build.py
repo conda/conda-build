@@ -485,7 +485,7 @@ def create_info_files(m, files, prefix):
 
     if m.get_value('source/git_url'):
         with io.open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
-            source.git_info(m.config, fo)
+            source.git_info(m.config.work_dir, verbose=m.config.verbose, fo=fo)
 
     if m.get_value('app/icon'):
         utils.copy_into(join(m.path, m.get_value('app/icon')),
