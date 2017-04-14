@@ -1,9 +1,9 @@
 package:
-  name: pins_downstream
+  name: package_has_run_exports
   version: 1.0
 
 build:
-  pin_downstream:
+  run_exports:
     - bzip2  {{ pin_compatible('bzip2') }}
 
 requirements:

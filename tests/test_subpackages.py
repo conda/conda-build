@@ -63,13 +63,13 @@ def test_subpackage_independent_hash(testing_metadata):
     assert outputs[0][-15:] != outputs[1][-15:]
 
 
-def test_pin_downstream_in_subpackage(testing_metadata, testing_index):
+def test_run_exports_in_subpackage(testing_metadata, testing_index):
     p1 = testing_metadata.copy()
-    p1.meta['outputs'] = [{'name': 'has_pin_downstream', 'pin_downstream': 'bzip2 1.0'}]
+    p1.meta['outputs'] = [{'name': 'has_run_exports', 'run_exports': 'bzip2 1.0'}]
     output = api.build(p1)[0]
     api.update_index(os.path.dirname(output), config=testing_metadata.config)
     p2 = testing_metadata.copy()
-    p2.meta['requirements']['build'] = ['has_pin_downstream']
+    p2.meta['requirements']['build'] = ['has_run_exports']
     p2.config.index = None
     p2_final = finalize_metadata(p2, None)
     assert 'bzip2 1.0' in p2_final.meta['requirements']['run']

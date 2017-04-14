@@ -81,7 +81,7 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
                 if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
-            pass_through_deps.append(spec)
+            pass_through_deps.append(spec.split(' ')[0])
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     dependencies = list(set(dependencies))
@@ -148,12 +148,12 @@ def get_upstream_pins(m, actions, index):
                 pkg_dir = os.path.join(pkgs_dir, pkg_dist)
                 pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
                 if os.path.isdir(pkg_dir):
-                    downstream_file = os.path.join(pkg_dir, 'info/pin_downstream')
+                    downstream_file = os.path.join(pkg_dir, 'info/run_exports')
                     if os.path.isfile(downstream_file):
                         additional_specs.extend(open(downstream_file).read().splitlines())
                     break
                 elif os.path.isfile(pkg_file):
-                    extra_specs = utils.package_has_file(pkg_file, 'info/pin_downstream')
+                    extra_specs = utils.package_has_file(pkg_file, 'info/run_exports')
                     if extra_specs:
                         additional_specs.extend(extra_specs.splitlines())
                     break
@@ -168,7 +168,7 @@ def get_upstream_pins(m, actions, index):
                             pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
                             if os.path.isfile(pkg_file):
                                 extra_specs = utils.package_has_file(pkg_file,
-                                                                    'info/pin_downstream')
+                                                                    'info/run_exports')
                                 if extra_specs:
                                     additional_specs.extend(extra_specs.splitlines())
                                 break
@@ -188,7 +188,7 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
         index = get_build_index(m.config, m.config.build_subdir)
 
     exclude_pattern = None
-    excludes = set(m.config.variant.get('exclude_from_build_hash', []))
+    excludes = set(m.config.variant.get('ignore_version', []))
 
     for key in m.config.variant.get('pin_run_as_build', {}).keys():
         if key in excludes:

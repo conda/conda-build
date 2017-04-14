@@ -489,7 +489,7 @@ def toposort(outputs):
 def output_dict_from_top_level_meta(m, files=None):
     requirements = m.meta.get('requirements', {})
     output_d = {'name': m.name(), 'requirements': requirements,
-                'pin_downstream': m.meta.get('build', {}).get('pin_downstream'),
+                'run_exports': m.meta.get('build', {}).get('run_exports'),
                 'noarch_python': m.get_value('build/noarch_python'),
                 'noarch': m.get_value('build/noarch'),
                 'type': 'conda',
@@ -817,7 +817,7 @@ class MetaData(object):
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})
         build_reqs = requirements.get('build', [])
-        excludes = self.config.variant.get('exclude_from_build_hash', [])
+        excludes = self.config.variant.get('ignore_version', [])
         if excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
@@ -1287,9 +1287,9 @@ class MetaData(object):
             if (not (output_metadata.noarch or output_metadata.noarch_python) and
                     self.config.platform != output_metadata.config.platform):
                 output_metadata.config.platform = self.config.platform
-            if 'pin_downstream' in output:
+            if 'run_exports' in output:
                 build = output_metadata.meta.get('build', {})
-                build['pin_downstream'] = output['pin_downstream']
+                build['run_exports'] = output['run_exports']
                 output_metadata.meta['build'] = build
             if 'outputs' in output_metadata.meta:
                 del output_metadata.meta['outputs']

@@ -891,9 +891,9 @@ def test_append_python_app_osx(testing_config):
 #         api.build(metadata)
 
 
-def test_pin_downstream(testing_metadata, testing_config):
-    api.build(os.path.join(metadata_dir, '_pin_downstream'), config=testing_config)
-    testing_metadata.meta['requirements']['build'] = ['test_has_pin_downstream']
+def test_run_exports(testing_metadata, testing_config):
+    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
+    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
     assert 'downstream_pinned_package 1.0' in m.meta['requirements']['run']
@@ -902,7 +902,7 @@ def test_pin_downstream(testing_metadata, testing_config):
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
     ms = api.render(recipe, config=testing_config)
-    assert any(re.match(r'pin_downstream_subpkg 1.0 h[a-f0-9]{%s}_0' % testing_config.hash_length,
+    assert any(re.match(r'run_exports_subpkg 1.0 h[a-f0-9]{%s}_0' % testing_config.hash_length,
                         req)
               for (m, _, _) in ms for req in m.meta['requirements']['run'])
     api.build(recipe, config=testing_config)
