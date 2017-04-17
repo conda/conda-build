@@ -1,0 +1,9 @@
+package:
+  name: test_lua_env
+  version: 1.0
+
+requirements:
+  build:
+    - lua
+  run:
+    - lua

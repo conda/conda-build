@@ -227,6 +227,13 @@ class Config(object):
             res = join(prefix, 'bin/{}'.format(binary_name))
         return res
 
+    def _get_r(self, prefix):
+        if sys.platform == 'win32':
+            res = join(prefix, 'Scripts', 'R.exe')
+        else:
+            res = join(prefix, 'bin/R')
+        return res
+
     @property
     def build_id(self):
         """This is a per-build (almost) unique id, consisting of the package being built, and the
@@ -311,6 +318,9 @@ class Config(object):
 
     def lua_bin(self, prefix):
         return self._get_lua(prefix)
+
+    def r_bin(self, prefix):
+        return self._get_r(prefix)
 
     @property
     def info_dir(self):
