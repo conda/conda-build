@@ -51,7 +51,7 @@ def get_r_ver(config):
 
 
 def get_npy_ver(config):
-    conda_npy = str(config.variant.get('numpy') or get_default_variants()[0]['numpy']).split('.')
+    conda_npy = ''.join(str(config.variant.get('numpy') or get_default_variants()[0]['numpy']).split('.'))
     # Convert int -> string, e.g.
     #   17 -> '1.7'
     #   110 -> '1.10'
