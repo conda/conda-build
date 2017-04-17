@@ -1,4 +1,28 @@
-20170-04-04 2.1.9:
+2017-04-17 2.1.10:
+
+Enhancements:
+-------------
+
+* Inspect linkages will now warn when multiple packages contain the same library  #1884, #1921
+
+Bug fixes:
+----------
+
+* Fix bin/conda getting included in packages that also had entry point scripts or binaries starting with 'conda'  #1923
+* Fix empty create_env, for compatibility with conda 4.4  #1924
+* Adapt to Conda's new MatchSpec implementation  #1927
+* Fix unbound local variables when --no-locking option used.  #1928
+* Don't set language env vars (PERL, R, LUA, etc.) when packages for those languages are not installed  #1930
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @kalefranz
+* @msarahan
+
+
+2017-04-04 2.1.9:
 
 Enhancements:
 -------------
