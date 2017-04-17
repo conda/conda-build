@@ -1,7 +1,9 @@
 package:
-  name: test_r_env_var_present
+  name: test_lua_env
   version: 1.0
 
 requirements:
   build:
-    - r_base
+    - lua
+  run:
+    - lua

@@ -258,58 +258,62 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config, prefix):
-    vars = {}
-    if os.path.isfile(config.python_bin(prefix)):
-        vars.update({
-            'PYTHON': config.python_bin(prefix),
+    vars_ = {
+            'CONDA_PY': str(config.CONDA_PY),
             'PY3K': str(config.PY3K),
+            'PY_VER': get_py_ver(config),
+            }
+    if os.path.isfile(config.python_bin(prefix)):
+        vars_.update({
+            'PYTHON': config.python_bin(prefix),
             'STDLIB_DIR': utils.get_stdlib_dir(prefix),
             'SP_DIR': utils.get_site_packages(prefix),
-            'PY_VER': get_py_ver(config),
-            'CONDA_PY': str(config.CONDA_PY),
         })
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
     if get_npy_ver(config):
-        vars['NPY_VER'] = get_npy_ver(config)
-        vars['CONDA_NPY'] = str(config.CONDA_NPY)
-    return vars
+        vars_['NPY_VER'] = get_npy_ver(config)
+        vars_['CONDA_NPY'] = str(config.CONDA_NPY)
+    return vars_
 
 
 def perl_vars(config, prefix):
-    vars = {}
-    if os.path.isfile(config.perl_bin(prefix)):
-        vars.update({
-            'PERL': config.perl_bin(prefix),
+    vars_ = {
             'PERL_VER': get_perl_ver(config),
             'CONDA_PERL': str(config.CONDA_PERL),
+             }
+    if os.path.isfile(config.perl_bin(prefix)):
+        vars_.update({
+            'PERL': config.perl_bin(prefix),
         })
-    return vars
+    return vars_
 
 
 def lua_vars(config, prefix):
-    vars = {}
-    lua = config.lua_bin(prefix)
-    if os.path.isfile(lua):
-        vars.update({
-            'LUA': lua,
-            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+    vars_ = {
             'LUA_VER': get_lua_ver(config),
             'CONDA_LUA': str(config.CONDA_LUA),
+             }
+    lua = config.lua_bin(prefix)
+    if os.path.isfile(lua):
+        vars_.update({
+            'LUA': lua,
+            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
         })
-    return vars
+    return vars_
 
 
 def r_vars(config, prefix):
-    vars = {}
-    r = config.r_bin(prefix)
-    if os.path.isfile(r):
-        vars.update({
-            'R': r,
+    vars_ = {
             'R_VER': get_r_ver(config),
             'CONDA_R': str(config.CONDA_R),
+            }
+    r = config.r_bin(prefix)
+    if os.path.isfile(r):
+        vars_.update({
+            'R': r,
         })
-    return vars
+    return vars_
 
 
 def meta_vars(meta, config):
@@ -398,7 +402,6 @@ def windows_vars(prefix):
         'LIBRARY_BIN': join(library_prefix, 'bin'),
         'LIBRARY_INC': join(library_prefix, 'include'),
         'LIBRARY_LIB': join(library_prefix, 'lib'),
-        'R': join(prefix, 'Scripts', 'R.exe'),
         'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/'))),
         # see https://en.wikipedia.org/wiki/Environment_variable#Default_values
         'ALLUSERSPROFILE': os.getenv('ALLUSERSPROFILE'),
@@ -437,7 +440,6 @@ def unix_vars(prefix):
         'HOME': os.getenv('HOME', 'UNKNOWN'),
         'PKG_CONFIG_PATH': join(prefix, 'lib', 'pkgconfig'),
         'CMAKE_GENERATOR': 'Unix Makefiles',
-        'R': join(prefix, 'bin', 'R'),
     }
 
 

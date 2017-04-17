@@ -5,3 +5,5 @@ package:
 requirements:
   build:
     - perl
+  run:
+    - perl

@@ -898,3 +898,24 @@ def test_extract_tarball_with_unicode_filename(test_config):
     """See https://github.com/conda/conda-build/pull/1779"""
     recipe = os.path.join(metadata_dir, '_unicode_in_tarball')
     api.build(recipe, config=test_config)
+
+
+def test_only_r_env_vars_defined(test_config):
+    recipe = os.path.join(metadata_dir, '_r_env_defined')
+    test_config.channel_urls = ('r', )
+    api.build(recipe, config=test_config)
+
+
+def test_only_perl_env_vars_defined(test_config):
+    recipe = os.path.join(metadata_dir, '_perl_env_defined')
+    test_config.channel_urls = ('conda-forge', )
+    api.build(recipe, config=test_config)
+
+
+@pytest.mark.skipif(on_win, reason='no lua package on win')
+def test_only_lua_env(test_config):
+    recipe = os.path.join(metadata_dir, '_lua_env_defined')
+    test_config.channel_urls = ('conda-forge', )
+    test_config.prefix_length = 80
+    test_config.set_build_id = False
+    api.build(recipe, config=test_config)

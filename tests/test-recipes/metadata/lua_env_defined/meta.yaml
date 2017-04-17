@@ -1,7 +1,0 @@
-package:
-  name: test_lua_env_var_present
-  version: 1.0
-
-requirements:
-  build:
-    - lua
