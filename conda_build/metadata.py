@@ -27,6 +27,9 @@ from conda_build.license_family import ensure_valid_license_family
 from conda_build.variants import get_default_variants
 from conda_build.exceptions import DependencyNeedsBuildingError
 
+if sys.version_info < (3, 0):
+	str = unicode
+
 try:
     import yaml
 
