@@ -1,0 +1,42 @@
+package:
+  name: test_split_package_entry_points
+  version: 1.0
+
+build:
+  entry_points:
+    - top1 = pkg1:main
+    - top2 = pkg2:main
+
+requirements:
+  build:
+    - python
+  run:
+    - split_package_entry_points1
+    - split_package_entry_points2
+
+# we want to make sure that top-level entry-points do not propagate down to subpackages
+#   and subpackage entry points should not propagate up to the top-level package
+outputs:
+  - name: split_package_entry_points1
+    entry_points:
+      - pkg1 = pkg1:main
+    script: install-pkg1.sh
+    requirements:
+      - python
+    test:
+      script: test-pkg1.py
+  - name: split_package_entry_points2
+    entry_points:
+      - pkg2 = pkg2:main
+    script: install-pkg2.sh
+    requirements:
+      - python
+    test:
+      script: test-pkg2.py
+
+test:
+  commands:
+    - top1
+    - top2
+  # imports:
+  #   -

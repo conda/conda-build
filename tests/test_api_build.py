@@ -402,24 +402,6 @@ def test_render_setup_py_old_funcname(testing_workdir, test_config, caplog):
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
 
 
-def test_debug_build_option(test_metadata, caplog, capfd):
-    logging.basicConfig(level=logging.INFO)
-    info_message = "INFO"
-    debug_message = "DEBUG"
-    api.build(test_metadata)
-    # this comes from an info message
-    assert info_message in caplog.text
-    # this comes from a debug message
-    assert debug_message not in caplog.text
-
-    test_metadata.config.debug = True
-    api.build(test_metadata)
-    # this comes from an info message
-    assert info_message in caplog.text
-    # this comes from a debug message
-    assert debug_message in caplog.text
-
-
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
 def test_backslash_in_always_include_files_path(test_config):
     api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
@@ -569,7 +551,6 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
         output = api.get_output_file_path(testing_workdir)
         assert ("relative_submodules-{}-0".format(tag) in output)
         api.build(testing_workdir)
-
 
 
 def test_noarch(testing_workdir):
@@ -908,7 +889,8 @@ def test_only_r_env_vars_defined(test_config):
 
 def test_only_perl_env_vars_defined(test_config):
     recipe = os.path.join(metadata_dir, '_perl_env_defined')
-    test_config.channel_urls = ('conda-forge', )
+    if not on_win:
+        test_config.channel_urls = ('conda-forge', )
     api.build(recipe, config=test_config)
 
 

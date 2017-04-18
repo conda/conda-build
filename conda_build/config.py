@@ -214,11 +214,12 @@ class Config(object):
 
     def _get_perl(self, prefix):
         if sys.platform == 'win32':
-            res = join(prefix, 'perl.exe')
+            res = join(prefix, 'Library', 'bin', 'perl.exe')
         else:
             res = join(prefix, 'bin/perl')
         return res
 
+    # TODO: This is probably broken on Windows, but no one has a lua package on windows to test.
     def _get_lua(self, prefix):
         binary_name = "luajit" if "2" == self.CONDA_LUA[0] else "lua"
         if sys.platform == 'win32':

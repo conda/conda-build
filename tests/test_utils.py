@@ -70,6 +70,7 @@ def test_disallow_merge_conflicts(namespace_setup, test_config):
                                                  'package'))
 
 
+@pytest.mark.skipif(utils.on_win, reason="only unix has full os.chmod capabilities")
 def test_unzip(testing_workdir):
     with open('file_with_execute_permission', 'w') as f:
         f.write("test")
