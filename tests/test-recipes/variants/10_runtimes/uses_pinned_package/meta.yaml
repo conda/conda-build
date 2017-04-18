@@ -1,7 +1,0 @@
-package:
-  name: uses_pinned_package
-  version: 1.0
-
-requirements:
-  build:
-    - pins_downstream
