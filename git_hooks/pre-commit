@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# This file is not automatically enabled on your clone.  To enable it,
+#   you need to:
+#
+# cd <root of conda-build clone>
+# ln -s $(pwd)/git_hooks/pre-commit .git/hooks/pre-commit
+
+# Run flake8
+flake8 .
