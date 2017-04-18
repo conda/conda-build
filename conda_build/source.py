@@ -104,25 +104,29 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, verbose=False,
         os.makedirs(src_dir)
     if verbose:
         print("Extracting download")
-    if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
-            '.tar', 'tar.z')):
-        tar_xf(src_path, src_dir)
-    elif src_path.lower().endswith('.zip'):
-        unzip(src_path, src_dir)
-    elif src_path.lower().endswith('.whl'):
-        # copy wheel itself *and* unpack it
-        # This allows test_files or about.license_file to locate files in the wheel,
-        # as well as `pip install name-version.whl` as install command
-        unzip(src_path, src_dir)
-        copy_into(src_path, src_dir, timeout, locking=locking)
-    else:
-        # In this case, the build script will need to deal with unpacking the source
-        print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-        copy_into(src_path, src_dir, timeout, locking=locking)
-    flist = os.listdir(src_dir)
-    folder = os.path.join(src_dir, flist[0])
-    if len(flist) == 1 and os.path.isdir(folder):
-        hoist_single_extracted_folder(folder)
+    with TemporaryDirectory() as tmpdir:
+        if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
+                '.tar', 'tar.z')):
+            tar_xf(src_path, tmpdir)
+        elif src_path.lower().endswith('.zip'):
+            unzip(src_path, tmpdir)
+        elif src_path.lower().endswith('.whl'):
+            # copy wheel itself *and* unpack it
+            # This allows test_files or about.license_file to locate files in the wheel,
+            # as well as `pip install name-version.whl` as install command
+            unzip(src_path, tmpdir)
+            copy_into(src_path, tmpdir, timeout, locking=locking)
+        else:
+            # In this case, the build script will need to deal with unpacking the source
+            print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
+            copy_into(src_path, tmpdir, timeout, locking=locking)
+        flist = os.listdir(tmpdir)
+        folder = os.path.join(tmpdir, flist[0])
+        if len(flist) == 1 and os.path.isdir(folder):
+            hoist_single_extracted_folder(folder)
+        flist = os.listdir(tmpdir)
+        for f in flist:
+            shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,

@@ -39,6 +39,19 @@ def test_extract_tarball_with_subfolders_moves_files(testing_metadata):
     assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'abc'))
 
 
+def test_extract_multiple_tarballs_with_subfolders_flattens_all(testing_metadata):
+    """Ensure that tarballs that contain only a single folder get their contents
+    hoisted up one level"""
+    testing_metadata.meta['source'] = [
+        {'folder': 'f1', 'url': os.path.join(thisdir, 'archives', 'subfolder.tar.bz2')},
+        {'folder': 'f1', 'url': os.path.join(thisdir, 'archives', 'subfolder2.tar.bz2')}]
+    source.provide(testing_metadata)
+    assert not os.path.exists(os.path.join(testing_metadata.config.work_dir, 'subfolder'))
+    assert not os.path.exists(os.path.join(testing_metadata.config.work_dir, 'subfolder2'))
+    assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'f1', 'abc'))
+    assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'f1', 'def'))
+
+
 def test_multiple_different_sources(testing_metadata):
     testing_metadata.meta['source'] = [
         {'folder': 'f1', 'url': os.path.join(thisdir, 'archives', 'a.tar.bz2')},
