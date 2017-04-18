@@ -657,6 +657,9 @@ def bundle_conda(output, metadata, env, **kw):
 
     files = output.get('files', [])
     if not files and output.get('script'):
+        with utils.path_prepended(metadata.config.build_prefix):
+            env = environ.get_dict(config=metadata.config, m=metadata)
+
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter = guess_interpreter(output['script'])

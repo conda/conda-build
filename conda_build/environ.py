@@ -51,7 +51,8 @@ def get_r_ver(config):
 
 
 def get_npy_ver(config):
-    conda_npy = ''.join(str(config.variant.get('numpy') or get_default_variants()[0]['numpy']).split('.'))
+    conda_npy = ''.join(str(config.variant.get('numpy') or
+                            get_default_variants()[0]['numpy']).split('.'))
     # Convert int -> string, e.g.
     #   17 -> '1.7'
     #   110 -> '1.10'
@@ -297,12 +298,12 @@ def python_vars(config, prefix):
             'CONDA_PY': ''.join(py_ver.split('.')[:2]),
             'PY3K': str(int(py_ver[0]) >= 3),
             'PY_VER': py_ver,
+            'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
+            'SP_DIR': utils.get_site_packages(prefix, py_ver),
             }
     if os.path.isfile(config.python_bin(prefix)):
         vars_.update({
             'PYTHON': config.python_bin(prefix),
-            'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
-            'SP_DIR': utils.get_site_packages(prefix, py_ver),
         })
 
     np_ver = config.variant.get('numpy', get_default_variants()[0]['numpy'])

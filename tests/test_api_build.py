@@ -979,22 +979,22 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     assert os.listdir(m.config.build_folder)
 
 
-def test_only_r_env_vars_defined(test_config):
+def test_only_r_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, '_r_env_defined')
-    test_config.channel_urls = ('r', )
-    api.build(recipe, config=test_config)
+    testing_config.channel_urls = ('r', )
+    api.build(recipe, config=testing_config)
 
 
-def test_only_perl_env_vars_defined(test_config):
+def test_only_perl_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, '_perl_env_defined')
-    test_config.channel_urls = ('conda-forge', )
-    api.build(recipe, config=test_config)
+    testing_config.channel_urls = ('conda-forge', )
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.skipif(on_win, reason='no lua package on win')
-def test_only_lua_env(test_config):
+def test_only_lua_env(testing_config):
     recipe = os.path.join(metadata_dir, '_lua_env_defined')
-    test_config.channel_urls = ('conda-forge', )
-    test_config.prefix_length = 80
-    test_config.set_build_id = False
-    api.build(recipe, config=test_config)
+    testing_config.channel_urls = ('conda-forge', )
+    testing_config.prefix_length = 80
+    testing_config.set_build_id = False
+    api.build(recipe, config=testing_config)
