@@ -969,6 +969,18 @@ class MetaData(object):
             output_metadata.meta['extra'] = extra
         output_metadata.noarch = output.get('noarch')
         output_metadata.noarch_python = output.get('noarch_python')
+        build = output_metadata.meta.get('build', {})
+        if 'entry_points' in output:
+            build['entry_points'] = output['entry_points']
+        elif 'entry_points' in output:
+            del output['entry_points']
+        output_metadata.meta['build'] = build
+        test = output_metadata.meta.get('test', {})
+        if not output.get('name') == self.name():
+            if 'commands' in test:
+                del test['commands']
+            if 'imports' in test:
+                del test['imports']
         return output_metadata
 
     def get_output_metadata_set(self, files, permit_undefined_jinja=False):
@@ -991,7 +1003,6 @@ class MetaData(object):
                 # but only if a matching output name is not explicitly provided
                 if uses_subpackage and not any(self.name() == out.get('name', '')
                                                for out in outputs):
-
                     outputs.append({'name': self.name(), 'requirements': requirements,
                                     'pin_downstream':
                                         self.meta.get('build', {}).get('pin_downstream'),
