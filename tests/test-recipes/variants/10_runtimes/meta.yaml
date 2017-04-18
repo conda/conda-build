@@ -1,7 +1,0 @@
-package:
-  name: runtimes
-  version: 1.0
-
-requirements:
-  build:
-    - {{ compiler('c') }}
