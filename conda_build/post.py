@@ -6,7 +6,6 @@ from functools import partial
 from glob import glob
 import io
 import locale
-import mmap
 import re
 import os
 import stat
@@ -63,7 +62,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
         try:
-            mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
+            mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
         except OSError:
             mm = fi.read()
         try:

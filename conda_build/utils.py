@@ -8,6 +8,7 @@ from glob import glob
 import json
 from locale import getpreferredencoding
 import logging
+import mmap
 import operator
 import os
 from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath, islink
@@ -56,6 +57,9 @@ on_win = (sys.platform == 'win32')
 codec = getpreferredencoding() or 'utf-8'
 on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, 'Scripts' if on_win else 'bin')
+mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
+mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
+mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
 
 PY_TMPL = """
@@ -1029,3 +1033,24 @@ def prefix_files(prefix):
                 res.add(path[len(prefix) + 1:])
     res = set(expand_globs(res, prefix))
     return res
+
+
+def mmap_mmap(fileno, length, tagname=None, flags=0, prot=mmap_PROT_READ | mmap_PROT_WRITE,
+              access=None, offset=0):
+    '''
+    Hides the differences between mmap.mmap on Windows and Unix.
+    Windows has `tagname`.
+    Unix does not, but makes up for it with `flags` and `prot`.
+    On both, the defaule value for `access` is determined from how the file
+    was opened so must not be passed in at all to get this default behaviour
+    '''
+    if on_win:
+        if access:
+            return mmap.mmap(fileno, length, tagname=tagname, access=access, offset=offset)
+        else:
+            return mmap.mmap(fileno, length, tagname=tagname)
+    else:
+        if access:
+            return mmap.mmap(fileno, length, flags=flags, prot=prot, access=access, offset=offset)
+        else:
+            return mmap.mmap(fileno, length, flags=flags, prot=prot)

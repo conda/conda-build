@@ -9,7 +9,6 @@ import fnmatch
 from glob import glob
 import io
 import json
-import mmap
 import os
 from os.path import isdir, isfile, islink, join
 import re
@@ -99,6 +98,7 @@ def have_prefix_files(files, prefix):
     :param files: Filenames to check for instances of prefix
     :type files: list of tuples containing strings (prefix, mode, filename)
     '''
+
     prefix_bytes = prefix.encode(utils.codec)
     prefix_placeholder_bytes = prefix_placeholder.encode(utils.codec)
     if utils.on_win:
@@ -124,7 +124,7 @@ def have_prefix_files(files, prefix):
 
         fi = open(path, 'rb+')
         try:
-            mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
+            mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
         except OSError:
             mm = fi.read()
 
@@ -138,7 +138,7 @@ def have_prefix_files(files, prefix):
                 mm.close()
                 fi.close()
                 fi = open(path, 'rb+')
-                mm = mmap.mmap(fi.fileno(), 0, flags=mmap.MAP_PRIVATE)
+                mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
         if mm.find(prefix_bytes) != -1:
             yield (prefix, mode, f)
         if utils.on_win and mm.find(forward_slash_prefix_bytes) != -1:
