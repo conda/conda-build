@@ -233,9 +233,16 @@ def parse(data, config, path=None):
         # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
         if not res[field]:
             res[field] = {}
-        if not isinstance(res[field], dict):
-            raise RuntimeError("The %s field should be a dict, not %s in file %s." %
-                               (field, res[field].__class__.__name__, path))
+        # source field may be either a dictionary, or a list of dictionaries
+        if field == 'source':
+            if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
+                        isinstance(res[field], string_types))):
+                raise RuntimeError("The %s field should be a dict or list of dicts, not "
+                                   "%s in file %s." % (field, res[field].__class__.__name__, path))
+        else:
+            if not isinstance(res[field], dict):
+                raise RuntimeError("The %s field should be a dict, not %s in file %s." %
+                                (field, res[field].__class__.__name__, path))
 
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
@@ -291,10 +298,18 @@ def sanitize(meta):
     Sanitize the meta-data to remove aliases/handle deprecation
 
     """
-    sanitize_funs = [('source', _git_clean), ]
-    for section, func in sanitize_funs:
+    sanitize_funs = {'source': [_git_clean]}
+    for section, funs in sanitize_funs.items():
         if section in meta:
-            meta[section] = func(meta[section])
+            for func in funs:
+                section_data = meta[section]
+                # section is a dictionary
+                if hasattr(section_data, 'keys'):
+                    section_data = func(section_data)
+                # section is a list of dictionaries
+                else:
+                    section_data = [func(_d) for _d in section_data]
+                meta[section] = section_data
     _trim_None_strings(meta)
     return meta
 
@@ -809,10 +824,17 @@ class MetaData(object):
         return res
 
     def _get_hash_contents(self):
-        sections = ['source', 'requirements', 'build']
+        sections = ['requirements', 'build']
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
                                   for section in sections})
+
+        if self.get_section('source'):
+            src = self.get_section('source')
+            if hasattr(src, 'keys'):
+                composite['source'] = HashableDict(src.copy())
+            else:
+                composite['source'] = [HashableDict(s.copy()) for s in src]
 
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})

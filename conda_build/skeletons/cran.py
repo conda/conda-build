@@ -460,7 +460,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
         if is_github_url:
             rm_rf(config.work_dir)
             m = metadata.MetaData.fromdict({'source': {'git_url': package}}, config=config)
-            source.git_source(m)
+            source.git_source(m.get_section('source'), m.config.git_cache, m.config.work_dir)
             git_tag = git_tag[0] if git_tag else get_latest_git_tag(config)
             p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, cwd=config.work_dir)

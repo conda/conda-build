@@ -246,7 +246,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         FNULL.close()
 
 
-def git_source(source_dict, git_cache, src_dir, recipe_path, verbose=True):
+def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     ''' Download a source from a Git repo (or submodule, recursively) '''
     if not isdir(git_cache):
         os.makedirs(git_cache)
