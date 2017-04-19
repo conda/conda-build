@@ -139,35 +139,37 @@ def msvc_env_cmd(bits, config, override=None):
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
     msvc_env_lines.append('set "MSYS2_ENV_CONV_EXCL=CL"')
+
+    error1 = 'if errorlevel 1 {}'
+
     if version == '10.0':
-        try:
-            WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
-                                            'installationfolder')
-            WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
+        msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
+        msvc_env_lines.append("where cl.exe")
+        msvc_env_lines.append('IF "%ERRORLEVEL%" == "1" (')
 
-            win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
-            win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_71_BAT_PATH, arch=win_sdk_arch)
+        WIN_SDK_71_PATH = Reg.get_value(os.path.join(WINSDK_BASE, 'v7.1'),
+                                        'installationfolder')
+        WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
 
-            # There are two methods of building Python 3.3 and 3.4 extensions (both
-            # of which required Visual Studio 2010 - as explained in the Python wiki
-            # https://wiki.python.org/moin/WindowsCompilers)
-            # 1) Use the Windows SDK 7.1
-            # 2) Use Visual Studio 2010 (any edition)
-            # However, VS2010 never shipped with a 64-bit compiler, so in this case
-            # **only** option (1) applies. For this reason, we always try and
-            # activate the Windows SDK first. Unfortunately, unsuccessfully setting
-            # up the environment does **not EXIT 1** and therefore we must fall
-            # back to attempting to set up VS2010.
-            # DelayedExpansion is required for the SetEnv.cmd
-            msvc_env_lines.append('Setlocal EnableDelayedExpansion')
-            msvc_env_lines.append(win_sdk_cmd)
-            # If the WindowsSDKDir environment variable has not been successfully
-            # set then try activating VS2010
-            msvc_env_lines.append('if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
-                WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)))
-        # sdk is not installed.  Fall back to only trying VS 2010
-        except KeyError:
-            msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
+        win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
+        win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_71_BAT_PATH, arch=win_sdk_arch)
+
+        # There are two methods of building Python 3.3 and 3.4 extensions (both
+        # of which required Visual Studio 2010 - as explained in the Python wiki
+        # https://wiki.python.org/moin/WindowsCompilers)
+        # 1) Use the Windows SDK 7.1
+        # 2) Use Visual Studio 2010 (any edition)
+        # However, VS2010 never shipped with a 64-bit compiler, so in this case
+        # **only** option (1) applies. For this reason, we always try and
+        # activate the Windows SDK first. Unfortunately, unsuccessfully setting
+        # up the environment does **not EXIT 1** and therefore we must fall
+        # back to attempting to set up VS2010.
+        # DelayedExpansion is required for the SetEnv.cmd
+
+        # If the VS2010 cl.exe is not found, try activating Win SDK
+        msvc_env_lines.append('Setlocal EnableDelayedExpansion')
+        msvc_env_lines.append(win_sdk_cmd)
+        msvc_env_lines.append(")")
     elif version == '9.0':
         # Get the Visual Studio 2008 path (not the Visual C++ for Python path)
         # and get the 'vcvars64.bat' from inside the bin (in the directory above
@@ -178,8 +180,6 @@ def msvc_env_cmd(bits, config, override=None):
         # there's an exception if VS or the VC compiler for python are not actually installed.
         except (KeyError, TypeError):
             VCVARS64_VS9_BAT_PATH = None
-
-        error1 = 'if errorlevel 1 {}'
 
         # Prefer VS9 proper over Microsoft Visual C++ Compiler for Python 2.7
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
