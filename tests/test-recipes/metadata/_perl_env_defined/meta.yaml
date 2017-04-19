@@ -1,0 +1,9 @@
+package:
+  name: test_perl_env_var_present
+  version: 1.0
+
+requirements:
+  build:
+    - perl
+  run:
+    - perl
