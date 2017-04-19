@@ -10,6 +10,11 @@ def test_pin_default(testing_metadata, mocker):
     pin = jinja_context.pin_compatible(testing_metadata, 'test')
     assert pin == '>=1.2.3,<2'
 
+def test_pin_compatible_exact(testing_metadata, mocker):
+    get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
+    get_env_dependencies.return_value = ['test 1.2.3 abc_0'], []
+    pin = jinja_context.pin_compatible(testing_metadata, 'test', exact=True)
+    assert pin == '1.2.3 abc_0'
 
 def test_pin_jpeg_style_default(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
