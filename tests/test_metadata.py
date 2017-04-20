@@ -5,7 +5,7 @@ import sys
 import pytest
 
 from conda_build.metadata import select_lines, MetaData
-from conda_build import api
+from conda_build import api, conda_interface
 from .utils import thisdir, metadata_dir
 
 
@@ -153,18 +153,20 @@ def test_native_compiler_metadata_linux(testing_config, mocker):
     testing_config.platform = 'linux'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config)[0][0]
-    assert 'gcc_linux-cos5-x86_64' in metadata.meta['requirements']['build']
-    assert 'gxx_linux-cos5-x86_64' in metadata.meta['requirements']['build']
-    assert 'gfortran_linux-cos5-x86_64' in metadata.meta['requirements']['build']
+    _64 = '_64' if conda_interface.bits == 64 else ''
+    assert 'gcc_linux-cos5-x86' + _64 in metadata.meta['requirements']['build']
+    assert 'gxx_linux-cos5-x86' + _64 in metadata.meta['requirements']['build']
+    assert 'gfortran_linux-cos5-x86' + _64 in metadata.meta['requirements']['build']
 
 
 def test_native_compiler_metadata_osx(testing_config, mocker):
     testing_config.platform = 'osx'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config)[0][0]
-    assert 'clang_osx-109-x86_64' in metadata.meta['requirements']['build']
-    assert 'clangxx_osx-109-x86_64' in metadata.meta['requirements']['build']
-    assert 'gfortran_osx-109-x86_64' in metadata.meta['requirements']['build']
+    _64 = '_64' if conda_interface.bits == 64 else ''
+    assert 'clang_osx-109-x86' + _64 in metadata.meta['requirements']['build']
+    assert 'clangxx_osx-109-x86' + _64 in metadata.meta['requirements']['build']
+    assert 'gfortran_osx-109-x86' + _64 in metadata.meta['requirements']['build']
 
 
 def test_compiler_metadata_cross_compiler():

@@ -32,6 +32,11 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.variants import get_default_variants
 
 
+# these are things that we provide env vars for more explicitly.  This list disables the
+#    pass-through of variant values to env vars for these keys.
+LANGUAGES = ('PERL', 'LUA', 'R', "NUMPY", 'PYTHON')
+
+
 def get_perl_ver(config):
     return '.'.join(config.variant.get('perl', get_default_variants()[0]['perl']).split('.')[:2])
 
@@ -254,7 +259,7 @@ def get_dict(config, m=None, prefix=None, for_env=True):
               feature_list})
 
     for k, v in config.variant.items():
-        if not for_env or k.upper() not in d:
+        if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
             d[k] = v
         else:
             log.debug("Omitting variable %s from env dictionary (already exists)", k)
@@ -315,6 +320,7 @@ def python_vars(config, prefix):
 def perl_vars(config, prefix):
     vars_ = {
             'PERL_VER': get_perl_ver(config),
+            'CONDA_PERL': get_perl_ver(config),
              }
     if os.path.isfile(config.perl_bin(prefix)):
         vars_.update({
