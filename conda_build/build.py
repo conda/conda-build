@@ -483,9 +483,15 @@ def create_info_files(m, files, prefix):
     detect_and_record_prefix_files(m, files, prefix)
     write_no_link(m, files)
 
-    if m.get_value('source/git_url'):
-        with io.open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
-            source.git_info(m.config, fo)
+    sources = m.get_section('source')
+    if hasattr(sources, 'keys'):
+        sources = [sources]
+
+    with io.open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
+        for src in sources:
+            if src.get('git_url'):
+                source.git_info(os.path.join(m.config.work_dir, src.get('folder', '')),
+                                verbose=m.config.verbose, fo=fo)
 
     if m.get_value('app/icon'):
         utils.copy_into(join(m.path, m.get_value('app/icon')),

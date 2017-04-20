@@ -11,7 +11,8 @@ import jinja2
 from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
 from .index import get_build_index
-from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
+from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
+                    string_types)
 from .render import get_env_dependencies
 
 
@@ -219,7 +220,7 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
 
 @memoized
 def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x',
-                   max_pin='x', permit_undefined_jinja=True):
+                   max_pin='x', permit_undefined_jinja=True, exact=False):
     """dynamically pin based on currently installed version.
 
     only mandatory input is package_name.
@@ -237,15 +238,22 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
     # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
     pins, _ = get_env_dependencies(m, 'build', m.config.variant, m.config.index)
-    versions = {p.split(' ')[0]: p.split(' ')[1] for p in pins}
+    versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
     if versions:
-        version = lower_bound or versions.get(package_name)
-        if version:
-            if upper_bound:
-                compatibility = ">=" + str(version) + ","
-                compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
-            else:
-                compatibility = apply_pin_expressions(version, min_pin, max_pin)
+        if exact and versions.get(package_name):
+            compatibility = ' '.join(versions[package_name])
+        else:
+            version = lower_bound or versions.get(package_name)
+            if version:
+                if hasattr(version, '__iter__') and not isinstance(version, string_types):
+                    version = version[0]
+                else:
+                    version = str(version)
+                if upper_bound:
+                    compatibility = ">=" + str(version) + ","
+                    compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+                else:
+                    compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
     if not compatibility and not permit_undefined_jinja:
         raise RuntimeError("Could not get compatibility information for {} package.  "

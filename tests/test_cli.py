@@ -184,7 +184,7 @@ def test_build_source(testing_workdir):
         args = [os.path.join(metadata_dir, '_pyyaml_find_header'), '--source', '--no-build-id',
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload', ]
         main_build.execute(args)
-        assert os.path.isfile(os.path.join(tmp, 'work', 'PyYAML-3.11', 'setup.py'))
+        assert os.path.isfile(os.path.join(tmp, 'work', 'setup.py'))
 
 
 def test_render_output_build_path_set_python(testing_workdir, testing_metadata, capfd):

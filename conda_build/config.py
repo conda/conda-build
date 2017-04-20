@@ -501,16 +501,15 @@ class Config(object):
 
     @property
     def work_dir(self):
-        """Where the source for the build is extracted/copied to.  If only a single folder is in
-        that folder, this function returns that level one deeper."""
+        """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
-        if os.path.isdir(path):
-            lst = [fn for fn in os.listdir(path) if not fn.startswith('.')]
-            if len(lst) == 1:
-                dir_path = join(path, lst[0])
-                if os.path.isdir(dir_path):
-                    return dir_path
+        # if os.path.isdir(path):
+        #     lst = [fn for fn in os.listdir(path) if not fn.startswith('.')]
+        #     if len(lst) == 1:
+        #         dir_path = join(path, lst[0])
+        #         if os.path.isdir(dir_path):
+        #             return dir_path
         return path
 
     @property
