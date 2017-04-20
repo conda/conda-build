@@ -698,6 +698,10 @@ class MetaData(object):
             if value:
                 d[key] = value
 
+        preferred_env = self.get_value('build/preferred_env')
+        if preferred_env:
+            d['preferred_env'] = preferred_env
+
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
