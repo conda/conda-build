@@ -40,9 +40,12 @@ SUFFIX_MAP = {'PY': 'python',
               'R': 'r_base'}
 
 
-def parse_config_file(path):
+def parse_config_file(path, config):
+    from conda_build.metadata import select_lines, ns_cfg
     with open(path) as f:
-        content = yaml.load(f, Loader=yaml.loader.BaseLoader)
+        contents = f.read()
+    contents = select_lines(contents, ns_cfg(config))
+    content = yaml.load(contents, Loader=yaml.loader.BaseLoader)
     return content
 
 
@@ -278,7 +281,7 @@ def get_package_variants(recipedir_or_metadata, config=None):
     files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
                               ignore_system_config=config.ignore_system_variants)
 
-    specs = get_default_variants(config.platform) + [parse_config_file(f) for f in files]
+    specs = get_default_variants(config.platform) + [parse_config_file(f, config) for f in files]
 
     # this is the override of the variants from files and args with values from CLI or env vars
     if config.variant:

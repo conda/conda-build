@@ -34,7 +34,7 @@ def test_get_package_variants_from_file(testing_workdir, testing_config):
     variants = global_specs.copy()
     variants['ignore_version'] = ['numpy']
     with open('variant_example.yaml', 'w') as f:
-        yaml.dump(variants, f)
+        yaml.dump(variants, f, default_flow_style=False)
     testing_config.variant_config_files = [os.path.join(testing_workdir, 'variant_example.yaml')]
     testing_config.ignore_system_config = True
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
@@ -45,6 +45,12 @@ def test_get_package_variants_from_file(testing_workdir, testing_config):
                for req in m.meta['requirements']['run']) == 1
     assert sum('python >=3.5,<3.6' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
+
+
+def test_use_selectors_in_variants(testing_workdir, testing_config):
+    testing_config.variant_config_files = [os.path.join(recipe_dir,
+                                                        'selector_conda_build_config.yaml')]
+    variants.get_package_variants(testing_workdir, testing_config)
 
 
 def test_get_package_variants_from_dictionary_of_lists(testing_config):
