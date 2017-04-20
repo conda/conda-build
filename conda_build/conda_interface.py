@@ -19,13 +19,15 @@ except ImportError:
     # no need to patch if it doesn't exist
     pass
 
-
 from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+
+conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3")
+
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
 
 
-if parse_version(CONDA_VERSION) >= parse_version("4.3"):
+if conda_43:
     from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.exports import untracked, walk_prefix  # NOQA
     from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
@@ -44,7 +46,7 @@ if parse_version(CONDA_VERSION) >= parse_version("4.3"):
     from conda.exports import VersionOrder  # NOQA
     from conda.exports import dist_str_in_index
     from conda.core.package_cache import ProgressiveFetchExtract
-    from conda.models.dist import Dist
+    from conda.models.dist import Dist, IndexRecord  # NOQA
 
 else:
     from conda.fetch import TmpDownload, download, handle_proxy_407  # NOQA
@@ -68,6 +70,7 @@ else:
 
     class ProgressiveFetchExtract(object): pass  # NOQA
     class Dist(object): pass # NOQA
+    class IndexRecord(object): pass # NOQA
 
 TmpDownload = TmpDownload
 download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix  # NOQA
@@ -94,7 +97,7 @@ else:
 configparser = configparser
 
 
-if parse_version(CONDA_VERSION) >= parse_version("4.3"):
+if conda_43:
     from conda.exports import FileMode, PathType
     FileMode, PathType = FileMode, PathType
     from conda.exports import EntityEncoder
