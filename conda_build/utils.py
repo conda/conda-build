@@ -155,7 +155,7 @@ def get_prefix_replacement_paths(src, dst):
     return os.path.join(*ssplit), os.path.join(*dsplit)
 
 
-def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clobber=False):
+def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clobber=False, ignore=None):
     """Copy all the files and directories in src to the directory dst"""
     log = get_logger(__name__)
     if symlinks and islink(src):
@@ -176,7 +176,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clo
         except:
             pass  # lchmod not available
     elif isdir(src):
-        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking, clobber=clobber)
+        merge_tree(src, dst, symlinks, timeout=timeout, lock=lock, locking=locking, clobber=clobber, ignore=ignore)
 
     else:
         if isdir(dst):

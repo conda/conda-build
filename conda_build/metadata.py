@@ -355,7 +355,7 @@ def _git_clean(source_meta):
 # conda-docs/docs/source/build.rst
 FIELDS = {
     'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
+    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path', 'path_ignore',
                'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',

@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import fnmatch
 import io
 import locale
 import os
@@ -562,13 +563,27 @@ def provide(metadata, patch=True):
                        verbose=metadata.config.verbose, timeout=metadata.config.timeout,
                        locking=metadata.config.locking)
         elif 'path' in source_dict:
+            ignore_patterns = meta.get('path_ignore', None)
+            if not isinstance(ignore_patterns, list):
+                ignore_patterns = [ignore_patterns]
+            ignore_patterns = [normpath(abspath(join(metadata.path, pat))) for pat in ignore_patterns]
+
+            def ignore(dir_path, file_list):
+                result = []
+                for pattern in ignore_patterns:
+                    for fn in file_list:
+                        path = join(dir_path, fn)
+                        if fnmatch.fnmatch(path, pattern):
+                            result.append(fn)
+                return result
+
             path = normpath(abspath(join(metadata.path, metadata.get_value('source/path'))))
             if metadata.config.verbose:
                 print("Copying %s to %s" % (path, src_dir))
             # careful here: we set test path to be outside of conda-build root in setup.cfg.
             #    If you don't do that, this is a recursive function
             copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
-                    locking=metadata.config.locking, clobber=True)
+                      locking=metadata.config.locking, clobber=True, ignore=ignore)
         else:  # no source
             if not isdir(src_dir):
                 os.makedirs(src_dir)
