@@ -1,3 +1,35 @@
+2017-04-20 3.0.0beta0
+
+Breaking changes:
+-----------------
+
+* pin_downstream has been renamed to run_exports  #1911
+* exclude_from_build_hash has been renamed to ignore_version  #1911
+
+Enhancements:
+-------------
+
+* use rm_rf to remove prefixes for more cleanliness and better speed  #1915
+* add support for multiple sources in one meta.yaml  #1929
+* allow ``exact`` keyword for pin_compatible jinja2 function  #1929
+* allow selectors in variant conda_build_config.yaml files  #1937
+
+Bug fixes:
+----------
+
+* fix mmap/file problems on virtualbox shared folders  #1914
+* Correct rendering with --dirty flag if recipe name appears as substring of another's name  #1931
+* don't set language env vars (PERL, R, LUA, PYTHON) when those packages are not installed  #1932
+* exclude language env vars from variant being set  #1944
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @rendinam
+
+
 2017-04-08 3.0.0alpha3
 
 Enhancements:
