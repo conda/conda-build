@@ -4,6 +4,7 @@ bdist_conda
 """
 from __future__ import print_function, division, unicode_literals
 
+import sys
 import time
 
 from collections import defaultdict
@@ -259,6 +260,8 @@ class bdist_conda(install):
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
         m.config.set_build_id = False
+        m.config.variant['python'] = ".".join((str(sys.version_info.major),
+                                               str(sys.version_info.minor)))
         api.build(m, build_only=True)
         self.config = m.config
         # prevent changes in the build ID from here, so that we're working in the same prefix
