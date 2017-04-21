@@ -15,7 +15,6 @@ build:
     - conda-inspect = conda_build.cli.main_inspect:main
     - conda-metapackage = conda_build.cli.main_metapackage:main
     - conda-render = conda_build.cli.main_render:main
-    - conda-sign = conda_build.cli.main_sign:main
     - conda-skeleton = conda_build.cli.main_skeleton:main
 
 requirements:
@@ -33,7 +32,6 @@ requirements:
     - jinja2
     - patchelf      # [linux]
     - pkginfo
-    - pycrypto
     - python
     - pyyaml
     - six
@@ -70,9 +68,6 @@ test:
     - which conda-render  # [unix]
     - where conda-render  # [win]
     - conda render -h
-    - which conda-sign  # [unix]
-    - where conda-sign  # [win]
-    - conda sign -h
     - which conda-skeleton  # [unix]
     - where conda-skeleton  # [win]
     - conda skeleton -h

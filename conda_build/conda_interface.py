@@ -31,7 +31,6 @@ if conda_43:
     from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.exports import untracked, walk_prefix  # NOQA
     from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
-    from conda.exports import KEYS, KEYS_DIR, hash_file  # NOQA
     from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
     from conda.exports import get_index  # NOQA
     from conda.exports import (Completer, InstalledPackages, add_parser_channels,
@@ -52,7 +51,6 @@ else:
     from conda.fetch import TmpDownload, download, handle_proxy_407  # NOQA
     from conda.misc import untracked, walk_prefix  # NOQA
     from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
-    from conda.signature import KEYS, KEYS_DIR, hash_file  # NOQA
     from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
     from conda.api import get_index  # NOQA
     from conda.cli.common import (Completer, InstalledPackages, add_parser_channels,
@@ -75,7 +73,6 @@ else:
 TmpDownload = TmpDownload
 download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix  # NOQA
 MatchSpec, Resolve, normalized_version = MatchSpec, Resolve, normalized_version
-KEYS, KEYS_DIR, hash_file = KEYS, KEYS_DIR, hash_file
 human_bytes, hashsum_file, md5_file, memoized = human_bytes, hashsum_file, md5_file, memoized
 unix_path_to_win, win_path_to_unix, url_path = unix_path_to_win, win_path_to_unix, url_path
 get_index, Completer, InstalledPackages = get_index, Completer, InstalledPackages

@@ -39,7 +39,6 @@ setup(
                             'conda-inspect = conda_build.cli.main_inspect:main',
                             'conda-metapackage = conda_build.cli.main_metapackage:main',
                             'conda-render = conda_build.cli.main_render:main',
-                            'conda-sign = conda_build.cli.main_sign:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             ]},
     install_requires=['conda', 'requests', 'filelock', 'pyyaml', 'conda-verify', 'pkginfo'],

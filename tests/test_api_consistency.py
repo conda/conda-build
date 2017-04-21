@@ -55,30 +55,6 @@ def test_api_test():
     assert argspec.defaults == (True, None)
 
 
-def test_api_keygen():
-    argspec = getargspec(api.keygen)
-    assert argspec.args == ['name', 'size']
-    assert argspec.defaults == ('conda_build_signing', 2048)
-
-
-def test_api_import_sign_key():
-    argspec = getargspec(api.import_sign_key)
-    assert argspec.args == ['private_key_path', 'new_name']
-    assert argspec.defaults == (None,)
-
-
-def test_api_sign():
-    argspec = getargspec(api.sign)
-    assert argspec.args == ['file_path', 'key_name_or_path']
-    assert argspec.defaults == (None,)
-
-
-def test_api_verify():
-    argspec = getargspec(api.verify)
-    assert argspec.args == ['file_path']
-    assert argspec.defaults is None
-
-
 def test_api_list_skeletons():
     argspec = getargspec(api.list_skeletons)
     assert argspec.args == []
