@@ -301,7 +301,7 @@ class Config(object):
 
     def _get_perl(self, prefix):
         if sys.platform == 'win32':
-            res = join(prefix, 'perl.exe')
+            res = join(prefix, 'Library', 'bin', 'perl.exe')
         else:
             res = join(prefix, 'bin/perl')
         return res
@@ -310,7 +310,7 @@ class Config(object):
         lua_ver = self.variant.get('lua', get_default_variants()[0]['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
         if sys.platform == 'win32':
-            res = join(prefix, '{}.exe'.format(binary_name))
+            res = join(prefix, 'Library', 'bin', '{}.exe'.format(binary_name))
         else:
             res = join(prefix, 'bin/{}'.format(binary_name))
         return res
