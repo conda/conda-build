@@ -529,6 +529,8 @@ class Config(object):
             for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
                 if os.path.isdir(path):
                     rm_rf(path)
+        if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
+            rm_rf(os.path.join(self.build_folder, 'prefix_files'))
 
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:

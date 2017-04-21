@@ -1013,6 +1013,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
                     utils.rm_rf(m.config.host_prefix)
                     utils.rm_rf(m.config.build_prefix)
+                    utils.rm_rf(m.config.test_prefix)
                     sub_host_ms_deps = m.ms_depends('host')
                     if host_index:
                         host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
@@ -1023,16 +1024,18 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                         assert not sub_host_ms_deps, ("Have host deps ({}) without a host_index"
                                                     .format(sub_host_ms_deps))
 
-                    # copies the backed-up new prefix files into the newly created host env
-                    for f in new_prefix_files:
-                        utils.copy_into(os.path.join(prefix_files_backup, f),
-                                        os.path.join(m.config.host_prefix, f),
-                                        symlinks=True)
                     sub_build_ms_deps = m.ms_depends('build')
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                                 sub_build_ms_deps, m.config)
                     environ.create_env(m.config.build_prefix, build_actions, config=m.config,
                                     subdir=m.config.build_subdir)
+
+                    # copies the backed-up new prefix files into the newly created host env
+                    for f in new_prefix_files:
+                        utils.copy_into(os.path.join(prefix_files_backup, f),
+                                        os.path.join(m.config.host_prefix, f),
+                                        symlinks=True)
+
                     built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                     new_pkgs[built_package] = (output_d, m)
                     # must rebuild index because conda has no way to incrementally add our last
@@ -1422,6 +1425,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
                                                        permit_unsatisfiable_variants=False)
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                utils.rm_rf(metadata.config.host_prefix)
+                utils.rm_rf(metadata.config.build_prefix)
+                utils.rm_rf(metadata.config.test_prefix)
+
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
