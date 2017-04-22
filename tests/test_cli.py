@@ -22,7 +22,6 @@ from conda_build.conda_interface import TemporaryDirectory
 from .utils import metadata_dir, put_bad_conda_on_path
 
 import conda_build.cli.main_build as main_build
-import conda_build.cli.main_sign as main_sign
 import conda_build.cli.main_render as main_render
 import conda_build.cli.main_convert as main_convert
 import conda_build.cli.main_develop as main_develop
@@ -409,32 +408,6 @@ def test_convert(testing_workdir, testing_config):
         testing_config.host_subdir = platform
         with TarCheck(os.path.join(dirname, pkg_name), config=testing_config) as tar:
             tar.correct_subdir()
-
-
-@pytest.mark.skipif(LooseVersion(conda.__version__) >= LooseVersion('4.3'),
-                    reason="conda 4.3 removed sign support")
-def test_sign(testing_workdir):
-    # test keygen
-    args = ['-k', 'testkey']
-    main_sign.execute(args)
-    keypath = os.path.expanduser("~/.conda/keys/testkey")
-    assert os.path.isfile(keypath)
-    assert os.path.isfile(keypath + '.pub')
-
-    # test signing
-    # download a test package
-    f = 'https://repo.continuum.io/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
-    pkg_name = "affine-2.0.0-py27_0.tar.bz2"
-    download(f, pkg_name)
-    args = [pkg_name]
-    main_sign.execute(args)
-    assert os.path.isfile(pkg_name + '.sig')
-
-    # test verification
-    args = ['-v', pkg_name]
-    main_sign.execute(args)
-    os.remove(keypath)
-    os.remove(keypath + '.pub')
 
 
 @pytest.mark.serial

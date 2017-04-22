@@ -397,8 +397,6 @@ def build_string_from_metadata(metadata):
         build_str = metadata.get_value('build/string')
     else:
         res = []
-        log = utils.get_logger(__name__)
-
         build_pkg_names = [ms.name for ms in metadata.ms_depends('build')]
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
@@ -411,12 +409,14 @@ def build_string_from_metadata(metadata):
                         # only append numpy when it is actually pinned
                         if name == 'numpy' and (not hasattr(ms, 'version') or not ms.version):
                             continue
-                        log.warn("Deprecation notice: computing build string (like pyXY).  This "
-                                 "functionality has been replaced with the hash (h????), which"
-                                 " can be readily inpsected with `conda inspect hash-inputs "
-                                 "<pkg-name>`.  pyXY, npXYY and the like will go away in "
-                                 "conda-build 4.0.  Please adapt any code that depends on filenames"
-                                 " with pyXY, npXYY, etc.")
+                        # not entirely sure this deprecation is a good idea.  Leaving this here
+                        #      for future consideration, but not showing it right now.
+                        # log.warn("Deprecation notice: computing build string (like pyXY).  This "
+                        #          "functionality has been replaced with the hash (h????), which"
+                        #          " can be readily inpsected with `conda inspect hash-inputs "
+                        #          "<pkg-name>`.  pyXY, npXYY and the like will go away in "
+                        #          "conda-build 4.0.  Please adapt any code that depends on "
+                        #          " filenames with pyXY, npXYY, etc.")
                         if metadata.noarch == name or (metadata.get_value('build/noarch_python') and
                                                     name == 'python'):
                             res.append(s)

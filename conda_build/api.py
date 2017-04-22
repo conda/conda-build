@@ -22,7 +22,6 @@ import sys as _sys
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
-from conda_build.utils import conda_43 as _conda_43
 from conda_build.utils import get_logger as _get_logger
 
 
@@ -191,46 +190,6 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
                            move_broken=move_broken)
 
     return test_result
-
-
-def keygen(name="conda_build_signing", size=2048):
-    """Create a private/public key pair for package verification purposes
-
-    name: string name of key to be generated.
-    size: length of the RSA key, in bits.  Should be power of 2.
-    """
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import keygen
-    return keygen(name, size)
-
-
-def import_sign_key(private_key_path, new_name=None):
-    """
-    private_key_path: specify a private key to be imported.  The public key is
-          generated automatically.  Specify ```new_name``` also to rename the
-          private key in the copied location.
-    """
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import import_key
-    return import_key(private_key_path, new_name=new_name)
-
-
-def sign(file_path, key_name_or_path=None):
-    """Create a signature file for accompanying a package"""
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import sign_and_write
-    return sign_and_write(file_path, key_name_or_path)
-
-
-def verify(file_path):
-    """Verify a signed package"""
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import verify
-    return verify(file_path)
 
 
 def list_skeletons():

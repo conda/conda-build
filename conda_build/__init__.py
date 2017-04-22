@@ -19,9 +19,7 @@ sub_commands = [
     'index',
     'inspect',
     'metapackage',
-    'pipbuild',
     'render'
-    'sign',
     'skeleton',
 ]
 
