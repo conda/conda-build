@@ -479,7 +479,7 @@ def check_symlinks(files, prefix, croot):
             elif real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
-                if not link_path.startswith('.'):
+                if not link_path.startswith('.') and not os.path.dirname(link_path) == '':
                     # Don't change the link structure if it is already a
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
