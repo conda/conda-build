@@ -378,6 +378,7 @@ FIELDS = {
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
               ],
+    'extra': ['recipe-maintainers']
 }
 
 
