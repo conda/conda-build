@@ -4,12 +4,13 @@ This module tests the build API.  These are high-level integration tests.
 
 from collections import OrderedDict
 from glob import glob
+import json
 import logging
 import os
 import re
 import subprocess
 import sys
-import json
+import time
 import uuid
 
 # for version
@@ -998,3 +999,17 @@ def test_only_lua_env(testing_config):
     testing_config.prefix_length = 80
     testing_config.set_build_id = False
     api.build(recipe, config=testing_config)
+
+
+def test_find_recipe_for_missing_dep_with_croot(testing_metadata, testing_workdir):
+    croot = os.path.join(testing_workdir, 'build_croot')
+    uniquifier = str(int(time.time()))
+    os.makedirs(croot)
+    a_name = 'a' + uniquifier
+    testing_metadata.meta['package']['name'] = a_name
+    api.output_yaml(testing_metadata, os.path.join(a_name, 'meta.yaml'))
+    b_name = 'b' + uniquifier
+    testing_metadata.meta['package']['name'] = b_name
+    testing_metadata.meta['requirements']['build'].append(a_name)
+    api.output_yaml(testing_metadata, os.path.join(b_name, 'meta.yaml'))
+    api.build(b_name, config=testing_metadata.config, croot=croot)
