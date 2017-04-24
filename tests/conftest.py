@@ -43,8 +43,8 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture(scope='function')
 def testing_index(request):
     with capture():
-        index = get_build_index(config=Config(debug=False, verbose=False), subdir=subdir,
-                                clear_cache=True)
+        index, index_ts = get_build_index(config=Config(debug=False, verbose=False), subdir=subdir,
+                                          clear_cache=True)
     return index
 
 

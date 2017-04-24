@@ -14,14 +14,11 @@ import tarfile
 from os.path import isfile, join, getmtime
 
 from conda_build.utils import file_info, get_lock, try_acquire_locks
-from conda_build import utils
+from conda_build import utils, conda_interface
 from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index
 
-# each python process keeps an index.  When a package is done building, it updates this index.
-#    This is a pretty massive performance optimization.
-# Top-level keys are subdir.  Each value there is a complete index for that subdir - which may
-#    actually come from multiple folders on disk
-CURRENT_INDEX = {}
+local_index_timestamp = 0
+cached_index = None
 
 
 def read_index_tar(tar_path, config, lock):
@@ -173,50 +170,60 @@ def ensure_valid_channel(local_folder, subdir, config):
 
 
 def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
+    global local_index_timestamp
+    global cached_index
     log = utils.get_logger(__name__)
-    log.debug("Building new index for subdir '{}' with channels {}, condarc channels = {}".format(
-        subdir, config.channel_urls, not omit_defaults))
-    # priority: local by croot (can vary), then channels passed as args,
-    #     then channels from config.
-    if config.debug:
-        log_context = partial(utils.LoggingContext, logging.DEBUG)
-    elif config.verbose:
-        log_context = partial(utils.LoggingContext, logging.INFO)
+    mtime = 0
+
+    if config.output_folder:
+        output_folder = config.output_folder
     else:
-        log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
+        output_folder = os.path.dirname(config.bldpkgs_dir)
 
-    # Note on conda and indexes:
-    #    get_index is unfortunately much more stateful than simply returning an index.
-    #    You cannot run get_index on one set of channels, and then later append a different
-    #    index from a different set of channels - conda has some other state that it is loading
-    #    and your second get_index will invalidate results from the first.   =(
+    # check file modification time - this is the age of our index.
+    index_file = os.path.join(output_folder, subdir, 'repodata.json')
+    if os.path.isfile(index_file):
+        mtime = os.path.getmtime(index_file)
 
-    # global CURRENT_INDEX
-    # if CURRENT_INDEX.get(subdir) and not clear_cache:
-    #     index = CURRENT_INDEX[subdir]
-    # else:
-    urls = list(config.channel_urls)
-    if os.path.isdir(config.croot):
-        urls.insert(0, url_path(config.croot))
-    ensure_valid_channel(config.croot, subdir, config)
+    if not os.path.isfile(index_file) or mtime > local_index_timestamp:
+        log.debug("Building new index for subdir '{}' with channels {}, condarc channels "
+                  "= {}".format(subdir, config.channel_urls, not omit_defaults))
+        # priority: local by croot (can vary), then channels passed as args,
+        #     then channels from config.
+        if config.debug:
+            log_context = partial(utils.LoggingContext, logging.DEBUG)
+        elif config.verbose:
+            log_context = partial(utils.LoggingContext, logging.INFO)
+        else:
+            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
 
-    # silence output from conda about fetching index files
-    with log_context():
-        with utils.capture():
-            try:
-                index = get_index(channel_urls=urls,
-                                prepend=not omit_defaults,
-                                use_local=True,
-                                use_cache=False,
-                                platform=subdir)
-            # HACK: defaults does not have the many subfolders we support.  Omit it and try again.
-            except CondaHTTPError:
-                if 'defaults' in urls:
-                    urls.remove('defaults')
-                index = get_index(channel_urls=urls,
-                                prepend=omit_defaults,
-                                use_local=True,
-                                use_cache=False,
-                                platform=subdir)
-        # CURRENT_INDEX[subdir] = index or {}
-    return index
+        urls = list(config.channel_urls)
+        if os.path.isdir(output_folder):
+            urls.insert(0, url_path(output_folder))
+        ensure_valid_channel(output_folder, subdir, config)
+
+        # silence output from conda about fetching index files
+        with log_context():
+            with utils.capture():
+                # replace noarch with native subdir - this ends up building an index with both the
+                #      native content and the noarch content.
+                if subdir == 'noarch':
+                    subdir = conda_interface.subdir
+                try:
+                    cached_index = get_index(channel_urls=urls,
+                                    prepend=not omit_defaults,
+                                    use_local=True,
+                                    use_cache=False,
+                                    platform=subdir)
+                # HACK: defaults does not have the many subfolders we support.  Omit it and
+                #          try again.
+                except CondaHTTPError:
+                    if 'defaults' in urls:
+                        urls.remove('defaults')
+                    cached_index = get_index(channel_urls=urls,
+                                             prepend=omit_defaults,
+                                             use_local=True,
+                                             use_cache=False,
+                                             platform=subdir)
+        local_index_timestamp = mtime
+    return cached_index, local_index_timestamp

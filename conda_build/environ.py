@@ -235,7 +235,6 @@ def get_hg_build_info(repo):
 
 
 def get_dict(config, m=None, prefix=None, for_env=True):
-    log = utils.get_logger(__name__)
     if not prefix:
         prefix = config.host_prefix
 
@@ -261,9 +260,6 @@ def get_dict(config, m=None, prefix=None, for_env=True):
     for k, v in config.variant.items():
         if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
             d[k] = v
-        else:
-            log.debug("Omitting variable %s from env dictionary (already exists)", k)
-
     return d
 
 
@@ -633,7 +629,7 @@ def _ensure_valid_spec(spec):
     return spec
 
 
-def get_install_actions(prefix, index, specs, config, retries=0):
+def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0):
     log = utils.get_logger(__name__)
     if config.verbose:
         capture = contextlib.contextmanager(lambda: (yield))
@@ -651,6 +647,10 @@ def get_install_actions(prefix, index, specs, config, retries=0):
         with capture():
             try:
                 actions = install_actions(prefix, index, specs, force=True)
+                # Experimenting with getting conda to create fewer Resolve objects
+                #   Experiment failed, seemingly due to conda's statefulness.  Packages could
+                #   not be found.
+                # index_timestamp=timestamp)
             except NoPackagesFoundError as exc:
                 raise DependencyNeedsBuildingError(exc)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
@@ -676,7 +676,7 @@ def get_install_actions(prefix, index, specs, config, retries=0):
                     log.warn("failed to get install actions, retrying.  exception was: %s",
                              str(exc))
                     actions = get_install_actions(prefix, index, specs, config,
-                                                    retries=retries + 1)
+                                                    retries=retries + 1, timestamp=timestamp)
                 else:
                     log.error("Failed to get install actions, max retries exceeded.")
                     raise
@@ -689,7 +689,7 @@ def get_install_actions(prefix, index, specs, config, retries=0):
 
 
 def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry=0,
-               index=None, locks=None):
+               locks=None):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -715,12 +715,12 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                     locks = utils.get_conda_operation_locks(config)
                 try:
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
-                        if not index:
-                            index = get_build_index(config=config, subdir=subdir)
+                        index, index_ts = get_build_index(config=config, subdir=subdir)
                         # input is a list - it's specs in MatchSpec format
                         if not hasattr(specs_or_actions, 'keys'):
                             specs = list(set(specs_or_actions))
-                            actions = get_install_actions(prefix, index, specs, config)
+                            actions = get_install_actions(prefix, index, specs, config,
+                                                          timestamp=index_ts)
                         else:
                             actions = specs_or_actions
                         display_actions(actions, index)

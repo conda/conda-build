@@ -54,10 +54,9 @@ def actions_to_pins(actions):
     return specs
 
 
-def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
+def get_env_dependencies(m, env, variant, exclude_pattern=None):
     dash_or_under = re.compile("[-_]")
-    if not index:
-        index = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
+    index, index_ts = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
     specs = [ms.spec for ms in m.ms_depends(env)]
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env == 'build':
@@ -87,7 +86,8 @@ def get_env_dependencies(m, env, variant, index=None, exclude_pattern=None):
     dependencies = list(set(dependencies))
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
-            actions = environ.get_install_actions(tmpdir, index, dependencies, m.config)
+            actions = environ.get_install_actions(tmpdir, index, dependencies, m.config,
+                                                  timestamp=index_ts)
         except UnsatisfiableError as e:
             # we'll get here if the environment is unsatisfiable
             raise DependencyNeedsBuildingError(e)
@@ -182,10 +182,9 @@ def get_upstream_pins(m, actions, index):
     return additional_specs
 
 
-def finalize_metadata(m, index=None, finalized_outputs=None):
+def finalize_metadata(m, finalized_outputs=None):
     """Fully render a recipe.  Fill in versions for build dependencies."""
-    if not index:
-        index = get_build_index(m.config, m.config.build_subdir)
+    index, index_ts = get_build_index(m.config, m.config.build_subdir)
 
     exclude_pattern = None
     excludes = set(m.config.variant.get('ignore_version', []))
@@ -209,7 +208,7 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
         build_reqs.append('python {}'.format(m.config.variant['python']))
         m.meta['requirements']['build'] = build_reqs
 
-    build_deps, actions = get_env_dependencies(m, 'build', m.config.variant, index, exclude_pattern)
+    build_deps, actions = get_env_dependencies(m, 'build', m.config.variant, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
 
@@ -217,7 +216,7 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
 
     reset_index = False
     if m.config.build_subdir != m.config.host_subdir:
-        index = get_build_index(m.config, m.config.host_subdir)
+        index, index_ts = get_build_index(m.config, m.config.host_subdir)
         reset_index = True
 
     # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
@@ -233,7 +232,7 @@ def finalize_metadata(m, index=None, finalized_outputs=None):
     if output_excludes:
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in output_excludes))
-    full_build_deps, _ = get_env_dependencies(m, 'build', m.config.variant, index,
+    full_build_deps, _ = get_env_dependencies(m, 'build', m.config.variant,
                                               exclude_pattern=exclude_pattern)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
@@ -297,7 +296,7 @@ def try_download(metadata, no_download_source):
                          "no_download_source.")
 
 
-def reparse(metadata, index):
+def reparse(metadata):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
     metadata.final = False
@@ -305,11 +304,11 @@ def reparse(metadata, index):
     py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
     metadata.parse_until_resolved()
-    metadata = finalize_metadata(metadata, index)
+    metadata = finalize_metadata(metadata)
     return metadata
 
 
-def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants=False,
+def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         stub_subpackages=False):
     rendered_metadata = {}
     need_reparse_in_env = False
@@ -383,7 +382,7 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
                         mv.meta['requirements']['build'] = [
                             python_version if re.match('^python(?:$| .*)', pkg) else pkg
                             for pkg in mv.meta['requirements']['build']]
-                    fm = finalize_metadata(mv, index)
+                    fm = finalize_metadata(mv)
                     rendered_metadata[fm.dist()] = (fm, need_source_download,
                                                     need_reparse_in_env)
                 except DependencyNeedsBuildingError as e:
@@ -414,14 +413,14 @@ def distribute_variants(metadata, variants, index, permit_unsatisfiable_variants
     return list(rendered_metadata.values())
 
 
-def expand_outputs(metadata_tuples, index):
+def expand_outputs(metadata_tuples):
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
     expanded_outputs = OrderedDict()
     for (_m, download, reparse) in metadata_tuples:
         for (output_dict, m) in _m.get_output_metadata_set():
             if output_dict.get('type') != 'wheel':
                 try:
-                    m = finalize_metadata(m, index)
+                    m = finalize_metadata(m)
                 except DependencyNeedsBuildingError:
                     log = utils.get_logger(__name__)
                     log.warn("Could not finalize metadata due to missing dependencies.  "
@@ -481,22 +480,21 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
 
     if m.final:
         rendered_metadata = [(m, False, False), ]
-        index = None
 
     else:
-        index = get_build_index(m.config, m.config.build_subdir)
+        index, index_ts = get_build_index(m.config, m.config.build_subdir)
         # when building, we don't want to fully expand all outputs into metadata, only expand
         #    whatever variants we have.
         variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
                     get_package_variants(m))
-        rendered_metadata = distribute_variants(m, variants, index,
+        rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                     stub_subpackages=True)
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 
-    return rendered_metadata, index
+    return rendered_metadata
 
 
 # Next bit of stuff is to support YAML output in the order we expect.

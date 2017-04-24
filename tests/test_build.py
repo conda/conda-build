@@ -13,7 +13,7 @@ import pytest
 from conda_build import build, api
 from conda_build.utils import on_win
 
-from .utils import metadata_dir, put_bad_conda_on_path, get_noarch_python_meta, put_bad_conda_on_path
+from .utils import metadata_dir, put_bad_conda_on_path, get_noarch_python_meta
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -45,7 +45,7 @@ def test_find_prefix_files(testing_workdir):
 def test_build_preserves_PATH(testing_workdir, testing_config, testing_index):
     m = api.render(os.path.join(metadata_dir, 'source_git'), config=testing_config)[0][0]
     ref_path = os.environ['PATH']
-    build.build(m, index=testing_index)
+    build.build(m)
     assert os.environ['PATH'] == ref_path
 
 

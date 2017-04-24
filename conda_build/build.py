@@ -752,7 +752,6 @@ def bundle_conda(output, metadata, env, **kw):
             os.remove(final_output)
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=metadata.config.locking)
-
     update_index(output_folder, config=metadata.config)
 
     # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
@@ -806,8 +805,7 @@ bundlers = {
 }
 
 
-def build(m, index, post=None, need_source_download=True, need_reparse_in_env=False,
-          built_packages=None):
+def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None):
     '''
     Build the package with the specified metadata.
 
@@ -873,20 +871,22 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
         if m.config.has_separate_host_prefix:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
-            host_index = get_build_index(m.config, m.config.host_subdir)
+            host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
             host_ms_deps = m.ms_depends('host')
             host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                       host_ms_deps, m.config)
+                                                       host_ms_deps, m.config, timestamp=host_ts)
             environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                subdir=m.config.host_subdir)
 
         build_ms_deps = m.ms_depends('build')
+        index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
         build_actions = environ.get_install_actions(m.config.build_prefix, index,
-                                                    build_ms_deps, m.config)
+                                                    build_ms_deps, m.config,
+                                                    timestamp=index_timestamp)
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, config=m.config,
-                               subdir=m.config.build_subdir, index=index)
+                               subdir=m.config.build_subdir)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -903,7 +903,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             m.parse_until_resolved(stub_subpackages=True)
 
         elif need_reparse_in_env:
-            m = reparse(m, index)
+            m = reparse(m)
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -930,7 +930,7 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
 
-        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)], index)
+        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
         if m.config.skip_existing:
             package_locations = [is_package_built(om) for om, _, _ in output_metas]
@@ -1018,7 +1018,8 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     sub_host_ms_deps = m.ms_depends('host')
                     if host_index:
                         host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                                sub_host_ms_deps, m.config)
+                                                                   sub_host_ms_deps, m.config,
+                                                                   timestamp=host_ts)
                         environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                         subdir=subdir)
                     else:
@@ -1026,8 +1027,10 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                                                     .format(sub_host_ms_deps))
 
                     sub_build_ms_deps = m.ms_depends('build')
+                    index, index_timestamp = get_build_index(m.config, m.config.host_subdir)
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
-                                                                sub_build_ms_deps, m.config)
+                                                                sub_build_ms_deps, m.config,
+                                                                timestamp=index_timestamp)
                     environ.create_env(m.config.build_prefix, build_actions, config=m.config,
                                     subdir=m.config.build_subdir)
 
@@ -1041,11 +1044,16 @@ def build(m, index, post=None, need_source_download=True, need_reparse_in_env=Fa
                     new_pkgs[built_package] = (output_d, m)
                     # must rebuild index because conda has no way to incrementally add our last
                     #    package to the index.
+
+                    subdir = ('noarch' if (m.noarch or m.noarch_python)
+                              else m.config.host_subdir)
                     if host_index:
-                        host_index = get_build_index(config=m.config, subdir=m.config.host_subdir,
-                                                    clear_cache=True)
-                    index = get_build_index(config=m.config, subdir=m.config.build_subdir,
-                                            clear_cache=True)
+                        host_index, host_ts = get_build_index(config=m.config,
+                                                              subdir=subdir,
+                                                              clear_cache=True)
+                    index, index_timestamp = get_build_index(config=m.config,
+                                                             subdir=subdir,
+                                                             clear_cache=True)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
 
@@ -1136,7 +1144,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
 
-            metadata_tuples, _ = render_recipe(recipe_dir, config=config, reset_build_id=False)
+            metadata_tuples = render_recipe(recipe_dir, config=config, reset_build_id=False)
 
             metadata = metadata_tuples[0][0]
             if (metadata.meta.get('test', {}).get('source_files') and
@@ -1223,11 +1231,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         #     packages on physical hardware. until then it is expected that
         #     something like QEMU or Wine will be used on the build machine,
         #     therefore, for now, we use host_subdir.
-        subdir = (metadata.config.host_subdir if metadata.config.host_subdir != 'noarch'
-                  else subdir)
-        index = get_build_index(metadata.config, subdir)
+
+        subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
+                  else metadata.config.host_subdir)
+        index, index_ts = get_build_index(metadata.config, subdir)
         actions = environ.get_install_actions(metadata.config.test_prefix, index,
-                                                specs, metadata.config)
+                                                specs, metadata.config, timestamp=index_ts)
         environ.create_env(metadata.config.test_prefix, actions, config=metadata.config,
                            subdir=subdir)
 
@@ -1390,7 +1399,6 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         try:
             recipe = recipe_list.popleft()
             name = recipe.name() if hasattr(recipe, 'name') else recipe
-            clear_index = name in retried_recipes
             if hasattr(recipe, 'config'):
                 metadata = recipe
                 config = metadata.config
@@ -1401,17 +1409,13 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
                 metadata_tuples = []
-                if clear_index:
-                    metadata.config.index = None
 
-                index = metadata.config.index if metadata.config.index else get_build_index(config,
-                                                                                config.build_subdir)
                 variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
                             get_package_variants(metadata))
 
                 # This is where reparsing happens - we need to re-evaluate the meta.yaml for any
                 #    jinja2 templating
-                metadata_tuples = distribute_variants(metadata, variants, index,
+                metadata_tuples = distribute_variants(metadata, variants,
                                                       permit_unsatisfiable_variants=False)
             else:
                 recipe_parent_dir = os.path.dirname(recipe)
@@ -1421,10 +1425,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 # each tuple is:
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
-                if clear_index:
-                    config.index = None
-                metadata_tuples, index = render_recipe(recipe, config=config, variants=variants,
-                                                       permit_unsatisfiable_variants=False)
+                metadata_tuples = render_recipe(recipe, config=config, variants=variants,
+                                                permit_unsatisfiable_variants=False)
             # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
             if post in (True, False):
@@ -1438,10 +1440,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
-                packages_from_this = build(metadata, index=index, post=post,
-                                            need_source_download=need_source_download,
-                                            need_reparse_in_env=need_reparse_in_env,
-                                            built_packages=built_packages)
+                packages_from_this = build(metadata, post=post,
+                                           need_source_download=need_source_download,
+                                           need_reparse_in_env=need_reparse_in_env,
+                                           built_packages=built_packages,
+                                           )
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith('.tar.bz2'):
@@ -1625,8 +1628,8 @@ def is_package_built(metadata):
         if not os.path.isdir(d):
             os.makedirs(d)
             update_index(d, metadata.config, could_be_mirror=False)
-    index = get_build_index(config=metadata.config, subdir=metadata.config.host_subdir,
-                            clear_cache=True)
+    index, index_ts = get_build_index(config=metadata.config, subdir=metadata.config.host_subdir,
+                                      clear_cache=True)
 
     urls = [url_path(metadata.config.croot)] + get_rc_urls()
     if metadata.config.channel_urls:
