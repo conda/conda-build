@@ -476,7 +476,7 @@ def toposort(outputs):
        will naturally lead to non-overlapping files in each package and also
        the correct files being present during the install and test procedures,
        provided they are run in this order.'''
-    from conda.toposort import _toposort
+    from .conda_interface import _toposort
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
     these_packages = [output_d['name'] for output_d, _ in outputs
