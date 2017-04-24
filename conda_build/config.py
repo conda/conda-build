@@ -327,7 +327,7 @@ class Config(object):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
                                                      "to preserve croot during path joins")
             build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)
-                                if package_name + "_" in build_folder])
+                                if build_folder.startswith(package_name + "_")])
 
             if self.dirty and build_folders:
                 # Use the most recent build with matching recipe name
