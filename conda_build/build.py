@@ -938,6 +938,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 print("Packages for ", m.path or m.name(),
                         "are already built in {0}, skipping.".format(package_locations))
                 return default_return
+            else:
+                package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
         else:
             package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
 
@@ -1636,5 +1638,6 @@ def is_package_built(metadata):
         urls.extend(metadata.config.channel_urls)
 
     # will be empty if none found, and evalute to False
-    return [url for url in urls
+    found_urls = [url for url in urls
             if dist_str_in_index(index, url + '::' + metadata.pkg_fn())]
+    return found_urls[0] if found_urls else None
