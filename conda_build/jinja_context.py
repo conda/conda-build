@@ -10,7 +10,6 @@ import jinja2
 
 from .conda_interface import PY3, memoized
 from .environ import get_dict as get_environ
-from .index import get_build_index
 from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
                     string_types)
 from .render import get_env_dependencies
@@ -230,14 +229,12 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
         by ``.``.
     """
     compatibility = None
-    if not m.config.index:
-        m.config.index = get_build_index(m.config, subdir=m.config.build_subdir)
 
     # this is the version split up into its component bits.
     # There are two cases considered here (so far):
     # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
     # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-    pins, _ = get_env_dependencies(m, 'build', m.config.variant, m.config.index)
+    pins, _ = get_env_dependencies(m, 'build', m.config.variant)
     versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
     if versions:
         if exact and versions.get(package_name):

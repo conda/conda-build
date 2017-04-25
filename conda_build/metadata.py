@@ -1383,7 +1383,7 @@ class MetaData(object):
 
                     try:
                         # we'll still filter out subpackages in finalize_metadata
-                        fm = finalize_metadata(fm, fm.config.index)
+                        fm = finalize_metadata(fm)
                         if not output_d.get('type') or output_d.get('type') == 'conda':
                             outputs[(fm.name(), HashableDict(variant))] = (output_d, fm)
                         else:

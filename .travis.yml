@@ -68,9 +68,6 @@ install:
     fi
   - pip install --no-deps .
   - conda info -a
-  # HACK: seem to be having issues getting MKL downloaded.  Force it to be there.
-  - curl -L https://repo.continuum.io/pkgs/free/linux-64/mkl-11.3.3-0.tar.bz2 -o ~/miniconda/pkgs/mkl-11.3.3-0.tar.bz2
-  - conda index ~/miniconda/pkgs
 
 script: ./ci/travis/run.sh
 

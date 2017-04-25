@@ -35,7 +35,7 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
 
-    metadata_tuples, index = render_recipe(recipe_path,
+    metadata_tuples = render_recipe(recipe_path,
                                     no_download_source=config.no_download_source,
                                     config=config, variants=variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
