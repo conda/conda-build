@@ -27,12 +27,12 @@ conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4")
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
 
-if conda_44:
+try:
+    # Conda 4.4+
     from conda.exports import _toposort
-    _toposort = _toposort
-else:
+except ImportError:
     from conda.toposort import _toposort
-    _toposort = _toposort
+_toposort = _toposort
 
 if conda_43:
     from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
