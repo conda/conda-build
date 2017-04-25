@@ -1,3 +1,32 @@
+2017-04-25 3.0.0beta1
+
+Breaking changes:
+-----------------
+
+* Package signing and verification have been removed, to follow their removal from conda 4.3.  #1950
+
+Enhancements:
+-------------
+
+* Avoid duplicate recreation of package index.  Speedup of 0-50%, depending on how extensively the recipe uses Jinja2 features.  #1954
+
+Bug Fixes:
+----------
+
+* Fix cleanup of folders in outer variant loop - was causing incorrect packages on 2nd variant in windows builds  #1950
+* Remove variant functionality from bdist_conda.  Its split packaging approach is incompatible.  #1950
+* Fix import of _toposort from conda, reroute through conda_interface  #1952
+* Match folder substrings more intelligently, for finding previous builds with --dirty  #1953
+* Fix type error with --skip-existing and some conda recipes (Conda-build's internal conda.recipe was one).  #1956
+
+Contributors:
+-------------
+
+* @kalefranz
+* @msarahan
+* @rendinam
+
+
 2017-04-20 3.0.0beta0
 
 Breaking changes:
