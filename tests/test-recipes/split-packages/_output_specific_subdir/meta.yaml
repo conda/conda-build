@@ -1,0 +1,10 @@
+package:
+  name: test_output_specific_subdir
+  version: 1.0
+
+outputs:
+  - name: default_subdir
+  - name: custom_subdir
+    target: linux-aarch64
+  # one package after to show that the customization is local to the one package
+  - name: default_subdir_2
