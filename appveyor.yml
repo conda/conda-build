@@ -78,7 +78,9 @@ test_script:
   - set LUA=
   - set R=
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
-  - rd /S /Q C:\cbtmp
+  # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
+  - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
+  # - rd /S /Q C:\cbtmp
   - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --durations=15
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
@@ -89,4 +91,4 @@ test_script:
 
 on_success:
   - pip install codecov
-  - codecov --env PYTHON_VERSION
+  - codecov --env PYTHON_VERSION --file C:\projects\conda-build\coverage.xml
