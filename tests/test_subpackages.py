@@ -5,6 +5,7 @@ import sys
 
 from conda_build import api
 from conda_build.render import finalize_metadata
+from conda_build.conda_interface import subdir
 
 from .utils import subpackage_dir, is_valid_dir
 
@@ -140,3 +141,17 @@ def test_intradep_with_templated_output_name(testing_config):
     expected_names = {'test_templated_subpackage_name', 'templated_subpackage_nameabc',
                       'depends_on_templated'}
     assert set((m.name() for (m, _, _) in metadata)) == expected_names
+
+
+def test_output_specific_subdir(testing_config):
+    recipe = os.path.join(subpackage_dir, '_output_specific_subdir')
+    metadata = api.render(recipe, config=testing_config)
+    assert len(metadata) == 3
+    for (m, _, _) in metadata:
+        if m.name() in ('default_subdir', 'default_subdir_2'):
+            assert m.config.host_subdir == subdir
+        elif m.name() == 'custom_subdir':
+            assert m.config.host_subdir == 'linux-aarch64'
+        else:
+            raise AssertionError("Test for output_specific_subdir written incorrectly - "
+                                 "package name not recognized")
