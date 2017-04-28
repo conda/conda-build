@@ -61,6 +61,12 @@ def test_create_pl_files(testing_workdir, testing_metadata):
     assert 'use perl-base;\n' in data
     assert 'use perl-matrix;\n' in data
 
+def test_non_py_does_not_create_py_files(testing_workdir, testing_metadata):
+    testing_metadata.meta['test']['imports'] = ['perl-base', 'perl-matrix']
+    testing_metadata.meta['package']['name'] = 'perl-conda-test'
+    ct.create_py_files(testing_metadata)
+    py_test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.py')
+    assert not os.path.isfile(py_test_file), "non-python package should not create run_test.py"
 
 def test_create_pl_files_lang_spec(testing_workdir, testing_metadata):
     testing_metadata.meta['test']['imports'] = [{'lang': 'perl', 'imports': ['perl-base',
