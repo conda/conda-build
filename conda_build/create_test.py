@@ -137,8 +137,7 @@ def create_py_files(m):
             # add any imports specifically marked as python
             if (hasattr(import_item, 'keys') and 'lang' in import_item and
                     import_item['lang'] == 'python'):
-                imports = import_item['imports']
-                break
+                imports.extend(import_item['imports'])
     else:
         imports = ensure_list(m.get_value('test/imports', []))
         imports = [item for item in imports if (not hasattr(item, 'keys') or
