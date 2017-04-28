@@ -25,6 +25,19 @@ def test_create_py_files_in_other_language(testing_workdir, testing_metadata):
     assert 'import time\n' in data
     assert 'import datetime\n' in data
 
+def test_create_py_files_in_other_language_multiple_python_dicts(testing_workdir, testing_metadata):
+    testing_metadata.meta['test']['imports'] = [{'lang': 'python', 'imports': ['time', 'datetime']}]
+    testing_metadata.meta['test']['imports'].append({'lang': 'python', 'imports': ['bokeh', 'holoviews']})
+    testing_metadata.meta['package']['name'] = 'perl-conda-test'
+    ct.create_py_files(testing_metadata)
+    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.py')
+    assert os.path.isfile(test_file)
+    with open(test_file) as f:
+        data = f.readlines()
+    assert 'import time\n' in data
+    assert 'import datetime\n' in data
+    assert 'import bokeh\n' in data
+    assert 'import holoviews\n' in data
 
 def test_create_r_files(testing_workdir, testing_metadata):
     testing_metadata.meta['test']['imports'] = ['r-base', 'r-matrix']
