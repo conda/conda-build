@@ -660,7 +660,8 @@ class MetaData(object):
         reqs = self.meta.get('requirements', {})
         run_reqs = reqs.get('run', [])
         if bool(self.get_value('build/osx_is_app', False)) and self.config.platform == 'osx':
-            run_reqs.append('python.app')
+            if 'python.app' not in run_reqs:
+                run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
     def parse_until_resolved(self, stub_subpackages=False):
