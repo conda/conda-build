@@ -489,7 +489,8 @@ def toposort(outputs):
             name = output_d['name']
             order[name] = idx
             topodict[name] = set()
-            for run_dep in output_m.get_value('requirements/run', []):
+            for run_dep in set(output_m.get_value('requirements/build', []) +
+                               output_m.get_value('requirements/run', [])):
                 run_dep = run_dep.split(' ')[0]
                 if run_dep in these_packages:
                     topodict[name].update((run_dep,))
@@ -1364,6 +1365,7 @@ class MetaData(object):
         render_order = toposort(list(six.moves.zip(outputs, metadata)))
         non_conda_packages = []
         outputs = OrderedDict()
+
         for (output_d, metadata) in render_order:
             if metadata.final:
                 # doesn't matter what the key is - we won't be using it in subdeps, because

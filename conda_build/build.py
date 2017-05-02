@@ -883,8 +883,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                     build_ms_deps, m.config,
                                                     timestamp=index_timestamp)
-        environ.create_env(m.config.build_prefix, build_actions, config=m.config,
-                            subdir=m.config.build_subdir)
+        if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
+                not os.listdir(m.config.build_prefix)):
+            environ.create_env(m.config.build_prefix, build_actions, config=m.config,
+                               subdir=m.config.build_subdir)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -1426,7 +1428,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
                 metadata_tuples = render_recipe(recipe, config=config, variants=variants,
-                                                permit_unsatisfiable_variants=False)
+                                                permit_unsatisfiable_variants=False,
+                                                reset_build_id=not config.dirty)
             # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
             if post in (True, False):

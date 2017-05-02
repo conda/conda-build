@@ -467,13 +467,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
-    if config.set_build_id:
-        m.config.compute_build_id(m.name(), reset=reset_build_id)
-
-    if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
-                                      len(os.listdir(m.config.work_dir)) == 0):
-        try_download(m, no_download_source=no_download_source)
-
     rendered_metadata = {}
 
     if m.final:
@@ -488,6 +481,14 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                     stub_subpackages=True)
+
+    if config.set_build_id:
+        for m, _, _ in rendered_metadata:
+            m.config.compute_build_id(m.name(), reset=reset_build_id)
+
+    if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
+                                      len(os.listdir(m.config.work_dir)) == 0):
+        try_download(m, no_download_source=no_download_source)
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)
