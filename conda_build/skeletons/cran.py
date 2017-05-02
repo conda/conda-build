@@ -648,7 +648,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                     continue
                 if name == 'R':
                     # Put R first
-                    # Regarless of build or run, and whether this is a recommended package or not,
+                    # Regardless of build or run, and whether this is a recommended package or not,
                     # it can only depend on 'r-base' since anything else can and will cause cycles
                     # in the dependency graph. The cran metadata lists all dependencies anyway, even
                     # those packages that are in the recommended group.

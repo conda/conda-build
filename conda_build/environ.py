@@ -22,6 +22,7 @@ from .conda_interface import install_actions, display_actions, execute_actions, 
 from .conda_interface import memoized
 from .conda_interface import MatchSpec
 
+import conda_build.api as api
 
 from conda_build.os_utils import external
 from conda_build import utils
@@ -652,6 +653,13 @@ def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0):
                 #   not be found.
                 # index_timestamp=timestamp)
             except NoPackagesFoundError as exc:
+                # Attempt to skeleton packages it can't find
+                packages = [x.split(" ")[0] for x in exc.pkgs]
+                for pkg in packages:
+                    if pkg.startswith("r-"):
+                        api.skeletonize([pkg], "cran")
+                    else:
+                        api.skeletonize([pkg], "pypi")
                 raise DependencyNeedsBuildingError(exc)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                     CondaError, AssertionError) as exc:
