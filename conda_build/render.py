@@ -367,8 +367,6 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             # reset this to our current variant to go ahead
             mv.config.variant = variant
 
-            if 'target_platform' in variant:
-                mv.config.host_subdir = variant['target_platform']
             if not need_reparse_in_env:
                 try:
                     mv.parse_until_resolved(stub_subpackages=stub_subpackages)

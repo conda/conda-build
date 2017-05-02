@@ -1275,11 +1275,11 @@ class MetaData(object):
             requirements = output_metadata.meta.get('requirements', {})
             output_reqs = output.get('requirements', {})
             if hasattr(output_reqs, 'keys'):
-                build_reqs = output_reqs.get('build', []) + requirements.get('build', [])
+                build_reqs = output_reqs.get('build', [])
                 run_reqs = output_reqs.get('run', [])
             else:
                 output_reqs = ensure_list(output_reqs)
-                build_reqs = output_reqs + requirements.get('build', [])
+                build_reqs = output_reqs
                 run_reqs = output_reqs
             if 'name' in output:
                 # since we are copying reqs from the top-level package, which

@@ -883,10 +883,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                     build_ms_deps, m.config,
                                                     timestamp=index_timestamp)
-        if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
-                not os.listdir(m.config.build_prefix)):
-            environ.create_env(m.config.build_prefix, build_actions, config=m.config,
-                               subdir=m.config.build_subdir)
+        environ.create_env(m.config.build_prefix, build_actions, config=m.config,
+                            subdir=m.config.build_subdir)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error

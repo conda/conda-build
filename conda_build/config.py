@@ -253,7 +253,7 @@ class Config(object):
     @host_subdir.setter
     def host_subdir(self, value):
         value = SUBDIR_ALIASES.get(value, value)
-        values = value.split('-')
+        values = value.rsplit('-', 1)
         self.host_platform = values[0]
         if len(values) > 1:
             self.host_arch = values[1]
