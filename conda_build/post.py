@@ -364,7 +364,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
-        if old.startswith('$ORIGIN/'):
+        if old.startswith('$ORIGIN'):
             new.append(old)
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
