@@ -1,0 +1,11 @@
+package:
+  name: subpackage_has_about_metadata
+  version: 1.0
+
+outputs:
+  - name: abc
+    about:
+      summary: weee
+  - name: def
+    about:
+      home: http://not.a.url
