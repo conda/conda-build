@@ -155,3 +155,18 @@ def test_output_specific_subdir(testing_config):
         else:
             raise AssertionError("Test for output_specific_subdir written incorrectly - "
                                  "package name not recognized")
+
+
+def test_about_metadata(testing_config):
+    recipe = os.path.join(subpackage_dir, '_about_metadata')
+    metadata = api.render(recipe, config=testing_config)
+    assert len(metadata) == 2
+    for m, _, _ in metadata:
+        if m.name() == 'abc':
+            assert 'summary' in m.meta['about']
+            assert m.meta['about']['summary'] == 'weee'
+            assert 'home' not in m.meta['about']
+        elif m.name() == 'def':
+            assert 'home' in m.meta['about']
+            assert 'summary' not in m.meta['about']
+            assert m.meta['about']['home'] == 'http://not.a.url'
