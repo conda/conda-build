@@ -896,6 +896,33 @@ def get_requirements(package, pkginfo, all_extras=True):
             extras_require = [pkginfo['extras_require'][x] for x in extras]
         except KeyError:
             sys.exit("Error: Invalid extra features: [%s]" % ','.join(extras))
+        # match PEP 508 environment markers; currently only matches the
+        #  subset of environment markers that compare to python_version
+        #  using a single basic Python comparison operator
+        version_marker = re.compile(r'^:python_version(<|<=|!=|==|>=|>)(.+)$')
+        for extra in pkginfo['extras_require']:
+            match_ver_mark = version_marker.match(extra)
+            if match_ver_mark:
+                op, ver = match_ver_mark.groups()
+                try:
+                    ver_tuple = tuple(int(x) for x in ver.strip('\'"').split("."))
+                except ValueError:
+                    pass  # bad match; abort
+                else:
+                    if op == "<":
+                        satisfies_ver = sys.version_info < ver_tuple
+                    elif op == "<=":
+                        satisfies_ver = sys.version_info <= ver_tuple
+                    elif op == "!=":
+                        satisfies_ver = sys.version_info != ver_tuple
+                    elif op == "==":
+                        satisfies_ver = sys.version_info == ver_tuple
+                    elif op == ">=":
+                        satisfies_ver = sys.version_info >= ver_tuple
+                    else:  # op == ">":
+                        satisfies_ver = sys.version_info > ver_tuple
+                    if satisfies_ver:
+                        extras_require += pkginfo['extras_require'][extra]
 
     # ... and collect all needed requirement specs in a single list:
     requires = []
