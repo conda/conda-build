@@ -1290,6 +1290,9 @@ class MetaData(object):
                 run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
             output_metadata.config.host_subdir = output.get('target', self.config.host_subdir)
 
+            if 'about' in output:
+                output_metadata.meta['about'] = output['about']
+
             requirements['build'] = build_reqs
             requirements['run'] = run_reqs
             output_metadata.meta['requirements'] = requirements

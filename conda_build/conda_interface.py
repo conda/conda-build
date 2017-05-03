@@ -220,7 +220,7 @@ else:
 
     get_local_urls = cc.get_local_urls
     arch_name = cc.arch_name
-    
+
     del locals()['cc']
 
 CondaError, CondaHTTPError, get_prefix, LinkError = CondaError, CondaHTTPError, get_prefix, LinkError  # NOQA

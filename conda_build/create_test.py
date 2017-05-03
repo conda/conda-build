@@ -132,13 +132,12 @@ def create_py_files(m):
     likely_non_python_pkg = likely_r_pkg or likely_lua_pkg or likely_perl_pkg
 
     if likely_non_python_pkg:
-        imports = ensure_list(m.get_value('test/imports', []))
-        for import_item in imports:
+        imports = []
+        for import_item in ensure_list(m.get_value('test/imports', [])):
             # add any imports specifically marked as python
             if (hasattr(import_item, 'keys') and 'lang' in import_item and
                     import_item['lang'] == 'python'):
-                imports = import_item['imports']
-                break
+                imports.extend(import_item['imports'])
     else:
         imports = ensure_list(m.get_value('test/imports', []))
         imports = [item for item in imports if (not hasattr(item, 'keys') or

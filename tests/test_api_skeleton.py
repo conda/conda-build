@@ -1,4 +1,5 @@
 import os
+import sys
 
 from pkg_resources import parse_version
 import pytest
@@ -120,3 +121,25 @@ def test_pypi_with_version_inconsistency(testing_workdir):
     with open('mpi4py_test/meta.yaml') as f:
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.0.10")
+
+
+def test_pypi_with_basic_environment_markers(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/1974
+    api.skeletonize('coconut', 'pypi', version='1.2.2')
+    with open('coconut/meta.yaml') as f:
+        actual = yaml.load(f)
+        build_reqs = str(actual['requirements']['build'])
+        run_reqs = str(actual['requirements']['run'])
+        # should include the right dependencies for the right version
+        if sys.version_info < (3,):
+            assert "futures" in build_reqs
+            assert "futures" in run_reqs
+        else:
+            assert "futures" not in build_reqs
+            assert "futures" not in run_reqs
+        if sys.version_info >= (2, 7):
+            assert "pygments" in build_reqs
+            assert "pygments" in run_reqs
+        else:
+            assert "pygments" not in build_reqs
+            assert "pygments" not in run_reqs
