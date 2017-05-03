@@ -652,6 +652,8 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
         kwargs.update({'env': env_copy})
     kwargs['env'] = {str(key): str(value) for key, value in kwargs['env'].items()}
     _args = []
+    if 'stdin' not in kwargs:
+        kwargs['stdin'] = subprocess.PIPE
     for arg in popenargs:
         # arguments to subprocess need to be bytestrings
         if sys.version_info.major < 3 and hasattr(arg, 'encode'):
