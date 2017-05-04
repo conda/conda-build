@@ -191,7 +191,9 @@ def _get_zip_dict_of_lists(combined_variant, list_of_strings):
     out = {}
 
     if used_keys:
-        dict_key = ",".join(list_of_strings)
+        # The join value needs to be selected as something
+        # that will not likely appear in any key or value.
+        dict_key = "#".join(list_of_strings)
         length = len(ensure_list(combined_variant[used_keys[0]]))
         for key in used_keys:
             if not len(ensure_list(combined_variant[key])) == length:
@@ -199,7 +201,7 @@ def _get_zip_dict_of_lists(combined_variant, list_of_strings):
                                  "fields within a group must be the same length."
                                  .format(used_keys[0], key))
         values = list(zip(*[ensure_list(combined_variant[key]) for key in used_keys]))
-        values = [','.join(value) for value in values]
+        values = ['#'.join(value) for value in values]
         out = {dict_key: values}
     return out
 
@@ -252,11 +254,11 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
         # split out zipped keys
         for k, v in remapped.copy().items():
             if isinstance(k, string_types) and isinstance(v, string_types):
-                keys = k.split(',')
-                values = v.split(',')
+                keys = k.split('#')
+                values = v.split('#')
                 for (_k, _v) in zip(keys, values):
                     remapped[_k] = _v
-                if ',' in k:
+                if '#' in k:
                     del remapped[k]
         dicts.append(remapped)
     return dicts
