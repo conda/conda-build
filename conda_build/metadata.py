@@ -1330,7 +1330,8 @@ class MetaData(object):
 
         out_metadata_map = {}
 
-        for variant in self.config.variants:
+        for variant in (self.config.variants if hasattr(self.config, 'variants')
+                        else [self.config.variant]):
             om = self.copy()
             om.final = False
             om.config.variant = variant
