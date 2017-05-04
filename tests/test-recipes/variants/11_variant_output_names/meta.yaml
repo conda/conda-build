@@ -1,0 +1,6 @@
+package:
+  name: test_output_variant_naming
+  version: 1.0
+
+outputs:
+  - name: some_output_using_{{ something }}_{{ something2 }}
