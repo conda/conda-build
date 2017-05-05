@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import io
 import locale
 import os
-from os.path import join, isdir, isfile, abspath, basename, exists, normpath
+from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser
 import re
 import shutil
 from subprocess import CalledProcessError
@@ -54,9 +54,14 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
 
         for url in source_dict['url']:
             if "://" not in url:
+                if url.startswith('~'):
+                    url = expanduser(url)
                 if not os.path.isabs(url):
                     url = os.path.normpath(os.path.join(recipe_path, url))
                 url = url_path(url)
+            else:
+                if url.startswith('file://~'):
+                    url = 'file://' + expanduser(url[7:]).replace('\\', '/')
             try:
                 print("Downloading %s" % url)
                 with LoggingContext():
