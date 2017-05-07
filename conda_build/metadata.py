@@ -1312,7 +1312,7 @@ class MetaData(object):
                 subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
                 build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
                 run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
-            output_metadata.config.host_subdir = output.get('target', self.config.host_subdir)
+            output_metadata.config.target_subdir = output.get('target', self.config.host_subdir)
 
             if 'about' in output:
                 output_metadata.meta['about'] = output['about']

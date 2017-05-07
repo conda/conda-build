@@ -741,8 +741,12 @@ def bundle_conda(output, metadata, env, **kw):
                           metadata.config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
+        try:
+            crossed_subdir = metadata.config.target_subdir
+        except:
+            crossed_subdir = metadata.config.host_subdir
         subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
-                  else metadata.config.host_subdir)
+                  else crossed_subdir)
         if metadata.config.output_folder:
             output_folder = os.path.join(metadata.config.output_folder, subdir)
         else:
