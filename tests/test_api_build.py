@@ -998,3 +998,12 @@ def test_only_lua_env(testing_config):
     testing_config.prefix_length = 80
     testing_config.set_build_id = False
     api.build(recipe, config=testing_config)
+
+
+def test_run_constrained_stores_constrains_info(testing_config):
+    recipe = os.path.join(metadata_dir, '_run_constrained')
+    out_file = api.build(recipe, config=testing_config)[0]
+    info_contents = json.loads(package_has_file(out_file, 'info/index.json'))
+    assert 'constrains' in info_contents
+    assert len(info_contents['constrains']) == 1
+    assert info_contents['constrains'][0] == 'bzip2  1.*'

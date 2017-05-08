@@ -1,0 +1,7 @@
+package:
+  name: test_run_constrained
+  version: 1.0
+
+requirements:
+  run_constrained:
+    - bzip2  1.*
