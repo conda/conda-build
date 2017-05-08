@@ -618,7 +618,8 @@ spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
 
 def _ensure_valid_spec(spec):
     if isinstance(spec, MatchSpec):
-        if hasattr(spec, 'version') and spec_ver_needing_star_re.match(str(spec.version)):
+        if (hasattr(spec, 'version') and spec.version and
+                spec_ver_needing_star_re.match(str(spec.version))):
             spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
     else:
         match = spec_needing_star_re.match(spec)
