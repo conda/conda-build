@@ -1507,6 +1507,12 @@ for Python 3.5 and needs to be rebuilt."""
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
 
+        finally:
+            # clean up locks to avoid permission errors when they exist in central installs
+            for (m, _, _) in metadata_tuples:
+                for lock in utils.get_conda_operation_locks(m.config):
+                    utils.rm_rf(lock.lock_file)
+
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
         tarballs = [f for f in built_packages if f.endswith('.tar.bz2')]
@@ -1515,8 +1521,7 @@ for Python 3.5 and needs to be rebuilt."""
         handle_pypi_upload(wheels, config=config)
 
     for (m, _, _) in metadata_tuples:
-        if not getattr(m.config, 'dirty') and not has_exception:
-            m.config.clean()
+        m.config.clean(remove_folders=not has_exception)
 
     return list(built_packages.keys())
 
