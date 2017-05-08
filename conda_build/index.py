@@ -19,6 +19,8 @@ from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index
 
 local_index_timestamp = 0
 cached_index = None
+local_subdir = ""
+cached_channels = []
 
 
 def read_index_tar(tar_path, config, lock):
@@ -171,7 +173,9 @@ def ensure_valid_channel(local_folder, subdir, config):
 
 def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     global local_index_timestamp
+    global local_subdir
     global cached_index
+    global cached_channels
     log = utils.get_logger(__name__)
     mtime = 0
 
@@ -185,7 +189,10 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     if os.path.isfile(index_file):
         mtime = os.path.getmtime(index_file)
 
-    if not os.path.isfile(index_file) or mtime > local_index_timestamp:
+    if (not os.path.isfile(index_file) or
+            local_subdir != subdir or
+            mtime > local_index_timestamp or
+            cached_channels != config.channel_urls):
         log.debug("Building new index for subdir '{}' with channels {}, condarc channels "
                   "= {}".format(subdir, config.channel_urls, not omit_defaults))
         # priority: local by croot (can vary), then channels passed as args,
@@ -226,4 +233,6 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                                              use_cache=False,
                                              platform=subdir)
         local_index_timestamp = mtime
+        local_subdir = subdir
+        cached_channels = config.channel_urls
     return cached_index, local_index_timestamp

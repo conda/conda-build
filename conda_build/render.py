@@ -309,7 +309,7 @@ def reparse(metadata):
 
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
-                        stub_subpackages=False):
+                        allow_no_other_outputs=False):
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
@@ -333,7 +333,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     future rendering
             mv.final = False
             mv.config.variant = {}
-            mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
+            mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
             vars_in_recipe = set(mv.undefined_jinja_vars)
 
             mv.config.variant = variant
@@ -367,11 +367,9 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             # reset this to our current variant to go ahead
             mv.config.variant = variant
 
-            if 'target_platform' in variant:
-                mv.config.host_subdir = variant['target_platform']
             if not need_reparse_in_env:
                 try:
-                    mv.parse_until_resolved(stub_subpackages=stub_subpackages)
+                    mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs)
                     need_source_download = (bool(mv.meta.get('source')) and
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
@@ -382,9 +380,14 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         mv.meta['requirements']['build'] = [
                             python_version if re.match('^python(?:$| .*)', pkg) else pkg
                             for pkg in mv.meta['requirements']['build']]
-                    fm = finalize_metadata(mv)
-                    rendered_metadata[fm.dist()] = (fm, need_source_download,
-                                                    need_reparse_in_env)
+                    # finalization is important here for the sake of
+                    #   deduplication. Without finalizing, we don't know
+                    #   whether two metadata objects will yield the same thing.
+                    # fm = finalize_metadata(mv)
+                    #  However, finalization means that all downloading must have already been done.
+                    #   This is not necessary, so let's see if we can get away
+                    #    with un-finalized data
+                    rendered_metadata[mv.dist()] = (mv, need_source_download, need_reparse_in_env)
                 except DependencyNeedsBuildingError as e:
                     unsatisfiable_variants.append(variant)
                     packages_needing_building.update(set(e.packages))
@@ -469,18 +472,24 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
+    rendered_metadata = {}
+
+    # important: set build id *before* downloading source.  Otherwise source goes into a different
+    #    build folder.
     if config.set_build_id:
         m.config.compute_build_id(m.name(), reset=reset_build_id)
 
+    # this source may go into a folder that doesn't match the eventual build folder.
+    #   There's no way around it AFAICT.  We must download the source to be able to render
+    #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
+    #   folder until rendering is complete, because package names can have variant jinja2 in them.
     if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
                                       len(os.listdir(m.config.work_dir)) == 0):
         try_download(m, no_download_source=no_download_source)
-
-    rendered_metadata = {}
+        # old_src_dir = m.config.work_dir
 
     if m.final:
         rendered_metadata = [(m, False, False), ]
-
     else:
         index, index_ts = get_build_index(m.config, m.config.build_subdir)
         # when building, we don't want to fully expand all outputs into metadata, only expand
@@ -489,7 +498,15 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                     get_package_variants(m))
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    stub_subpackages=True)
+                                    allow_no_other_outputs=True)
+
+    # if config.set_build_id:
+    #     m.config.compute_build_id(m.name(), reset=reset_build_id)
+        # move any existing downloaded source into the new location
+        # if old_src_dir:
+        #     shutil.move(old_src_dir, m.config.work_dir)
+        # for rm, _, _ in rendered_metadata:
+        #     rm.config.build_id = m.config.build_id
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)

@@ -8,6 +8,7 @@ from collections import namedtuple
 import math
 import os
 from os.path import abspath, expanduser, join
+import shutil
 import sys
 import time
 
@@ -253,7 +254,7 @@ class Config(object):
     @host_subdir.setter
     def host_subdir(self, value):
         value = SUBDIR_ALIASES.get(value, value)
-        values = value.split('-')
+        values = value.rsplit('-', 1)
         self.host_platform = values[0]
         if len(values) > 1:
             self.host_arch = values[1]
@@ -326,18 +327,23 @@ class Config(object):
         if self.set_build_id and (not self._build_id or reset):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
                                                      "to preserve croot during path joins")
-            build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)
-                                if build_folder.startswith(package_name + "_")])
-
+            build_folders = sorted([os.path.basename(build_folder)
+                            for build_folder in get_build_folders(self.croot)
+                            if os.path.basename(build_folder).startswith(package_name + "_")])
             if self.dirty and build_folders:
                 # Use the most recent build with matching recipe name
                 self._build_id = build_folders[-1]
             else:
+                old_dir = ""
+                if os.listdir(self.work_dir):
+                    old_dir = self.work_dir
                 # here we uniquely name folders, so that more than one build can happen concurrently
                 #    keep 6 decimal places so that prefix < 80 chars
                 build_id = package_name + "_" + str(int(time.time() * 1000))
                 # important: this is recomputing prefixes and determines where work folders are.
                 self._build_id = build_id
+                if old_dir:
+                    shutil.move(old_dir, self.work_dir)
 
     @property
     def build_id(self):
@@ -555,8 +561,11 @@ class Config(object):
 
 
 def get_or_merge_config(config, variant=None, **kwargs):
+    """Always returns a new object - never changes the config that might be passed in."""
     if not config:
         config = Config(variant=variant)
+    else:
+        config = config.copy()
     if kwargs:
         config.set_keys(**kwargs)
     if variant:

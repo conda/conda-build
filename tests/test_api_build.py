@@ -798,9 +798,9 @@ def test_build_expands_wildcards(mocker, testing_workdir):
             fh.write('\n')
     api.build(["a*"], config=config)
     output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
-    build_tree.assert_called_once_with(output, post=None, need_source_download=True,
-                                       build_only=False, notest=False, config=config,
-                                       variants=None)
+    build_tree.assert_called_once_with(output, build_only=False, config=mocker.ANY,
+                                       need_source_download=True, notest=False,
+                                       post=None, variants=None)
 
 
 @pytest.mark.serial
@@ -816,17 +816,27 @@ def test_remove_workdir_default(testing_config, caplog):
 
 
 @pytest.mark.serial
-def test_keep_workdir(testing_config, caplog):
+def test_keep_workdir_and_dirty_reuse(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
     #    of the config object rather than edit it in place, so that variants don't clobber one
     #    another
-    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False,
-                          debug=True)[0][0]
+
+    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
+    workdir = metadata.config.work_dir
     api.build(metadata)
     assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(metadata.config.work_dir, '*'))
+
+    # test that --dirty reuses the same old folder
+    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
+    assert workdir == metadata.config.work_dir
+
+    # test that without --dirty, we don't reuse the folder
+    metadata = api.render(recipe, config=testing_config)[0][0]
+    assert workdir != metadata.config.work_dir
+
     testing_config.clean()
 
 

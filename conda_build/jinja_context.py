@@ -280,16 +280,19 @@ def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit
 
 
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
-                   exact=False, permit_undefined_jinja=True, stub_subpackages=False):
+                   exact=False, permit_undefined_jinja=True, allow_no_other_outputs=False):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    if stub_subpackages:
-        pin = subpackage_name
+    if not hasattr(metadata, 'other_outputs'):
+        if allow_no_other_outputs:
+            pin = subpackage_name
+        else:
+            raise ValueError("Bug in conda-build: we need to have info about other outputs in "
+                             "order to allow pinning to them.  It's not here.")
     else:
-        assert hasattr(metadata, 'other_outputs')
         key = (subpackage_name, HashableDict(metadata.config.variant))
         pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin, exact,
                                              permit_undefined_jinja)
@@ -359,7 +362,7 @@ def compiler(language, config, permit_undefined_jinja=False):
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
-                      stub_subpackages=False):
+                      allow_no_other_outputs=False):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -384,7 +387,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                permit_undefined_jinja=permit_undefined_jinja),
         pin_subpackage=partial(pin_subpackage, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,
-                               stub_subpackages=stub_subpackages),
+                               allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)

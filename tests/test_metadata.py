@@ -145,14 +145,15 @@ def test_build_bootstrap_env_by_path(testing_metadata):
 def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
     testing_config.platform = 'win'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
-                          variants={'python': py_ver[0], 'target_platform': 'win-x86_64'})[0][0]
+                          variants={'python': py_ver[0], 'target_platform': 'win-x86_64'},
+                          permit_unsatisfiable_variants=True)[0][0]
     assert py_ver[1] in metadata.meta['requirements']['build']
 
 
 def test_native_compiler_metadata_linux(testing_config, mocker):
     testing_config.platform = 'linux'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
-                          config=testing_config)[0][0]
+                          config=testing_config, permit_unsatisfiable_variants=True)[0][0]
     _64 = '_64' if conda_interface.bits == 64 else ''
     assert 'gcc_linux-cos5-x86' + _64 in metadata.meta['requirements']['build']
     assert 'gxx_linux-cos5-x86' + _64 in metadata.meta['requirements']['build']
@@ -162,7 +163,7 @@ def test_native_compiler_metadata_linux(testing_config, mocker):
 def test_native_compiler_metadata_osx(testing_config, mocker):
     testing_config.platform = 'osx'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
-                          config=testing_config)[0][0]
+                          config=testing_config, permit_unsatisfiable_variants=True)[0][0]
     _64 = '_64' if conda_interface.bits == 64 else ''
     assert 'clang_osx-109-x86' + _64 in metadata.meta['requirements']['build']
     assert 'clangxx_osx-109-x86' + _64 in metadata.meta['requirements']['build']
@@ -210,3 +211,10 @@ def test_hash_applies_to_custom_build_string(testing_metadata):
     testing_metadata.meta['build']['string'] = 'steve'
     testing_metadata.meta['requirements']['build'] = ['zlib 1.2.8 3']
     assert testing_metadata.build_id() == 'stevehbcfeb9f'
+
+
+def test_config_member_decoupling(testing_metadata):
+    testing_metadata.config.some_member = 'abc'
+    b = testing_metadata.copy()
+    b.config.some_member = '123'
+    assert b.config.some_member != testing_metadata.config.some_member

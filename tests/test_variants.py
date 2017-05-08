@@ -142,5 +142,11 @@ def test_zip_fields():
 
 def test_cross_compilers():
     recipe = os.path.join(recipe_dir, '09_cross')
-    outputs = api.get_output_file_paths(recipe)
+    outputs = api.get_output_file_paths(recipe, permit_unsatisfiable_variants=True)
     assert len(outputs) == 3
+
+
+def test_variants_in_output_names():
+    recipe = os.path.join(recipe_dir, '11_variant_output_names')
+    outputs = api.get_output_file_paths(recipe)
+    assert len(outputs) == 4

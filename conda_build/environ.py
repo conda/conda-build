@@ -613,19 +613,23 @@ class Environment(object):
 
 
 spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+\s+)([0-9a-zA-Z\.]+)(\s+[0-9a-zA-Z\.]+)?")
+spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
 
 
 def _ensure_valid_spec(spec):
     if isinstance(spec, MatchSpec):
-        return spec
-    match = spec_needing_star_re.match(spec)
-    # ignore exact pins (would be a 3rd group)
-    if match and not match.group(3):
-        if 'numpy' in match.group(1) and match.group(2) == 'x.x':
-            spec = spec_needing_star_re.sub(r"\1\2", spec)
-        else:
-            if "*" not in spec:
-                spec = spec_needing_star_re.sub(r"\1\2.*", spec)
+        if (hasattr(spec, 'version') and spec.version and
+                spec_ver_needing_star_re.match(str(spec.version))):
+            spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
+    else:
+        match = spec_needing_star_re.match(spec)
+        # ignore exact pins (would be a 3rd group)
+        if match and not match.group(3):
+            if 'numpy' in match.group(1) and match.group(2) == 'x.x':
+                spec = spec_needing_star_re.sub(r"\1\2", spec)
+            else:
+                if "*" not in spec:
+                    spec = spec_needing_star_re.sub(r"\1\2.*", spec)
     return spec
 
 
