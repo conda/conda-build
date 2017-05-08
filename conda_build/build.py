@@ -676,7 +676,7 @@ def bundle_conda(output, metadata, env, **kw):
         env_output['PKG_VERSION'] = metadata.version()
         env_output['PKG_NAME'] = metadata.get_value('package/name')
         utils.check_call_env(interpreter.split(' ') +
-                    [os.path.join(metadata.path, output['script'])],
+                    [os.path.join(metadata.config.work_dir, output['script'])],
                              cwd=metadata.config.host_prefix, env=env_output)
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
@@ -701,7 +701,7 @@ def bundle_conda(output, metadata, env, **kw):
         test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
         script = output.get('test', {}).get('script')
         if script and script.endswith(ext):
-            utils.copy_into(os.path.join(metadata.path, output['test']['script']),
+            utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
                             test_dest_path, metadata.config.timeout,
                             locking=metadata.config.locking)
         elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
@@ -900,7 +900,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             try_download(m, no_download_source=False)
         if need_source_download:
             m.final = False
-            m.parse_until_resolved(stub_subpackages=True)
+            m.parse_until_resolved(allow_no_other_outputs=True)
 
         elif need_reparse_in_env:
             m = reparse(m)
@@ -1506,10 +1506,6 @@ for Python 3.5 and needs to be rebuilt."""
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
-        finally:
-            for (m, _, _) in metadata_tuples:
-                if not getattr(m.config, 'dirty') and not has_exception:
-                    m.config.clean()
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
@@ -1517,6 +1513,11 @@ for Python 3.5 and needs to be rebuilt."""
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
+
+    for (m, _, _) in metadata_tuples:
+        if not getattr(m.config, 'dirty') and not has_exception:
+            m.config.clean()
+
     return list(built_packages.keys())
 
 

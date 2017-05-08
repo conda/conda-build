@@ -48,8 +48,9 @@ def test_build_with_conda_not_on_path(testing_workdir):
 
 
 def test_build_add_channel():
-    """This recipe requires the blinker package, which is only on conda-forge.
-    This verifies that the -c argument works."""
+    """This recipe requires the conda_build_test_requirement package, which is
+    only on the conda_build_test channel. This verifies that the -c argument
+    works."""
 
     args = ['-c', 'conda_build_test', '--no-activate', '--no-anaconda-upload',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]

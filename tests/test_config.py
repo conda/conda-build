@@ -3,7 +3,7 @@ import sys
 
 import pytest
 
-from conda_build.config import Config
+from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import on_win
 
 
@@ -80,3 +80,12 @@ def test_set_bits(config):
     config.host_arch = 128
     assert config.host_subdir == config.platform + '-' + str(128)
     assert config.host_arch == 128
+
+
+def test_get_or_create_config_does_not_change_passed_in_config(config):
+    # arguments merged into existing configs should only affect new config, not the one that
+    #    was passed in
+    assert config.dirty is False
+    newconfig = get_or_merge_config(config, dirty=True)
+    assert newconfig.dirty is True
+    assert config.dirty is False

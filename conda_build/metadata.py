@@ -7,8 +7,8 @@ import json
 import os
 from os.path import isfile, join
 import re
-import six
 import sys
+import time
 
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import md5_file
@@ -527,7 +527,7 @@ class MetaData(object):
         self.undefined_jinja_vars = []
         # decouple this config from whatever was fed in.  People must change config by
         #    accessing and changing this attribute.
-        self.config = copy.copy(get_or_merge_config(config, variant=variant))
+        self.config = get_or_merge_config(config, variant=variant).copy()
 
         if isfile(path):
             self.meta_path = path
@@ -546,7 +546,7 @@ class MetaData(object):
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
-        self.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
+        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
         if 'host' in self.get_section('requirements'):
             self.config.has_separate_host_prefix = True
         self.config.disable_pip = self.disable_pip
@@ -589,7 +589,7 @@ class MetaData(object):
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False, stub_subpackages=False):
+    def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -616,7 +616,7 @@ class MetaData(object):
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
                 self.meta = parse(self._get_contents(permit_undefined_jinja,
-                                                     stub_subpackages=stub_subpackages),
+                                                     allow_no_other_outputs=allow_no_other_outputs),
                                   config=self.config,
                                   path=self.meta_path)
 
@@ -671,23 +671,31 @@ class MetaData(object):
                 run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self, stub_subpackages=False):
+    def parse_until_resolved(self, allow_no_other_outputs=False):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
         undefined_jinja_vars = ()
+        # store the "final" state that we think we're in.  reloading the meta.yaml file
+        #   can reset it (to True)
+        final = self.final
         # always parse again at least once.
-        self.parse_again(permit_undefined_jinja=True, stub_subpackages=stub_subpackages)
+        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=allow_no_other_outputs)
+        self.final = final
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
-            self.parse_again(permit_undefined_jinja=True, stub_subpackages=stub_subpackages)
+            self.parse_again(permit_undefined_jinja=True,
+                             allow_no_other_outputs=allow_no_other_outputs)
+            self.final = final
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
         # always parse again at the end, too.
-        self.parse_again(permit_undefined_jinja=False, stub_subpackages=stub_subpackages)
+        self.parse_again(permit_undefined_jinja=False,
+                         allow_no_other_outputs=allow_no_other_outputs)
+        self.final = final
 
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
@@ -959,6 +967,7 @@ class MetaData(object):
             subdir=self.config.host_subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
+            timestamp=int(time.time() * 1000),
         )
         for key in ('license', 'license_family'):
             value = self.get_value('about/' + key)
@@ -1043,7 +1052,7 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja, stub_subpackages=False):
+    def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1090,7 +1099,7 @@ class MetaData(object):
         env.globals.update(ns_cfg(self.config))
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
-                                             stub_subpackages=stub_subpackages))
+                                             allow_no_other_outputs=allow_no_other_outputs))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1322,6 +1331,21 @@ class MetaData(object):
                 build = output_metadata.meta.get('build', {})
                 build['run_exports'] = output['run_exports']
                 output_metadata.meta['build'] = build
+
+            # reset these so that reparsing does not reset the metadata name
+            output_metadata.path = ""
+            output_metadata.meta_path = ""
+
+        # ensure that packaging scripts are copied over into the workdir
+        if 'script' in output:
+            utils.copy_into(os.path.join(self.path, output['script']), self.config.work_dir)
+
+        # same thing, for test scripts
+        test_script = output.get('test', {}).get('script')
+        if test_script:
+            utils.copy_into(os.path.join(self.path, test_script),
+                            os.path.join(self.config.work_dir, test_script))
+
         return output_metadata
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,
@@ -1335,7 +1359,7 @@ class MetaData(object):
             om = self.copy()
             om.final = False
             om.config.variant = variant
-            om.parse_until_resolved(stub_subpackages=True)
+            om.parse_until_resolved(allow_no_other_outputs=True)
 
             outputs = om.get_section('outputs')
 
@@ -1379,14 +1403,8 @@ class MetaData(object):
         # variant is already rolled in from above
         for output_d, metadata in render_order.items():
             metadata.other_outputs = outputs
-            # for out in metadata.meta.get('outputs', []):
-            #     if out.get('name') == output_d.get('name'):
-            #         utils.merge_or_update_dict(output_d, out, "", merge=False)
-            #         break
-            # fm = metadata.get_output_metadata(output_d)
-
             try:
-                # we'll still filter out subpackages in finalize_metadata
+                metadata.parse_until_resolved(allow_no_other_outputs=False)
                 fm = finalize_metadata(metadata)
                 if not output_d.get('type') or output_d.get('type') == 'conda':
                     outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)

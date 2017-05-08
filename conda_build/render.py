@@ -12,7 +12,6 @@ import os
 from os.path import isdir, isfile, abspath
 import random
 import re
-import shutil
 import subprocess
 import string
 import sys
@@ -310,7 +309,7 @@ def reparse(metadata):
 
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
-                        stub_subpackages=False):
+                        allow_no_other_outputs=False):
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
@@ -334,7 +333,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     future rendering
             mv.final = False
             mv.config.variant = {}
-            mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
+            mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
             vars_in_recipe = set(mv.undefined_jinja_vars)
 
             mv.config.variant = variant
@@ -370,7 +369,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 
             if not need_reparse_in_env:
                 try:
-                    mv.parse_until_resolved(stub_subpackages=stub_subpackages)
+                    mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs)
                     need_source_download = (bool(mv.meta.get('source')) and
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
@@ -474,7 +473,11 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         sys.exit(1)
 
     rendered_metadata = {}
-    old_src_dir = ""
+
+    # important: set build id *before* downloading source.  Otherwise source goes into a different
+    #    build folder.
+    if config.set_build_id:
+        m.config.compute_build_id(m.name(), reset=reset_build_id)
 
     # this source may go into a folder that doesn't match the eventual build folder.
     #   There's no way around it AFAICT.  We must download the source to be able to render
@@ -484,9 +487,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                                       len(os.listdir(m.config.work_dir)) == 0):
         try_download(m, no_download_source=no_download_source)
         # old_src_dir = m.config.work_dir
-
-    if config.set_build_id:
-        m.config.compute_build_id(m.name(), reset=reset_build_id)
 
     if m.final:
         rendered_metadata = [(m, False, False), ]
@@ -498,15 +498,15 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                     get_package_variants(m))
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    stub_subpackages=True)
+                                    allow_no_other_outputs=True)
 
-    if config.set_build_id:
-        m.config.compute_build_id(m.name(), reset=reset_build_id)
+    # if config.set_build_id:
+    #     m.config.compute_build_id(m.name(), reset=reset_build_id)
         # move any existing downloaded source into the new location
         # if old_src_dir:
         #     shutil.move(old_src_dir, m.config.work_dir)
-        for rm, _, _ in rendered_metadata:
-            rm.config.build_id = m.config.build_id
+        # for rm, _, _ in rendered_metadata:
+        #     rm.config.build_id = m.config.build_id
 
     if need_cleanup:
         utils.rm_rf(recipe_dir)
