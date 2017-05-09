@@ -402,7 +402,7 @@ def build_string_from_metadata(metadata):
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
-        for s, names, places in (('py', 'python', 2), ('np', 'numpy', 2), ('pl', 'perl', 2),
+        for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 2),
                                  ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3)):
             for ms in metadata.ms_depends('run'):
                 for name in ensure_list(names):
@@ -410,14 +410,6 @@ def build_string_from_metadata(metadata):
                         # only append numpy when it is actually pinned
                         if name == 'numpy' and (not hasattr(ms, 'version') or not ms.version):
                             continue
-                        # not entirely sure this deprecation is a good idea.  Leaving this here
-                        #      for future consideration, but not showing it right now.
-                        # log.warn("Deprecation notice: computing build string (like pyXY).  This "
-                        #          "functionality has been replaced with the hash (h????), which"
-                        #          " can be readily inpsected with `conda inspect hash-inputs "
-                        #          "<pkg-name>`.  pyXY, npXYY and the like will go away in "
-                        #          "conda-build 4.0.  Please adapt any code that depends on "
-                        #          " filenames with pyXY, npXYY, etc.")
                         if metadata.noarch == name or (metadata.get_value('build/noarch_python') and
                                                     name == 'python'):
                             res.append(s)
@@ -918,17 +910,19 @@ class MetaData(object):
             check_bad_chrs(out, 'build/string')
         else:
             out = build_string_from_metadata(self)
-        if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
-            ret = out.rsplit('_', 1)
-            try:
-                int(ret[0])
-                out = self._hash_dependencies() + '_' + str(ret[0])
-            except ValueError:
-                out = ret[0] + self._hash_dependencies()
-            if len(ret) > 1:
-                out = '_'.join([out] + ret[1:])
-        else:
-            out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, self._hash_dependencies(), out)
+        if self.config.filename_hashing:
+            if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
+                ret = out.rsplit('_', 1)
+                try:
+                    int(ret[0])
+                    out = self._hash_dependencies() + '_' + str(ret[0])
+                except ValueError:
+                    out = ret[0] + self._hash_dependencies()
+                if len(ret) > 1:
+                    out = '_'.join([out] + ret[1:])
+            else:
+                out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, self._hash_dependencies(),
+                             out)
         return out
 
     def dist(self):

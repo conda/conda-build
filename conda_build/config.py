@@ -77,6 +77,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('_host_platform', None),
             Setting('_host_arch', None),
             Setting('has_separate_host_prefix', False),
+            Setting('filename_hashing', True),
 
             Setting('index', None),
 

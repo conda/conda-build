@@ -465,7 +465,8 @@ def create_info_files(m, files, prefix):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    write_hash_input(m)
+    if m.config.filename_hashing:
+        write_hash_input(m)
     write_info_json(m)  # actually index.json
     write_about_json(m)
     write_link_json(m)
