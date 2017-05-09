@@ -162,8 +162,10 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
             log.warn('path %s is a broken symlink - ignoring copy', src)
             return
 
+        cleanup_lock = False
         if not lock:
             lock = get_lock(src_folder, timeout=timeout)
+            cleanup_lock = True
         locks = [lock] if locking else []
         with try_acquire_locks(locks, timeout):
             # if intermediate folders not not exist create them
@@ -173,12 +175,14 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
                     os.makedirs(dst_folder)
                 except OSError:
                     pass
-
             try:
                 _copy_with_shell_fallback(src, dst_fn)
             except shutil.Error:
                 log.debug("skipping %s - already exists in %s",
                             os.path.basename(src), dst)
+            finally:
+                if cleanup_lock:
+                    rm_rf(lock.lock_file)
 
 
 # http://stackoverflow.com/a/22331852/1170370
