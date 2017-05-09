@@ -18,7 +18,7 @@ import yaml
 
 from .conda_interface import PY3
 
-from conda_build import exceptions, utils
+from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.completers import all_versions, conda_version
@@ -112,7 +112,7 @@ def reparse(metadata, config):
     """Some things need to be parsed again after the build environment has been created
     and activated."""
     sys.path.insert(0, config.build_prefix)
-    sys.path.insert(0, utils.get_site_packages(config.build_prefix))
+    sys.path.insert(0, utils.get_site_packages(config.build_prefix, environ.get_py_ver(config)))
     metadata.parse_again(config=config, permit_undefined_jinja=False)
 
 
