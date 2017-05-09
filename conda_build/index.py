@@ -6,7 +6,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import bz2
-import sys
 import json
 import tarfile
 from os.path import isfile, join, getmtime
@@ -95,13 +94,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
                 index = {}
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-        if could_be_mirror and any(fn.startswith('_license-') for fn in files):
-            sys.exit("""\
-    Error:
-        Indexing a copy of the Anaconda conda package channel is neither
-        necessary nor supported.  If you wish to add your own packages,
-        you can do so by adding them to a separate channel.
-    """)
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:
