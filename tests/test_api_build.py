@@ -28,7 +28,7 @@ from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env)
+                               package_has_file, check_output_env, get_conda_operation_locks)
 from conda_build.os_utils.external import find_executable
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
@@ -984,9 +984,13 @@ def test_extract_tarball_with_unicode_filename(testing_config):
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
+    locks = get_conda_operation_locks(m.config)
     with pytest.raises(RuntimeError):
         api.build(m)
     assert os.listdir(m.config.build_folder)
+    # make sure that it does not leave lock files, though, as these cause permission errors on
+    #    centralized installations
+    assert not any(os.path.isfile(lock.lock_file) for lock in locks)
 
 
 def test_only_r_env_vars_defined(testing_config):
