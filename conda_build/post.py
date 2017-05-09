@@ -27,6 +27,7 @@ from .conda_interface import md5_file
 from .conda_interface import PY3
 
 from conda_build import utils
+from conda_build.environ import get_py_ver
 
 if sys.platform.startswith('linux'):
     from conda_build.os_utils import elf
@@ -101,7 +102,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     itself
     """
     absfiles = [join(prefix, f) for f in files]
-    sp_dir = utils.get_site_packages(prefix)
+    py_ver = get_py_ver(config)
+    sp_dir = utils.get_site_packages(prefix, py_ver)
     for egg_path in glob(join(sp_dir, '*-py*.egg')):
         if isdir(egg_path):
             if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
