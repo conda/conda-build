@@ -1,3 +1,15 @@
+2017-05-09 2.1.12:
+
+Bug fixes:
+----------
+
+* Clean up lock files for temporary directories also
+
+Contributors:
+-------------
+
+* @msarahan
+
 2017-05-09 2.1.11:
 
 Enhancements:
