@@ -149,9 +149,9 @@ def test_output_specific_subdir(testing_config):
     assert len(metadata) == 3
     for (m, _, _) in metadata:
         if m.name() in ('default_subdir', 'default_subdir_2'):
-            assert m.config.host_subdir == subdir
+            assert m.config.target_subdir == subdir
         elif m.name() == 'custom_subdir':
-            assert m.config.host_subdir == 'linux-aarch64'
+            assert m.config.target_subdir == 'linux-aarch64'
         else:
             raise AssertionError("Test for output_specific_subdir written incorrectly - "
                                  "package name not recognized")

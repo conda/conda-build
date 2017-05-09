@@ -245,10 +245,13 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        if self.host_platform == 'noarch':
-            subdir = self.platform
+        if self.has_separate_host_prefix:
+            subdir = self.variant.get('target_platform', self.build_subdir)
         else:
-            subdir = "-".join([self.host_platform, str(self.host_arch)])
+            if self.host_platform == 'noarch':
+                subdir = self.host_platform
+            else:
+                subdir = "-".join([self.host_platform, str(self.host_arch)])
         return SUBDIR_ALIASES.get(subdir, subdir)
 
     @host_subdir.setter

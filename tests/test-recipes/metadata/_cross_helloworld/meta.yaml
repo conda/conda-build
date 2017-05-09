@@ -14,6 +14,7 @@ requirements:
 
 build:
   script:
+    - mkdir -p ${PREFIX}/bin
     - ${CC} helloworld.c -I${PREFIX}/include -L${PREFIX}/lib -lgreeting -DGREETING_SUFFIX="$(xz --version | head -n 1)" -o ${PREFIX}/bin/helloworld
 
 test:
@@ -21,7 +22,7 @@ test:
   # Test that information from build requirements can make it into host artefacts:
   - strings ${PREFIX}/bin/helloworld | grep "XZ Utils"
   # Test that the correct cross-compilers were used:
-  - file ${PREFIX}/bin/helloworld | grep "ELF 32-bit LSB executable, ARM, EABI5 version 1"
+  - file ${PREFIX}/bin/helloworld | grep "ELF 32-bit LSB executable, ARM, "
   # Not working at present for two reasons:
   # 1. We do not provide qemu
   # 2. Something wrong with the cross-compiler sysroot, to be investigated.

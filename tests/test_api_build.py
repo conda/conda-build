@@ -857,8 +857,7 @@ def test_workdir_removal_warning_no_remove(testing_config, caplog):
 
 @pytest.mark.skipif(not sys.platform.startswith('linux'),
                     reason="cross compiler packages created only on Linux right now")
-@pytest.mark.xfail(True,
-                   # VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
+@pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
                    reason="not completely implemented yet")
 def test_cross_compiler(testing_workdir, testing_config, caplog):
     # TODO: testing purposes.  Package on @mingwandroid's channel.
@@ -869,7 +868,7 @@ def test_cross_compiler(testing_workdir, testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
     output = api.build(recipe_dir, config=testing_config)[0]
     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
-    api.build(recipe, config=testing_config, remove_work_dir=False)
+    api.build(recipe_dir, config=testing_config, remove_work_dir=False)
     assert "Not removing work directory after build" in caplog.text
 
 

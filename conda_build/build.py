@@ -743,7 +743,7 @@ def bundle_conda(output, metadata, env, **kw):
                                     path_to_package=tmp_path)
         try:
             crossed_subdir = metadata.config.target_subdir
-        except:
+        except AttributeError:
             crossed_subdir = metadata.config.host_subdir
         subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
                   else crossed_subdir)
@@ -1021,19 +1021,20 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
-                    sub_host_ms_deps = m.ms_depends('host')
-                    if host_index:
+
+                    if m.config.has_separate_host_prefix:
+                        if VersionOrder(conda_version) < VersionOrder('4.3.2'):
+                            raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
+                        host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
+                        host_ms_deps = m.ms_depends('host')
                         host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                                   sub_host_ms_deps, m.config,
-                                                                   timestamp=host_ts)
+                                                                host_ms_deps, m.config,
+                                                                timestamp=host_ts)
                         environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                         subdir=subdir)
-                    else:
-                        assert not sub_host_ms_deps, ("Have host deps ({}) without a host_index"
-                                                    .format(sub_host_ms_deps))
 
                     sub_build_ms_deps = m.ms_depends('build')
-                    index, index_timestamp = get_build_index(m.config, m.config.host_subdir)
+                    index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                                 sub_build_ms_deps, m.config,
                                                                 timestamp=index_timestamp)
