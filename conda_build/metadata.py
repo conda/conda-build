@@ -264,6 +264,7 @@ default_structs = {
     'requirements/host': list,
     'requirements/run': list,
     'requirements/conflicts': list,
+    'requirements/run_constrained': list,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
@@ -370,7 +371,7 @@ FIELDS = {
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths',
               ],
-    'requirements': ['build', 'host', 'run', 'conflicts'],
+    'requirements': ['build', 'host', 'run', 'conflicts', 'run_constrained'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
@@ -978,6 +979,11 @@ class MetaData(object):
         if preferred_env:
             d['preferred_env'] = preferred_env
 
+        # conda 4.4+ optional dependencies
+        constrains = self.get_value('requirements/run_constrained')
+        if constrains:
+            d['constrains'] = constrains
+
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
@@ -1293,10 +1299,12 @@ class MetaData(object):
             if hasattr(output_reqs, 'keys'):
                 build_reqs = output_reqs.get('build', [])
                 run_reqs = output_reqs.get('run', [])
+                constrain_reqs = output_reqs.get('run_constrained', [])
             else:
                 output_reqs = ensure_list(output_reqs)
                 build_reqs = output_reqs
                 run_reqs = output_reqs
+                constrain_reqs = []
             if 'name' in output:
                 # since we are copying reqs from the top-level package, which
                 #   can depend on subpackages, make sure that we filter out
@@ -1311,6 +1319,8 @@ class MetaData(object):
 
             requirements['build'] = build_reqs
             requirements['run'] = run_reqs
+            if constrain_reqs:
+                requirements['run_constrained'] = constrain_reqs
             output_metadata.meta['requirements'] = requirements
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
             extra = self.meta.get('extra', {})
