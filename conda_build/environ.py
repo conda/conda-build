@@ -258,16 +258,17 @@ def conda_build_vars(prefix, config):
 
 
 def python_vars(config, prefix):
+    py_ver = get_py_ver(config)
     vars_ = {
             'CONDA_PY': str(config.CONDA_PY),
             'PY3K': str(config.PY3K),
-            'PY_VER': get_py_ver(config),
+            'PY_VER': py_ver,
+            'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
+            'SP_DIR': utils.get_site_packages(prefix, py_ver),
             }
     if os.path.isfile(config.python_bin(prefix)):
         vars_.update({
             'PYTHON': config.python_bin(prefix),
-            'STDLIB_DIR': utils.get_stdlib_dir(prefix),
-            'SP_DIR': utils.get_site_packages(prefix),
         })
     # Only define these variables if '--numpy=X.Y' was provided,
     # otherwise any attempt to use them should be an error.
