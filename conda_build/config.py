@@ -15,7 +15,7 @@ import time
 from .conda_interface import root_dir, root_writable, subdir, cc_platform, cc_conda_build
 from .conda_interface import string_types, binstar_upload
 
-from .utils import get_build_folders, rm_rf
+from .utils import get_build_folders, rm_rf, get_conda_operation_locks
 
 on_win = (sys.platform == 'win32')
 DEFAULT_PREFIX_LENGTH = 255
@@ -409,16 +409,22 @@ class Config(object):
         _ensure_dir(path)
         return path
 
-    def clean(self):
+    def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if self.build_id:
-            if os.path.isdir(self.build_folder):
-                rm_rf(self.build_folder)
-        else:
-            for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
-                if os.path.isdir(path):
-                    rm_rf(path)
+        if remove_folders and not getattr(self, 'dirty'):
+            if self.build_id:
+                if os.path.isdir(self.build_folder):
+                    rm_rf(self.build_folder)
+            else:
+                for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
+                    if os.path.isdir(path):
+                        rm_rf(path)
+            if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
+                rm_rf(os.path.join(self.build_folder, 'prefix_files'))
+
+        for lock in get_conda_operation_locks(self):
+            rm_rf(lock.lock_file)
 
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:
