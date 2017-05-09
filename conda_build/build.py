@@ -616,6 +616,12 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
 def get_build_index(config, clear_cache=True):
     # priority: local by croot (can vary), then channels passed as args,
     #     then channels from config.
+    native_dirs = [os.path.join(config.croot, dirname) for dirname in (config.subdir, 'noarch')]
+    for dirname in native_dirs:
+        if not os.path.isdir(dirname):
+            os.makedirs(dirname)
+        if not os.path.isfile(os.path.join(dirname, 'repodata.json.bz2')):
+            update_index(dirname, config)
     urls = [url_path(config.croot)] + list(config.channel_urls)
     index = get_index(channel_urls=urls,
                       prepend=not config.override_channels,
@@ -662,18 +668,7 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                 locks = []
                 try:
                     if config.locking:
-                        _pkgs_dirs = pkgs_dirs[:1]
-                        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs)
-                        for folder in locked_folders:
-                            if not os.path.isdir(folder):
-                                os.makedirs(folder)
-                            lock = utils.get_lock(folder, timeout=config.timeout)
-                            if not folder.endswith('pkgs'):
-                                update_index(folder, config=config, lock=lock,
-                                             could_be_mirror=False)
-                            locks.append(lock)
-                        # lock used to generally indicate a conda operation occurring
-                        locks.append(utils.get_lock('conda-operation', timeout=config.timeout))
+                        locks = utils.get_conda_operation_locks(config)
 
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         index = get_build_index(config=config, clear_cache=True)
@@ -1566,6 +1561,10 @@ packages, the other package needs to be rebuilt
                                     .format(recipe) + error_str + "\n" + extra_help)
             retried_recipes.append(recipe)
             recipe_list.extendleft(add_recipes)
+        finally:
+            # clean up locks to avoid permission errors when they exist in central installs
+            for lock in utils.get_conda_operation_locks(metadata.config):
+                utils.rm_rf(lock.lock_file)
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
@@ -1573,6 +1572,7 @@ packages, the other package needs to be rebuilt
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
+
     return built_packages
 
 

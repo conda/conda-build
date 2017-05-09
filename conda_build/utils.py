@@ -28,6 +28,7 @@ from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir
 from .conda_interface import string_types
+from .conda_interface import pkgs_dirs
 
 from conda_build.os_utils import external
 
@@ -283,6 +284,22 @@ def get_lock(folder, timeout=90, filename=".conda_lock"):
         raise RuntimeError("Could not write locks folder to either system location ({0})"
                            "or user location ({1}).  Aborting.".format(*_lock_folders))
     return _locations[location]
+
+
+def get_conda_operation_locks(config=None):
+    locks = []
+    # locks enabled by default
+    if not config or config.locking:
+        _pkgs_dirs = pkgs_dirs[:1]
+        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        for folder in locked_folders:
+            if not os.path.isdir(folder):
+                os.makedirs(folder)
+            lock = get_lock(folder, timeout=config.timeout if config else 90)
+            locks.append(lock)
+        # lock used to generally indicate a conda operation occurring
+        locks.append(get_lock('conda-operation', timeout=config.timeout if config else 90))
+    return locks
 
 
 def relative(f, d='lib'):
