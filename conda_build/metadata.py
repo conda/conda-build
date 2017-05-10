@@ -1286,6 +1286,7 @@ class MetaData(object):
             self.config.host_platform = 'noarch'
 
     def get_output_metadata(self, output):
+        self.config.target_subdir = output.get('target', self.config.host_subdir)
         if self.name() == output.get('name'):
             output_metadata = self
         else:
@@ -1312,7 +1313,6 @@ class MetaData(object):
                 subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
                 build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
                 run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
-            output_metadata.config.host_subdir = output.get('target', self.config.host_subdir)
 
             if 'about' in output:
                 output_metadata.meta['about'] = output['about']

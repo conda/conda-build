@@ -9,6 +9,10 @@ requirements:
   build:
     - {{ compiler('c') }}
 
+outputs:
+  - name: {{ PKG_NAME }}
+    target: {{ target_platform }}
+
 build:
   script:
     - env | sort
