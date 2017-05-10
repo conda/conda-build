@@ -91,7 +91,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
 def write_pth(egg_path, config):
     fn = basename(egg_path)
-    with open(join(utils.get_site_packages(config.build_prefix),
+    with open(join(utils.get_site_packages(config.build_prefix, get_py_ver(config)),
                    '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 

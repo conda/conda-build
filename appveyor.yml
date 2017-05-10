@@ -75,14 +75,14 @@ test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
   - mkdir C:\cbtmp
-  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial" --durations=15
   - rd /S /Q C:\cbtmp
-  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --durations=15
 
 on_failure:
   - 7z.exe a cbtmp.7z C:\cbtmp
   - appveyor PushArtifact cbtmp.7z
 
 on_success:
-  - pip install codecov
+  - pip install -I codecov==2.0.5
   - codecov --env PYTHON_VERSION

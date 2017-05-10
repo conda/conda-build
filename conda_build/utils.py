@@ -162,10 +162,8 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
             log.warn('path %s is a broken symlink - ignoring copy', src)
             return
 
-        cleanup_lock = False
-        if not lock:
+        if not lock and locking:
             lock = get_lock(src_folder, timeout=timeout)
-            cleanup_lock = True
         locks = [lock] if locking else []
         with try_acquire_locks(locks, timeout):
             # if intermediate folders not not exist create them
@@ -180,9 +178,6 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True):
             except shutil.Error:
                 log.debug("skipping %s - already exists in %s",
                             os.path.basename(src), dst)
-            finally:
-                if cleanup_lock:
-                    rm_rf(lock.lock_file)
 
 
 # http://stackoverflow.com/a/22331852/1170370
@@ -243,9 +238,10 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True):
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
-    if not lock:
-        lock = get_lock(src, timeout=timeout)
+    locks = []
     if locking:
+        if not lock:
+            lock = get_lock(src, timeout=timeout)
         locks = [lock]
     with try_acquire_locks(locks, timeout):
         copytree(src, dst, symlinks=symlinks)
@@ -259,7 +255,7 @@ _lock_folders = (os.path.join(root_dir, 'locks'),
                  os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
-def get_lock(folder, timeout=90, filename=".conda_lock"):
+def get_lock(folder, timeout=90):
     global _locations
     try:
         location = os.path.abspath(os.path.normpath(folder))
