@@ -23,7 +23,6 @@ from .conda_interface import md5_file
 from .conda_interface import PY3
 
 from conda_build import utils
-from conda_build.environ import get_py_ver
 
 if sys.platform.startswith('linux'):
     from conda_build.os_utils import elf
