@@ -5,6 +5,7 @@ Functions related to creating repodata index files.
 from __future__ import absolute_import, division, print_function
 
 import bz2
+import contextlib
 from functools import partial
 import json
 import logging
@@ -197,12 +198,14 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                   "= {}".format(subdir, config.channel_urls, not omit_defaults))
         # priority: local by croot (can vary), then channels passed as args,
         #     then channels from config.
+        capture = contextlib.contextmanager(lambda: (yield))
         if config.debug:
             log_context = partial(utils.LoggingContext, logging.DEBUG)
         elif config.verbose:
             log_context = partial(utils.LoggingContext, logging.INFO)
         else:
             log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
+            capture = utils.capture
 
         urls = list(config.channel_urls)
         if os.path.isdir(output_folder):
@@ -211,7 +214,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
 
         # silence output from conda about fetching index files
         with log_context():
-            with utils.capture():
+            with capture():
                 # replace noarch with native subdir - this ends up building an index with both the
                 #      native content and the noarch content.
                 if subdir == 'noarch':
