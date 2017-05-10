@@ -26,7 +26,8 @@ def create_files(dir_path, m, config):
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(dir_path, fn), config.timeout, locking=config.locking)
+        # disable locking to avoid locking a temporary directory (the extracted test folder)
+        copy_into(path, join(dir_path, fn), config.timeout, locking=False)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(config.work_dir):
         source.provide(m, config=config)
@@ -40,8 +41,9 @@ def create_files(dir_path, m, config):
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
             try:
+                # disable locking to avoid locking a temporary directory (the extracted test folder)
                 copy_into(f, f.replace(config.work_dir, config.test_dir), config.timeout,
-                        locking=config.locking)
+                          locking=False)
             except OSError as e:
                 log = logging.getLogger(__name__)
                 log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
@@ -68,7 +70,8 @@ def create_shell_files(dir_path, m, config):
         name = "run_test{}".format(ext)
 
     if exists(join(m.path, name)):
-        copy_into(join(m.path, name), dir_path, config.timeout, locking=config.locking)
+        # disable locking to avoid locking a temporary directory (the extracted test folder)
+        copy_into(join(m.path, name), dir_path, config.timeout, locking=False)
         has_tests = True
 
     with open(join(dir_path, name), 'a') as f:

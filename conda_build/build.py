@@ -942,7 +942,9 @@ def bundle_conda(output, metadata, config, env, **kw):
         if os.path.isfile(final_output):
             os.remove(final_output)
         print(final_output)
-        utils.copy_into(tmp_path, final_output, config.timeout, locking=config.locking)
+        # disable locking here.  It's just a temp folder getting locked.  Removing it proved to be
+        #    a major bottleneck.
+        utils.copy_into(tmp_path, final_output, config.timeout, locking=False)
 
     update_index(os.path.dirname(output_folder), config=config)
 
