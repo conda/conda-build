@@ -1,3 +1,18 @@
+2017-05-10 2.1.13:
+
+Bug fixes:
+----------
+
+* fix missing argument to get_site_packages function; add test coverage  #2009
+* pin codecov on appveyor to 2.0.5 for now  #2009
+* fix lock removal (just don't create locks for temporary directories)  #2009
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-05-09 2.1.12:
 
 Bug fixes:
