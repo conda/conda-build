@@ -61,13 +61,8 @@ def validate_variant(variant):
 def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False):
     """Find files to load variables from.  Note that order here determines clobbering.
 
-    Later files clobber earlier ones.  Preference is system-wide, then """
+    Later files clobber earlier ones.  order is user-wide < cwd < recipe dir < additional files"""
     files = []
-
-    if hasattr(metadata_or_path, 'path'):
-        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
-    else:
-        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
 
     if not ignore_system_config:
         if cc_conda_build.get('config_file'):
@@ -76,10 +71,21 @@ def find_config_files(metadata_or_path, additional_files=None, ignore_system_con
             system_path = os.path.join(os.path.expanduser('~'), "conda_build_config.yaml")
         if os.path.isfile(system_path):
             files.append(system_path)
+
+    cwd = os.path.join(os.getcwd(), 'conda_build_config.yaml')
+    if os.path.isfile(cwd):
+        files.append(cwd)
+
+    if hasattr(metadata_or_path, 'path'):
+        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
+    else:
+        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
     if os.path.isfile(recipe_config):
         files.append(recipe_config)
+
     if additional_files:
         files.extend([os.path.expanduser(additional_file) for additional_file in additional_files])
+
     return files
 
 
