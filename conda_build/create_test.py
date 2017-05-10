@@ -103,18 +103,18 @@ def _create_test_files(m, ext, comment_char='# '):
 
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
-            fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
-            fo.write("print('===== testing package: %s =====')\n" % m.dist())
+            fo.write("%s tests for %s (this is a generated file);\n" % (comment_char, m.dist()))
+            fo.write("print('===== testing package: %s =====');\n" % m.dist())
 
             try:
                 with open(test_file) as fi:
-                    fo.write("print('running {0}')\n".format(name))
+                    fo.write("print('running {0}');\n".format(name))
                     fo.write("{0} --- {1} (begin) ---\n".format(comment_char, name))
                     fo.write(fi.read())
                     fo.write("{0} --- {1} (end) ---\n".format(comment_char, name))
             except AttributeError:
                 fo.write("# tests were not packaged with this module, and cannot be run\n")
-            fo.write("\nprint('===== %s OK =====')\n" % m.dist())
+            fo.write("\nprint('===== %s OK =====');\n" % m.dist())
 
     return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
 
