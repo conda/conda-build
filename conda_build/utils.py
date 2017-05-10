@@ -26,7 +26,8 @@ from distutils.version import LooseVersion
 import filelock
 
 from conda import __version__ as conda_version
-from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
+
+from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import string_types, url_path, get_rc_urls
@@ -402,6 +403,7 @@ def unzip(zip_path, dir_path):
 def file_info(path):
     return {'size': getsize(path),
             'md5': md5_file(path),
+            'sha256': hashsum_file(path, 'sha256'),
             'mtime': getmtime(path)}
 
 # Taken from toolz
