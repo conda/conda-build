@@ -5,13 +5,12 @@
 from glob import glob
 import json
 import os
+import re
 import sys
 import yaml
 
-from distutils.version import LooseVersion
 import pytest
 
-import conda
 from conda_build.conda_interface import download
 from conda_build.tarcheck import TarCheck
 
@@ -64,6 +63,20 @@ def test_build_without_channel_fails(testing_workdir):
     args = ['--no-anaconda-upload', '--no-activate',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
+
+
+def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    args = ['--output', testing_workdir, '--old-build-string']
+    main_render.execute(args)
+    output, error = capfd.readouterr()
+    assert not re.search('h[0-9a-f]{%d}' % testing_metadata.config.hash_length, output)
+
+    args = ['--no-anaconda-upload', '--no-activate', testing_workdir, '--old-build-string']
+    main_build.execute(args)
+    output, error = capfd.readouterr()
+    assert not re.search('h[0-9a-f]{%d}' % testing_metadata.config.hash_length, output)
+    assert not re.search('h[0-9a-f]{%d}' % testing_metadata.config.hash_length, error)
 
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
