@@ -814,7 +814,7 @@ class MetaData(object):
                 ms = MatchSpec(spec)
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
-            except AttributeError:
+            except (AttributeError, ValueError):
                 raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
                                    "not supported in conda-build meta.yaml.")
             if ms.name == self.name():
@@ -1358,6 +1358,22 @@ class MetaData(object):
         if test_script:
             utils.copy_into(os.path.join(self.path, test_script),
                             os.path.join(self.config.work_dir, test_script))
+
+        # make sure that subpackages do not duplicate tests from top-level recipe
+        test = output_metadata.meta.get('test', {})
+        if output.get('name') != self.name():
+            if 'commands' in test:
+                del test['commands']
+            if 'imports' in test:
+                del test['imports']
+
+        # make sure that subpackages do not duplicate top-level entry-points
+        build = output_metadata.meta.get('build', {})
+        if 'entry_points' in output:
+            build['entry_points'] = output['entry_points']
+        elif 'entry_points' in build:
+            del build['entry_points']
+        output_metadata.meta['build'] = build
 
         return output_metadata
 

@@ -17,8 +17,9 @@ from conda_build.tarcheck import TarCheck
 
 from conda_build import api
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
-                               check_call_env)
+                               check_call_env, tar_xf)
 from conda_build.conda_interface import TemporaryDirectory
+from conda_build.environ import get_py_ver
 from .utils import metadata_dir, put_bad_conda_on_path
 
 import conda_build.cli.main_build as main_build
@@ -379,7 +380,6 @@ def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")
-    from conda_build.utils import tar_xf
     tar_xf("conda_version_test.tar.gz", testing_env)
     extract_folder = 'conda_version_test-0.1.0-1'
     cwd = os.getcwd()

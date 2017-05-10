@@ -328,6 +328,7 @@ def perl_vars(config, prefix):
 def lua_vars(config, prefix):
     vars_ = {
             'LUA_VER': get_lua_ver(config),
+            'CONDA_LUA': get_lua_ver(config),
              }
     lua = config.lua_bin(prefix)
     if os.path.isfile(lua):
@@ -341,6 +342,7 @@ def lua_vars(config, prefix):
 def r_vars(config, prefix):
     vars_ = {
             'R_VER': get_r_ver(config),
+            'CONDA_R': get_r_ver(config),
             }
     r = config.r_bin(prefix)
     if os.path.isfile(r):

@@ -27,7 +27,8 @@ def create_files(m):
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=m.config.locking,
+        # disable locking to avoid locking a temporary directory (the extracted test folder)
+        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=False,
                   clobber=True)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(m.config.work_dir):
@@ -42,8 +43,9 @@ def create_files(m):
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
             try:
+                # disable locking to avoid locking a temporary directory (the extracted test folder)
                 copy_into(f, f.replace(m.config.work_dir, m.config.test_dir), m.config.timeout,
-                        locking=m.config.locking)
+                          locking=False)
             except OSError as e:
                 log = logging.getLogger(__name__)
                 log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
@@ -70,7 +72,8 @@ def create_shell_files(m):
         name = "run_test{}".format(ext)
 
     if exists(join(m.path, name)):
-        copy_into(join(m.path, name), m.config.test_dir, m.config.timeout, locking=m.config.locking)
+        # disable locking to avoid locking a temporary directory (the extracted test folder)
+        copy_into(join(m.path, name), m.config.test_dir, m.config.timeout, locking=False)
         has_tests = True
 
     commands = ensure_list(m.get_value('test/commands', []))

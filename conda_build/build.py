@@ -683,7 +683,8 @@ def bundle_conda(output, metadata, env, **kw):
         keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
-                            if not any(keep_file == item for keep_file in keep_files))
+                            if not any(keep_file.startswith(item + os.path.sep)
+                                       for keep_file in keep_files))
 
     files = post_process_files(metadata, initial_files)
 
@@ -750,8 +751,11 @@ def bundle_conda(output, metadata, env, **kw):
         final_output = os.path.join(output_folder, output_filename)
         if os.path.isfile(final_output):
             os.remove(final_output)
+
+        # disable locking here.  It's just a temp folder getting locked.  Removing it proved to be
+        #    a major bottleneck.
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
-                        locking=metadata.config.locking)
+                        locking=False)
     update_index(output_folder, config=metadata.config)
 
     # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
@@ -1329,10 +1333,11 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             utils.rm_rf(recipe_dir)
         utils.rm_rf(metadata.config.test_prefix)
         print("TEST END:", test_package_name)
+
     return True
 
 
-def tests_failed(m, move_broken, broken_dir, config):
+def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     '''
     Causes conda to exit if any of the given package's tests failed.
 
@@ -1342,9 +1347,15 @@ def tests_failed(m, move_broken, broken_dir, config):
     if not isdir(broken_dir):
         os.makedirs(broken_dir)
 
+    if hasattr(package_or_metadata, 'config'):
+        pkg = bldpkg_path(package_or_metadata)
+    else:
+        pkg = package_or_metadata
+    dest = join(broken_dir, os.path.basename(pkg))
+
     if move_broken:
-        shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
-    sys.exit("TESTS FAILED: " + m.dist())
+        shutil.move(pkg, dest)
+    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
 def check_external():
@@ -1506,7 +1517,6 @@ for Python 3.5 and needs to be rebuilt."""
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
-
         finally:
             # clean up locks to avoid permission errors when they exist in central installs
             for (m, _, _) in metadata_tuples:
