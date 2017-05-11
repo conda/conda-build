@@ -311,6 +311,7 @@ class Config(object):
             res = join(prefix, 'bin/perl')
         return res
 
+    # TODO: This is probably broken on Windows, but no one has a lua package on windows to test.
     def _get_lua(self, prefix):
         lua_ver = self.variant.get('lua', get_default_variants()[0]['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"

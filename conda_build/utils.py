@@ -36,7 +36,6 @@ from .conda_interface import VersionOrder
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf  # NOQA
 import conda_build
-
 from conda_build.os_utils import external
 
 if PY3:
@@ -199,7 +198,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clo
             log.warn('path %s is a broken symlink - ignoring copy', src)
             return
 
-        if not lock:
+        if not lock and locking:
             lock = get_lock(src_folder, timeout=timeout)
         locks = [lock] if locking else []
         with try_acquire_locks(locks, timeout):
@@ -210,7 +209,6 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clo
                     os.makedirs(dst_folder)
                 except OSError:
                     pass
-
             try:
                 _copy_with_shell_fallback(src, dst_fn)
             except shutil.Error:
@@ -276,9 +274,10 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, cl
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
-    if not lock:
-        lock = get_lock(src, timeout=timeout)
+    locks = []
     if locking:
+        if not lock:
+            lock = get_lock(src, timeout=timeout)
         locks = [lock]
     with try_acquire_locks(locks, timeout):
         copytree(src, dst, symlinks=symlinks)
@@ -292,7 +291,7 @@ _lock_folders = (os.path.join(root_dir, 'locks'),
                  os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
-def get_lock(folder, timeout=90, filename=".conda_lock"):
+def get_lock(folder, timeout=90):
     global _locations
     try:
         location = os.path.abspath(os.path.normpath(folder))

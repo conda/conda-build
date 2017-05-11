@@ -1,0 +1,16 @@
+package:
+  name: test_preserve_egg_dir
+  version: 1.0
+
+source:
+  path: ../../test-package
+
+build:
+  preserve_egg_dir: True
+  script: python setup.py install
+
+requirements:
+  build:
+    - python
+  run:
+    - python

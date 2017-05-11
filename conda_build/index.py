@@ -10,7 +10,6 @@ from functools import partial
 import json
 import logging
 import os
-import sys
 import tarfile
 from os.path import isfile, join, getmtime
 
@@ -26,6 +25,7 @@ cached_channels = []
 
 def read_index_tar(tar_path, config, lock):
     """ Returns the index.json dict inside the given package tarball. """
+    locks = []
     if config.locking:
         locks = [lock]
     with try_acquire_locks(locks, config.timeout):
@@ -47,6 +47,7 @@ def write_repodata(repodata, dir_path, lock, config=None):
     if not config:
         import conda_build.config
         config = conda_build.config.config
+    locks = []
     if config.locking:
         locks = [lock]
     with try_acquire_locks(locks, config.timeout):
@@ -106,13 +107,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         subdir = None
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-        if could_be_mirror and any(fn.startswith('_license-') for fn in files):
-            sys.exit("""\
-    Error:
-        Indexing a copy of the Anaconda conda package channel is neither
-        necessary nor supported.  If you wish to add your own packages,
-        you can do so by adding them to a separate channel.
-    """)
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:

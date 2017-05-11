@@ -99,7 +99,7 @@ def write_pth(egg_path, config):
     fn = os.path.basename(egg_path)
     py_ver = '.'.join(config.variant['python'].split('.')[:2])
     with open(os.path.join(utils.get_site_packages(config.build_prefix, py_ver),
-                   '%s.pth' % (fn.split('-')[0])), 'w') as fo:
+                           '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
 

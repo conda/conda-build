@@ -407,26 +407,6 @@ def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
 
 
-def test_debug_build_option(testing_metadata, caplog, capfd):
-    info_message = "INFO"
-    debug_message = "DEBUG"
-    testing_metadata.config.debug = False
-    testing_metadata.config.verbose = False
-    with caplog.at_level(logging.INFO):
-        api.build(testing_metadata)
-        # this comes from an info message
-        assert info_message in caplog.text
-        # this comes from a debug message
-        assert debug_message not in caplog.text
-
-    testing_metadata.config.debug = True
-    api.build(testing_metadata)
-    # this comes from an info message
-    assert info_message in caplog.text
-    # this comes from a debug message
-    assert debug_message in caplog.text
-
-
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
 def test_backslash_in_always_include_files_path(testing_config):
     api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
@@ -1020,3 +1000,11 @@ def test_run_constrained_stores_constrains_info(testing_config):
     assert 'constrains' in info_contents
     assert len(info_contents['constrains']) == 1
     assert info_contents['constrains'][0] == 'bzip2  1.*'
+
+
+@pytest.mark.serial
+def test_no_locking(testing_config):
+    recipe = os.path.join(metadata_dir, 'source_git_jinja2')
+    api.update_index(os.path.join(testing_config.croot, testing_config.subdir),
+                     config=testing_config)
+    api.build(recipe, config=testing_config, locking=False)
