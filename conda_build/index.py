@@ -184,7 +184,8 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     if os.path.isfile(index_file):
         mtime = os.path.getmtime(index_file)
 
-    if (not os.path.isfile(index_file) or
+    if (clear_cache or
+            not os.path.isfile(index_file) or
             local_subdir != subdir or
             mtime > local_index_timestamp or
             cached_channels != config.channel_urls):
@@ -216,7 +217,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                 try:
                     cached_index = get_index(channel_urls=urls,
                                     prepend=not omit_defaults,
-                                    use_local=True,
+                                    use_local=False,
                                     use_cache=False,
                                     platform=subdir)
                 # HACK: defaults does not have the many subfolders we support.  Omit it and
@@ -226,7 +227,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                         urls.remove('defaults')
                     cached_index = get_index(channel_urls=urls,
                                              prepend=omit_defaults,
-                                             use_local=True,
+                                             use_local=False,
                                              use_cache=False,
                                              platform=subdir)
         local_index_timestamp = mtime

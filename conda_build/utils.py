@@ -43,7 +43,7 @@ if PY3:
     import urllib.request as urllib
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
-    PermissionError = PermissionError
+    PermissionError = PermissionError  # NOQA
 else:
     import urlparse
     import urllib

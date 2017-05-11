@@ -446,7 +446,7 @@ def get_entry_point_script_names(entry_point_scripts):
 
 
 def write_run_exports(m):
-    if 'run_exports' in m.meta.get('build', {}):
+    if m.meta.get('build', {}).get('run_exports'):
         with open(os.path.join(m.config.info_dir, 'run_exports'), 'w') as f:
             for pin in utils.ensure_list(m.meta['build']['run_exports']):
                 f.write(pin + "\n")
@@ -713,8 +713,6 @@ def bundle_conda(output, metadata, env, **kw):
     files = set(utils.prefix_files(metadata.config.host_prefix)) - initial_files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
 
-    # lock the output directory while we build this file
-    # create the tarball in a temporary directory to minimize lock time
     with TemporaryDirectory() as tmp:
         tmp_path = os.path.join(tmp, os.path.basename(output_filename))
         t = tarfile.open(tmp_path, 'w:bz2')
@@ -837,6 +835,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
     host_actions = []
     host_index = {}
     build_actions = []
+    output_metas = []
 
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(config=m.config, m=m)
@@ -845,9 +844,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if post in [False, None]:
-        if m.uses_jinja and (need_source_download or need_reparse_in_env):
-            print("    (actual version deferred until further download or env creation)")
-
         specs = [ms.spec for ms in m.ms_depends('build')]
         if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
             specs.extend(['pip', 'wheel'])
@@ -942,7 +938,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
         if m.config.skip_existing:
-            package_locations = [is_package_built(om) for om, _, _ in output_metas]
+            package_locations = [is_package_built(om) for _, om in output_metas]
             if all(package_locations):
                 print("Packages for ", m.path or m.name(),
                         "are already built in {0}, skipping.".format(package_locations))
@@ -950,7 +946,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             else:
                 package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
         else:
-            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
+            package_locations = [bldpkg_path(om) for _, om in output_metas]
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
@@ -1006,7 +1002,17 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
     new_pkgs = default_return
     if post in [True, None]:
-        outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        top_level_meta = m
+
+        # this is the old, default behavior: conda package, with difference between start
+        #    set of files and end set of files
+        prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
+        if os.path.isfile(prefix_file_list):
+            with open(prefix_file_list) as f:
+                initial_files = set(f.read().splitlines())
+        else:
+            initial_files = set()
 
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
@@ -1019,6 +1025,11 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 os.path.join(prefix_files_backup, f),
                                 symlinks=True)
             for (output_d, m) in outputs:
+                if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
+                                                                           output_d.get('script'))):
+                    output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
+                                         initial_files)
+
                 assert m.final, "output metadata for {} is not finalized".format(m.dist())
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
@@ -1054,6 +1065,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
                     built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                     new_pkgs[built_package] = (output_d, m)
+
                     # must rebuild index because conda has no way to incrementally add our last
                     #    package to the index.
 
@@ -1446,7 +1458,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 # We get one tuple per variant
                 metadata_tuples = render_recipe(recipe, config=config, variants=variants,
                                                 permit_unsatisfiable_variants=False,
-                                                reset_build_id=not config.dirty)
+                                                reset_build_id=not config.dirty,
+                                                bypass_env_check=True)
             # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
             if post in (True, False):

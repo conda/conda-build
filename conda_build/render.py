@@ -80,7 +80,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None):
                 if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
-            pass_through_deps.append(spec.split(' ')[0])
+            pass_through_deps.append(spec)
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     dependencies = list(set(dependencies))
@@ -182,7 +182,7 @@ def get_upstream_pins(m, actions, index):
     return additional_specs
 
 
-def finalize_metadata(m, finalized_outputs=None):
+def finalize_metadata(m):
     """Fully render a recipe.  Fill in versions for build dependencies."""
     index, index_ts = get_build_index(m.config, m.config.build_subdir)
 
@@ -238,7 +238,6 @@ def finalize_metadata(m, finalized_outputs=None):
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
 
-    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
     for env, values in (('build', build_deps), ('run', versioned_run_deps)):
         if values:
             requirements[env] = list({strip_channel(dep) for dep in values})
@@ -309,7 +308,7 @@ def reparse(metadata):
 
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
-                        allow_no_other_outputs=False):
+                        allow_no_other_outputs=False, bypass_env_check=False):
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
@@ -333,7 +332,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     future rendering
             mv.final = False
             mv.config.variant = {}
-            mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
+            mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True,
+                           bypass_env_check=True)
             vars_in_recipe = set(mv.undefined_jinja_vars)
 
             mv.config.variant = variant
@@ -369,7 +369,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 
             if not need_reparse_in_env:
                 try:
-                    mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs)
+                    mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
+                                            bypass_env_check=bypass_env_check)
                     need_source_download = (bool(mv.meta.get('source')) and
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
@@ -421,20 +422,12 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
     for (_m, download, reparse) in metadata_tuples:
         for (output_dict, m) in _m.get_output_metadata_set():
-            if output_dict.get('type') != 'wheel':
-                try:
-                    m = finalize_metadata(m)
-                except DependencyNeedsBuildingError:
-                    log = utils.get_logger(__name__)
-                    log.warn("Could not finalize metadata due to missing dependencies.  "
-                                "If building, these should get built in order and it's OK to "
-                                "ignore this message..")
-                expanded_outputs[m.dist()] = (m, download, reparse)
+            expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None,
-                  permit_unsatisfiable_variants=True, reset_build_id=True):
+                  permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -486,7 +479,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
                                       len(os.listdir(m.config.work_dir)) == 0):
         try_download(m, no_download_source=no_download_source)
-        # old_src_dir = m.config.work_dir
 
     if m.final:
         rendered_metadata = [(m, False, False), ]
@@ -498,16 +490,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                     get_package_variants(m))
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    allow_no_other_outputs=True)
-
-    # if config.set_build_id:
-    #     m.config.compute_build_id(m.name(), reset=reset_build_id)
-        # move any existing downloaded source into the new location
-        # if old_src_dir:
-        #     shutil.move(old_src_dir, m.config.work_dir)
-        # for rm, _, _ in rendered_metadata:
-        #     rm.config.build_id = m.config.build_id
-
+                                    allow_no_other_outputs=True, bypass_env_check=bypass_env_check)
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 

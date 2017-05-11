@@ -501,16 +501,49 @@ def toposort(output_metadata_map, phase):
     return result
 
 
-def output_dict_from_top_level_meta(m, files=None):
+def output_dict_from_top_level_meta(m):
     requirements = m.meta.get('requirements', {})
     output_d = {'name': m.name(), 'requirements': requirements,
-                'run_exports': m.meta.get('build', {}).get('run_exports'),
                 'noarch_python': m.get_value('build/noarch_python'),
                 'noarch': m.get_value('build/noarch'),
                 'type': 'conda',
                 }
-    if files:
-        output_d['files'] = files
+
+    run_exports = m.meta.get('build', {}).get('run_exports')
+    if run_exports:
+        output_d['run_exports'] = run_exports
+    return output_d
+
+
+def get_output_dicts_from_metadata(metadata):
+    outputs = metadata.get_section('outputs')
+
+    if not outputs:
+        outputs = [output_dict_from_top_level_meta(metadata)]
+    else:
+        # make a metapackage for the top-level package if the top-level requirements
+        #     mention a subpackage,
+        # but only if a matching output name is not explicitly provided
+        if metadata.uses_subpackage and not any(metadata.name() == out.get('name', '')
+                                            for out in outputs):
+            outputs.append(output_dict_from_top_level_meta(metadata))
+    for out in outputs:
+        if (metadata.name() == out.get('name', '') and not (out.get('files') or
+                                                        out.get('script'))):
+            out['requirements'] = metadata.meta.get('requirements', {})
+            out['noarch_python'] = out.get('noarch_python',
+                                            metadata.get_value('build/noarch_python'))
+            out['noarch'] = out.get('noarch', metadata.get_value('build/noarch'))
+    return outputs
+
+
+def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
+    output_d = original_dict
+    if 'name' in original_dict:
+        output_ds = [out for out in new_outputs if 'name' in out and
+                    out['name'] == original_dict['name']]
+        assert len(output_ds) == 1
+        output_d = output_ds[0]
     return output_d
 
 
@@ -582,7 +615,8 @@ class MetaData(object):
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
 
-    def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False):
+    def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False,
+                    bypass_env_check=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -609,7 +643,8 @@ class MetaData(object):
             # we sometimes create metadata from dictionaries, in which case we'll have no path
             if self.meta_path:
                 self.meta = parse(self._get_contents(permit_undefined_jinja,
-                                                     allow_no_other_outputs=allow_no_other_outputs),
+                                                     allow_no_other_outputs=allow_no_other_outputs,
+                                                     bypass_env_check=bypass_env_check),
                                   config=self.config,
                                   path=self.meta_path)
 
@@ -664,7 +699,7 @@ class MetaData(object):
                 run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self, allow_no_other_outputs=False):
+    def parse_until_resolved(self, allow_no_other_outputs=False, bypass_env_check=False):
         """variant contains key-value mapping for additional functions and values
         for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
@@ -673,13 +708,15 @@ class MetaData(object):
         #   can reset it (to True)
         final = self.final
         # always parse again at least once.
-        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=allow_no_other_outputs)
+        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=allow_no_other_outputs,
+                         bypass_env_check=bypass_env_check)
         self.final = final
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
             self.parse_again(permit_undefined_jinja=True,
-                             allow_no_other_outputs=allow_no_other_outputs)
+                             allow_no_other_outputs=allow_no_other_outputs,
+                             bypass_env_check=bypass_env_check)
             self.final = final
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
@@ -687,7 +724,8 @@ class MetaData(object):
 
         # always parse again at the end, too.
         self.parse_again(permit_undefined_jinja=False,
-                         allow_no_other_outputs=allow_no_other_outputs)
+                         allow_no_other_outputs=allow_no_other_outputs,
+                         bypass_env_check=bypass_env_check)
         self.final = final
 
     @classmethod
@@ -1052,7 +1090,8 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False):
+    def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False,
+                      bypass_env_check=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1099,7 +1138,8 @@ class MetaData(object):
         env.globals.update(ns_cfg(self.config))
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
-                                             allow_no_other_outputs=allow_no_other_outputs))
+                                             allow_no_other_outputs=allow_no_other_outputs,
+                                             bypass_env_check=bypass_env_check))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1279,69 +1319,89 @@ class MetaData(object):
         elif value:
             self.config.host_platform = 'noarch'
 
+    def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
+        output_metadata.meta['package']['name'] = output_dict.get('name', self.name())
+
+        # make sure that subpackages do not duplicate tests from top-level recipe
+        test = output_metadata.meta.get('test', {})
+        if output_dict.get('name') != self.name():
+            if 'commands' in test:
+                del test['commands']
+            if 'imports' in test:
+                del test['imports']
+
+        # make sure that subpackages do not duplicate top-level entry-points
+        build = output_metadata.meta.get('build', {})
+        if 'entry_points' in output_dict:
+            build['entry_points'] = output_dict['entry_points']
+        elif 'entry_points' in build:
+            del build['entry_points']
+        output_metadata.meta['build'] = build
+
+        # reset these so that reparsing does not reset the metadata name
+        output_metadata.path = ""
+        output_metadata.meta_path = ""
+
     def get_output_metadata(self, output):
         self.config.target_subdir = output.get('target', self.config.host_subdir)
         if self.name() == output.get('name'):
             output_metadata = self
         else:
             output_metadata = self.copy()
-            name = output.get('name', self.name())
-            if 'type' in output and output['type'] != 'conda':
-                name = name + '_' + output['type']
+            self.reconcile_metadata_with_output_dict(output_metadata, output)
+
+        if 'type' in output and output['type'] != 'conda':
+            name = output.get('name', self.name()) + '_' + output['type']
             output_metadata.meta['package']['name'] = name
-            requirements = output_metadata.meta.get('requirements', {})
-            output_reqs = output.get('requirements', {})
-            if hasattr(output_reqs, 'keys'):
-                build_reqs = output_reqs.get('build', [])
-                run_reqs = output_reqs.get('run', [])
-                constrain_reqs = output_reqs.get('run_constrained', [])
-            else:
-                output_reqs = ensure_list(output_reqs)
-                build_reqs = output_reqs
-                run_reqs = output_reqs
-                constrain_reqs = []
-            if 'name' in output:
-                # since we are copying reqs from the top-level package, which
-                #   can depend on subpackages, make sure that we filter out
-                #   subpackages so that they don't depend on themselves
-                subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
-                build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
-                run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
 
-            if 'about' in output:
-                output_metadata.meta['about'] = output['about']
+        output_reqs = output.get('requirements', {})
+        if hasattr(output_reqs, 'keys'):
+            build_reqs = output_reqs.get('build', [])
+            run_reqs = output_reqs.get('run', [])
+            constrain_reqs = output_reqs.get('run_constrained', [])
+        else:
+            output_reqs = ensure_list(output_reqs)
+            build_reqs = output_reqs
+            run_reqs = output_reqs
+            constrain_reqs = []
 
-            requirements['build'] = build_reqs
-            requirements['run'] = run_reqs
-            if constrain_reqs:
-                requirements['run_constrained'] = constrain_reqs
-            output_metadata.meta['requirements'] = requirements
-            output_metadata.meta['package']['version'] = output.get('version') or self.version()
+        if 'name' in output:
+            # since we are copying reqs from the top-level package, which
+            #   can depend on subpackages, make sure that we filter out
+            #   subpackages so that they don't depend on themselves
+            subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
+            build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
+            run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
+
+        if 'about' in output:
+            output_metadata.meta['about'] = output['about']
+
+        requirements = {'build': build_reqs, 'run': run_reqs}
+        if constrain_reqs:
+            requirements['run_constrained'] = constrain_reqs
+        output_metadata.meta['requirements'] = requirements
+        output_metadata.meta['package']['version'] = output.get('version') or self.version()
+        extra = self.meta.get('extra', {})
+        if self.name() == output.get('name') and 'requirements' not in output:
+            output['requirements'] = requirements
+        output_metadata.meta['extra'] = extra
+        output_metadata.final = False
+        if self.name() != output_metadata.name():
             extra = self.meta.get('extra', {})
-            if self.name() == output.get('name') and 'requirements' not in output:
-                output['requirements'] = requirements
+            extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
+                                    'version': self.version()}
             output_metadata.meta['extra'] = extra
-            output_metadata.final = False
-            if self.name() != output_metadata.name():
-                extra = self.meta.get('extra', {})
-                extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
-                                        'version': self.version()}
-                output_metadata.meta['extra'] = extra
-            output_metadata.noarch = output.get('noarch', False)
-            output_metadata.noarch_python = output.get('noarch_python', False)
-            # primarily for tests - make sure that we keep the platform consistent (setting noarch
-            #      would reset it)
-            if (not (output_metadata.noarch or output_metadata.noarch_python) and
-                    self.config.platform != output_metadata.config.platform):
-                output_metadata.config.platform = self.config.platform
-            if 'run_exports' in output:
-                build = output_metadata.meta.get('build', {})
-                build['run_exports'] = output['run_exports']
-                output_metadata.meta['build'] = build
-
-            # reset these so that reparsing does not reset the metadata name
-            output_metadata.path = ""
-            output_metadata.meta_path = ""
+        output_metadata.noarch = output.get('noarch', False)
+        output_metadata.noarch_python = output.get('noarch_python', False)
+        # primarily for tests - make sure that we keep the platform consistent (setting noarch
+        #      would reset it)
+        if (not (output_metadata.noarch or output_metadata.noarch_python) and
+                self.config.platform != output_metadata.config.platform):
+            output_metadata.config.platform = self.config.platform
+        if 'run_exports' in output and output['run_exports']:
+            build = output_metadata.meta.get('build', {})
+            build['run_exports'] = output['run_exports']
+            output_metadata.meta['build'] = build
 
         # ensure that packaging scripts are copied over into the workdir
         if 'script' in output:
@@ -1353,28 +1413,11 @@ class MetaData(object):
             utils.copy_into(os.path.join(self.path, test_script),
                             os.path.join(self.config.work_dir, test_script))
 
-        # make sure that subpackages do not duplicate tests from top-level recipe
-        test = output_metadata.meta.get('test', {})
-        if output.get('name') != self.name():
-            if 'commands' in test:
-                del test['commands']
-            if 'imports' in test:
-                del test['imports']
-
-        # make sure that subpackages do not duplicate top-level entry-points
-        build = output_metadata.meta.get('build', {})
-        if 'entry_points' in output:
-            build['entry_points'] = output['entry_points']
-        elif 'entry_points' in build:
-            del build['entry_points']
-        output_metadata.meta['build'] = build
-
         return output_metadata
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=True):
         from .render import finalize_metadata
-
         out_metadata_map = {}
 
         for variant in (self.config.variants if hasattr(self.config, 'variants')
@@ -1382,37 +1425,11 @@ class MetaData(object):
             om = self.copy()
             om.final = False
             om.config.variant = variant
-            om.parse_until_resolved(allow_no_other_outputs=True)
+            om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+            outputs = get_output_dicts_from_metadata(om)
 
-            outputs = om.get_section('outputs')
-
-            # this is the old, default behavior: conda package, with difference between start
-            #    set of files and end set of files
-            prefix_file_list = join(om.config.build_folder, 'prefix_files.txt')
-            if os.path.isfile(prefix_file_list):
-                with open(prefix_file_list) as f:
-                    initial_files = set(f.read().splitlines())
-            else:
-                initial_files = set()
-            files = utils.prefix_files(prefix=om.config.host_prefix) - initial_files
             try:
-                if not outputs:
-                    outputs = [output_dict_from_top_level_meta(om, files)]
-                else:
-                    # make a metapackage for the top-level package if the top-level requirements
-                    #     mention a subpackage,
-                    # but only if a matching output name is not explicitly provided
-                    if om.uses_subpackage and not any(om.name() == out.get('name', '')
-                                                        for out in outputs):
-                        outputs.append(output_dict_from_top_level_meta(om, files))
                 for out in outputs:
-                    if (om.name() == out.get('name', '') and not (out.get('files') or
-                                                                    out.get('script'))):
-                        out['files'] = files
-                        out['requirements'] = om.meta.get('requirements', {})
-                        out['noarch_python'] = out.get('noarch_python',
-                                                        om.get_value('build/noarch_python'))
-                        out['noarch'] = out.get('noarch', om.get_value('build/noarch'))
                     out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
             except SystemExit:
                 if not permit_undefined_jinja:
@@ -1423,28 +1440,47 @@ class MetaData(object):
         non_conda_packages = []
         outputs = OrderedDict()
 
-        # variant is already rolled in from above
-        for output_d, metadata in render_order.items():
-            metadata.other_outputs = outputs
-            try:
-                metadata.parse_until_resolved(allow_no_other_outputs=False)
-                fm = finalize_metadata(metadata)
-                if not output_d.get('type') or output_d.get('type') == 'conda':
-                    outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
-                else:
-                    # for wheels and other non-conda packages, just append them at the end.
-                    #    no deduplication with hashes currently.
-                    # hard part about including any part of output_d
-                    #    outside of this func is that it is harder to
-                    #    obtain an exact match elsewhere
-                    non_conda_packages.append((output_d, fm))
-
-            except DependencyNeedsBuildingError as e:
-                if not permit_unsatisfiable_variants:
-                    raise
-                else:
+        # early stages don't need to do the finalization.  Skip it until the later stages
+        #     when we need it.
+        if permit_undefined_jinja:
+            outputs = render_order
+        else:
+            # variant is already rolled in from above
+            for output_d, metadata in render_order.items():
+                try:
                     log = utils.get_logger(__name__)
-                    log.warn("Could not finalize metadata due to missing dependencies: "
-                                "{}".format(e.packages))
-                    outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
+                    log.info("Attempting to finalize metadata for {}".format(metadata.name()))
+                    # this is weird, but I think necessary. We should reparse
+                    #    the top-level recipe to get all of our dependencies
+                    #    fixed up.
+                    self.other_outputs = outputs
+                    om = self.copy()
+                    om.config.variant = metadata.config.variant
+                    if not om.final:
+                        om.parse_until_resolved()
+                    # get the new output_d from the reparsed top-level metadata, so that we have any
+                    #    exact subpackage version/hash info
+                    recipe_outputs = get_output_dicts_from_metadata(om)
+                    output_d = get_updated_output_dict_from_reparsed_metadata(output_d,
+                                                                              recipe_outputs)
+                    metadata = om.get_output_metadata(output_d)
+                    fm = finalize_metadata(metadata)
+                    if not output_d.get('type') or output_d.get('type') == 'conda':
+                        outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
+                    else:
+                        # for wheels and other non-conda packages, just append them at the end.
+                        #    no deduplication with hashes currently.
+                        # hard part about including any part of output_d
+                        #    outside of this func is that it is harder to
+                        #    obtain an exact match elsewhere
+                        non_conda_packages.append((output_d, fm))
+
+                except DependencyNeedsBuildingError as e:
+                    if not permit_unsatisfiable_variants:
+                        raise
+                    else:
+                        log = utils.get_logger(__name__)
+                        log.warn("Could not finalize metadata due to missing dependencies: "
+                                    "{}".format(e.packages))
+                        outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
         return list(outputs.values()) + non_conda_packages
