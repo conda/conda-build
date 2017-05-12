@@ -71,7 +71,7 @@ def test_run_exports_in_subpackage(testing_metadata, testing_index):
     p2 = testing_metadata.copy()
     p2.meta['requirements']['build'] = ['has_run_exports']
     p2.config.index = None
-    p2_final = finalize_metadata(p2, None)
+    p2_final = finalize_metadata(p2)
     assert 'bzip2 1.0' in p2_final.meta['requirements']['run']
 
 

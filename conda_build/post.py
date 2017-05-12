@@ -89,9 +89,10 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        if hasattr(new_data, 'decode') and utils.PY3:
-            new_data = new_data.decode()
-        fo.write(new_data)
+        try:
+            fo.write(new_data)
+        except TypeError:
+            fo.write(new_data.decode())
     os.chmod(path, 0o775)
 
 
