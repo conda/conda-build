@@ -31,6 +31,7 @@ from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import string_types, url_path, get_rc_urls
+from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
 # NOQA because it is not used in this file.
@@ -701,6 +702,7 @@ def print_skip_message(metadata):
           "configuration.".format(metadata.path))
 
 
+@memoized
 def package_has_file(package_path, file_path):
     try:
         locks = get_conda_operation_locks()
