@@ -106,7 +106,7 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
                                       sys.version_info.major, sys.version_info.minor, _hash))
     output, error = capfd.readouterr()
     # assert error == ""
-    assert output.rstrip() == test_path, error
+    assert test_path in output.rstrip(), error
 
 
 def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata,
