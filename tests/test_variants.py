@@ -89,6 +89,15 @@ def test_variant_with_numpy_not_pinned_reduces_matrix():
     assert len(metadata) == 2
 
 
+def test_variant_with_numpy_pinned_has_matrix():
+    # variants are defined in yaml file in this folder
+    # there are two python versions and two numpy versions.  However, because numpy is not pinned,
+    #    the numpy dimensions should get collapsed.
+    recipe = os.path.join(recipe_dir, '04_numpy_matrix_pinned')
+    metadata = api.render(recipe)
+    assert len(metadata) == 4
+
+
 def test_pinning_in_build_requirements():
     recipe = os.path.join(recipe_dir, '05_compatible')
     metadata = api.render(recipe)[0][0]
