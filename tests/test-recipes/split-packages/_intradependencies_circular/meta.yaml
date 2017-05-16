@@ -1,0 +1,17 @@
+# What's supposed to happen here is:
+#   1. a gets rendered.  It has an unresolved run_exports entry for b (just b, without the pin)
+#   2. b gets rendered.  It has an exact reference to a.  This in turn will change b - and the loop goes on.
+#      Conda-build should not loop.
+
+package:
+  name: circular_intradependencies
+  version: 1.0
+
+outputs:
+  - name: a
+    run_exports:
+      - {{ pin_subpackage('b', exact=True) }}
+  - name: b
+    requirements:
+      build:
+        - {{ pin_subpackage('a', exact=True) }}

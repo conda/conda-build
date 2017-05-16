@@ -194,9 +194,18 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
             assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top2', ext))
         elif fn.startswith('test_split_package_entry_points'):
             # python commands will make sure that these are available.
-            # assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top1', ext))
-            # assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top2', ext))
+            assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top1', ext))
+            assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top2', ext))
             assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg1', ext))
             assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg2', ext))
         else:
             raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
+
+
+def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
+    with pytest.raises(ValueError) as e:
+        api.build(recipe_dir, config=testing_config)
+    assert e.value.args[0] == ("Infinite loop in subpackages. Exact pins in "
+            "dependencies that contribute to the hash often cause this. Can "
+            "you change one or more exact pins to version bound constraints?")

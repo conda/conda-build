@@ -254,11 +254,12 @@ trues = {'y', 'on', 'true', 'yes'}
 falses = {'n', 'no', 'false', 'off'}
 
 default_structs = {
-    'source/patches': list,
     'build/entry_points': list,
+    'build/features': list,
+    'source/patches': list,
     'build/script': list,
     'build/script_env': list,
-    'build/features': list,
+    'build/run_exports': list,
     'build/track_features': list,
     'requirements/build': list,
     'requirements/host': list,
@@ -369,7 +370,7 @@ FIELDS = {
               'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
               'script_env', 'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
-              'preferred_env', 'preferred_env_executable_paths',
+              'preferred_env', 'preferred_env_executable_paths', 'run_exports',
               ],
     'requirements': ['build', 'host', 'run', 'conflicts', 'run_constrained'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -534,6 +535,45 @@ def get_output_dicts_from_metadata(metadata):
             out['noarch_python'] = out.get('noarch_python',
                                             metadata.get_value('build/noarch_python'))
             out['noarch'] = out.get('noarch', metadata.get_value('build/noarch'))
+    return outputs
+
+
+def finalize_outputs_pass(base_metadata, iteration, render_order=None, outputs=None,
+                          permit_unsatisfiable_variants=True):
+    from .render import finalize_metadata
+    outputs = OrderedDict()
+    for output_d, metadata in render_order.values():
+        try:
+            log = utils.get_logger(__name__)
+            log.info("Attempting to finalize metadata for {}".format(metadata.name()))
+            # this is weird, but I think necessary. We should reparse
+            #    the top-level recipe to get all of our dependencies
+            #    fixed up.
+            if not hasattr(base_metadata, 'other_outputs'):
+                base_metadata.other_outputs = OrderedDict()
+            base_metadata.other_outputs.update(outputs)
+            om = base_metadata.copy()
+            om.config.variant = metadata.config.variant
+            if not om.final:
+                om.parse_until_resolved()
+            # get the new output_d from the reparsed top-level metadata, so that we have any
+            #    exact subpackage version/hash info
+            recipe_outputs = get_output_dicts_from_metadata(om)
+            output_d = get_updated_output_dict_from_reparsed_metadata(output_d,
+                                                                        recipe_outputs)
+            metadata = om.get_output_metadata(output_d)
+            fm = finalize_metadata(metadata)
+            if not output_d.get('type') or output_d.get('type') == 'conda':
+                outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
+        except DependencyNeedsBuildingError as e:
+            if not permit_unsatisfiable_variants:
+                raise
+            else:
+                log = utils.get_logger(__name__)
+                log.warn("Could not finalize metadata due to missing dependencies: "
+                            "{}".format(e.packages))
+                outputs[(metadata.name(), HashableDict(metadata.config.variant))] = (
+                    output_d, metadata)
     return outputs
 
 
@@ -1417,7 +1457,6 @@ class MetaData(object):
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=True):
-        from .render import finalize_metadata
         out_metadata_map = {}
 
         for variant in (self.config.variants if hasattr(self.config, 'variants')
@@ -1436,51 +1475,44 @@ class MetaData(object):
                     raise
                 out_metadata_map = {}
 
+        # format here is {output_dict: metadata_object}
         render_order = toposort(out_metadata_map, phase='build')
+
+        conda_packages = OrderedDict()
         non_conda_packages = []
-        outputs = OrderedDict()
+        for output_d, m in render_order.items():
+            if not output_d.get('type') or output_d['type'] == 'conda':
+                conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
+            else:
+                # for wheels and other non-conda packages, just append them at the end.
+                #    no deduplication with hashes currently.
+                # hard part about including any part of output_d
+                #    outside of this func is that it is harder to
+                #    obtain an exact match elsewhere
+                non_conda_packages.append((output_d, m))
 
         # early stages don't need to do the finalization.  Skip it until the later stages
         #     when we need it.
-        if permit_undefined_jinja:
-            outputs = render_order
-        else:
-            # variant is already rolled in from above
-            for output_d, metadata in render_order.items():
-                try:
-                    log = utils.get_logger(__name__)
-                    log.info("Attempting to finalize metadata for {}".format(metadata.name()))
-                    # this is weird, but I think necessary. We should reparse
-                    #    the top-level recipe to get all of our dependencies
-                    #    fixed up.
-                    self.other_outputs = outputs
-                    om = self.copy()
-                    om.config.variant = metadata.config.variant
-                    if not om.final:
-                        om.parse_until_resolved()
-                    # get the new output_d from the reparsed top-level metadata, so that we have any
-                    #    exact subpackage version/hash info
-                    recipe_outputs = get_output_dicts_from_metadata(om)
-                    output_d = get_updated_output_dict_from_reparsed_metadata(output_d,
-                                                                              recipe_outputs)
-                    metadata = om.get_output_metadata(output_d)
-                    fm = finalize_metadata(metadata)
-                    if not output_d.get('type') or output_d.get('type') == 'conda':
-                        outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
-                    else:
-                        # for wheels and other non-conda packages, just append them at the end.
-                        #    no deduplication with hashes currently.
-                        # hard part about including any part of output_d
-                        #    outside of this func is that it is harder to
-                        #    obtain an exact match elsewhere
-                        non_conda_packages.append((output_d, fm))
+        if not permit_undefined_jinja:
+            # The loop above gives us enough info to determine the build order.  After that,
+            #    we can "finalize" the metadata (fill in version pins) for the build metadata.
+            #    This does not, however, account for circular dependencies
+            #    where a runtime exact dependency pin on a downstream build
+            #    subpackage in an upstream subpackage changes the upstream's
+            #    hash, which then changes the downstream package's hash, which
+            #    then recurses infinitely
 
-                except DependencyNeedsBuildingError as e:
-                    if not permit_unsatisfiable_variants:
-                        raise
-                    else:
-                        log = utils.get_logger(__name__)
-                        log.warn("Could not finalize metadata due to missing dependencies: "
-                                    "{}".format(e.packages))
-                        outputs[(metadata.name(), HashableDict(variant))] = (output_d, metadata)
-        return list(outputs.values()) + non_conda_packages
+            # In general, given upstream a and downstream b, b can depend on a
+            # exactly, but a can only have version constraints on b at run or
+            # run_exports, not exact=True
+
+            # 3 passes here:
+            #    1. fill in fully-resolved build-time dependencies
+            #    2. fill in fully-resolved run-time dependencies.  Note that circular dependencies
+            #       are allowed, but you can't have exact=True for circular run-time dependencies
+            #    3. finally, everything should be filled in and done.
+            for i in range(3):
+                conda_packages = finalize_outputs_pass(self, i, conda_packages,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+                self.other_outputs = conda_packages
+        return list(conda_packages.values()) + non_conda_packages
