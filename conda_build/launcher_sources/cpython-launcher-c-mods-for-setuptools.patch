@@ -1,0 +1,150 @@
+--- launcher.c.orig	2017-05-15 20:33:34.000000000 -0500
++++ launcher.c	2017-05-16 08:49:01.000000000 -0500
+@@ -13,6 +13,23 @@
+ #include <stdio.h>
+ #include <tchar.h>
+ 
++/* Replacement for setuptools {cli,gui}-{32,64}.exe programs with support
++ * for (16-bit) Unicode and spaces in paths. A minor modification of:
++ * https://raw.githubusercontent.com/python/cpython/3.6/PC/launcher.c
++ * To build with MSYS2/mingw-w64, from the MSYS2 shell:
++ * PATH=/mingw64/bin:$PATH gcc -mconsole -O2 -Wl,-s -DSCRIPT_WRAPPER -DUNICODE -D_UNICODE -DMINGW_HAS_SECURE_API launcher.c -lversion --static -static-libgcc -o cli-64.exe
++ * PATH=/mingw32/bin:$PATH gcc -mconsole -O2 -Wl,-s -DSCRIPT_WRAPPER -DUNICODE -D_UNICODE -DMINGW_HAS_SECURE_API launcher.c -lversion --static -static-libgcc -o cli-32.exe
++ * PATH=/mingw64/bin:$PATH gcc -mwindows -municode -O2 -Wl,-s -DSCRIPT_WRAPPER -DUNICODE -D_UNICODE -D_WINDOWS -DMINGW_HAS_SECURE_API launcher.c -lversion --static -static-libgcc -o gui-64.exe
++ * PATH=/mingw32/bin:$PATH gcc -mwindows -municode -O2 -Wl,-s -DSCRIPT_WRAPPER -DUNICODE -D_UNICODE -D_WINDOWS -DMINGW_HAS_SECURE_API launcher.c -lversion --static -static-libgcc -o gui-32.exe
++ */
++
++/* Previously BUFSIZE was used for this but 256 is not enough for even 260
++ * ASCII characters and far too little for unicode (it is a char array, not
++ * a wchar_t array, though it needs to be even bigger than 260 wchar_ts as
++ * the source script file could contain UTF-8 or UTF-32 (wchar_t is 2-byte)
++ */
++#define SHEBANG_BUFSIZE 2048
++
+ #define BUFSIZE 256
+ #define MSGSIZE 1024
+ 
+@@ -765,6 +782,25 @@
+ 
+ static COMMAND path_command;
+ 
++#if !defined(_MSC_VER)
++errno_t _wdupenv_s_emulated(wchar_t **buffer,
++                            size_t *numberOfElements,
++                            const wchar_t *varname)
++{
++    size_t szreq;
++
++    errno_t err = _wgetenv_s(&szreq, NULL, 0, varname);
++    if (szreq == 0)
++        return 1;
++    *buffer = (wchar_t*) malloc(sizeof(wchar_t) * szreq);
++    if (!*buffer)
++        return 1;
++    err = _wgetenv_s(&szreq, *buffer, szreq, varname);
++    return err;
++}
++#define _wdupenv_s _wdupenv_s_emulated
++#endif
++
+ static COMMAND * find_on_path(wchar_t * name)
+ {
+     wchar_t * pathext;
+@@ -888,7 +924,7 @@
+ 
+ static BOOL
+ parse_shebang(wchar_t * shebang_line, int nchars, wchar_t ** command,
+-              wchar_t ** suffix, BOOL *search)
++              wchar_t ** suffix, BOOL *search, wchar_t * argv0)
+ {
+     BOOL rc = FALSE;
+     SHEBANG * vpp;
+@@ -898,11 +934,40 @@
+     wchar_t * endp = shebang_line + nchars - 1;
+     COMMAND * cp;
+     wchar_t * skipped;
++    wchar_t tidied[_MAX_DRIVE+_MAX_DIR+_MAX_FNAME+_MAX_EXT] = L"";
+ 
+     *command = NULL;    /* failure return */
+     *suffix = NULL;
+     *search = FALSE;
+ 
++    if ((shebang_line[0] != L'#') || (shebang_line[1] != L'!')) {
++        /* This is deliberately very similar to find_exe() in:
++         * https://raw.githubusercontent.com/pypa/setuptools/master/launcher.c
++         * I was tempted to use _wsplitpath_s twice to get the parent dir, but
++         * any change of behaviour here would cause big trouble.
++         */
++        debug(L"parse_shebang called without a valid shebang %s (for argv0 %s)\n", shebang_line, argv0);
++        wchar_t drive[_MAX_DRIVE];
++        wchar_t dir[_MAX_DIR];
++        wchar_t fname[_MAX_FNAME];
++        wchar_t ext[_MAX_EXT];
++        wchar_t * tmp, wc;
++        if (wcslen(argv0)-1 < _countof(tidied)) {
++            wcsncpy_s(tidied, _countof(tidied), argv0, _TRUNCATE);
++            tmp = &tidied[0];
++            while (wc = *tmp++) {
++                if (wc == L'/') tmp[-1] = L'\\';
++            }
++            _wsplitpath_s(tidied, drive, _countof(drive), dir, _countof(dir), fname, _countof(fname), ext, _countof(ext));
++            tmp = dir+wcslen(dir)-1;
++            if (*tmp == L'\\') tmp--;
++            while (*tmp != L'\\' && tmp>=dir) *tmp-- = 0;
++            _snwprintf_s(tidied, _countof(tidied), _TRUNCATE, L"#!%s%s%s", drive, dir, PYTHON_EXECUTABLE);
++            debug(L"invented shebang: %s\n", tidied);
++            shebang_line = tidied;
++        }
++    }
++
+     if ((*shebang_line++ == L'#') && (*shebang_line++ == L'!')) {
+         shebang_line = skip_whitespace(shebang_line);
+         if (*shebang_line) {
+@@ -1121,7 +1186,7 @@
+  */
+     FILE * fp;
+     errno_t rc = _wfopen_s(&fp, *argv, L"rb");
+-    char buffer[BUFSIZE];
++    char buffer[SHEBANG_BUFSIZE];
+     wchar_t shebang_line[BUFSIZE + 1];
+     size_t read;
+     char *p;
+@@ -1138,7 +1203,7 @@
+     INSTALLED_PYTHON * ip;
+ 
+     if (rc == 0) {
+-        read = fread(buffer, sizeof(char), BUFSIZE, fp);
++        read = fread(buffer, sizeof(char), SHEBANG_BUFSIZE, fp);
+         debug(L"maybe_handle_shebang: read %d bytes\n", read);
+         fclose(fp);
+ 
+@@ -1163,7 +1228,7 @@
+                   bom->code_page);
+             start = &buffer[bom->length];
+         }
+-        p = find_terminator(start, BUFSIZE, bom);
++        p = find_terminator(start, SHEBANG_BUFSIZE, bom);
+         /*
+          * If no CR or LF was found in the heading,
+          * we assume it's not a shebang file.
+@@ -1247,7 +1312,7 @@
+             if (nchars > 0) {
+                 shebang_line[--nchars] = L'\0';
+                 is_virt = parse_shebang(shebang_line, nchars, &command,
+-                                        &suffix, &search);
++                                        &suffix, &search, *argv);
+                 if (command != NULL) {
+                     debug(L"parse_shebang: found command: %ls\n", command);
+                     if (!is_virt) {
+@@ -1565,7 +1630,11 @@
+ 
+ #else
+ 
++#if defined(_MSC_VER)
+ int cdecl wmain(int argc, wchar_t ** argv)
++#else
++int cdecl main(int argc, wchar_t ** argv)
++#endif
+ {
+     return process(argc, argv);
+ }
