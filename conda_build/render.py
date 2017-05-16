@@ -155,6 +155,9 @@ def get_upstream_pins(m, actions, index):
                 elif os.path.isfile(pkg_file):
                     extra_specs = utils.package_has_file(pkg_file, 'info/run_exports')
                     if extra_specs:
+                        # exclude packages pinning themselves (makes no sense)
+                        extra_specs = [spec for spec in extra_specs
+                                       if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]
                         additional_specs.extend(extra_specs.splitlines())
                     break
                 elif utils.conda_43():

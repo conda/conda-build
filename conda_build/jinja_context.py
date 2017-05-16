@@ -307,7 +307,6 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    global subpackage_cache
     if not hasattr(metadata, 'other_outputs'):
         if allow_no_other_outputs:
             pin = subpackage_name
@@ -316,13 +315,33 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
                              "order to allow pinning to them.  It's not here.")
     else:
         key = (subpackage_name, HashableDict(metadata.config.variant))
-        if key not in subpackage_cache:
-            pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
-                                                 exact, permit_undefined_jinja)
-            if pin != subpackage_name:
-                subpackage_cache[key] = pin
-        else:
-            pin = subpackage_cache[key]
+        # two ways to match:
+        #    1. only one other output named the same as the subpackage_name from the key
+        #    2. whole key matches (both subpackage name and variant)
+        keys = list(metadata.other_outputs.keys())
+        matching_package_keys = [k for k in keys if k[0] == subpackage_name]
+        if len(matching_package_keys) == 1:
+            key = matching_package_keys[0]
+
+        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
+                                                exact, permit_undefined_jinja)
+        if pin != subpackage_name and exact:
+            assert len(pin.split(' ')) == 3
+            # find index of this package in list of other outputs
+
+            # test that no outputs earlier in the list of other outputs have this
+            #     package pinned exactly in their requirements/run or build/run_exports sections
+            subpackage_index = list(metadata.other_outputs.keys()).index(key)
+            for _, m in list(metadata.other_outputs.values())[:subpackage_index]:
+                deps = m.get_value('requirements/run') + m.get_value('build/run_exports')
+                for dep in deps:
+                    if (dep.split()[0] == subpackage_name and
+                            len(dep.split()) == 3 and
+                            dep != pin):
+                        # raise an error, because this indicates a cyclical dependency
+                        raise ValueError("Infinite loop in subpackages. Exact pins in dependencies "
+                                    "that contribute to the hash often cause this. Can you "
+                                    "change one or more exact pins to version bound constraints?")
     return pin
 
 
