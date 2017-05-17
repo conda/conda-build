@@ -75,7 +75,7 @@ Contributors:
 * @abretaud
 * @evhub
 * @groutr
-* @jjhelmusk
+* @jjhelmus
 * @kalefranz
 * @ma-ba
 * @mingwandroid
