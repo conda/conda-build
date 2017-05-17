@@ -434,10 +434,10 @@ def get_repository_info(recipe_path):
 def _ensure_unix_line_endings(path):
     """Replace windows line endings with Unix.  Return path to modified file."""
     out_path = path + "_unix"
-    with open(path) as inputfile:
-        with open(out_path, "w") as outputfile:
+    with open(path, "rb") as inputfile:
+        with open(out_path, "wb") as outputfile:
             for line in inputfile:
-                outputfile.write(line.replace("\r\n", "\n"))
+                outputfile.write(line.replace(b"\r\n", b"\n"))
     return out_path
 
 
