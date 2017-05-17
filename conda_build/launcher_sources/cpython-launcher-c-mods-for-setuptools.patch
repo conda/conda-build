@@ -1,6 +1,26 @@
 --- launcher.c.orig	2017-05-15 20:33:34.000000000 -0500
-+++ launcher.c	2017-05-16 08:49:01.000000000 -0500
-@@ -13,6 +13,23 @@
++++ launcher.c	2017-05-17 10:58:18.524041300 -0500
+@@ -8,11 +8,43 @@
+  * Curt Hagenlocher (job management)
+  */
+ 
++
++#if defined(_MSC_VER)
++#ifdef NDEBUG
++// /Og (global optimizations), /Os (favor small code), /Oy (no frame pointers)
++#pragma optimize("gsy",on)
++
++// Note that merging the .rdata section will result in LARGER exe's if you using
++// MFC (esp. static link). If this is desirable, define _MERGE_RDATA_ in your project.
++#ifdef _MERGE_RDATA_
++#pragma comment(linker,"/merge:.rdata=.data")
++#endif // _MERGE_RDATA_
++
++#endif // NDEBUG
++#endif
++
+ #include <windows.h>
+ #include <shlobj.h>
  #include <stdio.h>
  #include <tchar.h>
  
@@ -24,7 +44,7 @@
  #define BUFSIZE 256
  #define MSGSIZE 1024
  
-@@ -765,6 +782,25 @@
+@@ -765,6 +797,25 @@
  
  static COMMAND path_command;
  
@@ -50,7 +70,7 @@
  static COMMAND * find_on_path(wchar_t * name)
  {
      wchar_t * pathext;
-@@ -888,7 +924,7 @@
+@@ -888,7 +939,7 @@
  
  static BOOL
  parse_shebang(wchar_t * shebang_line, int nchars, wchar_t ** command,
@@ -59,7 +79,7 @@
  {
      BOOL rc = FALSE;
      SHEBANG * vpp;
-@@ -898,11 +934,40 @@
+@@ -898,11 +949,40 @@
      wchar_t * endp = shebang_line + nchars - 1;
      COMMAND * cp;
      wchar_t * skipped;
@@ -75,12 +95,12 @@
 +         * I was tempted to use _wsplitpath_s twice to get the parent dir, but
 +         * any change of behaviour here would cause big trouble.
 +         */
-+        debug(L"parse_shebang called without a valid shebang %s (for argv0 %s)\n", shebang_line, argv0);
 +        wchar_t drive[_MAX_DRIVE];
 +        wchar_t dir[_MAX_DIR];
 +        wchar_t fname[_MAX_FNAME];
 +        wchar_t ext[_MAX_EXT];
 +        wchar_t * tmp, wc;
++        debug(L"parse_shebang called without a valid shebang %s (for argv0 %s)\n", shebang_line, argv0);
 +        if (wcslen(argv0)-1 < _countof(tidied)) {
 +            wcsncpy_s(tidied, _countof(tidied), argv0, _TRUNCATE);
 +            tmp = &tidied[0];
@@ -100,7 +120,7 @@
      if ((*shebang_line++ == L'#') && (*shebang_line++ == L'!')) {
          shebang_line = skip_whitespace(shebang_line);
          if (*shebang_line) {
-@@ -1121,7 +1186,7 @@
+@@ -1121,7 +1201,7 @@
   */
      FILE * fp;
      errno_t rc = _wfopen_s(&fp, *argv, L"rb");
@@ -109,7 +129,7 @@
      wchar_t shebang_line[BUFSIZE + 1];
      size_t read;
      char *p;
-@@ -1138,7 +1203,7 @@
+@@ -1138,7 +1218,7 @@
      INSTALLED_PYTHON * ip;
  
      if (rc == 0) {
@@ -118,7 +138,7 @@
          debug(L"maybe_handle_shebang: read %d bytes\n", read);
          fclose(fp);
  
-@@ -1163,7 +1228,7 @@
+@@ -1163,7 +1243,7 @@
                    bom->code_page);
              start = &buffer[bom->length];
          }
@@ -127,7 +147,7 @@
          /*
           * If no CR or LF was found in the heading,
           * we assume it's not a shebang file.
-@@ -1247,7 +1312,7 @@
+@@ -1247,7 +1327,7 @@
              if (nchars > 0) {
                  shebang_line[--nchars] = L'\0';
                  is_virt = parse_shebang(shebang_line, nchars, &command,
@@ -136,15 +156,3 @@
                  if (command != NULL) {
                      debug(L"parse_shebang: found command: %ls\n", command);
                      if (!is_virt) {
-@@ -1565,7 +1630,11 @@
- 
- #else
- 
-+#if defined(_MSC_VER)
- int cdecl wmain(int argc, wchar_t ** argv)
-+#else
-+int cdecl main(int argc, wchar_t ** argv)
-+#endif
- {
-     return process(argc, argv);
- }
