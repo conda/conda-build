@@ -1,3 +1,16 @@
+2017-05-18 2.1.15:
+
+Bug fixes:
+----------
+
+* Fix windows entry point exe's for spaces in the final exe path  #2039
+
+Contributors:
+-------------
+
+* @mingwandroid
+
+
 2017-05-17 2.1.14:
 
 Enhancements:
