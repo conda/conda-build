@@ -774,6 +774,9 @@ def find_recipe(path):
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
+            utils.get_logger(__name__).warn("Multiple meta.yaml files found. "
+                                            "The meta.yaml file in the base directory "
+                                            "will be used.")
             results = [base_recipe]
         else:
             raise IOError("More than one meta.yaml files found in %s" % path)
