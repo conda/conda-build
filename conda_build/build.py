@@ -873,13 +873,14 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
-        if m.config.has_separate_host_prefix:
+        if m.config.host_subdir != m.config.build_subdir:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
             host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
             host_ms_deps = m.ms_depends('host')
             host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                       host_ms_deps, m.config, timestamp=host_ts)
+                                                       host_ms_deps, m.config, timestamp=host_ts,
+                                                       subdir=m.config.host_subdir)
             environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                subdir=m.config.host_subdir)
 
@@ -1038,7 +1039,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
 
-                    if m.config.has_separate_host_prefix:
+                    if m.config.host_subdir != m.config.build_subdir:
                         if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                             raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
                         host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
@@ -1520,6 +1521,9 @@ and 'x' means 'x' or one of 'x' dependencies isn't built
 for Python 3.5 and needs to be rebuilt."""
 
                 recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
+                # conda-forge style.  meta.yaml lives one level deeper.
+                if not recipe_glob:
+                    recipe_glob = glob(os.path.join(recipe_parent_dir, '..', pkg))
                 if recipe_glob:
                     for recipe_dir in recipe_glob:
                         print(("Missing dependency {0}, but found" +

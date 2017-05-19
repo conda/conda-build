@@ -635,7 +635,7 @@ def _ensure_valid_spec(spec):
     return spec
 
 
-def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0):
+def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0, subdir=None):
     log = utils.get_logger(__name__)
     if config.verbose:
         capture = contextlib.contextmanager(lambda: (yield))
@@ -658,7 +658,7 @@ def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0):
                 #   not be found.
                 # index_timestamp=timestamp)
             except NoPackagesFoundError as exc:
-                raise DependencyNeedsBuildingError(exc)
+                raise DependencyNeedsBuildingError(exc, subdir=subdir)
             except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                     CondaError, AssertionError) as exc:
                 if 'lock' in str(exc):
@@ -804,7 +804,7 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                         log.error("Failed to create env, max retries exceeded.")
                         raise
     # We must not symlink conda across different platforms when cross-compiling.
-    if os.path.basename(prefix) == '_build_env' or not config.has_separate_host_prefix:
+    if os.path.basename(prefix) == '_build_env' or not config.is_cross:
         if utils.on_win:
             shell = "cmd.exe"
         else:
