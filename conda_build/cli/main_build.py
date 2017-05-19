@@ -135,6 +135,13 @@ different sets of packages."""
         '--user',
         help="User/organization to upload packages to on anaconda.org or pypi"
     )
+    p.add_argument(
+        '--no-force-upload',
+        help="Disable force upload to anaconda.org, preventing overwriting any existing packages",
+        dest='force_upload',
+        default=True,
+        action='store_false',
+    )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
         '--password',
