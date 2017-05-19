@@ -385,7 +385,7 @@ def write_link_json(m, config):
 def write_about_json(m, config):
     with open(join(config.info_dir, 'about.json'), 'w') as fo:
         d = {}
-        for key in ('home', 'dev_url', 'doc_url', 'license_url',
+        for key in ('home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',
                     'license', 'summary', 'description', 'license_family'):
             value = m.get_value('about/%s' % key)
             if value:
