@@ -516,6 +516,7 @@ def apply_patch(src_dir, path, config, git=None):
         patch_strip_level = _guess_patch_strip_level(files, src_dir)
         patch_args = ['-p%d' % patch_strip_level, '-i', path]
         if sys.platform == 'win32':
+            patch_args.insert(0, '--binary')
             patch_args[-1] = _ensure_unix_line_endings(path)
         check_call_env([patch] + patch_args, cwd=src_dir)
         if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
