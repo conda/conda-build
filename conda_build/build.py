@@ -1064,6 +1064,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                         os.path.join(m.config.host_prefix, f),
                                         symlinks=True)
 
+                    # we must refresh the environment variables because our env for each package
+                    #    can be different from the env for the top level build.
+                    with utils.path_prepended(m.config.build_prefix):
+                        env = environ.get_dict(config=m.config, m=m)
                     built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                     new_pkgs[built_package] = (output_d, m)
 

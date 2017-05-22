@@ -1382,10 +1382,8 @@ class MetaData(object):
 
     def get_output_metadata(self, output):
         self.config.target_subdir = output.get('target', self.config.host_subdir)
-        if self.name() == output.get('name'):
-            output_metadata = self
-        else:
-            output_metadata = self.copy()
+        output_metadata = self.copy()
+        if self.name() != output.get('name'):
             self.reconcile_metadata_with_output_dict(output_metadata, output)
 
         if 'type' in output and output['type'] != 'conda':
