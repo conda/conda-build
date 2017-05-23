@@ -613,8 +613,6 @@ class MetaData(object):
         # In the second pass, we'll be more strict. See build.build()
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
         self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
-        if 'host' in self.get_section('requirements'):
-            self.config.has_separate_host_prefix = True
         self.config.disable_pip = self.disable_pip
 
     @property
@@ -1384,10 +1382,8 @@ class MetaData(object):
 
     def get_output_metadata(self, output):
         self.config.target_subdir = output.get('target', self.config.host_subdir)
-        if self.name() == output.get('name'):
-            output_metadata = self
-        else:
-            output_metadata = self.copy()
+        output_metadata = self.copy()
+        if self.name() != output.get('name'):
             self.reconcile_metadata_with_output_dict(output_metadata, output)
 
         if 'type' in output and output['type'] != 'conda':

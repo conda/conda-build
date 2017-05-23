@@ -44,7 +44,9 @@ DEFAULT_PREFIX_LENGTH = 255
 # translate our internal more meaningful subdirs to the ones that conda understands
 SUBDIR_ALIASES = {
     'linux-cos5-x86_64': 'linux-64',
+    'linux-cos6-x86_64': 'linux-64',
     'linux-cos5-x86': 'linux-32',
+    'linux-cos6-x86': 'linux-32',
     'osx-109-x86_64': 'osx-64',
     'win-x86_64': 'win-64',
     'win-x86': 'win-32',
@@ -76,7 +78,6 @@ DEFAULTS = [Setting('activate', True),
             Setting('remove_work_dir', True),
             Setting('_host_platform', None),
             Setting('_host_arch', None),
-            Setting('has_separate_host_prefix', False),
             Setting('filename_hashing', True),
 
             Setting('index', None),
@@ -218,7 +219,8 @@ class Config(object):
 
     @property
     def host_arch(self):
-        return self._host_arch or self.arch
+        return (self._host_arch or
+                self.variant.get('target_platform', self.build_subdir).split('-', 1)[1])
 
     @host_arch.setter
     def host_arch(self, value):
@@ -238,7 +240,8 @@ class Config(object):
 
     @property
     def host_platform(self):
-        return self._host_platform or self.platform
+        return (self._host_platform or
+                self.variant.get('target_platform', self.build_subdir).split('-', 1)[0])
 
     @host_platform.setter
     def host_platform(self, value):
@@ -246,13 +249,11 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        if self.has_separate_host_prefix:
-            subdir = self.variant.get('target_platform', self.build_subdir)
-        else:
-            if self.host_platform == 'noarch':
-                subdir = self.host_platform
-            else:
-                subdir = "-".join([self.host_platform, str(self.host_arch)])
+        subdir = self.variant.get('target_platform', self.build_subdir)
+        if self.host_platform == 'noarch':
+            subdir = self.host_platform
+        elif subdir != "-".join([self.host_platform, str(self.host_arch)]):
+            subdir = "-".join([self.host_platform, str(self.host_arch)])
         return SUBDIR_ALIASES.get(subdir, subdir)
 
     @host_subdir.setter
@@ -389,7 +390,7 @@ class Config(object):
         """The temporary folder where the build environment is created.  The build env contains
         libraries that may be linked, but only if the host env is not specified.  It is placed on
         PATH."""
-        if self.has_separate_host_prefix:
+        if self.host_subdir != self.build_subdir:
             prefix = join(self.build_folder, '_build_env')
         else:
             prefix = self.host_prefix

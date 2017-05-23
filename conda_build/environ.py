@@ -635,7 +635,13 @@ def _ensure_valid_spec(spec):
     return spec
 
 
-def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0):
+_cached_install_actions = {}
+_last_timestamp = 0
+
+
+def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0, subdir=None):
+    global _cached_install_actions
+    global _last_timestamp
     log = utils.get_logger(__name__)
     if config.verbose:
         capture = contextlib.contextmanager(lambda: (yield))
@@ -645,52 +651,57 @@ def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0):
     for feature, value in feature_list:
         if value:
             specs.append('%s@' % feature)
-    specs = [_ensure_valid_spec(spec) for spec in specs]
-    if specs:
-        # this is hiding output like:
-        #    Fetching package metadata ...........
-        #    Solving package specifications: ..........
-        with capture():
-            try:
-                actions = install_actions(prefix, index, specs, force=True)
-                # Experimenting with getting conda to create fewer Resolve objects
-                #   Experiment failed, seemingly due to conda's statefulness.  Packages could
-                #   not be found.
-                # index_timestamp=timestamp)
-            except NoPackagesFoundError as exc:
-                raise DependencyNeedsBuildingError(exc)
-            except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                    CondaError, AssertionError) as exc:
-                if 'lock' in str(exc):
-                    log.warn("failed to get install actions, retrying.  exception was: %s",
-                             str(exc))
-                elif ('requires a minimum conda version' in str(exc) or
-                        'link a source that does not' in str(exc) or
-                        isinstance(exc, AssertionError)):
-                    locks = utils.get_conda_operation_locks(config)
-                    with utils.try_acquire_locks(locks, timeout=config.timeout):
-                        pkg_dir = str(exc)
-                        folder = 0
-                        while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
-                            pkg_dir = os.path.dirname(pkg_dir)
-                            folder += 1
-                        log.warn("I think conda ended up with a partial extraction for %s.  "
-                                    "Removing the folder and retrying", pkg_dir)
-                        if pkg_dir in pkgs_dirs and os.path.isdir(pkg_dir):
-                            utils.rm_rf(pkg_dir)
-                if retries < config.max_env_retry:
-                    log.warn("failed to get install actions, retrying.  exception was: %s",
-                             str(exc))
-                    actions = get_install_actions(prefix, index, specs, config,
-                                                    retries=retries + 1, timestamp=timestamp)
-                else:
-                    log.error("Failed to get install actions, max retries exceeded.")
-                    raise
-        if config.disable_pip:
-            actions['LINK'] = [spec for spec in actions['LINK']
-                                if not spec.startswith('pip-') and
-                                not spec.startswith('setuptools-')]
-    utils.trim_empty_keys(actions)
+    specs = tuple(_ensure_valid_spec(spec) for spec in specs)
+    if (specs, subdir, timestamp) in _cached_install_actions and timestamp > _last_timestamp:
+        actions = _cached_install_actions[(specs, subdir, timestamp)]
+    else:
+        if specs:
+            # this is hiding output like:
+            #    Fetching package metadata ...........
+            #    Solving package specifications: ..........
+            with capture():
+                try:
+                    actions = install_actions(prefix, index, specs, force=True)
+                    # Experimenting with getting conda to create fewer Resolve objects
+                    #   Experiment failed, seemingly due to conda's statefulness.  Packages could
+                    #   not be found.
+                    # index_timestamp=timestamp)
+                except NoPackagesFoundError as exc:
+                    raise DependencyNeedsBuildingError(exc, subdir=subdir)
+                except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
+                        CondaError, AssertionError) as exc:
+                    if 'lock' in str(exc):
+                        log.warn("failed to get install actions, retrying.  exception was: %s",
+                                str(exc))
+                    elif ('requires a minimum conda version' in str(exc) or
+                            'link a source that does not' in str(exc) or
+                            isinstance(exc, AssertionError)):
+                        locks = utils.get_conda_operation_locks(config)
+                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                            pkg_dir = str(exc)
+                            folder = 0
+                            while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
+                                pkg_dir = os.path.dirname(pkg_dir)
+                                folder += 1
+                            log.warn("I think conda ended up with a partial extraction for %s.  "
+                                        "Removing the folder and retrying", pkg_dir)
+                            if pkg_dir in pkgs_dirs and os.path.isdir(pkg_dir):
+                                utils.rm_rf(pkg_dir)
+                    if retries < config.max_env_retry:
+                        log.warn("failed to get install actions, retrying.  exception was: %s",
+                                str(exc))
+                        actions = get_install_actions(prefix, index, specs, config,
+                                                        retries=retries + 1, timestamp=timestamp)
+                    else:
+                        log.error("Failed to get install actions, max retries exceeded.")
+                        raise
+            if config.disable_pip:
+                actions['LINK'] = [spec for spec in actions['LINK']
+                                    if not spec.startswith('pip-') and
+                                    not spec.startswith('setuptools-')]
+        utils.trim_empty_keys(actions)
+        _cached_install_actions[(specs, subdir, timestamp)] = actions
+        _last_timestamp = timestamp
     return actions
 
 
@@ -804,7 +815,7 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                         log.error("Failed to create env, max retries exceeded.")
                         raise
     # We must not symlink conda across different platforms when cross-compiling.
-    if os.path.basename(prefix) == '_build_env' or not config.has_separate_host_prefix:
+    if os.path.basename(prefix) == '_build_env' or not config.is_cross:
         if utils.on_win:
             shell = "cmd.exe"
         else:
