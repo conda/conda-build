@@ -158,10 +158,13 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
     for recipe in paths:
-        try:
-            recipes.append(find_recipe(recipe))
-        except IOError:
-            continue
+        if (os.path.isdir(recipe) or
+                (os.path.isfile(recipe) and
+                 os.path.basename(recipe) in ('meta.yaml', 'conda.yaml'))):
+            try:
+                recipes.append(find_recipe(recipe))
+            except IOError:
+                continue
     metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
     recipes.extend(metadata)
     absolute_recipes = []

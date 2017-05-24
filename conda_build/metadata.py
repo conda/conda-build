@@ -1471,6 +1471,9 @@ class MetaData(object):
                     raise
                 out_metadata_map = {}
 
+        assert out_metadata_map, ("Error: output metadata set is empty.  Please file an issue on "
+                          "the conda-build tracker at https://github.com/conda/conda-build/issues")
+
         # format here is {output_dict: metadata_object}
         render_order = toposort(out_metadata_map, phase='build')
 

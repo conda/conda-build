@@ -17,7 +17,7 @@ from .conda_interface import binstar_upload
 from .variants import get_default_variants
 from .conda_interface import cc_platform, cc_conda_build, subdir
 
-from .utils import get_build_folders, rm_rf, trim_empty_keys, get_logger, get_conda_operation_locks
+from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
 on_win = (sys.platform == 'win32')
 
@@ -154,15 +154,15 @@ class Config(object):
                 version = version[0]
             return version
 
+        def set_lang(variant, lang):
+            value = env(lang, self.variant.get(lang))
+            if value:
+                variant[lang] = value
+
         # this is where we override any variant config files with the legacy CONDA_* vars
         #     or CLI params
-        self.variant.update({'perl': env('perl', self.variant.get('perl')),
-                             'lua': env('lua', self.variant.get('lua')),
-                             'python': env('python', self.variant.get('python')),
-                             'numpy': env('numpy', self.variant.get('numpy')),
-                             'r_base': env('r_base', self.variant.get('r_base')),
-                             })
-        trim_empty_keys(self.variant)
+        for lang in ('perl', 'lua', 'python', 'numpy', 'r_base'):
+            set_lang(self.variant, lang)
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         croot = kwargs.get('croot')
@@ -546,7 +546,8 @@ class Config(object):
                 rm_rf(os.path.join(self.build_folder, 'prefix_files'))
 
         for lock in get_conda_operation_locks(self):
-            rm_rf(lock.lock_file)
+            if os.path.isfile(lock.lock_file):
+                rm_rf(lock.lock_file)
 
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:

@@ -1548,7 +1548,8 @@ for Python 3.5 and needs to be rebuilt."""
             # clean up locks to avoid permission errors when they exist in central installs
             for (m, _, _) in metadata_tuples:
                 for lock in utils.get_conda_operation_locks(m.config):
-                    utils.rm_rf(lock.lock_file)
+                    if os.path.isfile(lock.lock_file):
+                        utils.rm_rf(lock.lock_file)
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
