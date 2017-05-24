@@ -111,8 +111,11 @@ def get_pin_from_build(m, dep, build_dep_versions):
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
             not (dep_name == 'python' and m.noarch) and
             dep_name in build_dep_versions):
-        pin = utils.apply_pin_expressions(version.split()[0],
-                                            **m.config.variant['pin_run_as_build'][dep_name])
+        pin_cfg = m.config.variant['pin_run_as_build'][dep_name]
+        if isinstance(pin_cfg, str):
+            # if pin arg is a single 'x.x', use the same value for min and max
+            pin_cfg = dict(min_pin=pin_cfg, max_pin=pin_cfg)
+        pin = utils.apply_pin_expressions(version.split()[0], **pin_cfg)
     elif dep.startswith('numpy') and 'x.x' in dep:
         if not build_dep_versions.get(dep_name):
             raise ValueError("numpy x.x specified, but numpy not in build requirements.")
