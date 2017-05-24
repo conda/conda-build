@@ -897,10 +897,16 @@ def collect_channels(config, is_host=False):
 
 def trim_empty_keys(dict_):
     to_remove = set()
+    negative_means_empty = ('final', 'noarch_python')
     for k, v in dict_.items():
         if hasattr(v, 'keys'):
             trim_empty_keys(v)
-        if not v:
+        # empty lists and empty strings, and None are always empty.
+        if v == list() or v == '' or v is None:
+            to_remove.add(k)
+        # other things that evaluate as False may not be "empty" - things can be manually set to
+        #     false, and we need to keep that setting.
+        if not v and k in negative_means_empty:
             to_remove.add(k)
     for k in to_remove:
         del dict_[k]

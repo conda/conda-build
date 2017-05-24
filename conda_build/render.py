@@ -535,6 +535,7 @@ else:
 
 
 def output_yaml(metadata, filename=None):
+    utils.trim_empty_keys(metadata.meta)
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:
