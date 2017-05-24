@@ -1,6 +1,9 @@
 import os
+import tempfile
 
-from conda_build.source import _guess_patch_strip_level, apply_patch
+from conda_build.source import (
+    _ensure_unix_line_endings, _guess_patch_strip_level, apply_patch,
+)
 
 
 def test_patch_strip_level(testing_workdir, monkeypatch):
@@ -54,3 +57,16 @@ def test_patch(testing_workdir, testing_config):
         with open('file-modification.txt', 'r') as modified:
             lines = modified.readlines()
         assert lines[0] == '43770\n'
+
+
+def test_ensure_unix_line_endings_with_nonutf8_characters():
+    in_path = tempfile.mktemp()
+    with open(in_path, "wb") as fp:
+        fp.write(b"\xf1\r\n")  # tilde-n encoded in latin1
+
+    out_path = _ensure_unix_line_endings(in_path)
+    with open(out_path, "rb") as fp:
+        assert fp.read() == b"\xf1\n"
+
+    os.remove(in_path)
+    os.remove(out_path)

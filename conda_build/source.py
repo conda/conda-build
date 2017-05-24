@@ -434,10 +434,10 @@ def get_repository_info(recipe_path):
 def _ensure_unix_line_endings(path):
     """Replace windows line endings with Unix.  Return path to modified file."""
     out_path = path + "_unix"
-    with open(path) as inputfile:
-        with open(out_path, "w") as outputfile:
+    with open(path, "rb") as inputfile:
+        with open(out_path, "wb") as outputfile:
             for line in inputfile:
-                outputfile.write(line.replace("\r\n", "\n"))
+                outputfile.write(line.replace(b"\r\n", b"\n"))
     return out_path
 
 
@@ -516,6 +516,7 @@ def apply_patch(src_dir, path, config, git=None):
         patch_strip_level = _guess_patch_strip_level(files, src_dir)
         patch_args = ['-p%d' % patch_strip_level, '-i', path]
         if sys.platform == 'win32':
+            patch_args.insert(0, '--binary')
             patch_args[-1] = _ensure_unix_line_endings(path)
         check_call_env([patch] + patch_args, cwd=src_dir)
         if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
