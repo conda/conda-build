@@ -27,7 +27,8 @@ def create_files(m):
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
-        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=m.config.locking,
+        # disable locking to avoid locking a temporary directory (the extracted test folder)
+        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=False,
                   clobber=True)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(m.config.work_dir):
@@ -42,8 +43,9 @@ def create_files(m):
             raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
         for f in files:
             try:
+                # disable locking to avoid locking a temporary directory (the extracted test folder)
                 copy_into(f, f.replace(m.config.work_dir, m.config.test_dir), m.config.timeout,
-                        locking=m.config.locking)
+                          locking=False)
             except OSError as e:
                 log = logging.getLogger(__name__)
                 log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
@@ -70,7 +72,8 @@ def create_shell_files(m):
         name = "run_test{}".format(ext)
 
     if exists(join(m.path, name)):
-        copy_into(join(m.path, name), m.config.test_dir, m.config.timeout, locking=m.config.locking)
+        # disable locking to avoid locking a temporary directory (the extracted test folder)
+        copy_into(join(m.path, name), m.config.test_dir, m.config.timeout, locking=False)
         has_tests = True
 
     commands = ensure_list(m.get_value('test/commands', []))
@@ -103,18 +106,18 @@ def _create_test_files(m, ext, comment_char='# '):
 
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
-            fo.write("%s tests for %s (this is a generated file)\n" % (comment_char, m.dist()))
-            fo.write("print('===== testing package: %s =====')\n" % m.dist())
+            fo.write("%s tests for %s (this is a generated file);\n" % (comment_char, m.dist()))
+            fo.write("print('===== testing package: %s =====');\n" % m.dist())
 
             try:
                 with open(test_file) as fi:
-                    fo.write("print('running {0}')\n".format(name))
+                    fo.write("print('running {0}');\n".format(name))
                     fo.write("{0} --- {1} (begin) ---\n".format(comment_char, name))
                     fo.write(fi.read())
                     fo.write("{0} --- {1} (end) ---\n".format(comment_char, name))
             except AttributeError:
                 fo.write("# tests were not packaged with this module, and cannot be run\n")
-            fo.write("\nprint('===== %s OK =====')\n" % m.dist())
+            fo.write("\nprint('===== %s OK =====');\n" % m.dist())
 
     return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
 

@@ -89,9 +89,10 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        if hasattr(new_data, 'decode') and utils.PY3:
-            new_data = new_data.decode()
-        fo.write(new_data)
+        try:
+            fo.write(new_data)
+        except TypeError:
+            fo.write(new_data.decode())
     os.chmod(path, 0o775)
 
 
@@ -99,7 +100,7 @@ def write_pth(egg_path, config):
     fn = os.path.basename(egg_path)
     py_ver = '.'.join(config.variant['python'].split('.')[:2])
     with open(os.path.join(utils.get_site_packages(config.build_prefix, py_ver),
-                   '%s.pth' % (fn.split('-')[0])), 'w') as fo:
+                           '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
 

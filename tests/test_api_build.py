@@ -28,7 +28,7 @@ from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env)
+                               package_has_file, check_output_env, get_conda_operation_locks)
 from conda_build.os_utils.external import find_executable
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
@@ -407,26 +407,6 @@ def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
 
 
-def test_debug_build_option(testing_metadata, caplog, capfd):
-    info_message = "INFO"
-    debug_message = "DEBUG"
-    testing_metadata.config.debug = False
-    testing_metadata.config.verbose = False
-    with caplog.at_level(logging.INFO):
-        api.build(testing_metadata)
-        # this comes from an info message
-        assert info_message in caplog.text
-        # this comes from a debug message
-        assert debug_message not in caplog.text
-
-    testing_metadata.config.debug = True
-    api.build(testing_metadata)
-    # this comes from an info message
-    assert info_message in caplog.text
-    # this comes from a debug message
-    assert debug_message in caplog.text
-
-
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
 def test_backslash_in_always_include_files_path(testing_config):
     api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
@@ -444,7 +424,7 @@ def test_numpy_setup_py_data(testing_config):
     _hash = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]._hash_dependencies()
     assert os.path.basename(api.get_output_file_path(recipe_path,
                             config=testing_config, numpy="1.11")[0]) == \
-                            "load_setup_py_test-1.0a1-py{0}{1}np111{2}_1.tar.bz2".format(
+                            "load_setup_py_test-1.0a1-np111py{0}{1}{2}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
@@ -798,9 +778,9 @@ def test_build_expands_wildcards(mocker, testing_workdir):
             fh.write('\n')
     api.build(["a*"], config=config)
     output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
-    build_tree.assert_called_once_with(output, post=None, need_source_download=True,
-                                       build_only=False, notest=False, config=config,
-                                       variants=None)
+    build_tree.assert_called_once_with(output, build_only=False, config=mocker.ANY,
+                                       need_source_download=True, notest=False,
+                                       post=None, variants=None)
 
 
 @pytest.mark.serial
@@ -816,17 +796,27 @@ def test_remove_workdir_default(testing_config, caplog):
 
 
 @pytest.mark.serial
-def test_keep_workdir(testing_config, caplog):
+def test_keep_workdir_and_dirty_reuse(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
     #    of the config object rather than edit it in place, so that variants don't clobber one
     #    another
-    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False,
-                          debug=True)[0][0]
+
+    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
+    workdir = metadata.config.work_dir
     api.build(metadata)
     assert "Not removing work directory after build" in caplog.text
     assert glob(os.path.join(metadata.config.work_dir, '*'))
+
+    # test that --dirty reuses the same old folder
+    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
+    assert workdir == metadata.config.work_dir
+
+    # test that without --dirty, we don't reuse the folder
+    metadata = api.render(recipe, config=testing_config)[0][0]
+    assert workdir != metadata.config.work_dir
+
     testing_config.clean()
 
 
@@ -847,8 +837,7 @@ def test_workdir_removal_warning_no_remove(testing_config, caplog):
 
 @pytest.mark.skipif(not sys.platform.startswith('linux'),
                     reason="cross compiler packages created only on Linux right now")
-@pytest.mark.xfail(True,
-                   # VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
+@pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
                    reason="not completely implemented yet")
 def test_cross_compiler(testing_workdir, testing_config, caplog):
     # TODO: testing purposes.  Package on @mingwandroid's channel.
@@ -859,7 +848,7 @@ def test_cross_compiler(testing_workdir, testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
     output = api.build(recipe_dir, config=testing_config)[0]
     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
-    api.build(recipe, config=testing_config, remove_work_dir=False)
+    api.build(recipe_dir, config=testing_config, remove_work_dir=False)
     assert "Not removing work directory after build" in caplog.text
 
 
@@ -971,12 +960,17 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     api.build(recipe, config=testing_config)
 
 
+@pytest.mark.serial
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
+    locks = get_conda_operation_locks(m.config)
     with pytest.raises(RuntimeError):
         api.build(m)
     assert os.listdir(m.config.build_folder)
+    # make sure that it does not leave lock files, though, as these cause permission errors on
+    #    centralized installations
+    assert not any(os.path.isfile(lock.lock_file) for lock in locks)
 
 
 def test_only_r_env_vars_defined(testing_config):
@@ -998,3 +992,20 @@ def test_only_lua_env(testing_config):
     testing_config.prefix_length = 80
     testing_config.set_build_id = False
     api.build(recipe, config=testing_config)
+
+
+def test_run_constrained_stores_constrains_info(testing_config):
+    recipe = os.path.join(metadata_dir, '_run_constrained')
+    out_file = api.build(recipe, config=testing_config)[0]
+    info_contents = json.loads(package_has_file(out_file, 'info/index.json'))
+    assert 'constrains' in info_contents
+    assert len(info_contents['constrains']) == 1
+    assert info_contents['constrains'][0] == 'bzip2  1.*'
+
+
+@pytest.mark.serial
+def test_no_locking(testing_config):
+    recipe = os.path.join(metadata_dir, 'source_git_jinja2')
+    api.update_index(os.path.join(testing_config.croot, testing_config.subdir),
+                     config=testing_config)
+    api.build(recipe, config=testing_config, locking=False)

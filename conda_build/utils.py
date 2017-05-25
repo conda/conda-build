@@ -26,16 +26,17 @@ from distutils.version import LooseVersion
 import filelock
 
 from conda import __version__ as conda_version
-from .conda_interface import md5_file, unix_path_to_win, win_path_to_unix
+
+from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import string_types, url_path, get_rc_urls
+from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf  # NOQA
 import conda_build
-
 from conda_build.os_utils import external
 
 if PY3:
@@ -43,7 +44,7 @@ if PY3:
     import urllib.request as urllib
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
-    PermissionError = PermissionError
+    PermissionError = PermissionError  # NOQA
 else:
     import urlparse
     import urllib
@@ -198,7 +199,7 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clo
             log.warn('path %s is a broken symlink - ignoring copy', src)
             return
 
-        if not lock:
+        if not lock and locking:
             lock = get_lock(src_folder, timeout=timeout)
         locks = [lock] if locking else []
         with try_acquire_locks(locks, timeout):
@@ -209,7 +210,6 @@ def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clo
                     os.makedirs(dst_folder)
                 except OSError:
                     pass
-
             try:
                 _copy_with_shell_fallback(src, dst_fn)
             except shutil.Error:
@@ -275,9 +275,10 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, cl
         raise IOError("Can't merge {0} into {1}: file exists: "
                       "{2}".format(src, dst, existing[0]))
 
-    if not lock:
-        lock = get_lock(src, timeout=timeout)
+    locks = []
     if locking:
+        if not lock:
+            lock = get_lock(src, timeout=timeout)
         locks = [lock]
     with try_acquire_locks(locks, timeout):
         copytree(src, dst, symlinks=symlinks)
@@ -291,7 +292,7 @@ _lock_folders = (os.path.join(root_dir, 'locks'),
                  os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
-def get_lock(folder, timeout=90, filename=".conda_lock"):
+def get_lock(folder, timeout=90):
     global _locations
     try:
         location = os.path.abspath(os.path.normpath(folder))
@@ -402,6 +403,7 @@ def unzip(zip_path, dir_path):
 def file_info(path):
     return {'size': getsize(path),
             'md5': md5_file(path),
+            'sha256': hashsum_file(path, 'sha256'),
             'mtime': getmtime(path)}
 
 # Taken from toolz
@@ -700,6 +702,7 @@ def print_skip_message(metadata):
           "configuration.".format(metadata.path))
 
 
+@memoized
 def package_has_file(package_path, file_path):
     try:
         locks = get_conda_operation_locks()
@@ -771,6 +774,9 @@ def find_recipe(path):
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
+            get_logger(__name__).warn("Multiple meta.yaml files found. "
+                                      "The meta.yaml file in the base directory "
+                                      "will be used.")
             results = [base_recipe]
         else:
             raise IOError("More than one meta.yaml files found in %s" % path)
@@ -891,10 +897,16 @@ def collect_channels(config, is_host=False):
 
 def trim_empty_keys(dict_):
     to_remove = set()
+    negative_means_empty = ('final', 'noarch_python')
     for k, v in dict_.items():
         if hasattr(v, 'keys'):
             trim_empty_keys(v)
-        if not v:
+        # empty lists and empty strings, and None are always empty.
+        if v == list() or v == '' or v is None:
+            to_remove.add(k)
+        # other things that evaluate as False may not be "empty" - things can be manually set to
+        #     false, and we need to keep that setting.
+        if not v and k in negative_means_empty:
             to_remove.add(k)
     for k in to_remove:
         del dict_[k]

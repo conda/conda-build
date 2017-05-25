@@ -80,7 +80,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None):
                 if dash_or_under.sub("", key) == dash_or_under.sub("", spec_name):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
-            pass_through_deps.append(spec.split(' ')[0])
+            pass_through_deps.append(spec)
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
     dependencies = list(set(dependencies))
@@ -111,8 +111,11 @@ def get_pin_from_build(m, dep, build_dep_versions):
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
             not (dep_name == 'python' and m.noarch) and
             dep_name in build_dep_versions):
-        pin = utils.apply_pin_expressions(version.split()[0],
-                                            **m.config.variant['pin_run_as_build'][dep_name])
+        pin_cfg = m.config.variant['pin_run_as_build'][dep_name]
+        if isinstance(pin_cfg, str):
+            # if pin arg is a single 'x.x', use the same value for min and max
+            pin_cfg = dict(min_pin=pin_cfg, max_pin=pin_cfg)
+        pin = utils.apply_pin_expressions(version.split()[0], **pin_cfg)
     elif dep.startswith('numpy') and 'x.x' in dep:
         if not build_dep_versions.get(dep_name):
             raise ValueError("numpy x.x specified, but numpy not in build requirements.")
@@ -155,6 +158,9 @@ def get_upstream_pins(m, actions, index):
                 elif os.path.isfile(pkg_file):
                     extra_specs = utils.package_has_file(pkg_file, 'info/run_exports')
                     if extra_specs:
+                        # exclude packages pinning themselves (makes no sense)
+                        extra_specs = [spec for spec in extra_specs
+                                       if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]
                         additional_specs.extend(extra_specs.splitlines())
                     break
                 elif utils.conda_43():
@@ -182,7 +188,7 @@ def get_upstream_pins(m, actions, index):
     return additional_specs
 
 
-def finalize_metadata(m, finalized_outputs=None):
+def finalize_metadata(m):
     """Fully render a recipe.  Fill in versions for build dependencies."""
     index, index_ts = get_build_index(m.config, m.config.build_subdir)
 
@@ -238,7 +244,6 @@ def finalize_metadata(m, finalized_outputs=None):
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
 
-    rendered_metadata.meta['requirements'] = rendered_metadata.meta.get('requirements', {})
     for env, values in (('build', build_deps), ('run', versioned_run_deps)):
         if values:
             requirements[env] = list({strip_channel(dep) for dep in values})
@@ -309,7 +314,7 @@ def reparse(metadata):
 
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
-                        stub_subpackages=False):
+                        allow_no_other_outputs=False, bypass_env_check=False):
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
@@ -333,7 +338,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     future rendering
             mv.final = False
             mv.config.variant = {}
-            mv.parse_again(permit_undefined_jinja=True, stub_subpackages=True)
+            mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True,
+                           bypass_env_check=True)
             vars_in_recipe = set(mv.undefined_jinja_vars)
 
             mv.config.variant = variant
@@ -367,11 +373,10 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             # reset this to our current variant to go ahead
             mv.config.variant = variant
 
-            if 'target_platform' in variant:
-                mv.config.host_subdir = variant['target_platform']
             if not need_reparse_in_env:
                 try:
-                    mv.parse_until_resolved(stub_subpackages=stub_subpackages)
+                    mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
+                                            bypass_env_check=bypass_env_check)
                     need_source_download = (bool(mv.meta.get('source')) and
                                             not mv.needs_source_for_render and
                                             not os.listdir(mv.config.work_dir))
@@ -382,9 +387,14 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         mv.meta['requirements']['build'] = [
                             python_version if re.match('^python(?:$| .*)', pkg) else pkg
                             for pkg in mv.meta['requirements']['build']]
-                    fm = finalize_metadata(mv)
-                    rendered_metadata[fm.dist()] = (fm, need_source_download,
-                                                    need_reparse_in_env)
+                    # finalization is important here for the sake of
+                    #   deduplication. Without finalizing, we don't know
+                    #   whether two metadata objects will yield the same thing.
+                    # fm = finalize_metadata(mv)
+                    #  However, finalization means that all downloading must have already been done.
+                    #   This is not necessary, so let's see if we can get away
+                    #    with un-finalized data
+                    rendered_metadata[mv.dist()] = (mv, need_source_download, need_reparse_in_env)
                 except DependencyNeedsBuildingError as e:
                     unsatisfiable_variants.append(variant)
                     packages_needing_building.update(set(e.packages))
@@ -418,20 +428,12 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
     for (_m, download, reparse) in metadata_tuples:
         for (output_dict, m) in _m.get_output_metadata_set():
-            if output_dict.get('type') != 'wheel':
-                try:
-                    m = finalize_metadata(m)
-                except DependencyNeedsBuildingError:
-                    log = utils.get_logger(__name__)
-                    log.warn("Could not finalize metadata due to missing dependencies.  "
-                                "If building, these should get built in order and it's OK to "
-                                "ignore this message..")
-                expanded_outputs[m.dist()] = (m, download, reparse)
+            expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
 
 def render_recipe(recipe_path, config, no_download_source=False, variants=None,
-                  permit_unsatisfiable_variants=True, reset_build_id=True):
+                  permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
     """Returns a list of tuples, each consisting of
 
     (metadata-object, needs_download, needs_render_in_env)
@@ -469,18 +471,23 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         sys.stderr.write(e.error_msg())
         sys.exit(1)
 
+    rendered_metadata = {}
+
+    # important: set build id *before* downloading source.  Otherwise source goes into a different
+    #    build folder.
     if config.set_build_id:
         m.config.compute_build_id(m.name(), reset=reset_build_id)
 
+    # this source may go into a folder that doesn't match the eventual build folder.
+    #   There's no way around it AFAICT.  We must download the source to be able to render
+    #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
+    #   folder until rendering is complete, because package names can have variant jinja2 in them.
     if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
                                       len(os.listdir(m.config.work_dir)) == 0):
         try_download(m, no_download_source=no_download_source)
 
-    rendered_metadata = {}
-
     if m.final:
         rendered_metadata = [(m, False, False), ]
-
     else:
         index, index_ts = get_build_index(m.config, m.config.build_subdir)
         # when building, we don't want to fully expand all outputs into metadata, only expand
@@ -489,8 +496,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                     get_package_variants(m))
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    stub_subpackages=True)
-
+                                    allow_no_other_outputs=True, bypass_env_check=bypass_env_check)
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 
@@ -529,6 +535,7 @@ else:
 
 
 def output_yaml(metadata, filename=None):
+    utils.trim_empty_keys(metadata.meta)
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:

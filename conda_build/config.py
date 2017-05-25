@@ -8,6 +8,7 @@ from collections import namedtuple
 import math
 import os
 from os.path import abspath, expanduser, join
+import shutil
 import sys
 import time
 
@@ -16,7 +17,7 @@ from .conda_interface import binstar_upload
 from .variants import get_default_variants
 from .conda_interface import cc_platform, cc_conda_build, subdir
 
-from .utils import get_build_folders, rm_rf, trim_empty_keys, get_logger
+from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
 on_win = (sys.platform == 'win32')
 
@@ -43,7 +44,9 @@ DEFAULT_PREFIX_LENGTH = 255
 # translate our internal more meaningful subdirs to the ones that conda understands
 SUBDIR_ALIASES = {
     'linux-cos5-x86_64': 'linux-64',
+    'linux-cos6-x86_64': 'linux-64',
     'linux-cos5-x86': 'linux-32',
+    'linux-cos6-x86': 'linux-32',
     'osx-109-x86_64': 'osx-64',
     'win-x86_64': 'win-64',
     'win-x86': 'win-32',
@@ -75,7 +78,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('remove_work_dir', True),
             Setting('_host_platform', None),
             Setting('_host_arch', None),
-            Setting('has_separate_host_prefix', False),
+            Setting('filename_hashing', True),
 
             Setting('index', None),
 
@@ -151,15 +154,15 @@ class Config(object):
                 version = version[0]
             return version
 
+        def set_lang(variant, lang):
+            value = env(lang, self.variant.get(lang))
+            if value:
+                variant[lang] = value
+
         # this is where we override any variant config files with the legacy CONDA_* vars
         #     or CLI params
-        self.variant.update({'perl': env('perl', self.variant.get('perl')),
-                             'lua': env('lua', self.variant.get('lua')),
-                             'python': env('python', self.variant.get('python')),
-                             'numpy': env('numpy', self.variant.get('numpy')),
-                             'r_base': env('r_base', self.variant.get('r_base')),
-                             })
-        trim_empty_keys(self.variant)
+        for lang in ('perl', 'lua', 'python', 'numpy', 'r_base'):
+            set_lang(self.variant, lang)
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
         croot = kwargs.get('croot')
@@ -216,7 +219,8 @@ class Config(object):
 
     @property
     def host_arch(self):
-        return self._host_arch or self.arch
+        return (self._host_arch or
+                self.variant.get('target_platform', self.build_subdir).split('-', 1)[1])
 
     @host_arch.setter
     def host_arch(self, value):
@@ -236,7 +240,8 @@ class Config(object):
 
     @property
     def host_platform(self):
-        return self._host_platform or self.platform
+        return (self._host_platform or
+                self.variant.get('target_platform', self.build_subdir).split('-', 1)[0])
 
     @host_platform.setter
     def host_platform(self, value):
@@ -244,16 +249,17 @@ class Config(object):
 
     @property
     def host_subdir(self):
+        subdir = self.variant.get('target_platform', self.build_subdir)
         if self.host_platform == 'noarch':
-            subdir = self.platform
-        else:
+            subdir = self.host_platform
+        elif subdir != "-".join([self.host_platform, str(self.host_arch)]):
             subdir = "-".join([self.host_platform, str(self.host_arch)])
         return SUBDIR_ALIASES.get(subdir, subdir)
 
     @host_subdir.setter
     def host_subdir(self, value):
         value = SUBDIR_ALIASES.get(value, value)
-        values = value.split('-')
+        values = value.rsplit('-', 1)
         self.host_platform = values[0]
         if len(values) > 1:
             self.host_arch = values[1]
@@ -306,6 +312,7 @@ class Config(object):
             res = join(prefix, 'bin/perl')
         return res
 
+    # TODO: This is probably broken on Windows, but no one has a lua package on windows to test.
     def _get_lua(self, prefix):
         lua_ver = self.variant.get('lua', get_default_variants()[0]['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
@@ -326,18 +333,23 @@ class Config(object):
         if self.set_build_id and (not self._build_id or reset):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
                                                      "to preserve croot during path joins")
-            build_folders = sorted([build_folder for build_folder in get_build_folders(self.croot)
-                                if build_folder.startswith(package_name + "_")])
-
+            build_folders = sorted([os.path.basename(build_folder)
+                            for build_folder in get_build_folders(self.croot)
+                            if os.path.basename(build_folder).startswith(package_name + "_")])
             if self.dirty and build_folders:
                 # Use the most recent build with matching recipe name
                 self._build_id = build_folders[-1]
             else:
+                old_dir = ""
+                if os.listdir(self.work_dir):
+                    old_dir = self.work_dir
                 # here we uniquely name folders, so that more than one build can happen concurrently
                 #    keep 6 decimal places so that prefix < 80 chars
                 build_id = package_name + "_" + str(int(time.time() * 1000))
                 # important: this is recomputing prefixes and determines where work folders are.
                 self._build_id = build_id
+                if old_dir:
+                    shutil.move(old_dir, self.work_dir)
 
     @property
     def build_id(self):
@@ -378,7 +390,7 @@ class Config(object):
         """The temporary folder where the build environment is created.  The build env contains
         libraries that may be linked, but only if the host env is not specified.  It is placed on
         PATH."""
-        if self.has_separate_host_prefix:
+        if self.host_subdir != self.build_subdir:
             prefix = join(self.build_folder, '_build_env')
         else:
             prefix = self.host_prefix
@@ -519,18 +531,23 @@ class Config(object):
         _ensure_dir(path)
         return path
 
-    def clean(self):
+    def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if self.build_id:
-            if os.path.isdir(self.build_folder):
-                rm_rf(self.build_folder)
-        else:
-            for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
-                if os.path.isdir(path):
-                    rm_rf(path)
-        if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
-            rm_rf(os.path.join(self.build_folder, 'prefix_files'))
+        if remove_folders and not getattr(self, 'dirty'):
+            if self.build_id:
+                if os.path.isdir(self.build_folder):
+                    rm_rf(self.build_folder)
+            else:
+                for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
+                    if os.path.isdir(path):
+                        rm_rf(path)
+            if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
+                rm_rf(os.path.join(self.build_folder, 'prefix_files'))
+
+        for lock in get_conda_operation_locks(self):
+            if os.path.isfile(lock.lock_file):
+                rm_rf(lock.lock_file)
 
     def clean_pkgs(self):
         for folder in self.bldpkgs_dirs:
@@ -555,8 +572,11 @@ class Config(object):
 
 
 def get_or_merge_config(config, variant=None, **kwargs):
+    """Always returns a new object - never changes the config that might be passed in."""
     if not config:
         config = Config(variant=variant)
+    else:
+        config = config.copy()
     if kwargs:
         config.set_keys(**kwargs)
     if variant:

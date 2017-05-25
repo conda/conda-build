@@ -61,13 +61,8 @@ def validate_variant(variant):
 def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False):
     """Find files to load variables from.  Note that order here determines clobbering.
 
-    Later files clobber earlier ones.  Preference is system-wide, then """
+    Later files clobber earlier ones.  order is user-wide < cwd < recipe dir < additional files"""
     files = []
-
-    if hasattr(metadata_or_path, 'path'):
-        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
-    else:
-        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
 
     if not ignore_system_config:
         if cc_conda_build.get('config_file'):
@@ -76,10 +71,21 @@ def find_config_files(metadata_or_path, additional_files=None, ignore_system_con
             system_path = os.path.join(os.path.expanduser('~'), "conda_build_config.yaml")
         if os.path.isfile(system_path):
             files.append(system_path)
+
+    cwd = os.path.join(os.getcwd(), 'conda_build_config.yaml')
+    if os.path.isfile(cwd):
+        files.append(cwd)
+
+    if hasattr(metadata_or_path, 'path'):
+        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
+    else:
+        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
     if os.path.isfile(recipe_config):
         files.append(recipe_config)
+
     if additional_files:
         files.extend([os.path.expanduser(additional_file) for additional_file in additional_files])
+
     return files
 
 
@@ -191,7 +197,9 @@ def _get_zip_dict_of_lists(combined_variant, list_of_strings):
     out = {}
 
     if used_keys:
-        dict_key = ",".join(list_of_strings)
+        # The join value needs to be selected as something
+        # that will not likely appear in any key or value.
+        dict_key = "#".join(list_of_strings)
         length = len(ensure_list(combined_variant[used_keys[0]]))
         for key in used_keys:
             if not len(ensure_list(combined_variant[key])) == length:
@@ -199,7 +207,7 @@ def _get_zip_dict_of_lists(combined_variant, list_of_strings):
                                  "fields within a group must be the same length."
                                  .format(used_keys[0], key))
         values = list(zip(*[ensure_list(combined_variant[key]) for key in used_keys]))
-        values = [','.join(value) for value in values]
+        values = ['#'.join(value) for value in values]
         out = {dict_key: values}
     return out
 
@@ -229,7 +237,7 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
 
     combined, extend_keys = combine_specs(specs)
 
-    if 'target_platform' not in combined:
+    if 'target_platform' not in combined or not combined['target_platform']:
         combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
 
     if 'extend_keys' in combined:
@@ -252,11 +260,11 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
         # split out zipped keys
         for k, v in remapped.copy().items():
             if isinstance(k, string_types) and isinstance(v, string_types):
-                keys = k.split(',')
-                values = v.split(',')
+                keys = k.split('#')
+                values = v.split('#')
                 for (_k, _v) in zip(keys, values):
                     remapped[_k] = _v
-                if ',' in k:
+                if '#' in k:
                     del remapped[k]
         dicts.append(remapped)
     return dicts

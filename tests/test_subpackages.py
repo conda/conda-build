@@ -1,11 +1,10 @@
 import os
 import pytest
 import re
-import sys
 
-from conda_build import api
 from conda_build.render import finalize_metadata
 from conda_build.conda_interface import subdir
+from conda_build import api, utils
 
 from .utils import subpackage_dir, is_valid_dir
 
@@ -72,7 +71,7 @@ def test_run_exports_in_subpackage(testing_metadata, testing_index):
     p2 = testing_metadata.copy()
     p2.meta['requirements']['build'] = ['has_run_exports']
     p2.config.index = None
-    p2_final = finalize_metadata(p2, None)
+    p2_final = finalize_metadata(p2)
     assert 'bzip2 1.0' in p2_final.meta['requirements']['run']
 
 
@@ -149,9 +148,9 @@ def test_output_specific_subdir(testing_config):
     assert len(metadata) == 3
     for (m, _, _) in metadata:
         if m.name() in ('default_subdir', 'default_subdir_2'):
-            assert m.config.host_subdir == subdir
+            assert m.config.target_subdir == subdir
         elif m.name() == 'custom_subdir':
-            assert m.config.host_subdir == 'linux-aarch64'
+            assert m.config.target_subdir == 'linux-aarch64'
         else:
             raise AssertionError("Test for output_specific_subdir written incorrectly - "
                                  "package name not recognized")
@@ -170,3 +169,43 @@ def test_about_metadata(testing_config):
             assert 'home' in m.meta['about']
             assert 'summary' not in m.meta['about']
             assert m.meta['about']['home'] == 'http://not.a.url'
+
+
+def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_entry_points')
+    outputs = api.build(recipe_dir, config=testing_config)
+    if utils.on_win:
+        script_dir = 'Scripts'
+        ext = '.exe'
+    else:
+        script_dir = 'bin'
+        ext = ''
+    for out in outputs:
+        fn = os.path.basename(out)
+        if fn.startswith('split_package_entry_points1'):
+            assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg1', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg2', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top1', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top2', ext))
+        elif fn.startswith('split_package_entry_points2'):
+            assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg2', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg1', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top1', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top2', ext))
+        elif fn.startswith('test_split_package_entry_points'):
+            # python commands will make sure that these are available.
+            assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top1', ext))
+            assert utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'top2', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg1', ext))
+            assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg2', ext))
+        else:
+            raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
+
+
+def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
+    with pytest.raises(ValueError) as e:
+        api.build(recipe_dir, config=testing_config)
+    assert e.value.args[0] == ("Infinite loop in subpackages. Exact pins in "
+            "dependencies that contribute to the hash often cause this. Can "
+            "you change one or more exact pins to version bound constraints?")

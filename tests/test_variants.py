@@ -89,6 +89,15 @@ def test_variant_with_numpy_not_pinned_reduces_matrix():
     assert len(metadata) == 2
 
 
+def test_variant_with_numpy_pinned_has_matrix():
+    # variants are defined in yaml file in this folder
+    # there are two python versions and two numpy versions.  However, because numpy is not pinned,
+    #    the numpy dimensions should get collapsed.
+    recipe = os.path.join(recipe_dir, '04_numpy_matrix_pinned')
+    metadata = api.render(recipe)
+    assert len(metadata) == 4
+
+
 def test_pinning_in_build_requirements():
     recipe = os.path.join(recipe_dir, '05_compatible')
     metadata = api.render(recipe)[0][0]
@@ -142,5 +151,11 @@ def test_zip_fields():
 
 def test_cross_compilers():
     recipe = os.path.join(recipe_dir, '09_cross')
-    outputs = api.get_output_file_paths(recipe)
+    outputs = api.get_output_file_paths(recipe, permit_unsatisfiable_variants=True)
     assert len(outputs) == 3
+
+
+def test_variants_in_output_names():
+    recipe = os.path.join(recipe_dir, '11_variant_output_names')
+    outputs = api.get_output_file_paths(recipe)
+    assert len(outputs) == 4

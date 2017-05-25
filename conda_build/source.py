@@ -434,10 +434,20 @@ def get_repository_info(recipe_path):
 def _ensure_unix_line_endings(path):
     """Replace windows line endings with Unix.  Return path to modified file."""
     out_path = path + "_unix"
-    with open(path) as inputfile:
-        with open(out_path, "w") as outputfile:
+    with open(path, "rb") as inputfile:
+        with open(out_path, "wb") as outputfile:
             for line in inputfile:
-                outputfile.write(line.replace("\r\n", "\n"))
+                outputfile.write(line.replace(b"\r\n", b"\n"))
+    return out_path
+
+
+def _ensure_win_line_endings(path):
+    """Replace unix line endings with win.  Return path to modified file."""
+    out_path = path + "_win"
+    with open(path, "rb") as inputfile:
+        with open(out_path, "wb") as outputfile:
+            for line in inputfile:
+                outputfile.write(line.replace(b"\n", b"\r\n"))
     return out_path
 
 
@@ -515,11 +525,38 @@ def apply_patch(src_dir, path, config, git=None):
         """ % (os.pathsep.join(external.dir_paths)))
         patch_strip_level = _guess_patch_strip_level(files, src_dir)
         patch_args = ['-p%d' % patch_strip_level, '-i', path]
-        if sys.platform == 'win32':
-            patch_args[-1] = _ensure_unix_line_endings(path)
-        check_call_env([patch] + patch_args, cwd=src_dir)
-        if sys.platform == 'win32' and os.path.exists(patch_args[-1]):
-            os.remove(patch_args[-1])  # clean up .patch_unix file
+
+        # line endings are a pain.
+        # https://unix.stackexchange.com/a/243748/34459
+
+        try:
+            log = get_logger(__name__)
+            log.info("Trying to apply patch as-is")
+            check_call_env([patch] + patch_args, cwd=src_dir)
+        except CalledProcessError:
+            if sys.platform == 'win32':
+                unix_ending_file = _ensure_unix_line_endings(path)
+                patch_args[-1] = unix_ending_file
+                try:
+                    log.info("Applying unmodified patch failed.  "
+                             "Convert to unix line endings and trying again.")
+                    check_call_env([patch] + patch_args, cwd=src_dir)
+                except:
+                    log.info("Applying unix patch failed.  "
+                             "Convert to CRLF line endings and trying again with --binary.")
+                    patch_args.insert(0, '--binary')
+                    win_ending_file = _ensure_win_line_endings(path)
+                    patch_args[-1] = win_ending_file
+                    try:
+                        check_call_env([patch] + patch_args, cwd=src_dir)
+                    finally:
+                        if os.path.exists(win_ending_file):
+                            os.remove(win_ending_file)  # clean up .patch_win file
+                finally:
+                    if os.path.exists(unix_ending_file):
+                        os.remove(unix_ending_file)  # clean up .patch_unix file
+            else:
+                raise
 
 
 def provide(metadata, patch=True):

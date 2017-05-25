@@ -8,7 +8,7 @@ import sys
 
 import jinja2
 
-from .conda_interface import PY3, memoized
+from .conda_interface import PY3
 from .environ import get_dict as get_environ
 from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
                     string_types)
@@ -217,9 +217,11 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
-@memoized
+cached_env_dependencies = {}
+
+
 def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x',
-                   max_pin='x', permit_undefined_jinja=True, exact=False):
+                   max_pin='x', permit_undefined_jinja=False, exact=False, bypass_env_check=False):
     """dynamically pin based on currently installed version.
 
     only mandatory input is package_name.
@@ -228,34 +230,43 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     pin expressions are of the form 'x.x' - the number of pins is the number of x's separated
         by ``.``.
     """
-    compatibility = None
+    global cached_env_dependencies
+    compatibility = ""
 
-    # this is the version split up into its component bits.
-    # There are two cases considered here (so far):
-    # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
-    # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
-    pins, _ = get_env_dependencies(m, 'build', m.config.variant)
-    versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
-    if versions:
-        if exact and versions.get(package_name):
-            compatibility = ' '.join(versions[package_name])
+    # optimization: this is slow (requires solver), so better to bypass it
+    # until the finalization stage.
+    if not bypass_env_check and not permit_undefined_jinja:
+        # this is the version split up into its component bits.
+        # There are two cases considered here (so far):
+        # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
+        # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
+        key = (m.name(), HashableDict(m.config.variant))
+        if key in cached_env_dependencies:
+            pins = cached_env_dependencies[key]
         else:
-            version = lower_bound or versions.get(package_name)
-            if version:
-                if hasattr(version, '__iter__') and not isinstance(version, string_types):
-                    version = version[0]
-                else:
-                    version = str(version)
-                if upper_bound:
-                    compatibility = ">=" + str(version) + ","
-                    compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
-                else:
-                    compatibility = apply_pin_expressions(version, min_pin, max_pin)
+            pins, _ = get_env_dependencies(m, 'build', m.config.variant)
+            cached_env_dependencies[key] = pins
+        versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
+        if versions:
+            if exact and versions.get(package_name):
+                compatibility = ' '.join(versions[package_name])
+            else:
+                version = lower_bound or versions.get(package_name)
+                if version:
+                    if hasattr(version, '__iter__') and not isinstance(version, string_types):
+                        version = version[0]
+                    else:
+                        version = str(version)
+                    if upper_bound:
+                        compatibility = ">=" + str(version) + ","
+                        compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+                    else:
+                        compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
-    if not compatibility and not permit_undefined_jinja:
+    if not compatibility and not permit_undefined_jinja and not bypass_env_check:
         raise RuntimeError("Could not get compatibility information for {} package.  "
                            "Is it one of your build dependencies?".format(package_name))
-    return compatibility
+    return "  ".join((package_name, compatibility)) if compatibility is not None else None
 
 
 def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit_undefined_jinja):
@@ -263,6 +274,13 @@ def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit
     # this function is not necessary and can be folded back into pin_subpackage.
     pin = None
     subpackage_name, _ = key
+    # two ways to match:
+    #    1. only one other output named the same as the subpackage_name from the key
+    #    2. whole key matches (both subpackage name and variant)
+    keys = list(outputs.keys())
+    matching_package_keys = [k for k in keys if k[0] == subpackage_name]
+    if len(matching_package_keys) == 1:
+        key = matching_package_keys[0]
     if key in outputs:
         sp_m = outputs[key][1]
         if permit_undefined_jinja and not sp_m.version():
@@ -279,20 +297,51 @@ def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit
     return pin
 
 
+subpackage_cache = {}
+
+
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
-                   exact=False, permit_undefined_jinja=True, stub_subpackages=False):
+                   exact=False, permit_undefined_jinja=False, allow_no_other_outputs=False):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    if stub_subpackages:
-        pin = subpackage_name
+    if not hasattr(metadata, 'other_outputs'):
+        if allow_no_other_outputs:
+            pin = subpackage_name
+        else:
+            raise ValueError("Bug in conda-build: we need to have info about other outputs in "
+                             "order to allow pinning to them.  It's not here.")
     else:
-        assert hasattr(metadata, 'other_outputs')
         key = (subpackage_name, HashableDict(metadata.config.variant))
-        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin, exact,
-                                             permit_undefined_jinja)
+        # two ways to match:
+        #    1. only one other output named the same as the subpackage_name from the key
+        #    2. whole key matches (both subpackage name and variant)
+        keys = list(metadata.other_outputs.keys())
+        matching_package_keys = [k for k in keys if k[0] == subpackage_name]
+        if len(matching_package_keys) == 1:
+            key = matching_package_keys[0]
+
+        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
+                                                exact, permit_undefined_jinja)
+        if pin != subpackage_name and exact:
+            assert len(pin.split(' ')) == 3
+            # find index of this package in list of other outputs
+
+            # test that no outputs earlier in the list of other outputs have this
+            #     package pinned exactly in their requirements/run or build/run_exports sections
+            subpackage_index = list(metadata.other_outputs.keys()).index(key)
+            for _, m in list(metadata.other_outputs.values())[:subpackage_index]:
+                deps = m.get_value('requirements/run') + m.get_value('build/run_exports')
+                for dep in deps:
+                    if (dep.split()[0] == subpackage_name and
+                            len(dep.split()) == 3 and
+                            dep != pin):
+                        # raise an error, because this indicates a cyclical dependency
+                        raise ValueError("Infinite loop in subpackages. Exact pins in dependencies "
+                                    "that contribute to the hash often cause this. Can you "
+                                    "change one or more exact pins to version bound constraints?")
     return pin
 
 
@@ -359,7 +408,7 @@ def compiler(language, config, permit_undefined_jinja=False):
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
-                      stub_subpackages=False):
+                      allow_no_other_outputs=False, bypass_env_check=False):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -381,10 +430,11 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                 permit_undefined_jinja=permit_undefined_jinja),
         installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
         pin_compatible=partial(pin_compatible, initial_metadata,
-                               permit_undefined_jinja=permit_undefined_jinja),
+                               permit_undefined_jinja=permit_undefined_jinja,
+                               bypass_env_check=bypass_env_check),
         pin_subpackage=partial(pin_subpackage, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,
-                               stub_subpackages=stub_subpackages),
+                               allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)

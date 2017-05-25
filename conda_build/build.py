@@ -446,7 +446,7 @@ def get_entry_point_script_names(entry_point_scripts):
 
 
 def write_run_exports(m):
-    if 'run_exports' in m.meta.get('build', {}):
+    if m.meta.get('build', {}).get('run_exports'):
         with open(os.path.join(m.config.info_dir, 'run_exports'), 'w') as f:
             for pin in utils.ensure_list(m.meta['build']['run_exports']):
                 f.write(pin + "\n")
@@ -465,7 +465,8 @@ def create_info_files(m, files, prefix):
         # make sure we use '/' path separators in metadata
         files = [_f.replace('\\', '/') for _f in files]
 
-    write_hash_input(m)
+    if m.config.filename_hashing:
+        write_hash_input(m)
     write_info_json(m)  # actually index.json
     write_about_json(m)
     write_link_json(m)
@@ -676,14 +677,15 @@ def bundle_conda(output, metadata, env, **kw):
         env_output['PKG_VERSION'] = metadata.version()
         env_output['PKG_NAME'] = metadata.get_value('package/name')
         utils.check_call_env(interpreter.split(' ') +
-                    [os.path.join(metadata.path, output['script'])],
+                    [os.path.join(metadata.config.work_dir, output['script'])],
                              cwd=metadata.config.host_prefix, env=env_output)
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
-                            if not any(keep_file == item for keep_file in keep_files))
+                            if not any(keep_file.startswith(item + os.path.sep)
+                                       for keep_file in keep_files))
 
     files = post_process_files(metadata, initial_files)
 
@@ -701,7 +703,7 @@ def bundle_conda(output, metadata, env, **kw):
         test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
         script = output.get('test', {}).get('script')
         if script and script.endswith(ext):
-            utils.copy_into(os.path.join(metadata.path, output['test']['script']),
+            utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
                             test_dest_path, metadata.config.timeout,
                             locking=metadata.config.locking)
         elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
@@ -711,8 +713,6 @@ def bundle_conda(output, metadata, env, **kw):
     files = set(utils.prefix_files(metadata.config.host_prefix)) - initial_files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
 
-    # lock the output directory while we build this file
-    # create the tarball in a temporary directory to minimize lock time
     with TemporaryDirectory() as tmp:
         tmp_path = os.path.join(tmp, os.path.basename(output_filename))
         t = tarfile.open(tmp_path, 'w:bz2')
@@ -741,8 +741,12 @@ def bundle_conda(output, metadata, env, **kw):
                           metadata.config.run_package_verify_scripts else None
             verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
                                     path_to_package=tmp_path)
+        try:
+            crossed_subdir = metadata.config.target_subdir
+        except AttributeError:
+            crossed_subdir = metadata.config.host_subdir
         subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
-                  else metadata.config.host_subdir)
+                  else crossed_subdir)
         if metadata.config.output_folder:
             output_folder = os.path.join(metadata.config.output_folder, subdir)
         else:
@@ -750,8 +754,11 @@ def bundle_conda(output, metadata, env, **kw):
         final_output = os.path.join(output_folder, output_filename)
         if os.path.isfile(final_output):
             os.remove(final_output)
+
+        # disable locking here.  It's just a temp folder getting locked.  Removing it proved to be
+        #    a major bottleneck.
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
-                        locking=metadata.config.locking)
+                        locking=False)
     update_index(output_folder, config=metadata.config)
 
     # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
@@ -828,6 +835,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
     host_actions = []
     host_index = {}
     build_actions = []
+    output_metas = []
 
     with utils.path_prepended(m.config.build_prefix):
         env = environ.get_dict(config=m.config, m=m)
@@ -836,9 +844,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if post in [False, None]:
-        if m.uses_jinja and (need_source_download or need_reparse_in_env):
-            print("    (actual version deferred until further download or env creation)")
-
         specs = [ms.spec for ms in m.ms_depends('build')]
         if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
             specs.extend(['pip', 'wheel'])
@@ -868,13 +873,14 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
-        if m.config.has_separate_host_prefix:
+        if m.config.host_subdir != m.config.build_subdir:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
             host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
             host_ms_deps = m.ms_depends('host')
             host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                       host_ms_deps, m.config, timestamp=host_ts)
+                                                       host_ms_deps, m.config, timestamp=host_ts,
+                                                       subdir=m.config.host_subdir)
             environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                subdir=m.config.host_subdir)
 
@@ -900,7 +906,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             try_download(m, no_download_source=False)
         if need_source_download:
             m.final = False
-            m.parse_until_resolved(stub_subpackages=True)
+            m.parse_until_resolved(allow_no_other_outputs=True)
 
         elif need_reparse_in_env:
             m = reparse(m)
@@ -933,7 +939,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
         if m.config.skip_existing:
-            package_locations = [is_package_built(om) for om, _, _ in output_metas]
+            package_locations = [is_package_built(om) for _, om in output_metas]
             if all(package_locations):
                 print("Packages for ", m.path or m.name(),
                         "are already built in {0}, skipping.".format(package_locations))
@@ -941,7 +947,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             else:
                 package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
         else:
-            package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
+            package_locations = [bldpkg_path(om) for _, om in output_metas]
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
@@ -997,7 +1003,17 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
     new_pkgs = default_return
     if post in [True, None]:
-        outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        top_level_meta = m
+
+        # this is the old, default behavior: conda package, with difference between start
+        #    set of files and end set of files
+        prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
+        if os.path.isfile(prefix_file_list):
+            with open(prefix_file_list) as f:
+                initial_files = set(f.read().splitlines())
+        else:
+            initial_files = set()
 
         # subdir needs to always be some real platform - so ignore noarch.
         subdir = (m.config.host_subdir if m.config.host_subdir != 'noarch' else
@@ -1010,6 +1026,11 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 os.path.join(prefix_files_backup, f),
                                 symlinks=True)
             for (output_d, m) in outputs:
+                if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
+                                                                           output_d.get('script'))):
+                    output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
+                                         initial_files)
+
                 assert m.final, "output metadata for {} is not finalized".format(m.dist())
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
@@ -1017,19 +1038,20 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
-                    sub_host_ms_deps = m.ms_depends('host')
-                    if host_index:
+
+                    if m.config.host_subdir != m.config.build_subdir:
+                        if VersionOrder(conda_version) < VersionOrder('4.3.2'):
+                            raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
+                        host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
+                        host_ms_deps = m.ms_depends('host')
                         host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                                   sub_host_ms_deps, m.config,
-                                                                   timestamp=host_ts)
+                                                                host_ms_deps, m.config,
+                                                                timestamp=host_ts)
                         environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                         subdir=subdir)
-                    else:
-                        assert not sub_host_ms_deps, ("Have host deps ({}) without a host_index"
-                                                    .format(sub_host_ms_deps))
 
                     sub_build_ms_deps = m.ms_depends('build')
-                    index, index_timestamp = get_build_index(m.config, m.config.host_subdir)
+                    index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                                 sub_build_ms_deps, m.config,
                                                                 timestamp=index_timestamp)
@@ -1042,8 +1064,13 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                         os.path.join(m.config.host_prefix, f),
                                         symlinks=True)
 
+                    # we must refresh the environment variables because our env for each package
+                    #    can be different from the env for the top level build.
+                    with utils.path_prepended(m.config.build_prefix):
+                        env = environ.get_dict(config=m.config, m=m)
                     built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
                     new_pkgs[built_package] = (output_d, m)
+
                     # must rebuild index because conda has no way to incrementally add our last
                     #    package to the index.
 
@@ -1329,10 +1356,11 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             utils.rm_rf(recipe_dir)
         utils.rm_rf(metadata.config.test_prefix)
         print("TEST END:", test_package_name)
+
     return True
 
 
-def tests_failed(m, move_broken, broken_dir, config):
+def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     '''
     Causes conda to exit if any of the given package's tests failed.
 
@@ -1342,9 +1370,15 @@ def tests_failed(m, move_broken, broken_dir, config):
     if not isdir(broken_dir):
         os.makedirs(broken_dir)
 
+    if hasattr(package_or_metadata, 'config'):
+        pkg = bldpkg_path(package_or_metadata)
+    else:
+        pkg = package_or_metadata
+    dest = join(broken_dir, os.path.basename(pkg))
+
     if move_broken:
-        shutil.move(bldpkg_path(m), join(broken_dir, "%s.tar.bz2" % m.dist()))
-    sys.exit("TESTS FAILED: " + m.dist())
+        shutil.move(pkg, dest)
+    sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
 def check_external():
@@ -1428,7 +1462,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
                 metadata_tuples = render_recipe(recipe, config=config, variants=variants,
-                                                permit_unsatisfiable_variants=False)
+                                                permit_unsatisfiable_variants=False,
+                                                reset_build_id=not config.dirty,
+                                                bypass_env_check=True)
             # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
             if post in (True, False):
@@ -1489,6 +1525,9 @@ and 'x' means 'x' or one of 'x' dependencies isn't built
 for Python 3.5 and needs to be rebuilt."""
 
                 recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
+                # conda-forge style.  meta.yaml lives one level deeper.
+                if not recipe_glob:
+                    recipe_glob = glob(os.path.join(recipe_parent_dir, '..', pkg))
                 if recipe_glob:
                     for recipe_dir in recipe_glob:
                         print(("Missing dependency {0}, but found" +
@@ -1506,9 +1545,11 @@ for Python 3.5 and needs to be rebuilt."""
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
         finally:
+            # clean up locks to avoid permission errors when they exist in central installs
             for (m, _, _) in metadata_tuples:
-                if not getattr(m.config, 'dirty') and not has_exception:
-                    m.config.clean()
+                for lock in utils.get_conda_operation_locks(m.config):
+                    if os.path.isfile(lock.lock_file):
+                        utils.rm_rf(lock.lock_file)
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
@@ -1516,6 +1557,10 @@ for Python 3.5 and needs to be rebuilt."""
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
+
+    for (m, _, _) in metadata_tuples:
+        m.config.clean(remove_folders=not has_exception)
+
     return list(built_packages.keys())
 
 

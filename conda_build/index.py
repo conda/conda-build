@@ -5,11 +5,11 @@ Functions related to creating repodata index files.
 from __future__ import absolute_import, division, print_function
 
 import bz2
+import contextlib
 from functools import partial
 import json
 import logging
 import os
-import sys
 import tarfile
 from os.path import isfile, join, getmtime
 
@@ -19,10 +19,13 @@ from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index
 
 local_index_timestamp = 0
 cached_index = None
+local_subdir = ""
+cached_channels = []
 
 
 def read_index_tar(tar_path, config, lock):
     """ Returns the index.json dict inside the given package tarball. """
+    locks = []
     if config.locking:
         locks = [lock]
     with try_acquire_locks(locks, config.timeout):
@@ -44,6 +47,7 @@ def write_repodata(repodata, dir_path, lock, config=None):
     if not config:
         import conda_build.config
         config = conda_build.config.config
+    locks = []
     if config.locking:
         locks = [lock]
     with try_acquire_locks(locks, config.timeout):
@@ -103,13 +107,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         subdir = None
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-        if could_be_mirror and any(fn.startswith('_license-') for fn in files):
-            sys.exit("""\
-    Error:
-        Indexing a copy of the Anaconda conda package channel is neither
-        necessary nor supported.  If you wish to add your own packages,
-        you can do so by adding them to a separate channel.
-    """)
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:
@@ -171,7 +168,9 @@ def ensure_valid_channel(local_folder, subdir, config):
 
 def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     global local_index_timestamp
+    global local_subdir
     global cached_index
+    global cached_channels
     log = utils.get_logger(__name__)
     mtime = 0
 
@@ -185,17 +184,23 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
     if os.path.isfile(index_file):
         mtime = os.path.getmtime(index_file)
 
-    if not os.path.isfile(index_file) or mtime > local_index_timestamp:
+    if (clear_cache or
+            not os.path.isfile(index_file) or
+            local_subdir != subdir or
+            mtime > local_index_timestamp or
+            cached_channels != config.channel_urls):
         log.debug("Building new index for subdir '{}' with channels {}, condarc channels "
                   "= {}".format(subdir, config.channel_urls, not omit_defaults))
         # priority: local by croot (can vary), then channels passed as args,
         #     then channels from config.
+        capture = contextlib.contextmanager(lambda: (yield))
         if config.debug:
             log_context = partial(utils.LoggingContext, logging.DEBUG)
         elif config.verbose:
             log_context = partial(utils.LoggingContext, logging.INFO)
         else:
             log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
+            capture = utils.capture
 
         urls = list(config.channel_urls)
         if os.path.isdir(output_folder):
@@ -204,7 +209,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
 
         # silence output from conda about fetching index files
         with log_context():
-            with utils.capture():
+            with capture():
                 # replace noarch with native subdir - this ends up building an index with both the
                 #      native content and the noarch content.
                 if subdir == 'noarch':
@@ -212,7 +217,7 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                 try:
                     cached_index = get_index(channel_urls=urls,
                                     prepend=not omit_defaults,
-                                    use_local=True,
+                                    use_local=False,
                                     use_cache=False,
                                     platform=subdir)
                 # HACK: defaults does not have the many subfolders we support.  Omit it and
@@ -222,8 +227,10 @@ def get_build_index(config, subdir, clear_cache=False, omit_defaults=False):
                         urls.remove('defaults')
                     cached_index = get_index(channel_urls=urls,
                                              prepend=omit_defaults,
-                                             use_local=True,
+                                             use_local=False,
                                              use_cache=False,
                                              platform=subdir)
         local_index_timestamp = mtime
+        local_subdir = subdir
+        cached_channels = config.channel_urls
     return cached_index, local_index_timestamp

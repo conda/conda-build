@@ -26,14 +26,17 @@ from conda_build.utils import get_logger as _get_logger
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
-           **kwargs):
+           finalize=True, **kwargs):
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
-    from conda_build.render import render_recipe
+    from conda_build.render import render_recipe, finalize_metadata
+    from conda_build.exceptions import DependencyNeedsBuildingError
+    from conda_build.conda_interface import NoPackagesFoundError
     from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
+    log = _get_logger(__name__)
 
     metadata_tuples = render_recipe(recipe_path,
                                     no_download_source=config.no_download_source,
@@ -45,6 +48,15 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                 permit_unsatisfiable_variants=permit_unsatisfiable_variants):
             # only show conda packages right now
             if 'type' not in od or od['type'] == 'conda':
+                if finalize:
+                    try:
+                        om = finalize_metadata(om)
+                    except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                        if permit_unsatisfiable_variants:
+                            log.warn("Returning non-final recipe; one or more dependencies "
+                                    "was unsatisfiable.")
+                        else:
+                            raise
                 output_metas[om.dist()] = ((om, download, render_in_env))
     return list(output_metas.values())
 
@@ -77,7 +89,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     elif isinstance(recipe_path_or_metadata, string_types):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
-                            variants=variants, config=config)
+                            variants=variants, config=config, **kwargs)
     else:
         assert hasattr(recipe_path_or_metadata, 'config'), ("Expecting metadata object - got {}"
                                                             .format(recipe_path_or_metadata))
@@ -146,10 +158,13 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
     for recipe in paths:
-        try:
-            recipes.append(find_recipe(recipe))
-        except IOError:
-            continue
+        if (os.path.isdir(recipe) or
+                (os.path.isfile(recipe) and
+                 os.path.basename(recipe) in ('meta.yaml', 'conda.yaml'))):
+            try:
+                recipes.append(find_recipe(recipe))
+            except IOError:
+                continue
     metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
     recipes.extend(metadata)
     absolute_recipes = []

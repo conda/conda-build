@@ -1,5 +1,5 @@
 package:
-  name: test_keep_work_dir
+  name: test_keep_work_dir_{{ something }}
   version: 1.0
 
 source:

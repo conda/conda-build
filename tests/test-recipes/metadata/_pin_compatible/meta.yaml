@@ -7,5 +7,5 @@ requirements:
     - numpy  1.11.2
     - python
   run:
-    - numpy {{ pin_compatible('numpy') }}
+    - {{ pin_compatible('numpy') }}
     - python

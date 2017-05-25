@@ -99,6 +99,13 @@ source to try fill in related template variables.",
         help="""Additional variant config files to add.  These yaml files can contain
         keys such as `c_compiler` and `target_platform` to form a build matrix."""
     )
+    p.add_argument(
+        "--old-build-string", dest="filename_hashing", action="store_false",
+        default=True, help=("Disable hash additions to filenames to distinguish package "
+                            "variants from one another.  NOTE: any filename collisions are "
+                            "yours to handle.  Any variants with overlapping names within a "
+                            "build will clobber each other.")
+    )
 
     add_parser_channels(p)
     return p
