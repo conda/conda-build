@@ -1,0 +1,37 @@
+
+install:
+  # Install conda
+  - wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update conda
+
+  # Install dependencies
+  - conda create -n {{ name }} python=$TRAVIS_PYTHON_VERSION pytest coverage 
+  - source activate {{ name }}
+    
+  # update setuptools and pip
+  - conda update setuptools pip
+
+  # {{ name }} required deps
+  - pip install git+https://github.com/{{ name }}/datashape
+  - pip install git+https://github.com/{{ name }}/odo
+
+  # Install coveralls
+  - pip install coveralls
+
+  # Install {{ name }} 
+  - pip install -e .[ci]
+
+script:
+  - conda list
+  - py.test {{ name }}
+
+after_success:
+  - coveralls
+
+notifications:
+  email: {{ email }}
+  on_success: "change"
+  on_failure: "always" # "change"
