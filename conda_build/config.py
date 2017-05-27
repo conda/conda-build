@@ -265,10 +265,6 @@ class Config(object):
             self.host_arch = values[1]
 
     @property
-    def is_cross(self):
-        return self.build_subdir != self.host_subdir
-
-    @property
     def croot(self):
         """This is where source caches and work folders live"""
         if not self._croot:

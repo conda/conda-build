@@ -314,3 +314,11 @@ def get_package_variants(recipedir_or_metadata, config=None):
 
 def get_default_variants(platform=cc_platform):
     return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS, platform)
+
+
+def get_loop_vars(variants):
+    """For purposes of naming/identifying, provide a way of identifying which variables contribute
+    to the matrix dimensionality"""
+    special_keys = ('pin_run_as_build', 'zip_keys', 'ignore_version')
+    return [k for k in variants[0] if k not in special_keys and
+            any(variant[k] != variants[0][k] for variant in variants[1:])]
