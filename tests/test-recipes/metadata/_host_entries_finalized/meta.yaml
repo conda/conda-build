@@ -1,0 +1,12 @@
+# When host requirements were added, they were not respected during finalization
+#    thus things like the filenaming and variant distribution were not working.
+
+package:
+  name: test_host_packages_finalized
+  version: 1.0
+
+requirements:
+  host:
+    - python
+  run:
+    - python

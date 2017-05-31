@@ -68,6 +68,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
+@memoized
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     env = os.environ.copy()
     log = utils.get_logger(__name__)
@@ -151,6 +152,7 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     return OK
 
 
+@memoized
 def get_git_info(repo, config):
     """
     Given a repo to a git repo, return a dictionary of:
@@ -400,7 +402,8 @@ def meta_vars(meta, config):
     d['PKG_BUILDNUM'] = str(meta.build_number() or 0)
     if meta.final:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
-    d['RECIPE_DIR'] = meta.path
+    d['RECIPE_DIR'] = (meta.path if meta.path else
+                       meta.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
     return d
 
 
@@ -815,9 +818,10 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                         log.error("Failed to create env, max retries exceeded.")
                         raise
     # We must not symlink conda across different platforms when cross-compiling.
-    #  On second thought, I think we must, because activating the host env does the symlink for us anyway,
-    #     and when activate does it, we end up with conda symlinks in every package.  =()
-    #if os.path.basename(prefix) == '_build_env' or not is_cross:
+    #  On second thought, I think we must, because activating the host env does
+    #     the symlink for us anyway, and when activate does it, we end up with
+    #     conda symlinks in every package. =()
+    # if os.path.basename(prefix) == '_build_env' or not is_cross:
     if utils.on_win:
         shell = "cmd.exe"
     else:
