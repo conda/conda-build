@@ -4,7 +4,7 @@ import re
 
 from conda_build.render import finalize_metadata
 from conda_build.conda_interface import subdir
-from conda_build import api, utils
+from conda_build import api, utils, exceptions
 
 from .utils import subpackage_dir, is_valid_dir
 
@@ -204,8 +204,10 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
 
 def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(exceptions.RecipeError):
         api.build(recipe_dir, config=testing_config)
-    assert e.value.args[0] == ("Infinite loop in subpackages. Exact pins in "
-            "dependencies that contribute to the hash often cause this. Can "
-            "you change one or more exact pins to version bound constraints?")
+
+
+def test_toplevel_subpackage_exact_does_not_raise_infinite_loop_error(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_intradependencies_toplevel_circular')
+    api.render(recipe_dir, config=testing_config)

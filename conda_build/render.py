@@ -443,7 +443,7 @@ def expand_outputs(metadata_tuples):
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
     expanded_outputs = OrderedDict()
     for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.get_output_metadata_set():
+        for (output_dict, m) in _m.get_output_metadata_set(permit_unsatisfiable_variants=False):
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
@@ -555,8 +555,7 @@ else:
 def output_yaml(metadata, filename=None):
     utils.trim_empty_keys(metadata.meta)
     if metadata.meta.get('outputs'):
-        for out in metadata.meta['outputs']:
-            utils.trim_empty_keys(out)
+        del metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:

@@ -328,23 +328,6 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
 
         pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
                                                 exact, permit_undefined_jinja)
-        if pin != subpackage_name and exact:
-            assert len(pin.split(' ')) == 3
-            # find index of this package in list of other outputs
-
-            # test that no outputs earlier in the list of other outputs have this
-            #     package pinned exactly in their requirements/run or build/run_exports sections
-            subpackage_index = list(metadata.other_outputs.keys()).index(key)
-            for _, m in list(metadata.other_outputs.values())[:subpackage_index]:
-                deps = m.get_value('requirements/run') + m.get_value('build/run_exports')
-                for dep in deps:
-                    if (dep.split()[0] == subpackage_name and
-                            len(dep.split()) == 3 and
-                            dep != pin):
-                        # raise an error, because this indicates a cyclical dependency
-                        raise ValueError("Infinite loop in subpackages. Exact pins in dependencies "
-                                    "that contribute to the hash often cause this. Can you "
-                                    "change one or more exact pins to version bound constraints?")
     return pin
 
 
