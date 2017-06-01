@@ -48,6 +48,7 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                 permit_unsatisfiable_variants=permit_unsatisfiable_variants):
             # only show conda packages right now
             if 'type' not in od or od['type'] == 'conda':
+                assert hasattr(om.config, 'variants')
                 if finalize:
                     try:
                         om = finalize_metadata(om)
