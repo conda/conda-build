@@ -238,7 +238,10 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
     combined, extend_keys = combine_specs(specs)
 
     if 'target_platform' not in combined or not combined['target_platform']:
-        combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
+        try:
+            combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
+        except KeyError:
+            combined['target_platform'] = [DEFAULT_PLATFORMS[platform.split('-')[0]]]
 
     if 'extend_keys' in combined:
         del combined['extend_keys']

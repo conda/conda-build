@@ -364,7 +364,10 @@ compilers = {
 
 
 def native_compiler(language, config):
-    compiler = compilers[config.platform][language]
+    try:
+        compiler = compilers[config.platform][language]
+    except KeyError:
+        compiler = compilers[config.platform.split('-')[0]][language]
     if hasattr(compiler, 'keys'):
         compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
     return compiler
