@@ -316,7 +316,7 @@ def test_pip_in_meta_yaml_fail(testing_workdir, testing_config):
 
 
 def test_recursive_fail(testing_workdir, testing_config):
-    with pytest.raises(RuntimeError) as exc:
+    with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)) as exc:
         api.build(os.path.join(fail_dir, "recursive-build"), config=testing_config)
     # indentation critical here.  If you indent this, and the exception is not raised, then
     #     the exc variable here isn't really completely created and shows really strange errors:
@@ -389,6 +389,7 @@ def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
 
 
+@pytest.mark.serial
 def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     good_files = ['f1.py', 'f3.py']
@@ -670,6 +671,7 @@ def test_preferred_env(testing_config):
     assert 'package_metadata_version' in extra
 
 
+@pytest.mark.serial
 def test_skip_compile_pyc(testing_config):
     outputs = api.build(os.path.join(metadata_dir, "skip_compile_pyc"), config=testing_config)
     tf = tarfile.open(outputs[0])
@@ -966,7 +968,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
     locks = get_conda_operation_locks(m.config)
-    with pytest.raises(RuntimeError):
+    with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)):
         api.build(m)
     assert os.listdir(m.config.build_folder)
     # make sure that it does not leave lock files, though, as these cause permission errors on
