@@ -184,7 +184,7 @@ class Config(object):
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or subdir.split('-')[-1]
+        return self._arch or subdir.rsplit('-', 1)[1]
 
     @arch.setter
     def arch(self, value):
@@ -198,7 +198,7 @@ class Config(object):
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or cc_platform
+        return self._platform or subdir.rsplit('-', 1)[0]
 
     @platform.setter
     def platform(self, value):
