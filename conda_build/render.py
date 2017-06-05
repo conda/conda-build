@@ -88,7 +88,7 @@ def parse_or_try_download(metadata, no_download_source, config,
                 need_source_download = False
             try:
                 metadata.parse_again(config=config, permit_undefined_jinja=False)
-                need_reparse_in_env = False
+                need_reparse_in_env = metadata.uses_setup_py_in_meta
             except (ImportError, exceptions.UnableToParseMissingSetuptoolsDependencies):
                 pass  # we just don't alter the need_reparse_in_env variable
         except subprocess.CalledProcessError as error:
