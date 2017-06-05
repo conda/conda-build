@@ -883,8 +883,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                        subdir=m.config.host_subdir)
             environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                subdir=m.config.host_subdir, is_cross=m.is_cross)
-
-        build_ms_deps = m.ms_depends('build')
+            build_ms_deps = m.ms_depends('build')
+        else:
+            # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
+            build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
         index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
         build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                     build_ms_deps, m.config,
@@ -1064,8 +1066,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                                 timestamp=host_ts)
                         environ.create_env(m.config.host_prefix, host_actions, config=m.config,
                                         subdir=subdir, is_cross=m.is_cross)
-
-                    sub_build_ms_deps = m.ms_depends('build')
+                        sub_build_ms_deps = m.ms_depends('build')
+                    else:
+                        # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
+                        sub_build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
                     index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                                 sub_build_ms_deps, m.config,
