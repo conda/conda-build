@@ -934,3 +934,12 @@ def test_no_force_upload_condarc_setting(mocker, testing_workdir, test_metadata)
     del cc_conda_build['force_upload']
     pkg = api.build(testing_workdir)
     assert call.called_once_with(['anaconda', 'upload', '--force', pkg])
+
+
+def test_setup_py_data_in_env(test_config):
+    recipe = os.path.join(metadata_dir, '_setup_py_data_in_env')
+    # should pass with any modern python (just not 3.5)
+    api.build(recipe, config=test_config)
+    # make sure it fails with our special python logic
+    with pytest.raises(subprocess.CalledProcessError):
+        api.build(recipe, config=test_config, python='3.4')

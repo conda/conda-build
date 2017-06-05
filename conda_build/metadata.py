@@ -859,8 +859,13 @@ class MetaData(object):
 
     @property
     def uses_setup_py_in_meta(self):
-        with open(self.meta_path) as f:
-            meta_text = f.read()
+        meta_path = (self.meta_path or
+                     self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        if meta_path:
+            with open(self.meta_path) as f:
+                meta_text = f.read()
+        else:
+            meta_text = ''
         return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
