@@ -11,14 +11,14 @@ from distutils.version import LooseVersion
 import pytest
 
 import conda
-from conda_build.conda_interface import download
+from conda_build.conda_interface import download, reset_context
 from conda_build.tarcheck import TarCheck
 
 from conda_build import api
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
                                check_call_env, tar_xf)
 from conda_build.conda_interface import TemporaryDirectory
-from conda_build.environ import get_py_ver
+import conda_build
 from .utils import metadata_dir, put_bad_conda_on_path
 
 import conda_build.cli.main_build as main_build
@@ -441,3 +441,23 @@ def test_purge_all(test_metadata):
     main_build.execute(args)
     assert not get_build_folders(test_metadata.config.croot)
     assert not os.path.isfile(fn)
+
+
+def test_no_force_upload(mocker, testing_workdir, test_metadata):
+    with open(os.path.join(testing_workdir, '.condarc'), 'w') as f:
+        f.write('anaconda_upload: True\n')
+        f.write('conda_build:\n')
+        f.write('    force_upload: False\n')
+    del test_metadata.meta['test']
+    api.output_yaml(test_metadata, 'meta.yaml')
+    args = ['--no-force-upload', testing_workdir]
+    call = mocker.patch.object(conda_build.build.subprocess, 'call')
+    reset_context(testing_workdir)
+    main_build.execute(args)
+    pkg = api.get_output_file_path(test_metadata)
+    assert call.called_once_with(['anaconda', 'upload', pkg])
+    args = [testing_workdir]
+    with open(os.path.join(testing_workdir, '.condarc'), 'w') as f:
+        f.write('anaconda_upload: True\n')
+    main_build.execute(args)
+    assert call.called_once_with(['anaconda', 'upload', '--force', pkg])

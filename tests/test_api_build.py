@@ -14,7 +14,8 @@ import uuid
 # for version
 import conda
 
-from conda_build.conda_interface import PY3, url_path
+from conda_build.conda_interface import PY3, url_path, cc_conda_build
+import conda_build
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -920,3 +921,16 @@ def test_no_locking(test_config):
     recipe = os.path.join(metadata_dir, 'source_git_jinja2')
     api.update_index(os.path.join(test_config.croot, test_config.subdir), config=test_config)
     api.build(recipe, config=test_config, locking=False)
+
+
+def test_no_force_upload_condarc_setting(mocker, testing_workdir, test_metadata):
+    test_metadata.config.anaconda_upload = True
+    del test_metadata.meta['test']
+    api.output_yaml(test_metadata, 'meta.yaml')
+    call = mocker.patch.object(conda_build.build.subprocess, 'call')
+    cc_conda_build['force_upload'] = False
+    pkg = api.build(testing_workdir)
+    assert call.called_once_with(['anaconda', 'upload', pkg])
+    del cc_conda_build['force_upload']
+    pkg = api.build(testing_workdir)
+    assert call.called_once_with(['anaconda', 'upload', '--force', pkg])

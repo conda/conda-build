@@ -1587,14 +1587,11 @@ def handle_anaconda_upload(paths, config):
     upload = False
     # this is the default, for no explicit argument.
     # remember that anaconda_upload takes defaults from condarc
-    if config.anaconda_upload is None:
-        pass
-    elif config.token or config.user:
+    if config.token or config.user:
         upload = True
     # rc file has uploading explicitly turned off
-    elif config.anaconda_upload is False:
+    elif not config.anaconda_upload:
         print("# Automatic uploading is disabled")
-        upload = False
     else:
         upload = True
 
@@ -1626,7 +1623,9 @@ Error: cannot locate anaconda command (required for upload)
 
     if config.token:
         cmd.extend(['--token', config.token])
-    cmd.extend(['upload', '--force'])
+    cmd.append('upload')
+    if config.force_upload:
+        cmd.append('--force')
     if config.user:
         cmd.extend(['--user', config.user])
     for package in paths:
