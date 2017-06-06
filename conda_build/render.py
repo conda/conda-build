@@ -189,7 +189,7 @@ def get_upstream_pins(m, actions, index):
 
 
 def finalize_metadata(m):
-    """Fully render a recipe.  Fill in versions for build dependencies."""
+    """Fully render a recipe.  Fill in versions for build/host dependencies."""
     index, index_ts = get_build_index(m.config, m.config.build_subdir)
 
     exclude_pattern = None
@@ -214,16 +214,25 @@ def finalize_metadata(m):
         build_reqs.append('python {}'.format(m.config.variant['python']))
         m.meta['requirements']['build'] = build_reqs
 
-    build_deps, actions = get_env_dependencies(m, 'build', m.config.variant, exclude_pattern)
+    # if we have host deps, they're more important than the build deps.
+    build_deps, build_actions = get_env_dependencies(m, 'build', m.config.variant, exclude_pattern)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
 
-    extra_run_specs = get_upstream_pins(m, actions, index)
+    extra_run_specs = get_upstream_pins(m, build_actions, index)
 
     reset_index = False
-    if m.config.build_subdir != m.config.host_subdir:
-        index, index_ts = get_build_index(m.config, m.config.host_subdir)
-        reset_index = True
+    if m.is_cross:
+        host_reqs = m.get_value('requirements/host')
+        # if python is in the build specs, but doesn't have a specific associated
+        #    version, make sure to add one
+        if host_reqs and 'python' in host_reqs:
+            host_reqs.append('python {}'.format(m.config.variant['python']))
+            m.meta['requirements']['host'] = host_reqs
+        host_deps, host_actions = get_env_dependencies(m, 'host', m.config.variant, exclude_pattern)
+        extra_run_specs += get_upstream_pins(m, host_actions, index)
+    else:
+        host_deps = []
 
     # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
     #    To avoid confusion, any index passed around is always the native build platform.
@@ -238,15 +247,16 @@ def finalize_metadata(m):
     if output_excludes:
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in output_excludes))
-    full_build_deps, _ = get_env_dependencies(m, 'build', m.config.variant,
+    pinning_env = 'host' if m.is_cross else 'build'
+    full_build_deps, _ = get_env_dependencies(m, pinning_env, m.config.variant,
                                               exclude_pattern=exclude_pattern)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
 
-    for env, values in (('build', build_deps), ('run', versioned_run_deps)):
+    for _env, values in (('build', build_deps), ('host', host_deps), ('run', versioned_run_deps)):
         if values:
-            requirements[env] = list({strip_channel(dep) for dep in values})
+            requirements[_env] = list({strip_channel(dep) for dep in values})
     rendered_metadata.meta['requirements'] = requirements
 
     test_deps = rendered_metadata.get_value('test/requires')
@@ -313,6 +323,14 @@ def reparse(metadata):
     return metadata
 
 
+def insert_python_version(metadata, env):
+    reqs = metadata.get_value('requirements/' + env)
+    if reqs and 'python' in reqs:
+        python_version = 'python {}'.format(metadata.config.variant['python'])
+        metadata.meta['requirements'][env] = [python_version if re.match('^python(?:$| .*)', pkg)
+                                              else pkg for pkg in reqs]
+
+
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         allow_no_other_outputs=False, bypass_env_check=False):
     rendered_metadata = {}
@@ -366,7 +384,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                     conform_dict['target_platform'] = variant['target_platform']
 
             build_reqs = mv.meta.get('requirements', {}).get('build', [])
-            if 'python' in build_reqs:
+            host_reqs = mv.meta.get('requirements', {}).get('host', [])
+            if 'python' in build_reqs or 'python' in host_reqs:
                 conform_dict['python'] = variant['python']
 
             mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
@@ -382,11 +401,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                                             not os.listdir(mv.config.work_dir))
                     # if python is in the build specs, but doesn't have a specific associated
                     #    version, make sure to add one to newly parsed 'requirements/build'.
-                    if build_reqs and 'python' in build_reqs:
-                        python_version = 'python {}'.format(mv.config.variant['python'])
-                        mv.meta['requirements']['build'] = [
-                            python_version if re.match('^python(?:$| .*)', pkg) else pkg
-                            for pkg in mv.meta['requirements']['build']]
+                    for env in ('build', 'host'):
+                        insert_python_version(mv, env)
                     # finalization is important here for the sake of
                     #   deduplication. Without finalizing, we don't know
                     #   whether two metadata objects will yield the same thing.
@@ -427,7 +443,7 @@ def expand_outputs(metadata_tuples):
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
     expanded_outputs = OrderedDict()
     for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.get_output_metadata_set():
+        for (output_dict, m) in _m.get_output_metadata_set(permit_unsatisfiable_variants=False):
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
@@ -487,6 +503,8 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         try_download(m, no_download_source=no_download_source)
 
     if m.final:
+        if not hasattr(m.config, 'variants'):
+            m.config.variants = [m.config.variant]
         rendered_metadata = [(m, False, False), ]
     else:
         index, index_ts = get_build_index(m.config, m.config.build_subdir)
@@ -536,6 +554,8 @@ else:
 
 def output_yaml(metadata, filename=None):
     utils.trim_empty_keys(metadata.meta)
+    if metadata.meta.get('outputs'):
+        del metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:

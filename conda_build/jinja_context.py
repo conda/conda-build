@@ -244,7 +244,10 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
         if key in cached_env_dependencies:
             pins = cached_env_dependencies[key]
         else:
-            pins, _ = get_env_dependencies(m, 'build', m.config.variant)
+            if m.is_cross:
+                pins, _ = get_env_dependencies(m, 'host', m.config.variant)
+            else:
+                pins, _ = get_env_dependencies(m, 'build', m.config.variant)
             cached_env_dependencies[key] = pins
         versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
         if versions:
@@ -325,23 +328,6 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
 
         pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
                                                 exact, permit_undefined_jinja)
-        if pin != subpackage_name and exact:
-            assert len(pin.split(' ')) == 3
-            # find index of this package in list of other outputs
-
-            # test that no outputs earlier in the list of other outputs have this
-            #     package pinned exactly in their requirements/run or build/run_exports sections
-            subpackage_index = list(metadata.other_outputs.keys()).index(key)
-            for _, m in list(metadata.other_outputs.values())[:subpackage_index]:
-                deps = m.get_value('requirements/run') + m.get_value('build/run_exports')
-                for dep in deps:
-                    if (dep.split()[0] == subpackage_name and
-                            len(dep.split()) == 3 and
-                            dep != pin):
-                        # raise an error, because this indicates a cyclical dependency
-                        raise ValueError("Infinite loop in subpackages. Exact pins in dependencies "
-                                    "that contribute to the hash often cause this. Can you "
-                                    "change one or more exact pins to version bound constraints?")
     return pin
 
 
@@ -378,7 +364,10 @@ compilers = {
 
 
 def native_compiler(language, config):
-    compiler = compilers[config.platform][language]
+    try:
+        compiler = compilers[config.platform][language]
+    except KeyError:
+        compiler = compilers[config.platform.split('-')[0]][language]
     if hasattr(compiler, 'keys'):
         compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
     return compiler
@@ -439,16 +428,3 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
 
         environ=environ)
     return ctx
-
-
-def get_used_variants(recipe_metadata):
-    """because the functions in jinja_context don't directly used jinja variables, we need to teach
-    conda-build which ones are used, so that it can limit the build space based on what entries are
-    actually used."""
-    with open(recipe_metadata.meta_path) as f:
-        recipe_text = f.read()
-    used_variables = set()
-    for lang in 'c', 'cxx', 'fortran':
-        if re.search('compiler\([\\]?[\'"]{}[\\]?[\'"]\)'.format(lang), recipe_text):
-            used_variables.update(set(['{}_compiler'.format(lang), 'target_platform']))
-    return used_variables

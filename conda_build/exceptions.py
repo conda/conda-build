@@ -82,3 +82,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
 
     def __str__(self):
         return self.message
+
+
+class RecipeError(CondaBuildException):
+    pass

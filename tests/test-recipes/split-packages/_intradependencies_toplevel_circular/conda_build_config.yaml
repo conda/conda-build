@@ -1,0 +1,3 @@
+cross_target_platform: linux-64
+gcc: 7.1
+binutils: 2.28

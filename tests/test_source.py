@@ -1,10 +1,13 @@
 import os
 import subprocess
+import tarfile
 import tempfile
 
 import pytest
 
 from conda_build import source
+from conda_build.conda_interface import TemporaryDirectory
+from conda_build.source import download_to_cache
 from .utils import thisdir
 
 
@@ -77,3 +80,18 @@ def test_git_repo_with_single_subdir_does_not_enter_subdir(testing_metadata):
         'git_url': 'https://github.com/conda/conda_build_single_folder_test'}
     source.provide(testing_metadata)
     assert os.path.basename(testing_metadata.config.work_dir) != 'one_folder'
+
+
+def test_source_user_expand(testing_workdir):
+    with TemporaryDirectory(dir=os.path.expanduser('~')) as tmp:
+        with TemporaryDirectory() as tbz_srcdir:
+            file_txt = os.path.join(tbz_srcdir, "file.txt")
+            with open(file_txt, 'w') as f:
+                f.write("hello")
+            tbz_name = os.path.join(tmp, "cb-test.tar.bz2")
+            with tarfile.open(tbz_name, "w:bz2") as tar:
+                tar.add(tbz_srcdir, arcname=os.path.sep)
+            for prefix in ('~', 'file://~'):
+                source_dict = {"url": os.path.join(prefix, os.path.basename(tmp), "cb-test.tar.bz2")}
+                with TemporaryDirectory() as tmp2:
+                    download_to_cache(tmp2, '', source_dict)

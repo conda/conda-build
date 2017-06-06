@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import io
 import locale
 import os
-from os.path import join, isdir, isfile, abspath, basename, exists, normpath
+from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser
 import re
 import shutil
 from subprocess import CalledProcessError
@@ -17,7 +17,7 @@ from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2,
-                               get_logger, rm_rf)
+                               get_logger, rm_rf, LoggingContext)
 
 # legacy exports for conda
 from .config import Config as _Config
@@ -54,12 +54,18 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
 
         for url in source_dict['url']:
             if "://" not in url:
+                if url.startswith('~'):
+                    url = expanduser(url)
                 if not os.path.isabs(url):
                     url = os.path.normpath(os.path.join(recipe_path, url))
                 url = url_path(url)
+            else:
+                if url.startswith('file://~'):
+                    url = 'file://' + expanduser(url[7:]).replace('\\', '/')
             try:
                 print("Downloading %s" % url)
-                download(url, path)
+                with LoggingContext():
+                    download(url, path)
             except CondaHTTPError as e:
                 print("Error: %s" % str(e).strip(), file=sys.stderr)
             except RuntimeError as e:

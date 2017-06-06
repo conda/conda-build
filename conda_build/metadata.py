@@ -18,14 +18,12 @@ from .conda_interface import specs_from_url
 from .conda_interface import envs_dirs
 from .conda_interface import string_types
 
-from conda_build import exceptions, filt, utils
+from conda_build import exceptions, filt, utils, variants
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
                                HashableDict, trim_empty_keys, filter_files)
 from conda_build.license_family import ensure_valid_license_family
-from conda_build.variants import get_default_variants
-from conda_build.exceptions import DependencyNeedsBuildingError
 
 try:
     import yaml
@@ -66,7 +64,8 @@ def ns_cfg(config):
         nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
 
-    py = config.variant.get('python', get_default_variants()[0]['python'])
+    defaults = variants.get_default_variants()[0]
+    py = config.variant.get('python', defaults['python'])
     py = int("".join(py.split('.')[:2]))
     d.update(dict(py=py,
                     py3k=bool(30 <= py < 40),
@@ -78,13 +77,13 @@ def ns_cfg(config):
                     py35=bool(py == 35),
                     py36=bool(py == 36),))
 
-    np = config.variant.get('numpy', get_default_variants()[0]['numpy'])
+    np = config.variant.get('numpy', defaults['numpy'])
     d['np'] = int("".join(np.split('.')[:2]))
 
-    pl = config.variant.get('perl', get_default_variants()[0]['perl'])
+    pl = config.variant.get('perl', defaults['perl'])
     d['pl'] = pl
 
-    lua = config.variant.get('lua', get_default_variants()[0]['lua'])
+    lua = config.variant.get('lua', defaults['lua'])
     d['lua'] = lua
     d['luajit'] = bool(lua[0] == "2")
 
@@ -219,6 +218,52 @@ def ensure_valid_noarch_value(meta):
         return
     if build_noarch.lower() == 'none':
         raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
+
+
+def _get_all_dependencies(metadata, envs=('host', 'build', 'run')):
+    reqs = []
+    for _env in envs:
+        reqs.extend(metadata.meta.get('requirements', {}).get(_env, []))
+    return reqs
+
+
+def check_circular_dependencies(render_order):
+    pairs = []
+    for idx, m in enumerate(render_order.values()):
+        for other_m in list(render_order.values())[idx + 1:]:
+            if (any(m.name() == dep or dep.startswith(m.name() + ' ')
+                   for dep in _get_all_dependencies(other_m)) and
+                any(other_m.name() == dep or dep.startswith(other_m.name() + ' ')
+                   for dep in _get_all_dependencies(m))):
+                pairs.append((m.name(), other_m.name()))
+    if pairs:
+        error = "Circular dependencies in recipe: \n"
+        for pair in pairs:
+            error += "    {0} <-> {1}\n".format(*pair)
+        raise exceptions.RecipeError(error)
+
+
+def ensure_matching_hashes(output_metadata):
+    envs = 'build', 'host', 'run'
+    problemos = []
+    for (_, m) in output_metadata.values():
+        for (_, om) in output_metadata.values():
+            if m != om:
+                deps = (_get_all_dependencies(om, envs) +
+                        om.meta.get('build', {}).get('run_exports', []))
+                for dep in deps:
+                    if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
+                            dep.split(' ')[-1] != m.build_id()):
+                        problemos.append((m.name(), om.name()))
+
+    if problemos:
+        error = ""
+        for prob in problemos:
+            error += "Mismatching package: {}; consumer package: {}\n".format(*prob)
+        raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
+                                     "that contribute to the hash often cause this. Can you "
+                                     "change one or more exact pins to version bound constraints?\n"
+                                     "Involved packages were:\n" + error)
 
 
 def parse(data, config, path=None):
@@ -399,7 +444,8 @@ def build_string_from_metadata(metadata):
         build_str = metadata.get_value('build/string')
     else:
         res = []
-        build_pkg_names = [ms.name for ms in metadata.ms_depends('build')]
+        build_or_host = 'host' if metadata.is_cross else 'build'
+        build_pkg_names = [ms.name for ms in metadata.ms_depends(build_or_host)]
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
@@ -565,7 +611,7 @@ def finalize_outputs_pass(base_metadata, iteration, render_order=None, outputs=N
             fm = finalize_metadata(metadata)
             if not output_d.get('type') or output_d.get('type') == 'conda':
                 outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
-        except DependencyNeedsBuildingError as e:
+        except exceptions.DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
                 raise
             else:
@@ -614,6 +660,10 @@ class MetaData(object):
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
         self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
         self.config.disable_pip = self.disable_pip
+
+    @property
+    def is_cross(self):
+        return bool(self.get_value('requirements/host'))
 
     @property
     def final(self):
@@ -1050,7 +1100,9 @@ class MetaData(object):
             d['preferred_env'] = preferred_env
 
         # conda 4.4+ optional dependencies
-        constrains = self.get_value('requirements/run_constrained')
+        constrains = ensure_list(self.get_value('requirements/run_constrained'))
+        # filter None values
+        constrains = [v for v in constrains if v]
         if constrains:
             d['constrains'] = constrains
 
@@ -1393,11 +1445,13 @@ class MetaData(object):
         output_reqs = output.get('requirements', {})
         if hasattr(output_reqs, 'keys'):
             build_reqs = output_reqs.get('build', [])
+            host_reqs = output_reqs.get('host', [])
             run_reqs = output_reqs.get('run', [])
             constrain_reqs = output_reqs.get('run_constrained', [])
         else:
             output_reqs = ensure_list(output_reqs)
             build_reqs = output_reqs
+            host_reqs = []
             run_reqs = output_reqs
             constrain_reqs = []
 
@@ -1407,12 +1461,13 @@ class MetaData(object):
             #   subpackages so that they don't depend on themselves
             subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
             build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
+            host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
             run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
 
         if 'about' in output:
             output_metadata.meta['about'] = output['about']
 
-        requirements = {'build': build_reqs, 'run': run_reqs}
+        requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
         if constrain_reqs:
             requirements['run_constrained'] = constrain_reqs
         output_metadata.meta['requirements'] = requirements
@@ -1425,7 +1480,7 @@ class MetaData(object):
         if self.name() != output_metadata.name():
             extra = self.meta.get('extra', {})
             extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
-                                    'version': self.version()}
+                                      'version': self.version()}
             output_metadata.meta['extra'] = extra
         output_metadata.noarch = output.get('noarch', False)
         output_metadata.noarch_python = output.get('noarch_python', False)
@@ -1490,6 +1545,8 @@ class MetaData(object):
                 #    obtain an exact match elsewhere
                 non_conda_packages.append((output_d, m))
 
+        check_circular_dependencies(render_order)
+
         # early stages don't need to do the finalization.  Skip it until the later stages
         #     when we need it.
         if not permit_undefined_jinja:
@@ -1514,4 +1571,11 @@ class MetaData(object):
                 conda_packages = finalize_outputs_pass(self, i, conda_packages,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
                 self.other_outputs = conda_packages
+
+            # Sanity check: if any exact pins of any subpackages, make sure that they match
+            ensure_matching_hashes(conda_packages)
+
         return list(conda_packages.values()) + non_conda_packages
+
+    def get_loop_vars(self):
+        return variants.get_loop_vars(self.config.variants)

@@ -558,9 +558,10 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
         monkeypatch.undo()
         # This will (after one spin round the loop) install and run 'git' with the
         # build env prepended to os.environ[]
-        output = api.get_output_file_path(testing_workdir)[0]
+        metadata = api.render(testing_workdir)[0][0]
+        output = api.get_output_file_path(metadata)[0]
         assert ("relative_submodules-{}-".format(tag) in output)
-        api.build(testing_workdir)
+        api.build(metadata)
 
 
 def test_noarch(testing_workdir):

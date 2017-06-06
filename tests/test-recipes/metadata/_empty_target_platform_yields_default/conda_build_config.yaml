@@ -1,0 +1,5 @@
+#  this should get stripped out by the selector, leaving an empty list.
+#  We need to make sure that the recipe still produces an output metadata with the default target_platform
+#    We'll trigger an assertion error if we go through get_output_metadata_set and end up with nothing.
+target_platform:
+  - abc                    # [False]

@@ -171,7 +171,7 @@ def get_run_dists(m):
     prefix = join(envs_dirs[0], '_run')
     utils.rm_rf(prefix)
     environ.create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=m.config,
-                       subdir=m.config.host_subdir)
+                       subdir=m.config.host_subdir, is_cross=m.is_cross)
     return sorted(linked(prefix))
 
 
@@ -882,9 +882,11 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                        host_ms_deps, m.config, timestamp=host_ts,
                                                        subdir=m.config.host_subdir)
             environ.create_env(m.config.host_prefix, host_actions, config=m.config,
-                               subdir=m.config.host_subdir)
-
-        build_ms_deps = m.ms_depends('build')
+                               subdir=m.config.host_subdir, is_cross=m.is_cross)
+            build_ms_deps = m.ms_depends('build')
+        else:
+            # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
+            build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
         index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
         build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                     build_ms_deps, m.config,
@@ -892,7 +894,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, config=m.config,
-                               subdir=m.config.build_subdir)
+                               subdir=m.config.build_subdir, is_cross=m.is_cross)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -980,9 +982,24 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                             bf.write('export {0}="{1}"\n'.format(k, v))
 
                         if m.config.activate:
-                            bf.write('source "{0}activate" "{1}" &> '
-                                        '/dev/null\n'.format(utils.root_script_dir + os.path.sep,
-                                                            m.config.build_prefix))
+                            bf.write('source "{0}activate" "{1}" &> /dev/null\n'
+                                     .format(utils.root_script_dir + os.path.sep,
+                                             m.config.build_prefix))
+                            if m.is_cross:
+                                # HACK: we need both build and host envs
+                                #     "active" - i.e. on PATH, and with their
+                                #     activate.d scripts sourced. Conda only
+                                #     lets us activate one, though. This is a
+                                #     vile hack to trick conda into "stacking"
+                                #     two environments.
+                                #
+                                # Net effect: binaries come from host first, then build
+                                #
+                                # Conda 4.4 may break this by reworking the activate scripts.
+                                bf.write('unset CONDA_PATH_BACKUP\n')
+                                bf.write('source "{0}activate" "{1}" &> /dev/null\n'
+                                         .format(utils.root_script_dir + os.path.sep,
+                                                 m.config.host_prefix))
                         if script:
                                 bf.write(script)
                         if isfile(build_file):
@@ -1048,15 +1065,17 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                                 host_ms_deps, m.config,
                                                                 timestamp=host_ts)
                         environ.create_env(m.config.host_prefix, host_actions, config=m.config,
-                                        subdir=subdir)
-
-                    sub_build_ms_deps = m.ms_depends('build')
+                                        subdir=subdir, is_cross=m.is_cross)
+                        sub_build_ms_deps = m.ms_depends('build')
+                    else:
+                        # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
+                        sub_build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
                     index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
                                                                 sub_build_ms_deps, m.config,
                                                                 timestamp=index_timestamp)
                     environ.create_env(m.config.build_prefix, build_actions, config=m.config,
-                                    subdir=m.config.build_subdir)
+                                    subdir=m.config.build_subdir, is_cross=m.is_cross)
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
@@ -1267,7 +1286,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         actions = environ.get_install_actions(metadata.config.test_prefix, index,
                                                 specs, metadata.config, timestamp=index_ts)
         environ.create_env(metadata.config.test_prefix, actions, config=metadata.config,
-                           subdir=subdir)
+                           subdir=subdir, is_cross=metadata.is_cross)
 
         with utils.path_prepended(metadata.config.test_prefix):
             env = dict(os.environ.copy())

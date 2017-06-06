@@ -110,3 +110,12 @@ def test_pin_compatible_semver(testing_config):
     #    This is broken right now, because compound pins like we do here have never been supported
     #    in the build string.
     # assert 'np111' in api.get_output_file_path(metadata)
+
+
+def test_host_entries_finalized(testing_config):
+    recipe = os.path.join(metadata_dir, '_host_entries_finalized')
+    metadata = api.render(recipe, config=testing_config)
+    assert len(metadata) == 2
+    outputs = api.get_output_file_paths(recipe, config=testing_config)
+    assert any('py27h' in out for out in outputs)
+    assert any('py36h' in out for out in outputs)

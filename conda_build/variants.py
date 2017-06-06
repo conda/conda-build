@@ -238,7 +238,10 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
     combined, extend_keys = combine_specs(specs)
 
     if 'target_platform' not in combined or not combined['target_platform']:
-        combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
+        try:
+            combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
+        except KeyError:
+            combined['target_platform'] = [DEFAULT_PLATFORMS[platform.split('-')[0]]]
 
     if 'extend_keys' in combined:
         del combined['extend_keys']
@@ -314,3 +317,11 @@ def get_package_variants(recipedir_or_metadata, config=None):
 
 def get_default_variants(platform=cc_platform):
     return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS, platform)
+
+
+def get_loop_vars(variants):
+    """For purposes of naming/identifying, provide a way of identifying which variables contribute
+    to the matrix dimensionality"""
+    special_keys = ('pin_run_as_build', 'zip_keys', 'ignore_version')
+    return [k for k in variants[0] if k not in special_keys and
+            any(variant[k] != variants[0][k] for variant in variants[1:])]

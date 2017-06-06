@@ -15,6 +15,12 @@ requirements:
 build:
   script:
     - mkdir -p ${PREFIX}/bin
+    # Both build env and host env should be on PATH.  Host env should come first.
+    - echo $PATH | grep -q "_h_env_placehold"
+    - echo $PATH | grep -q "_build_env"
+    - host_pos=echo $abc | tr ':' '\n' | grep -bo _h_env_placehold | sed 's/:.*$//'
+    - build_pos=echo $abc | tr ':' '\n' | grep -bo _build_env | sed 's/:.*$//'
+    - test $host_pos -lt $build_pos
     - ${CC} helloworld.c -I${PREFIX}/include -L${PREFIX}/lib -lgreeting -DGREETING_SUFFIX="$(xz --version | head -n 1)" -o ${PREFIX}/bin/helloworld
 
 test:
