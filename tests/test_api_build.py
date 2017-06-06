@@ -889,6 +889,15 @@ def test_run_exports(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' in m.meta['requirements']['run']
 
 
+def test_ignore_run_exports(testing_metadata, testing_config):
+    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
+    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
+    testing_metadata.meta['build']['ignore_run_exports'] = ['downstream_pinned_package']
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert 'downstream_pinned_package 1.0' not in m.meta['requirements']['run']
+
+
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
     ms = api.render(recipe, config=testing_config)
