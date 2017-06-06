@@ -1068,7 +1068,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                         subdir=subdir, is_cross=m.is_cross)
                         sub_build_ms_deps = m.ms_depends('build')
                     else:
-                        # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
+                        # When not cross-compiling, the build deps aggregate 'build' and 'host'.
                         sub_build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
                     index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
                     build_actions = environ.get_install_actions(m.config.build_prefix, index,
