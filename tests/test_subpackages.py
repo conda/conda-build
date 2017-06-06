@@ -1,3 +1,4 @@
+import json
 import os
 import pytest
 import re
@@ -169,6 +170,19 @@ def test_about_metadata(testing_config):
             assert 'home' in m.meta['about']
             assert 'summary' not in m.meta['about']
             assert m.meta['about']['home'] == 'http://not.a.url'
+    outs = api.build(recipe, config=testing_config)
+    for out in outs:
+        about_meta = utils.package_has_file(out, 'info/about.json')
+        assert about_meta
+        info = json.loads(about_meta)
+        if os.path.basename(out).startswith('abc'):
+            assert 'summary' in info
+            assert info['summary'] == 'weee'
+            assert 'home' not in info
+        elif os.path.basename(out).startswith('def'):
+            assert 'home' in info
+            assert 'summary' not in info
+            assert info['home'] == 'http://not.a.url'
 
 
 def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
