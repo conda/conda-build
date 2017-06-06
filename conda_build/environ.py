@@ -73,7 +73,9 @@ def get_lua_include_dir(config):
 def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
     env = os.environ.copy()
     log = utils.get_logger(__name__)
-    if config.verbose:
+    base_log_level = log.getEffectiveLevel()
+
+    if config.debug:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
@@ -148,6 +150,7 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
         log.warn(str(error))
         OK = False
     finally:
+        log.setLevel(base_log_level)
         if not config.verbose:
             FNULL.close()
     return OK
@@ -167,8 +170,9 @@ def get_git_info(repo, config):
     """
     d = {}
     log = utils.get_logger(__name__)
+    base_log_level = log.getEffectiveLevel()
 
-    if config.verbose:
+    if config.debug:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
@@ -208,6 +212,7 @@ def get_git_info(repo, config):
         d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
                                             d["GIT_DESCRIBE_HASH"])
 
+    log.setLevel(base_log_level)
     # issues on Windows with the next line of the command prompt being recorded here.
     assert not any("\n" in value for value in d.values())
     return d
