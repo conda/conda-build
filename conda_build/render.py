@@ -125,6 +125,17 @@ def get_pin_from_build(m, dep, build_dep_versions):
     return dep
 
 
+def _filter_run_exports(specs, ignore_list):
+    filtered_specs = []
+    for spec in specs:
+        if hasattr(spec, 'decode'):
+            spec = spec.decode()
+        if not any((spec == ignore_spec or spec.startswith(ignore_spec + ' '))
+                   for ignore_spec in ignore_list):
+            filtered_specs.append(spec)
+    return filtered_specs
+
+
 def get_upstream_pins(m, actions, index):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
@@ -138,6 +149,7 @@ def get_upstream_pins(m, actions, index):
     #    we read contents directly
     if actions:
         execute_actions(actions, index, verbose=m.config.debug)
+        ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
         _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
         for pkg in linked_packages:
@@ -153,15 +165,16 @@ def get_upstream_pins(m, actions, index):
                 if os.path.isdir(pkg_dir):
                     downstream_file = os.path.join(pkg_dir, 'info/run_exports')
                     if os.path.isfile(downstream_file):
-                        additional_specs.extend(open(downstream_file).read().splitlines())
+                        specs = open(downstream_file).read().splitlines()
+                        additional_specs.extend(_filter_run_exports(specs, ignore_list))
                     break
                 elif os.path.isfile(pkg_file):
                     extra_specs = utils.package_has_file(pkg_file, 'info/run_exports')
                     if extra_specs:
                         # exclude packages pinning themselves (makes no sense)
-                        extra_specs = [spec for spec in extra_specs
-                                       if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]
-                        additional_specs.extend(extra_specs.splitlines())
+                        extra_specs = [spec for spec in extra_specs.splitlines()
+                            if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]
+                        additional_specs.extend(_filter_run_exports(extra_specs, ignore_list))
                     break
                 elif utils.conda_43():
                     # TODO: this is a vile hack reaching into conda's internals. Replace with
@@ -176,7 +189,8 @@ def get_upstream_pins(m, actions, index):
                                 extra_specs = utils.package_has_file(pkg_file,
                                                                     'info/run_exports')
                                 if extra_specs:
-                                    additional_specs.extend(extra_specs.splitlines())
+                                    specs = extra_specs.splitlines()
+                                    additional_specs.extend(_filter_run_exports(specs, ignore_list))
                                 break
                         break
                     except KeyError:
