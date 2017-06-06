@@ -16,7 +16,8 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
-from conda_build.conda_interface import add_parser_channels, url_path, binstar_upload
+from conda_build.conda_interface import (add_parser_channels, url_path, binstar_upload,
+                                         cc_conda_build)
 from conda_build.cli.main_render import get_render_parser
 import conda_build.source as source
 from conda_build.utils import LoggingContext
@@ -59,7 +60,7 @@ different sets of packages."""
         action="store_false",
         help="Don't include the recipe inside the built package.",
         dest='include_recipe',
-        default=True,
+        default=cc_conda_build.get('include_recipe', 'true').lower() == 'true',
     )
     p.add_argument(
         '-s', "--source",
@@ -100,8 +101,9 @@ different sets of packages."""
     p.add_argument(
         '--skip-existing',
         action='store_true',
-        help="""Skip recipes for which there already exists an existing build
-        (locally or in the channels). """
+        help=("Skip recipes for which there already exists an existing build"
+              "(locally or in the channels)."),
+        default=cc_conda_build.get('skip_existing', 'false').lower() == 'true',
     )
     p.add_argument(
         '--keep-old-work',
@@ -119,6 +121,7 @@ different sets of packages."""
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
+        default=cc_conda_build.get('quiet', 'false').lower() == 'true',
     )
     p.add_argument(
         '--debug',
@@ -127,16 +130,18 @@ different sets of packages."""
     )
     p.add_argument(
         '--token',
-        help="Token to pass through to anaconda upload"
+        help="Token to pass through to anaconda upload",
+        default=cc_conda_build.get('anaconda_token'),
     )
     p.add_argument(
         '--user',
-        help="User/organization to upload packages to on anaconda.org or pypi"
+        help="User/organization to upload packages to on anaconda.org or pypi",
+        default=cc_conda_build.get('user'),
     )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
         '--password',
-        help="password to use when uploading packages to pypi"
+        help="password to use when uploading packages to pypi",
     )
     pypi_grp.add_argument(
         '--sign', default=False,
@@ -152,17 +157,19 @@ different sets of packages."""
     )
     pypi_grp.add_argument(
         '--config-file',
-        help="path to .pypirc file to use when uploading to pypi"
+        help="path to .pypirc file to use when uploading to pypi",
+        default=cc_conda_build.get('pypirc'),
     )
     pypi_grp.add_argument(
-        '--repository', '-r', default='pypitest',
-        help="PyPI repository to upload to"
+        '--repository', '-r', help="PyPI repository to upload to",
+        default=cc_conda_build.get('pypi_repository', 'pypitest'),
     )
     p.add_argument(
         "--no-activate",
         action="store_false",
         help="do not activate the build and test envs; just prepend to PATH",
         dest='activate',
+        default=cc_conda_build.get('activate', 'true').lower() == 'true',
     )
     p.add_argument(
         "--no-build-id",
@@ -170,6 +177,8 @@ different sets of packages."""
         help=("do not generate unique build folder names.  Use if having issues with "
               "paths being too long."),
         dest='set_build_id',
+        # note: inverted - dest stores positive logic
+        default=cc_conda_build.get('set_build_id', 'true').lower() == 'true',
     )
     p.add_argument(
         "--croot",
@@ -179,7 +188,8 @@ different sets of packages."""
     p.add_argument(
         "--no-verify",
         action="store_true",
-        help=("do not run verification on recipes or packages when building")
+        help="do not run verification on recipes or packages when building",
+        default=cc_conda_build.get('no_verify', 'false').lower() == 'true',
     )
     p.add_argument(
         "--output-folder",

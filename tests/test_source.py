@@ -91,7 +91,7 @@ def test_source_user_expand(testing_workdir):
             tbz_name = os.path.join(tmp, "cb-test.tar.bz2")
             with tarfile.open(tbz_name, "w:bz2") as tar:
                 tar.add(tbz_srcdir, arcname=os.path.sep)
-            for prefix in ('~', 'file://~'):
+            for prefix in ('~', 'file:///~'):
                 source_dict = {"url": os.path.join(prefix, os.path.basename(tmp), "cb-test.tar.bz2")}
                 with TemporaryDirectory() as tmp2:
                     download_to_cache(tmp2, '', source_dict)
