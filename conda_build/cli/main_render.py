@@ -9,7 +9,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 import sys
 
-from conda_build.conda_interface import ArgumentParser, add_parser_channels
+from conda_build.conda_interface import ArgumentParser, add_parser_channels, cc_conda_build
 
 from conda_build import __version__, api
 
@@ -101,10 +101,11 @@ source to try fill in related template variables.",
     )
     p.add_argument(
         "--old-build-string", dest="filename_hashing", action="store_false",
-        default=True, help=("Disable hash additions to filenames to distinguish package "
-                            "variants from one another.  NOTE: any filename collisions are "
-                            "yours to handle.  Any variants with overlapping names within a "
-                            "build will clobber each other.")
+        default=cc_conda_build.get('filename_hashing', 'true').lower() == 'true',
+        help=("Disable hash additions to filenames to distinguish package "
+              "variants from one another. NOTE: any filename collisions are "
+              "yours to handle. Any variants with overlapping names within a "
+              "build will clobber each other.")
     )
 
     add_parser_channels(p)

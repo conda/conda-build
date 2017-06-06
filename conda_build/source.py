@@ -60,8 +60,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
                     url = os.path.normpath(os.path.join(recipe_path, url))
                 url = url_path(url)
             else:
-                if url.startswith('file://~'):
-                    url = 'file://' + expanduser(url[7:]).replace('\\', '/')
+                if url.startswith('file:///~'):
+                    url = 'file:///' + expanduser(url[8:]).replace('\\', '/')
             try:
                 print("Downloading %s" % url)
                 with LoggingContext():
