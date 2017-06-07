@@ -91,7 +91,7 @@ def test_pypi_version_sorting(testing_workdir, testing_config):
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks'])
+    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
 
 
 def test_pypi_with_entry_points(testing_workdir):

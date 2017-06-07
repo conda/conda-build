@@ -391,9 +391,23 @@ def compiler(language, config, permit_undefined_jinja=False):
 
         # support cross compilers.  A cross-compiler package will have a name such as
         #    gcc_target
-        #    gcc_linux-cos5-64
+        #    gcc_linux-cos6-64
         compiler = '_'.join([compiler, config.variant['target_platform']])
     return compiler
+
+
+def cdt(package_name, config, permit_undefined_jinja=False):
+    """Support configuration of Core Dependency Trees."""
+    cdt_name = 'cos6'
+    arch = config.host_arch or config.arch
+    cdt_arch = 'x86_64' if arch == '64' else 'i686'
+    if config.variant:
+        cdt_name = config.variant.get('cdt_name', cdt_name)
+        cdt_arch = config.variant.get('cdt_arch', cdt_arch)
+    if ' ' in package_name:
+        return (package_name.split(' ')[0] + '-' + cdt_name + '-' + cdt_arch + ' ' + ' '.join(package_name.split(' ')[1:]))
+    else:
+        return (package_name + '-' + cdt_name + '-' + cdt_arch)
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
@@ -425,6 +439,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                permit_undefined_jinja=permit_undefined_jinja,
                                allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
+        cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)
     return ctx

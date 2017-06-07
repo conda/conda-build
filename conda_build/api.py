@@ -23,6 +23,7 @@ from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGT
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
+from os.path import expanduser
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
@@ -229,6 +230,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     if recursive:
         kwargs.update({'recursive': recursive})
     if output_dir != ".":
+        output_dir = expanduser(output_dir)
         kwargs.update({'output_dir': output_dir})
 
     # here we're dumping all extra kwargs as attributes on the config object.  We'll extract
