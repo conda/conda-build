@@ -2,6 +2,9 @@ package:
   name: conda-build-test-recursive-build-fail
   version: 1.0
 
+source:
+  path: ../../test-package
+
 # This is a version of the package that doesn't exist. The test is that this
 # doesn't run infinitely.
 requirements:

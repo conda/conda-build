@@ -25,6 +25,7 @@ import hashlib
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
+import yaml
 
 # used to get version
 from .conda_interface import envs_dirs, env_path_backup_var_exists
@@ -167,11 +168,11 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
 
 # TODO: this is mostly duplicated with the scheme of pin_run_as_build.  Could be refactored
 #     away, probably.
-def get_run_dists(m):
+def get_run_dists(m, env='host'):
     prefix = join(envs_dirs[0], '_run')
     utils.rm_rf(prefix)
     environ.create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=m.config,
-                       subdir=m.config.host_subdir, is_cross=m.is_cross)
+                       env=env, subdir=m.config.host_subdir, is_cross=m.is_cross)
     return sorted(linked(prefix))
 
 
@@ -194,8 +195,17 @@ def copy_recipe(m):
             # store the rendered meta.yaml file, plus information about where it came from
             #    and what version of conda-build created it
             original_recipe = os.path.join(output_metadata.path, 'meta.yaml')
+        # it's a subpackage.  We need to store our hash inputs
         else:
             original_recipe = ""
+            _, hash_inputs = m.get_hash_contents()
+            src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+            assert recipe_dir, "Conda-build bug: lost track of recipe path."
+            for fn in hash_inputs:
+                src_path = join(src_dir, fn)
+                dst_path = join(recipe_dir, fn)
+                utils.copy_into(src_path, dst_path, timeout=output_metadata.config.timeout,
+                                locking=output_metadata.config.locking, clobber=True)
 
         # just for lack of confusion, don't show outputs in final rendered recipes
         if 'outputs' in output_metadata.meta:
@@ -214,6 +224,10 @@ def copy_recipe(m):
             if original_recipe:
                 utils.copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
                                 timeout=m.config.timeout, locking=m.config.locking, clobber=True)
+
+        # dump the full variant in use for this package to the recipe folder
+        with open(os.path.join(recipe_dir, 'conda_build_config.yaml'), 'w') as f:
+            yaml.dump(m.config.variant, f)
 
 
 def copy_readme(m):
@@ -238,7 +252,7 @@ def copy_license(m):
 
 
 def write_hash_input(m):
-    recipe_input, file_paths = m._get_hash_contents()
+    recipe_input, file_paths = m.get_hash_contents()
     with open(os.path.join(m.config.info_dir, 'hash_input.json'), 'w') as f:
         json.dump(recipe_input, f)
 
@@ -759,7 +773,8 @@ def bundle_conda(output, metadata, env, **kw):
         #    a major bottleneck.
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=False)
-    update_index(output_folder, config=metadata.config)
+    update_index(output_folder, verbose=metadata.config.verbose, locking=metadata.config.locking,
+                 timeout=metadata.config.timeout)
 
     # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
     if os.path.basename(output_folder) != 'noarch':
@@ -767,7 +782,9 @@ def bundle_conda(output, metadata, env, **kw):
             os.makedirs(os.path.join(os.path.dirname(output_folder), 'noarch'))
         except OSError:
             pass
-        update_index(os.path.join(os.path.dirname(output_folder), 'noarch'), config=metadata.config)
+        update_index(os.path.join(os.path.dirname(output_folder), 'noarch'),
+                     verbose=metadata.config.verbose, locking=metadata.config.locking,
+                    timeout=metadata.config.timeout)
 
     # remove info files from host prefix. We do not remove the actual package's files as subsequent
     # builds may well need them. In other words, the caller manages the files in output['checksums']
@@ -833,7 +850,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
     log = utils.get_logger(__name__)
     host_actions = []
-    host_index = {}
     build_actions = []
     output_metas = []
 
@@ -876,24 +892,40 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         if m.config.host_subdir != m.config.build_subdir:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
-            host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
             host_ms_deps = m.ms_depends('host')
-            host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                       host_ms_deps, m.config, timestamp=host_ts,
-                                                       subdir=m.config.host_subdir)
-            environ.create_env(m.config.host_prefix, host_actions, config=m.config,
+            host_actions = environ.get_install_actions(m.config.host_prefix,
+                                                       tuple(host_ms_deps), 'host',
+                                                       subdir=m.config.host_subdir,
+                                                       debug=m.config.debug,
+                                                       verbose=m.config.verbose,
+                                                       locking=m.config.locking,
+                                                       bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                       timeout=m.config.timeout,
+                                                       disable_pip=m.config.disable_pip,
+                                                       max_env_retry=m.config.max_env_retry,
+                                                       output_folder=m.config.output_folder,
+                                                       channel_urls=tuple(m.config.channel_urls))
+            environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
                                subdir=m.config.host_subdir, is_cross=m.is_cross)
             build_ms_deps = m.ms_depends('build')
         else:
             # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
             build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
-        index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
-        build_actions = environ.get_install_actions(m.config.build_prefix, index,
-                                                    build_ms_deps, m.config,
-                                                    timestamp=index_timestamp)
+        build_actions = environ.get_install_actions(m.config.build_prefix,
+                                                    tuple(build_ms_deps), 'build',
+                                                    subdir=m.config.build_subdir,
+                                                    debug=m.config.debug,
+                                                    verbose=m.config.verbose,
+                                                    locking=m.config.locking,
+                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                    timeout=m.config.timeout,
+                                                    disable_pip=m.config.disable_pip,
+                                                    max_env_retry=m.config.max_env_retry,
+                                                    output_folder=m.config.output_folder,
+                                                    channel_urls=tuple(m.config.channel_urls))
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
-            environ.create_env(m.config.build_prefix, build_actions, config=m.config,
+            environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
                                subdir=m.config.build_subdir, is_cross=m.is_cross)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
@@ -941,7 +973,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
         if m.config.skip_existing:
-            package_locations = [is_package_built(om) for _, om in output_metas]
+            # TODO: should we check both host and build envs?  These are the same, except when
+            #    cross compiling.
+            package_locations = [is_package_built(om, 'host') for _, om in output_metas]
             if all(package_locations):
                 print("Packages for ", m.path or m.name(),
                         "are already built in {0}, skipping.".format(package_locations))
@@ -1051,31 +1085,50 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 assert m.final, "output metadata for {} is not finalized".format(m.dist())
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                    if post is None:
+                    log.info("Packaging {}".format(m.name()))
+                    # for more than one output, we clear and rebuild the environment before each
+                    #    package.  We also do this for single outputs that present their own
+                    #    build reqs.
+                    if len(outputs) > 1 or output_d.get('requirements', {}).get('build', {}):
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
 
-                    if m.config.host_subdir != m.config.build_subdir:
-                        if VersionOrder(conda_version) < VersionOrder('4.3.2'):
-                            raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
-                        host_index, host_ts = get_build_index(m.config, m.config.host_subdir)
-                        host_ms_deps = m.ms_depends('host')
-                        host_actions = environ.get_install_actions(m.config.host_prefix, host_index,
-                                                                host_ms_deps, m.config,
-                                                                timestamp=host_ts)
-                        environ.create_env(m.config.host_prefix, host_actions, config=m.config,
-                                        subdir=subdir, is_cross=m.is_cross)
-                        sub_build_ms_deps = m.ms_depends('build')
-                    else:
-                        # When not cross-compiling, the build deps aggregate 'build' and 'host'.
-                        sub_build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
-                    index, index_timestamp = get_build_index(m.config, m.config.build_subdir)
-                    build_actions = environ.get_install_actions(m.config.build_prefix, index,
-                                                                sub_build_ms_deps, m.config,
-                                                                timestamp=index_timestamp)
-                    environ.create_env(m.config.build_prefix, build_actions, config=m.config,
-                                    subdir=m.config.build_subdir, is_cross=m.is_cross)
+                        if m.config.host_subdir != m.config.build_subdir:
+                            host_ms_deps = m.ms_depends('host')
+                            host_actions = environ.get_install_actions(m.config.host_prefix,
+                                                    tuple(host_ms_deps), 'host',
+                                                    subdir=m.config.host_subdir,
+                                                    debug=m.config.debug,
+                                                    verbose=m.config.verbose,
+                                                    locking=m.config.locking,
+                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                    timeout=m.config.timeout,
+                                                    disable_pip=m.config.disable_pip,
+                                                    max_env_retry=m.config.max_env_retry,
+                                                    output_folder=m.config.output_folder,
+                                                    channel_urls=tuple(m.config.channel_urls))
+                            environ.create_env(m.config.host_prefix, host_actions, env='host',
+                                            config=m.config, subdir=subdir, is_cross=m.is_cross)
+                            sub_build_ms_deps = m.ms_depends('build')
+                        else:
+                            # When not cross-compiling, the build deps aggregate 'build' and 'host'.
+                            sub_build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
+                        build_actions = environ.get_install_actions(m.config.build_prefix,
+                                                    tuple(sub_build_ms_deps), 'build',
+                                                    subdir=m.config.build_subdir,
+                                                    debug=m.config.debug,
+                                                    verbose=m.config.verbose,
+                                                    locking=m.config.locking,
+                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                    timeout=m.config.timeout,
+                                                    disable_pip=m.config.disable_pip,
+                                                    max_env_retry=m.config.max_env_retry,
+                                                    output_folder=m.config.output_folder,
+                                                    channel_urls=tuple(m.config.channel_urls))
+                        environ.create_env(m.config.build_prefix, build_actions, env='build',
+                                        config=m.config, subdir=m.config.build_subdir,
+                                        is_cross=m.is_cross)
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
@@ -1095,12 +1148,24 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
                     subdir = ('noarch' if (m.noarch or m.noarch_python)
                               else m.config.host_subdir)
-                    if host_index:
-                        host_index, host_ts = get_build_index(config=m.config,
-                                                              subdir=subdir,
+                    if m.is_cross:
+                        host_index, host_ts = get_build_index(subdir=subdir,
+                                                              bldpkgs_dir=m.config.bldpkgs_dir,
+                                                              output_folder=m.config.output_folder,
+                                                              channel_urls=m.config.channel_urls,
+                                                              debug=m.config.debug,
+                                                              verbose=m.config.verbose,
+                                                              locking=m.config.locking,
+                                                              timeout=m.config.timeout,
                                                               clear_cache=True)
-                    index, index_timestamp = get_build_index(config=m.config,
-                                                             subdir=subdir,
+                    index, index_timestamp = get_build_index(subdir=subdir,
+                                                             bldpkgs_dir=m.config.bldpkgs_dir,
+                                                             output_folder=m.config.output_folder,
+                                                             channel_urls=m.config.channel_urls,
+                                                             debug=m.config.debug,
+                                                             verbose=m.config.verbose,
+                                                             locking=m.config.locking,
+                                                             timeout=m.config.timeout,
                                                              clear_cache=True)
     else:
         print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -1282,10 +1347,19 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
         subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
                   else metadata.config.host_subdir)
-        index, index_ts = get_build_index(metadata.config, subdir)
-        actions = environ.get_install_actions(metadata.config.test_prefix, index,
-                                                specs, metadata.config, timestamp=index_ts)
-        environ.create_env(metadata.config.test_prefix, actions, config=metadata.config,
+        actions = environ.get_install_actions(metadata.config.test_prefix,
+                                              tuple(specs), 'host',
+                                              subdir=subdir,
+                                              debug=metadata.config.debug,
+                                              verbose=metadata.config.verbose,
+                                              locking=metadata.config.locking,
+                                              bldpkgs_dirs=tuple(metadata.config.bldpkgs_dirs),
+                                              timeout=metadata.config.timeout,
+                                              disable_pip=metadata.config.disable_pip,
+                                              max_env_retry=metadata.config.max_env_retry,
+                                              output_folder=metadata.config.output_folder,
+                                              channel_urls=tuple(metadata.config.channel_urls))
+        environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
                            subdir=subdir, is_cross=metadata.is_cross)
 
         with utils.path_prepended(metadata.config.test_prefix):
@@ -1434,10 +1508,6 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     # this is primarily for exception handling.  It's OK that it gets clobbered by
     #     the loop below.
     metadata = None
-    metadata_tuples = []
-
-    # set this to false whenever everything has succeeded.
-    has_exception = True
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
@@ -1463,7 +1533,6 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     config.compute_build_id(metadata.name(), reset=True)
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
-                metadata_tuples = []
 
                 variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
                             get_package_variants(metadata))
@@ -1519,12 +1588,10 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                 build_meta['string'] = build_str
                                 dict_and_meta[1].meta['build'] = build_meta
                                 test(dict_and_meta[1], config=metadata.config)
-                            except subprocess.CalledProcessError:
-                                has_exception.add(metadata.dist())
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
-            has_exception = False
+            config.clean()
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
             add_recipes = []
@@ -1532,6 +1599,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             recipe_list.extendleft([metadata if metadata else recipe])
             for pkg in e.packages:
                 if pkg in to_build_recursive:
+                    config.clean(remove_folders=False)
                     raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                        .format(recipe) + str(e.message) + "\n" + extra_help)
 
@@ -1554,21 +1622,17 @@ for Python 3.5 and needs to be rebuilt."""
                                 "{0} first").format(pkg))
                         add_recipes.append(recipe_dir)
                 else:
+                    config.clean(remove_folders=False)
                     raise
             # if we failed to render due to unsatisfiable dependencies, we should only bail out
             #    if we've already retried this recipe.
             if (not metadata and retried_recipes.count(recipe) and
                     retried_recipes.count(recipe) >= len(metadata.ms_depends('build'))):
+                config.clean(remove_folders=False)
                 raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
-        finally:
-            # clean up locks to avoid permission errors when they exist in central installs
-            for (m, _, _) in metadata_tuples:
-                for lock in utils.get_conda_operation_locks(m.config):
-                    if os.path.isfile(lock.lock_file):
-                        utils.rm_rf(lock.lock_file)
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
@@ -1576,9 +1640,6 @@ for Python 3.5 and needs to be rebuilt."""
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
-
-    for (m, _, _) in metadata_tuples:
-        m.config.clean(remove_folders=not has_exception)
 
     return list(built_packages.keys())
 
@@ -1689,14 +1750,21 @@ def clean_build(config, folders=None):
         utils.rm_rf(folder)
 
 
-def is_package_built(metadata):
+def is_package_built(metadata, env):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
             update_index(d, metadata.config, could_be_mirror=False)
-    index, index_ts = get_build_index(config=metadata.config, subdir=metadata.config.host_subdir,
+    subdir = getattr(metadata.config, '{}_subdir'.format(env))
+    index, index_ts = get_build_index(subdir=subdir,
+                                      bldpkgs_dir=metadata.config.bldpkgs_dir,
+                                      output_folder=metadata.config.output_folder,
+                                      channel_urls=metadata.config.channel_urls,
+                                      debug=metadata.config.debug,
+                                      verbose=metadata.config.verbose,
+                                      locking=metadata.config.locking,
+                                      timeout=metadata.config.timeout,
                                       clear_cache=True)
-
     urls = [url_path(metadata.config.croot)] + get_rc_urls()
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)

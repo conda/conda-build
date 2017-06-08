@@ -5,7 +5,7 @@ import sys
 import pytest
 
 from conda_build.metadata import select_lines, MetaData
-from conda_build import api, conda_interface
+from conda_build import api, conda_interface, render
 from .utils import thisdir, metadata_dir
 
 
@@ -184,11 +184,28 @@ def test_compiler_metadata_cross_compiler():
     assert 'fortran-compiler-linux_osx-109-x86_64' in metadata.meta['requirements']['build']
 
 
+req = 'zlib 1.2.8 '
+if sys.platform == 'win32':
+    vc_ver = '9' if sys.version_info[0] == 2 else '14'
+    req += 'vc{}_'.format(vc_ver)
+req += '3'
+test_reqs = [req]
+if sys.platform == 'win32':
+    test_reqs.append('vc {}'.format(vc_ver))
+
 def test_hash_build_id(testing_metadata):
-    testing_metadata.meta['requirements']['build'] = ['zlib 1.2.8 3']
-    assert testing_metadata._hash_dependencies() == 'hbcfeb9f'
-    assert testing_metadata.build_id() == 'hbcfeb9f_1'.format(sys.version_info.major,
-                                                               sys.version_info.minor)
+    testing_metadata.meta['requirements']['build'] = test_reqs
+    testing_metadata = render.finalize_metadata(testing_metadata)
+    if sys.platform == 'win32':
+        if sys.version_info[0] == 2:
+            assert testing_metadata._hash_dependencies() == 'h5e09b76'
+            assert testing_metadata.build_id() == 'h5e09b76_1'
+        else:
+            assert testing_metadata._hash_dependencies() == 'h9802f05'
+            assert testing_metadata.build_id() == 'h9802f05_1'
+    else:
+        assert testing_metadata._hash_dependencies() == 'hbcfeb9f'
+        assert testing_metadata.build_id() == 'hbcfeb9f_1'
 
 
 def test_hash_build_id_key_order(testing_metadata):
@@ -212,8 +229,15 @@ def test_hash_build_id_key_order(testing_metadata):
 
 def test_hash_applies_to_custom_build_string(testing_metadata):
     testing_metadata.meta['build']['string'] = 'steve'
-    testing_metadata.meta['requirements']['build'] = ['zlib 1.2.8 3']
-    assert testing_metadata.build_id() == 'stevehbcfeb9f'
+    testing_metadata.meta['requirements']['build'] = test_reqs
+    testing_metadata = render.finalize_metadata(testing_metadata)
+    if sys.platform == 'win32':
+        if sys.version_info[0] == 2:
+            assert testing_metadata.build_id() == 'steveh5e09b76'
+        else:
+            assert testing_metadata.build_id() == 'steveh9802f05'
+    else:
+        assert testing_metadata.build_id() == 'stevehbcfeb9f'
 
 
 def test_config_member_decoupling(testing_metadata):

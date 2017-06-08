@@ -997,16 +997,8 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     specs.extend(extra_specs)
 
-    # Do everything in the build env in case the setup.py install goes
-    # haywire.
-    # TODO: Try with another version of Python if this one fails. Some
-    # packages are Python 2 or Python 3 only.
-
-    if not os.path.isdir(config.build_prefix) or not os.listdir(config.build_prefix):
-        create_env(config.build_prefix, specs_or_actions=specs,
-                   subdir=config.build_subdir,
-                   clear_cache=False,
-                   config=config)
+    create_env(config.build_prefix, specs_or_actions=specs, env='build',
+                subdir=config.build_subdir, clear_cache=False, config=config)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

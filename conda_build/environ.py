@@ -69,12 +69,12 @@ def get_lua_include_dir(config):
 
 
 @memoized
-def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
+def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expected_rev='HEAD'):
     env = os.environ.copy()
     log = utils.get_logger(__name__)
     base_log_level = log.getEffectiveLevel()
 
-    if config.debug:
+    if debug:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
@@ -93,7 +93,7 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
                                                  "log",
                                                  "-n1",
                                                  "--format=%H",
-                                                 "HEAD" + "^" * config.git_commits_since_tag],
+                                                 "HEAD" + "^" * git_commits_since_tag],
                                                 env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
         expected_tag_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H",
@@ -150,13 +150,13 @@ def verify_git_repo(git_dir, git_url, config, expected_rev='HEAD'):
         OK = False
     finally:
         log.setLevel(base_log_level)
-        if not config.verbose:
+        if not debug:
             FNULL.close()
     return OK
 
 
 @memoized
-def get_git_info(repo, config):
+def get_git_info(repo, debug):
     """
     Given a repo to a git repo, return a dictionary of:
       GIT_DESCRIBE_TAG
@@ -171,7 +171,7 @@ def get_git_info(repo, config):
     log = utils.get_logger(__name__)
     base_log_level = log.getEffectiveLevel()
 
-    if config.debug:
+    if debug:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
@@ -392,11 +392,12 @@ def meta_vars(meta, config):
         if git_url:
             _x = verify_git_repo(git_dir,
                                  git_url,
-                                 config,
+                                 config.git_commits_since_tag,
+                                 config.debug,
                                  meta.get_value('source/git_rev', 'HEAD'))
 
         if _x or meta.get_value('source/path'):
-            d.update(get_git_info(git_dir, config))
+            d.update(get_git_info(git_dir, config.debug))
 
     elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):
         d.update(get_hg_build_info(hg_dir))
@@ -643,37 +644,49 @@ def _ensure_valid_spec(spec):
     return spec
 
 
-_cached_install_actions = {}
-_last_timestamp = 0
+cached_actions = {}
+last_index_ts = 0
 
 
-def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0, subdir=None):
-    global _cached_install_actions
-    global _last_timestamp
+def get_install_actions(prefix, specs, env, retries=0, subdir=None,
+                        verbose=True, debug=False, locking=True,
+                        bldpkgs_dirs=None, timeout=90, disable_pip=False,
+                        max_env_retry=3, output_folder=None, channel_urls=None):
+    global cached_actions
+    global last_index_ts
+    actions = {}
     log = utils.get_logger(__name__)
-    if config.verbose:
+    conda_log_level = logging.WARN
+    if verbose:
         capture = contextlib.contextmanager(lambda: (yield))
+    elif debug:
+        capture = contextlib.contextmanager(lambda: (yield))
+        conda_log_level = logging.DEBUG
     else:
         capture = utils.capture
-    actions = {'LINK': []}
     for feature, value in feature_list:
         if value:
             specs.append('%s@' % feature)
+
+    bldpkgs_dirs = ensure_list(bldpkgs_dirs)
+
+    index, index_ts = get_build_index(subdir, list(bldpkgs_dirs)[0], output_folder=output_folder,
+                                      channel_urls=channel_urls, debug=debug, verbose=verbose,
+                                      locking=locking, timeout=timeout)
     specs = tuple(_ensure_valid_spec(spec) for spec in specs)
-    if (specs, subdir, timestamp) in _cached_install_actions and timestamp > _last_timestamp:
-        actions = _cached_install_actions[(specs, subdir, timestamp)]
-    else:
-        if specs:
-            # this is hiding output like:
-            #    Fetching package metadata ...........
-            #    Solving package specifications: ..........
+
+    if (specs, env, subdir, channel_urls) in cached_actions and last_index_ts >= index_ts:
+        actions = cached_actions[(specs, env, subdir, channel_urls)].copy()
+        if "PREFIX" in actions:
+            actions['PREFIX'] = prefix
+    elif specs:
+        # this is hiding output like:
+        #    Fetching package metadata ...........
+        #    Solving package specifications: ..........
+        with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
                     actions = install_actions(prefix, index, specs, force=True)
-                    # Experimenting with getting conda to create fewer Resolve objects
-                    #   Experiment failed, seemingly due to conda's statefulness.  Packages could
-                    #   not be found.
-                    # index_timestamp=timestamp)
                 except NoPackagesFoundError as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
@@ -684,36 +697,46 @@ def get_install_actions(prefix, index, specs, config, retries=0, timestamp=0, su
                     elif ('requires a minimum conda version' in str(exc) or
                             'link a source that does not' in str(exc) or
                             isinstance(exc, AssertionError)):
-                        locks = utils.get_conda_operation_locks(config)
-                        with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        locks = utils.get_conda_operation_locks(locking, bldpkgs_dirs, timeout)
+                        with utils.try_acquire_locks(locks, timeout=timeout):
                             pkg_dir = str(exc)
                             folder = 0
                             while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
                                 pkg_dir = os.path.dirname(pkg_dir)
                                 folder += 1
-                            log.warn("I think conda ended up with a partial extraction for %s.  "
+                            log.warn("I think conda ended up with a partial extraction for %s. "
                                         "Removing the folder and retrying", pkg_dir)
                             if pkg_dir in pkgs_dirs and os.path.isdir(pkg_dir):
                                 utils.rm_rf(pkg_dir)
-                    if retries < config.max_env_retry:
+                    if retries < max_env_retry:
                         log.warn("failed to get install actions, retrying.  exception was: %s",
                                 str(exc))
-                        actions = get_install_actions(prefix, index, specs, config,
-                                                        retries=retries + 1, timestamp=timestamp)
+                        actions = get_install_actions(prefix, tuple(specs), env,
+                                                      retries=retries + 1,
+                                                      subdir=subdir,
+                                                      verbose=verbose,
+                                                      debug=debug,
+                                                      locking=locking,
+                                                      bldpkgs_dirs=tuple(bldpkgs_dirs),
+                                                      timeout=timeout,
+                                                      disable_pip=disable_pip,
+                                                      max_env_retry=max_env_retry,
+                                                      output_folder=output_folder,
+                                                      channel_urls=tuple(channel_urls))
                     else:
                         log.error("Failed to get install actions, max retries exceeded.")
                         raise
-            if config.disable_pip:
-                actions['LINK'] = [spec for spec in actions['LINK']
-                                    if not spec.startswith('pip-') and
-                                    not spec.startswith('setuptools-')]
+        if disable_pip:
+            actions['LINK'] = [spec for spec in actions['LINK']
+                                if not spec.startswith('pip-') and
+                                not spec.startswith('setuptools-')]
         utils.trim_empty_keys(actions)
-        _cached_install_actions[(specs, subdir, timestamp)] = actions
-        _last_timestamp = timestamp
+        cached_actions[(specs, env, subdir, channel_urls)] = actions.copy()
+        last_index_ts = index_ts
     return actions
 
 
-def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry=0,
+def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, retry=0,
                locks=None, is_cross=False):
     '''
     Create a conda envrionment for the given prefix and specs.
@@ -740,14 +763,31 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                     locks = utils.get_conda_operation_locks(config)
                 try:
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
-                        index, index_ts = get_build_index(config=config, subdir=subdir)
                         # input is a list - it's specs in MatchSpec format
                         if not hasattr(specs_or_actions, 'keys'):
                             specs = list(set(specs_or_actions))
-                            actions = get_install_actions(prefix, index, specs, config,
-                                                          timestamp=index_ts)
+                            actions = get_install_actions(prefix, tuple(specs), env,
+                                                          subdir=subdir,
+                                                          verbose=config.verbose,
+                                                          debug=config.debug,
+                                                          locking=config.locking,
+                                                          bldpkgs_dirs=tuple(config.bldpkgs_dirs),
+                                                          timeout=config.timeout,
+                                                          disable_pip=config.disable_pip,
+                                                          max_env_retry=config.max_env_retry,
+                                                          output_folder=config.output_folder,
+                                                          channel_urls=tuple(config.channel_urls))
                         else:
                             actions = specs_or_actions
+                        index, index_ts = get_build_index(subdir=subdir,
+                                                        bldpkgs_dir=config.bldpkgs_dir,
+                                                        output_folder=config.output_folder,
+                                                        channel_urls=config.channel_urls,
+                                                        debug=config.debug,
+                                                        verbose=config.verbose,
+                                                        locking=config.locking,
+                                                        timeout=config.timeout)
+                        utils.trim_empty_keys(actions)
                         display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():
@@ -775,14 +815,14 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                             prefix = config.build_prefix
                             actions['PREFIX'] = prefix
 
-                            create_env(prefix, actions, config=config, subdir=subdir,
+                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
                                        clear_cache=clear_cache, is_cross=is_cross)
                         else:
                             raise
                     elif 'lock' in str(exc):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, actions, config=config, subdir=subdir,
+                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
                                     clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                     elif ('requires a minimum conda version' in str(exc) or
                           'link a source that does not' in str(exc)):
@@ -798,7 +838,7 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                                 utils.rm_rf(pkg_dir)
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, actions, config=config, subdir=subdir,
+                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
                                        clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                         else:
                             log.error("Failed to create env, max retries exceeded.")
@@ -817,7 +857,7 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
                                 utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                        create_env(prefix, actions, config=config, subdir=subdir,
+                        create_env(prefix, actions, config=config, subdir=subdir, env=env,
                                    clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                     else:
                         log.error("Failed to create env, max retries exceeded.")
@@ -835,34 +875,41 @@ def create_env(prefix, specs_or_actions, config, subdir, clear_cache=True, retry
 
 
 def clean_pkg_cache(dist, config):
-    _pkgs_dirs = pkgs_dirs[:1]
     locks = []
+
+    conda_log_level = logging.WARN
+    if config.debug:
+        conda_log_level = logging.DEBUG
+
+    _pkgs_dirs = pkgs_dirs[:1]
     if config.locking:
         locks = [utils.get_lock(folder, timeout=config.timeout) for folder in _pkgs_dirs]
-    with utils.try_acquire_locks(locks, timeout=config.timeout):
-        rmplan = [
-            'RM_EXTRACTED {0} local::{0}'.format(dist),
-            'RM_FETCHED {0} local::{0}'.format(dist),
-        ]
-        execute_plan(rmplan)
+    with utils.LoggingContext(conda_log_level):
+        with utils.try_acquire_locks(locks, timeout=config.timeout):
+            rmplan = [
+                'RM_EXTRACTED {0} local::{0}'.format(dist),
+                'RM_FETCHED {0} local::{0}'.format(dist),
+            ]
+            execute_plan(rmplan)
 
-        # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
-        #   Conda's cleanup is still necessary - it keeps track of its own in-memory
-        #   list of downloaded things.
-        for folder in pkgs_dirs:
-            try:
-                assert not os.path.exists(os.path.join(folder, dist))
-                assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
-                for pkg_id in [dist, 'local::' + dist]:
-                    assert pkg_id not in package_cache()
-            except AssertionError:
-                log = utils.get_logger(__name__)
-                log.debug("Conda caching error: %s package remains in cache after removal", dist)
-                log.debug("manually removing to compensate")
-                cache = package_cache()
-                keys = [key for key in cache.keys() if dist in key]
-                for pkg_id in keys:
-                    if pkg_id in cache:
-                        del cache[pkg_id]
-                for entry in glob(os.path.join(folder, dist + '*')):
-                    utils.rm_rf(entry)
+            # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
+            #   Conda's cleanup is still necessary - it keeps track of its own in-memory
+            #   list of downloaded things.
+            for folder in pkgs_dirs:
+                try:
+                    assert not os.path.exists(os.path.join(folder, dist))
+                    assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
+                    for pkg_id in [dist, 'local::' + dist]:
+                        assert pkg_id not in package_cache()
+                except AssertionError:
+                    log = utils.get_logger(__name__)
+                    log.debug("Conda caching error: %s package remains in cache after removal",
+                              dist)
+                    log.debug("manually removing to compensate")
+                    cache = package_cache()
+                    keys = [key for key in cache.keys() if dist in key]
+                    for pkg_id in keys:
+                        if pkg_id in cache:
+                            del cache[pkg_id]
+                    for entry in glob(os.path.join(folder, dist + '*')):
+                        utils.rm_rf(entry)

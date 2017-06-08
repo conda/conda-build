@@ -36,7 +36,6 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     from conda_build.conda_interface import NoPackagesFoundError
     from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
-    log = _get_logger(__name__)
 
     metadata_tuples = render_recipe(recipe_path,
                                     no_download_source=config.no_download_source,
@@ -49,14 +48,12 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
             # only show conda packages right now
             if 'type' not in od or od['type'] == 'conda':
                 assert hasattr(om.config, 'variants')
-                if finalize:
+                if finalize and not om.final:
                     try:
-                        om = finalize_metadata(om)
+                        om = finalize_metadata(om,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
                     except (DependencyNeedsBuildingError, NoPackagesFoundError):
-                        if permit_unsatisfiable_variants:
-                            log.warn("Returning non-final recipe; one or more dependencies "
-                                    "was unsatisfiable.")
-                        else:
+                        if not permit_unsatisfiable_variants:
                             raise
                 output_metas[om.dist()] = ((om, download, render_in_env))
     return list(output_metas.values())
@@ -361,4 +358,5 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         config = Config()
 
     for path in dir_paths:
-        update_index(path, config, force=force, check_md5=check_md5, remove=remove)
+        update_index(path, force=force, check_md5=check_md5, remove=remove, verbose=config.verbose,
+                     locking=config.locking, timeout=config.timeout)

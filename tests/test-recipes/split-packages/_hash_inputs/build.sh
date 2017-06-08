@@ -1,0 +1,1 @@
+echo "building OK"

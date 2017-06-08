@@ -586,31 +586,32 @@ def get_output_dicts_from_metadata(metadata):
     return outputs
 
 
-def finalize_outputs_pass(base_metadata, iteration, render_order=None, outputs=None,
-                          permit_unsatisfiable_variants=True):
+def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
+                          permit_unsatisfiable_variants=False):
     from .render import finalize_metadata
     outputs = OrderedDict()
+    # each of these outputs can have a different set of dependency versions from each other,
+    #    but also from base_metadata
     for output_d, metadata in render_order.values():
         try:
             log = utils.get_logger(__name__)
-            log.info("Attempting to finalize metadata for {}".format(metadata.name()))
-            # this is weird, but I think necessary. We should reparse
-            #    the top-level recipe to get all of our dependencies
-            #    fixed up.
-            if not hasattr(base_metadata, 'other_outputs'):
-                base_metadata.other_outputs = OrderedDict()
-            base_metadata.other_outputs.update(outputs)
+            # We should reparse the top-level recipe to get all of our dependencies fixed up.
+            # we base things on base_metadata because it has the record of the full origin recipe
             om = base_metadata.copy()
+            # match up the old variant with the current one from this output
             om.config.variant = metadata.config.variant
-            if not om.final:
-                om.parse_until_resolved()
+            if not hasattr(om, 'other_outputs'):
+                om.other_outputs = OrderedDict()
+            om.other_outputs.update(outputs)
+            om.final = False
+            om.parse_until_resolved()
             # get the new output_d from the reparsed top-level metadata, so that we have any
             #    exact subpackage version/hash info
             recipe_outputs = get_output_dicts_from_metadata(om)
             output_d = get_updated_output_dict_from_reparsed_metadata(output_d,
-                                                                        recipe_outputs)
-            metadata = om.get_output_metadata(output_d)
-            fm = finalize_metadata(metadata)
+                                                                      recipe_outputs)
+            om = om.get_output_metadata(output_d)
+            fm = finalize_metadata(om, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             if not output_d.get('type') or output_d.get('type') == 'conda':
                 outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
@@ -622,7 +623,20 @@ def finalize_outputs_pass(base_metadata, iteration, render_order=None, outputs=N
                             "{}".format(e.packages))
                 outputs[(metadata.name(), HashableDict(metadata.config.variant))] = (
                     output_d, metadata)
-    return outputs
+    base_metadata.other_outputs = outputs
+    base_metadata.final = False
+    base_metadata.parse_until_resolved()
+    # in the final pass, we finalize each of the outputs.  Up to now, we have not been computing
+    #  the actual installed versions of their dependencies (aside from subpackages)
+    if pass_no == 2:
+        final_outputs = OrderedDict()
+        for k, (out_d, m) in outputs.items():
+            fm = finalize_metadata(m, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+            final_outputs[(m.name(), HashableDict(m.config.variant))] = out_d, fm
+        return final_outputs
+    else:
+        return finalize_outputs_pass(base_metadata, render_order, pass_no + 1, outputs,
+                                     permit_unsatisfiable_variants)
 
 
 def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
@@ -960,7 +974,7 @@ class MetaData(object):
             res.append(ms)
         return res
 
-    def _get_hash_contents(self):
+    def get_hash_contents(self):
         sections = ['requirements', 'build']
         # make a copy of values, so that no sorting occurs in place
         composite = HashableDict({section: copy.copy(self.get_section(section))
@@ -998,21 +1012,38 @@ class MetaData(object):
                 del composite['requirements'][key]
 
         file_paths = []
-        if self.path and self.config.include_recipe and self.include_recipe():
+        if self.config.include_recipe and self.include_recipe():
             recorded_input_files = os.path.join(self.path, '..', 'hash_input_files')
             if os.path.exists(recorded_input_files):
                 with open(recorded_input_files) as f:
                     file_paths = f.read().splitlines()
             else:
-                files = utils.rec_glob(self.path, "*")
-                file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
-                # exclude meta.yaml and , because the json dictionary captures their content
-                # never include run_test - these can be renamed from subpackages, or the top-level
-                #    and if they're part of the top-level only, there will be missing files in the
-                #    subpackage
-                file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
-                                                            f.startswith('run_test'))]
-                file_paths = filter_files(file_paths, self.path)
+                # is this a subpackage?  If so, add only the files relevant to exactly this
+                if 'parent_recipe' in self.meta.get('extra', {}):
+                    parent_recipe_path = self.meta['extra']['parent_recipe'].get('path')
+                    this_output = [out for out in self.meta.get('outputs', [])
+                                   if out.get('name') == self.name()][0]
+                    install_script = this_output.get('script')
+                    # # HACK: conda-build renames the actual test script from the recipe into
+                    # #    run_test.* in the package.  This makes the test discovery code work.
+                    # if test_script:
+                    #     ext = os.path.splitext(test_script)[1]
+                    #     test_script = 'run_test' + ext
+                    build_inputs = []
+                    for build_input in ('build.sh', 'bld.bat'):
+                        if os.path.isfile(os.path.join(parent_recipe_path, build_input)):
+                            build_inputs.append(build_input)
+                    inputs = [install_script] + build_inputs
+                    file_paths = [script for script in inputs if script]
+                    file_paths = filter_files(file_paths, parent_recipe_path)
+                else:
+                    files = utils.rec_glob(self.path, "*")
+                    file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
+                    # exclude meta.yaml because the json dictionary captures its content
+                    file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
+                                                                f.startswith('run_test') or
+                                                                f == 'conda_build_config.yaml')]
+                    file_paths = filter_files(file_paths, self.path)
         trim_empty_keys(composite)
         return composite, sorted(file_paths)
 
@@ -1024,12 +1055,19 @@ class MetaData(object):
         # save only the first HASH_LENGTH characters - should be more than enough, since these only
         #    need to be unique within one version
         # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-        recipe_input, file_paths = self._get_hash_contents()
-        hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
-        for recipe_file in file_paths:
-            with open(os.path.join(self.path, recipe_file), 'rb') as f:
-                hash_.update(f.read())
-        hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+        if self.final:
+            recipe_input, file_paths = self.get_hash_contents()
+            hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
+            recipe_path = (self.path or
+                           self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+            if recipe_path:
+                for recipe_file in file_paths:
+                    with open(os.path.join(recipe_path, recipe_file), 'rb') as f:
+                        hash_.update(f.read())
+            hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+        else:
+            # cheaper fake hash
+            hash_ = 'h{}'.format(str(int(time.time() * 1000))[-self.config.hash_length:])
         return hash_
 
     def build_id(self):
@@ -1509,7 +1547,7 @@ class MetaData(object):
         return output_metadata
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,
-                                permit_unsatisfiable_variants=True):
+                                permit_unsatisfiable_variants=False):
         out_metadata_map = {}
 
         for variant in (self.config.variants if hasattr(self.config, 'variants')
@@ -1569,14 +1607,11 @@ class MetaData(object):
             #    2. fill in fully-resolved run-time dependencies.  Note that circular dependencies
             #       are allowed, but you can't have exact=True for circular run-time dependencies
             #    3. finally, everything should be filled in and done.
-            for i in range(3):
-                conda_packages = finalize_outputs_pass(self, i, conda_packages,
-                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-                self.other_outputs = conda_packages
+            conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
+                                permit_unsatisfiable_variants=permit_unsatisfiable_variants)
 
             # Sanity check: if any exact pins of any subpackages, make sure that they match
             ensure_matching_hashes(conda_packages)
-
         return list(conda_packages.values()) + non_conda_packages
 
     def get_loop_vars(self):
