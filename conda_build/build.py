@@ -1291,7 +1291,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
         print("TEST START:", test_package_name)
 
-        if metadata.config.remove_work_dir and os.listdir(metadata.config.work_dir):
+        if metadata.config.remove_work_dir:
             # Needs to come after create_files in case there's test/source_files
             print("Deleting work directory,", metadata.config.work_dir)
             utils.rm_rf(metadata.config.work_dir)
