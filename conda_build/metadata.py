@@ -543,7 +543,7 @@ def toposort(output_metadata_map, phase):
     # not sure that this is working...  not everything has 'name', and not sure how this pans out
     #    may end up excluding packages without the 'name' field
     keys.extend([k for pkgname in endorder for k in output_metadata_map.keys()
-                 if 'name' in k and k['name'] == pkgname])
+                 if ('name' in k and k['name'] == pkgname) or 'name' not in k])
     result = OrderedDict()
     for key in keys:
         result[key] = output_metadata_map[key]
@@ -1533,12 +1533,23 @@ class MetaData(object):
 
         # format here is {output_dict: metadata_object}
         render_order = toposort(out_metadata_map, phase='build')
+        check_circular_dependencies(render_order)
 
         conda_packages = OrderedDict()
         non_conda_packages = []
         for output_d, m in render_order.items():
             if not output_d.get('type') or output_d['type'] == 'conda':
                 conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
+            elif output_d.get('type') == 'wheel':
+                if (not output_d.get('requirements', {}).get('build') or
+                        not any('wheel' in req for req in output_d['requirements']['build'])):
+                    build_reqs = output_d.get('requirements', {}).get('build', [])
+                    build_reqs.extend(['wheel', 'python {}'.format(m.config.variant['python'])])
+                    output_d['requirements'] = output_d.get('requirements', {})
+                    output_d['requirements']['build'] = build_reqs
+                    m.meta['requirements'] = m.meta.get('requirements', {})
+                    m.meta['requirements']['build'] = build_reqs
+                non_conda_packages.append((output_d, m))
             else:
                 # for wheels and other non-conda packages, just append them at the end.
                 #    no deduplication with hashes currently.
@@ -1546,8 +1557,6 @@ class MetaData(object):
                 #    outside of this func is that it is harder to
                 #    obtain an exact match elsewhere
                 non_conda_packages.append((output_d, m))
-
-        check_circular_dependencies(render_order)
 
         # early stages don't need to do the finalization.  Skip it until the later stages
         #     when we need it.
