@@ -22,7 +22,8 @@ from .conda_interface import display_actions, install_actions
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import groupby, getter, comma_join, rm_rf, package_has_file, get_logger
+from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
+                               ensure_list)
 
 
 def which_package(path):
@@ -203,7 +204,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
     if untracked:
         packages.append(untracked_package)
 
-    for pkg in packages:
+    for pkg in ensure_list(packages):
         if pkg == untracked_package:
             dist = untracked_package
         elif pkg not in installed:
@@ -279,7 +280,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
     installed = _installed(prefix)
 
     output_string = ""
-    for pkg in packages:
+    for pkg in ensure_list(packages):
         if pkg == untracked_package:
             dist = untracked_package
         elif pkg not in installed:
@@ -315,7 +316,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
 def get_hash_input(packages):
     log = get_logger(__name__)
     hash_inputs = {}
-    for pkg in packages:
+    for pkg in ensure_list(packages):
         pkgname = os.path.basename(pkg)[:-8]
         hash_inputs[pkgname] = {}
         hash_input = package_has_file(pkg, 'info/hash_input.json')
