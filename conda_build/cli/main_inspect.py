@@ -5,6 +5,7 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
 import logging
+from os.path import expanduser
 from pprint import pprint
 import sys
 
@@ -65,6 +66,12 @@ libraries that ought to be dependent conda packages.  """
         choices=('package', 'dependency'),
         help="""Attribute to group by (default: %(default)s). Useful when used
         in conjunction with --all.""",
+    )
+    linkages.add_argument(
+        '--sysroot',
+        action='store',
+        help='System root in which to look for system libraries.',
+        default='',
     )
     linkages.add_argument(
         '--all',
@@ -187,7 +194,8 @@ def execute(args):
     elif args.subcommand == 'linkages':
         print(api.inspect_linkages(args.packages, prefix=get_prefix(args),
                                    untracked=args.untracked, all_packages=args.all,
-                                   show_files=args.show_files, groupby=args.groupby))
+                                   show_files=args.show_files, groupby=args.groupby,
+                                   sysroot=expanduser(args.sysroot)))
     elif args.subcommand == 'objects':
         print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
     elif args.subcommand == 'prefix-lengths':
