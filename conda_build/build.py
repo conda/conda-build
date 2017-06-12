@@ -1292,12 +1292,14 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         print("TEST START:", test_package_name)
 
         if metadata.config.remove_work_dir:
+            dest = os.path.join(os.path.dirname(metadata.config.work_dir),
+                                'work_moved_' + metadata.dist())
             # Needs to come after create_files in case there's test/source_files
-            print("Deleting work directory,", metadata.config.work_dir)
-            utils.rm_rf(metadata.config.work_dir)
+            print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+            os.rename(config.work_dir, dest)
         else:
-            log.warn("Not removing work directory after build.  Your package may depend on files "
-                    "in the work directory that are not included with your package")
+            log.warn("Not moving work directory after build.  Your package may depend on files "
+                     "in the work directory that are not included with your package")
 
         get_build_metadata(metadata)
         specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
