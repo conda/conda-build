@@ -1,0 +1,13 @@
+package:
+  name: test_hash_input_contents
+  version: 1.0
+
+requirements:
+  run:
+    - {{ pin_subpackage('test_subpackage', exact=True) }}
+
+outputs:
+  - name: test_subpackage
+    script: install-script.sh
+    test:
+      script: test-script.sh

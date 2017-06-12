@@ -42,7 +42,7 @@ def test_find_prefix_files(testing_workdir):
     assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
 
 
-def test_build_preserves_PATH(testing_workdir, testing_config, testing_index):
+def test_build_preserves_PATH(testing_workdir, testing_config):
     m = api.render(os.path.join(metadata_dir, 'source_git'), config=testing_config)[0][0]
     ref_path = os.environ['PATH']
     build.build(m)

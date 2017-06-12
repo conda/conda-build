@@ -35,7 +35,7 @@ from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
 # NOQA because it is not used in this file.
-from conda_build.conda_interface import rm_rf  # NOQA
+from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
 import conda_build
 from conda_build.os_utils import external
 
@@ -287,13 +287,12 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, cl
 # purpose here is that we want *one* lock per location on disk.  It can be locked or unlocked
 #    at any time, but the lock within this process should all be tied to the same tracking
 #    mechanism.
-_locations = {}
 _lock_folders = (os.path.join(root_dir, 'locks'),
                  os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
 def get_lock(folder, timeout=90):
-    global _locations
+    fl = None
     try:
         location = os.path.abspath(os.path.normpath(folder))
     except OSError:
@@ -309,33 +308,32 @@ def get_lock(folder, timeout=90):
             if not os.path.isdir(locks_dir):
                 os.makedirs(locks_dir)
             lock_file = os.path.join(locks_dir, lock_filename)
-            if not os.path.isfile(lock_file):
-                with open(lock_file, 'a') as f:
-                    f.write(location)
-            if location not in _locations:
-                _locations[location] = filelock.FileLock(lock_file, timeout)
+            with open(lock_file, 'w') as f:
+                f.write("")
+            fl = filelock.FileLock(lock_file, timeout)
             break
         except (OSError, IOError):
             continue
     else:
         raise RuntimeError("Could not write locks folder to either system location ({0})"
                            "or user location ({1}).  Aborting.".format(*_lock_folders))
-    return _locations[location]
+    return fl
 
 
-def get_conda_operation_locks(config=None):
+def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=90):
     locks = []
+    bldpkgs_dirs = ensure_list(bldpkgs_dirs)
     # locks enabled by default
-    if not config or config.locking:
+    if locking:
         _pkgs_dirs = pkgs_dirs[:1]
-        locked_folders = _pkgs_dirs + list(config.bldpkgs_dirs) if config else []
+        locked_folders = _pkgs_dirs + list(bldpkgs_dirs)
         for folder in locked_folders:
             if not os.path.isdir(folder):
                 os.makedirs(folder)
-            lock = get_lock(folder, timeout=config.timeout if config else 90)
+            lock = get_lock(folder, timeout=timeout)
             locks.append(lock)
         # lock used to generally indicate a conda operation occurring
-        locks.append(get_lock('conda-operation', timeout=config.timeout if config else 90))
+        locks.append(get_lock('conda-operation', timeout=timeout))
     return locks
 
 
@@ -786,8 +784,9 @@ def find_recipe(path):
 
 
 class LoggingContext(object):
-    loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'print', 'progress',
-               'dotupdate', 'stdoutlog', 'requests']
+    loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'conda.instructions',
+               'fetch.progress', 'print', 'progress', 'dotupdate', 'stdoutlog', 'requests',
+               'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete']
 
     def __init__(self, level=logging.WARN, handler=None, close=True):
         self.level = level
@@ -902,7 +901,7 @@ def trim_empty_keys(dict_):
         if hasattr(v, 'keys'):
             trim_empty_keys(v)
         # empty lists and empty strings, and None are always empty.
-        if v == list() or v == '' or v is None:
+        if v == list() or v == '' or v is None or v == dict():
             to_remove.add(k)
         # other things that evaluate as False may not be "empty" - things can be manually set to
         #     false, and we need to keep that setting.
@@ -970,20 +969,24 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
             os.path.islink(os.path.join(prefix, f))]
 
 
-# def rm_rf(path):
-#     if on_win:
-#         # native windows delete is potentially much faster
-#         try:
-#             if os.path.isfile(path):
-#                 subprocess.check_call('del {}'.format(path), shell=True)
-#             elif os.path.isdir(path):
-#                 subprocess.check_call('rd /s /q {}'.format(path), shell=True)
-#             else:
-#                 pass
-#         except subprocess.CalledProcessError:
-#             return _rm_rf(path)
-#     else:
-#         return _rm_rf(path)
+def rm_rf(path, config=None):
+    if on_win:
+        # native windows delete is potentially much faster
+        try:
+            if os.path.isfile(path):
+                subprocess.check_call('del {}'.format(path), shell=True)
+            elif os.path.isdir(path):
+                subprocess.check_call('rd /s /q {}'.format(path), shell=True)
+            else:
+                pass
+        except subprocess.CalledProcessError:
+            pass
+    conda_log_level = logging.WARN
+    if config and config.debug:
+        conda_log_level = logging.DEBUG
+    with LoggingContext(conda_log_level):
+        _rm_rf(path)
+
 
 def get_logger(name, dedupe=True):
     log = logging.getLogger(name)

@@ -2,6 +2,7 @@
 This module tests the build API.  These are high-level integration tests.
 """
 
+import base64
 from collections import OrderedDict
 from glob import glob
 import logging
@@ -124,9 +125,10 @@ def test_no_anaconda_upload_condarc(service_name, testing_workdir, testing_confi
 
 def test_git_describe_info_on_branch(testing_config):
     recipe_path = os.path.join(metadata_dir, "_git_describe_number_branch")
-    output = api.get_output_file_path(recipe_path)[0]
-    _hash = api.render(recipe_path, config=testing_config)[0][0]._hash_dependencies()
-    test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
+    m = api.render(recipe_path, config=testing_config)[0][0]
+    output = api.get_output_file_path(m)[0]
+    _hash = m._hash_dependencies()
+    test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
                     "git_describe_number_branch-1.20.2.0-{}_1_g82c6ba6.tar.bz2".format(_hash))
     assert test_path == output
 
@@ -165,8 +167,9 @@ def test_early_abort(testing_config, capfd):
 
 def test_output_build_path_git_source(testing_workdir, testing_config):
     recipe_path = os.path.join(metadata_dir, "source_git_jinja2")
-    output = api.get_output_file_path(recipe_path, config=testing_config)[0]
-    _hash = api.render(recipe_path, config=testing_config)[0][0]._hash_dependencies()
+    m = api.render(recipe_path, config=testing_config)[0][0]
+    output = api.get_output_file_paths(m)[0]
+    _hash = m._hash_dependencies()
     test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
                     "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
                         sys.version_info.major, sys.version_info.minor, _hash))
@@ -246,8 +249,6 @@ def dummy_executable(folder, exename):
 
 
 def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatch):
-    # temporarily necessary because we have custom rebuilt svn for longer prefix here
-    testing_config.channel_urls = ('conda_build_test', )
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
     monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
@@ -422,14 +423,14 @@ def test_build_metadata_object(testing_metadata):
 @pytest.mark.skipif(on_win, reason="fortran compilers on win are hard.")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
-    _hash = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]._hash_dependencies()
-    assert os.path.basename(api.get_output_file_path(recipe_path,
-                            config=testing_config, numpy="1.11")[0]) == \
+    m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+    _hash = m._hash_dependencies()
+    assert os.path.basename(api.get_output_file_path(m)[0]) == \
                             "load_setup_py_test-1.0a1-np111py{0}{1}{2}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
-def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
+def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monkeypatch):
     """
     A multi-part test encompassing the following checks:
 
@@ -525,7 +526,10 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
                           'm2-git         # [win]',
                           'm2-filesystem  # [win]'])]))
 
-        filename = os.path.join(testing_workdir, 'meta.yaml')
+        recipe_dir = os.path.join(testing_workdir, 'recipe')
+        if not os.path.exists(recipe_dir):
+            os.makedirs(recipe_dir)
+        filename = os.path.join(testing_workdir, 'recipe', 'meta.yaml')
         data = OrderedDict([
             ('package', OrderedDict([
                 ('name', 'relative_submodules'),
@@ -559,10 +563,10 @@ def test_relative_git_url_submodule_clone(testing_workdir, monkeypatch):
         monkeypatch.undo()
         # This will (after one spin round the loop) install and run 'git' with the
         # build env prepended to os.environ[]
-        metadata = api.render(testing_workdir)[0][0]
-        output = api.get_output_file_path(metadata)[0]
+        metadata = api.render(testing_workdir, config=testing_config)[0][0]
+        output = api.get_output_file_path(metadata, config=testing_config)[0]
         assert ("relative_submodules-{}-".format(tag) in output)
-        api.build(metadata)
+        api.build(metadata, config=testing_config)
 
 
 def test_noarch(testing_workdir):
@@ -583,7 +587,7 @@ def test_noarch(testing_workdir):
 
 
 def test_disable_pip(testing_config, testing_metadata):
-    testing_metadata.disable_pip = True
+    testing_metadata.config.disable_pip = True
     testing_metadata.meta['build']['script'] = 'python -c "import pip; print(pip.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
@@ -843,16 +847,14 @@ def test_workdir_removal_warning_no_remove(testing_config, caplog):
 @pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
                    reason="not completely implemented yet")
 def test_cross_compiler(testing_workdir, testing_config, caplog):
-    # TODO: testing purposes.  Package on @mingwandroid's channel.
-    testing_config.channel_urls = ('rdonnelly', )
+    # TODO: testing purposes.  Package from @mingwandroid's channel, copied to conda_build_test
+    testing_config.channel_urls = ('conda_build_test', )
     # activation is necessary to set the appropriate toolchain env vars
     testing_config.activate = True
     # testing_config.debug = True
     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
     output = api.build(recipe_dir, config=testing_config)[0]
     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
-    api.build(recipe_dir, config=testing_config, remove_work_dir=False)
-    assert "Not removing work directory after build" in caplog.text
 
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
@@ -883,6 +885,7 @@ def test_append_python_app_osx(testing_config):
 #         api.build(metadata)
 
 
+@pytest.mark.serial
 def test_run_exports(testing_metadata, testing_config):
     api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
@@ -891,7 +894,10 @@ def test_run_exports(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' in m.meta['requirements']['run']
 
 
+@pytest.mark.serial
 def test_ignore_run_exports(testing_metadata, testing_config):
+    # need to clear conda's index, or else we somehow pick up the test_run_exports folder
+    #     above for our package here.
     api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
     testing_metadata.meta['build']['ignore_run_exports'] = ['downstream_pinned_package']
@@ -979,10 +985,21 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     locks = get_conda_operation_locks(m.config)
     with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)):
         api.build(m)
-    assert os.listdir(m.config.build_folder)
+    assert os.path.isdir(m.config.build_folder), 'build folder was removed'
+    assert os.listdir(m.config.build_folder), 'build folder has no files'
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
-    assert not any(os.path.isfile(lock.lock_file) for lock in locks)
+    any_locks = False
+    locks_list = set()
+    for lock in locks:
+        if os.path.isfile(lock.lock_file):
+            any_locks = True
+            dest_path = base64.b64decode(os.path.basename(lock.lock_file))
+            if PY3 and hasattr(dest_path, 'decode'):
+                dest_path = dest_path.decode()
+            locks_list.add((lock.lock_file, dest_path))
+    assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
+                                                                for (l, r) in locks_list))
 
 
 def test_only_r_env_vars_defined(testing_config):

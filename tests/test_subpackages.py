@@ -64,7 +64,7 @@ def test_subpackage_independent_hash(testing_metadata):
     assert outputs[0][-15:] != outputs[1][-15:]
 
 
-def test_run_exports_in_subpackage(testing_metadata, testing_index):
+def test_run_exports_in_subpackage(testing_metadata):
     p1 = testing_metadata.copy()
     p1.meta['outputs'] = [{'name': 'has_run_exports', 'run_exports': 'bzip2 1.0'}]
     output = api.build(p1)[0]
@@ -185,6 +185,7 @@ def test_about_metadata(testing_config):
             assert info['home'] == 'http://not.a.url'
 
 
+@pytest.mark.serial
 def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_entry_points')
     outputs = api.build(recipe_dir, config=testing_config)
@@ -225,3 +226,16 @@ def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
 def test_toplevel_subpackage_exact_does_not_raise_infinite_loop_error(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_intradependencies_toplevel_circular')
     api.render(recipe_dir, config=testing_config)
+
+
+def test_subpackage_hash_inputs(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_hash_inputs')
+    outputs = api.build(recipe_dir, config=testing_config)
+    assert len(outputs) == 2
+    for out in outputs:
+        if os.path.basename(out).startswith('test_subpackage'):
+            assert utils.package_has_file(out, 'info/recipe/install-script.sh')
+            assert utils.package_has_file(out, 'info/recipe/build.sh')
+        else:
+            assert utils.package_has_file(out, 'info/recipe/install-script.sh')
+            assert utils.package_has_file(out, 'info/recipe/build.sh')

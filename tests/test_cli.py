@@ -237,7 +237,7 @@ def test_skeleton_pypi(testing_workdir, testing_config):
     # assert 'Nothing to test for' not in error
 
 
-def test_skeleton_pypi_arguments_work(testing_workdir, testing_config):
+def test_skeleton_pypi_arguments_work(testing_workdir):
     """
     These checks whether skeleton executes without error when these
     options are specified on the command line AND whether the underlying

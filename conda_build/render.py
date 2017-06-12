@@ -54,10 +54,12 @@ def actions_to_pins(actions):
     return specs
 
 
-def get_env_dependencies(m, env, variant, exclude_pattern=None):
+def get_env_dependencies(m, env, variant, exclude_pattern=None,
+                         permit_unsatisfiable_variants=False):
     dash_or_under = re.compile("[-_]")
-    index, index_ts = get_build_index(m.config, getattr(m.config, "{}_subdir".format(env)))
     specs = [ms.spec for ms in m.ms_depends(env)]
+    if env == 'build' and m.is_cross and m.config.build_subdir == m.config.host_subdir:
+        specs.extend([ms.spec for ms in m.ms_depends('host')])
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env == 'build':
         specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
@@ -83,17 +85,34 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None):
             pass_through_deps.append(spec)
     random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
                             for _ in range(10))
-    dependencies = list(set(dependencies))
+    dependencies = set(dependencies)
+    unsat = None
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
-            actions = environ.get_install_actions(tmpdir, index, dependencies, m.config,
-                                                  timestamp=index_ts)
-        except UnsatisfiableError as e:
+            actions = environ.get_install_actions(tmpdir, tuple(dependencies), env,
+                                                  subdir=getattr(m.config, '{}_subdir'.format(env)),
+                                                  debug=m.config.debug,
+                                                  verbose=m.config.verbose,
+                                                  locking=m.config.locking,
+                                                  bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                  timeout=m.config.timeout,
+                                                  disable_pip=m.config.disable_pip,
+                                                  max_env_retry=m.config.max_env_retry,
+                                                  output_folder=m.config.output_folder,
+                                                  channel_urls=tuple(m.config.channel_urls))
+        except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
             # we'll get here if the environment is unsatisfiable
-            raise DependencyNeedsBuildingError(e)
+            if hasattr(e, 'packages'):
+                unsat = ', '.join(e.packages)
+            else:
+                unsat = e.message
+            if permit_unsatisfiable_variants:
+                actions = {}
+            else:
+                raise
 
     specs = actions_to_pins(actions)
-    return specs + subpackages + pass_through_deps, actions
+    return specs + subpackages + pass_through_deps, actions, unsat
 
 
 def strip_channel(spec_str):
@@ -136,7 +155,7 @@ def _filter_run_exports(specs, ignore_list):
     return filtered_specs
 
 
-def get_upstream_pins(m, actions, index):
+def get_upstream_pins(m, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
     additional_specs = []
@@ -147,6 +166,14 @@ def get_upstream_pins(m, actions, index):
             del actions[key]
     # this should be just downloading packages.  We don't need to extract them -
     #    we read contents directly
+
+    index, index_ts = get_build_index(getattr(m.config, '{}_subdir'.format(env)),
+                                      bldpkgs_dir=m.config.bldpkgs_dir,
+                                      output_folder=m.config.output_folder,
+                                      channel_urls=m.config.channel_urls,
+                                      debug=m.config.debug, verbose=m.config.verbose,
+                                      locking=m.config.locking, timeout=m.config.timeout)
+
     if actions:
         execute_actions(actions, index, verbose=m.config.debug)
         ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
@@ -182,7 +209,8 @@ def get_upstream_pins(m, actions, index):
                     try:
                         pfe = ProgressiveFetchExtract(link_dists=[pkg],
                                                     index=index)
-                        pfe.execute()
+                        with utils.LoggingContext():
+                            pfe.execute()
                         for pkgs_dir in _pkgs_dirs:
                             pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
                             if os.path.isfile(pkg_file):
@@ -202,10 +230,8 @@ def get_upstream_pins(m, actions, index):
     return additional_specs
 
 
-def finalize_metadata(m):
+def finalize_metadata(m, permit_unsatisfiable_variants=False):
     """Fully render a recipe.  Fill in versions for build/host dependencies."""
-    index, index_ts = get_build_index(m.config, m.config.build_subdir)
-
     exclude_pattern = None
     excludes = set(m.config.variant.get('ignore_version', []))
 
@@ -229,29 +255,28 @@ def finalize_metadata(m):
         m.meta['requirements']['build'] = build_reqs
 
     # if we have host deps, they're more important than the build deps.
-    build_deps, build_actions = get_env_dependencies(m, 'build', m.config.variant, exclude_pattern)
+    build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
+                                        exclude_pattern,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
 
-    extra_run_specs = get_upstream_pins(m, build_actions, index)
+    extra_run_specs = get_upstream_pins(m, build_actions, 'build')
 
-    reset_index = False
-    if m.is_cross:
+    if m.is_cross and m.config.host_subdir != m.config.build_subdir:
         host_reqs = m.get_value('requirements/host')
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one
         if host_reqs and 'python' in host_reqs:
             host_reqs.append('python {}'.format(m.config.variant['python']))
             m.meta['requirements']['host'] = host_reqs
-        host_deps, host_actions = get_env_dependencies(m, 'host', m.config.variant, exclude_pattern)
-        extra_run_specs += get_upstream_pins(m, host_actions, index)
+        host_deps, host_actions, host_unsat = get_env_dependencies(m, 'host', m.config.variant,
+                                        exclude_pattern,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+        extra_run_specs += get_upstream_pins(m, host_actions, 'host')
     else:
         host_deps = []
-
-    # IMPORTANT: due to the statefulness of conda's index, this index invalidates the earlier one!
-    #    To avoid confusion, any index passed around is always the native build platform.
-    if reset_index:
-        index = None
+        host_unsat = None
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -262,8 +287,9 @@ def finalize_metadata(m):
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in output_excludes))
     pinning_env = 'host' if m.is_cross else 'build'
-    full_build_deps, _ = get_env_dependencies(m, pinning_env, m.config.variant,
-                                              exclude_pattern=exclude_pattern)
+    full_build_deps, _, _ = get_env_dependencies(m, pinning_env, m.config.variant,
+                                        exclude_pattern=exclude_pattern,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
@@ -299,8 +325,14 @@ def finalize_metadata(m):
     # hard-code build string so that any future "renderings" can't go wrong based on user env
     rendered_metadata.meta['build']['string'] = rendered_metadata.build_id()
 
-    rendered_metadata.final = True
-    rendered_metadata.config.index = index
+    if build_unsat or host_unsat:
+        rendered_metadata.final = False
+        log = utils.get_logger(__name__)
+        log.warn("Returning non-final recipe for {}; one or more dependencies "
+                 "was unsatisfiable:\nBuild: {}\nHost: {}".format(rendered_metadata.dist(),
+                                                                  build_unsat, host_unsat))
+    else:
+        rendered_metadata.final = True
     return rendered_metadata
 
 
@@ -361,89 +393,66 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     # store these for reference later
     metadata.config.variants = variants
 
-    if variants:
-        recipe_requirements = metadata.extract_requirements_text()
-        for variant in variants:
-            mv = metadata.copy()
+    recipe_requirements = metadata.extract_requirements_text()
+    for variant in variants:
+        mv = metadata.copy()
 
-            # this determines which variants were used, and thus which ones should be locked for
-            #     future rendering
-            mv.final = False
-            mv.config.variant = {}
-            mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True,
-                           bypass_env_check=True)
-            vars_in_recipe = set(mv.undefined_jinja_vars)
+        # this determines which variants were used, and thus which ones should be locked for
+        #     future rendering
+        mv.final = False
+        mv.config.variant = {}
+        mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True,
+                        bypass_env_check=True)
+        vars_in_recipe = set(mv.undefined_jinja_vars)
 
-            mv.config.variant = variant
-            conform_dict = {}
-            for key in vars_in_recipe:
-                if PY3 and hasattr(recipe_requirements, 'decode'):
-                    recipe_requirements = recipe_requirements.decode()
-                elif not PY3 and hasattr(recipe_requirements, 'encode'):
-                    recipe_requirements = recipe_requirements.encode()
-                # We use this variant in the top-level recipe.
-                # constrain the stored variants to only this version in the output
-                #     variant mapping
-                if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
-                    conform_dict[key] = variant[key]
+        mv.config.variant = variant
+        conform_dict = {}
+        for key in vars_in_recipe:
+            if PY3 and hasattr(recipe_requirements, 'decode'):
+                recipe_requirements = recipe_requirements.decode()
+            elif not PY3 and hasattr(recipe_requirements, 'encode'):
+                recipe_requirements = recipe_requirements.encode()
+            # We use this variant in the top-level recipe.
+            # constrain the stored variants to only this version in the output
+            #     variant mapping
+            if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
+                conform_dict[key] = variant[key]
 
-            compiler_matches = re.findall(r"compiler\([\'\"](.*)[\'\"].*\)",
-                                         recipe_requirements)
-            if compiler_matches:
-                from conda_build.jinja_context import native_compiler
-                for match in compiler_matches:
-                    compiler_key = '{}_compiler'.format(match)
-                    conform_dict[compiler_key] = variant.get(compiler_key,
-                                            native_compiler(match, mv.config))
-                    conform_dict['target_platform'] = variant['target_platform']
+        compiler_matches = re.findall(r"compiler\([\'\"](.*)[\'\"].*\)",
+                                        recipe_requirements)
+        if compiler_matches:
+            from conda_build.jinja_context import native_compiler
+            for match in compiler_matches:
+                compiler_key = '{}_compiler'.format(match)
+                conform_dict[compiler_key] = variant.get(compiler_key,
+                                        native_compiler(match, mv.config))
+                conform_dict['target_platform'] = variant['target_platform']
 
-            build_reqs = mv.meta.get('requirements', {}).get('build', [])
-            host_reqs = mv.meta.get('requirements', {}).get('host', [])
-            if 'python' in build_reqs or 'python' in host_reqs:
-                conform_dict['python'] = variant['python']
+        build_reqs = mv.meta.get('requirements', {}).get('build', [])
+        host_reqs = mv.meta.get('requirements', {}).get('host', [])
+        if 'python' in build_reqs or 'python' in host_reqs:
+            conform_dict['python'] = variant['python']
 
-            mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
-            # reset this to our current variant to go ahead
-            mv.config.variant = variant
+        mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
 
-            if not need_reparse_in_env:
-                try:
-                    mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
-                                            bypass_env_check=bypass_env_check)
-                    need_source_download = (bool(mv.meta.get('source')) and
-                                            not mv.needs_source_for_render and
-                                            not os.listdir(mv.config.work_dir))
-                    # if python is in the build specs, but doesn't have a specific associated
-                    #    version, make sure to add one to newly parsed 'requirements/build'.
-                    for env in ('build', 'host'):
-                        insert_python_version(mv, env)
-                    # finalization is important here for the sake of
-                    #   deduplication. Without finalizing, we don't know
-                    #   whether two metadata objects will yield the same thing.
-                    # fm = finalize_metadata(mv)
-                    #  However, finalization means that all downloading must have already been done.
-                    #   This is not necessary, so let's see if we can get away
-                    #    with un-finalized data
-                    rendered_metadata[mv.dist()] = (mv, need_source_download, need_reparse_in_env)
-                except DependencyNeedsBuildingError as e:
-                    unsatisfiable_variants.append(variant)
-                    packages_needing_building.update(set(e.packages))
-                    if permit_unsatisfiable_variants:
-                        rendered_metadata[mv.dist()] = (mv, need_source_download,
-                                                        need_reparse_in_env)
-                    continue
-                except exceptions.UnableToParseMissingSetuptoolsDependencies:
-                    need_reparse_in_env = True
-                except:
-                    raise
-            else:
-                # computes hashes based on whatever the current specs are - not the final specs
-                #    This is a deduplication step.  Any variants that end up identical because a
-                #    given variant is not used in a recipe are effectively ignored, though we still
-                #    pay the price to parse for that variant.
-                rendered_metadata[mv.build_id()] = (mv, need_source_download, need_reparse_in_env)
-    else:
-        rendered_metadata['base_recipe'] = (metadata, need_source_download, need_reparse_in_env)
+        if not need_reparse_in_env:
+            mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
+                                    bypass_env_check=bypass_env_check)
+            need_source_download = (bool(mv.meta.get('source')) and
+                                    not mv.needs_source_for_render and
+                                    not os.listdir(mv.config.work_dir))
+            # if python is in the build specs, but doesn't have a specific associated
+            #    version, make sure to add one to newly parsed 'requirements/build'.
+            for env in ('build', 'host'):
+                insert_python_version(mv, env)
+        try:
+            fm = finalize_metadata(mv,
+                                    permit_unsatisfiable_variants=False)
+            rendered_metadata[fm.dist()] = (fm, need_source_download, need_reparse_in_env)
+        except DependencyNeedsBuildingError as e:
+            unsatisfiable_variants.append(variant)
+            packages_needing_building.update(set(e.packages))
+            rendered_metadata[mv.dist()] = (mv, need_source_download, need_reparse_in_env)
 
     if unsatisfiable_variants and not permit_unsatisfiable_variants:
         raise DependencyNeedsBuildingError(packages=packages_needing_building)
@@ -521,7 +530,12 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
             m.config.variants = [m.config.variant]
         rendered_metadata = [(m, False, False), ]
     else:
-        index, index_ts = get_build_index(m.config, m.config.build_subdir)
+        index, index_ts = get_build_index(m.config.build_subdir,
+                                        bldpkgs_dir=m.config.bldpkgs_dir,
+                                        output_folder=m.config.output_folder,
+                                        channel_urls=m.config.channel_urls,
+                                        debug=m.config.debug, verbose=m.config.verbose,
+                                        locking=m.config.locking, timeout=m.config.timeout)
         # when building, we don't want to fully expand all outputs into metadata, only expand
         #    whatever variants we have.
         variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
@@ -529,6 +543,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                     allow_no_other_outputs=True, bypass_env_check=bypass_env_check)
+
     if need_cleanup:
         utils.rm_rf(recipe_dir)
 

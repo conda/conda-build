@@ -5,11 +5,9 @@ import sys
 import pytest
 
 from conda_build.config import Config
-from conda_build.index import get_build_index
-from conda_build.conda_interface import subdir
 from conda_build.variants import get_default_variants
 from conda_build.metadata import MetaData
-from conda_build.utils import check_call_env, prepend_bin_path, copy_into, capture
+from conda_build.utils import check_call_env, prepend_bin_path, copy_into
 
 
 @pytest.fixture(scope='function')
@@ -41,21 +39,13 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope='function')
-def testing_index(request):
-    index, index_ts = get_build_index(config=Config(debug=False, verbose=False), subdir=subdir,
-                                        clear_cache=True)
-    return index
-
-
-@pytest.fixture(scope='function')
-def testing_config(testing_workdir, testing_index, request):
+def testing_config(testing_workdir, request):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
-                  activate=False, debug=False, variant=None,
-                  indexes=testing_index)
+                  activate=False, debug=False, variant=None)
 
 
 @pytest.fixture(scope='function')
-def testing_metadata(request, testing_config, testing_index):
+def testing_metadata(request, testing_config):
     d = defaultdict(dict)
     d['package']['name'] = request.function.__name__
     d['package']['version'] = '1.0'
@@ -67,7 +57,6 @@ def testing_metadata(request, testing_config, testing_index):
     d['about']['home'] = "sweet home"
     d['about']['license'] = "contract in blood"
     d['about']['summary'] = "a test package"
-    testing_config.index = testing_index
     testing_config.variant = get_default_variants()[0]
     return MetaData.fromdict(d, config=testing_config)
 
@@ -82,3 +71,8 @@ def testing_env(testing_workdir, request, monkeypatch):
                                                 prepend_prefix=True)['PATH'])
     # cleanup is done by just cleaning up the testing_workdir
     return env_path
+
+
+# @pytest.fixture(scope='session')
+# def testing_example_package(tmpdir, testing_metadata):
+#     return api.build(testing_metadata)

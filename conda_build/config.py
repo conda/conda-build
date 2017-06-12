@@ -541,7 +541,7 @@ class Config(object):
             if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
                 rm_rf(os.path.join(self.build_folder, 'prefix_files'))
 
-        for lock in get_conda_operation_locks(self):
+        for lock in get_conda_operation_locks(self.locking, self.bldpkgs_dirs):
             if os.path.isfile(lock.lock_file):
                 rm_rf(lock.lock_file)
 

@@ -245,9 +245,9 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
             pins = cached_env_dependencies[key]
         else:
             if m.is_cross:
-                pins, _ = get_env_dependencies(m, 'host', m.config.variant)
+                pins, _, _ = get_env_dependencies(m, 'host', m.config.variant)
             else:
-                pins, _ = get_env_dependencies(m, 'build', m.config.variant)
+                pins, _, _ = get_env_dependencies(m, 'build', m.config.variant)
             cached_env_dependencies[key] = pins
         versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
         if versions:
