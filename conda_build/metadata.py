@@ -1056,19 +1056,15 @@ class MetaData(object):
         # save only the first HASH_LENGTH characters - should be more than enough, since these only
         #    need to be unique within one version
         # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-        if self.final:
-            recipe_input, file_paths = self.get_hash_contents()
-            hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
-            recipe_path = (self.path or
-                           self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-            if recipe_path:
-                for recipe_file in file_paths:
-                    with open(os.path.join(recipe_path, recipe_file), 'rb') as f:
-                        hash_.update(f.read())
-            hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
-        else:
-            # cheaper fake hash
-            hash_ = 'h{}'.format(str(int(time.time() * 1000))[-self.config.hash_length:])
+        recipe_input, file_paths = self.get_hash_contents()
+        hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
+        recipe_path = (self.path or
+                        self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        if recipe_path:
+            for recipe_file in file_paths:
+                with open(os.path.join(recipe_path, recipe_file), 'rb') as f:
+                    hash_.update(f.read())
+        hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
         return hash_
 
     def build_id(self):
@@ -1077,7 +1073,7 @@ class MetaData(object):
             check_bad_chrs(out, 'build/string')
         else:
             out = build_string_from_metadata(self)
-        if self.config.filename_hashing:
+        if self.config.filename_hashing and self.final:
             if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
                 ret = out.rsplit('_', 1)
                 try:
@@ -1622,7 +1618,16 @@ class MetaData(object):
 
             # Sanity check: if any exact pins of any subpackages, make sure that they match
             ensure_matching_hashes(conda_packages)
-        return list(conda_packages.values()) + non_conda_packages
+        # We arbitrarily mark all output metadata as final, regardless of if it truly is or not.
+        #    This is done to add sane hashes to unfinalizable packages, so that they are
+        #    differentiable from one another.  This is mostly a test concern than an actual one,
+        #    as any "final" recipe returned here will still barf if anyone tries to actually build
+        #    it.
+        final_conda_packages = []
+        for (out_d, m) in conda_packages.values():
+            m.final = True
+            final_conda_packages.append((out_d, m))
+        return final_conda_packages + non_conda_packages
 
     def get_loop_vars(self):
         return variants.get_loop_vars(self.config.variants)

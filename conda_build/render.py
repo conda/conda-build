@@ -382,8 +382,6 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     rendered_metadata = {}
     need_reparse_in_env = False
     need_source_download = True
-    unsatisfiable_variants = []
-    packages_needing_building = set()
 
     # don't bother distributing python if it's a noarch package
     if metadata.noarch or metadata.noarch_python:
@@ -445,17 +443,13 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #    version, make sure to add one to newly parsed 'requirements/build'.
             for env in ('build', 'host'):
                 insert_python_version(mv, env)
-        try:
-            fm = finalize_metadata(mv,
-                                    permit_unsatisfiable_variants=False)
-            rendered_metadata[fm.dist()] = (fm, need_source_download, need_reparse_in_env)
-        except DependencyNeedsBuildingError as e:
-            unsatisfiable_variants.append(variant)
-            packages_needing_building.update(set(e.packages))
-            rendered_metadata[mv.dist()] = (mv, need_source_download, need_reparse_in_env)
+            fm = mv.copy()
+            # HACK: trick conda-build into thinking this is final, and computing a hash based
+            #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
+            #     our ability to differentiate configurations
+            fm.final = True
+            rendered_metadata[fm.dist()] = (mv, need_source_download, need_reparse_in_env)
 
-    if unsatisfiable_variants and not permit_unsatisfiable_variants:
-        raise DependencyNeedsBuildingError(packages=packages_needing_building)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
