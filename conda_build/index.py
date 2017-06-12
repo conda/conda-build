@@ -101,8 +101,6 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
             except (IOError, ValueError):
                 index = {}
 
-        subdir = None
-
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
         for fn in files:
             path = join(dir_path, fn)
@@ -117,9 +115,6 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
             d = read_index_tar(path, lock=lock, locking=locking, timeout=timeout)
             d.update(file_info(path))
             index[fn] = d
-            # there's only one subdir for a given folder, so only read these contents once
-            if not subdir:
-                subdir = d['subdir']
 
         for fn in files:
             index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
