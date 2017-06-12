@@ -1,3 +1,116 @@
+2017-05-23 3.0.0
+
+These release notes are an aggregation of all older pre-releases of conda-build
+3.0.0. All changes from 2.1.15 and below have been incorporated.
+
+Breaking changes:
+-----------------
+
+* Support for post-build metadata (__conda_version__.txt and the like) has been removed.
+* pin_downstream has been renamed to run_exports  #1911
+* exclude_from_build_hash has been renamed to ignore_version  #1911
+* Package signing and verification have been removed, to follow their removal from conda 4.3.  #1950
+
+Enhancements:
+-------------
+
+* greatly extended Jinja2 templating capabilities  #1585
+* record environment variables at top of build.sh, similar to what is done with bld.bat in win.  #1765
+* use symlinks when copying to improve performance  #1867
+* load setup.cfg data in load_setup_py_data  #1878
+* calculate checksum and simplify cran skeleton  #1879
+* Check that files are executable when finding them #1899
+* use rm_rf to remove prefixes for more cleanliness and better speed  #1915
+* add support for multiple sources in one meta.yaml  #1929
+* allow ``exact`` keyword for pin_compatible jinja2 function  #1929
+* allow selectors in variant conda_build_config.yaml files  #1937
+* Avoid duplicate recreation of package index.  Speedup of 0-50%, depending on how extensively the recipe uses Jinja2 features.  #1954
+* Allow per-subpackage specification of target subdir  #1961
+* Add basic environment marker support to conda skeleton pypi  #1984
+* allow about section for each subpackage  #1987
+* add support for optional dependencies (conda 4.4)  #2001
+* fix windows entry point exe's for unicode  #2045
+* allow strings for pin_run_as_build values (e.g. x.x) rather than just dictionaries  #2042
+* add meta.yaml entry to override run_exports pins  #2073
+* add several condarc entries that can be used to control conda-build behavior  #2074
+* add new pyldd tool and use it when ldd/otool fail   #2082
+* Allow configuration of conda-build's loggers by logging configuration files.  Default to debug,info going to stdout, warn,error going to stderr.  #2078
+* rename work dir before tests, rather than removing it, so that build intermediates can be inspected if tests fail.  #2078
+
+Bug fixes:
+----------
+
+* fix symlinks to folders in packaging  #1775
+* fix detection of patch level when maxlevel=0  #1796
+* properly copy permissions when extracting zip files  #1855
+* Add more important Windows environment variables to the test environment  #1859, #1863
+* remove build and test envs after each packaging step, to avoid unsatisfiable errors  #1866
+* remove version pins from requirements added by run_test files (again avoid unsatisfiable errors)  #1866
+* fix prefix file detection picking up too many files due to env recreation  #1866
+* fix missing r_bin, make run_test.r scripts work  #1869
+* fix R's binary path on Windows  #1870
+* remove tab completion on CLI for compatibility with conda 4.4  #1795
+* reduce scope of git try/except block so that GIT_FULL_HASH is available, even if tags are not  #1873
+* Fix "compiler" jinja2 looping, so that it is respected in subpackages #1874
+* Fix license family comparison - case matching  #1875
+* Fix inspect linkages when multiple packages contain a library  #1884
+* avoid unnecessary computation of hashing  #1888
+* fix python imports not being run in test phase  #1896
+* fix path omission in paths.json for noarch packages  #1895
+* standardize entry point script template to match pip  #1908
+* fix cleanup happening even when build fails  #1909
+* fix bin/conda getting included in conda-build release tarballs  #1913
+* fix mmap/file problems on virtualbox shared folders  #1914
+* Correct rendering with --dirty flag if recipe name appears as substring of another's name  #1931
+* don't set language env vars (PERL, R, LUA, PYTHON) when those packages are not installed  #1932
+* exclude language env vars from variant being set  #1944
+* Fix cleanup of folders in outer variant loop - was causing incorrect packages on 2nd variant in windows builds  #1950
+* Remove variant functionality from bdist_conda.  Its split packaging approach is incompatible.  #1950
+* Fix import of _toposort from conda, reroute through conda_interface  #1952
+* Match folder substrings more intelligently, for finding previous builds with --dirty  #1953
+* Fix type error with --skip-existing and some conda recipes (Conda-build's internal conda.recipe was one).  #1956
+* Fix non-python packages creating python tests where they should not have  #1967
+* Don't add python.app to run reqs multiple times  #1972
+* Fix incorrect removal of cc in conda_interface.py  #1971
+* Fix ORIGIN replacement - trailing slash was messing things up  #1982
+* Pipe stdin when calling subprocess, in hopes of getting better ctrl-c handling with conda.  #1986
+* Ensure that lock files are removed after build exit (or crash) to avoid permission errors on central installs  #2002
+* Process line endings in bytes mode rather than text mode  #2035
+* add a warning to find_recipe when multiple meta.yaml files are found (bioconda style)  #2040
+* When applying patches, try 3 line ending options on the patch: 1. unchanged; 2. convert patch to unix line endings; 3. convert patch to windows line endings.  #2052
+* fix empty target_platform variant entry leading to empty builds  #2056
+* fix host activation for cross-capable recipes  #2060
+* fix handling of circularity in subpackages #2065
+* fix subdir handling for subdirs with more than one - character  #2066
+* Install build and host deps when using cross-capable recipe on strictly native (not cross) build  #2070
+* reduce verbosity of git error messages that people never care about  #2075
+* hash only direct inputs of subpackages, rather than all files.  This limits creation of identical packages with similar hashes.  #2079
+
+
+
+Contributors:
+-------------
+
+* @abretaud
+* @evhub
+* @groutr
+* @jjhelmus
+* @kalefranz
+* @ma-ba
+* @mandeep
+* @mingwandroid
+* @minrk
+* @msarahan
+* @pkgw
+* @pwwang
+* @rolando
+* @stuarteberg
+* @tatome
+* @ukoethe
+* @waltonseymour
+* @wulmer
+
+
 2017-05-23 3.0.0rc1
 
 These release notes are an aggregation of all older pre-releases of conda-build
