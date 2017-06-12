@@ -778,9 +778,8 @@ def bundle_conda(output, metadata, env, **kw):
 
 
 def bundle_wheel(output, metadata, env):
-    import pip
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
-        pip.main(['wheel', '--wheel-dir', tmpdir, '--no-deps', '.'])
+        utils.check_call_env(['pip', 'wheel', '--wheel-dir', tmpdir, '--no-deps', '.'], env=env)
         wheel_files = glob(os.path.join(tmpdir, "*.whl"))
         if not wheel_files:
             raise RuntimeError("Wheel creation failed.  Please see output above to debug.")
@@ -1048,7 +1047,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
                                          initial_files)
 
-                assert m.final, "output metadata for {} is not finalized".format(m.dist())
+                assert output_d.get('type') != 'conda' or m.final, (
+                    "output metadata for {} is not finalized".format(m.dist()))
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
                     if post is None:
