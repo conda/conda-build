@@ -404,7 +404,6 @@ def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
 
 
 def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
-    logging.basicConfig(level=logging.INFO)
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=testing_config)
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
 
@@ -803,7 +802,7 @@ def test_remove_workdir_default(testing_config, caplog):
 
 
 @pytest.mark.serial
-def test_keep_workdir_and_dirty_reuse(testing_config, caplog):
+def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
@@ -813,7 +812,7 @@ def test_keep_workdir_and_dirty_reuse(testing_config, caplog):
     metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
     workdir = metadata.config.work_dir
     api.build(metadata)
-    assert "Not removing work directory after build" in caplog.text
+    out, err = capfd.readouterr()
     assert glob(os.path.join(metadata.config.work_dir, '*'))
 
     # test that --dirty reuses the same old folder
@@ -827,7 +826,6 @@ def test_keep_workdir_and_dirty_reuse(testing_config, caplog):
     testing_config.clean()
 
 
-@pytest.mark.serial
 def test_workdir_removal_warning(testing_config, caplog):
     recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
     with pytest.raises(ValueError) as exc:
@@ -835,18 +833,11 @@ def test_workdir_removal_warning(testing_config, caplog):
         assert "work dir is removed" in str(exc)
 
 
-@pytest.mark.serial
-def test_workdir_removal_warning_no_remove(testing_config, caplog):
-    recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
-    api.build(recipe, config=testing_config, remove_work_dir=False)
-    assert "Not removing work directory after build" in caplog.text
-
-
 @pytest.mark.skipif(not sys.platform.startswith('linux'),
                     reason="cross compiler packages created only on Linux right now")
 @pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
                    reason="not completely implemented yet")
-def test_cross_compiler(testing_workdir, testing_config, caplog):
+def test_cross_compiler(testing_workdir, testing_config, capfd):
     # TODO: testing purposes.  Package from @mingwandroid's channel, copied to conda_build_test
     testing_config.channel_urls = ('conda_build_test', )
     # activation is necessary to set the appropriate toolchain env vars

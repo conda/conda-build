@@ -1291,13 +1291,15 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
         print("TEST START:", test_package_name)
 
-        if metadata.config.remove_work_dir and os.listdir(metadata.config.work_dir):
+        if metadata.config.remove_work_dir:
+            dest = os.path.join(os.path.dirname(metadata.config.work_dir),
+                                'work_moved_' + metadata.dist())
             # Needs to come after create_files in case there's test/source_files
-            print("Deleting work directory,", metadata.config.work_dir)
-            utils.rm_rf(metadata.config.work_dir)
+            print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+            os.rename(config.work_dir, dest)
         else:
-            log.warn("Not removing work directory after build.  Your package may depend on files "
-                    "in the work directory that are not included with your package")
+            log.warn("Not moving work directory after build.  Your package may depend on files "
+                     "in the work directory that are not included with your package")
 
         get_build_metadata(metadata)
         specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
@@ -1598,6 +1600,13 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([metadata if metadata else recipe])
             for pkg in e.packages:
+                pkg_name = pkg.split(' ')[0]
+                # if we hit missing dependencies at test time, the error we get says that our
+                #    package that we just built needs to be built.  Very confusing.  Bomb out
+                #    if any of our output metadatas are in the exception list of pkgs.
+                if metadata and any(pkg_name == output_meta.name() for (_, output_meta) in
+                       metadata.get_output_metadata_set(permit_undefined_jinja=True)):
+                    raise
                 if pkg in to_build_recursive:
                     config.clean(remove_folders=False)
                     raise RuntimeError("Can't build {0} due to environment creation error:\n"

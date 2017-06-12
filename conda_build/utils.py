@@ -8,6 +8,7 @@ from glob import glob
 import json
 from locale import getpreferredencoding
 import logging
+import logging.config
 import mmap
 import operator
 import os
@@ -20,6 +21,7 @@ import shutil
 import tarfile
 import tempfile
 import time
+import yaml
 import zipfile
 
 from distutils.version import LooseVersion
@@ -34,9 +36,9 @@ from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder
+from .conda_interface import cc_conda_build
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
-import conda_build
 from conda_build.os_utils import external
 
 if PY3:
@@ -988,13 +990,67 @@ def rm_rf(path, config=None):
         _rm_rf(path)
 
 
-def get_logger(name, dedupe=True):
-    log = logging.getLogger(name)
-    if dedupe:
-        dedupe_handler = logging.StreamHandler()
-        dedupe_handler.addFilter(conda_build.filt)
-        log.addHandler(dedupe_handler)
+# https://stackoverflow.com/a/31459386/1170370
+class LessThanFilter(logging.Filter):
+    def __init__(self, exclusive_maximum, name=""):
+        super(LessThanFilter, self).__init__(name)
+        self.max_level = exclusive_maximum
 
+    def filter(self, record):
+        # non-zero return means we log this message
+        return 1 if record.levelno < self.max_level else 0
+
+
+class GreaterThanFilter(logging.Filter):
+    def __init__(self, exclusive_minimum, name=""):
+        super(GreaterThanFilter, self).__init__(name)
+        self.min_level = exclusive_minimum
+
+    def filter(self, record):
+        # non-zero return means we log this message
+        return 1 if record.levelno > self.min_level else 0
+
+
+# unclutter logs - show messages only once
+class DuplicateFilter(logging.Filter):
+    def __init__(self):
+        self.msgs = set()
+
+    def filter(self, record):
+        log = record.msg not in self.msgs
+        self.msgs.add(record.msg)
+        return int(log)
+
+
+dedupe_filter = DuplicateFilter()
+info_debug_stdout_filter = LessThanFilter(logging.WARNING)
+warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
+
+
+def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
+    config_file = cc_conda_build.get('log_config_file')
+    # by loading config file here, and then only adding handlers later, people
+    # should be able to override conda-build's logger settings here.
+    if config_file:
+        with open(config_file) as f:
+            config_dict = yaml.load(f)
+        logging.config.dictConfig(config_dict)
+        level = config_dict.get('loggers', {}).get(name, {}).get('level', level)
+    log = logging.getLogger(name)
+    log.setLevel(level)
+    if dedupe:
+        log.addFilter(dedupe_filter)
+
+    # these are defaults.  They can be overridden by configuring a log config yaml file.
+    if not log.handlers and add_stdout_stderr_handlers:
+        stdout_handler = logging.StreamHandler(sys.stdout)
+        stderr_handler = logging.StreamHandler(sys.stderr)
+        stdout_handler.addFilter(info_debug_stdout_filter)
+        stderr_handler.addFilter(warning_error_stderr_filter)
+        stdout_handler.setLevel(level)
+        stderr_handler.setLevel(level)
+        log.addHandler(stdout_handler)
+        log.addHandler(stderr_handler)
     return log
 
 

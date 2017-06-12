@@ -12,4 +12,5 @@ requirements:
   build:
     # To test the conda_build version
     - svn
-    - vc 9   # [win]
+    - vc 9   # [win and py2k]
+    - vc 14   # [win and py3k]

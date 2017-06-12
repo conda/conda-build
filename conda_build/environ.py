@@ -72,14 +72,12 @@ def get_lua_include_dir(config):
 def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expected_rev='HEAD'):
     env = os.environ.copy()
     log = utils.get_logger(__name__)
-    base_log_level = log.getEffectiveLevel()
 
     if debug:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
         stderr = FNULL
-        log.setLevel(logging.ERROR)
 
     if not expected_rev:
         return False
@@ -145,11 +143,10 @@ def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expect
             log.debug("git_url: " + git_url.lower())
             OK = False
     except subprocess.CalledProcessError as error:
-        log.warn("Error obtaining git information in verify_git_repo.  Error was: ")
-        log.warn(str(error))
+        log.debug("Error obtaining git information in verify_git_repo.  Error was: ")
+        log.debug(str(error))
         OK = False
     finally:
-        log.setLevel(base_log_level)
         if not debug:
             FNULL.close()
     return OK
@@ -169,14 +166,12 @@ def get_git_info(repo, debug):
     """
     d = {}
     log = utils.get_logger(__name__)
-    base_log_level = log.getEffectiveLevel()
 
     if debug:
         stderr = None
     else:
         FNULL = open(os.devnull, 'w')
         stderr = FNULL
-        log.setLevel(logging.ERROR)
 
     # grab information from describe
     env = os.environ.copy()
@@ -192,7 +187,7 @@ def get_git_info(repo, debug):
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
     except subprocess.CalledProcessError:
-        log.warn("Failed to obtain git tag information.  Are you using annotated tags?")
+        log.debug("Failed to obtain git tag information.  Are you using annotated tags?")
 
     try:
         # get the _full_ hash of the current HEAD
@@ -203,15 +198,14 @@ def get_git_info(repo, debug):
 
         d['GIT_FULL_HASH'] = output
     except subprocess.CalledProcessError as error:
-        log.warn("Error obtaining git commit information.  Error was: ")
-        log.warn(str(error))
+        log.debug("Error obtaining git commit information.  Error was: ")
+        log.debug(str(error))
 
     # set up the build string
     if "GIT_DESCRIBE_NUMBER" in d and "GIT_DESCRIBE_HASH" in d:
         d['GIT_BUILD_STR'] = '{}_{}'.format(d["GIT_DESCRIBE_NUMBER"],
                                             d["GIT_DESCRIBE_HASH"])
 
-    log.setLevel(base_log_level)
     # issues on Windows with the next line of the command prompt being recorded here.
     assert not any("\n" in value for value in d.values())
     return d
@@ -742,10 +736,8 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
     Create a conda envrionment for the given prefix and specs.
     '''
     if config.debug:
-        utils.get_logger("conda_build").setLevel(logging.DEBUG)
         external_logger_context = utils.LoggingContext(logging.DEBUG)
     else:
-        utils.get_logger("conda_build").setLevel(logging.INFO)
         external_logger_context = utils.LoggingContext(logging.ERROR)
 
     with external_logger_context:

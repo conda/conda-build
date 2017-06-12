@@ -18,7 +18,7 @@ from .conda_interface import specs_from_url
 from .conda_interface import envs_dirs
 from .conda_interface import string_types
 
-from conda_build import exceptions, filt, utils, variants
+from conda_build import exceptions, utils, variants
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
@@ -597,6 +597,8 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             log = utils.get_logger(__name__)
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
             # we base things on base_metadata because it has the record of the full origin recipe
+            if base_metadata.config.verbose:
+                log.info("Attempting to finalize metadata for {}".format(metadata.name()))
             om = base_metadata.copy()
             # match up the old variant with the current one from this output
             om.config.variant = metadata.config.variant
@@ -733,7 +735,6 @@ class MetaData(object):
         assert not self.final, "modifying metadata after finalization"
 
         log = utils.get_logger(__name__)
-        log.addFilter(filt)
 
         if isfile(self.requirements_path) and not self.get_value('requirements/run'):
             self.meta.setdefault('requirements', {})

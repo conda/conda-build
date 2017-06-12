@@ -198,3 +198,59 @@ def test_filter_files():
     files_list = ['a', 'x.git/a', 'something/x.git/a',
                   'x.git\\a', 'something\\x.git\\a']
     assert len(utils.filter_files(files_list, '')) == len(files_list)
+
+
+def test_logger_filtering(caplog, capfd):
+    import logging
+    log = utils.get_logger(__name__, level=logging.DEBUG)
+    log.debug('test debug message')
+    log.info('test info message')
+    log.info('test duplicate message')
+    log.info('test duplicate message')
+    log.warn('test warn message')
+    log.error('test error message')
+    out, err = capfd.readouterr()
+    assert 'test debug message' in out
+    assert 'test info message' in out
+    assert 'test warn message' not in out
+    assert 'test error message' not in out
+    assert 'test debug message' not in err
+    assert 'test info message' not in err
+    assert 'test warn message' in err
+    assert 'test error message' in err
+    assert caplog.text.count('duplicate') == 1
+
+
+def test_logger_config_from_file(testing_workdir, caplog, capfd, mocker):
+    test_file = os.path.join(testing_workdir, 'build_log_config.yaml')
+    with open(test_file, 'w') as f:
+        f.write("""
+version: 1
+formatters:
+  simple:
+    format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+handlers:
+  console:
+    class: logging.StreamHandler
+    level: WARN
+    formatter: simple
+    stream: ext://sys.stdout
+loggers:
+  {}:
+    level: WARN
+    handlers: [console]
+    propagate: no
+root:
+  level: DEBUG
+  handlers: [console]
+""".format(__name__))
+    cc_conda_build = mocker.patch.object(utils, 'cc_conda_build')
+    cc_conda_build.get.return_value = test_file
+    log = utils.get_logger(__name__)
+    # default log level is INFO, but our config file should set level to DEBUG
+    log.warn('test message')
+    # output should have gone to stdout according to config above.
+    out, err = capfd.readouterr()
+    assert 'test message' in out
+    # make sure that it is not in stderr - this is testing override of defaults.
+    assert 'test message' not in err
