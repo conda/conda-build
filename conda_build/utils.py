@@ -990,7 +990,6 @@ def rm_rf(path, config=None):
         _rm_rf(path)
 
 
-
 # https://stackoverflow.com/a/31459386/1170370
 class LessThanFilter(logging.Filter):
     def __init__(self, exclusive_maximum, name=""):

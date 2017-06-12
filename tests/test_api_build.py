@@ -833,13 +833,6 @@ def test_workdir_removal_warning(testing_config, caplog):
         assert "work dir is removed" in str(exc)
 
 
-def test_workdir_removal_warning_no_remove(testing_config, capfd):
-    recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
-    api.build(recipe, config=testing_config, remove_work_dir=False)
-    out, err = capfd.readouterr()
-    assert "Not removing work directory after build" in err
-
-
 @pytest.mark.skipif(not sys.platform.startswith('linux'),
                     reason="cross compiler packages created only on Linux right now")
 @pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),

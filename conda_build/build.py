@@ -1598,6 +1598,13 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([metadata if metadata else recipe])
             for pkg in e.packages:
+                pkg_name = pkg.split(' ')[0]
+                # if we hit missing dependencies at test time, the error we get says that our
+                #    package that we just built needs to be built.  Very confusing.  Bomb out
+                #    if any of our output metadatas are in the exception list of pkgs.
+                if metadata and any(pkg_name == output_meta.name() for (_, output_meta) in
+                       metadata.get_output_metadata_set(permit_undefined_jinja=True)):
+                    raise
                 if pkg in to_build_recursive:
                     config.clean(remove_folders=False)
                     raise RuntimeError("Can't build {0} due to environment creation error:\n"
