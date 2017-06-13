@@ -62,6 +62,7 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
 
 
 def test_get_output_file_path_metadata_object(testing_metadata):
+    testing_metadata.final = True
     build_path = api.get_output_file_path(testing_metadata)[0]
     _hash = testing_metadata._hash_dependencies()
     python = ''.join(testing_metadata.config.variant['python'].split('.')[:2])
