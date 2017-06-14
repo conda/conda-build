@@ -282,7 +282,11 @@ def dict_from_cran_lines(lines):
         if not line:
             continue
         try:
-            (k, v) = line.split(': ', 1)
+            if ': ' in line:
+                (k, v) = line.split(': ', 1)
+            else:
+                # Sometimes (leaflet) you get lines such as 'Depends:'
+                (k, v) = line.split(':', 1)
         except ValueError:
             sys.exit("Error: Could not parse metadata (%s)" % line)
         d[k] = v
@@ -674,8 +678,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                     deps.append('{indent}posix                # [win]'.format(indent=INDENT))
                     deps.append('{indent}{{{{native}}}}toolchain  # [win]'.format(indent=INDENT))
                     deps.append('{indent}gcc                  # [not win]'.format(indent=INDENT))
-                else:
-                    deps.append('{indent}libgcc  # [not win]')
+                elif dep_type == 'run':
+                    deps.append('{indent}{{{{native}}}}gcc-libs   # [win]'.format(indent=INDENT))
+                    deps.append('{indent}libgcc               # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
