@@ -678,8 +678,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                     deps.append('{indent}posix                # [win]'.format(indent=INDENT))
                     deps.append('{indent}{{{{native}}}}toolchain  # [win]'.format(indent=INDENT))
                     deps.append('{indent}gcc                  # [not win]'.format(indent=INDENT))
-                else:
-                    deps.append('{indent}libgcc  # [not win]'.format(indent=INDENT))
+                elif dep_type == 'run':
+                    deps.append('{indent}{{{{native}}}}gcc-libs   # [win]'.format(indent=INDENT))
+                    deps.append('{indent}libgcc               # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
