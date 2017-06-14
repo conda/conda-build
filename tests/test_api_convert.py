@@ -98,3 +98,64 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
         assert 'Scripts/test-script-setup-script.py' in has_prefix_files
         assert 'Scripts/test-script-manual-script.py' in has_prefix_files
         assert 'Scripts/test-script-manual-postfix-script.py' in has_prefix_files
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
+@pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
+def test_convert_dependencies(testing_workdir, base_platform, package):
+    package_name, example_file = package
+    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
+                                                                            package_name)
+    fn = "{}-np112py36_0.tar.bz2".format(package_name)
+    download(f, fn)
+
+    dependencies = ['numpy 1.7.1 py36_0', 'cryptography 1.7.0 py36_0']
+    expected_paths_json = package_has_file(fn, 'info/paths.json')
+    api.convert(fn, platforms='all', dependencies=dependencies, quiet=False, verbose=False)
+    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+        python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
+        package = os.path.join(platform, fn)
+        assert package_has_file(package,
+                                '{}/{}'.format(python_folder, example_file))
+
+        with tarfile.open(package) as t:
+            info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+
+            assert 'numpy 1.7.1 py36_0' in info['depends']
+            assert 'numpy 1.12.1 py36_0' not in info['depends']
+            assert 'cryptography 1.7.0 py36_0' in info['depends']
+            assert 'cryptography 1.8.1 py36_0' not in info['depends']
+
+        if expected_paths_json:
+            assert package_has_file(package, 'info/paths.json')
+            assert_package_paths_matches_files(package)
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
+@pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
+def test_convert_no_dependencies(testing_workdir, base_platform, package):
+    package_name, example_file = package
+    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
+                                                                            package_name)
+    fn = "{}-np112py36_0.tar.bz2".format(package_name)
+    download(f, fn)
+
+    expected_paths_json = package_has_file(fn, 'info/paths.json')
+    api.convert(fn, platforms='all', dependencies=None, quiet=False, verbose=False)
+    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+        python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
+        package = os.path.join(platform, fn)
+        assert package_has_file(package,
+                                '{}/{}'.format(python_folder, example_file))
+
+        with tarfile.open(package) as t:
+            info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+
+            assert 'numpy 1.12.1 py36_0' in info['depends']
+            assert 'cryptography 1.8.1 py36_0' in info['depends']
+
+        if expected_paths_json:
+            assert package_has_file(package, 'info/paths.json')
+            assert_package_paths_matches_files(package)

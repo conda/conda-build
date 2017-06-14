@@ -208,7 +208,7 @@ path_mapping_identity = [
 pyver_re = re.compile(r'python\s+(?:[<>=]*)(\d.\d)')
 
 
-def get_pure_py_file_map(t, platform):
+def get_pure_py_file_map(t, platform, dependencies):
     info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
     try:
         paths = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
@@ -233,6 +233,9 @@ def get_pure_py_file_map(t, platform):
     newinfo['platform'] = dest_plat
     newinfo['arch'] = 'x86_64' if dest_arch == '64' else 'x86'
     newinfo['subdir'] = platform
+
+    if dependencies is not None:
+        newinfo['depends'] = dependencies
 
     pythons = list(filter(None, [pyver_re.match(p) for p in info['depends']]))
     pythons = list(set(p.group(1) for p in pythons))
@@ -410,7 +413,22 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
         source_type = 'unix' if info['platform'] in {'osx', 'linux'} else 'win'
 
         if dependencies:
+            # split dependencies away from their version numbers since we need the names
+            # in order to evaluate duplication
+            dependency_names = set(dependency.split()[0] for dependency in dependencies)
+            index_dependency_names = set(index.split()[0] for index in info['depends'])
+
+            repeated_packages = index_dependency_names.intersection(dependency_names)
+
+            if len(repeated_packages) > 0:
+                for index_dependency in info['depends']:
+                    for dependency in repeated_packages:
+                        if index_dependency.startswith(dependency):
+                            info['depends'].remove(index_dependency)
+
             info['depends'].extend(dependencies)
+
+            dependencies = info['depends']
 
         nonpy_unix = False
         nonpy_win = False
@@ -453,7 +471,7 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
                       (file_path, info['platform'], platform), file=sys.stderr)
                 continue
 
-            file_map = get_pure_py_file_map(t, platform)
+            file_map = get_pure_py_file_map(t, platform, dependencies)
 
             if dry_run:
                 if not quiet:
