@@ -1276,7 +1276,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     warn_on_use_of_SRC_DIR(metadata)
 
-    config.compute_build_id(metadata.name())
+    if config.set_build_id:
+        config.compute_build_id(metadata.name())
 
     clean_pkg_cache(metadata.dist(), config)
 
