@@ -888,6 +888,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
+        test_ms_deps = m.get_value('test/requires', [])
+
         if m.config.host_subdir != m.config.build_subdir:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
@@ -922,6 +924,21 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                     max_env_retry=m.config.max_env_retry,
                                                     output_folder=m.config.output_folder,
                                                     channel_urls=tuple(m.config.channel_urls))
+
+        # make sure test deps are available before taking time to create build env
+        environ.get_install_actions(m.config.test_prefix,
+                                    tuple(test_ms_deps), 'test',
+                                    subdir=m.config.build_subdir,
+                                    debug=m.config.debug,
+                                    verbose=m.config.verbose,
+                                    locking=m.config.locking,
+                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                    timeout=m.config.timeout,
+                                    disable_pip=m.config.disable_pip,
+                                    max_env_retry=m.config.max_env_retry,
+                                    output_folder=m.config.output_folder,
+                                    channel_urls=tuple(m.config.channel_urls))
+
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
