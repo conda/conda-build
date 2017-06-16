@@ -469,8 +469,9 @@ def linux_vars(compiler_vars, prefix, config):
     if config.arch == 32:
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
-    return {}
-
+    return {
+        'DISPLAY': os.getenv('DISPLAY'),
+    }
 
 def system_vars(env_dict, prefix, config):
     d = dict()
