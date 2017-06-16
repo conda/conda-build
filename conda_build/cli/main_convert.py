@@ -63,7 +63,7 @@ all.""",
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
         help="Platform to convert the packages to.",
-        default=[subdir]
+        default=None
     )
     p.add_argument(
         "--dependencies", "-d",
