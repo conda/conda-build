@@ -888,7 +888,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
-        test_ms_deps = m.get_value('test/requires', [])
+        test_run_ms_deps = m.get_value('test/requires', []) + m.get_value('requirements/run', [])
 
         if m.config.host_subdir != m.config.build_subdir:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
@@ -927,7 +927,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         # make sure test deps are available before taking time to create build env
         environ.get_install_actions(m.config.test_prefix,
-                                    tuple(test_ms_deps), 'test',
+                                    tuple(test_run_ms_deps), 'test',
                                     subdir=m.config.build_subdir,
                                     debug=m.config.debug,
                                     verbose=m.config.verbose,

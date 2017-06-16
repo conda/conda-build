@@ -1040,3 +1040,13 @@ def test_test_dependencies(testing_workdir, testing_config):
 
     assert ('Package missing in current osx-64 channels: \n  '
             '- pytest-package-does-not-exist' in str(e.value))
+
+
+def test_runtime_dependencies(testing_workdir, testing_config):
+    recipe = os.path.join(fail_dir, 'check_runtime_dependencies')
+
+    with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
+        api.build(recipe, config=testing_config)
+
+    assert ('Package missing in current osx-64 channels: \n  '
+            '- some-nonexistent-package1' in str(e.value))
