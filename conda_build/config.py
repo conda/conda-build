@@ -475,7 +475,7 @@ class Config(object):
     def bldpkgs_dirs(self):
         """ Dirs where previous build packages might be. """
         # The first two *might* be the same, but might not, depending on if this is a cross-compile.
-        #     cc.subdir should be the native platform, while self.subdir would be the host platform.
+        #     subdir should be the native platform, while self.subdir would be the host platform.
         return {join(self.croot, self.host_subdir), join(self.croot, subdir),
                 join(self.croot, "noarch"), }
 
