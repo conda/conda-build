@@ -119,3 +119,12 @@ def test_pypi_with_version_inconsistency(testing_workdir):
     with open('mpi4py_test/meta.yaml') as f:
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.0.10")
+
+
+def test_setuptools_test_requirements(testing_workdir):
+    api.skeletonize(packages='hdf5storage', repo='pypi')
+
+    with open('hdf5storage/meta.yaml') as f:
+        actual = yaml.load(f)
+
+    assert actual['test']['requires'] == ['nose >=1.0']
