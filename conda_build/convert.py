@@ -172,6 +172,31 @@ def _check_paths_version(paths):
         raise RuntimeError("Cannot handle info/paths.json paths_version other than 1")
 
 
+def _is_same_platform_arch(path, platform):
+    """Compare the source platform and architecture to the target platform and architecture.
+
+    If the source platform and architecture are the same as the target platform
+    and architecture then the conversion of the package should be skipped.
+    """
+    with tarfile.open(path) as tar:
+        info = json.loads(tar.extractfile('info/index.json').read().decode('utf-8'))
+
+    source_platform = info.get('platform')
+
+    if info.get('arch') == 'x86_64':
+        source_architecture = 64
+    elif info.get('arch') == 'x86':
+        source_architecture = 32
+    else:
+        # if the source arch can't be determined then set it to
+        # an abritrary number 0 so that the package still builds
+        source_architecture = 0
+
+    source_platform_arch = '{}-{}' .format(source_platform, source_architecture)
+
+    return platform == source_platform_arch
+
+
 def _update_paths(paths, mapping_dict):
     """Given a paths file, update it such that old paths are replaced with new"""
     updated_paths = deepcopy(paths)
@@ -435,8 +460,16 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
 
         if 'all' in platforms:
             platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
+
         base_output_dir = output_dir
+
         for platform in platforms:
+            if _is_same_platform_arch(file_path, platform):
+                print("Source platform '{}' and target platform '{}' are the same platform "
+                      "and architecture.\n"
+                      "Skipping conversion." .format(info['platform'], platform))
+                continue
+
             info['subdir'] = platform
             output_dir = join(base_output_dir, platform)
             if abspath(expanduser(join(output_dir, fn))) == file_path:

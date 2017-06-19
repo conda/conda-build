@@ -417,11 +417,14 @@ def test_convert(testing_workdir, testing_config):
     platforms = ['osx-64', 'win-32', 'win-64', 'linux-64', 'linux-32']
     for platform in platforms:
         dirname = os.path.join('converted', platform)
-        assert os.path.isdir(dirname)
-        assert pkg_name in os.listdir(dirname)
-        testing_config.host_subdir = platform
-        with TarCheck(os.path.join(dirname, pkg_name), config=testing_config) as tar:
-            tar.correct_subdir()
+        if platform != 'win-64':
+            assert os.path.isdir(dirname)
+            assert pkg_name in os.listdir(dirname)
+            testing_config.host_subdir = platform
+            with TarCheck(os.path.join(dirname, pkg_name), config=testing_config) as tar:
+                tar.correct_subdir()
+        else:
+            assert not os.path.isdir(dirname)
 
 
 @pytest.mark.serial
