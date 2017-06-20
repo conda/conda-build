@@ -790,14 +790,15 @@ def test_build_expands_wildcards(mocker, testing_workdir):
 
 
 @pytest.mark.serial
-def test_remove_workdir_default(testing_config, caplog):
+@pytest.mark.parametrize('set_build_id', [True, False])
+def test_remove_workdir_default(testing_config, caplog, set_build_id):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
     #    of the config object rather than edit it in place, so that variants don't clobber one
     #    another
     metadata = api.render(recipe, config=testing_config)[0][0]
-    api.build(metadata)
+    api.build(metadata, set_build_id=set_build_id)
     assert not glob(os.path.join(metadata.config.work_dir, '*'))
 
 
