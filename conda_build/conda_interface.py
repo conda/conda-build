@@ -20,7 +20,11 @@ except ImportError:
     pass
 
 
-from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+if parse_version(CONDA_VERSION) >= parse_version("4.4"):
+    from conda.exports import display_actions, execute_actions, execute_plan, install_actions
+else:
+    from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
 
@@ -142,6 +146,35 @@ else:
 
 EntityEncoder, FileMode, PathType = EntityEncoder, FileMode, PathType
 
+
+if parse_version(CONDA_VERSION) >= parse_version("4.3"):
+    from conda.exports import (CondaError, CondaHTTPError, LinkError, LockError,
+                               NoPackagesFoundError, PaddingError, UnsatisfiableError)
+
+    from conda.exports import non_x86_linux_machines
+    from conda.exports import context, get_prefix as context_get_prefix, reset_context
+    from conda.exports import get_conda_build_local_url
+    binstar_upload = context.binstar_upload
+    bits = context.bits
+    conda_private = context.conda_private
+    default_python = context.default_python
+    envs_dirs = context.envs_dirs
+    pkgs_dirs = list(context.pkgs_dirs)
+    cc_platform = context.platform
+    root_dir = context.root_dir
+    root_writable = context.root_writable
+    subdir = context.subdir
+
+    get_rc_urls = lambda: list(context.channels)
+    get_prefix = partial(context_get_prefix, context)
+    cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
+
+    # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
+    os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
+    reset_context()
+
+    get_local_urls = lambda: list(get_conda_build_local_url()) or []
+    arch_name = context.arch_name
 
 if parse_version(CONDA_VERSION) >= parse_version("4.2"):
     from conda.exceptions import (CondaError, CondaHTTPError, LinkError, LockError,
