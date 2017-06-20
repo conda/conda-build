@@ -780,9 +780,10 @@ def test_build_expands_wildcards(mocker, testing_workdir):
 
 
 @pytest.mark.serial
-def test_remove_workdir_default(test_config, caplog):
+@pytest.mark.parametrize('set_build_id', [True, False])
+def test_remove_workdir_default(test_config, caplog, set_build_id):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
-    api.build(recipe, config=test_config)
+    api.build(recipe, config=test_config, set_build_id=set_build_id)
     assert not glob(os.path.join(test_config.work_dir, '*'))
 
 
