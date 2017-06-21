@@ -44,13 +44,21 @@ def assert_package_paths_matches_files(package_path):
                                      ('py-1.4.32', 'py/__init__.py')])
 def test_convert_platform_to_others(testing_workdir, base_platform, package):
     package_name, example_file = package
+    platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
+
+    # skip building on the same platform as the source platform
+    for platform in platforms:
+        source_platform = '{}-64' .format(base_platform)
+        if platform == source_platform:
+            platforms.remove(platform)
+
     f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py27_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-py27_0.tar.bz2".format(package_name)
     download(f, fn)
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', quiet=False, verbose=False)
-    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+    for platform in platforms:
         python_folder = 'lib/python2.7' if not platform.startswith('win') else 'Lib'
         package = os.path.join(platform, fn)
         assert package_has_file(package,
@@ -105,6 +113,14 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
+    platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
+
+    # skip building on the same platform as the source platform
+    for platform in platforms:
+        source_platform = '{}-64' .format(base_platform)
+        if platform == source_platform:
+            platforms.remove(platform)
+
     f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
@@ -113,7 +129,7 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
     dependencies = ['numpy 1.7.1 py36_0', 'cryptography 1.7.0 py36_0']
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', dependencies=dependencies, quiet=False, verbose=False)
-    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+    for platform in platforms:
         python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
         package = os.path.join(platform, fn)
         assert package_has_file(package,
@@ -137,6 +153,14 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_no_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
+    platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
+
+    # skip building on the same platform as the source platform
+    for platform in platforms:
+        source_platform = '{}-64' .format(base_platform)
+        if platform == source_platform:
+            platforms.remove(platform)
+
     f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
@@ -144,7 +168,7 @@ def test_convert_no_dependencies(testing_workdir, base_platform, package):
 
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', dependencies=None, quiet=False, verbose=False)
-    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+    for platform in platforms:
         python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
         package = os.path.join(platform, fn)
         assert package_has_file(package,
@@ -159,3 +183,29 @@ def test_convert_no_dependencies(testing_workdir, base_platform, package):
         if expected_paths_json:
             assert package_has_file(package, 'info/paths.json')
             assert_package_paths_matches_files(package)
+
+
+@pytest.mark.serial
+@pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
+@pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
+def test_skip_conversion(testing_workdir, base_platform, package, capfd):
+    package_name, example_file = package
+    source_plat_arch = '{}-64' .format(base_platform)
+
+    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
+                                                                            package_name)
+    fn = "{}-np112py36_0.tar.bz2".format(package_name)
+    download(f, fn)
+
+    api.convert(fn, platforms=source_plat_arch, dependencies=None, quiet=False, verbose=False)
+
+    output, error = capfd.readouterr()
+
+    skip_message = ("Source platform '{}' and target platform '{}' are the same platform and architecture."
+                    "\nSkipping conversion.\n"
+                    .format(base_platform, source_plat_arch))
+
+    package = os.path.join(source_plat_arch, fn)
+
+    assert skip_message in output
+    assert not os.path.exists(package)
