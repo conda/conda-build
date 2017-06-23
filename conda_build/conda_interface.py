@@ -148,12 +148,20 @@ EntityEncoder, FileMode, PathType = EntityEncoder, FileMode, PathType
 
 
 if parse_version(CONDA_VERSION) >= parse_version("4.3"):
-    from conda.exports import (CondaError, CondaHTTPError, LinkError, LockError,
-                               NoPackagesFoundError, PaddingError, UnsatisfiableError)
+    try:
+        from conda.exports import (CondaError, CondaHTTPError, LinkError, LockError,
+                                   NoPackagesFoundError, PaddingError, UnsatisfiableError)
 
-    from conda.exports import non_x86_linux_machines
-    from conda.exports import context, get_prefix as context_get_prefix, reset_context
-    from conda.exports import get_conda_build_local_url
+        from conda.exports import non_x86_linux_machines
+        from conda.exports import context, get_prefix as context_get_prefix, reset_context
+        from conda.exports import get_conda_build_local_url
+    except ImportError:
+        from conda.exceptions import (CondaError, CondaHTTPError, LinkError, LockError,
+                                      NoPackagesFoundError, PaddingError, UnsatisfiableError)
+
+        from conda.base.context import non_x86_linux_machines
+        from conda.base.context import context, get_prefix as context_get_prefix, reset_context
+
     binstar_upload = context.binstar_upload
     bits = context.bits
     conda_private = context.conda_private
