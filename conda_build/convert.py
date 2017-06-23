@@ -418,7 +418,7 @@ def get_pure_py_file_map(t, platform, dependencies):
 
 def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None, force=False,
                   dependencies=None, verbose=False, quiet=True, dry_run=False):
-    if not show_imports and platforms is None:
+    if not show_imports and len(platforms) == 0:
         sys.exit('Error: --platform option required for conda package conversion')
 
     with tarfile.open(file_path) as t:
