@@ -1,3 +1,47 @@
+2017-06-23 2.1.16:
+
+Enhancements:
+-------------
+
+* add CLI flag and condarc setting to disable --force for anaconda upload  #2047
+* add doc_source_url to allowed fields in about section  #2048
+* add a second pass for getting information from setup.py that is performed in
+  the build environment, so that version-specific logic in setup.py should work.
+  #2071
+* add semicolons to print statements in test files to avoid errors with Perl.  #2012 #2089
+* pass through more CPU-specific environment variables on windows  #2072
+* pass through DISPLAY environment variable on Linux  #2098
+* Improve conda_interface for better conda 4.4 and later 4.3.x releases  #2113
+* skeleton pypi & lua: replace legacy noarch syntax with conda 4.3 style  #2120
+* Restore --keep-old-work flag: works like --dirty to leave your build intermediaries, but does not reuse build folders like --dirty.  #2119
+* Speed up and fix-up conda-convert  #2116 #2123
+
+Bug fixes:
+----------
+
+* fix test/imports with multiple language entries  #1967
+* add missing six dependency in conda recipe for conda-build  #2063
+* fix dependency addition when converting packages  #2091
+* don't set build_id in test phase when --no-build-id is given #2100
+* fix handling of string literals not being lists in test requirements from setup.py #2107
+
+Contributors:
+-------------
+
+* @aburgm
+* @AndresGuzman-Ballen
+* @gqmelo
+* @isuruf
+* @kalefranz
+* @mandeep
+* @mingwandroid
+* @msarahan
+* @nehaljwani
+* @nsoranzo
+* @timsnyder
+* @vinjana
+
+
 2017-05-18 2.1.15:
 
 Bug fixes:
