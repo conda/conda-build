@@ -13,7 +13,6 @@ from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
 from conda_build.utils import PY3
-from conda_build.conda_interface import subdir
 
 logging.basicConfig(level=logging.INFO)
 
