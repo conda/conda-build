@@ -376,9 +376,9 @@ def rename_executable(directory, executable, target_platform):
     target_platform (str) -- the platform to target: 'unix' or 'win'
     """
     if target_platform == 'win':
-        old_executable_path = '{}/{}' .format(directory.path, executable)
+        old_executable_path = '{}/{}' .format(directory, executable)
         new_executable_path = '{}/{}-script.py' .format(
-            directory.path, retrieve_executable_name(executable))
+            directory, retrieve_executable_name(executable))
 
         with open(old_executable_path) as script_file_in:
             lines = script_file_in.read().splitlines()
@@ -390,7 +390,7 @@ def rename_executable(directory, executable, target_platform):
         os.renames(old_executable_path, new_executable_path)
 
     else:
-        old_executable_path = '{}/{}' .format(directory.path, executable)
+        old_executable_path = '{}/{}' .format(directory, executable)
 
         if old_executable_path.endswith('.py'):
 
@@ -564,22 +564,23 @@ def convert_from_unix_to_windows(file_path, output_dir, platform, dependencies, 
 
     prefixes = set()
 
-    for directory in os.scandir(temp_dir):
-        if directory.name == 'lib':
-            update_lib_contents(directory.path, temp_dir, 'win', file_path)
+    for entry in os.listdir(temp_dir):
+        directory = os.path.join(temp_dir, entry)
+        if os.path.isdir(directory) and 'lib' in entry:
+            update_lib_contents(directory, temp_dir, 'win', file_path)
 
-        if directory.name == 'bin':
+        if os.path.isdir(directory) and 'bin' in entry:
             for script in os.listdir(directory):
                 if not script.startswith('.'):
                     rename_executable(directory, script, 'win')
-                    create_exe_file(directory.path, retrieve_executable_name(script),
+                    create_exe_file(directory, retrieve_executable_name(script),
                                       platform)
 
                 prefixes.add('/opt/anaconda1anaconda2anaconda3 text Scripts/{}-script.py\n'
                     .format(retrieve_executable_name(script)))
 
             new_bin_path = '{}/Scripts' .format(temp_dir)
-            os.renames(directory.path, new_bin_path)
+            os.renames(directory, new_bin_path)
 
     update_index_file(temp_dir, platform, dependencies, verbose)
     update_prefix_file(temp_dir, prefixes)
@@ -606,11 +607,12 @@ def convert_from_windows_to_unix(file_path, output_dir, platform, dependencies, 
 
     prefixes = set()
 
-    for directory in os.scandir(temp_dir):
-        if directory.name == 'Lib':
-            update_lib_contents(directory.path, temp_dir, 'unix', file_path)
+    for entry in os.listdir(temp_dir):
+        directory = os.path.join(temp_dir, entry)
+        if os.path.isdir(directory) and 'Lib' in directory:
+            update_lib_contents(directory, temp_dir, 'unix', file_path)
 
-        if directory.name == 'Scripts':
+        if os.path.isdir(directory) and 'Scripts' in directory:
             for script in os.listdir(directory):
                 rename_executable(directory, script, 'unix')
                 remove_executable(directory, script)
@@ -619,7 +621,7 @@ def convert_from_windows_to_unix(file_path, output_dir, platform, dependencies, 
                     .format(retrieve_executable_name(script)))
 
             new_bin_path = '{}/bin' .format(temp_dir)
-            os.renames(directory.path, new_bin_path)
+            os.renames(directory, new_bin_path)
 
     update_index_file(temp_dir, platform, dependencies, verbose)
     update_prefix_file(temp_dir, prefixes)
