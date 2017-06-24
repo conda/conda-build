@@ -423,6 +423,14 @@ class Config(object):
                         rm_rf(path)
             if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
                 rm_rf(os.path.join(self.build_folder, 'prefix_files'))
+        else:
+            print("\nLeaving build/test directories:"
+                  "\n  Work:\t", os.path.relpath(self.work_dir),
+                  "\n  Test:\t", os.path.relpath(self.test_dir),
+                  "\nLeaving build/test environments:"
+                  "\n  Test:\tsource activate ", os.path.relpath(self.test_prefix),
+                  "\n  Build:\tsource activate ",os.path.relpath(self.build_prefix),
+                  "\n\n")
 
         for lock in get_conda_operation_locks(self):
             rm_rf(lock.lock_file)
@@ -437,9 +445,12 @@ class Config(object):
 
     def __exit__(self, e_type, e_value, traceback):
         if not getattr(self, 'dirty') and e_type is None:
-            logging.getLogger(__name__).info("--dirty flag not specified.  Removing build"
-                                             " folder after successful build/test.\n")
-            self.clean()
+            if not getattr(self, 'keep_old_work'):
+                logging.getLogger(__name__).info("--dirty flag and --keep-old-work not specified."
+                                                 "Removing build/test folder after successful build/test.\n")
+                self.clean()
+            else:
+                self.clean(remove_folders=False)
 
     def copy(self):
         new = copy.copy(self)
