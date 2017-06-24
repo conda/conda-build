@@ -485,7 +485,7 @@ def update_files_file(temp_dir, verbose):
                         print('Updating {}' .format(package_file_path))
 
 
-def create_target_archive(file_path, temp_dir, platform):
+def create_target_archive(file_path, temp_dir, platform, output_dir):
     """Create the converted package's tar file.
 
     Positional arguments:
@@ -495,7 +495,11 @@ def create_target_archive(file_path, temp_dir, platform):
     platform (str) -- the platform to convert to: 'win-64', 'win-32', 'linux-64',
         'linux-32', or 'osx-64'
     """
-    destination = '{}/{}' .format(platform, os.path.basename(file_path))
+    destination = '{}/{}/{}' .format(output_dir, platform, os.path.basename(file_path))
+
+    output_directory = os.path.normpath('{}/{}' .format(output_dir, platform))
+    if not os.path.isdir(output_directory):
+        os.makedirs(output_directory)
 
     with tarfile.open(destination, 'w:bz2') as target:
         for dirpath, dirnames, filenames in os.walk(temp_dir):
@@ -519,10 +523,7 @@ def convert_between_unix_platforms(file_path, output_dir, platform, dependencies
 
     update_index_file(temp_dir, platform, dependencies, verbose)
 
-    if not os.path.isdir(platform):
-        os.makedirs(platform)
-
-    create_target_archive(file_path, temp_dir, platform)
+    create_target_archive(file_path, temp_dir, platform, output_dir)
 
     # we need to manually remove the temporary directory created by tempfile.mkdtemp
     shutil.rmtree(temp_dir)
@@ -543,10 +544,7 @@ def convert_between_windows_architechtures(file_path, output_dir, platform,
 
     update_index_file(temp_dir, platform, dependencies, verbose)
 
-    if not os.path.isdir(platform):
-        os.makedirs(platform)
-
-    create_target_archive(file_path, temp_dir, platform)
+    create_target_archive(file_path, temp_dir, platform, output_dir)
 
     # we need to manually remove the temporary directory created by tempfile.mkdtemp
     shutil.rmtree(temp_dir)
@@ -563,9 +561,6 @@ def convert_from_unix_to_windows(file_path, output_dir, platform, dependencies, 
     verbose (bool) -- show output of items that are updated
     """
     temp_dir = extract_temporary_directory(file_path)
-
-    if not os.path.isdir(platform):
-        os.makedirs(platform)
 
     prefixes = set()
 
@@ -591,7 +586,7 @@ def convert_from_unix_to_windows(file_path, output_dir, platform, dependencies, 
     update_paths_file(temp_dir, target_platform='win')
     update_files_file(temp_dir, verbose)
 
-    create_target_archive(file_path, temp_dir, platform)
+    create_target_archive(file_path, temp_dir, platform, output_dir)
 
     shutil.rmtree(temp_dir)
 
@@ -608,9 +603,6 @@ def convert_from_windows_to_unix(file_path, output_dir, platform, dependencies, 
     """
     retrieve_python_version(file_path)
     temp_dir = extract_temporary_directory(file_path)
-
-    if not os.path.isdir(platform):
-        os.makedirs(platform)
 
     prefixes = set()
 
@@ -634,7 +626,7 @@ def convert_from_windows_to_unix(file_path, output_dir, platform, dependencies, 
     update_paths_file(temp_dir, target_platform='unix')
     update_files_file(temp_dir, verbose)
 
-    create_target_archive(file_path, temp_dir, platform)
+    create_target_archive(file_path, temp_dir, platform, output_dir)
 
     shutil.rmtree(temp_dir)
 
