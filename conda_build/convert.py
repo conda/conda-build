@@ -257,10 +257,10 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
                 new_lib_file = re.sub('Lib', 'lib/{}' .format(python_version), lib_file)
                 os.renames(lib_file, new_lib_file)
 
+            os.rename('{}/Lib' .format(temp_dir), '{}/lib' .format(temp_dir))
+
         except OSError:
             pass
-
-        os.rename('{}/Lib' .format(temp_dir), '{}/lib' .format(temp_dir))
 
 
 def update_executable_path(file_path, target_platform):
