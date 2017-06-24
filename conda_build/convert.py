@@ -82,7 +82,7 @@ def retrieve_python_version(file_path):
         temporary directory containing the extracted source package contents
     """
     if 'python' in file_path:
-        pattern = re.compile(r'python\d\.\d/')
+        pattern = re.compile(r'python\d\.\d')
         matched = pattern.search(file_path)
 
         if matched:
@@ -211,7 +211,7 @@ def update_lib_path(path, target_platform, temp_dir=None):
         python_version = retrieve_python_version(temp_dir)
         renamed_lib_path = re.sub('\ALib', 'lib/{}' .format(python_version), path)
 
-    return renamed_lib_path
+    return os.path.normpath(renamed_lib_path)
 
 
 def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
@@ -248,23 +248,19 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         except IndexError:
             pass
 
-        # renaming to a temp dir to deal with file systems that are case-insensitive
-        os.rename('{}/lib' .format(temp_dir), '{}/templibdir' .format(temp_dir))
-        os.rename('{}/templibdir' .format(temp_dir), '{}/Lib' .format(temp_dir))
+        os.rename('{}/lib' .format(temp_dir), '{}/Lib' .format(temp_dir))
 
     elif target_platform == 'unix':
         try:
             for lib_file in glob.iglob('{}/**' .format(lib_directory)):
                 python_version = retrieve_python_version(file_path)
-                new_lib_file = re.sub('/Lib', '/lib/{}' .format(python_version), lib_file)
+                new_lib_file = re.sub('Lib', 'lib/{}' .format(python_version), lib_file)
                 os.renames(lib_file, new_lib_file)
 
         except OSError:
             pass
 
-        # renaming to a temp dir to deal with file systems that are case-insensitive
-        os.rename('{}/Lib' .format(temp_dir), '{}/templibdir' .format(temp_dir))
-        os.rename('{}/templibdir' .format(temp_dir), '{}/lib' .format(temp_dir))
+        os.rename('{}/Lib' .format(temp_dir), '{}/lib' .format(temp_dir))
 
 
 def update_executable_path(file_path, target_platform):
@@ -480,7 +476,8 @@ def update_files_file(temp_dir, verbose):
     with open(files_file, 'w+') as files:
         for dirpath, dirnames, filenames in os.walk(temp_dir):
             for filename in filenames:
-                package_file_path = os.path.join(dirpath, filename).replace(temp_dir + '/', '')
+                package_file_path = os.path.join(
+                    dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
                 if not package_file_path.startswith('info'):
                     files.write(package_file_path + '\n')
 
@@ -503,7 +500,8 @@ def create_target_archive(file_path, temp_dir, platform):
     with tarfile.open(destination, 'w:bz2') as target:
         for dirpath, dirnames, filenames in os.walk(temp_dir):
             for filename in filenames:
-                destination_file_path = os.path.join(dirpath, filename).replace(temp_dir + '/', '')
+                destination_file_path = os.path.join(
+                    dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
                 target.add(os.path.join(dirpath, filename), arcname=destination_file_path)
 
 
