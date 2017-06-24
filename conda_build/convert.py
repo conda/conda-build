@@ -86,7 +86,7 @@ def retrieve_python_version(file_path):
         matched = pattern.search(file_path)
 
         if matched:
-            return matched[0]
+            return matched.group(0)
 
     else:
         if file_path.endswith(('.tar.bz2', '.tar')):
