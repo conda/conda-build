@@ -87,10 +87,10 @@ def guess_license_family(license_name=None,
 
     license_name = remove_special_characters(license_name)
     for family in recognized:
-        if family in license_name:
+        if remove_special_characters(family) in license_name:
             return family
     for family in recognized:
-        if license_name in family:
+        if license_name in remove_special_characters(family):
             return family
     return 'OTHER'
 
