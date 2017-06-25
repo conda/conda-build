@@ -68,7 +68,7 @@ source:
    # - fix.patch
 
 build:
-  {noarch_python_comment}noarch_python: True
+  {noarch_python_comment}noarch: generic
   # Useful to leave this on by default, will allow relocating
   # packages that have hard-coded paths in them
   detect_binary_files_with_prefix: true

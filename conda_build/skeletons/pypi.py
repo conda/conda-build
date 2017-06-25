@@ -169,7 +169,7 @@ source:
    # - fix.patch
 
 {build_comment}build:
-  {noarch_python_comment}noarch_python: True
+  {noarch_python_comment}noarch: python
   {egg_comment}preserve_egg_dir: True
   {entry_comment}entry_points:
     # Put any entry points (scripts to be generated automatically) here. The
