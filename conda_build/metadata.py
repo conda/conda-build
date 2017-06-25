@@ -1631,3 +1631,7 @@ class MetaData(object):
 
     def get_loop_vars(self):
         return variants.get_loop_vars(self.config.variants)
+
+    def clean(self):
+        """This ensures that clean is called with the correct build id"""
+        self.config.clean()

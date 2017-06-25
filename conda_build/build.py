@@ -1593,7 +1593,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
-            config.clean()
+            # each metadata element here comes from one recipe, thus it will share one build id
+            #    cleaning on the last metadata in the loop should take care of all of the stuff.
+            metadata.clean()
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
             add_recipes = []
