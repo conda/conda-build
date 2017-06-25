@@ -362,6 +362,29 @@ def retrieve_executable_name(executable):
     return os.path.splitext(os.path.basename(executable))[0]
 
 
+def is_binary_file(file_path):
+    """Read a file's contents to check whether it is a binary file.
+
+    When converting files, we need to check that binary files are not
+    converted.
+
+    Source: https://stackoverflow.com/questions/898669/
+
+    Positional arguments:
+    file_path (str) -- the file path to the file to check
+    """
+    if os.path.isfile(file_path):
+        with open(file_path, 'rb') as buffered_file:
+            file_contents = buffered_file.read(1024)
+
+        text_characters = bytearray({7, 8, 9, 10, 12, 13, 27}.union(
+            set(range(0x20, 0x100)) - {0x7f}))
+
+        return bool(file_contents.translate(None, text_characters))
+
+    return False
+
+
 def rename_executable(directory, executable, target_platform):
     """Rename an executable file when converting between platforms.
 
@@ -375,36 +398,36 @@ def rename_executable(directory, executable, target_platform):
     executable (str) -- the name of the executable to rename
     target_platform (str) -- the platform to target: 'unix' or 'win'
     """
-    if target_platform == 'win':
-        old_executable_path = '{}/{}' .format(directory, executable)
-        new_executable_path = '{}/{}-script.py' .format(
-            directory, retrieve_executable_name(executable))
+    old_executable_path = '{}/{}' .format(directory, executable)
 
-        with open(old_executable_path) as script_file_in:
-            lines = script_file_in.read().splitlines()
-
-        with open(old_executable_path, 'w') as script_file_out:
-            for line in lines[1:]:
-                script_file_out.write(line + '\n')
-
-        os.renames(old_executable_path, new_executable_path)
-
-    else:
-        old_executable_path = '{}/{}' .format(directory, executable)
-
-        if old_executable_path.endswith('.py'):
-
-            new_executable_path = old_executable_path.replace('-script.py', '')
+    if not is_binary_file(old_executable_path):
+        if target_platform == 'win':
+            new_executable_path = '{}/{}-script.py' .format(
+                directory, retrieve_executable_name(executable))
 
             with open(old_executable_path) as script_file_in:
                 lines = script_file_in.read().splitlines()
 
             with open(old_executable_path, 'w') as script_file_out:
-                script_file_out.write('#!/opt/anaconda1anaconda2anaconda3/bin/python' + '\n')
-                for line in lines:
+                for line in lines[1:]:
                     script_file_out.write(line + '\n')
 
             os.renames(old_executable_path, new_executable_path)
+
+        else:
+            if old_executable_path.endswith('.py'):
+
+                new_executable_path = old_executable_path.replace('-script.py', '')
+
+                with open(old_executable_path) as script_file_in:
+                    lines = script_file_in.read().splitlines()
+
+                with open(old_executable_path, 'w') as script_file_out:
+                    script_file_out.write('#!/opt/anaconda1anaconda2anaconda3/bin/python' + '\n')
+                    for line in lines:
+                        script_file_out.write(line + '\n')
+
+                os.renames(old_executable_path, new_executable_path)
 
 
 def remove_executable(directory, executable):
