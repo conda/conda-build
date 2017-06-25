@@ -473,6 +473,7 @@ def linux_vars(compiler_vars, prefix, config):
         'DISPLAY': os.getenv('DISPLAY'),
     }
 
+
 def system_vars(env_dict, prefix, config):
     d = dict()
     compiler_vars = defaultdict(text_type)
