@@ -94,7 +94,7 @@ def retrieve_python_version(file_path):
                 index = json.loads(tar.extractfile('info/index.json').read().decode('utf-8'))
 
         else:
-            path_file = '{}/info/index.json' .format(file_path)
+            path_file = os.path.join(file_path, 'info/index.json')
 
             with open(path_file) as index_file:
                 index = json.load(index_file)
@@ -163,7 +163,7 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
     dependencies (List[str]) -- the dependencies passed from the command line
     verbose (bool) -- show output of items that are updated
     """
-    index_file = '{}/info/index.json' .format(temp_dir)
+    index_file = os.path.join(temp_dir, 'info/index.json')
 
     with open(index_file) as file:
         index = json.load(file)
@@ -209,7 +209,7 @@ def update_lib_path(path, target_platform, temp_dir=None):
 
     elif target_platform == 'unix':
         python_version = retrieve_python_version(temp_dir)
-        renamed_lib_path = re.sub('\ALib', 'lib/{}' .format(python_version), path)
+        renamed_lib_path = re.sub('\ALib', os.path.join('lib', python_version), path)
 
     return os.path.normpath(renamed_lib_path)
 
@@ -234,7 +234,7 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         try:
             for lib_file in glob.iglob('{}/python*/**' .format(lib_directory)):
                 if 'site-packages' in lib_file:
-                    new_site_packages_path = '{}/lib/site-packages' .format(temp_dir)
+                    new_site_packages_path = os.path.join(temp_dir, 'lib/site-packages')
                     os.renames(lib_file, new_site_packages_path)
                 else:
                     if retrieve_python_version(lib_file) is not None:
@@ -248,16 +248,16 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         except IndexError:
             pass
 
-        os.rename('{}/lib' .format(temp_dir), '{}/Lib' .format(temp_dir))
+        os.rename(os.path.join(temp_dir, 'lib'), os.path.join(temp_dir, 'Lib'))
 
     elif target_platform == 'unix':
         try:
             for lib_file in glob.iglob('{}/**' .format(lib_directory)):
                 python_version = retrieve_python_version(file_path)
-                new_lib_file = re.sub('Lib', 'lib/{}' .format(python_version), lib_file)
+                new_lib_file = re.sub('Lib', os.path.join('lib', python_version), lib_file)
                 os.renames(lib_file, new_lib_file)
 
-            os.rename('{}/Lib' .format(temp_dir), '{}/lib' .format(temp_dir))
+            os.rename(os.path.join(temp_dir, 'Lib'), os.path.join(temp_dir, 'lib'))
 
         except OSError:
             pass
@@ -296,13 +296,13 @@ def add_new_windows_path(executable_directory, executable):
     executable_directory (str) -- the file path to temporary directory's 'Scripts' directory
     executable (str) -- the filename of the script to add to paths.json
     """
-    with open('{}/{}' .format(executable_directory, executable), 'rb') as script_file:
+    with open(os.path.join(executable_directory, executable), 'rb') as script_file:
         script_file_contents = script_file.read()
         new_path = {"_path": "Scripts/{}" .format(executable),
                     "path_type": "hardlink",
                     "sha256": hashlib.sha256(script_file_contents).hexdigest(),
-                    "size_in_bytes": os.path.getsize('{}/{}' .format(
-                        executable_directory, executable))
+                    "size_in_bytes": os.path.getsize(
+                        os.path.join(executable_directory, executable))
                     }
     return new_path
 
@@ -315,7 +315,7 @@ def update_paths_file(temp_dir, target_platform):
         package's extracted contents
     target_platform (str) -- the platform to target: 'unix' or 'win'
     """
-    paths_file = '{}/info/paths.json' .format(temp_dir)
+    paths_file = os.path.join(temp_dir, 'info/paths.json')
 
     if os.path.isfile(paths_file):
         with open(paths_file) as file:
@@ -329,7 +329,7 @@ def update_paths_file(temp_dir, target_platform):
                 elif path['_path'].startswith('bin'):
                     path['_path'] = update_executable_path(path['_path'], 'win')
 
-            script_directory = '{}/Scripts/' .format(temp_dir)
+            script_directory = os.path.join(temp_dir, 'Scripts')
             if os.path.isdir(script_directory):
                 for script in os.listdir(script_directory):
                     if script.endswith('.exe'):
@@ -401,11 +401,11 @@ def rename_executable(directory, executable, target_platform):
     executable (str) -- the name of the executable to rename
     target_platform (str) -- the platform to target: 'unix' or 'win'
     """
-    old_executable_path = '{}/{}' .format(directory, executable)
+    old_executable_path = os.path.join(directory, executable)
 
     if target_platform == 'win':
-        new_executable_path = '{}/{}-script.py' .format(
-            directory, retrieve_executable_name(executable))
+        new_executable_path = os.path.join(directory, '{}-script.py' .format(
+            retrieve_executable_name(executable)))
 
         with open(old_executable_path) as script_file_in:
             lines = script_file_in.read().splitlines()
@@ -458,12 +458,12 @@ def create_exe_file(directory, executable, target_platform):
     exe_directory = os.path.dirname(__file__)
 
     if target_platform.endswith('32'):
-        executable_file = '{}/cli-32.exe' .format(exe_directory)
+        executable_file = os.path.join(exe_directory, 'cli-32.exe')
 
     else:
-        executable_file = '{}/cli-64.exe' .format(exe_directory)
+        executable_file = os.path.join(exe_directory, 'cli-64.exe')
 
-    renamed_executable_file = '{}/{}.exe' .format(directory, executable)
+    renamed_executable_file = os.path.join(directory, '{}.exe' .format(executable))
 
     shutil.copyfile(executable_file, renamed_executable_file)
 
@@ -479,7 +479,7 @@ def update_prefix_file(temp_dir, prefixes):
         package's extracted contents
     prefixes (List[str])-- the prefixes to write to 'has_prefix'
     """
-    has_prefix_file = '{}/info/has_prefix' .format(temp_dir)
+    has_prefix_file = os.path.join(temp_dir, 'info/has_prefix')
 
     with open(has_prefix_file, 'w+') as prefix_file:
         for prefix in prefixes:
@@ -497,7 +497,8 @@ def update_files_file(temp_dir, verbose):
         package's extracted contents
     verbose (bool) -- show output of items that are updated
     """
-    files_file = '{}/info/files' .format(temp_dir)
+    files_file = os.path.join(temp_dir, 'info/files')
+
     with open(files_file, 'w+') as files:
         for dirpath, dirnames, filenames in os.walk(temp_dir):
             for filename in filenames:
@@ -520,11 +521,12 @@ def create_target_archive(file_path, temp_dir, platform, output_dir):
     platform (str) -- the platform to convert to: 'win-64', 'win-32', 'linux-64',
         'linux-32', or 'osx-64'
     """
-    destination = '{}/{}/{}' .format(output_dir, platform, os.path.basename(file_path))
+    output_directory = os.path.join(output_dir, platform)
 
-    output_directory = os.path.normpath('{}/{}' .format(output_dir, platform))
     if not os.path.isdir(output_directory):
         os.makedirs(output_directory)
+
+    destination = os.path.join(output_directory, os.path.basename(file_path))
 
     with tarfile.open(destination, 'w:bz2') as target:
         for dirpath, dirnames, filenames in os.walk(temp_dir):
@@ -604,7 +606,7 @@ def convert_from_unix_to_windows(file_path, output_dir, platform, dependencies, 
                     prefixes.add('/opt/anaconda1anaconda2anaconda3 text Scripts/{}-script.py\n'
                         .format(retrieve_executable_name(script)))
 
-            new_bin_path = '{}/Scripts' .format(temp_dir)
+            new_bin_path = os.path.join(temp_dir, 'Scripts')
             os.renames(directory, new_bin_path)
 
     update_index_file(temp_dir, platform, dependencies, verbose)
@@ -646,7 +648,7 @@ def convert_from_windows_to_unix(file_path, output_dir, platform, dependencies, 
                     prefixes.add('/opt/anaconda1anaconda2anaconda3 text bin/{}\n'
                         .format(retrieve_executable_name(script)))
 
-            new_bin_path = '{}/bin' .format(temp_dir)
+            new_bin_path = os.path.join(temp_dir, 'bin')
             os.renames(directory, new_bin_path)
 
     update_index_file(temp_dir, platform, dependencies, verbose)
