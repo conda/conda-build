@@ -108,8 +108,9 @@ different sets of packages."""
     p.add_argument(
         '--keep-old-work',
         action='store_true',
-        dest='dirty',
-        help="Deprecated.  Same as --dirty."
+        dest='keep_old_work',
+        help="Do not remove anything from environment, even after successful"
+             "build and test."
     )
     p.add_argument(
         '--dirty',
