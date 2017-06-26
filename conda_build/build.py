@@ -863,6 +863,7 @@ def bundle_conda(output, metadata, config, env, **kw):
     with utils.path_prepended(metadata.config.build_prefix):
         env = environ.get_dict(config=metadata.config, m=metadata)
     files = output.get('files', [])
+
     if not files and output.get('script'):
         interpreter = output.get('script_interpreter')
         if not interpreter:
@@ -1080,6 +1081,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
 
         utils.rm_rf(config.info_dir)
         files1 = prefix_files(prefix=config.build_prefix)
+
         for pat in m.always_include_files():
             has_matches = False
             for f in set(files1):
@@ -1141,6 +1143,7 @@ def build(m, config, post=None, need_source_download=True, need_reparse_in_env=F
                         cmd = [shell_path, '-x', '-e', work_file]
                         # this should raise if any problems occur while building
                         utils.check_call_env(cmd, env=env, cwd=src_dir)
+                        utils.remove_pycache_from_scripts(m.config.build_prefix)
 
     if post in [True, None]:
         with open(join(m.config.build_folder, 'prefix_files.txt'), 'r') as f:

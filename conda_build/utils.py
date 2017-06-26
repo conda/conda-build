@@ -760,3 +760,16 @@ def conda_43():
     """Conda 4.3 broke compatibility in lots of new fun and exciting ways.  This function is for
     changing conda-build's behavior when conda 4.3 or higher is installed."""
     return LooseVersion(conda_version) >= LooseVersion('4.3')
+
+
+def remove_pycache_from_scripts(build_prefix):
+    """Remove pip created pycache directory from bin or Scripts."""
+    if on_win:
+        scripts_path = os.path.join(build_prefix, 'Scripts')
+    else:
+        scripts_path = os.path.join(build_prefix, 'bin')
+
+    for entry in os.listdir(scripts_path):
+        entry_path = os.path.join(scripts_path, entry)
+        if os.path.isdir(entry_path) and entry.strip(os.sep) == '__pycache__':
+            shutil.rmtree(entry_path)

@@ -380,7 +380,7 @@ def test_convert(testing_workdir):
     # convert it to all platforms
     args = ['-o', 'converted', '--platform', 'all', pkg_name]
     main_convert.execute(args)
-    platforms = ['osx-64', 'win-32', 'win-64', 'linux-64', 'linux-32']
+    platforms = ['osx-64', 'win-32', 'linux-64', 'linux-32']
     for platform in platforms:
         dirname = os.path.join('converted', platform)
         assert os.path.isdir(dirname)

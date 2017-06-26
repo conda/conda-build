@@ -13,7 +13,6 @@ from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
 from conda_build.utils import PY3
-from conda_build.conda_interface import subdir
 
 logging.basicConfig(level=logging.INFO)
 
@@ -63,7 +62,7 @@ all.""",
         action="append",
         choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
         help="Platform to convert the packages to.",
-        default=[subdir]
+        default=None
     )
     p.add_argument(
         "--dependencies", "-d",
