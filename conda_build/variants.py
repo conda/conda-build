@@ -10,7 +10,7 @@ import yaml
 
 from conda_build.utils import ensure_list, HashableDict
 from conda_build.conda_interface import string_types
-from conda_build.conda_interface import arch_name
+from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
 from conda_build.conda_interface import cc_platform
 
@@ -26,9 +26,11 @@ DEFAULT_VARIANTS = {
     'ignore_version': [],
 }
 
+arch_name = subdir.rsplit('-', 1)[-1]
+
 DEFAULT_PLATFORMS = {
-    'linux': 'linux-cos5-' + arch_name,
-    'osx': 'osx-109-' + arch_name,
+    'linux': 'linux-' + arch_name,
+    'osx': 'osx-' + arch_name,
     'win': 'win-' + arch_name,
 }
 

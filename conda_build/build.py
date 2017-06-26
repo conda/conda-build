@@ -1015,7 +1015,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                             bf.write('export {0}="{1}"\n'.format(k, v))
 
                         if m.config.activate:
-                            bf.write('source "{0}activate" "{1}" &> /dev/null\n'
+                            bf.write('source "{0}activate" "{1}"\n'
                                      .format(utils.root_script_dir + os.path.sep,
                                              m.config.build_prefix))
                             if m.is_cross:
@@ -1030,7 +1030,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 #
                                 # Conda 4.4 may break this by reworking the activate scripts.
                                 bf.write('unset CONDA_PATH_BACKUP\n')
-                                bf.write('source "{0}activate" "{1}" &> /dev/null\n'
+                                bf.write('source "{0}activate" "{1}"\n'
                                          .format(utils.root_script_dir + os.path.sep,
                                                  m.config.host_prefix))
                         if script:
@@ -1392,12 +1392,11 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 tf.write('set -x -e\n')
             if config.activate:
                 ext = ".bat" if utils.on_win else ""
-                tf.write('{source} "{conda_root}activate{ext}" "{test_env}" {squelch}\n'.format(
+                tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
                     conda_root=utils.root_script_dir + os.path.sep,
                     source="call" if utils.on_win else "source",
                     ext=ext,
-                    test_env=config.test_prefix,
-                    squelch=">nul 2>&1" if utils.on_win else "&> /dev/null"))
+                    test_env=config.test_prefix))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
@@ -1594,7 +1593,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
-            config.clean()
+            # each metadata element here comes from one recipe, thus it will share one build id
+            #    cleaning on the last metadata in the loop should take care of all of the stuff.
+            metadata.clean()
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
             add_recipes = []

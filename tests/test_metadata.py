@@ -156,10 +156,10 @@ def test_native_compiler_metadata_linux(testing_config, mocker):
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config, permit_unsatisfiable_variants=True,
                           finalize=False)[0][0]
-    _64 = '_64' if conda_interface.bits == 64 else ''
-    assert any(dep.startswith('gcc_linux-cos5-x86' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('gxx_linux-cos5-x86' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('gfortran_linux-cos5-x86' + _64) for dep in metadata.meta['requirements']['build'])
+    _64 = '64' if conda_interface.bits == 64 else '32'
+    assert any(dep.startswith('gcc_linux-' + _64) for dep in metadata.meta['requirements']['build'])
+    assert any(dep.startswith('gxx_linux-' + _64) for dep in metadata.meta['requirements']['build'])
+    assert any(dep.startswith('gfortran_linux-' + _64) for dep in metadata.meta['requirements']['build'])
 
 
 def test_native_compiler_metadata_osx(testing_config, mocker):
@@ -167,10 +167,10 @@ def test_native_compiler_metadata_osx(testing_config, mocker):
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config, permit_unsatisfiable_variants=True,
                           finalize=False)[0][0]
-    _64 = '_64' if conda_interface.bits == 64 else ''
-    assert any(dep.startswith('clang_osx-109-x86' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('clangxx_osx-109-x86' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('gfortran_osx-109-x86' + _64) for dep in metadata.meta['requirements']['build'])
+    _64 = '64' if conda_interface.bits == 64 else '32'
+    assert any(dep.startswith('clang_osx-' + _64) for dep in metadata.meta['requirements']['build'])
+    assert any(dep.startswith('clangxx_osx-' + _64) for dep in metadata.meta['requirements']['build'])
+    assert any(dep.startswith('gfortran_osx-' + _64) for dep in metadata.meta['requirements']['build'])
 
 
 def test_compiler_metadata_cross_compiler():
