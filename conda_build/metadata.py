@@ -570,6 +570,10 @@ def get_output_dicts_from_metadata(metadata):
     if not outputs:
         outputs = [output_dict_from_top_level_meta(metadata)]
     else:
+        assert not hasattr(outputs, 'keys'), ('outputs specified as dictionary, but must be a '
+                                              'list of dictionaries.  YAML syntax is: \n\n'
+                                              'outputs:\n    - name: subpkg\n\n'
+                                              '(note the - before the inner dictionary)')
         # make a metapackage for the top-level package if the top-level requirements
         #     mention a subpackage,
         # but only if a matching output name is not explicitly provided
