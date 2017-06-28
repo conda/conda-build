@@ -773,3 +773,6 @@ def remove_pycache_from_scripts(build_prefix):
         entry_path = os.path.join(scripts_path, entry)
         if os.path.isdir(entry_path) and entry.strip(os.sep) == '__pycache__':
             shutil.rmtree(entry_path)
+
+        elif os.path.isfile(entry_path) and entry_path.endswith('.pyc'):
+            os.remove(entry_path)
