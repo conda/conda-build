@@ -552,7 +552,7 @@ def write_conda_recipe(package_cdt, output_dir, architecture, recursive, overrid
 
 
 def skeletonize(packages, output_dir=".",
-                version=None, recursive=False, architecture=None, override_arch=True, config=None):
+                version=None, recursive=False, architecture='x86_64', override_arch=True, config=None):
     write_conda_recipe(packages, output_dir, architecture, recursive, override_arch, config)
 
 
