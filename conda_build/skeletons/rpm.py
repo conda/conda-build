@@ -183,49 +183,9 @@ def rpm_filename_split(rpmfilename):
     return rpm_name, version, release, platform
 
 
-def rpm_url_split(rpm_url, src_cache):
-    """
-    Exists mainly to check the results of rpm_filename_split with pyrpm.
-    These need to match because we use the same (well, reverse) logic to
-    form the URLs for the dependencies.
-
-    .. or rather it used to do that, but I do not want to depend on pyrpm
-    anymore so it does nothing now.
-    """
+def rpm_split_url_and_cache(rpm_url, src_cache):
     cached_path, sha256str = cache_file(src_cache, rpm_url)
     rpm_name, version, release, platform = rpm_filename_split(basename(rpm_url))
-
-    """
-    try:
-        from pyrpm.rpm import RPM
-    except ImportError:
-        RPM = None
-        print("ERROR: Please install pyrpm via:\nconda install pyrpm")
-        sys.exit(1)
-
-    with open(cached_path, 'rb') as rpmfile:
-        rpm = RPM(rpmfile)
-        check_rpm_name = rpm.header.name
-        check_version = rpm.header.version
-        check_release = rpm.header.release
-        check_platform = rpm.header.platform
-        check_sha256str = rpm.checksum
-        # print((rpm.header.entries))
-
-        assert check_rpm_name == rpm_name, 'rpm_name {} != {}'.format(check_rpm_name, rpm_name)
-        assert check_version == version, 'version {} != {}'.format(check_version, version)
-        assert check_release == release, 'release {} != {}'.format(check_release, release)
-        # assert check_platform == platform, 'platform {} != {}'.format(check_platform, platform)
-        if check_sha256str != sha256str:
-            # Make sure to remove the file if the checksums do not match
-            print("ERROR: RPM checksum: {} does not match\n"\
-                  "        cached file: {} for file {}".format(check_sha256str,
-                                                               sha256str,
-                                                               cached_path))
-            unlink(cached_path)
-        assert check_sha256str == sha256str
-    """
-
     return rpm_name, version, release, platform, cached_path, sha256str
 
 
@@ -285,23 +245,6 @@ str_flags_to_conda_version_spec = dict({'LT': '<',
                                         'GE': '>=',
                                         'GT': '>',
                                         })
-
-
-def RPMprco_to_depends(RPMprco):
-    epoch = RPMprco.version[0]
-    if epoch is None:
-        epoch = 0
-    if epoch != 0:
-        print("WARNING: {} has an (unhandled) epoch of {}".format(RPMprco.name, epoch))
-    if RPMprco.str_flags is not None:
-        str_flags = str_flags_to_conda_version_spec[RPMprco.str_flags]
-    else:
-        str_flags = None
-    return dict({'name': RPMprco.name,
-                 'flags': str_flags,
-                 'epoch': epoch,
-                 'ver': RPMprco.version[1],
-                 'rel': RPMprco.version[2]})
 
 
 def dictify(r, root=True):
@@ -493,8 +436,8 @@ def write_conda_recipes(recursive, repo_primary, package,
     package = entry_name
     rpm_url = dirname(dirname(cdt['base_url'])) + '/' + entry['location']
     srpm_url = cdt['sbase_url'] + entry['source']
-    _, _, _, _, _, sha256str = rpm_url_split(rpm_url, src_cache)
-    _, _, _, _, _, srcsha256str = rpm_url_split(srpm_url, src_cache)
+    _, _, _, _, _, sha256str = rpm_split_url_and_cache(rpm_url, src_cache)
+    _, _, _, _, _, srcsha256str = rpm_split_url_and_cache(srpm_url, src_cache)
     depends = [required for required in entry['requires'] if valid_depends(required)]
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
