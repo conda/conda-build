@@ -1,5 +1,4 @@
 import textwrap
-from conda_build import conda_interface
 SEPARATOR = "-" * 70
 
 indent = lambda s: textwrap.fill(textwrap.dedent(s))
@@ -61,8 +60,8 @@ class VerifyError(CondaBuildException):
 
 class DependencyNeedsBuildingError(CondaBuildException):
     def __init__(self, conda_exception=None, packages=None, subdir=None, *args, **kwargs):
+        self.subdir = subdir
         if packages:
-            self.message = "Unsatisfiable dependencies: {}".format(packages)
             self.packages = packages
         else:
             self.packages = packages or []
@@ -72,16 +71,16 @@ class DependencyNeedsBuildingError(CondaBuildException):
                 pkg = line.lstrip('  - ').split(' -> ')[-1]
                 pkg = pkg.strip().split(' ')[0]
                 self.packages.append(pkg)
-            conda_exception_text = str(conda_exception)
-            if subdir:
-                conda_exception_text = conda_exception_text.replace(conda_interface.subdir, subdir)
-            self.message = conda_exception_text
         if not self.packages:
             raise RuntimeError("failed to parse packages from exception:"
                                " {}".format(str(conda_exception)))
 
     def __str__(self):
         return self.message
+
+    @property
+    def message(self):
+        return "Unsatisfiable dependencies for platform {}: {}".format(self.subdir, self.packages)
 
 
 class RecipeError(CondaBuildException):
