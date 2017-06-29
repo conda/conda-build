@@ -674,8 +674,10 @@ def create_env(prefix, specs, config, clear_cache=True, retry=0):
                         index = get_build_index(config=config, clear_cache=True)
                         actions = install_actions(prefix, index, specs)
                         if config.disable_pip:
-                            actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('pip-')]  # noqa
-                            actions['LINK'] = [spec for spec in actions['LINK'] if not spec.startswith('setuptools-')]  # noqa
+                            for pkg in ('pip', 'setuptools', 'wheel'):
+                                if not any(re.match('^%s(?:$| .*)' % pkg, dep) for dep in specs):
+                                    actions['LINK'] = [spec for spec in actions['LINK']
+                                                       if not spec.startswith(pkg + '-')]
                         display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():

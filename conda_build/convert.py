@@ -106,12 +106,6 @@ def retrieve_python_version(file_path):
             build_version_number[0], build_version_number[1])
 
 
-def remove_all_pyc(file_path):
-    for root, dirs, files in os.walk(file_path):
-        if '__pycache__' in dirs:
-            utils.rm_rf(os.path.join(root, '__pycache__'))
-
-
 def extract_temporary_directory(file_path):
     """Extract the source tar archive contents to a temporary directory.
 
