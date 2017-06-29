@@ -521,7 +521,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
 # name their RPMs differently we probably want to hide that away from users
 # Do I want to pass just the package name, the CDT and the arch and rely on
 # expansion to form the URL? I have been going backwards and forwards here.
-def write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch, config):
+def write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch,
+                       config):
     cdt_name = distro
     bits = '32' if architecture in ('armv6', 'armv7a', 'i686', 'i386') else '64'
     base_architectures = dict({'i686': 'i386'})
@@ -556,7 +557,8 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                architecture=default_architecture, override_arch=True, config=None, distro=default_distro):
+                architecture=default_architecture, override_arch=True,
+                config=None, distro=default_distro):
     write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch, config)
 
 
