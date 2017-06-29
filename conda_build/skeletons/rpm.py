@@ -26,6 +26,7 @@ except ImportError:
 
 # This is used in two places
 default_architecture = 'x86_64'
+default_distro = 'centos6'
 
 RPM_META = """\
 package:
@@ -555,7 +556,7 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                architecture=default_architecture, override_arch=True, config=None, distro=None):
+                architecture=default_architecture, override_arch=True, config=None, distro=default_distro):
     write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch, config)
 
 
@@ -607,7 +608,7 @@ def add_parser(repos):
 
     rpm.add_argument("--distro",
                      type=distro,
-                     default="centos6",
+                     default=default_distro,
                      help="Distro to use. Applies to all packages, valid values are: {}".format(
                          valid_distros()))
 

@@ -13,7 +13,7 @@ repo_packages = [('', 'pypi', 'pip', '8.1.2'),
                  ('r', 'cran', 'nmf', ''),
                  ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ''),
                  ('perl', 'cpan', 'Moo', ''),
-                 ('', 'rpm', ['libX11-devel', 'centos6'], ''),
+                 ('', 'rpm', 'libX11-devel', ''),
                  # ('lua', luarocks', 'LuaSocket', ''),
                  ]
 
