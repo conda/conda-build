@@ -29,7 +29,7 @@ from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
 
-from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env
+from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env, ensure_list
 from conda_build.source import apply_patch
 from conda_build.environ import create_env
 from conda_build.config import Config
@@ -157,7 +157,7 @@ source:
    # - fix.patch
 
 {build_comment}build:
-  {noarch_python_comment}noarch_python: True
+  {noarch_python_comment}noarch: python
   {egg_comment}preserve_egg_dir: True
   {entry_comment}entry_points:
     # Put any entry points (scripts to be generated automatically) here. The
@@ -788,7 +788,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['import_comment'] = ''
 
         d['tests_require'] = INDENT.join(sorted([spec_from_line(pkg) for pkg
-                                                    in pkginfo['tests_require']]))
+                                                 in ensure_list(pkginfo['tests_require'])]))
 
     if pkginfo.get('homeurl'):
         d['homeurl'] = pkginfo['homeurl']

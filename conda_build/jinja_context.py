@@ -4,7 +4,6 @@ from functools import partial
 import json
 import os
 import re
-import sys
 
 import jinja2
 
@@ -13,6 +12,8 @@ from .environ import get_dict as get_environ
 from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
                     string_types)
 from .render import get_env_dependencies
+from .utils import copy_into, check_call_env, rm_rf
+from . import _load_setup_py_data
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -78,89 +79,30 @@ class FilteredLoader(jinja2.BaseLoader):
 
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                        permit_undefined_jinja=True):
-    _setuptools_data = {}
-    log = get_logger(__name__)
-
-    def setup(**kw):
-        _setuptools_data.update(kw)
-
-    import setuptools
-    import distutils.core
-
-    cd_to_work = False
-    path_backup = sys.path
-
-    if from_recipe_dir and recipe_dir:
-        setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
-    elif os.path.exists(config.work_dir):
-        cd_to_work = True
-        cwd = os.getcwd()
-        os.chdir(config.work_dir)
-        if not os.path.isabs(setup_file):
-            setup_file = os.path.join(config.work_dir, setup_file)
-        # this is very important - or else if versioneer or otherwise is in the start folder,
-        # things will pick up the wrong versioneer/whatever!
-        sys.path.insert(0, config.work_dir)
-    else:
-        message = ("Did not find setup.py file in manually specified location, and source "
-                  "not downloaded yet.")
+    # we must copy the script into the work folder to avoid incompatible pyc files
+    origin_setup_script = os.path.join(os.path.dirname(__file__), '_load_setup_py_data.py')
+    dest_setup_script = os.path.join(config.work_dir, '_load_setup_py_data.py')
+    copy_into(origin_setup_script, dest_setup_script)
+    if os.path.isfile(config.build_python):
+        args = [config.build_python, dest_setup_script, config.work_dir, setup_file]
+        if from_recipe_dir:
+            assert recipe_dir, 'recipe_dir must be set if from_recipe_dir is True'
+            args.append('--from-recipe-dir')
+            args.extend(['--recipe-dir', recipe_dir])
         if permit_undefined_jinja:
-            log.debug(message)
-            return {}
-        else:
-            raise RuntimeError(message)
-
-    # Patch setuptools, distutils
-    setuptools_setup = setuptools.setup
-    distutils_setup = distutils.core.setup
-    numpy_setup = None
-
-    versioneer = None
-    if 'versioneer' in sys.modules:
-        versioneer = sys.modules['versioneer']
-        del sys.modules['versioneer']
-
-    try:
-        import numpy.distutils.core
-        numpy_setup = numpy.distutils.core.setup
-        numpy.distutils.core.setup = setup
-    except ImportError:
-        log.debug("Failed to import numpy for setup patch.  Is numpy installed?")
-
-    setuptools.setup = distutils.core.setup = setup
-    ns = {
-        '__name__': '__main__',
-        '__doc__': None,
-        '__file__': setup_file,
-    }
-    if os.path.isfile(setup_file):
-        try:
-            from setuptools.config import read_configuration
-        except ImportError:
-            pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
-        else:
-            setup_cfg = os.path.join(os.path.dirname(setup_file), 'setup.cfg')
-            if os.path.isfile(setup_cfg):
-                # read_configuration returns a dict of dicts. Each dict (keys: 'metadata',
-                # 'options'), if present, provides keyword arguments for the setup function.
-                for kwargs in read_configuration(setup_cfg).values():
-                    _setuptools_data.update(kwargs)
-        code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
-        exec(code, ns, ns)
+            args.append('--permit-undefined-jinja')
+        check_call_env(args, env=get_environ(config))
+        # this is a file that the subprocess will have written
+        with open(os.path.join(config.work_dir, 'conda_build_loaded_setup_py.json')) as f:
+            _setuptools_data = json.load(f)
     else:
-        if not permit_undefined_jinja:
-            raise TypeError('{} is not a file that can be read'.format(setup_file))
-
-    sys.modules['versioneer'] = versioneer
-
-    distutils.core.setup = distutils_setup
-    setuptools.setup = setuptools_setup
-    if numpy_setup:
-        numpy.distutils.core.setup = numpy_setup
-    if cd_to_work:
-        os.chdir(cwd)
-    # remove our workdir from sys.path
-    sys.path = path_backup
+        _setuptools_data = _load_setup_py_data.load_setup_py_data(setup_file,
+                                                    from_recipe_dir=from_recipe_dir,
+                                                    recipe_dir=recipe_dir,
+                                                    work_dir=config.work_dir,
+                                                    permit_undefined_jinja=permit_undefined_jinja)
+    # cleanup: we must leave the source tree empty unless the source code is already present
+    rm_rf(os.path.join(config.work_dir, '_load_setup_py_data.py'))
     return _setuptools_data if _setuptools_data else None
 
 

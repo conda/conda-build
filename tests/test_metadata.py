@@ -193,6 +193,7 @@ test_reqs = [req]
 if sys.platform == 'win32':
     test_reqs.append('vc {}'.format(vc_ver))
 
+
 def test_hash_build_id(testing_metadata):
     testing_metadata.meta['requirements']['build'] = test_reqs
     testing_metadata = render.finalize_metadata(testing_metadata)

@@ -473,6 +473,10 @@ def windows_vars(prefix):
         'USERNAME': os.getenv('USERNAME'),
         'USERPROFILE': os.getenv('USERPROFILE'),
         'windir': os.getenv('windir'),
+        # CPU data, see https://github.com/conda/conda-build/issues/2064
+        'PROCESSOR_ARCHITEW6432': os.getenv('PROCESSOR_ARCHITEW6432'),
+        'PROCESSOR_ARCHITECTURE': os.getenv('PROCESSOR_ARCHITECTURE'),
+        'PROCESSOR_IDENTIFIER': os.getenv('PROCESSOR_IDENTIFIER'),
     }
 
 

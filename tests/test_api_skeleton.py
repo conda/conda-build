@@ -143,3 +143,12 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
         else:
             assert "pygments" not in build_reqs
             assert "pygments" not in run_reqs
+
+
+def test_setuptools_test_requirements(testing_workdir):
+    api.skeletonize(packages='hdf5storage', repo='pypi')
+
+    with open('hdf5storage/meta.yaml') as f:
+        actual = yaml.load(f)
+
+    assert actual['test']['requires'] == ['nose >=1.0']

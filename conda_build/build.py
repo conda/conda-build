@@ -374,7 +374,7 @@ def write_link_json(m):
 def write_about_json(m):
     with open(join(m.config.info_dir, 'about.json'), 'w') as fo:
         d = {}
-        for key in ('home', 'dev_url', 'doc_url', 'license_url',
+        for key in ('home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',
                     'license', 'summary', 'description', 'license_family'):
             value = m.get_value('about/%s' % key)
             if value:
@@ -606,7 +606,6 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
         with open(join(info_dir, 'paths.json'), "w") as files_json:
             json.dump(files_json_info, files_json, sort_keys=True, indent=2, separators=(',', ': '),
                     cls=EntityEncoder)
-
     # Return a dict of file: sha1sum. We could (but currently do not)
     # use this to detect overlap and mutated overlap.
     checksums = dict()
@@ -677,6 +676,7 @@ def bundle_conda(output, metadata, env, **kw):
     log.info('Packaging %s', metadata.dist())
 
     files = output.get('files', [])
+
     if not files and output.get('script'):
         with utils.path_prepended(metadata.config.build_prefix):
             env = environ.get_dict(config=metadata.config, m=metadata)
@@ -1067,6 +1067,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     cmd = [shell_path, '-x', '-e', work_file]
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
+                    utils.remove_pycache_from_scripts(m.config.build_prefix)
 
     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
     initial_files = set()
@@ -1701,14 +1702,11 @@ def handle_anaconda_upload(paths, config):
     upload = False
     # this is the default, for no explicit argument.
     # remember that anaconda_upload takes defaults from condarc
-    if config.anaconda_upload is None:
-        pass
-    elif config.token or config.user:
+    if config.token or config.user:
         upload = True
     # rc file has uploading explicitly turned off
-    elif config.anaconda_upload is False:
+    elif not config.anaconda_upload:
         print("# Automatic uploading is disabled")
-        upload = False
     else:
         upload = True
 
@@ -1740,7 +1738,9 @@ Error: cannot locate anaconda command (required for upload)
 
     if config.token:
         cmd.extend(['--token', config.token])
-    cmd.extend(['upload', '--force'])
+    cmd.append('upload')
+    if config.force_upload:
+        cmd.append('--force')
     if config.user:
         cmd.extend(['--user', config.user])
     for package in paths:
