@@ -25,7 +25,10 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
     try:
         base_package, _ = os.path.splitext(os.path.basename(package))
         package_name = "-".join([prefix, base_package]) if prefix else base_package
-        assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))
+        contents = os.listdir(testing_workdir)
+        assert len([content for content in contents
+                    if content.startswith(package_name.lower()) and
+                    os.path.isdir(os.path.join(testing_workdir, content))])
     except:
         print(os.listdir(testing_workdir))
         raise

@@ -499,7 +499,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'RPM': '{RPM}',
               'PWD': '{PWD}',
               'RECIPE_DIR': '{RECIPE_DIR}'})
-    odir = join(output_dir, cdt['dirname'] + '-' + architectures[0], package_cdt_name)
+    odir = join(output_dir, package_cdt_name)
     try:
         makedirs(odir)
     except:
