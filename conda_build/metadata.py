@@ -1634,7 +1634,7 @@ class MetaData(object):
         return final_conda_packages + non_conda_packages
 
     def get_loop_vars(self):
-        return variants.get_loop_vars(self.config.variants)
+        return variants.get_loop_vars(self.config.input_variants)
 
     def clean(self):
         """This ensures that clean is called with the correct build id"""

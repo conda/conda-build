@@ -369,12 +369,15 @@ def reparse(metadata):
     return metadata
 
 
-def insert_python_version(metadata, env):
+def insert_variant_versions(metadata, env):
     reqs = metadata.get_value('requirements/' + env)
-    if reqs and 'python' in reqs:
-        python_version = 'python {}'.format(metadata.config.variant['python'])
-        metadata.meta['requirements'][env] = [python_version if re.match('^python(?:$| .*)', pkg)
-                                              else pkg for pkg in reqs]
+    for key, val in metadata.config.variant.items():
+        if reqs and key in reqs:
+            version = ' '.join((key, val))
+            # return the version-appended entry if it's in the reqs, otherwise
+            # regex allows entries that have just the name, no other version specifier
+            metadata.meta['requirements'][env] = [version if re.match('^%s(?:$)' % key, pkg)
+                                                  else pkg for pkg in reqs]
 
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
@@ -390,6 +393,9 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 
     # store these for reference later
     metadata.config.variants = variants
+    # These are always the full set.  just 'variants' is the one that gets
+    #     used mostly, and can be reduced
+    metadata.config.input_variants = variants
 
     recipe_requirements = metadata.extract_requirements_text()
     for variant in variants:
@@ -441,8 +447,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                                     not os.listdir(mv.config.work_dir))
             # if python is in the build specs, but doesn't have a specific associated
             #    version, make sure to add one to newly parsed 'requirements/build'.
-            for env in ('build', 'host'):
-                insert_python_version(mv, env)
+            for env in ('build', 'host', 'run'):
+                insert_variant_versions(mv, env)
             fm = mv.copy()
             # HACK: trick conda-build into thinking this is final, and computing a hash based
             #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
