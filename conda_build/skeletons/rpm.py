@@ -13,7 +13,6 @@ from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
 from six import string_types
-from six.moves import zip_longest
 from textwrap import wrap
 from xml.etree import cElementTree as ET
 from .cran import yaml_quote_string
@@ -24,6 +23,9 @@ try:
 except ImportError:
     from urllib2 import urlopen
 
+
+# This is used in two places
+default_architecture = 'x86_64'
 
 RPM_META = """\
 package:
@@ -425,8 +427,8 @@ def remap_license(rpm_license):
     return license, family
 
 
-def write_conda_recipes(recursive, repo_primary, package,
-                        architectures, cdt, output_dir, override_arch, src_cache):
+def write_conda_recipes(recursive, repo_primary, package, architectures,
+                        cdt, output_dir, override_arch, src_cache):
     entry, entry_name, arch = find_repo_entry_and_arch(repo_primary, architectures,
                                                        dict({'name': package}))
     if not entry:
@@ -518,8 +520,8 @@ def write_conda_recipes(recursive, repo_primary, package,
 # name their RPMs differently we probably want to hide that away from users
 # Do I want to pass just the package name, the CDT and the arch and rely on
 # expansion to form the URL? I have been going backwards and forwards here.
-def write_conda_recipe(package_cdt, output_dir, architecture, recursive, override_arch, config):
-    package, cdt_name = package_cdt
+def write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch, config):
+    cdt_name = distro
     bits = '32' if architecture in ('armv6', 'armv7a', 'i686', 'i386') else '64'
     base_architectures = dict({'i686': 'i386'})
     try:
@@ -541,19 +543,20 @@ def write_conda_recipe(package_cdt, output_dir, architecture, recursive, overrid
                                  "primary", massage_primary,
                                  cdt,
                                  config.src_cache)
-    write_conda_recipes(recursive,
-                        repo_primary,
-                        package,
-                        [base_architecture, "noarch"],
-                        cdt,
-                        output_dir,
-                        override_arch,
-                        config.src_cache)
+    for package in packages:
+        write_conda_recipes(recursive,
+                            repo_primary,
+                            package,
+                            [base_architecture, "noarch"],
+                            cdt,
+                            output_dir,
+                            override_arch,
+                            config.src_cache)
 
 
-def skeletonize(packages, output_dir=".", version=None, recursive=False, architecture='x86_64',
-                override_arch=True, config=None):
-    write_conda_recipe(packages, output_dir, architecture, recursive, override_arch, config)
+def skeletonize(packages, output_dir=".", version=None, recursive=False,
+                architecture=default_architecture, override_arch=True, config=None, distro=None):
+    write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch, config)
 
 
 def add_parser(repos):
@@ -564,21 +567,10 @@ def add_parser(repos):
     Create recipe skeleton for RPM files
         """,)
 
-    class name_cdt(argparse._AppendAction):
-        def __call__(self, parser, namespace, values, option_string=None):
-            if len(values) % 2:
-                raise argparse.ArgumentError(self,
-                                             "%s takes groups of 2 values (rpm name, cdt), %d given"
-                                             % (option_string, len(values)))
-            pkgs = zip_longest(*[iter(values)] * 2, fillvalue='')
-            for pkg in pkgs:
-                super(name_cdt, self).__call__(parser, namespace, pkg, option_string)
-
     rpm.add_argument(
         "packages",
         nargs='+',
-        action=name_cdt,
-        help="RPM package name followed by CDT name"
+        help="RPM package name(s)"
     )
 
     rpm.add_argument(
@@ -597,7 +589,7 @@ def add_parser(repos):
     rpm.add_argument(
         "--architecture",
         help="Conda arch to make these packages for, used in URL expansions (default: %(default)s).",  # noqa
-        default=None,
+        default=default_architecture,
     )
 
     rpm.add_argument(
@@ -605,8 +597,22 @@ def add_parser(repos):
         help="Version to use. Applies to all packages.",
     )
 
-    rpm.add_argument('--no-override-arch',
+    def valid_distros():
+        return ", ".join([name for name, _ in iteritems(CDTs)])
+
+    def distro(distro_name):
+        if distro_name not in CDTs:
+            raise argparse.ArgumentTypeError("valid --distro values are {}".format(valid_distros()))
+        return distro_name
+
+    rpm.add_argument("--distro",
+                     type=distro,
+                     default="centos6",
+                     help="Distro to use. Applies to all packages, valid values are: {}".format(
+                         valid_distros()))
+
+    rpm.add_argument("--no-override-arch",
                      help="Do not override noarch in package names",
-                     dest='override_arch',
+                     dest="override_arch",
                      default=True,
-                     action='store_false')
+                     action="store_false")
