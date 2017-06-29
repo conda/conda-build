@@ -441,7 +441,7 @@ def cdt(package_name, config, permit_undefined_jinja=False):
         "DEBUG_FFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
       }
     }
-    """
+    """  # NOQA
 
     cdt_name = 'cos6'
     arch = config.host_arch or config.arch
@@ -456,6 +456,7 @@ def cdt(package_name, config, permit_undefined_jinja=False):
     else:
         result = (package_name + '-' + cdt_name + '-' + cdt_arch)
     return result
+
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
                       allow_no_other_outputs=False, bypass_env_check=False):
