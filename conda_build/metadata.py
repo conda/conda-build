@@ -1535,16 +1535,6 @@ class MetaData(object):
             build['run_exports'] = output['run_exports']
             output_metadata.meta['build'] = build
 
-        # ensure that packaging scripts are copied over into the workdir
-        if 'script' in output:
-            utils.copy_into(os.path.join(self.path, output['script']), self.config.work_dir)
-
-        # same thing, for test scripts
-        test_script = output.get('test', {}).get('script')
-        if test_script:
-            utils.copy_into(os.path.join(self.path, test_script),
-                            os.path.join(self.config.work_dir, test_script))
-
         return output_metadata
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,

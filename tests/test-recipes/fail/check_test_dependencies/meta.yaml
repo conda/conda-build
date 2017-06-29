@@ -1,0 +1,18 @@
+package:
+  name: conda-build-test-depedencies
+  version: 1.0
+
+build:
+  string: abc
+
+requirements:
+  build:
+    - python
+  run:
+    - python
+
+test:
+  requires:
+    - pytest
+    - pytest-cov
+    - pytest-package-does-not-exist

@@ -888,6 +888,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
+        test_run_ms_deps = m.get_value('test/requires', []) + m.get_value('requirements/run', [])
+
         if m.config.host_subdir != m.config.build_subdir:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
@@ -922,6 +924,28 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                     max_env_retry=m.config.max_env_retry,
                                                     output_folder=m.config.output_folder,
                                                     channel_urls=tuple(m.config.channel_urls))
+
+        try:
+            # make sure test deps are available before taking time to create build env
+            environ.get_install_actions(m.config.test_prefix,
+                                        tuple(test_run_ms_deps), 'test',
+                                        subdir=m.config.build_subdir,
+                                        debug=m.config.debug,
+                                        verbose=m.config.verbose,
+                                        locking=m.config.locking,
+                                        bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                        timeout=m.config.timeout,
+                                        disable_pip=m.config.disable_pip,
+                                        max_env_retry=m.config.max_env_retry,
+                                        output_folder=m.config.output_folder,
+                                        channel_urls=tuple(m.config.channel_urls))
+        except DependencyNeedsBuildingError as e:
+            # subpackages are not actually missing.  We just haven't built them yet.
+            missing_deps = set(e.packages) - set(out.name()
+                        for _, out in m.get_output_metadata_set(permit_undefined_jinja=True))
+            if missing_deps:
+                e.packages = missing_deps
+                raise e
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
@@ -1080,6 +1104,20 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                                            output_d.get('script'))):
                     output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
                                          initial_files)
+
+                meta_dir = (m.meta_path or
+                            m.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+                if meta_dir and meta_dir.endswith('.yaml'):
+                    meta_dir = os.path.dirname(meta_dir)
+                # ensure that packaging scripts are copied over into the workdir
+                if 'script' in output_d and meta_dir:
+                    utils.copy_into(os.path.join(meta_dir, output_d['script']), m.config.work_dir)
+
+                # same thing, for test scripts
+                test_script = output_d.get('test', {}).get('script')
+                if test_script and meta_dir:
+                    utils.copy_into(os.path.join(meta_dir, test_script),
+                                    os.path.join(m.config.work_dir, test_script))
 
                 assert output_d.get('type') != 'conda' or m.final, (
                     "output metadata for {} is not finalized".format(m.dist()))

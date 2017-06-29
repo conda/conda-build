@@ -1030,3 +1030,23 @@ def test_no_locking(testing_config):
     api.update_index(os.path.join(testing_config.croot, testing_config.subdir),
                      config=testing_config)
     api.build(recipe, config=testing_config, locking=False)
+
+
+def test_test_dependencies(testing_workdir, testing_config):
+    recipe = os.path.join(fail_dir, 'check_test_dependencies')
+
+    with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
+        api.build(recipe, config=testing_config)
+
+    assert 'Unsatisfiable dependencies for platform ' in str(e.value)
+    assert 'pytest-package-does-not-exist' in str(e.value)
+
+
+def test_runtime_dependencies(testing_workdir, testing_config):
+    recipe = os.path.join(fail_dir, 'check_runtime_dependencies')
+
+    with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
+        api.build(recipe, config=testing_config)
+
+    assert 'Unsatisfiable dependencies for platform ' in str(e.value)
+    assert 'some-nonexistent-package1' in str(e.value)
