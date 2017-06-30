@@ -154,29 +154,23 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
                                      ('py-1.4.32', 'py/__init__.py')])
 def test_convert_platform_to_others(testing_workdir, base_platform, package):
     package_name, example_file = package
-    platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
-
-    # skip building on the same platform as the source platform
-    for platform in platforms:
-        source_platform = '{}-64' .format(base_platform)
-        if platform == source_platform:
-            platforms.remove(platform)
-
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py27_0.tar.bz2'.format(base_platform,
-                                                                            package_name)
+    subdir = '{}-64'.format(base_platform)
+    f = 'http://repo.continuum.io/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
+                                                                         package_name)
     fn = "{}-py27_0.tar.bz2".format(package_name)
     download(f, fn)
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', quiet=False, verbose=False)
-    for platform in platforms:
-        python_folder = 'lib/python2.7' if not platform.startswith('win') else 'Lib'
-        package = os.path.join(platform, fn)
-        assert package_has_file(package,
-                                '{}/site-packages/{}'.format(python_folder, example_file))
+    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+        if subdir != platform:
+            python_folder = 'lib/python2.7' if not platform.startswith('win') else 'Lib'
+            package = os.path.join(platform, fn)
+            assert package_has_file(package,
+                                    '{}/site-packages/{}'.format(python_folder, example_file))
 
-        if expected_paths_json:
-            assert package_has_file(package, 'info/paths.json')
-            assert_package_paths_matches_files(package)
+            if expected_paths_json:
+                assert package_has_file(package, 'info/paths.json')
+                assert_package_paths_matches_files(package)
 
 
 @pytest.mark.serial
@@ -222,39 +216,33 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
-    platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
-
-    # skip building on the same platform as the source platform
-    for platform in platforms:
-        source_platform = '{}-64' .format(base_platform)
-        if platform == source_platform:
-            platforms.remove(platform)
-
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
-                                                                            package_name)
+    subdir = '{}-64'.format(base_platform)
+    f = 'http://repo.continuum.io/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
+                                                                              package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
     download(f, fn)
 
     dependencies = ['numpy 1.7.1 py36_0', 'cryptography 1.7.0 py36_0']
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', dependencies=dependencies, quiet=False, verbose=False)
-    for platform in platforms:
-        python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
-        package = os.path.join(platform, fn)
-        assert package_has_file(package,
-                                '{}/{}'.format(python_folder, example_file))
+    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+        if platform != subdir:
+            python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
+            package = os.path.join(platform, fn)
+            assert package_has_file(package,
+                                    '{}/{}'.format(python_folder, example_file))
 
-        with tarfile.open(package) as t:
-            info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+            with tarfile.open(package) as t:
+                info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
 
-            assert 'numpy 1.7.1 py36_0' in info['depends']
-            assert 'numpy 1.12.1 py36_0' not in info['depends']
-            assert 'cryptography 1.7.0 py36_0' in info['depends']
-            assert 'cryptography 1.8.1 py36_0' not in info['depends']
+                assert 'numpy 1.7.1 py36_0' in info['depends']
+                assert 'numpy 1.12.1 py36_0' not in info['depends']
+                assert 'cryptography 1.7.0 py36_0' in info['depends']
+                assert 'cryptography 1.8.1 py36_0' not in info['depends']
 
-        if expected_paths_json:
-            assert package_has_file(package, 'info/paths.json')
-            assert_package_paths_matches_files(package)
+            if expected_paths_json:
+                assert package_has_file(package, 'info/paths.json')
+                assert_package_paths_matches_files(package)
 
 
 @pytest.mark.serial
@@ -262,36 +250,30 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_no_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
-    platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
-
-    # skip building on the same platform as the source platform
-    for platform in platforms:
-        source_platform = '{}-64' .format(base_platform)
-        if platform == source_platform:
-            platforms.remove(platform)
-
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
-                                                                            package_name)
+    subdir = '{}-64'.format(base_platform)
+    f = 'http://repo.continuum.io/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
+                                                                              package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
     download(f, fn)
 
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', dependencies=None, quiet=False, verbose=False)
-    for platform in platforms:
-        python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
-        package = os.path.join(platform, fn)
-        assert package_has_file(package,
-                                '{}/{}'.format(python_folder, example_file))
+    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+        if platform != subdir:
+            python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
+            package = os.path.join(platform, fn)
+            assert package_has_file(package,
+                                    '{}/{}'.format(python_folder, example_file))
 
-        with tarfile.open(package) as t:
-            info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+            with tarfile.open(package) as t:
+                info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
 
-            assert 'numpy 1.12.1 py36_0' in info['depends']
-            assert 'cryptography 1.8.1 py36_0' in info['depends']
+                assert 'numpy 1.12.1 py36_0' in info['depends']
+                assert 'cryptography 1.8.1 py36_0' in info['depends']
 
-        if expected_paths_json:
-            assert package_has_file(package, 'info/paths.json')
-            assert_package_paths_matches_files(package)
+            if expected_paths_json:
+                assert package_has_file(package, 'info/paths.json')
+                assert_package_paths_matches_files(package)
 
 
 @pytest.mark.serial

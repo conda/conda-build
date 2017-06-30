@@ -423,7 +423,7 @@ FIELDS = {
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
-    'about': ['home', 'dev_url', 'doc_url', 'license_url',  # these are URLs
+    'about': ['home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
               ],
@@ -1315,8 +1315,10 @@ class MetaData(object):
 
     @property
     def uses_setup_py_in_meta(self):
-        meta_text = ""
-        if self.meta_path:
+        meta_text = ''
+        meta_path = (self.meta_path or
+                     self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        if meta_path:
             with open(self.meta_path) as f:
                 meta_text = f.read()
         return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text

@@ -1,6 +1,11 @@
+import sys
 from setuptools import setup
 # from distutils.core import setup
 
+# test with an old version of Python that we'll never normally use
+if sys.version_info[:2] == (3, 4):
+    # die intentionally to signal that we're using the old python version
+    sys.exit(1)
 
 setup(
     name="conda-build-test-project",
@@ -17,6 +22,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
     ],
     description="test package for testing conda-build",
     packages=['conda_build_test'],

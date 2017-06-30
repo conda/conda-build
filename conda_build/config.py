@@ -56,6 +56,7 @@ SUBDIR_ALIASES = {
 Setting = namedtuple("ConfigSetting", "name, default")
 DEFAULTS = [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
+            Setting('force_upload', True),
             Setting('channel_urls', []),
             Setting('dirty', False),
             Setting('include_recipe', True),
@@ -79,6 +80,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('_host_platform', None),
             Setting('_host_arch', None),
             Setting('filename_hashing', True),
+            Setting('keep_old_work', False),
 
             Setting('index', None),
 
@@ -540,6 +542,14 @@ class Config(object):
                         rm_rf(path)
             if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
                 rm_rf(os.path.join(self.build_folder, 'prefix_files'))
+        else:
+            print("\nLeaving build/test directories:"
+                  "\n  Work:\t", os.path.relpath(self.work_dir),
+                  "\n  Test:\t", os.path.relpath(self.test_dir),
+                  "\nLeaving build/test environments:"
+                  "\n  Test:\tsource activate ", os.path.relpath(self.test_prefix),
+                  "\n  Build:\tsource activate ", os.path.relpath(self.build_prefix),
+                  "\n\n")
 
         for lock in get_conda_operation_locks(self.locking, self.bldpkgs_dirs):
             if os.path.isfile(lock.lock_file):
@@ -561,10 +571,12 @@ class Config(object):
         pass
 
     def __exit__(self, e_type, e_value, traceback):
-        if not getattr(self, 'dirty') and e_type is None:
-            get_logger(__name__).info("--dirty flag not specified.  Removing build"
-                                      " folder after successful build/test.\n")
+        if not getattr(self, 'dirty') and e_type is None and not getattr(self, 'keep_old_work'):
+            get_logger(__name__).info("--dirty flag and --keep-old-work not specified."
+                                        "Removing build/test folder after successful build/test.\n")
             self.clean()
+        else:
+            self.clean(remove_folders=False)
 
 
 def get_or_merge_config(config, variant=None, **kwargs):

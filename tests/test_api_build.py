@@ -17,6 +17,8 @@ import uuid
 import conda
 
 from conda_build.conda_interface import PY3, url_path, LinkError, CondaError
+from conda_build.conda_interface import PY3, url_path, cc_conda_build
+import conda_build
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
@@ -1050,3 +1052,25 @@ def test_runtime_dependencies(testing_workdir, testing_config):
 
     assert 'Unsatisfiable dependencies for platform ' in str(e.value)
     assert 'some-nonexistent-package1' in str(e.value)
+
+
+def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metadata):
+    testing_metadata.config.anaconda_upload = True
+    del testing_metadata.meta['test']
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    call = mocker.patch.object(conda_build.build.subprocess, 'call')
+    cc_conda_build['force_upload'] = False
+    pkg = api.build(testing_workdir)
+    assert call.called_once_with(['anaconda', 'upload', pkg])
+    del cc_conda_build['force_upload']
+    pkg = api.build(testing_workdir)
+    assert call.called_once_with(['anaconda', 'upload', '--force', pkg])
+
+
+def test_setup_py_data_in_env(testing_config):
+    recipe = os.path.join(metadata_dir, '_setup_py_data_in_env')
+    # should pass with any modern python (just not 3.5)
+    api.build(recipe, config=testing_config)
+    # make sure it fails with our special python logic
+    with pytest.raises(subprocess.CalledProcessError):
+        api.build(recipe, config=testing_config, python='3.4')

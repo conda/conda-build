@@ -598,7 +598,9 @@ def convert_from_unix_to_windows(file_path, output_dir, platform, dependencies, 
 
         if os.path.isdir(directory) and entry.strip(os.sep) == 'bin':
             for script in os.listdir(directory):
-                if not is_binary_file(directory, script) and not script.startswith('.'):
+                if (os.path.isfile(os.path.join(directory, script)) and
+                        not is_binary_file(directory, script) and
+                        not script.startswith('.')):
                     rename_executable(directory, script, 'win')
                     create_exe_file(directory, retrieve_executable_name(script),
                                       platform)
