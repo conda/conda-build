@@ -501,6 +501,8 @@ def osx_vars(compiler_vars, config):
     return {
         'OSX_ARCH': OSX_ARCH,
         'MACOSX_DEPLOYMENT_TARGET': MACOSX_DEPLOYMENT_TARGET,
+        'LC_ALL': os.getenv('LC_ALL', ''),
+        'LANG': os.getenv('LANG', ''),
     }
 
 
@@ -522,6 +524,8 @@ def linux_vars(compiler_vars, prefix, config):
         'QEMU_UNAME': os.getenv('QEMU_UNAME'),
         'DEJAGNU': os.getenv('DEJAGNU'),
         'DISPLAY': os.getenv('DISPLAY'),
+        'LC_ALL': os.getenv('LC_ALL', ''),
+        'LANG': os.getenv('LANG', ''),
     }
 
 

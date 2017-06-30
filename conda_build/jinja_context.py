@@ -333,9 +333,71 @@ def compiler(language, config, permit_undefined_jinja=False):
 
         # support cross compilers.  A cross-compiler package will have a name such as
         #    gcc_target
-        #    gcc_linux-cos5-64
+        #    gcc_linux-cos6-64
         compiler = '_'.join([compiler, config.variant['target_platform']])
     return compiler
+
+
+def cdt(package_name, config, permit_undefined_jinja=False):
+    """Support configuration of Core Dependency Trees.
+    We should define CDTs in a single location. The current
+    idea is to emit parts of the following to index.json (the
+    bits that the solver could make use of) and parts to
+    about.json (the other bits).
+    "system": {
+      "os": {
+        "type": "windows", "linux", "bsd", "darwin",
+        "os_distribution": "CentOS", "FreeBSD", "Windows", "osx",
+        "os_version": "6.9", "10.12.3",
+        "os_kernel_version" : "2.6.32",
+        "os_libc_family": "glibc",
+        "os_libc_version": "2.12",
+      }
+      "cpu": {
+        # Whichever cpu_architecture/cpu_isa we build-out for:
+        # .. armv6 is compatible with and uses all CPU features of a Raspberry PI 1
+        # .. armv7a is compatible with and uses all CPU features of a Raspberry PI 2
+        # .. aarch64 is compatible with and uses all CPU features of a Raspberry PI 3
+        "cpu_architecture": "x86", "x86_64",
+                            "armv6", "armv7a", "aarch32", "aarch64",
+                            "powerpc", "powerpc64",
+                            "s390", "s390x",
+        "cpu_isa": "nocona", "armv8.1-a", "armv8.3-a",
+        # "?" because the vfpu is specified by cpu_architecture + cpu_isa + rules.
+        "vfpu": "?",
+        "cpu_endianness": "BE", "LE",
+      }
+      "gpu ?": {
+      }
+      "compilerflags": {
+        # When put into a CDT these should be the base defaults.
+        # Package builds can and will change these frequently.
+        "CPPFLAGS": "-D_FORTIFY_SOURCE=2",
+        "CFLAGS": "-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -O2 -pipe",
+        "CXXFLAGS": "-fvisibility-inlines-hidden -std=c++17 -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -O2 -pipe",
+        "LDFLAGS": "-Wl,-O1,--sort-common,--as-needed,-z,relro",
+        "FFLAGS": "-fopenmp",
+        # These are appended to the non-DEBUG values:
+        "DEBUG_CFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
+        "DEBUG_CXXFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
+        "DEBUG_FFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
+      }
+    }
+    """  # NOQA
+
+    cdt_name = 'cos6'
+    arch = config.host_arch or config.arch
+    cdt_arch = 'x86_64' if arch == '64' else 'i686'
+    if config.variant:
+        cdt_name = config.variant.get('cdt_name', cdt_name)
+        cdt_arch = config.variant.get('cdt_arch', cdt_arch)
+    if ' ' in package_name:
+        name = package_name.split(' ')[0]
+        ver_build = package_name.split(' ')[1:]
+        result = (name + '-' + cdt_name + '-' + cdt_arch + ' ' + ' '.join(ver_build))
+    else:
+        result = (package_name + '-' + cdt_name + '-' + cdt_arch)
+    return result
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
@@ -367,6 +429,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                permit_undefined_jinja=permit_undefined_jinja,
                                allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
+        cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
 
         environ=environ)
     return ctx

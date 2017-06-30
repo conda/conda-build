@@ -9,22 +9,26 @@ from conda_build import api
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
-repo_packages = [('', 'pypi', 'pip', "8.1.2"),
-                 ('r', 'cran', 'nmf', ""),
-                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ""),
-                 ('perl', 'cpan', 'Moo', ""),
-                 # ('lua', luarocks', 'LuaSocket'),
+repo_packages = [('', 'pypi', 'pip', '8.1.2'),
+                 ('r', 'cran', 'nmf', ''),
+                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ''),
+                 ('perl', 'cpan', 'Moo', ''),
+                 ('', 'rpm', 'libX11-devel', ''),
+                 # ('lua', luarocks', 'LuaSocket', ''),
                  ]
 
 
-@pytest.mark.parametrize("prefix,repo,package, version", repo_packages)
+@pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
 def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
     api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
                     config=testing_config)
     try:
         base_package, _ = os.path.splitext(os.path.basename(package))
         package_name = "-".join([prefix, base_package]) if prefix else base_package
-        assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))
+        contents = os.listdir(testing_workdir)
+        assert len([content for content in contents
+                    if content.startswith(package_name.lower()) and
+                    os.path.isdir(os.path.join(testing_workdir, content))])
     except:
         print(os.listdir(testing_workdir))
         raise
@@ -91,7 +95,7 @@ def test_pypi_version_sorting(testing_workdir, testing_config):
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks'])
+    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
 
 
 def test_pypi_with_entry_points(testing_workdir):
