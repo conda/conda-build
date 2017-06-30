@@ -6,4 +6,4 @@ requirements:
   build:
     - libpng
   run:
-    - {{ pin_compatible('libpng', max_pin='x.x', min_pin=None) }}
+    - {{ pin_compatible('libpng', min_pin=None, upper_bound='5.0') }}

@@ -203,7 +203,8 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
                     else:
                         version = str(version)
                     if upper_bound:
-                        compatibility = ">=" + str(version) + ","
+                        if min_pin or lower_bound:
+                            compatibility = ">=" + str(version) + ","
                         compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
                     else:
                         compatibility = apply_pin_expressions(version, min_pin, max_pin)
