@@ -100,7 +100,6 @@ if __name__ == '__main__':
     # we get back a dict of the setup data
     data = load_setup_py_data(**args.__dict__)
     with open(os.path.join(args.work_dir, 'conda_build_loaded_setup_py.json'), 'w') as f:
-        # need to remove the cmdclass as it is not json serializable
-        if 'cmdclass' in data:
-            del data['cmdclass']
-        json.dump(data, f)
+        # this is lossy.  Anything that can't be serialized is either forced to None or
+        #     removed completely.
+        json.dump(data, f, skipkeys=True, default=lambda x: None)
