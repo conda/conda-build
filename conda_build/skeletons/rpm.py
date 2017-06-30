@@ -9,6 +9,7 @@ except:
     import pickle as pickle
 import gzip
 import hashlib
+import io
 from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
@@ -267,13 +268,13 @@ def dictify_pickled(xml_file, dict_massager=None, cdt=None):
     pickled = xml_file + '.p'
     if exists(pickled):
         return pickle.load(open(pickled, 'rb'))
-    with open(xml_file, 'rt') as xf:
+    with io.open(xml_file, 'r', encoding='utf-8') as xf:
         xmlstring = xf.read()
         # Remove the global namespace.
         xmlstring = re.sub(r'\sxmlns="[^"]+"', r'', xmlstring, count=1)
         # Replace sub-namespaces with their names.
         xmlstring = re.sub(r'\sxmlns:([a-zA-Z]*)="[^"]+"', r' xmlns:\1="\1"', xmlstring)
-        root = ET.fromstring(xmlstring)
+        root = ET.fromstring(xmlstring.encode('utf-8'))
         result = dictify(root)
         if dict_massager:
             result = dict_massager(result, cdt)
