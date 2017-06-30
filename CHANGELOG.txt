@@ -1,3 +1,19 @@
+2017-06-30 2.1.17:
+
+Bug fixes:
+----------
+
+* Fix disable_pip removing packages even when they are explicit dependencies  #2129
+* Remove any pyc files for entry point scripts that pip may have created #2134
+* Ignore unserializable data when reading setup.py data  #2141
+
+Contributors:
+-------------
+
+* @mandeep
+* @msarahan
+
+
 2017-06-23 2.1.16:
 
 Enhancements:
