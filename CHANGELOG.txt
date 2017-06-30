@@ -5,14 +5,29 @@ This release includes all changes to the 2.1.x branch up to and including the 2.
 Enhancements:
 -------------
 
+* Raise errors prior to build if any run or test deps are unsatisfiable  #2102
+* Add skeleton function for RPM packages, to be used for things like Xorg  #2109
+* Improve test coverage of workdir removal  #2111 #2112
+* Match variants in conda_build_config.yaml with dep names (implicit jinja2 version spec) #2124
+
 Bug fixes:
 ----------
+
+* fix reference to cc.subdir (it is just subdir)  #2015
+* fix failing test when using filename_hashing=False (non-existent json file)  #2087
+* fix dependencies specified to conda-convert not being added  #2090
+* fix disable_pip removing packages even when they are explicit recipe deps #2129
+* fix pin_compatible jinja2 function not respecting lower_bound as None correctly  #2138
 
 Contributors:
 -------------
 
+* @jakirkham
 * @mandeep
+* @mingwandroid
 * @msarahan
+* @neok-m4700
+
 
 2017-06-23 2.1.16:
 
