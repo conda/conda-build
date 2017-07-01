@@ -133,16 +133,23 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'macros': {'pyver': '2.6.6',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
             'suse_leap_rpi3': {'dirname': 'suse_leap_rpi3',
-                                'cdt_short_name': 'slrpi3',
-                                'base_url': 'http://download.opensuse.org/ports/{arch}/distribution/leap/42.3-Current/repo/oss/suse/{arch}/',  # noqa
-                                'base_url_to_repomd': 'repodata/repomd.xml',
-                                'repomd_url': 'http://vault.centos.org/5.11/os/{base_architecture}/repodata/repomd.xml',  # noqa
-                                'host_machine': 'aarch64-conda_rpi3-linux-gnueabi',
-                                'host_subdir': 'linux-aarch64',
-                                'rpm_filename_platform': 'el5.{arch}',
-                                'checksummer': hashlib.sha256,
-                                'checksummer_name': "sha256",
-                                'macros': {}},
+                               'short_name': 'slrpi3',
+                               # I cannot locate the src.rpms for OpenSUSE leap. This key being present tells this code to ignore missing src rpms but
+                               # we should *never* release binaries we do not have the sources for!
+                               'allow_missing_sources': True,
+                               'repomd_url': 'http://download.opensuse.org/ports/aarch64/distribution/leap/42.3-Current/repo/oss/suse/repodata/repomd.xml', # noqa
+                               'base_url': 'http://download.opensuse.org/ports/{architecture}/distribution/leap/42.3-Current/repo/oss/suse/{architecture}/',  # noqa
+                               'sbase_url': 'http://download.opensuse.org/ports/{architecture}/source/factory/repo/oss/suse/src/',
+                               # I even tried an older release but it was just as bad:
+                               # 'repomd_url': 'http://download.opensuse.org/ports/aarch64/distribution/leap/42.2/repo/oss/suse/repodata/repomd.xml', # noqa
+                               # 'base_url': 'http://download.opensuse.org/ports/{architecture}/distribution/leap/42.2/repo/oss/suse/{architecture}/',
+                               # 'sbase_url': 'http://download.opensuse.org/source/distribution/leap/42.2/repo/oss/suse/src/',
+                               'host_machine': 'aarch64-conda_rpi3-linux-gnueabi',
+                               'host_subdir': 'linux-aarch64',
+                               'rpm_filename_platform': '{architecture}',
+                               'checksummer': hashlib.sha256,
+                               'checksummer_name': "sha256",
+                               'macros': {}},
              'raspbian_rpi2': {'dirname': 'raspbian_rpi2',
                                'cdt_short_name': 'rrpi2',
                                'host_machine': 'armv7a-conda_rpi2-linux-gnueabi',
@@ -352,10 +359,19 @@ def massage_primary(repo_primary, cdt):
             continue
         checksum = package['checksum'][0]['_text']
         source = package['format'][0]['{rpm}sourcerpm'][0]['_text']
+        # If you need to check if the sources exist (perhaps you've got the source URL wrong
+        # or the distro has forgotten to copy them?):
+        # import requests
+        # sbase_url = cdt['sbase_url']
+        # surl = sbase_url + source
+        # print("{} {}".format(requests.head(surl).status_code, surl))
         location = package['location'][0]['href']
         version = package['version'][0]
         summary = package['summary'][0]['_text']
-        description = package['description'][0]['_text']
+        try:
+            description = package['description'][0]['_text']
+        except:
+            description = "NA"
         if '_text' in package['url'][0]:
             url = package['url'][0]['_text']
         else:
@@ -441,7 +457,15 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
     rpm_url = dirname(dirname(cdt['base_url'])) + '/' + entry['location']
     srpm_url = cdt['sbase_url'] + entry['source']
     _, _, _, _, _, sha256str = rpm_split_url_and_cache(rpm_url, src_cache)
-    _, _, _, _, _, srcsha256str = rpm_split_url_and_cache(srpm_url, src_cache)
+    try:
+        _, _, _, _, _, srcsha256str = rpm_split_url_and_cache(srpm_url, src_cache)
+    except:
+        # Just pretend the binaries are sources.
+        if 'allow_missing_sources' in cdt:
+            srcsha256str = sha256str
+            srpm_url = rpm_url
+        else:
+            raise
     depends = [required for required in entry['requires'] if valid_depends(required)]
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
