@@ -500,15 +500,20 @@ def update_files_file(temp_dir, verbose):
     files_file = os.path.join(temp_dir, 'info/files')
 
     with open(files_file, 'w+') as files:
+        file_paths = []
         for dirpath, dirnames, filenames in os.walk(temp_dir):
             for filename in filenames:
                 package_file_path = os.path.join(
                     dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
                 if not package_file_path.startswith('info'):
-                    files.write(package_file_path + '\n')
+                    # files.write(package_file_path + '\n')
+                    file_paths.append(package_file_path)
 
                     if verbose:
                         print('Updating {}' .format(package_file_path))
+
+        for file_path in sorted(file_paths):
+            files.write(file_path + '\n')
 
 
 def create_target_archive(file_path, temp_dir, platform, output_dir):

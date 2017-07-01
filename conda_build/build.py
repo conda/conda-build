@@ -330,7 +330,7 @@ def write_info_files_file(m, files):
         if m.get_value('build/noarch_python'):
             fo.write('\n')
         elif m.noarch == 'python':
-            for f in files:
+            for f in sorted(files):
                 if f.find("site-packages") >= 0:
                     fo.write(f[f.find("site-packages"):] + '\n')
                 elif f.startswith("bin") and (f not in entry_point_script_names):
@@ -340,7 +340,7 @@ def write_info_files_file(m, files):
                 else:
                     fo.write(f + '\n')
         else:
-            for f in files:
+            for f in sorted(files):
                 fo.write(f + '\n')
 
 
