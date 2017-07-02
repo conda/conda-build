@@ -43,7 +43,7 @@ source:
 
 outputs:
   - name: {packagename}
-    target: noarch
+    noarch: generic
     about:
       home: {home}
       license: {license}
@@ -134,16 +134,17 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
             'suse_leap_rpi3': {'dirname': 'suse_leap_rpi3',
                                'short_name': 'slrpi3',
-                               # I cannot locate the src.rpms for OpenSUSE leap. This key being present tells this code to ignore missing src rpms but
-                               # we should *never* release binaries we do not have the sources for!
+                               # I cannot locate the src.rpms for OpenSUSE leap. The existence
+                               # of this key tells this code to ignore missing src rpms but we
+                               # should *never* release binaries we do not have the sources for.
                                'allow_missing_sources': True,
                                'repomd_url': 'http://download.opensuse.org/ports/aarch64/distribution/leap/42.3-Current/repo/oss/suse/repodata/repomd.xml', # noqa
                                'base_url': 'http://download.opensuse.org/ports/{architecture}/distribution/leap/42.3-Current/repo/oss/suse/{architecture}/',  # noqa
-                               'sbase_url': 'http://download.opensuse.org/ports/{architecture}/source/factory/repo/oss/suse/src/',
+                               'sbase_url': 'http://download.opensuse.org/ports/{architecture}/source/factory/repo/oss/suse/src/',  # noqa
                                # I even tried an older release but it was just as bad:
                                # 'repomd_url': 'http://download.opensuse.org/ports/aarch64/distribution/leap/42.2/repo/oss/suse/repodata/repomd.xml', # noqa
-                               # 'base_url': 'http://download.opensuse.org/ports/{architecture}/distribution/leap/42.2/repo/oss/suse/{architecture}/',
-                               # 'sbase_url': 'http://download.opensuse.org/source/distribution/leap/42.2/repo/oss/suse/src/',
+                               # 'base_url': 'http://download.opensuse.org/ports/{architecture}/distribution/leap/42.2/repo/oss/suse/{architecture}/',  # noqa
+                               # 'sbase_url': 'http://download.opensuse.org/source/distribution/leap/42.2/repo/oss/suse/src/',  # noqa
                                'host_machine': 'aarch64-conda_rpi3-linux-gnueabi',
                                'host_subdir': 'linux-aarch64',
                                'rpm_filename_platform': '{architecture}',
@@ -445,6 +446,13 @@ def remap_license(rpm_license):
     return license, family
 
 
+def tidy_text(text, wrap_at=0):
+    stripped = text.strip("'\"\n ")
+    if wrap_at > 0:
+        stripped = wrap(stripped, wrap_at)
+    return stripped
+
+
 def write_conda_recipes(recursive, repo_primary, package, architectures,
                         cdt, output_dir, override_arch, src_cache):
     entry, entry_name, arch = find_repo_entry_and_arch(repo_primary, architectures,
@@ -458,15 +466,31 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
     srpm_url = cdt['sbase_url'] + entry['source']
     _, _, _, _, _, sha256str = rpm_split_url_and_cache(rpm_url, src_cache)
     try:
-        _, _, _, _, _, srcsha256str = rpm_split_url_and_cache(srpm_url, src_cache)
+        # We ignore the hash of source RPMs since they
+        # are not given in the source repository data.
+        _, _, _, _, _, _ = rpm_split_url_and_cache(srpm_url, src_cache)
     except:
         # Just pretend the binaries are sources.
         if 'allow_missing_sources' in cdt:
-            srcsha256str = sha256str
             srpm_url = rpm_url
         else:
             raise
     depends = [required for required in entry['requires'] if valid_depends(required)]
+
+    if package in cdt['dependency_add']:
+        for missing_dep in cdt['dependency_add'][package]:
+            e_missing, e_name_missing, _ = find_repo_entry_and_arch(repo_primary, architectures,
+                                                                    dict({'name': missing_dep}))
+            if e_missing:
+                for provides in e_missing['provides']:
+                    if provides['name'] == e_name_missing:
+                        copy_provides = copy(provides)
+                        if 'rel' in copy_provides:
+                            del(copy_provides['rel'])
+                        depends.append(copy_provides)
+            else:
+                print('WARNING: Additional dependency of {}, {} not found'.format(package,
+                                                                                  missing_dep))
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
                                                                  architectures,
@@ -474,6 +498,13 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         if override_arch:
             dep_arch = architectures[0]
         depend['arch'] = dep_arch
+        # Because something else may provide a substitute for the wanted package
+        # we need to also overwrite the versions with those of the provider, e.g.
+        # libjpeg 6b is provided by libjpeg-turbo 1.2.1
+        if 'ver' in dep_entry:
+            depend['ver'] = dep_entry['ver']
+        if 'epoch' in dep_entry:
+            depend['epoch'] = dep_entry['epoch']
         if recursive:
             depend['name'] = write_conda_recipes(recursive,
                                                  repo_primary,
@@ -513,8 +544,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'license_family': license_family,
               'checksum_name': cdt['checksummer_name'],
               'checksum': entry['checksum'],
-              'summary': '(CDT) ' + entry['summary'],
-              'description': '|\n        ' + '\n        '.join(wrap(entry['description'], 78)),
+              'summary': '"(CDT) ' + tidy_text(entry['summary']) + '"',
+              'description': '|\n        ' + '\n        '.join(tidy_text(entry['description'], 78)),  # noqa
               # Cheeky workaround.  I use ${PREFIX},
               # ${PWD}, ${RPM} and ${RECIPE_DIR} in
               # BUILDSH and they get interpreted as
@@ -547,7 +578,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
 # Do I want to pass just the package name, the CDT and the arch and rely on
 # expansion to form the URL? I have been going backwards and forwards here.
 def write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch,
-                       config):
+                       dependency_add, config):
     cdt_name = distro
     bits = '32' if architecture in ('armv6', 'armv7a', 'i686', 'i386') else '64'
     base_architectures = dict({'i686': 'i386'})
@@ -564,6 +595,18 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
             cdt[k] = v.format(**architecture_bits)
         else:
             cdt[k] = v
+
+    # Add undeclared dependencies. These can be baked into the global
+    # CDTs dict, passed in on the commandline or a mixture of both.
+    if 'dependency_add' not in cdt:
+        cdt['dependency_add'] = dict()
+    if dependency_add:
+        for package_and_missed_deps in dependency_add:
+            as_list = package_and_missed_deps[0].split(',')
+            if as_list[0] in cdt['dependency_add']:
+                cdt['dependency_add'][as_list[0]].extend(as_list[1:])
+            else:
+                cdt['dependency_add'][as_list[0]] = as_list[1:]
 
     repomd_url = cdt['repomd_url']
     repo_primary = get_repo_dict(repomd_url,
@@ -583,8 +626,9 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 architecture=default_architecture, override_arch=True,
-                config=None, distro=default_distro):
-    write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch, config)
+                dependency_add=[], config=None, distro=default_distro):
+    write_conda_recipe(packages, distro, output_dir, architecture, recursive,
+                       override_arch, dependency_add, config)
 
 
 def add_parser(repos):
@@ -612,6 +656,13 @@ def add_parser(repos):
         action='store_true',
         dest='recursive',
         help='Create recipes for dependencies if they do not already exist',
+    )
+
+    rpm.add_argument(
+        "--dependency-add",
+        nargs='+',
+        action='append',
+        help='Add undeclared dependencies (format: package,missing_dep1,missing_dep2)',
     )
 
     rpm.add_argument(
