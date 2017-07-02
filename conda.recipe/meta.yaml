@@ -35,6 +35,7 @@ requirements:
     - python
     - pyyaml
     - six
+    - glob2
 
 test:
   requires:

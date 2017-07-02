@@ -179,12 +179,30 @@ class TestUtils(unittest.TestCase):
 
 
 def test_expand_globs(testing_workdir):
-    files = ['abc', 'acb']
+    sub_dir = os.path.join(testing_workdir, 'sub1')
+    os.mkdir(sub_dir)
+    ssub_dir = os.path.join(sub_dir, 'ssub1')
+    os.mkdir(ssub_dir)
+    files = ['abc', 'acb',
+             os.path.join(sub_dir, 'def'),
+             os.path.join(sub_dir, 'abc'),
+             os.path.join(ssub_dir, 'ghi'),
+             os.path.join(ssub_dir, 'abc')]
     for f in files:
         with open(f, 'w') as _f:
             _f.write('weee')
-    assert utils.expand_globs(files, testing_workdir) == files
-    assert utils.expand_globs(['a*'], testing_workdir) == files
+
+    # Test dirs
+    exp = utils.expand_globs([os.path.join('sub1', 'ssub1')], testing_workdir)
+    assert sorted(exp) == sorted(['sub1/ssub1/ghi', 'sub1/ssub1/abc'])
+
+    # Test files
+    exp = sorted(utils.expand_globs(['abc', files[2]], testing_workdir))
+    assert exp == sorted(['abc', 'sub1/def'])
+
+    # Test globs
+    exp = sorted(utils.expand_globs(['a*', '*/*f', '**/*i'], testing_workdir))
+    assert exp == sorted(['abc', 'acb', 'sub1/def', 'sub1/ssub1/ghi'])
 
 
 def test_filter_files():
