@@ -10,6 +10,8 @@ import re
 import sys
 import time
 
+from bs4 import UnicodeDammit
+
 from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import md5_file
 from .conda_interface import non_x86_linux_machines
@@ -1319,16 +1321,16 @@ class MetaData(object):
         meta_path = (self.meta_path or
                      self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
         if meta_path:
-            with open(self.meta_path) as f:
-                meta_text = f.read()
-        return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
+            with open(self.meta_path, 'rb') as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
+        return u"load_setup_py_data" in meta_text or u"load_setuptools" in meta_text
 
     @property
     def uses_regex_in_meta(self):
         meta_text = ""
         if self.meta_path:
-            with open(self.meta_path) as f:
-                meta_text = f.read()
+            with open(self.meta_path, 'rb') as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
         return "load_file_regex" in meta_text
 
     @property
@@ -1339,9 +1341,9 @@ class MetaData(object):
     def uses_jinja(self):
         if not self.meta_path:
             return False
-        with open(self.meta_path) as f:
-            metayaml = f.read()
-            matches = re.findall(r"{{.*}}", metayaml)
+        with open(self.meta_path, 'rb') as f:
+            meta_text = UnicodeDammit(f.read()).unicode_markup
+            matches = re.findall(r"{{.*}}", meta_text)
         return len(matches) > 0
 
     @property
@@ -1626,7 +1628,9 @@ class MetaData(object):
         return final_conda_packages + non_conda_packages
 
     def get_loop_vars(self):
-        return variants.get_loop_vars(self.config.input_variants)
+        _variants = (self.config.input_variants if hasattr(self.config, 'input_variants') else
+                    self.config.variants)
+        return variants.get_loop_vars(_variants)
 
     def clean(self):
         """This ensures that clean is called with the correct build id"""
