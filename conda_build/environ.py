@@ -522,9 +522,9 @@ def linux_vars(compiler_vars, prefix, config):
         # filtered so it only contains the result of `linux_vars`
         # which, before this change was empty, and after it only
         # contains other QEMU env vars.
-        'QEMU_LD_PREFIX': os.getenv('QEMU_LD_PREFIX'),
-        'QEMU_UNAME': os.getenv('QEMU_UNAME'),
-        'DEJAGNU': os.getenv('DEJAGNU'),
+        'QEMU_LD_PREFIX': os.getenv('QEMU_LD_PREFIX', ''),
+        'QEMU_UNAME': os.getenv('QEMU_UNAME', ''),
+        'DEJAGNU': os.getenv('DEJAGNU', ''),
         'DISPLAY': os.getenv('DISPLAY'),
         'LC_ALL': os.getenv('LC_ALL', ''),
         'LANG': os.getenv('LANG', ''),
