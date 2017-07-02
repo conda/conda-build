@@ -41,7 +41,8 @@ setup(
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             ]},
-    install_requires=['conda', 'requests', 'filelock', 'pyyaml', 'conda-verify', 'pkginfo'],
+    install_requires=['conda', 'requests', 'filelock', 'pyyaml', 'conda-verify',
+                      'pkginfo', 'glob2'],
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
     zip_safe=False,
 )

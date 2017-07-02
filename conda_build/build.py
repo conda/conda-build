@@ -273,7 +273,7 @@ def get_files_with_prefix(m, files, prefix):
         ignore_files = []
     if not m.get_value('build/detect_binary_files_with_prefix', True):
         ignore_types.update((FileMode.binary.name,))
-    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_mode)
+    # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
     ignore_files.extend(
         f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files)
     files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
