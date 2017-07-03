@@ -41,10 +41,12 @@ source:
   - url: {srcrpmurl}
     folder: source
 
+{depends_build}
+
 outputs:
   - name: {packagename}
     noarch: generic
-{depends}
+{depends_run}
     about:
       home: {home}
       license: {license}
@@ -500,10 +502,11 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         # Because something else may provide a substitute for the wanted package
         # we need to also overwrite the versions with those of the provider, e.g.
         # libjpeg 6b is provided by libjpeg-turbo 1.2.1
-        if 'ver' in dep_entry:
-            depend['ver'] = dep_entry['ver']
-        if 'epoch' in dep_entry:
-            depend['epoch'] = dep_entry['epoch']
+        if depend['name'] != dep_name and 'version' in dep_entry:
+            if 'ver' in dep_entry['version']:
+                depend['ver'] = dep_entry['version']['ver']
+            if 'epoch' in dep_entry['version']:
+                depend['epoch'] = dep_entry['version']['epoch']
         if recursive:
             depend['name'] = write_conda_recipes(recursive,
                                                  repo_primary,
@@ -520,13 +523,15 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                 cdt['short_name'], depend['arch'],
                                                 depend['flags'], depend['ver'])
                          for depend in depends]
-        dependsstr_part = '\n'.join(['        - {}'.format(depends_spec)
+        dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
-        dependsstr = '    requirements:\n' \
-                     '      build:\n' + dependsstr_part + '\n' + \
-                     '      run:\n' + dependsstr_part
+        dependsstr_build = 'requirements:\n' \
+                           '  build:\n' + dependsstr_part + '\n'
+        dependsstr_run = '    requirements:\n' \
+                           '      run:\n    ' + '\n    '.join(dependsstr_part.split('\n')) + '\n'
     else:
-        dependsstr = ''
+        dependsstr_build = ''
+        dependsstr_run = ''
 
     package_l = package.lower().replace('+', 'x')
     package_cdt_name = package_l + '-' + sn
@@ -535,7 +540,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'packagename': package_cdt_name,
               'hostmachine': cdt['host_machine'],
               'hostsubdir': cdt['host_subdir'],
-              'depends': dependsstr,
+              'depends_build': dependsstr_build,
+              'depends_run': dependsstr_run,
               'rpmurl': rpm_url,
               'srcrpmurl': srpm_url,
               'home': entry['home'],
