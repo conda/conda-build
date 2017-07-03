@@ -732,9 +732,10 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
                         log.error("Failed to get install actions, max retries exceeded.")
                         raise
         if disable_pip:
-            actions['LINK'] = [spec for spec in actions['LINK']
-                                if not spec.startswith('pip-') and
-                                not spec.startswith('setuptools-')]
+            for pkg in ('pip', 'setuptools', 'wheel'):
+                if not any(re.match('^%s(?:$| .*)' % pkg, str(dep)) for dep in specs):
+                    actions['LINK'] = [spec for spec in actions['LINK']
+                                       if not spec.name == pkg]
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls)] = actions.copy()
         last_index_ts = index_ts
