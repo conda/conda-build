@@ -44,14 +44,13 @@ source:
 outputs:
   - name: {packagename}
     noarch: generic
+{depends}
     about:
       home: {home}
       license: {license}
       license_family: {license_family}
       summary: {summary}
       description: {description}
-
-{depends}
 """
 
 
@@ -521,11 +520,11 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                 cdt['short_name'], depend['arch'],
                                                 depend['flags'], depend['ver'])
                          for depend in depends]
-        dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
+        dependsstr_part = '\n'.join(['        - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
-        dependsstr = 'requirements:\n' \
-                     '  build:\n' + dependsstr_part + '\n' + \
-                     '  run:\n' + dependsstr_part
+        dependsstr = '    requirements:\n' \
+                     '      build:\n' + dependsstr_part + '\n' + \
+                     '      run:\n' + dependsstr_part
     else:
         dependsstr = ''
 
