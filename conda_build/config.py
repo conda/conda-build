@@ -88,6 +88,7 @@ DEFAULTS = [Setting('activate', True),
             #     which is useful in tests, but makes little sense on actual systems.
             Setting('_platform', None),
             Setting('_arch', None),
+            Setting('_target_subdir', None),
 
             # variants
             Setting('variant_config_files', []),
@@ -265,6 +266,14 @@ class Config(object):
         self.host_platform = values[0]
         if len(values) > 1:
             self.host_arch = values[1]
+
+    @property
+    def target_subdir(self):
+        return self._target_subdir or self.host_subdir
+
+    @target_subdir.setter
+    def target_subdir(self, value):
+        self._target_subdir = value
 
     @property
     def croot(self):
