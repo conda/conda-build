@@ -585,7 +585,7 @@ def get_output_dicts_from_metadata(metadata):
     for out in outputs:
         if (metadata.name() == out.get('name', '') and not (out.get('files') or
                                                         out.get('script'))):
-            out['requirements'] = metadata.meta.get('requirements', {})
+            out['requirements'] = out.get('requirements', metadata.meta.get('requirements', {}))
             out['noarch_python'] = out.get('noarch_python',
                                             metadata.get_value('build/noarch_python'))
             out['noarch'] = out.get('noarch', metadata.get_value('build/noarch'))
@@ -1120,15 +1120,16 @@ class MetaData(object):
         return d
 
     def info_index(self):
-        arch = self.config.host_arch or self.config.arch
+        arch = 'noarch' if self.config.target_subdir == 'noarch' else self.config.host_arch
         d = dict(
             name=self.name(),
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number() if self.build_number() else 0,
-            platform=self.config.platform if self.config.platform != 'noarch' else None,
+            platform=self.config.platform if (self.config.platform != 'noarch' and
+                                              arch != 'noarch') else None,
             arch=ARCH_MAP.get(arch, arch),
-            subdir=self.config.host_subdir,
+            subdir=self.config.target_subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
             timestamp=int(time.time() * 1000),
@@ -1478,7 +1479,8 @@ class MetaData(object):
         output_metadata.meta_path = ""
 
     def get_output_metadata(self, output):
-        self.config.target_subdir = output.get('target', self.config.host_subdir)
+        if output.get('target'):
+            self.config.target_subdir = output['target']
         output_metadata = self.copy()
         if self.name() != output.get('name'):
             self.reconcile_metadata_with_output_dict(output_metadata, output)

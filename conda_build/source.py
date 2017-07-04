@@ -74,7 +74,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
                 print("Success")
                 break
         else:  # no break
-            raise RuntimeError("Could not download %s" % fn)
+            raise RuntimeError("Could not download %s" % url)
 
     for tp in ('md5', 'sha1', 'sha256'):
         try:

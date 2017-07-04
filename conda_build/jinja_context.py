@@ -327,7 +327,7 @@ def compiler(language, config, permit_undefined_jinja=False):
 
     compiler = None
     nc = native_compiler(language, config)
-    if config.variant:
+    if config.variant and 'target_platform' in config.variant:
         language_compiler_key = '{}_compiler'.format(language)
         # fall back to native if language-compiler is not explicitly set in variant
         compiler = config.variant.get(language_compiler_key, nc)
