@@ -150,6 +150,9 @@ CRAN_KEYS = [
     'Maintainer',
 ]
 
+CRAN_KEYS_CAN_BE_BLANK = [
+    'Suggests'
+]
 
 # The following base/recommended package names are derived from R's source
 # tree (R-3.0.2/share/make/vars.mk).  Hopefully they don't change too much
@@ -297,10 +300,13 @@ def dict_from_cran_lines(lines):
         if not line:
             continue
         try:
-            (k, v) = line.split(': ', 1)
+            line = line.split(':')
+            if len(line) < 2 and line[0] in CRAN_KEYS_CAN_BE_BLANK:
+                continue
+            (k, v) = line[:2]
         except ValueError:
             sys.exit("Error: Could not parse metadata (%s)" % line)
-        d[k] = v
+        d[k.strip()] = v.strip()
         # if k not in CRAN_KEYS:
         #     print("Warning: Unknown key %s" % k)
     d['orig_lines'] = lines
