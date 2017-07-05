@@ -214,12 +214,13 @@ def copy_recipe(m):
         # each metadata field has a dict as a value and each value may contain
         # a list of strings that needs to be sorted alphabetically
         for field, value in output_metadata.meta.items():
-            for key in value.keys():
-                if '{}/{}' .format(field, key) not in ('build/script', 'test/commands'):
-                    try:
+            try:
+                for key in value.keys():
+                    section = '{}/{}' .format(field, key)
+                    if section not in ('build/script', 'test/commands'):
                         output_metadata.meta[field][key].sort()
-                    except AttributeError:
-                        pass
+            except AttributeError:
+                pass
 
         rendered = output_yaml(output_metadata)
 
