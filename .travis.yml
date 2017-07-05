@@ -5,22 +5,22 @@ python:
   - 3.6
 env:
   - CONDA_VERSION=4.3.x
-  - CONDA_VERSION=4.2.x
+  - CONDA_VERSION=4.4.x
 matrix:
   fast_finish: true
   exclude:
     - python: 2.7
-      env: CONDA_VERSION=4.3.x
+      env: CONDA_VERSION=4.4.x
   include:
     - python: 3.6
       env:
         - FLAKE8=true
-        - CONDA_VERSION=4.2.x
+        - CONDA_VERSION=4.3.x
       os: linux
   allow_failures:
     - env:
         - FLAKE8=true
-        - CONDA_VERSION=4.2.x
+        - CONDA_VERSION=4.3.x
       python: 3.6
 
 addons:
@@ -47,6 +47,7 @@ install:
   - conda update -q --all
   - if [ -n "$CONDA_VERSION" ]; then
         rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
         pushd conda;
         $HOME/miniconda/bin/python utils/setup-testing.py install;
@@ -62,7 +63,7 @@ install:
     else
       conda install -c conda-forge -q perl;
       conda install -q pytest pip pytest-cov numpy mock;
-      $HOME/miniconda/bin/pip install pytest-xdist pytest-catchlog pytest-mock;
+      $HOME/miniconda/bin/pip install pytest-xdist==1.16.0 pytest-catchlog pytest-mock;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
     fi
   - pip install --no-deps .

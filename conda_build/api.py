@@ -22,42 +22,123 @@ import sys as _sys
 from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
-from conda_build.utils import conda_43 as _conda_43
+from conda_build.utils import get_logger as _get_logger
+from os.path import expanduser
 
 
-def render(recipe_path, config=None, **kwargs):
-    from conda_build.render import render_recipe
+def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
+           finalize=True, **kwargs):
+    """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
+       templates evaluated.
+
+    Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
+    from conda_build.render import render_recipe, finalize_metadata
+    from conda_build.exceptions import DependencyNeedsBuildingError
+    from conda_build.conda_interface import NoPackagesFoundError
+    from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
-    return render_recipe(recipe_path, no_download_source=config.no_download_source, config=config)
+
+    metadata_tuples = render_recipe(recipe_path,
+                                    no_download_source=config.no_download_source,
+                                    config=config, variants=variants,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+    output_metas = OrderedDict()
+    for meta, download, render_in_env in metadata_tuples:
+        for od, om in meta.get_output_metadata_set(
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants):
+            # only show conda packages right now
+            if 'type' not in od or od['type'] == 'conda':
+                assert hasattr(om.config, 'variants')
+                if finalize and not om.final:
+                    try:
+                        om = finalize_metadata(om,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+                    except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                        if not permit_unsatisfiable_variants:
+                            raise
+                output_metas[om.dist()] = ((om, download, render_in_env))
+    return list(output_metas.values())
 
 
 def output_yaml(metadata, file_path=None):
+    """Save a rendered recipe in its final form to the path given by file_path"""
     from conda_build.render import output_yaml
     return output_yaml(metadata, file_path)
 
 
-def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None, **kwargs):
-    from conda_build.render import render_recipe, bldpkg_path
+def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, config=None,
+                         variants=None, **kwargs):
+    """Get output file paths for any packages that would be created by a recipe
+
+    Both split packages (recipes with more than one output) and build matrices,
+    created with variants, contribute to the list of file paths here.
+    """
+    from conda_build.render import bldpkg_path
+    from conda_build.conda_interface import string_types
     config = get_or_merge_config(config, **kwargs)
-    if hasattr(recipe_path_or_metadata, 'config'):
-        metadata = recipe_path_or_metadata
+    if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
+                                                                       string_types):
+        list_of_metas = [hasattr(item[0], 'config') for item in recipe_path_or_metadata
+                        if len(item) == 3]
+
+        if list_of_metas and all(list_of_metas):
+            metadata = recipe_path_or_metadata
+        else:
+            raise ValueError("received mixed list of metas: {}".format(recipe_path_or_metadata))
+    elif isinstance(recipe_path_or_metadata, string_types):
+        # first, render the parent recipe (potentially multiple outputs, depending on variants).
+        metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
+                            variants=variants, config=config, **kwargs)
     else:
-        metadata, _, _ = render_recipe(recipe_path_or_metadata,
-                                       no_download_source=no_download_source,
-                                       config=config)
-    return bldpkg_path(metadata)
+        assert hasattr(recipe_path_or_metadata, 'config'), ("Expecting metadata object - got {}"
+                                                            .format(recipe_path_or_metadata))
+        metadata = [(recipe_path_or_metadata, None, None)]
+    #    Next, loop over outputs that each metadata defines
+    outs = []
+    for (m, _, _) in metadata:
+        if m.skip():
+            outs.append("Skipped: {} defines build/skip for this configuration."
+                        .format(m.path))
+        else:
+            outs.append(bldpkg_path(m))
+    return sorted(list(set(outs)))
 
 
-def check(recipe_path, no_download_source=False, config=None, **kwargs):
-    from conda_build.render import render_recipe
+def get_output_file_path(recipe_path_or_metadata, no_download_source=False, config=None,
+                         variants=None, **kwargs):
+    """Get output file paths for any packages that would be created by a recipe
+
+    Both split packages (recipes with more than one output) and build matrices,
+    created with variants, contribute to the list of file paths here.
+    """
+    log = _get_logger(__name__)
+    log.warn("deprecation warning: this function has been renamed to get_output_file_paths, "
+             "to reflect that potentially multiple paths are returned.  This function will be "
+             "removed in the conda-build 4.0 release.")
+    return get_output_file_paths(recipe_path_or_metadata,
+                                 no_download_source=no_download_source,
+                                 config=config, variants=variants, **kwargs)
+
+
+def check(recipe_path, no_download_source=False, config=None, variants=None, **kwargs):
+    """Check validity of input recipe path
+
+    Verifies that recipe can be completely rendered, and that fields of the rendered recipe are
+    valid fields, with some value checking.
+    """
     config = get_or_merge_config(config, **kwargs)
-    metadata, _, _ = render_recipe(recipe_path, no_download_source=no_download_source,
-                                   config=config)
-    return metadata.check_fields()
+    metadata = render(recipe_path, no_download_source=no_download_source,
+                      config=config, variants=variants)
+    return all(m[0].check_fields() for m in metadata)
 
 
 def build(recipe_paths_or_metadata, post=None, need_source_download=True,
-          build_only=False, notest=False, config=None, **kwargs):
+          build_only=False, notest=False, config=None, variants=None, **kwargs):
+    """Run the build step.
+
+    If recipe paths are provided, renders recipe before building.
+    Tests built packages by default.  notest=True to skip test."""
+
     import os
     from conda_build.build import build_tree
     from conda_build.conda_interface import string_types
@@ -76,10 +157,13 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
     for recipe in paths:
-        try:
-            recipes.append(find_recipe(recipe))
-        except IOError:
-            pass
+        if (os.path.isdir(recipe) or
+                (os.path.isfile(recipe) and
+                 os.path.basename(recipe) in ('meta.yaml', 'conda.yaml'))):
+            try:
+                recipes.append(find_recipe(recipe))
+            except IOError:
+                continue
     metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
     recipes.extend(metadata)
     absolute_recipes = []
@@ -93,11 +177,17 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
                 raise ValueError("Path to recipe did not exist: {}".format(recipe))
             absolute_recipes.append(recipe)
 
+    if not absolute_recipes:
+        raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
-                      need_source_download=need_source_download, config=config)
+                      need_source_download=need_source_download, config=config, variants=variants)
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
+    """Run tests on either a package or a recipe folder
+
+    For a recipe folder, it renders the recipe enough to know what package to download, and obtains
+    it from your currently configuured channels."""
     from conda_build.build import test
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
@@ -114,45 +204,6 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
                            move_broken=move_broken)
 
     return test_result
-
-
-def keygen(name="conda_build_signing", size=2048):
-    """Create a private/public key pair for package verification purposes
-
-    name: string name of key to be generated.
-    size: length of the RSA key, in bits.  Should be power of 2.
-    """
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import keygen
-    return keygen(name, size)
-
-
-def import_sign_key(private_key_path, new_name=None):
-    """
-    private_key_path: specify a private key to be imported.  The public key is
-          generated automatically.  Specify ```new_name``` also to rename the
-          private key in the copied location.
-    """
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import import_key
-    return import_key(private_key_path, new_name=new_name)
-
-
-def sign(file_path, key_name_or_path=None):
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import sign_and_write
-    return sign_and_write(file_path, key_name_or_path)
-
-
-def verify(file_path):
-    """Verify a signed package"""
-    if _conda_43():
-        raise ValueError("Signing is not supported with Conda v4.3 and above.  Aborting.")
-    from .sign import verify
-    return verify(file_path)
 
 
 def list_skeletons():
@@ -179,6 +230,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     if recursive:
         kwargs.update({'recursive': recursive})
     if output_dir != ".":
+        output_dir = expanduser(output_dir)
         kwargs.update({'output_dir': output_dir})
 
     # here we're dumping all extra kwargs as attributes on the config object.  We'll extract
@@ -244,11 +296,11 @@ def test_installable(channel='defaults'):
 
 
 def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all_packages=False,
-                     show_files=False, groupby='package'):
+                     show_files=False, groupby='package', sysroot=''):
     from .inspect import inspect_linkages
     packages = _ensure_list(packages)
     return inspect_linkages(packages, prefix=prefix, untracked=untracked, all_packages=all_packages,
-                            show_files=show_files, groupby=groupby)
+                            show_files=show_files, groupby=groupby, sysroot=sysroot)
 
 
 def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):
@@ -259,8 +311,9 @@ def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):
 
 def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     from conda_build.tarcheck import check_prefix_lengths
+    config = Config(prefix_length=min_prefix_length)
     packages = _ensure_list(packages)
-    prefix_lengths = check_prefix_lengths(packages, min_prefix_length)
+    prefix_lengths = check_prefix_lengths(packages, config)
     if prefix_lengths:
         print("Packages with binary prefixes shorter than %d characters:"
                 % min_prefix_length)
@@ -272,12 +325,21 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
     return len(prefix_lengths) == 0
 
 
+def inspect_hash_inputs(packages):
+    """Return dictionaries of data that created the hash value (h????) for the provided package(s)
+
+    Returns a dictionary with a key for each input package and a value of the dictionary loaded
+    from the package's info/hash_input.json file
+    """
+    from .inspect import get_hash_input
+    return get_hash_input(packages)
+
+
 def create_metapackage(name, version, entry_points=(), build_string=None, build_number=0,
                        dependencies=(), home=None, license_name=None, summary=None,
-                       config=None):
+                       config=None, **kwargs):
     from .metapackage import create_metapackage
-    if not config:
-        config = Config()
+    config = get_or_merge_config(config, **kwargs)
     return create_metapackage(name=name, version=version, entry_points=entry_points,
                               build_string=build_string, build_number=build_number,
                               dependencies=dependencies, home=home,
@@ -298,4 +360,5 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         config = Config()
 
     for path in dir_paths:
-        update_index(path, config, force=force, check_md5=check_md5, remove=remove)
+        update_index(path, force=force, check_md5=check_md5, remove=remove, verbose=config.verbose,
+                     locking=config.locking, timeout=config.timeout)

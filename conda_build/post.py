@@ -1,16 +1,13 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+import fnmatch
 from functools import partial
 from glob import glob
 import io
 import locale
-import mmap
 import re
 import os
-import fnmatch
-from os.path import (basename, dirname, join, splitext, isdir, isfile, exists,
-                     islink, realpath, relpath, normpath)
 import stat
 from subprocess import call, check_output
 import sys
@@ -26,23 +23,18 @@ from .conda_interface import md5_file
 from .conda_interface import PY3
 
 from conda_build import utils
+from conda_build.os_utils.pyldd import is_codefile
 
-if sys.platform.startswith('linux'):
-    from conda_build.os_utils import elf
-elif sys.platform == 'darwin':
+if sys.platform == 'darwin':
     from conda_build.os_utils import macho
-
-SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
 
 
 def is_obj(path):
-    assert sys.platform != 'win32'
-    return bool((sys.platform.startswith('linux') and elf.is_elf(path)) or
-                (sys.platform == 'darwin' and macho.is_macho(path)))
+    return is_codefile(path)
 
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
-    path = join(prefix, f)
+    path = os.path.join(prefix, f)
     if is_obj(path):
         return
     elif os.path.islink(path):
@@ -53,40 +45,59 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     if os.stat(path).st_size == 0:
         return
 
+    bytes_ = False
+
     with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
         try:
             data = fi.read(100)
+            fi.seek(0)
         except UnicodeDecodeError:  # file is binary
             return
 
+        SHEBANG_PAT = re.compile(r'^#!.+$', re.M)
+
         # regexp on the memory mapped file so we only read it into
         # memory if the regexp matches.
-        mm = mmap.mmap(fi.fileno(), 0)
-        m = SHEBANG_PAT.match(mm)
+        try:
+            mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
+        except OSError:
+            mm = fi.read()
+        try:
+            m = SHEBANG_PAT.match(mm)
+        except TypeError:
+            SHEBANG_PAT = re.compile(br'^#!.+$', re.M)
+            bytes_ = True
+            m = SHEBANG_PAT.match(mm)
 
-        if not (m and b'python' in m.group()):
+        python_str = b'python' if bytes_ else 'python'
+
+        if not (m and python_str in m.group()):
             return
 
         data = mm[:]
 
-    encoding = sys.stdout.encoding or 'utf8'
-
-    py_exec = ('/bin/bash ' + prefix + '/bin/pythonw'
+    py_exec = '#!' + ('/bin/bash ' + prefix + '/bin/pythonw'
                if sys.platform == 'darwin' and osx_is_app else
-               prefix + '/bin/' + basename(build_python))
-    new_data = SHEBANG_PAT.sub(b'#!' + py_exec.encode(encoding), data, count=1)
+               prefix + '/bin/' + os.path.basename(build_python))
+    if bytes_ and hasattr(py_exec, 'encode'):
+        py_exec = py_exec.encode()
+    new_data = SHEBANG_PAT.sub(py_exec, data, count=1)
     if new_data == data:
         return
     print("updating shebang:", f)
     with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
-        fo.write(new_data.decode(encoding))
+        try:
+            fo.write(new_data)
+        except TypeError:
+            fo.write(new_data.decode())
     os.chmod(path, 0o775)
 
 
 def write_pth(egg_path, config):
-    fn = basename(egg_path)
-    with open(join(utils.get_site_packages(config.build_prefix),
-                   '%s.pth' % (fn.split('-')[0])), 'w') as fo:
+    fn = os.path.basename(egg_path)
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    with open(os.path.join(utils.get_site_packages(config.build_prefix, py_ver),
+                           '%s.pth' % (fn.split('-')[0])), 'w') as fo:
         fo.write('./%s\n' % fn)
 
 
@@ -95,34 +106,36 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
     """
-    absfiles = [join(prefix, f) for f in files]
-    sp_dir = utils.get_site_packages(prefix)
-    for egg_path in glob(join(sp_dir, '*-py*.egg')):
-        if isdir(egg_path):
-            if preserve_egg_dir or not any(join(egg_path, i) in absfiles for i
+    absfiles = [os.path.join(prefix, f) for f in files]
+    py_ver = '.'.join(config.variant['python'].split('.')[:2])
+    sp_dir = utils.get_site_packages(prefix, py_ver)
+    for egg_path in glob(os.path.join(sp_dir, '*-py*.egg')):
+        if os.path.isdir(egg_path):
+            if preserve_egg_dir or not any(os.path.join(egg_path, i) in absfiles for i
                     in walk_prefix(egg_path, False, windows_forward_slashes=False)):
                 write_pth(egg_path, config=config)
                 continue
 
             print('found egg dir:', egg_path)
             try:
-                os.rename(join(egg_path, 'EGG-INFO'),
+                os.rename(os.path.join(egg_path, 'EGG-INFO'),
                           egg_path + '-info')
             except OSError:
                 pass
-            utils.rm_rf(join(egg_path, 'EGG-INFO'))
+            utils.rm_rf(os.path.join(egg_path, 'EGG-INFO'))
             for fn in os.listdir(egg_path):
                 if fn == '__pycache__':
-                    utils.rm_rf(join(egg_path, fn))
+                    utils.rm_rf(os.path.join(egg_path, fn))
                 else:
                     # this might be a name-space package
                     # so the package directory already exists
                     # from another installed dependency
-                    if os.path.exists(join(sp_dir, fn)):
+                    if os.path.exists(os.path.join(sp_dir, fn)):
                         try:
-                            utils.copy_into(join(egg_path, fn), join(sp_dir, fn), config.timeout,
+                            utils.copy_into(os.path.join(egg_path, fn),
+                                            os.path.join(sp_dir, fn), config.timeout,
                                             locking=config.locking)
-                            utils.rm_rf(join(egg_path, fn))
+                            utils.rm_rf(os.path.join(egg_path, fn))
                         except IOError as e:
                             fn = os.path.basename(str(e).split()[-1])
                             raise IOError("Tried to merge folder {egg_path} into {sp_dir}, but {fn}"
@@ -132,15 +145,15 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                                           "this conflict."
                                           .format(egg_path=egg_path, sp_dir=sp_dir, fn=fn))
                     else:
-                        os.rename(join(egg_path, fn), join(sp_dir, fn))
+                        os.rename(os.path.join(egg_path, fn), os.path.join(sp_dir, fn))
 
-        elif isfile(egg_path):
+        elif os.path.isfile(egg_path):
             if egg_path not in absfiles:
                 continue
             print('found egg:', egg_path)
             write_pth(egg_path, config=config)
 
-    utils.rm_rf(join(sp_dir, 'easy-install.pth'))
+    utils.rm_rf(os.path.join(sp_dir, 'easy-install.pth'))
 
 
 def rm_py_along_so(prefix):
@@ -148,10 +161,10 @@ def rm_py_along_so(prefix):
     for root, _, files in os.walk(prefix):
         for fn in files:
             if fn.endswith(('.so', '.pyd')):
-                name, _ = splitext(fn)
+                name, _ = os.path.splitext(fn)
                 for ext in '.py', '.pyc', '.pyo':
                     if name + ext in files:
-                        os.unlink(join(root, name + ext))
+                        os.unlink(os.path.join(root, name + ext))
 
 
 def rm_pyo(files, prefix):
@@ -220,10 +233,9 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
 
 
 def find_lib(link, prefix, path=None):
-    from conda_build.build import prefix_files
-    files = prefix_files(prefix)
+    files = utils.prefix_files(prefix)
     if link.startswith(prefix):
-        link = normpath(link[len(prefix) + 1:])
+        link = os.path.normpath(link[len(prefix) + 1:])
         if link not in files:
             sys.exit("Error: Could not find %s" % link)
         return link
@@ -234,21 +246,21 @@ def find_lib(link, prefix, path=None):
         # change it.
         return
     if '/' not in link or link.startswith('@executable_path/'):
-        link = basename(link)
+        link = os.path.basename(link)
         file_names = defaultdict(list)
         for f in files:
-            file_names[basename(f)].append(f)
+            file_names[os.path.basename(f)].append(f)
         if link not in file_names:
             sys.exit("Error: Could not find %s" % link)
         if len(file_names[link]) > 1:
-            if path and basename(path) == link:
+            if path and os.path.basename(path) == link:
                 # The link is for the file itself, just use it
                 return path
             # Allow for the possibility of the same library appearing in
             # multiple places.
             md5s = set()
             for f in file_names[link]:
-                md5s.add(md5_file(join(prefix, f)))
+                md5s.add(md5_file(os.path.join(prefix, f)))
             if len(md5s) > 1:
                 sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
             else:
@@ -266,7 +278,7 @@ def osx_ch_link(path, link_dict, prefix):
     if not link_loc:
         return
 
-    lib_to_link = relpath(dirname(link_loc), 'lib')
+    lib_to_link = os.path.relpath(os.path.dirname(link_loc), 'lib')
     # path_to_lib = utils.relative(path[len(prefix) + 1:])
 
     # e.g., if
@@ -286,7 +298,7 @@ def osx_ch_link(path, link_dict, prefix):
     # @loader_path/path_to_lib/lib_to_link/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
-    ret = '@rpath/%s/%s' % (lib_to_link, basename(link))
+    ret = '@rpath/%s/%s' % (lib_to_link, os.path.basename(link))
 
     # XXX: IF the above fails for whatever reason, the below can be used
     # TODO: This might contain redundant ..'s if link and path are both in
@@ -319,9 +331,9 @@ def mk_relative_osx(path, prefix, build_prefix=None):
     if names:
         # Add an rpath to every executable to increase the chances of it
         # being found.
-        rpath = join('@loader_path',
-                     relpath(join(prefix, 'lib'),
-                             dirname(path)), '').replace('/./', '/')
+        rpath = os.path.join('@loader_path',
+                     os.path.relpath(os.path.join(prefix, 'lib'),
+                             os.path.dirname(path)), '').replace('/./', '/')
         macho.add_rpath(path, rpath, verbose=True)
 
         # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
@@ -338,8 +350,8 @@ def mk_relative_osx(path, prefix, build_prefix=None):
 def mk_relative_linux(f, prefix, rpaths=('lib',)):
     'Respects the original values and converts abs to $ORIGIN-relative'
 
-    elf = join(prefix, f)
-    origin = dirname(elf)
+    elf = os.path.join(prefix, f)
+    origin = os.path.dirname(elf)
 
     patchelf = external.find_executable('patchelf', prefix)
     try:
@@ -350,7 +362,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
-        if old.startswith('$ORIGIN/'):
+        if old.startswith('$ORIGIN'):
             new.append(old)
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
@@ -387,7 +399,7 @@ def assert_relative_osx(path, prefix):
 
 def mk_relative(m, f, prefix):
     assert sys.platform != 'win32'
-    path = join(prefix, f)
+    path = os.path.join(prefix, f)
     if not is_obj(path):
         return
 
@@ -401,10 +413,10 @@ def fix_permissions(files, prefix):
     print("Fixing permissions")
     for root, dirs, _ in os.walk(prefix):
         for dn in dirs:
-            lchmod(join(root, dn), 0o775)
+            lchmod(os.path.join(root, dn), 0o775)
 
     for f in files:
-        path = join(prefix, f)
+        path = os.path.join(prefix, f)
         st = os.lstat(path)
         old_mode = stat.S_IMODE(st.st_mode)
         new_mode = old_mode
@@ -414,7 +426,11 @@ def fix_permissions(files, prefix):
         # ensure user and group can write and all can read
         new_mode = new_mode | stat.S_IWUSR | stat.S_IWGRP | stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH  # noqa
         if old_mode != new_mode:
-            lchmod(path, new_mode)
+            try:
+                lchmod(path, new_mode)
+            except (OSError, utils.PermissionError) as e:
+                log = utils.get_logger(__name__)
+                log.warn(str(e))
 
 
 def post_build(m, files, prefix, build_python, croot):
@@ -445,12 +461,12 @@ def check_symlinks(files, prefix, croot):
     if readlink is False:
         return  # Not on Unix system
     msgs = []
-    real_build_prefix = realpath(prefix)
+    real_build_prefix = os.path.realpath(prefix)
     for f in files:
-        path = join(real_build_prefix, f)
-        if islink(path):
+        path = os.path.join(real_build_prefix, f)
+        if os.path.islink(path):
             link_path = readlink(path)
-            real_link_path = realpath(path)
+            real_link_path = os.path.realpath(path)
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
@@ -468,7 +484,7 @@ def check_symlinks(files, prefix, croot):
                     # such crazy things don't happen.
                     print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
-                    os.symlink(relpath(real_link_path, dirname(path)), path)
+                    os.symlink(os.path.relpath(real_link_path, os.path.dirname(path)), path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(croot):
@@ -500,33 +516,17 @@ def make_hardlink_copy(path, prefix):
         utils.rm_rf(dest)
 
 
-def get_build_metadata(m, config):
-    src_dir = config.work_dir
-
-    if "build" not in m.meta:
-        m.meta["build"] = {}
-    if exists(join(src_dir, '__conda_version__.txt')):
-        print("Deprecation warning: support for __conda_version__ will be removed in Conda build 3.0."  # noqa
+def get_build_metadata(m):
+    src_dir = m.config.work_dir
+    if os.path.exists(os.path.join(src_dir, '__conda_version__.txt')):
+        raise ValueError("support for __conda_version__ has been removed as of Conda-build 3.0."
               "Try Jinja templates instead: "
               "http://conda.pydata.org/docs/building/meta-yaml.html#templating-with-jinja")
-        with open(join(src_dir, '__conda_version__.txt')) as f:
-            version = f.read().strip()
-            print("Setting version from __conda_version__.txt: %s" % version)
-            m.meta['package']['version'] = version
-    if exists(join(src_dir, '__conda_buildnum__.txt')):
-        print("Deprecation warning: support for __conda_buildnum__ will be removed in Conda build 3.0."  # noqa
+    if os.path.exists(os.path.join(src_dir, '__conda_buildnum__.txt')):
+        raise ValueError("support for __conda_buildnum__ has been removed as of Conda-build 3.0."
               "Try Jinja templates instead: "
               "http://conda.pydata.org/docs/building/meta-yaml.html#templating-with-jinja")
-        with open(join(src_dir, '__conda_buildnum__.txt')) as f:
-            build_number = f.read().strip()
-            print("Setting build number from __conda_buildnum__.txt: %s" %
-                  build_number)
-            m.meta['build']['number'] = build_number
-    if exists(join(src_dir, '__conda_buildstr__.txt')):
-        print("Deprecation warning: support for __conda_buildstr__ will be removed in Conda build 3.0."  # noqa
+    if os.path.exists(os.path.join(src_dir, '__conda_buildstr__.txt')):
+        raise ValueError("support for __conda_buildstr__ has been removed as of Conda-build 3.0."
               "Try Jinja templates instead: "
               "http://conda.pydata.org/docs/building/meta-yaml.html#templating-with-jinja")
-        with open(join(src_dir, '__conda_buildstr__.txt')) as f:
-            buildstr = f.read().strip()
-            print("Setting version from __conda_buildstr__.txt: %s" % buildstr)
-            m.meta['build']['string'] = buildstr

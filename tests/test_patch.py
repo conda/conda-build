@@ -1,6 +1,11 @@
 import os
+import tempfile
 
-from conda_build.source import _guess_patch_strip_level, apply_patch
+import pytest
+
+from conda_build.source import (_ensure_unix_line_endings, _ensure_win_line_endings,
+                                _guess_patch_strip_level, apply_patch)
+from conda_build.utils import on_win
 
 
 def test_patch_strip_level(testing_workdir, monkeypatch):
@@ -23,7 +28,8 @@ def test_patch_strip_level(testing_workdir, monkeypatch):
     monkeypatch.chdir(testing_workdir)
 
 
-def test_patch(testing_workdir, test_config):
+@pytest.fixture
+def patch_files(testing_workdir):
     with open('file-deletion.txt', 'w') as f:
         f.write('hello\n')
     with open('file-modification.txt', 'w') as f:
@@ -46,11 +52,47 @@ def test_patch(testing_workdir, test_config):
         f.write('@@ -1 +1 @@\n')
         f.write('-hello\n')
         f.write('+43770\n')
-        f.close()
-        apply_patch('.', patchfile, test_config)
-        assert not os.path.exists('file-deletion.txt')
-        assert os.path.exists('file-creation.txt')
-        assert os.path.exists('file-modification.txt')
-        with open('file-modification.txt', 'r') as modified:
-            lines = modified.readlines()
-        assert lines[0] == '43770\n'
+    return patchfile
+
+
+def test_patch(patch_files, testing_config):
+    apply_patch('.', patch_files, testing_config)
+    assert not os.path.exists('file-deletion.txt')
+    assert os.path.exists('file-creation.txt')
+    assert os.path.exists('file-modification.txt')
+    with open('file-modification.txt', 'r') as modified:
+        lines = modified.readlines()
+    assert lines[0] == '43770\n'
+
+
+def test_ensure_unix_line_endings_with_nonutf8_characters():
+    in_path = tempfile.mktemp()
+    with open(in_path, "wb") as fp:
+        fp.write(b"\xf1\r\n")  # tilde-n encoded in latin1
+
+    out_path = _ensure_unix_line_endings(in_path)
+    with open(out_path, "rb") as fp:
+        assert fp.read() == b"\xf1\n"
+
+    os.remove(in_path)
+    os.remove(out_path)
+
+
+@pytest.mark.skipif(not on_win, reason="insanity only on Windows")
+def test_patch_unix_source_win_patch(patch_files, testing_config):
+    _ensure_unix_line_endings('file-modification.txt')
+    _ensure_win_line_endings(patch_files)
+    apply_patch('.', patch_files, testing_config)
+    with open('file-modification.txt', 'r') as modified:
+        lines = modified.readlines()
+    assert lines[0] == '43770\n'
+
+
+@pytest.mark.skipif(not on_win, reason="insanity only on Windows")
+def test_patch_win_source_unix_patch(patch_files, testing_config):
+    _ensure_win_line_endings('file-modification.txt')
+    _ensure_unix_line_endings(patch_files)
+    apply_patch('.', patch_files, testing_config)
+    with open('file-modification.txt', 'r') as modified:
+        lines = modified.readlines()
+    assert lines[0] == '43770\n'

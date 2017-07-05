@@ -5,10 +5,11 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
 import logging
+from os.path import expanduser
+from pprint import pprint
 import sys
 
-from conda_build.conda_interface import (ArgumentParser, add_parser_prefix, InstalledPackages,
-                                         get_prefix)
+from conda_build.conda_interface import ArgumentParser, add_parser_prefix, get_prefix
 
 from conda_build import api
 
@@ -46,7 +47,7 @@ libraries that ought to be dependent conda packages.  """
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer = InstalledPackages
+    )
     linkages.add_argument(
         '--untracked',
         action='store_true',
@@ -65,6 +66,12 @@ libraries that ought to be dependent conda packages.  """
         choices=('package', 'dependency'),
         help="""Attribute to group by (default: %(default)s). Useful when used
         in conjunction with --all.""",
+    )
+    linkages.add_argument(
+        '--sysroot',
+        action='store',
+        help='System root in which to look for system libraries.',
+        default='',
     )
     linkages.add_argument(
         '--all',
@@ -89,7 +96,7 @@ package.
         action='store',
         nargs='*',
         help='Conda packages to inspect.',
-    ).completer = InstalledPackages
+    )
     objects.add_argument(
         '--untracked',
         action='store_true',
@@ -157,6 +164,17 @@ Tools for investigating conda channels.
         type=int,
     )
 
+    hash_inputs = subcommand.add_parser(
+        "hash-inputs",
+        help="Show data used to compute hash identifier (h????) for package",
+        description="Show data used to compute hash identifier (h????) for package",
+    )
+    hash_inputs.add_argument(
+        'packages',
+        action='store',
+        nargs='*',
+        help='Conda packages to inspect.',
+    )
     args = p.parse_args(args)
     return p, args
 
@@ -176,12 +194,15 @@ def execute(args):
     elif args.subcommand == 'linkages':
         print(api.inspect_linkages(args.packages, prefix=get_prefix(args),
                                    untracked=args.untracked, all_packages=args.all,
-                                   show_files=args.show_files, groupby=args.groupby))
+                                   show_files=args.show_files, groupby=args.groupby,
+                                   sysroot=expanduser(args.sysroot)))
     elif args.subcommand == 'objects':
         print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
     elif args.subcommand == 'prefix-lengths':
         if not api.inspect_prefix_length(args.packages, min_prefix_length=args.min_prefix_length):
             sys.exit(1)
+    elif args.subcommand == 'hash-inputs':
+        pprint(api.inspect_hash_inputs(args.packages))
     else:
         raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))
 

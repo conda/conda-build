@@ -1,0 +1,11 @@
+package:
+  name: r-test_conda_build_r_tests
+  version: 1.0
+
+requirements:
+  run:
+    - r-base
+
+tests:
+  imports:
+    - r-boot

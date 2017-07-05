@@ -1,0 +1,2 @@
+c_compiler: "compiler_linux-64"
+target_platform: "linux-imx351uc"

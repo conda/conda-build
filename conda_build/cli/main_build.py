@@ -16,11 +16,11 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
-from conda_build.cli.main_render import (set_language_env_vars, RecipeCompleter,
-                                         get_render_parser, bldpkg_path)
-from conda_build.conda_interface import cc, add_parser_channels, url_path
+from conda_build.conda_interface import (add_parser_channels, url_path, binstar_upload,
+                                         cc_conda_build)
+from conda_build.cli.main_render import get_render_parser
 import conda_build.source as source
-from conda_build.utils import print_skip_message, LoggingContext
+from conda_build.utils import LoggingContext
 from conda_build.config import Config
 
 on_win = (sys.platform == 'win32')
@@ -46,21 +46,21 @@ different sets of packages."""
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
         dest='anaconda_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
         dest='anaconda_upload',
-        default=cc.binstar_upload,
+        default=binstar_upload,
     )
     p.add_argument(
         "--no-include-recipe",
         action="store_false",
         help="Don't include the recipe inside the built package.",
         dest='include_recipe',
-        default=True,
+        default=cc_conda_build.get('include_recipe', 'true').lower() == 'true',
     )
     p.add_argument(
         '-s', "--source",
@@ -95,21 +95,22 @@ different sets of packages."""
         'recipe',
         metavar='RECIPE_PATH',
         nargs='+',
-        choices=RecipeCompleter(),
         help="Path to recipe directory.  Pass 'purge' here to clean the "
         "work and test intermediates.",
     )
     p.add_argument(
         '--skip-existing',
         action='store_true',
-        help="""Skip recipes for which there already exists an existing build
-        (locally or in the channels). """
+        help=("Skip recipes for which there already exists an existing build"
+              "(locally or in the channels)."),
+        default=cc_conda_build.get('skip_existing', 'false').lower() == 'true',
     )
     p.add_argument(
         '--keep-old-work',
         action='store_true',
-        dest='dirty',
-        help="Deprecated.  Same as --dirty."
+        dest='keep_old_work',
+        help="Do not remove anything from environment, even after successful"
+             "build and test."
     )
     p.add_argument(
         '--dirty',
@@ -121,6 +122,7 @@ different sets of packages."""
         '-q', "--quiet",
         action="store_true",
         help="do not display progress bar",
+        default=cc_conda_build.get('quiet', 'false').lower() == 'true',
     )
     p.add_argument(
         '--debug',
@@ -129,16 +131,25 @@ different sets of packages."""
     )
     p.add_argument(
         '--token',
-        help="Token to pass through to anaconda upload"
+        help="Token to pass through to anaconda upload",
+        default=cc_conda_build.get('anaconda_token'),
     )
     p.add_argument(
         '--user',
-        help="User/organization to upload packages to on anaconda.org or pypi"
+        help="User/organization to upload packages to on anaconda.org or pypi",
+        default=cc_conda_build.get('user'),
+    )
+    p.add_argument(
+        '--no-force-upload',
+        help="Disable force upload to anaconda.org, preventing overwriting any existing packages",
+        dest='force_upload',
+        default=True,
+        action='store_false',
     )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
         '--password',
-        help="password to use when uploading packages to pypi"
+        help="password to use when uploading packages to pypi",
     )
     pypi_grp.add_argument(
         '--sign', default=False,
@@ -154,17 +165,19 @@ different sets of packages."""
     )
     pypi_grp.add_argument(
         '--config-file',
-        help="path to .pypirc file to use when uploading to pypi"
+        help="path to .pypirc file to use when uploading to pypi",
+        default=cc_conda_build.get('pypirc'),
     )
     pypi_grp.add_argument(
-        '--repository', '-r', default='pypitest',
-        help="PyPI repository to upload to"
+        '--repository', '-r', help="PyPI repository to upload to",
+        default=cc_conda_build.get('pypi_repository', 'pypitest'),
     )
     p.add_argument(
         "--no-activate",
         action="store_false",
         help="do not activate the build and test envs; just prepend to PATH",
         dest='activate',
+        default=cc_conda_build.get('activate', 'true').lower() == 'true',
     )
     p.add_argument(
         "--no-build-id",
@@ -172,6 +185,8 @@ different sets of packages."""
         help=("do not generate unique build folder names.  Use if having issues with "
               "paths being too long."),
         dest='set_build_id',
+        # note: inverted - dest stores positive logic
+        default=cc_conda_build.get('set_build_id', 'true').lower() == 'true',
     )
     p.add_argument(
         "--croot",
@@ -181,7 +196,8 @@ different sets of packages."""
     p.add_argument(
         "--no-verify",
         action="store_true",
-        help=("do not run verification on recipes or packages when building")
+        help="do not run verification on recipes or packages when building",
+        default=cc_conda_build.get('no_verify', 'false').lower() == 'true',
     )
     p.add_argument(
         "--output-folder",
@@ -226,7 +242,17 @@ different sets of packages."""
               " you package may depend on files that are not included in the package, and may pass"
               "tests, but ultimately fail on installed systems.")
     )
-
+    p.add_argument(
+        "--long-test-prefix", default=True, action="store_false",
+        help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
+              "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
+              "default in conda-build 3.0+")
+    )
+    p.add_argument(
+        "--no-long-test-prefix", dest="long_test_prefix", action="store_false",
+        help=("Do not use a long prefix for the test prefix, as well as the build prefix."
+              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  ")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)
@@ -235,17 +261,14 @@ different sets of packages."""
 
 def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
-        metadata, _, _ = api.render(recipe, config=config)
-        if metadata.skip():
-            print_skip_message(metadata)
-        else:
-            print(bldpkg_path(metadata))
+        paths = api.get_output_file_paths(recipe)
+        print('\n'.join(sorted(paths)))
 
 
 def source_action(recipe, config):
-    metadata, _, _ = api.render(recipe, config=config)
-    source.provide(metadata, config=config)
-    print('Source tree in:', config.work_dir)
+    metadata = api.render(recipe, config=config)[0][0]
+    source.provide(metadata)
+    print('Source tree in:', metadata.config.work_dir)
 
 
 def test_action(recipe, config):
@@ -262,7 +285,7 @@ def execute(args):
     build.check_external()
 
     # change globals in build module, see comment there as well
-    channel_urls = args.channel or ()
+    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
     config.channel_urls = []
 
     for url in channel_urls:
@@ -287,14 +310,12 @@ def execute(args):
         config.clean_pkgs()
         return
 
-    set_language_env_vars(args, parser, config=config, execute=execute)
-
     action = None
     if args.output:
         action = output_action
-        logging.basicConfig(level=logging.ERROR)
         config.verbose = False
         config.quiet = True
+        config.debug = False
     elif args.test:
         action = test_action
     elif args.source:
@@ -303,10 +324,7 @@ def execute(args):
         action = check_action
 
     if action:
-        for recipe in args.recipe:
-            action(recipe, config)
-        outputs = []
-
+        outputs = [action(recipe, config) for recipe in args.recipe]
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
                             notest=args.notest, already_built=None, config=config,

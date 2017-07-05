@@ -1,0 +1,9 @@
+package:
+  name: test_r_env_var_present
+  version: 1.0
+
+requirements:
+  build:
+    - r-base
+  run:
+    - r-base

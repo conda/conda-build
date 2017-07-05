@@ -1,0 +1,9 @@
+package:
+  name: compatible
+  version: 1.0
+
+requirements:
+  build:
+    - libpng
+  run:
+    - {{ pin_compatible('libpng') }}

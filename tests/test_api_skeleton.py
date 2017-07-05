@@ -1,4 +1,5 @@
 import os
+import sys
 
 from pkg_resources import parse_version
 import pytest
@@ -8,28 +9,33 @@ from conda_build import api
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
-repo_packages = [('', 'pypi', 'pip', "8.1.2"),
-                 ('r', 'cran', 'nmf', ""),
-                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ""),
-                 ('perl', 'cpan', 'Moo', ""),
-                 # ('lua', luarocks', 'LuaSocket'),
+repo_packages = [('', 'pypi', 'pip', '8.1.2'),
+                 ('r', 'cran', 'nmf', ''),
+                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ''),
+                 ('perl', 'cpan', 'Moo', ''),
+                 ('', 'rpm', 'libX11-devel', ''),
+                 # ('lua', luarocks', 'LuaSocket', ''),
                  ]
 
 
-@pytest.mark.parametrize("prefix,repo,package, version", repo_packages)
-def test_repo(prefix, repo, package, version, testing_workdir, test_config):
-    api.skeletonize(package, repo, version=version, output_dir=testing_workdir, config=test_config)
+@pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
+def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
+    api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
+                    config=testing_config)
     try:
         base_package, _ = os.path.splitext(os.path.basename(package))
         package_name = "-".join([prefix, base_package]) if prefix else base_package
-        assert os.path.isdir(os.path.join(testing_workdir, package_name.lower()))
+        contents = os.listdir(testing_workdir)
+        assert len([content for content in contents
+                    if content.startswith(package_name.lower()) and
+                    os.path.isdir(os.path.join(testing_workdir, content))])
     except:
         print(os.listdir(testing_workdir))
         raise
 
 
-def test_name_with_version_specified(testing_workdir, test_config):
-    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=test_config)
+def test_name_with_version_specified(testing_workdir, testing_config):
+    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config)
     with open('{}/test-skeleton/sympy-0.7.5/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
     with open('sympy/meta.yaml') as f:
@@ -37,10 +43,10 @@ def test_name_with_version_specified(testing_workdir, test_config):
     assert expected == actual, (expected, actual)
 
 
-def test_pypi_url(testing_workdir, test_config):
+def test_pypi_url(testing_workdir, testing_config):
     api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
                     'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
-                    repo='pypi', config=test_config)
+                    repo='pypi', config=testing_config)
     with open('{}/test-skeleton/sympy-0.7.5-url/meta.yaml'.format(thisdir)) as f:
         expected = yaml.load(f)
     with open('sympy/meta.yaml') as f:
@@ -48,14 +54,14 @@ def test_pypi_url(testing_workdir, test_config):
     assert expected == actual, (expected, actual)
 
 
-def test_pypi_with_setup_options(testing_workdir, test_config):
+def test_pypi_with_setup_options(testing_workdir, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
     api.skeletonize(packages='photutils', repo='pypi', version='0.2.2', setup_options='--offline',
-                    config=test_config)
+                    config=testing_config)
 
     # Check that the setup option occurs in bld.bat and build.sh.
     for script in ['bld.bat', 'build.sh']:
@@ -64,10 +70,10 @@ def test_pypi_with_setup_options(testing_workdir, test_config):
             assert '--offline' in content
 
 
-def test_pypi_pin_numpy(testing_workdir, test_config):
+def test_pypi_pin_numpy(testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0', config=test_config,
+    api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0', config=testing_config,
                     pin_numpy=True)
 
     with open('msumastro/meta.yaml') as f:
@@ -77,10 +83,10 @@ def test_pypi_pin_numpy(testing_workdir, test_config):
     assert 'numpy x.x' in actual['requirements']['build']
 
 
-def test_pypi_version_sorting(testing_workdir, test_config):
+def test_pypi_version_sorting(testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='impyla', repo='pypi', config=test_config)
+    api.skeletonize(packages='impyla', repo='pypi', config=testing_config)
 
     with open('impyla/meta.yaml') as f:
         actual = yaml.load(f)
@@ -89,7 +95,7 @@ def test_pypi_version_sorting(testing_workdir, test_config):
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks'])
+    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
 
 
 def test_pypi_with_entry_points(testing_workdir):
@@ -104,6 +110,7 @@ def test_pypi_with_version_arg(testing_workdir):
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.7.2")
 
+
 def test_pypi_with_extra_specs(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1697
     api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24')
@@ -111,9 +118,41 @@ def test_pypi_with_extra_specs(testing_workdir):
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.1.24")
 
+
 def test_pypi_with_version_inconsistency(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/189
     api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10')
     with open('mpi4py_test/meta.yaml') as f:
         actual = yaml.load(f)
         assert parse_version(actual['package']['version']) == parse_version("0.0.10")
+
+
+def test_pypi_with_basic_environment_markers(testing_workdir):
+    # regression test for https://github.com/conda/conda-build/issues/1974
+    api.skeletonize('coconut', 'pypi', version='1.2.2')
+    with open('coconut/meta.yaml') as f:
+        actual = yaml.load(f)
+        build_reqs = str(actual['requirements']['build'])
+        run_reqs = str(actual['requirements']['run'])
+        # should include the right dependencies for the right version
+        if sys.version_info < (3,):
+            assert "futures" in build_reqs
+            assert "futures" in run_reqs
+        else:
+            assert "futures" not in build_reqs
+            assert "futures" not in run_reqs
+        if sys.version_info >= (2, 7):
+            assert "pygments" in build_reqs
+            assert "pygments" in run_reqs
+        else:
+            assert "pygments" not in build_reqs
+            assert "pygments" not in run_reqs
+
+
+def test_setuptools_test_requirements(testing_workdir):
+    api.skeletonize(packages='hdf5storage', repo='pypi')
+
+    with open('hdf5storage/meta.yaml') as f:
+        actual = yaml.load(f)
+
+    assert actual['test']['requires'] == ['nose >=1.0']

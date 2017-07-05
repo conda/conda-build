@@ -1,0 +1,3 @@
+value:
+  - abc
+  - def    # [py > 99]

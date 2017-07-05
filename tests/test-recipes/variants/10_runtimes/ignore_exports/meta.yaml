@@ -1,0 +1,11 @@
+package:
+  name: package_consuming_run_exports
+  version: 1.0
+
+build:
+  ignore_run_exports:
+    - bzip2
+
+requirements:
+  build:
+    - package_has_run_exports

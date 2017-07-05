@@ -1,0 +1,11 @@
+package:
+  name: test_variant_override
+  version: 1.0
+
+outputs:
+  #  this one should not loop over the pythons in the variant config
+  - name: test_subpkg_no_python
+  #  this one should loop over the pythons in the variant config
+  - name: test_subpkg
+    requirements:
+    - python  {{ python }}

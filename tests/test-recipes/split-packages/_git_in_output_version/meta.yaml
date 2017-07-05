@@ -1,0 +1,17 @@
+package:
+  name: test_git_in_outptut_version
+  version: 1.0
+
+source:
+  path: ../../../../../conda_build_test_recipe
+
+requirements:
+  build:
+    # the purpose of these dependencies is to disallow empty requirements from making the tests
+    #    pass when they would otherwise fail.  Empty requirements hide lack of finalization.
+    - posix  # [win]
+    - git    # [not win]
+
+outputs:
+  - name: git_version
+    version: {{ GIT_DESCRIBE_TAG }}

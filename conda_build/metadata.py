@@ -1,22 +1,30 @@
 from __future__ import absolute_import, division, print_function
 
+from collections import OrderedDict
 import copy
+import hashlib
+import json
 import os
 from os.path import isfile, join
 import re
-import six
 import sys
+import time
+
+from bs4 import UnicodeDammit
 
 from .conda_interface import iteritems, PY3, text_type
-from .conda_interface import memoized, md5_file
-from .conda_interface import non_x86_linux_machines, platform, arch_name
+from .conda_interface import md5_file
+from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
 from .conda_interface import specs_from_url
+from .conda_interface import envs_dirs
+from .conda_interface import string_types
 
-from conda_build import exceptions
+from conda_build import exceptions, utils, variants
 from conda_build.features import feature_list
-from conda_build.config import Config
-from conda_build.utils import ensure_list, find_recipe, expand_globs
+from conda_build.config import Config, get_or_merge_config
+from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
+                               HashableDict, trim_empty_keys, filter_files)
 from conda_build.license_family import ensure_valid_license_family
 
 try:
@@ -33,15 +41,14 @@ except ImportError:
 
 on_win = (sys.platform == 'win32')
 
+# arches that don't follow exact names in the subdir need to be mapped here
+ARCH_MAP = {'32': 'x86',
+            '64': 'x86_64'}
+
 
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
-    plat = config.subdir
-    py = config.CONDA_PY
-    np = config.CONDA_NPY
-    pl = config.CONDA_PERL
-    lua = config.CONDA_LUA
-    assert isinstance(py, int), py
+    plat = config.build_subdir
     d = dict(
         linux=plat.startswith('linux-'),
         linux32=bool(plat == 'linux-32'),
@@ -54,23 +61,34 @@ def ns_cfg(config):
         win64=bool(plat == 'win-64'),
         x86=plat.endswith(('-32', '-64')),
         x86_64=plat.endswith('-64'),
-        pl=pl,
-        py=py,
-        lua=lua,
-        luajit=bool(lua[0] == "2"),
-        py3k=bool(30 <= py < 40),
-        py2k=bool(20 <= py < 30),
-        py26=bool(py == 26),
-        py27=bool(py == 27),
-        py33=bool(py == 33),
-        py34=bool(py == 34),
-        py35=bool(py == 35),
-        py36=bool(py == 36),
-        np=np,
         os=os,
         environ=os.environ,
         nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
+
+    defaults = variants.get_default_variants()[0]
+    py = config.variant.get('python', defaults['python'])
+    py = int("".join(py.split('.')[:2]))
+    d.update(dict(py=py,
+                    py3k=bool(30 <= py < 40),
+                    py2k=bool(20 <= py < 30),
+                    py26=bool(py == 26),
+                    py27=bool(py == 27),
+                    py33=bool(py == 33),
+                    py34=bool(py == 34),
+                    py35=bool(py == 35),
+                    py36=bool(py == 36),))
+
+    np = config.variant.get('numpy', defaults['numpy'])
+    d['np'] = int("".join(np.split('.')[:2]))
+
+    pl = config.variant.get('perl', defaults['perl'])
+    d['pl'] = pl
+
+    lua = config.variant.get('lua', defaults['lua'])
+    d['lua'] = lua
+    d['luajit'] = bool(lua[0] == "2")
+
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
@@ -141,13 +159,11 @@ def select_lines(data, namespace):
 Error: Invalid selector in meta.yaml line %d:
 %s
 ''' % (i + 1, line))
-                sys.exit(1)
-            continue
-        lines.append(line)
+        else:
+            lines.append(line)
     return '\n'.join(lines) + '\n'
 
 
-@memoized
 def yamlize(data):
     try:
         return yaml.load(data, Loader=BaseLoader)
@@ -170,6 +186,33 @@ def ensure_valid_fields(meta):
         raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
 
 
+def _trim_None_strings(meta_dict):
+    log = utils.get_logger(__name__)
+    for key, value in meta_dict.items():
+        if hasattr(value, 'keys'):
+            meta_dict[key] = _trim_None_strings(value)
+        elif value and hasattr(value, '__iter__') or isinstance(value, string_types):
+            if isinstance(value, string_types):
+                meta_dict[key] = None if 'None' in value else value
+            else:
+                # support lists of dicts (homogeneous)
+                keep = []
+                if hasattr(next(iter(value)), 'keys'):
+                    for d in value:
+                        trimmed_dict = _trim_None_strings(d)
+                        if trimmed_dict:
+                            keep.append(trimmed_dict)
+                # support lists of strings (homogeneous)
+                else:
+                    keep = [i for i in value if 'None' not in i]
+                meta_dict[key] = keep
+        else:
+            log.debug("found unrecognized data type in dictionary: {0}, type: {1}".format(value,
+                                                                                    type(value)))
+    trim_empty_keys(meta_dict)
+    return meta_dict
+
+
 def ensure_valid_noarch_value(meta):
     try:
         build_noarch = meta['build']['noarch']
@@ -177,6 +220,52 @@ def ensure_valid_noarch_value(meta):
         return
     if build_noarch.lower() == 'none':
         raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
+
+
+def _get_all_dependencies(metadata, envs=('host', 'build', 'run')):
+    reqs = []
+    for _env in envs:
+        reqs.extend(metadata.meta.get('requirements', {}).get(_env, []))
+    return reqs
+
+
+def check_circular_dependencies(render_order):
+    pairs = []
+    for idx, m in enumerate(render_order.values()):
+        for other_m in list(render_order.values())[idx + 1:]:
+            if (any(m.name() == dep or dep.startswith(m.name() + ' ')
+                   for dep in _get_all_dependencies(other_m)) and
+                any(other_m.name() == dep or dep.startswith(other_m.name() + ' ')
+                   for dep in _get_all_dependencies(m))):
+                pairs.append((m.name(), other_m.name()))
+    if pairs:
+        error = "Circular dependencies in recipe: \n"
+        for pair in pairs:
+            error += "    {0} <-> {1}\n".format(*pair)
+        raise exceptions.RecipeError(error)
+
+
+def ensure_matching_hashes(output_metadata):
+    envs = 'build', 'host', 'run'
+    problemos = []
+    for (_, m) in output_metadata.values():
+        for (_, om) in output_metadata.values():
+            if m != om:
+                deps = (_get_all_dependencies(om, envs) +
+                        om.meta.get('build', {}).get('run_exports', []))
+                for dep in deps:
+                    if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
+                            dep.split(' ')[-1] != m.build_id()):
+                        problemos.append((m.name(), om.name()))
+
+    if problemos:
+        error = ""
+        for prob in problemos:
+            error += "Mismatching package: {}; consumer package: {}\n".format(*prob)
+        raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
+                                     "that contribute to the hash often cause this. Can you "
+                                     "change one or more exact pins to version bound constraints?\n"
+                                     "Involved packages were:\n" + error)
 
 
 def parse(data, config, path=None):
@@ -191,9 +280,16 @@ def parse(data, config, path=None):
         # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
         if not res[field]:
             res[field] = {}
-        if not isinstance(res[field], dict):
-            raise RuntimeError("The %s field should be a dict, not %s in file %s." %
-                               (field, res[field].__class__.__name__, path))
+        # source field may be either a dictionary, or a list of dictionaries
+        if field == 'source':
+            if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
+                        isinstance(res[field], string_types))):
+                raise RuntimeError("The %s field should be a dict or list of dicts, not "
+                                   "%s in file %s." % (field, res[field].__class__.__name__, path))
+        else:
+            if not isinstance(res[field], dict):
+                raise RuntimeError("The %s field should be a dict, not %s in file %s." %
+                                (field, res[field].__class__.__name__, path))
 
     ensure_valid_fields(res)
     ensure_valid_license_family(res)
@@ -205,15 +301,29 @@ trues = {'y', 'on', 'true', 'yes'}
 falses = {'n', 'no', 'false', 'off'}
 
 default_structs = {
-    'source/patches': list,
     'build/entry_points': list,
+    'build/features': list,
+    'source/patches': list,
     'build/script': list,
     'build/script_env': list,
-    'build/features': list,
+    'build/run_exports': list,
     'build/track_features': list,
+    'build/osx_is_app': bool,
+    'build/preserve_egg_dir': bool,
+    'build/binary_relocation': bool,
+    'build/noarch': text_type,
+    'build/noarch_python': bool,
+    'build/detect_binary_files_with_prefix': bool,
+    'build/skip': bool,
+    'build/skip_compile_pyc': list,
+    'build/preferred_env': text_type,
+    'build/preferred_env_executable_paths': list,
+    'build/ignore_run_exports': list,
     'requirements/build': list,
+    'requirements/host': list,
     'requirements/run': list,
     'requirements/conflicts': list,
+    'requirements/run_constrained': list,
     'test/requires': list,
     'test/files': list,
     'test/source_files': list,
@@ -229,16 +339,6 @@ default_structs = {
     'source/git_rev': text_type,
     'source/path': text_type,
     'source/git_url': text_type,
-    'build/osx_is_app': bool,
-    'build/preserve_egg_dir': bool,
-    'build/binary_relocation': bool,
-    'build/noarch': text_type,
-    'build/noarch_python': bool,
-    'build/detect_binary_files_with_prefix': bool,
-    'build/skip': bool,
-    'build/skip_compile_pyc': list,
-    'build/preferred_env': text_type,
-    'build/preferred_env_executable_paths': list,
     'app/own_environment': bool
 }
 
@@ -248,12 +348,19 @@ def sanitize(meta):
     Sanitize the meta-data to remove aliases/handle deprecation
 
     """
-    # make a copy to avoid side-effects
-    meta = meta.copy()
-    sanitize_funs = [('source', _git_clean), ]
-    for section, func in sanitize_funs:
+    sanitize_funs = {'source': [_git_clean]}
+    for section, funs in sanitize_funs.items():
         if section in meta:
-            meta[section] = func(meta[section])
+            for func in funs:
+                section_data = meta[section]
+                # section is a dictionary
+                if hasattr(section_data, 'keys'):
+                    section_data = func(section_data)
+                # section is a list of dictionaries
+                else:
+                    section_data = [func(_d) for _d in section_data]
+                meta[section] = section_data
+    _trim_None_strings(meta)
     return meta
 
 
@@ -311,13 +418,14 @@ FIELDS = {
               'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
               'script_env', 'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
-              'preferred_env', 'preferred_env_executable_paths',
+              'preferred_env', 'preferred_env_executable_paths', 'run_exports',
+              'ignore_run_exports',
               ],
-    'requirements': ['build', 'run', 'conflicts'],
+    'requirements': ['build', 'host', 'run', 'conflicts', 'run_constrained'],
     'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'],
     'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
-    'about': ['home', 'dev_url', 'doc_url', 'license_url',  # these are URLs
+    'about': ['home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
               ],
@@ -335,85 +443,227 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
-def handle_config_version(ms, ver, dep_type='run'):
-    """
-    'ms' is an instance of MatchSpec, and 'ver' is the version from the
-    configuration, e.g. for ms.name == 'python', ver = 26 or None,
-    return a (sometimes new) MatchSpec object
-    """
-    if ms.strictness == 3:
-        return ms
-
-    if ms.strictness == 2:
-        if ms.spec.split()[1] == 'x.x':
-            if ver is None:
-                raise RuntimeError("'%s' requires external setting" % ms.spec)
-            # (no return here - proceeds below)
-        else:  # regular version
-            return ms
-
-    # If we don't have a configured version, or we are dealing with a simple
-    # numpy runtime dependency; just use "numpy"/the name of the package as
-    # the specification. In practice this means that a recipe which just
-    # defines numpy as a runtime dependency will match any version of numpy
-    # at install time.
-    if ver is None or (dep_type == 'run' and ms.strictness == 1 and
-                       ms.name == 'numpy'):
-        return MatchSpec(ms.name)
-
-    ver = text_type(ver)
-    if '.' not in ver:
-        if ms.name == 'numpy':
-            ver = '%s.%s' % (ver[0], ver[1:])
-        else:
-            ver = '.'.join(ver)
-    return MatchSpec('%s %s*' % (ms.name, ver))
-
-
 def build_string_from_metadata(metadata):
     if metadata.meta.get('build', {}).get('string'):
-        return metadata.get_value('build/string')
-    res = []
-    version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
-    for name, s in (('numpy', 'np'), ('python', 'py'),
-                    ('perl', 'pl'), ('lua', 'lua'),
-                    ('r', 'r'), ('r-base', 'r')):
-        for ms in metadata.ms_depends():
-            if ms.name == name:
-                try:
-                    v = ms.spec.split()[1]
-                except IndexError:
-                    if name not in ['numpy']:
-                        res.append(s)
-                    break
-                if any(i in v for i in ',|>!<'):
-                    break
-                if name not in ['perl', 'lua', 'r', 'r-base']:
-                    match = version_pat.match(v)
-                    if match:
-                        res.append(s + match.group(1) + match.group(2))
-                else:
-                    res.append(s + v.strip('*'))
-                break
+        build_str = metadata.get_value('build/string')
+    else:
+        res = []
+        build_or_host = 'host' if metadata.is_cross else 'build'
+        build_pkg_names = [ms.name for ms in metadata.ms_depends(build_or_host)]
+        # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
+        #    nice to get rid of this, since the hash supercedes that functionally, but not clear
+        #    whether anyone's tools depend on this file naming right now.
+        for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 2),
+                                 ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3)):
+            for ms in metadata.ms_depends('run'):
+                for name in ensure_list(names):
+                    if ms.name == name and name in build_pkg_names:
+                        # only append numpy when it is actually pinned
+                        if name == 'numpy' and (not hasattr(ms, 'version') or not ms.version):
+                            continue
+                        if metadata.noarch == name or (metadata.get_value('build/noarch_python') and
+                                                    name == 'python'):
+                            res.append(s)
+                        else:
+                            pkg_names = list(ensure_list(names))
+                            pkg_names.extend([_n.replace('-', '_')
+                                              for _n in ensure_list(names) if '-' in _n])
+                            for _n in pkg_names:
+                                _n = _n.replace('-', '_')
+                                variant_version = metadata.config.variant.get(_n, "")
+                                if variant_version:
+                                    break
+                            res.append(''.join([s] + variant_version.split('.')[:places]))
 
-    features = ensure_list(metadata.get_value('build/features', []))
-    if res:
-        res.append('_')
-    if features:
-        res.extend(('_'.join(features), '_'))
-    res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
-    return "".join(res)
+        features = ensure_list(metadata.get_value('build/features', []))
+        if res:
+            res.append('_')
+        if features:
+            res.extend(('_'.join(features), '_'))
+        res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
+        build_str = "".join(res)
+    return build_str
+
+
+# This really belongs in conda, and it is int conda.cli.common,
+#   but we don't presently have an API there.
+def _get_env_path(env_name_or_path):
+    if not os.path.isdir(env_name_or_path):
+        for envs_dir in list(envs_dirs) + [os.getcwd()]:
+            path = os.path.join(envs_dir, env_name_or_path)
+            if os.path.isdir(path):
+                env_name_or_path = path
+                break
+    bootstrap_metadir = os.path.join(env_name_or_path, 'conda-meta')
+    if not os.path.isdir(bootstrap_metadir):
+        print("Bootstrap environment '%s' not found" % env_name_or_path)
+        sys.exit(1)
+    return env_name_or_path
+
+
+def _get_dependencies_from_environment(env_name_or_path):
+    path = _get_env_path(env_name_or_path)
+    # construct build requirements that replicate the given bootstrap environment
+    # and concatenate them to the build requirements from the recipe
+    bootstrap_metadata = get_installed_packages(path)
+    bootstrap_requirements = []
+    for package, data in bootstrap_metadata.items():
+        bootstrap_requirements.append("%s %s %s" % (package, data['version'], data['build']))
+    return {'requirements': {'build': bootstrap_requirements}}
+
+
+def toposort(output_metadata_map, phase):
+    '''This function is used to work out the order to run the install scripts
+       for split packages based on any interdependencies. The result is just
+       a re-ordering of outputs such that we can run them in that order and
+       reset the initial set of files in the install prefix after each. This
+       will naturally lead to non-overlapping files in each package and also
+       the correct files being present during the install and test procedures,
+       provided they are run in this order.'''
+    from .conda_interface import _toposort
+    # We only care about the conda packages built by this recipe. Non-conda
+    # packages get sorted to the end.
+    these_packages = [output_d['name'] for output_d in output_metadata_map
+                      if output_d.get('type', 'conda') == 'conda']
+    topodict = dict()
+    order = dict()
+    endorder = set()
+    for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
+        if output_d.get('type', 'conda') == 'conda':
+            name = output_d['name']
+            order[name] = idx
+            topodict[name] = set()
+            for run_dep in output_m.get_value('requirements/{}'.format(phase), []):
+                run_dep = run_dep.split(' ')[0]
+                if run_dep in these_packages:
+                    topodict[name].update((run_dep,))
+        else:
+            endorder.add(idx)
+    topo_order = list(_toposort(topodict))
+    keys = [k for pkgname in topo_order for k in output_metadata_map.keys()
+            if 'name' in k and k['name'] == pkgname]
+    # not sure that this is working...  not everything has 'name', and not sure how this pans out
+    #    may end up excluding packages without the 'name' field
+    keys.extend([k for pkgname in endorder for k in output_metadata_map.keys()
+                 if ('name' in k and k['name'] == pkgname) or 'name' not in k])
+    result = OrderedDict()
+    for key in keys:
+        result[key] = output_metadata_map[key]
+    return result
+
+
+def output_dict_from_top_level_meta(m):
+    requirements = m.meta.get('requirements', {})
+    output_d = {'name': m.name(), 'requirements': requirements,
+                'noarch_python': m.get_value('build/noarch_python'),
+                'noarch': m.get_value('build/noarch'),
+                'type': 'conda',
+                }
+
+    run_exports = m.meta.get('build', {}).get('run_exports')
+    if run_exports:
+        output_d['run_exports'] = run_exports
+    return output_d
+
+
+def get_output_dicts_from_metadata(metadata):
+    outputs = metadata.get_section('outputs')
+
+    if not outputs:
+        outputs = [output_dict_from_top_level_meta(metadata)]
+    else:
+        assert not hasattr(outputs, 'keys'), ('outputs specified as dictionary, but must be a '
+                                              'list of dictionaries.  YAML syntax is: \n\n'
+                                              'outputs:\n    - name: subpkg\n\n'
+                                              '(note the - before the inner dictionary)')
+        # make a metapackage for the top-level package if the top-level requirements
+        #     mention a subpackage,
+        # but only if a matching output name is not explicitly provided
+        if metadata.uses_subpackage and not any(metadata.name() == out.get('name', '')
+                                            for out in outputs):
+            outputs.append(output_dict_from_top_level_meta(metadata))
+    for out in outputs:
+        if (metadata.name() == out.get('name', '') and not (out.get('files') or
+                                                        out.get('script'))):
+            out['requirements'] = out.get('requirements', metadata.meta.get('requirements', {}))
+            out['noarch_python'] = out.get('noarch_python',
+                                            metadata.get_value('build/noarch_python'))
+            out['noarch'] = out.get('noarch', metadata.get_value('build/noarch'))
+    return outputs
+
+
+def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
+                          permit_unsatisfiable_variants=False):
+    from .render import finalize_metadata
+    outputs = OrderedDict()
+    # each of these outputs can have a different set of dependency versions from each other,
+    #    but also from base_metadata
+    for output_d, metadata in render_order.values():
+        try:
+            log = utils.get_logger(__name__)
+            # We should reparse the top-level recipe to get all of our dependencies fixed up.
+            # we base things on base_metadata because it has the record of the full origin recipe
+            if base_metadata.config.verbose:
+                log.info("Attempting to finalize metadata for {}".format(metadata.name()))
+            om = base_metadata.copy()
+            # match up the old variant with the current one from this output
+            om.config.variant = metadata.config.variant
+            if not hasattr(om, 'other_outputs'):
+                om.other_outputs = OrderedDict()
+            om.other_outputs.update(outputs)
+            om.final = False
+            om.parse_until_resolved()
+            # get the new output_d from the reparsed top-level metadata, so that we have any
+            #    exact subpackage version/hash info
+            recipe_outputs = get_output_dicts_from_metadata(om)
+            output_d = get_updated_output_dict_from_reparsed_metadata(output_d,
+                                                                      recipe_outputs)
+            om = om.get_output_metadata(output_d)
+            fm = finalize_metadata(om, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+            if not output_d.get('type') or output_d.get('type') == 'conda':
+                outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
+        except exceptions.DependencyNeedsBuildingError as e:
+            if not permit_unsatisfiable_variants:
+                raise
+            else:
+                log = utils.get_logger(__name__)
+                log.warn("Could not finalize metadata due to missing dependencies: "
+                            "{}".format(e.packages))
+                outputs[(metadata.name(), HashableDict(metadata.config.variant))] = (
+                    output_d, metadata)
+    base_metadata.other_outputs = outputs
+    base_metadata.final = False
+    base_metadata.parse_until_resolved()
+    # in the final pass, we finalize each of the outputs.  Up to now, we have not been computing
+    #  the actual installed versions of their dependencies (aside from subpackages)
+    if pass_no == 2:
+        final_outputs = OrderedDict()
+        for k, (out_d, m) in outputs.items():
+            fm = finalize_metadata(m, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+            final_outputs[(m.name(), HashableDict(m.config.variant))] = out_d, fm
+        return final_outputs
+    else:
+        return finalize_outputs_pass(base_metadata, render_order, pass_no + 1, outputs,
+                                     permit_unsatisfiable_variants)
+
+
+def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
+    output_d = original_dict
+    if 'name' in original_dict:
+        output_ds = [out for out in new_outputs if 'name' in out and
+                    out['name'] == original_dict['name']]
+        assert len(output_ds) == 1
+        output_d = output_ds[0]
+    return output_d
 
 
 class MetaData(object):
-    def __init__(self, path, config=None):
+    def __init__(self, path, config=None, variant=None):
 
         self.undefined_jinja_vars = []
-
-        if not config:
-            config = Config()
-
-        self.config = config
+        # decouple this config from whatever was fed in.  People must change config by
+        #    accessing and changing this attribute.
+        self.config = get_or_merge_config(config, variant=variant).copy()
 
         if isfile(path):
             self.meta_path = path
@@ -425,17 +675,19 @@ class MetaData(object):
 
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
         # We'll immediately replace these contents in parse_again()
-        self.meta = parse("package:\n"
-                          "  name: uninitialized",
-                          path=self.meta_path,
-                          config=self.config)
+        self.meta = dict()
 
         # This is the 'first pass' parse of meta.yaml, so not all variables are defined yet
         # (e.g. GIT_FULL_HASH, etc. are undefined)
         # Therefore, undefined jinja variables are permitted here
         # In the second pass, we'll be more strict. See build.build()
-        self.parse_again(config=config, permit_undefined_jinja=True)
+        # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
+        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
         self.config.disable_pip = self.disable_pip
+
+    @property
+    def is_cross(self):
+        return bool(self.get_value('requirements/host'))
 
     @property
     def final(self):
@@ -449,9 +701,34 @@ class MetaData(object):
 
     @property
     def disable_pip(self):
-        return 'build' in self.meta and 'disable_pip' in self.meta['build']
+        return self.config.disable_pip or ('build' in self.meta and
+                                           'disable_pip' in self.meta['build'])
 
-    def parse_again(self, config=None, permit_undefined_jinja=False):
+    @disable_pip.setter
+    def disable_pip(self, value):
+        self.config.disable_pip = value
+        build = self.meta.get('build', {})
+        build['disable_pip'] = value
+        self.meta['build'] = build
+
+    def append_metadata_sections(self, sections_file_or_dict, merge, raise_on_clobber=False):
+        """Append to or replace subsections to meta.yaml
+
+        This is used to alter input recipes, so that a given requirement or
+        setting is applied without manually altering the input recipe. It is
+        intended for vendors who want to extend existing recipes without
+        necessarily removing information. pass merge=False to replace sections.
+        """
+        if hasattr(sections_file_or_dict, 'keys'):
+            build_config = sections_file_or_dict
+        else:
+            with open(sections_file_or_dict) as configfile:
+                build_config = parse(configfile.read(), config=self.config)
+        utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
+                                   raise_on_clobber=raise_on_clobber)
+
+    def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False,
+                    bypass_env_check=False):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -461,77 +738,134 @@ class MetaData(object):
         permit_undefined_jinja: If True, *any* use of undefined jinja variables will
                                 evaluate to an emtpy string, without emitting an error.
         """
-        if self.meta_path:
-            if not config:
-                config = self.config
-            try:
-                os.environ["CONDA_BUILD_STATE"] = "RENDER"
-                self.meta = parse(self._get_contents(permit_undefined_jinja, config=config),
-                                config=config, path=self.meta_path)
-            except:
-                raise
-            finally:
-                del os.environ["CONDA_BUILD_STATE"]
+        assert not self.final, "modifying metadata after finalization"
 
-            if (isfile(self.requirements_path) and
-                    not self.meta['requirements']['run']):
-                self.meta.setdefault('requirements', {})
-                run_requirements = specs_from_url(self.requirements_path)
-                self.meta['requirements']['run'] = run_requirements
+        log = utils.get_logger(__name__)
 
+        if isfile(self.requirements_path) and not self.get_value('requirements/run'):
+            self.meta.setdefault('requirements', {})
+            run_requirements = specs_from_url(self.requirements_path)
+            self.meta['requirements']['run'] = run_requirements
+
+        os.environ["CONDA_BUILD_STATE"] = "RENDER"
+        append_sections_file = None
+        clobber_sections_file = None
+        try:
+            # we sometimes create metadata from dictionaries, in which case we'll have no path
+            if self.meta_path:
+                self.meta = parse(self._get_contents(permit_undefined_jinja,
+                                                     allow_no_other_outputs=allow_no_other_outputs,
+                                                     bypass_env_check=bypass_env_check),
+                                  config=self.config,
+                                  path=self.meta_path)
+
+                if (isfile(self.requirements_path) and
+                        not self.meta.get('requirements', {}).get('run', [])):
+                    self.meta.setdefault('requirements', {})
+                    run_requirements = specs_from_url(self.requirements_path)
+                    self.meta['requirements']['run'] = run_requirements
+
+                append_sections_file = os.path.join(self.path, 'recipe_append.yaml')
+                clobber_sections_file = os.path.join(self.path, 'recipe_clobber.yaml')
+
+            append_sections_file = self.config.append_sections_file or append_sections_file
+            if append_sections_file and not os.path.isfile(append_sections_file):
+                log.debug('input append sections file did not exist: %s', append_sections_file)
+                append_sections_file = None
+            clobber_sections_file = self.config.clobber_sections_file or clobber_sections_file
+            if clobber_sections_file and not os.path.isfile(clobber_sections_file):
+                log.debug('input clobber sections file did not exist: %s', clobber_sections_file)
+                clobber_sections_file = None
+
+            if append_sections_file:
+                self.append_metadata_sections(append_sections_file, merge=True)
+            if clobber_sections_file:
+                self.append_metadata_sections(clobber_sections_file, merge=False)
+            if self.config.bootstrap:
+                dependencies = _get_dependencies_from_environment(self.config.bootstrap)
+                self.append_metadata_sections(dependencies, merge=True)
+        except:
+            raise
+        finally:
+            del os.environ["CONDA_BUILD_STATE"]
+            pass
         self.validate_features()
+        self.ensure_no_pip_requirements()
+
+    def ensure_no_pip_requirements(self):
+        keys = 'requirements/build', 'requirements/run', 'test/requires'
+        for key in keys:
+            if any(hasattr(item, 'keys') for item in self.get_value(key)):
+                raise ValueError("Dictionaries are not supported as values in requirements sections"
+                                 ".  Note that pip requirements as used in conda-env "
+                                 "environment.yml files are not supported by conda-build.")
         self.append_requirements()
 
     def append_requirements(self):
         """For dynamic determination of build or run reqs, based on configuration"""
         reqs = self.meta.get('requirements', {})
         run_reqs = reqs.get('run', [])
-        # build_reqs = reqs.get('build', [])
         if bool(self.get_value('build/osx_is_app', False)) and self.config.platform == 'osx':
-            run_reqs.append('python.app')
+            if 'python.app' not in run_reqs:
+                run_reqs.append('python.app')
         self.meta['requirements'] = reqs
 
-    def parse_until_resolved(self, config):
+    def parse_until_resolved(self, allow_no_other_outputs=False, bypass_env_check=False):
+        """variant contains key-value mapping for additional functions and values
+        for jinja2 variables"""
         # undefined_jinja_vars is refreshed by self.parse again
         undefined_jinja_vars = ()
+        # store the "final" state that we think we're in.  reloading the meta.yaml file
+        #   can reset it (to True)
+        final = self.final
         # always parse again at least once.
-        self.parse_again(config, permit_undefined_jinja=True)
+        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=allow_no_other_outputs,
+                         bypass_env_check=bypass_env_check)
+        self.final = final
 
         while set(undefined_jinja_vars) != set(self.undefined_jinja_vars):
             undefined_jinja_vars = self.undefined_jinja_vars
-            self.parse_again(config, permit_undefined_jinja=True)
+            self.parse_again(permit_undefined_jinja=True,
+                             allow_no_other_outputs=allow_no_other_outputs,
+                             bypass_env_check=bypass_env_check)
+            self.final = final
         if undefined_jinja_vars:
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
         # always parse again at the end, too.
-        self.parse_again(config, permit_undefined_jinja=True)
+        self.parse_again(permit_undefined_jinja=False,
+                         allow_no_other_outputs=allow_no_other_outputs,
+                         bypass_env_check=bypass_env_check)
+        self.final = final
 
     @classmethod
-    def fromstring(cls, metadata, config=None):
+    def fromstring(cls, metadata, config=None, variant=None):
         m = super(MetaData, cls).__new__(cls)
         if not config:
             config = Config()
-        m.meta = parse(metadata, path='', config=config)
+        m.meta = parse(metadata, config=config, path='', variant=variant)
         m.config = config
-        m.parse_again(config=config, permit_undefined_jinja=True)
+        m.parse_again(permit_undefined_jinja=True)
         return m
 
     @classmethod
-    def fromdict(cls, metadata, config=None):
+    def fromdict(cls, metadata, config=None, variant=None):
         """
         Create a MetaData object from metadata dict directly.
         """
         m = super(MetaData, cls).__new__(cls)
         m.path = ''
         m.meta_path = ''
+        m.requirements_path = ''
         m.meta = sanitize(metadata)
 
         if not config:
-            config = Config()
+            config = Config(variant=variant)
 
         m.config = config
         m.undefined_jinja_vars = []
+        m.final = False
 
         return m
 
@@ -607,54 +941,158 @@ class MetaData(object):
 
     def ms_depends(self, typ='run'):
         res = []
-        name_ver_list = [
-            ('python', self.config.CONDA_PY),
-            ('numpy', self.config.CONDA_NPY),
-            ('perl', self.config.CONDA_PERL),
-            ('lua', self.config.CONDA_LUA),
+        names = ('python', 'numpy', 'perl', 'lua')
+        name_ver_list = [(name, self.config.variant[name])
+                         for name in names
+                         if self.config.variant.get(name)]
+        if self.config.variant.get('r_base'):
             # r is kept for legacy installations, r-base deprecates it.
-            ('r', self.config.CONDA_R),
-            ('r-base', self.config.CONDA_R),
-        ]
+            name_ver_list.extend([('r', self.config.variant['r_base']),
+                                  ('r-base', self.config.variant['r_base']),
+                                  ])
         for spec in self.get_value('requirements/' + typ, []):
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
-            except AttributeError:
+            except (AttributeError, ValueError):
                 raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
                                    "not supported in conda-build meta.yaml.")
             if ms.name == self.name():
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
-                    if self.get_value('build/noarch_python') or self.get_value('build/noarch'):
+                    if self.noarch:
                         continue
-                    ms = handle_config_version(ms, ver, typ)
 
             for c in '=!@#$%^&*:;"\'\\|<>?/':
                 if c in ms.name:
                     sys.exit("Error: bad character '%s' in package name "
                              "dependency '%s'" % (c, ms.name))
-                parts = spec.split()
-                if len(parts) >= 2:
-                    if parts[1] in {'>', '>=', '=', '==', '!=', '<', '<='}:
-                        msg = ("Error: bad character '%s' in package version "
-                               "dependency '%s'" % (parts[1], ms.name))
-                        if len(parts) >= 3:
-                            msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
-                                parts[1], parts[2])
-                        sys.exit(msg)
+            parts = spec.split()
+            if len(parts) >= 2:
+                if parts[1] in {'>', '>=', '=', '==', '!=', '<', '<='}:
+                    msg = ("Error: bad character '%s' in package version "
+                           "dependency '%s'" % (parts[1], ms.name))
+                    if len(parts) >= 3:
+                        msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
+                            parts[1], parts[2])
+                    sys.exit(msg)
             res.append(ms)
         return res
 
+    def get_hash_contents(self):
+        sections = ['requirements', 'build']
+        # make a copy of values, so that no sorting occurs in place
+        composite = HashableDict({section: copy.copy(self.get_section(section))
+                                  for section in sections})
+
+        if self.get_section('source'):
+            src = self.get_section('source')
+            if hasattr(src, 'keys'):
+                composite['source'] = HashableDict(src.copy())
+            else:
+                composite['source'] = [HashableDict(s.copy()) for s in src]
+
+        # filter build requirements for ones that should not be in the hash
+        requirements = composite.get('requirements', {})
+        build_reqs = requirements.get('build', [])
+        excludes = self.config.variant.get('ignore_version', [])
+        if excludes:
+            exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
+            build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
+        requirements['build'] = build_reqs
+        composite['requirements'] = requirements
+
+        # remove the build number from the hash, so that we can bump it without changing the hash
+        if 'number' in composite['build']:
+            del composite['build']['number']
+        # remove the build string, so that hashes don't affect themselves
+        for key in ('string', 'noarch', 'noarch_python'):
+            if key in composite['build']:
+                del composite['build'][key]
+        if not composite['build']:
+            del composite['build']
+
+        for key in 'build', 'run':
+            if key in composite['requirements'] and not composite['requirements'].get(key):
+                del composite['requirements'][key]
+
+        file_paths = []
+        if self.config.include_recipe and self.include_recipe():
+            recorded_input_files = os.path.join(self.path, '..', 'hash_input_files')
+            if os.path.exists(recorded_input_files):
+                with open(recorded_input_files) as f:
+                    file_paths = f.read().splitlines()
+            else:
+                # is this a subpackage?  If so, add only the files relevant to exactly this
+                if 'parent_recipe' in self.meta.get('extra', {}):
+                    parent_recipe_path = self.meta['extra']['parent_recipe'].get('path')
+                    this_output = [out for out in self.meta.get('outputs', [])
+                                   if out.get('name') == self.name()][0]
+                    install_script = this_output.get('script')
+                    # # HACK: conda-build renames the actual test script from the recipe into
+                    # #    run_test.* in the package.  This makes the test discovery code work.
+                    # if test_script:
+                    #     ext = os.path.splitext(test_script)[1]
+                    #     test_script = 'run_test' + ext
+                    build_inputs = []
+                    for build_input in ('build.sh', 'bld.bat'):
+                        if os.path.isfile(os.path.join(parent_recipe_path, build_input)):
+                            build_inputs.append(build_input)
+                    inputs = [install_script] + build_inputs
+                    file_paths = [script for script in inputs if script]
+                    file_paths = filter_files(file_paths, parent_recipe_path)
+                else:
+                    files = utils.rec_glob(self.path, "*")
+                    file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
+                    # exclude meta.yaml because the json dictionary captures its content
+                    file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
+                                                                f.startswith('run_test') or
+                                                                f == 'conda_build_config.yaml')]
+                    file_paths = filter_files(file_paths, self.path)
+        trim_empty_keys(composite)
+        return composite, sorted(file_paths)
+
+    def _hash_dependencies(self):
+        """With arbitrary pinning, we can't depend on the build string as done in
+        build_string_from_metadata - there's just too much info.  Instead, we keep that as-is, to
+        not be disruptive, but we add this extra hash, which is just a way of distinguishing files
+        on disk.  The actual determination of dependencies is done in the repository metadata."""
+        # save only the first HASH_LENGTH characters - should be more than enough, since these only
+        #    need to be unique within one version
+        # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
+        recipe_input, file_paths = self.get_hash_contents()
+        hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
+        recipe_path = (self.path or
+                        self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        if recipe_path:
+            for recipe_file in file_paths:
+                with open(os.path.join(recipe_path, recipe_file), 'rb') as f:
+                    hash_.update(f.read())
+        hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+        return hash_
+
     def build_id(self):
-        ret = self.get_value('build/string')
-        if ret:
-            check_bad_chrs(ret, 'build/string')
+        out = self.get_value('build/string')
+        if out:
+            check_bad_chrs(out, 'build/string')
         else:
-            ret = build_string_from_metadata(self)
-        return ret
+            out = build_string_from_metadata(self)
+        if self.config.filename_hashing and self.final:
+            if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
+                ret = out.rsplit('_', 1)
+                try:
+                    int(ret[0])
+                    out = self._hash_dependencies() + '_' + str(ret[0])
+                except ValueError:
+                    out = ret[0] + self._hash_dependencies()
+                if len(ret) > 1:
+                    out = '_'.join([out] + ret[1:])
+            else:
+                out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, self._hash_dependencies(),
+                             out)
+        return out
 
     def dist(self):
         return '%s-%s-%s' % (self.name(), self.version(), self.build_id())
@@ -682,30 +1120,46 @@ class MetaData(object):
         return d
 
     def info_index(self):
+        arch = 'noarch' if self.config.target_subdir == 'noarch' else self.config.host_arch
         d = dict(
             name=self.name(),
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number() if self.build_number() else 0,
-            platform=platform,
-            arch=arch_name,
-            subdir=self.config.subdir,
+            platform=self.config.platform if (self.config.platform != 'noarch' and
+                                              arch != 'noarch') else None,
+            arch=ARCH_MAP.get(arch, arch),
+            subdir=self.config.target_subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
+            timestamp=int(time.time() * 1000),
         )
         for key in ('license', 'license_family'):
             value = self.get_value('about/' + key)
             if value:
                 d[key] = value
 
-        build_noarch = self.get_value('build/noarch')
+        preferred_env = self.get_value('build/preferred_env')
+        if preferred_env:
+            d['preferred_env'] = preferred_env
+
+        # conda 4.4+ optional dependencies
+        constrains = ensure_list(self.get_value('requirements/run_constrained'))
+        # filter None values
+        constrains = [v for v in constrains if v]
+        if constrains:
+            d['constrains'] = constrains
+
         if self.get_value('build/features'):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
-        if self.get_value('build/noarch_python') or build_noarch:
+        if self.noarch:
             d['platform'] = d['arch'] = None
             d['subdir'] = 'noarch'
+            # These are new-style noarch settings.  the self.noarch setting can be True in 2 ways:
+            #    if noarch: True or if noarch_python: True.  This is disambiguation.
+            build_noarch = self.get_value('build/noarch')
             if build_noarch:
                 d['noarch'] = build_noarch
         if self.is_app():
@@ -770,7 +1224,8 @@ class MetaData(object):
     def skip(self):
         return self.get_value('build/skip', False)
 
-    def _get_contents(self, permit_undefined_jinja, config):
+    def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False,
+                      bypass_env_check=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -811,12 +1266,21 @@ class MetaData(object):
             UndefinedNeverFail.all_undefined_names = []
             undefined_type = UndefinedNeverFail
 
-        loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=config)
+        loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
-        env.globals.update(ns_cfg(config))
-        env.globals.update(context_processor(self, path, config=config,
-                                             permit_undefined_jinja=permit_undefined_jinja))
+        env.globals.update(ns_cfg(self.config))
+        env.globals.update(context_processor(self, path, config=self.config,
+                                             permit_undefined_jinja=permit_undefined_jinja,
+                                             allow_no_other_outputs=allow_no_other_outputs,
+                                             bypass_env_check=bypass_env_check))
+
+        # Future goal here.  Not supporting jinja2 on replaced sections right now.
+
+        # we write a temporary file, so that we can dynamically replace sections in the meta.yaml
+        #     file on disk.  These replaced sections also need to have jinja2 filling in templates.
+        # The really hard part here is that we need to operate on plain text, because we need to
+        #     keep selectors and all that.
 
         try:
             template = env.get_or_select_template(filename)
@@ -826,13 +1290,13 @@ class MetaData(object):
                 self.undefined_jinja_vars = UndefinedNeverFail.all_undefined_names
             else:
                 self.undefined_jinja_vars = []
-            return rendered
 
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, str(ex)))
+        return rendered
 
     def __unicode__(self):
         '''
@@ -854,14 +1318,20 @@ class MetaData(object):
 
     @property
     def uses_setup_py_in_meta(self):
-        with open(self.meta_path) as f:
-            meta_text = f.read()
-        return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
+        meta_text = ''
+        meta_path = (self.meta_path or
+                     self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        if meta_path:
+            with open(self.meta_path, 'rb') as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
+        return u"load_setup_py_data" in meta_text or u"load_setuptools" in meta_text
 
     @property
     def uses_regex_in_meta(self):
-        with open(self.meta_path) as f:
-            meta_text = f.read()
+        meta_text = ""
+        if self.meta_path:
+            with open(self.meta_path, 'rb') as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
         return "load_file_regex" in meta_text
 
     @property
@@ -872,9 +1342,9 @@ class MetaData(object):
     def uses_jinja(self):
         if not self.meta_path:
             return False
-        with open(self.meta_path) as f:
-            metayaml = f.read()
-            matches = re.findall(r"{{.*}}", metayaml)
+        with open(self.meta_path, 'rb') as f:
+            meta_text = UnicodeDammit(f.read()).unicode_markup
+            matches = re.findall(r"{{.*}}", meta_text)
         return len(matches) > 0
 
     @property
@@ -882,17 +1352,20 @@ class MetaData(object):
         """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
+        vcs = None
         vcs_types = ["git", "svn", "hg"]
         # We would get here if we use Jinja2 templating, but specify source with path.
-        with open(self.meta_path) as f:
-            metayaml = f.read()
-            for vcs in vcs_types:
-                matches = re.findall(r"{}_[^\.\s\'\"]+".format(vcs.upper()), metayaml)
-                if len(matches) > 0 and vcs != self.meta['package']['name']:
-                    if vcs == "hg":
-                        vcs = "mercurial"
-                    return vcs
-        return None
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                metayaml = f.read()
+                for _vcs in vcs_types:
+                    matches = re.findall(r"{}_[^\.\s\'\"]+".format(_vcs.upper()), metayaml)
+                    if len(matches) > 0 and _vcs != self.meta['package']['name']:
+                        if _vcs == "hg":
+                            _vcs = "mercurial"
+                        vcs = _vcs
+                        break
+        return vcs
 
     @property
     def uses_vcs_in_build(self):
@@ -916,6 +1389,33 @@ class MetaData(object):
                             return vcs
         return None
 
+    def extract_requirements_text(self):
+        text = ""
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                recipe_text = f.read()
+            if PY3 and hasattr(recipe_text, 'decode'):
+                recipe_text = recipe_text.decode()
+            match = re.search(r'(^requirements:.*?)(^test:|^extra:|^about:|^outputs:|\Z)',
+                              recipe_text, flags=re.MULTILINE | re.DOTALL)
+            text = match.group(1) if match else ""
+        return text
+
+    @property
+    def uses_subpackage(self):
+        outputs = self.get_section('outputs')
+        in_reqs = False
+        for out in outputs:
+            if 'name' in out:
+                name_re = re.compile(r"^{}(\s|\Z|$)".format(out['name']))
+                in_reqs = any(name_re.match(req) for req in self.get_value('requirements/run'))
+        subpackage_pin = False
+        if not in_reqs and self.meta_path:
+                data = self.extract_requirements_text()
+                if data:
+                    subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
+        return in_reqs or bool(subpackage_pin)
+
     def validate_features(self):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
@@ -927,51 +1427,213 @@ class MetaData(object):
         new.meta = copy.deepcopy(self.meta)
         return new
 
+    @property
+    def noarch(self):
+        return self.get_value('build/noarch')
+
+    @noarch.setter
+    def noarch(self, value):
+        build = self.meta.get('build', {})
+        build['noarch'] = value
+        self.meta['build'] = build
+        if not self.noarch_python and not value:
+            self.config.reset_platform()
+        elif value:
+            self.config.host_platform = 'noarch'
+
+    @property
+    def noarch_python(self):
+        return self.get_value('build/noarch_python')
+
+    @noarch_python.setter
+    def noarch_python(self, value):
+        build = self.meta.get('build', {})
+        build['noarch_python'] = value
+        self.meta['build'] = build
+        if not self.noarch and not value:
+            self.config.reset_platform()
+        elif value:
+            self.config.host_platform = 'noarch'
+
+    def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
+        output_metadata.meta['package']['name'] = output_dict.get('name', self.name())
+
+        # make sure that subpackages do not duplicate tests from top-level recipe
+        test = output_metadata.meta.get('test', {})
+        if output_dict.get('name') != self.name():
+            if 'commands' in test:
+                del test['commands']
+            if 'imports' in test:
+                del test['imports']
+
+        # make sure that subpackages do not duplicate top-level entry-points
+        build = output_metadata.meta.get('build', {})
+        if 'entry_points' in output_dict:
+            build['entry_points'] = output_dict['entry_points']
+        elif 'entry_points' in build:
+            del build['entry_points']
+        output_metadata.meta['build'] = build
+
+        # reset these so that reparsing does not reset the metadata name
+        output_metadata.path = ""
+        output_metadata.meta_path = ""
+
     def get_output_metadata(self, output):
+        if output.get('target'):
+            self.config.target_subdir = output['target']
         output_metadata = self.copy()
-        output_metadata.meta['package']['name'] = output.get('name', self.name())
-        requirements = output_metadata.meta.get('requirements', {})
-        requirements['run'] = output.get('requirements', [])
+        if self.name() != output.get('name'):
+            self.reconcile_metadata_with_output_dict(output_metadata, output)
+
+        if 'type' in output and output['type'] != 'conda':
+            name = output.get('name', self.name()) + '_' + output['type']
+            output_metadata.meta['package']['name'] = name
+
+        output_reqs = output.get('requirements', {})
+        if hasattr(output_reqs, 'keys'):
+            build_reqs = output_reqs.get('build', [])
+            host_reqs = output_reqs.get('host', [])
+            run_reqs = output_reqs.get('run', [])
+            constrain_reqs = output_reqs.get('run_constrained', [])
+        else:
+            output_reqs = ensure_list(output_reqs)
+            build_reqs = output_reqs
+            host_reqs = []
+            run_reqs = output_reqs
+            constrain_reqs = []
+
+        if 'name' in output:
+            # since we are copying reqs from the top-level package, which
+            #   can depend on subpackages, make sure that we filter out
+            #   subpackages so that they don't depend on themselves
+            subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
+            build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
+            host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
+            run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
+
+        if 'about' in output:
+            output_metadata.meta['about'] = output['about']
+
+        requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
+        if constrain_reqs:
+            requirements['run_constrained'] = constrain_reqs
         output_metadata.meta['requirements'] = requirements
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
-        extra['parent_recipe'] = {'path': self.path, 'name': self.name(), 'version': self.version()}
+        if self.name() == output.get('name') and 'requirements' not in output:
+            output['requirements'] = requirements
         output_metadata.meta['extra'] = extra
-        if 'outputs' in output_metadata.meta:
-            del output_metadata.meta['outputs']
+        output_metadata.final = False
+        if self.name() != output_metadata.name():
+            extra = self.meta.get('extra', {})
+            extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
+                                      'version': self.version()}
+            output_metadata.meta['extra'] = extra
+        output_metadata.noarch = output.get('noarch', False)
+        output_metadata.noarch_python = output.get('noarch_python', False)
+        # primarily for tests - make sure that we keep the platform consistent (setting noarch
+        #      would reset it)
+        if (not (output_metadata.noarch or output_metadata.noarch_python) and
+                self.config.platform != output_metadata.config.platform):
+            output_metadata.config.platform = self.config.platform
+        if 'run_exports' in output and output['run_exports']:
+            build = output_metadata.meta.get('build', {})
+            build['run_exports'] = output['run_exports']
+            output_metadata.meta['build'] = build
+
         return output_metadata
 
-    def get_output_metadata_set(self, files, permit_undefined_jinja=False):
-        outputs = self.get_section('outputs')
+    def get_output_metadata_set(self, permit_undefined_jinja=False,
+                                permit_unsatisfiable_variants=False):
+        out_metadata_map = {}
 
-        # this is the old, default behavior: conda package, with difference between start
-        #    set of files and end set of files
-        requirements = self.get_value('requirements/run')
-        try:
-            if not outputs:
-                outputs = [{'name': self.name(),
-                            'files': files,
-                            'requirements': requirements}]
-                metadata = [self]
-            else:
-                # make a metapackage for the top-level package if the top-level requirements
-                #     mention a subpackage,
-                uses_subpackage = any(out.get('name') in requirements for out in outputs)
-                # but only if a matching output name is not explicitly provided
-                if uses_subpackage and not any(self.name() == out.get('name', '')
-                                               for out in outputs):
-                    outputs.append({'name': self.name(), 'requirements': requirements,
-                                    'pin_downstream':
-                                        self.meta.get('build', {}).get('pin_downstream')})
+        for variant in (self.config.variants if hasattr(self.config, 'variants')
+                        else [self.config.variant]):
+            om = self.copy()
+            om.final = False
+            om.config.variant = variant
+            om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+            outputs = get_output_dicts_from_metadata(om)
+
+            try:
                 for out in outputs:
-                    if (self.name() == out.get('name', '') and not (out.get('files') or
-                                                                    out.get('script'))):
-                        out['files'] = files
-                        requirements = requirements
-                    metadata = [self.get_output_metadata(output) for output in outputs]
-        except SystemExit:
-            if not permit_undefined_jinja:
-                raise
-            outputs = []
-            metadata = []
-        return list(six.moves.zip(outputs, metadata))
+                    out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
+            except SystemExit:
+                if not permit_undefined_jinja:
+                    raise
+                out_metadata_map = {}
+
+        assert out_metadata_map, ("Error: output metadata set is empty.  Please file an issue on "
+                          "the conda-build tracker at https://github.com/conda/conda-build/issues")
+
+        # format here is {output_dict: metadata_object}
+        render_order = toposort(out_metadata_map, phase='build')
+        check_circular_dependencies(render_order)
+
+        conda_packages = OrderedDict()
+        non_conda_packages = []
+        for output_d, m in render_order.items():
+            if not output_d.get('type') or output_d['type'] == 'conda':
+                conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
+            elif output_d.get('type') == 'wheel':
+                if (not output_d.get('requirements', {}).get('build') or
+                        not any('wheel' in req for req in output_d['requirements']['build'])):
+                    build_reqs = output_d.get('requirements', {}).get('build', [])
+                    build_reqs.extend(['wheel', 'python {}'.format(m.config.variant['python'])])
+                    output_d['requirements'] = output_d.get('requirements', {})
+                    output_d['requirements']['build'] = build_reqs
+                    m.meta['requirements'] = m.meta.get('requirements', {})
+                    m.meta['requirements']['build'] = build_reqs
+                non_conda_packages.append((output_d, m))
+            else:
+                # for wheels and other non-conda packages, just append them at the end.
+                #    no deduplication with hashes currently.
+                # hard part about including any part of output_d
+                #    outside of this func is that it is harder to
+                #    obtain an exact match elsewhere
+                non_conda_packages.append((output_d, m))
+
+        # early stages don't need to do the finalization.  Skip it until the later stages
+        #     when we need it.
+        if not permit_undefined_jinja:
+            # The loop above gives us enough info to determine the build order.  After that,
+            #    we can "finalize" the metadata (fill in version pins) for the build metadata.
+            #    This does not, however, account for circular dependencies
+            #    where a runtime exact dependency pin on a downstream build
+            #    subpackage in an upstream subpackage changes the upstream's
+            #    hash, which then changes the downstream package's hash, which
+            #    then recurses infinitely
+
+            # In general, given upstream a and downstream b, b can depend on a
+            # exactly, but a can only have version constraints on b at run or
+            # run_exports, not exact=True
+
+            # 3 passes here:
+            #    1. fill in fully-resolved build-time dependencies
+            #    2. fill in fully-resolved run-time dependencies.  Note that circular dependencies
+            #       are allowed, but you can't have exact=True for circular run-time dependencies
+            #    3. finally, everything should be filled in and done.
+            conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
+                                permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+
+            # Sanity check: if any exact pins of any subpackages, make sure that they match
+            ensure_matching_hashes(conda_packages)
+        # We arbitrarily mark all output metadata as final, regardless of if it truly is or not.
+        #    This is done to add sane hashes to unfinalizable packages, so that they are
+        #    differentiable from one another.  This is mostly a test concern than an actual one,
+        #    as any "final" recipe returned here will still barf if anyone tries to actually build
+        #    it.
+        final_conda_packages = []
+        for (out_d, m) in conda_packages.values():
+            m.final = True
+            final_conda_packages.append((out_d, m))
+        return final_conda_packages + non_conda_packages
+
+    def get_loop_vars(self):
+        _variants = (self.config.input_variants if hasattr(self.config, 'input_variants') else
+                    self.config.variants)
+        return variants.get_loop_vars(_variants)
+
+    def clean(self):
+        """This ensures that clean is called with the correct build id"""
+        self.config.clean()

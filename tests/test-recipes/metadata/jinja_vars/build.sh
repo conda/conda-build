@@ -6,6 +6,3 @@
 
 # Sanity check: Neither was LD_LIBRARY_PATH
 [ "$LD_LIBRARY_PATH" == "" ]
-
-# Check the special value we gave the build string, which depends on build number
-[ "${PKG_BUILD_STRING}" == "${CONDA_TEST_VAR}_${PKG_BUILDNUM}" ]

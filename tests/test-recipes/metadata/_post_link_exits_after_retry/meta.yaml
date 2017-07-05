@@ -4,4 +4,4 @@ package:
 
 requirements:
   build:
-    - post-link-fails
+    - _post-link-fails

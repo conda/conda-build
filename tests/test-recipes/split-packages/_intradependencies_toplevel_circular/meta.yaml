@@ -1,0 +1,80 @@
+package:
+  name: compilers_{{ cross_target_platform }}
+  version: {{ gcc }}
+
+source:
+  path: .
+
+build:
+  detect_binary_files_with_prefix: False
+  binary_relocation: False
+
+requirements:
+  run:
+    - {{ pin_subpackage('gcc_' ~ cross_target_platform, exact=True) }}
+    - {{ pin_subpackage('gxx_' ~ cross_target_platform, exact=True) }}
+    - {{ pin_subpackage('gfortran_' ~ cross_target_platform, exact=True) }}
+
+outputs:
+  - name: gcc_{{ cross_target_platform }}
+    requirements:
+#      build:
+#        - unifdef
+      run:
+        - {{ pin_subpackage('binutils_' ~ cross_target_platform, exact=True) }}
+    run_exports:
+      - {{ pin_subpackage('libgcc_' ~ cross_target_platform) }}
+    about:
+      summary: GNU C Compiler
+      home: https://gcc.gnu.org/
+      license: GPL
+
+  - name: gxx_{{ cross_target_platform }}
+    requirements:
+      # For cpp and crt{i,n}.o
+      - {{ pin_subpackage('gcc_' ~ cross_target_platform, exact=True) }}
+    run_exports:
+      - {{ pin_subpackage('libstdcxx_' ~ cross_target_platform) }}
+    about:
+      summary: GNU C++ Compiler
+      home: https://gcc.gnu.org/
+      license: GPL
+
+  - name: gfortran_{{ cross_target_platform }}
+    requirements:
+      # For cpp and crt{i,n}.o
+      - {{ pin_subpackage('gcc_' ~ cross_target_platform, exact=True) }}
+    run_exports:
+      - {{ pin_subpackage('libgfortran_' ~ cross_target_platform) }}
+    about:
+      summary: GNU Fortran Compiler
+      home: https://gcc.gnu.org/
+      license: GPL
+
+  - name: binutils_{{ cross_target_platform }}
+    version: {{ binutils }}
+    about:
+      summary: The GNU Binutils are a collection of binary tools.
+      home: https://www.gnu.org/software/binutils/
+      license: GPL
+
+  - name: libstdcxx_{{ cross_target_platform }}
+    target: {{ cross_target_platform }}
+    about:
+      summary: The GNU C++ Runtime Library
+      home: https://gcc.gnu.org/
+      license: GPL3 with runtime exception
+
+  - name: libgcc_{{ cross_target_platform }}
+    target: {{ cross_target_platform }}
+    about:
+      summary: The GCC low-level runtime library
+      home: https://gcc.gnu.org/onlinedocs/gccint/Libgcc.html
+      license: GPL
+
+  - name: libgfortran_{{ cross_target_platform }}
+    target: {{ cross_target_platform }}
+    about:
+      summary: The GNU Fortran Runtime Library
+      home: https://gcc.gnu.org/
+      license: GPL

@@ -1,0 +1,11 @@
+package:
+  name: numpy_matrix
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    - numpy
+  run:
+    - python
+    - numpy

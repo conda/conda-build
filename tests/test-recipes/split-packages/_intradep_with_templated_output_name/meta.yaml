@@ -1,0 +1,18 @@
+package:
+  name: test_templated_subpackage_name
+  version: 1.0
+
+requirements:
+  build:
+    # the purpose of these dependencies is to disallow empty requirements from making the tests
+    #    pass when they would otherwise fail.  Empty requirements hide lack of finalization.
+    - posix  # [win]
+    - git    # [not win]
+  run:
+    - {{ pin_subpackage('templated_subpackage_name' ~ test_var) }}
+
+outputs:
+  - name: templated_subpackage_name{{ test_var }}
+  - name: depends_on_templated
+    requirements:
+      - {{ pin_subpackage('templated_subpackage_name' ~ test_var) }}

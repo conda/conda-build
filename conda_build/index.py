@@ -4,22 +4,31 @@ Functions related to creating repodata index files.
 
 from __future__ import absolute_import, division, print_function
 
-import os
 import bz2
-import sys
+import contextlib
+from functools import partial
 import json
+import logging
+import os
 import tarfile
 from os.path import isfile, join, getmtime
 
 from conda_build.utils import file_info, get_lock, try_acquire_locks
-from .conda_interface import PY3, md5_file
+from conda_build import utils, conda_interface
+from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index
+
+local_index_timestamp = 0
+cached_index = None
+local_subdir = ""
+cached_channels = []
 
 
-def read_index_tar(tar_path, config, lock):
+def read_index_tar(tar_path, lock, locking=True, timeout=90):
     """ Returns the index.json dict inside the given package tarball. """
-    if config.locking:
+    locks = []
+    if locking:
         locks = [lock]
-    with try_acquire_locks(locks, config.timeout):
+    with try_acquire_locks(locks, timeout):
         with tarfile.open(tar_path) as t:
             try:
                 return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
@@ -33,14 +42,12 @@ def read_index_tar(tar_path, config, lock):
                                 "File probably corrupt." % tar_path)
 
 
-def write_repodata(repodata, dir_path, lock, config=None):
+def write_repodata(repodata, dir_path, lock, locking=90, timeout=90):
     """ Write updated repodata.json and repodata.json.bz2 """
-    if not config:
-        import conda_build.config
-        config = conda_build.config.config
-    if config.locking:
+    locks = []
+    if locking:
         locks = [lock]
-    with try_acquire_locks(locks, config.timeout):
+    with try_acquire_locks(locks, timeout):
         data = json.dumps(repodata, indent=2, sort_keys=True)
         # strip trailing whitespace
         data = '\n'.join(line.rstrip() for line in data.splitlines())
@@ -53,8 +60,8 @@ def write_repodata(repodata, dir_path, lock, config=None):
             fo.write(bz2.compress(data.encode('utf-8')))
 
 
-def update_index(dir_path, config, force=False, check_md5=False, remove=True, lock=None,
-                 could_be_mirror=True):
+def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
+                 could_be_mirror=True, verbose=True, locking=True, timeout=90):
     """
     Update all index files in dir_path with changed packages.
 
@@ -68,23 +75,25 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
     :type check_md5: bool
     """
 
-    if config.verbose:
-        print("updating index in:", dir_path)
-    index_path = join(dir_path, '.index.json')
+    log = utils.get_logger(__name__)
+
+    log.debug("updating index in: %s", dir_path)
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
+
+    index_path = join(dir_path, '.index.json')
 
     if not lock:
         lock = get_lock(dir_path)
 
     locks = []
-    if config.locking:
+    if locking:
         locks.append(lock)
 
-    with try_acquire_locks(locks, config.timeout):
-        if force:
-            index = {}
-        else:
+    index = {}
+
+    with try_acquire_locks(locks, timeout):
+        if not force:
             try:
                 mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
                 with open(index_path, **mode_dict) as fi:
@@ -93,13 +102,6 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
                 index = {}
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
-        if could_be_mirror and any(fn.startswith('_license-') for fn in files):
-            sys.exit("""\
-    Error:
-        Indexing a copy of the Anaconda conda package channel is neither
-        necessary nor supported.  If you wish to add your own packages,
-        you can do so by adding them to a separate channel.
-    """)
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:
@@ -108,9 +110,9 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
                         continue
                 elif index[fn]['mtime'] == getmtime(path):
                     continue
-            if config.verbose:
+            if verbose:
                 print('updating:', fn)
-            d = read_index_tar(path, config, lock=lock)
+            d = read_index_tar(path, lock=lock, locking=locking, timeout=timeout)
             d.update(file_info(path))
             index[fn] = d
 
@@ -120,7 +122,7 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
         if remove:
             # remove files from the index which are not on disk
             for fn in set(index) - files:
-                if config.verbose:
+                if verbose:
                     print("removing:", fn)
                 del index[fn]
 
@@ -142,4 +144,87 @@ def update_index(dir_path, config, force=False, check_md5=False, remove=True, lo
                 info['depends'] = info['requires']
 
         repodata = {'packages': index, 'info': {}}
-        write_repodata(repodata, dir_path, lock=lock, config=config)
+        write_repodata(repodata, dir_path, lock=lock, locking=locking, timeout=timeout)
+
+
+def ensure_valid_channel(local_folder, subdir, verbose=True, locking=True, timeout=90):
+    for folder in set((subdir, 'noarch')):
+        path = os.path.join(local_folder, folder)
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        if not os.path.isfile(os.path.join(path, 'repodata.json')):
+            update_index(path, verbose=verbose, locking=locking, timeout=timeout)
+
+
+def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
+                    omit_defaults=False, channel_urls=None, debug=False, verbose=True,
+                    locking=True, timeout=90):
+    global local_index_timestamp
+    global local_subdir
+    global cached_index
+    global cached_channels
+    log = utils.get_logger(__name__)
+    mtime = 0
+
+    channel_urls = list(utils.ensure_list(channel_urls))
+
+    if not output_folder:
+        output_folder = os.path.dirname(bldpkgs_dir)
+
+    # check file modification time - this is the age of our index.
+    index_file = os.path.join(output_folder, subdir, 'repodata.json')
+    if os.path.isfile(index_file):
+        mtime = os.path.getmtime(index_file)
+
+    if (clear_cache or
+            not os.path.isfile(index_file) or
+            local_subdir != subdir or
+            mtime > local_index_timestamp or
+            cached_channels != channel_urls):
+
+        log.debug("Building new index for subdir '{}' with channels {}, condarc channels "
+                  "= {}".format(subdir, channel_urls, not omit_defaults))
+        # priority: local by croot (can vary), then channels passed as args,
+        #     then channels from config.
+        capture = contextlib.contextmanager(lambda: (yield))
+        if debug:
+            log_context = partial(utils.LoggingContext, logging.DEBUG)
+        elif verbose:
+            log_context = partial(utils.LoggingContext, logging.WARN)
+        else:
+            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
+            capture = utils.capture
+
+        urls = list(channel_urls)
+        if os.path.isdir(output_folder):
+            urls.insert(0, url_path(output_folder))
+        ensure_valid_channel(output_folder, subdir, verbose=verbose, locking=locking,
+                             timeout=timeout)
+
+        # silence output from conda about fetching index files
+        with log_context():
+            with capture():
+                # replace noarch with native subdir - this ends up building an index with both the
+                #      native content and the noarch content.
+                if subdir == 'noarch':
+                    subdir = conda_interface.subdir
+                try:
+                    cached_index = get_index(channel_urls=urls,
+                                    prepend=not omit_defaults,
+                                    use_local=False,
+                                    use_cache=False,
+                                    platform=subdir)
+                # HACK: defaults does not have the many subfolders we support.  Omit it and
+                #          try again.
+                except CondaHTTPError:
+                    if 'defaults' in urls:
+                        urls.remove('defaults')
+                    cached_index = get_index(channel_urls=urls,
+                                             prepend=omit_defaults,
+                                             use_local=False,
+                                             use_cache=False,
+                                             platform=subdir)
+        local_index_timestamp = os.path.getmtime(index_file)
+        local_subdir = subdir
+        cached_channels = channel_urls
+    return cached_index, local_index_timestamp

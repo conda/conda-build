@@ -3,7 +3,8 @@ import os
 import pytest
 
 from conda_build import api
-from .utils import metadata_dir, is_valid_dir, check_call_env
+from conda_build.utils import check_call_env
+from .utils import metadata_dir, is_valid_dir
 
 published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code')
 
@@ -23,9 +24,7 @@ def recipe(request):
 
 
 # This tests any of the folders in the test-recipes/published_code folder that don't start with _
-def test_recipe_builds(recipe, test_config, testing_workdir):
+def test_recipe_builds(recipe, testing_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
-    ok_to_test = api.build(recipe, config=test_config)
-    if ok_to_test:
-        api.test(recipe, config=test_config)
+    api.build(recipe, config=testing_config)

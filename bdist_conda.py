@@ -4,6 +4,7 @@ bdist_conda
 """
 from __future__ import print_function, division, unicode_literals
 
+import sys
 import time
 
 from collections import defaultdict
@@ -254,11 +255,15 @@ class bdist_conda(install):
             d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
         d = dict(d)
+        self.config.dirty = True
         m = MetaData.fromdict(d, config=self.config)
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
         m.config.set_build_id = False
+        m.config.variant['python'] = ".".join((str(sys.version_info.major),
+                                               str(sys.version_info.minor)))
         api.build(m, build_only=True)
+        self.config = m.config
         # prevent changes in the build ID from here, so that we're working in the same prefix
         # Do the install
         if not PY3:
@@ -266,19 +271,19 @@ class bdist_conda(install):
             install.run(self)
         else:
             super().run()
-        api.build(m, post=True)
-        api.test(m)
-        output_file = api.get_output_file_path(m)
+        output = api.build(m, post=True)[0]
+        api.test(output, config=m.config)
+        m.config.clean()
         if self.anaconda_upload:
             class args:
                 anaconda_upload = self.anaconda_upload
-            handle_anaconda_upload(output_file, args)
+            handle_anaconda_upload(output, args)
         else:
             no_upload_message = """\
 # If you want to upload this package to anaconda.org later, type:
 #
 # $ anaconda upload %s
-""" % output_file
+""" % output
             print(no_upload_message)
 
 

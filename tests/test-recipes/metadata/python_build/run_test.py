@@ -1,15 +1,15 @@
 import os
+from glob import glob
 import json
 
 
 def main():
     prefix = os.environ['PREFIX']
-    info_file = os.path.join(prefix, 'conda-meta',
-                             'conda-build-test-python-build-1.0-0.json')
+    info_file = glob(os.path.join(prefix, 'conda-meta', 'conda-build-test-python-build-1.0*.json'))[0]
     with open(info_file, 'r') as fh:
         info = json.load(fh)
 
-    assert len(info['depends']) == 0
+    assert len(info['depends']) == 0, info['depends']
 
 if __name__ == '__main__':
     main()

@@ -11,6 +11,7 @@ from conda_build.conda_interface import linked_data
 
 from conda_build import post
 from conda_build.os_utils.macho import otool
+from conda_build.os_utils.pyldd import inspect_linkages
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
 LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
@@ -41,16 +42,36 @@ def ldd(path):
 
 
 @memoized
-def get_linkages(obj_files, prefix):
+def get_linkages(obj_files, prefix, sysroot):
     res = {}
 
     for f in obj_files:
         path = join(prefix, f)
-        if sys.platform.startswith('linux'):
-            res[f] = ldd(path)
-        elif sys.platform.startswith('darwin'):
-            links = otool(path)
-            res[f] = [(basename(l['name']), l['name']) for l in links]
+        # ldd quite often fails on foreign architectures.
+        ldd_failed = False
+        try:
+            if sys.platform.startswith('linux'):
+                res[f] = ldd(path)
+            elif sys.platform.startswith('darwin'):
+                links = otool(path)
+                res[f] = [(basename(l['name']), l['name']) for l in links]
+        except:
+            ldd_failed = True
+        finally:
+            res_py = inspect_linkages(path, sysroot)
+            res_py = [(basename(lp), lp) for lp in res_py]
+            print("set(res_py) {}".format(set(res_py)))
+            if ldd_failed:
+                res[f] = res_py
+            else:
+                print("set(res[f]) = {}".format(set(res[f])))
+                if set(res[f]) != set(res_py):
+                    print("WARNING: pyldd disagrees with ldd/otool. This will not cause any")
+                    print("WARNING: problems for this build, but please file a bug at:")
+                    print("WARNING: https://github.com/conda/conda-build")
+                    print("WARNING: and (if possible) attach file {}".format(path))
+                    print("WARNING: ldd/tool gives {}, pyldd gives {}"
+                              .format(set(res[f]), set(res_py)))
 
     return res
 

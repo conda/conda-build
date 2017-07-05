@@ -21,7 +21,7 @@ import requests
 from requests.packages.urllib3.util.url import parse_url
 import yaml
 
-from conda_build.conda_interface import spec_from_line, Completer
+from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
 from conda_build.conda_interface import CondaSession
 from conda_build.conda_interface import download, handle_proxy_407
@@ -29,9 +29,9 @@ from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
 
-from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env
+from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env, ensure_list
 from conda_build.source import apply_patch
-from conda_build.build import create_env
+from conda_build.environ import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
@@ -127,18 +127,6 @@ class RequestsTransport(Transport):
         return '%s://%s/%s' % (scheme, host, handler)
 
 
-class PyPIPackagesCompleter(Completer):
-    def __init__(self, prefix, parsed_args, **kwargs):
-        self.prefix = prefix
-        self.parsed_args = parsed_args
-
-    def _get_items(self):
-        from conda_build.pypi import get_xmlrpc_client
-        args = self.parsed_args
-        client = get_xmlrpc_client(getattr(args, 'pypi_url'))
-        return [i.lower() for i in client.list_packages()]
-
-
 pypi_example = """
 Examples:
 
@@ -169,7 +157,7 @@ source:
    # - fix.patch
 
 {build_comment}build:
-  {noarch_python_comment}noarch_python: True
+  {noarch_python_comment}noarch: python
   {egg_comment}preserve_egg_dir: True
   {entry_comment}entry_points:
     # Put any entry points (scripts to be generated automatically) here. The
@@ -481,7 +469,7 @@ def add_parser(repos):
         nargs='+',
         help="""PyPi packages to create recipe skeletons for.
                 You can also specify package[extra,...] features.""",
-    ).completer = PyPIPackagesCompleter
+    )
     pypi.add_argument(
         "--output-dir",
         help="Directory to write recipes to (default: %(default)s).",
@@ -800,7 +788,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['import_comment'] = ''
 
         d['tests_require'] = INDENT.join(sorted([spec_from_line(pkg) for pkg
-                                                    in pkginfo['tests_require']]))
+                                                 in ensure_list(pkginfo['tests_require'])]))
 
     if pkginfo.get('homeurl'):
         d['homeurl'] = pkginfo['homeurl']
@@ -908,6 +896,33 @@ def get_requirements(package, pkginfo, all_extras=True):
             extras_require = [pkginfo['extras_require'][x] for x in extras]
         except KeyError:
             sys.exit("Error: Invalid extra features: [%s]" % ','.join(extras))
+        # match PEP 508 environment markers; currently only matches the
+        #  subset of environment markers that compare to python_version
+        #  using a single basic Python comparison operator
+        version_marker = re.compile(r'^:python_version(<|<=|!=|==|>=|>)(.+)$')
+        for extra in pkginfo['extras_require']:
+            match_ver_mark = version_marker.match(extra)
+            if match_ver_mark:
+                op, ver = match_ver_mark.groups()
+                try:
+                    ver_tuple = tuple(int(x) for x in ver.strip('\'"').split("."))
+                except ValueError:
+                    pass  # bad match; abort
+                else:
+                    if op == "<":
+                        satisfies_ver = sys.version_info < ver_tuple
+                    elif op == "<=":
+                        satisfies_ver = sys.version_info <= ver_tuple
+                    elif op == "!=":
+                        satisfies_ver = sys.version_info != ver_tuple
+                    elif op == "==":
+                        satisfies_ver = sys.version_info == ver_tuple
+                    elif op == ">=":
+                        satisfies_ver = sys.version_info >= ver_tuple
+                    else:  # op == ">":
+                        satisfies_ver = sys.version_info > ver_tuple
+                    if satisfies_ver:
+                        extras_require += pkginfo['extras_require'][extra]
 
     # ... and collect all needed requirement specs in a single list:
     requires = []
@@ -982,15 +997,8 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     specs.extend(extra_specs)
 
-    # Do everything in the build env in case the setup.py install goes
-    # haywire.
-    # TODO: Try with another version of Python if this one fails. Some
-    # packages are Python 2 or Python 3 only.
-
-    if not os.path.isdir(config.build_prefix) or not os.listdir(config.build_prefix):
-        create_env(config.build_prefix, specs=specs,
-                clear_cache=False,
-                config=config)
+    create_env(config.build_prefix, specs_or_actions=specs, env='build',
+                subdir=config.build_subdir, clear_cache=False, config=config)
     stdlib_dir = join(config.build_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)

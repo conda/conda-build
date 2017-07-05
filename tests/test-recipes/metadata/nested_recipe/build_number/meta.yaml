@@ -1,5 +1,5 @@
 package:
-  name: conda-build-test-build-number
+  name: conda-build-test-nested-recipe
   version: 1.0
 
 build:

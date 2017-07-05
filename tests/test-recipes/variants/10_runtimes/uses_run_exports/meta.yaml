@@ -1,0 +1,11 @@
+package:
+  name: package_has_run_exports
+  version: 1.0
+
+build:
+  run_exports:
+    - {{ pin_compatible('bzip2') }}
+
+requirements:
+  build:
+    - bzip2

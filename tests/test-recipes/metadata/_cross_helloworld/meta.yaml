@@ -1,0 +1,39 @@
+package:
+  name: _cross_helloworld
+  version: 1.0
+
+source:
+  path: ./src
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - xz
+  host:
+    - _cross_libgreeting
+
+build:
+  script:
+    - mkdir -p ${PREFIX}/bin
+    # Both build env and host env should be on PATH.  Host env should come first.
+    - echo $PATH | grep -q "_h_env_placehold"
+    - echo $PATH | grep -q "_build_env"
+    - host_pos=echo $abc | tr ':' '\n' | grep -bo _h_env_placehold | sed 's/:.*$//'
+    - build_pos=echo $abc | tr ':' '\n' | grep -bo _build_env | sed 's/:.*$//'
+    - test $host_pos -lt $build_pos
+    - ${CC} helloworld.c -I${PREFIX}/include -L${PREFIX}/lib -lgreeting -DGREETING_SUFFIX="$(xz --version | head -n 1)" -o ${PREFIX}/bin/helloworld
+
+test:
+  commands:
+  # Test that information from build requirements can make it into host artefacts:
+  - strings ${PREFIX}/bin/helloworld | grep "XZ Utils"
+  # Test that the correct cross-compilers were used:
+  - file ${PREFIX}/bin/helloworld | grep "ELF 32-bit LSB executable, ARM, "
+  # Not working at present for two reasons:
+  # 1. We do not provide qemu
+  # 2. Something wrong with the cross-compiler sysroot, to be investigated.
+  #    Using the actual CAT box sysroot instead *does* work.
+  # requirements:
+  #   - qemu-arm
+  #   - {{ compiler('c') }}
+  # - qemu-arm -L ${PREFIX}/arm-unknown-linux-uclibcgnueabi/sysroot ${PREFIX}/bin/helloworld | grep "Hello World!"

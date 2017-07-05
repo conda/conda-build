@@ -1,0 +1,20 @@
+From f39550bc4ee55f54842829af7b78e692a9376841 Mon Sep 17 00:00:00 2001
+From: Ray Donnelly <mingw.android@gmail.com>
+Date: Sun, 19 Mar 2017 14:22:52 +0000
+Subject: [PATCH] Extra commit ensuring verify_git_repo ignores it
+
+---
+ README.md | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/README.md b/README.md
+index 27eb18c..f62828e 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,3 @@
+ # conda_build_test_recipe
+ This repo is used for testing conda-build
++This commit is used to ensure that, when applied via git am, it is ignored by the sha1 check in verify_git_repo
+-- 
+2.11.1
+

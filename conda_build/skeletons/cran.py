@@ -10,6 +10,12 @@ from os.path import join, exists, isfile, basename, isdir
 import re
 import subprocess
 import sys
+import hashlib
+
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 import requests
 import yaml
@@ -25,18 +31,16 @@ from conda_build import source, metadata
 from conda_build.config import Config
 from conda_build.utils import rm_rf
 from conda_build.conda_interface import text_type, iteritems
-from conda_build.conda_interface import Completer
 from conda_build.license_family import allowed_license_families, guess_license_family
 
 CRAN_META = """\
-{{% set name = '{cran_packagename}' %}}
 {{% set version = '{cran_version}' %}}
 
 {{% set posix = 'm2-' if win else '' %}}
 {{% set native = 'm2w64-' if win else '' %}}
 
 package:
-  name: r-{{{{ name|lower }}}}
+  name: {packagename}
   version: {{{{ version|replace("-", "_") }}}}
 
 source:
@@ -44,9 +48,7 @@ source:
   {url_key} {cranurl}
   {git_url_key} {git_url}
   {git_tag_key} {git_tag}
-  # You can add a hash for the file here, like md5 or sha1
-  # md5: 49448ba4863157652311cc5ea4fea3ea
-  # sha1: 3bcfbee008276084cbb37a2b453963c61176a322
+  {hash_entry}
   # patches:
    # List any patch files here
    # - fix.patch
@@ -195,20 +197,6 @@ VERSION_DEPENDENCY_REGEX = re.compile(
 )
 
 
-class CRANPackagesCompleter(Completer):
-    def __init__(self, prefix, parsed_args):
-        self.prefix = prefix
-        self.parsed_args = parsed_args
-
-    def _get_items(self):
-        args = self.parsed_args
-        cran_url = getattr(args, 'cran_url', 'https://cran.r-project.org/')
-        output_dir = getattr(args, 'output_dir', '.')
-        cran_metadata = get_cran_metadata(cran_url, output_dir, verbose=False)
-        return [i.lower() for i in cran_metadata] + ['r-%s' % i.lower() for i
-            in cran_metadata]
-
-
 def package_exists(package_name):
     # TODO: how can we get cran to spit out package presence?
     # available.packages() is probably a start, but no channels are working on mac right now?
@@ -230,7 +218,7 @@ def add_parser(repos):
         "packages",
         nargs='+',
         help="""CRAN packages to create recipe skeletons for.""",
-    ).completer = CRANPackagesCompleter
+    )
     cran.add_argument(
         "--output-dir",
         help="Directory to write recipes to (default: %(default)s).",
@@ -294,7 +282,11 @@ def dict_from_cran_lines(lines):
         if not line:
             continue
         try:
-            (k, v) = line.split(': ', 1)
+            if ': ' in line:
+                (k, v) = line.split(': ', 1)
+            else:
+                # Sometimes (leaflet) you get lines such as 'Depends:'
+                (k, v) = line.split(':', 1)
         except ValueError:
             sys.exit("Error: Could not parse metadata (%s)" % line)
         d[k] = v
@@ -399,7 +391,7 @@ def get_package_metadata(cran_url, package, session):
 
 
 def get_latest_git_tag(config):
-    p = subprocess.Popen(['git', 'describe', '--abbrev=0', '--tags'],
+    p = subprocess.Popen(['git', 'describe', '--tags', '--abbrev=0'],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
@@ -471,8 +463,8 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
 
         if is_github_url:
             rm_rf(config.work_dir)
-            m = metadata.MetaData.fromdict({'source': {'git_url': package}})
-            source.git_source(m, config=config)
+            m = metadata.MetaData.fromdict({'source': {'git_url': package}}, config=config)
+            source.git_source(m.get_section('source'), m.config.git_cache, m.config.work_dir)
             git_tag = git_tag[0] if git_tag else get_latest_git_tag(config)
             p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, cwd=config.work_dir)
@@ -548,6 +540,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['fn_key'] = ''
             d['git_url_key'] = 'git_url:'
             d['git_tag_key'] = 'git_tag:'
+            d['hash_entry'] = '# You can add a hash for the file here, like md5, sha1 or sha256'
             d['filename'] = ''
             d['cranurl'] = ''
             d['git_url'] = url
@@ -559,6 +552,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['git_tag_key'] = ''
             d['git_url'] = ''
             d['git_tag'] = ''
+            d['hash_entry'] = ''
 
         if version:
             d['version'] = version
@@ -571,11 +565,21 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             sys.exit(not version_compare(dir_path, d['conda_version']))
 
         if not is_github_url:
-            d['filename'] = "{{ name }}_{{ version }}.tar.gz"
+            filename = '{}_{}.tar.gz'
+            contrib_url = cran_url + 'src/contrib/'
+            package_url = contrib_url + filename.format(package, d['cran_version'])
+
+            # calculate sha256 by downloading source
+            sha256 = hashlib.sha256()
+            print("Downloading source from {}".format(package_url))
+            sha256.update(urlopen(package_url).read())
+            d['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
+
+            d['filename'] = filename.format(package, '{{ version }}')
             if archive:
-                d['cranurl'] = (INDENT + cran_url + 'src/contrib/' +
-                    d['filename'] + INDENT + cran_url + 'src/contrib/' +
-                    'Archive/{{ name }}/' + d['filename'])
+                d['cranurl'] = (INDENT + contrib_url +
+                    d['filename'] + INDENT + contrib_url +
+                    'Archive/{}/'.format(package) + d['filename'])
             else:
                 d['cranurl'] = ' ' + cran_url + 'src/contrib/' + d['filename']
 
@@ -595,6 +599,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['home_comment'] = ''
             d['homeurl'] = ' ' + yaml_quote_string(cran_package['URL'])
         else:
+            # use CRAN page as homepage if nothing has been specified
             d['home_comment'] = ''
             d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
@@ -673,6 +678,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                     deps.append('{indent}posix                # [win]'.format(indent=INDENT))
                     deps.append('{indent}{{{{native}}}}toolchain  # [win]'.format(indent=INDENT))
                     deps.append('{indent}gcc                  # [not win]'.format(indent=INDENT))
+                elif dep_type == 'run':
+                    deps.append('{indent}{{{{native}}}}gcc-libs   # [win]'.format(indent=INDENT))
+                    deps.append('{indent}libgcc               # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:

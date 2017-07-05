@@ -80,11 +80,13 @@ command line with the conda metapackage command.
     )
     p.add_argument(
         "--home",
-        help="The homepage for the metapackage."
+        help="The homepage for the metapackage.",
+
     )
     p.add_argument(
         "--license",
         help="The license of the metapackage.",
+        dest='license_name'
     )
     p.add_argument(
         "--summary",
@@ -109,10 +111,7 @@ command line with the conda metapackage command.
 
 def execute(args):
     _, args = parse_args(args)
-    api.create_metapackage(name=args.name, version=args.version, entry_points=args.entry_points,
-                           build_string=args.build_string, build_number=args.build_number,
-                           dependencies=args.dependencies, home=args.home,
-                           license_name=args.license, summary=args.summary)
+    api.create_metapackage(**args.__dict__)
 
 
 def main():

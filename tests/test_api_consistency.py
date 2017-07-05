@@ -14,14 +14,15 @@ def test_api_config():
 
 def test_api_get_or_merge_config():
     argspec = getargspec(api.get_or_merge_config)
-    assert argspec.args == ['config']
-    assert argspec.defaults is None
+    assert argspec.args == ['config', 'variant']
+    assert argspec.defaults == (None, )
 
 
 def test_api_render():
     argspec = getargspec(api.render)
-    assert argspec.args == ['recipe_path', 'config']
-    assert argspec.defaults == (None,)
+    assert argspec.args == ['recipe_path', 'config', 'variants',
+                            'permit_unsatisfiable_variants', 'finalize']
+    assert argspec.defaults == (None, None, True, True)
 
 
 def test_api_output_yaml():
@@ -32,51 +33,27 @@ def test_api_output_yaml():
 
 def test_api_get_output_file_path():
     argspec = getargspec(api.get_output_file_path)
-    assert argspec.args == ['recipe_path_or_metadata', 'no_download_source', 'config']
-    assert argspec.defaults == (False, None)
+    assert argspec.args == ['recipe_path_or_metadata', 'no_download_source', 'config', 'variants']
+    assert argspec.defaults == (False, None, None)
 
 
 def test_api_check():
     argspec = getargspec(api.check)
-    assert argspec.args == ['recipe_path', 'no_download_source', 'config']
-    assert argspec.defaults == (False, None)
+    assert argspec.args == ['recipe_path', 'no_download_source', 'config', 'variants']
+    assert argspec.defaults == (False, None, None)
 
 
 def test_api_build():
     argspec = getargspec(api.build)
     assert argspec.args == ['recipe_paths_or_metadata', 'post', 'need_source_download',
-                            'build_only', 'notest', 'config']
-    assert argspec.defaults == (None, True, False, False, None)
+                            'build_only', 'notest', 'config', 'variants']
+    assert argspec.defaults == (None, True, False, False, None, None)
 
 
 def test_api_test():
     argspec = getargspec(api.test)
     assert argspec.args == ['recipedir_or_package_or_metadata', 'move_broken', 'config']
     assert argspec.defaults == (True, None)
-
-
-def test_api_keygen():
-    argspec = getargspec(api.keygen)
-    assert argspec.args == ['name', 'size']
-    assert argspec.defaults == ('conda_build_signing', 2048)
-
-
-def test_api_import_sign_key():
-    argspec = getargspec(api.import_sign_key)
-    assert argspec.args == ['private_key_path', 'new_name']
-    assert argspec.defaults == (None,)
-
-
-def test_api_sign():
-    argspec = getargspec(api.sign)
-    assert argspec.args == ['file_path', 'key_name_or_path']
-    assert argspec.defaults == (None,)
-
-
-def test_api_verify():
-    argspec = getargspec(api.verify)
-    assert argspec.args == ['file_path']
-    assert argspec.defaults is None
 
 
 def test_api_list_skeletons():
@@ -114,8 +91,8 @@ def test_api_installable():
 def test_api_inspect_linkages():
     argspec = getargspec(api.inspect_linkages)
     assert argspec.args == ['packages', 'prefix', 'untracked', 'all_packages',
-                            'show_files', 'groupby']
-    assert argspec.defaults == (sys.prefix, False, False, False, 'package')
+                            'show_files', 'groupby', 'sysroot']
+    assert argspec.defaults == (sys.prefix, False, False, False, 'package', '')
 
 
 def test_api_inspect_objects():

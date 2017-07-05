@@ -36,5 +36,6 @@ def find_executable(executable, prefix=None):
                     return path
         else:
             path = join(dir_path, executable)
-            if isfile(expanduser(path)):
+            exp_path = expanduser(path)
+            if isfile(exp_path) and os.access(exp_path, os.X_OK):
                 return expanduser(path)

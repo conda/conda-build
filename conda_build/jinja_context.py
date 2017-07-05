@@ -2,16 +2,18 @@ from __future__ import absolute_import, division, print_function
 
 from functools import partial
 import json
-import logging
 import os
 import re
-import sys
 
 import jinja2
 
 from .conda_interface import PY3
 from .environ import get_dict as get_environ
-from .metadata import select_lines, ns_cfg
+from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
+                    string_types)
+from .render import get_env_dependencies
+from .utils import copy_into, check_call_env, rm_rf
+from . import _load_setup_py_data
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -68,6 +70,8 @@ class FilteredLoader(jinja2.BaseLoader):
         self.config = config
 
     def get_source(self, environment, template):
+        # we have circular imports here.  Do a local import
+        from .metadata import select_lines, ns_cfg
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
         return select_lines(contents, ns_cfg(self.config)), filename, uptodate
@@ -75,84 +79,36 @@ class FilteredLoader(jinja2.BaseLoader):
 
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                        permit_undefined_jinja=True):
-    _setuptools_data = {}
-    log = logging.getLogger(__name__)
-
-    def setup(**kw):
-        _setuptools_data.update(kw)
-
-    import setuptools
-    import distutils.core
-
-    cd_to_work = False
-    path_backup = sys.path
-
-    if from_recipe_dir and recipe_dir:
-        setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
-    elif os.path.exists(config.work_dir):
-        cd_to_work = True
-        cwd = os.getcwd()
-        os.chdir(config.work_dir)
-        if not os.path.isabs(setup_file):
-            setup_file = os.path.join(config.work_dir, setup_file)
-        # this is very important - or else if versioneer or otherwise is in the start folder,
-        # things will pick up the wrong versioneer/whatever!
-        sys.path.insert(0, config.work_dir)
-    else:
-        message = ("Did not find setup.py file in manually specified location, and source "
-                  "not downloaded yet.")
+    # we must copy the script into the work folder to avoid incompatible pyc files
+    origin_setup_script = os.path.join(os.path.dirname(__file__), '_load_setup_py_data.py')
+    dest_setup_script = os.path.join(config.work_dir, '_load_setup_py_data.py')
+    copy_into(origin_setup_script, dest_setup_script)
+    if os.path.isfile(config.build_python):
+        args = [config.build_python, dest_setup_script, config.work_dir, setup_file]
+        if from_recipe_dir:
+            assert recipe_dir, 'recipe_dir must be set if from_recipe_dir is True'
+            args.append('--from-recipe-dir')
+            args.extend(['--recipe-dir', recipe_dir])
         if permit_undefined_jinja:
-            log.debug(message)
-            return {}
-        else:
-            raise RuntimeError(message)
-
-    # Patch setuptools, distutils
-    setuptools_setup = setuptools.setup
-    distutils_setup = distutils.core.setup
-    numpy_setup = None
-
-    versioneer = None
-    if 'versioneer' in sys.modules:
-        versioneer = sys.modules['versioneer']
-        del sys.modules['versioneer']
-
-    try:
-        import numpy.distutils.core
-        numpy_setup = numpy.distutils.core.setup
-        numpy.distutils.core.setup = setup
-    except ImportError:
-        log.debug("Failed to import numpy for setup patch.  Is numpy installed?")
-
-    setuptools.setup = distutils.core.setup = setup
-    ns = {
-        '__name__': '__main__',
-        '__doc__': None,
-        '__file__': setup_file,
-    }
-    if os.path.isfile(setup_file):
-        code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
-        exec(code, ns, ns)
+            args.append('--permit-undefined-jinja')
+        check_call_env(args, env=get_environ(config))
+        # this is a file that the subprocess will have written
+        with open(os.path.join(config.work_dir, 'conda_build_loaded_setup_py.json')) as f:
+            _setuptools_data = json.load(f)
     else:
-        if not permit_undefined_jinja:
-            raise TypeError('{} is not a file that can be read'.format(setup_file))
-
-    sys.modules['versioneer'] = versioneer
-
-    distutils.core.setup = distutils_setup
-    setuptools.setup = setuptools_setup
-    if numpy_setup:
-        numpy.distutils.core.setup = numpy_setup
-    if cd_to_work:
-        os.chdir(cwd)
-    # remove our workdir from sys.path
-    sys.path = path_backup
+        _setuptools_data = _load_setup_py_data.load_setup_py_data(setup_file,
+                                                    from_recipe_dir=from_recipe_dir,
+                                                    recipe_dir=recipe_dir,
+                                                    work_dir=config.work_dir,
+                                                    permit_undefined_jinja=permit_undefined_jinja)
+    # cleanup: we must leave the source tree empty unless the source code is already present
+    rm_rf(os.path.join(config.work_dir, '_load_setup_py_data.py'))
     return _setuptools_data if _setuptools_data else None
 
 
 def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     permit_undefined_jinja=True):
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
     log.warn("Deprecation notice: the load_setuptools function has been renamed to "
              "load_setup_py_data.  load_setuptools will be removed in a future release.")
     return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
@@ -169,7 +125,7 @@ def load_npm():
 def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
                     recipe_dir=None, permit_undefined_jinja=True):
     match = False
-    log = logging.getLogger(__name__)
+    log = get_logger(__name__)
 
     cd_to_work = False
 
@@ -203,14 +159,257 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
     return match if match else None
 
 
-def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja):
+cached_env_dependencies = {}
+
+
+def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin='x.x.x.x.x.x',
+                   max_pin='x', permit_undefined_jinja=False, exact=False, bypass_env_check=False):
+    """dynamically pin based on currently installed version.
+
+    only mandatory input is package_name.
+    upper_bound is the authoritative upper bound, if provided.  The lower bound is the the
+        currently installed version.
+    pin expressions are of the form 'x.x' - the number of pins is the number of x's separated
+        by ``.``.
+    """
+    global cached_env_dependencies
+    compatibility = ""
+
+    # optimization: this is slow (requires solver), so better to bypass it
+    # until the finalization stage.
+    if not bypass_env_check and not permit_undefined_jinja:
+        # this is the version split up into its component bits.
+        # There are two cases considered here (so far):
+        # 1. Good packages that follow semver style (if not philosophy).  For example, 1.2.3
+        # 2. Evil packages that cram everything alongside a single major version.  For example, 9b
+        key = (m.name(), HashableDict(m.config.variant))
+        if key in cached_env_dependencies:
+            pins = cached_env_dependencies[key]
+        else:
+            if m.is_cross:
+                pins, _, _ = get_env_dependencies(m, 'host', m.config.variant)
+            else:
+                pins, _, _ = get_env_dependencies(m, 'build', m.config.variant)
+            cached_env_dependencies[key] = pins
+        versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
+        if versions:
+            if exact and versions.get(package_name):
+                compatibility = ' '.join(versions[package_name])
+            else:
+                version = lower_bound or versions.get(package_name)
+                if version:
+                    if hasattr(version, '__iter__') and not isinstance(version, string_types):
+                        version = version[0]
+                    else:
+                        version = str(version)
+                    if upper_bound:
+                        if min_pin or lower_bound:
+                            compatibility = ">=" + str(version) + ","
+                        compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+                    else:
+                        compatibility = apply_pin_expressions(version, min_pin, max_pin)
+
+    if not compatibility and not permit_undefined_jinja and not bypass_env_check:
+        raise RuntimeError("Could not get compatibility information for {} package.  "
+                           "Is it one of your build dependencies?".format(package_name))
+    return "  ".join((package_name, compatibility)) if compatibility is not None else None
+
+
+def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit_undefined_jinja):
+    # If we can finalize the metadata at the same time as we create metadata.other_outputs then
+    # this function is not necessary and can be folded back into pin_subpackage.
+    pin = None
+    subpackage_name, _ = key
+    # two ways to match:
+    #    1. only one other output named the same as the subpackage_name from the key
+    #    2. whole key matches (both subpackage name and variant)
+    keys = list(outputs.keys())
+    matching_package_keys = [k for k in keys if k[0] == subpackage_name]
+    if len(matching_package_keys) == 1:
+        key = matching_package_keys[0]
+    if key in outputs:
+        sp_m = outputs[key][1]
+        if permit_undefined_jinja and not sp_m.version():
+            pin = None
+        else:
+            if exact:
+                pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+            else:
+                pin = "{0} {1}".format(subpackage_name,
+                                       apply_pin_expressions(sp_m.version(), min_pin,
+                                                             max_pin))
+    else:
+        pin = subpackage_name
+    return pin
+
+
+subpackage_cache = {}
+
+
+def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
+                   exact=False, permit_undefined_jinja=False, allow_no_other_outputs=False):
+    """allow people to specify pinnings based on subpackages that are defined in the recipe.
+
+    For example, given a compiler package, allow it to specify either a compatible or exact
+    pinning on the runtime package that is also created by the compiler package recipe
+    """
+    if not hasattr(metadata, 'other_outputs'):
+        if allow_no_other_outputs:
+            pin = subpackage_name
+        else:
+            raise ValueError("Bug in conda-build: we need to have info about other outputs in "
+                             "order to allow pinning to them.  It's not here.")
+    else:
+        key = (subpackage_name, HashableDict(metadata.config.variant))
+        # two ways to match:
+        #    1. only one other output named the same as the subpackage_name from the key
+        #    2. whole key matches (both subpackage name and variant)
+        keys = list(metadata.other_outputs.keys())
+        matching_package_keys = [k for k in keys if k[0] == subpackage_name]
+        if len(matching_package_keys) == 1:
+            key = matching_package_keys[0]
+
+        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
+                                                exact, permit_undefined_jinja)
+    return pin
+
+
+# map python version to default compiler on windows, to match upstream python
+#    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
+#    in the conda-build variant configuration
+compilers = {
+    'win': {
+        'c': {
+            '2.7': 'vs2008',
+            '3.3': 'vs2010',
+            '3.4': 'vs2010',
+            '3.5': 'vs2015',
+        },
+        'cxx': {
+            '2.7': 'vs2008',
+            '3.3': 'vs2010',
+            '3.4': 'vs2010',
+            '3.5': 'vs2015',
+        },
+        'fortran': 'gfortran',
+    },
+    'linux': {
+        'c': 'gcc',
+        'cxx': 'gxx',
+        'fortran': 'gfortran',
+    },
+    'osx': {
+        'c': 'clang',
+        'cxx': 'clangxx',
+        'fortran': 'gfortran',
+    },
+}
+
+
+def native_compiler(language, config):
+    try:
+        compiler = compilers[config.platform][language]
+    except KeyError:
+        compiler = compilers[config.platform.split('-')[0]][language]
+    if hasattr(compiler, 'keys'):
+        compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
+    return compiler
+
+
+def compiler(language, config, permit_undefined_jinja=False):
+    """Support configuration of compilers.  This is somewhat platform specific.
+
+    Native compilers never list their host - it is always implied.  Generally, they are
+    metapackages, pointing at a package that does specify the host.  These in turn may be
+    metapackages, pointing at a package where the host is the same as the target (both being the
+    native architecture).
+    """
+
+    compiler = None
+    nc = native_compiler(language, config)
+    if config.variant and 'target_platform' in config.variant:
+        language_compiler_key = '{}_compiler'.format(language)
+        # fall back to native if language-compiler is not explicitly set in variant
+        compiler = config.variant.get(language_compiler_key, nc)
+
+        # support cross compilers.  A cross-compiler package will have a name such as
+        #    gcc_target
+        #    gcc_linux-cos6-64
+        compiler = '_'.join([compiler, config.variant['target_platform']])
+    return compiler
+
+
+def cdt(package_name, config, permit_undefined_jinja=False):
+    """Support configuration of Core Dependency Trees.
+    We should define CDTs in a single location. The current
+    idea is to emit parts of the following to index.json (the
+    bits that the solver could make use of) and parts to
+    about.json (the other bits).
+    "system": {
+      "os": {
+        "type": "windows", "linux", "bsd", "darwin",
+        "os_distribution": "CentOS", "FreeBSD", "Windows", "osx",
+        "os_version": "6.9", "10.12.3",
+        "os_kernel_version" : "2.6.32",
+        "os_libc_family": "glibc",
+        "os_libc_version": "2.12",
+      }
+      "cpu": {
+        # Whichever cpu_architecture/cpu_isa we build-out for:
+        # .. armv6 is compatible with and uses all CPU features of a Raspberry PI 1
+        # .. armv7a is compatible with and uses all CPU features of a Raspberry PI 2
+        # .. aarch64 is compatible with and uses all CPU features of a Raspberry PI 3
+        "cpu_architecture": "x86", "x86_64",
+                            "armv6", "armv7a", "aarch32", "aarch64",
+                            "powerpc", "powerpc64",
+                            "s390", "s390x",
+        "cpu_isa": "nocona", "armv8.1-a", "armv8.3-a",
+        # "?" because the vfpu is specified by cpu_architecture + cpu_isa + rules.
+        "vfpu": "?",
+        "cpu_endianness": "BE", "LE",
+      }
+      "gpu ?": {
+      }
+      "compilerflags": {
+        # When put into a CDT these should be the base defaults.
+        # Package builds can and will change these frequently.
+        "CPPFLAGS": "-D_FORTIFY_SOURCE=2",
+        "CFLAGS": "-march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -O2 -pipe",
+        "CXXFLAGS": "-fvisibility-inlines-hidden -std=c++17 -fmessage-length=0 -march=nocona -mtune=haswell -ftree-vectorize -fPIC -fstack-protector-strong -O2 -pipe",
+        "LDFLAGS": "-Wl,-O1,--sort-common,--as-needed,-z,relro",
+        "FFLAGS": "-fopenmp",
+        # These are appended to the non-DEBUG values:
+        "DEBUG_CFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
+        "DEBUG_CXXFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
+        "DEBUG_FFLAGS": "-Og -g -Wall -Wextra -fcheck=all -fbacktrace -fimplicit-none -fvar-tracking-assignments",
+      }
+    }
+    """  # NOQA
+
+    cdt_name = 'cos6'
+    arch = config.host_arch or config.arch
+    cdt_arch = 'x86_64' if arch == '64' else 'i686'
+    if config.variant:
+        cdt_name = config.variant.get('cdt_name', cdt_name)
+        cdt_arch = config.variant.get('cdt_arch', cdt_arch)
+    if ' ' in package_name:
+        name = package_name.split(' ')[0]
+        ver_build = package_name.split(' ')[1:]
+        result = (name + '-' + cdt_name + '-' + cdt_arch + ' ' + ' '.join(ver_build))
+    else:
+        result = (package_name + '-' + cdt_name + '-' + cdt_arch)
+    return result
+
+
+def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
+                      allow_no_other_outputs=False, bypass_env_check=False):
     """
     Return a dictionary to use as context for jinja templates.
 
     initial_metadata: Augment the context with values from this MetaData object.
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
-    ctx = get_environ(config=config, m=initial_metadata)
+    ctx = get_environ(config=config, m=initial_metadata, for_env=False)
     environ = dict(os.environ)
     environ.update(get_environ(config=config, m=initial_metadata))
 
@@ -223,5 +422,15 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_npm=load_npm,
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
+        installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
+        pin_compatible=partial(pin_compatible, initial_metadata,
+                               permit_undefined_jinja=permit_undefined_jinja,
+                               bypass_env_check=bypass_env_check),
+        pin_subpackage=partial(pin_subpackage, initial_metadata,
+                               permit_undefined_jinja=permit_undefined_jinja,
+                               allow_no_other_outputs=allow_no_other_outputs),
+        compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
+        cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
+
         environ=environ)
     return ctx
