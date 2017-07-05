@@ -187,7 +187,12 @@ def get_git_info(repo, debug):
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
     except subprocess.CalledProcessError:
-        log.debug("Failed to obtain git tag information.  Are you using annotated tags?")
+        msg = (
+            "Failed to obtain git tag information.\n"
+            "Consider using annotated tags if you are not already "
+            "as they are more reliable when used with git describe."
+        )
+        log.debug(msg)
 
     try:
         # get the _full_ hash of the current HEAD
