@@ -58,7 +58,7 @@ def get_linkages(obj_files, prefix, sysroot):
         except:
             ldd_failed = True
         finally:
-            res_py = inspect_linkages(path, sysroot)
+            res_py = inspect_linkages(path, sysroot=sysroot)
             res_py = [(basename(lp), lp) for lp in res_py]
             print("set(res_py) {}".format(set(res_py)))
             if ldd_failed:
