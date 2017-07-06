@@ -4,7 +4,7 @@ import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
-from glob import glob
+from glob2 import glob
 import json
 from locale import getpreferredencoding
 import logging
@@ -755,10 +755,13 @@ def expand_globs(path_list, root_dir):
         elif os.path.isfile(path):
             files.append(path.replace(root_dir + os.path.sep, ''))
         else:
-            glob_files = [f.replace(root_dir + os.path.sep, '') for f in glob(path)]
+            # File compared to the globs use / as separator indenpendently of the os
+            glob_files = [f.replace(root_dir + os.path.sep, '')
+                          for f in glob(path)]
             if not glob_files:
                 log.error('invalid recipe path: {}'.format(path))
             files.extend(glob_files)
+    files = [f.replace(os.path.sep, '/') for f in files]
     return files
 
 
