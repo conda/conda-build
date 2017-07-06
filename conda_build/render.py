@@ -372,12 +372,13 @@ def reparse(metadata):
 def insert_variant_versions(metadata, env):
     reqs = metadata.get_value('requirements/' + env)
     for key, val in metadata.config.variant.items():
-        if reqs and key in reqs:
-            version = ' '.join((key, val))
-            # return the version-appended entry if it's in the reqs, otherwise
-            # regex allows entries that have just the name, no other version specifier
-            metadata.meta['requirements'][env] = [version if re.match('^%s(?:$)' % key, pkg)
-                                                  else pkg for pkg in reqs]
+        matches = [re.match(r'^%s(?:\s*$|(?=(?:\s*[#\[])))' % key, pkg, re.M) for pkg in reqs]
+        if any(matches):
+            for i, x in enumerate(matches):
+                if x:
+                    del reqs[i]
+                    reqs.insert(i, ' '.join((key, val)))
+    metadata.meta['requirements'][env] = reqs
 
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
@@ -398,6 +399,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     metadata.config.input_variants = variants
 
     recipe_requirements = metadata.extract_requirements_text()
+
     for variant in variants:
         mv = metadata.copy()
 
