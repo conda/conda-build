@@ -1143,3 +1143,35 @@ def remove_pycache_from_scripts(build_prefix):
 
         elif os.path.isfile(entry_path) and entry_path.endswith('.pyc'):
             os.remove(entry_path)
+
+
+def sort_list_in_nested_structure(dictionary, omissions=''):
+    """Recurse through a nested dictionary and sort any lists that are found.
+
+    If the list that is found contains anything but strings, it is skipped
+    as we can't compare lists containing different types. The omissions argument
+    allows for certain sections of the dictionary to be omitted from sorting.
+    """
+    for field, value in dictionary.items():
+        if isinstance(value, dict):
+            for key in value.keys():
+                section = dictionary[field][key]
+                if isinstance(section, dict):
+                    sort_list_in_nested_structure(section)
+                elif (isinstance(section, list) and
+                    '{}/{}' .format(field, key) not in omissions and
+                        all(isinstance(item, str) for item in section)):
+                    section.sort()
+
+        # there's a possibility for nested lists containing dictionaries
+        # in this case we recurse until we find a list to sort
+        elif isinstance(value, list):
+            for element in value:
+                if isinstance(element, dict):
+                    sort_list_in_nested_structure(element)
+            value.sort()
+
+        # since each field contains subfields, we don't need to worry
+        # about sorting anything that may come up here
+        else:
+            continue

@@ -211,16 +211,8 @@ def copy_recipe(m):
         if 'outputs' in output_metadata.meta:
             del output_metadata.meta['outputs']
 
-        # each metadata field has a dict as a value and each value may contain
-        # a list of strings that needs to be sorted alphabetically
-        for field, value in output_metadata.meta.items():
-            for key in value.keys():
-                if '{}/{}' .format(field, key) not in ('build/script', 'test/commands'):
-                    try:
-                        output_metadata.meta[field][key].sort()
-                    except AttributeError:
-                        pass
-
+        utils.sort_list_in_nested_structure(output_metadata.meta,
+                                            ('build/script', 'test/commands'))
         rendered = output_yaml(output_metadata)
 
         if not original_recipe or not open(original_recipe).read() == rendered:
