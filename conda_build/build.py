@@ -211,8 +211,8 @@ def copy_recipe(m):
         if 'outputs' in output_metadata.meta:
             del output_metadata.meta['outputs']
 
-        utils.sort_list_in_nested_dictionary(output_metadata.meta,
-                                             ('build/script', 'test/commands'))
+        utils.sort_list_in_nested_structure(output_metadata.meta,
+                                            ('build/script', 'test/commands'))
         rendered = output_yaml(output_metadata)
 
         if not original_recipe or not open(original_recipe).read() == rendered:
