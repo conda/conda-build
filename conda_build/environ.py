@@ -26,7 +26,7 @@ from .conda_interface import MatchSpec
 from conda_build.os_utils import external
 from conda_build import utils
 from conda_build.features import feature_list
-from conda_build.utils import prepend_bin_path, ensure_list
+from conda_build.utils import prepend_bin_path, ensure_list, path_prepended
 from conda_build.index import get_build_index
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.variants import get_default_variants
@@ -87,12 +87,13 @@ def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expect
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit (minus our locally applied patches) matches expected commit
-        current_commit = utils.check_output_env(["git",
-                                                 "log",
-                                                 "-n1",
-                                                 "--format=%H",
-                                                 "HEAD" + "^" * git_commits_since_tag],
-                                                env=env, stderr=stderr)
+        with path_prepended(config.build_prefix):
+            current_commit = utils.check_output_env(["git",
+                                                     "log",
+                                                     "-n1",
+                                                     "--format=%H",
+                                                     "HEAD" + "^" * git_commits_since_tag],
+                                                    env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
         expected_tag_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H",
                                                       expected_rev],
