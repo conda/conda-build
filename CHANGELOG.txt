@@ -1,3 +1,54 @@
+2017-07-06 3.0.2:
+
+Enhancements:
+-------------
+
+* Add SSL_CERT_FILE and REQUESTS_CA_BUNDLE env vars to passed-through variables  #2142
+* Sort several package aspects for package reproducibility  #2143 #2149 #2154
+* Add glob2 dependency to allow recursive globs in fields specifying filenames/paths  #2146
+* Add conda skeleton rpm for creating recipes to repackage RPMs as conda packages  #2147
+* Improve error messaging when git describe fails due to lack of annotated tags  #2158
+
+
+Bug fixes:
+----------
+
+* drop setup.py data that is not JSON serializable  #2141
+* enhance support for recipes containing unicode or non-ascii characters in meta.yaml  #2148
+* CRAN skeleton: allow some keys to be blank without throwing exceptions  #2153
+* Fix incorrect arguments passed to pyldd (use keywords)  #2160
+* fix incorrect distribution of variants when more than one variant key matched  #2161
+
+Contributors:
+-------------
+
+* @aburgm
+* @dougalsutherland
+* @dhirschfeld
+* @mandeep
+* @MatthieuDartiailh
+* @mingwandroid
+* @msarahan
+* @nehaljwani
+
+
+
+2017-06-30 2.1.17:
+
+Bug fixes:
+----------
+
+* Fix disable_pip removing packages even when they are explicit dependencies  #2129
+* Remove any pyc files for entry point scripts that pip may have created #2134
+* Ignore unserializable data when reading setup.py data  #2141
+
+Contributors:
+-------------
+
+* @mandeep
+* @msarahan
+
+
 2017-06-29 3.0.1:
 
 This release includes all changes to the 2.1.x branch up to and including the 2.1.16 release.
