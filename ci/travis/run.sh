@@ -7,7 +7,7 @@ if [[ "$FLAKE8" == "true" ]]; then
     conda build --help
     conda build --version
     conda build conda.recipe --no-anaconda-upload
-    conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION conda-build
+    conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION conda-build glob2
     # because this is a file, conda is not going to process any of its dependencies.
     conda install -n _cbtest $(conda render --output conda.recipe)
     source activate _cbtest
