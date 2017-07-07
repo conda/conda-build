@@ -1,7 +1,6 @@
 import os
 import subprocess
 import tarfile
-import tempfile
 
 import pytest
 
