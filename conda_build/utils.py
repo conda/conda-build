@@ -1172,9 +1172,7 @@ def sort_list_in_nested_structure(dictionary, omissions=''):
             for element in value:
                 if isinstance(element, dict):
                     sort_list_in_nested_structure(element)
-            value.sort()
-
-        # since each field contains subfields, we don't need to worry
-        # about sorting anything that may come up here
-        else:
-            continue
+            try:
+                value.sort()
+            except TypeError:
+                pass

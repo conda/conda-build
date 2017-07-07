@@ -73,6 +73,20 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
     setuptools.setup = setuptools_setup
     if numpy_setup:
         numpy.distutils.core.setup = numpy_setup
+    try:
+        from setuptools.config import read_configuration
+    except ImportError:
+        pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
+    else:
+        setup_cfg = os.path.join(os.path.dirname(setup_file), 'setup.cfg')
+        if os.path.isfile(setup_cfg):
+            # read_configuration returns a dict of dicts. Each dict (keys: 'metadata',
+            # 'options'), if present, provides keyword arguments for the setup function.
+            for kwargs in read_configuration(setup_cfg).values():
+                # explicit arguments to setup.py take priority over values in setup.cfg
+                for k, v in kwargs.items():
+                    if k not in _setuptools_data:
+                        _setuptools_data[k] = v
     if cd_to_work:
         os.chdir(cwd)
     # remove our workdir from sys.path

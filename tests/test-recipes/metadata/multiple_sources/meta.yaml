@@ -1,0 +1,9 @@
+package:
+  name: test_multiple_sources
+  version: 1.0
+
+source:
+  - folder: 'f1'
+    url: ../../../archives/a.tar.bz2
+  - folder: 'f2'
+    url: ../../../archives/b.tar.bz2
