@@ -748,7 +748,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
 
 
 def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, retry=0,
-               locks=None, is_cross=False):
+               locks=None, is_cross=False, always_include_files=[]):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -876,11 +876,14 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
     #     the symlink for us anyway, and when activate does it, we end up with
     #     conda symlinks in every package. =()
     # if os.path.basename(prefix) == '_build_env' or not is_cross:
-    if utils.on_win:
-        shell = "cmd.exe"
-    else:
-        shell = "bash"
-    symlink_conda(prefix, sys.prefix, shell)
+
+    # Hack, do not SYMLINK_CONDA when we're building conda.
+    if not any(include in ('bin/deactivate', 'Scripts/deactivate.bat') for include in always_include_files):
+        if utils.on_win:
+            shell = "cmd.exe"
+        else:
+            shell = "bash"
+            symlink_conda(prefix, sys.prefix, shell)
 
 
 def clean_pkg_cache(dist, config):

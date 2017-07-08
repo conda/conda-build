@@ -951,7 +951,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
-                               subdir=m.config.build_subdir, is_cross=m.is_cross)
+                               subdir=m.config.build_subdir, is_cross=m.is_cross,
+                               always_include_files = m.always_include_files())
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
