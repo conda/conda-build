@@ -114,6 +114,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'repomd_url': 'http://vault.centos.org/5.11/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos5-linux-gnu',
                          'host_subdir': 'linux-{bits}',
+                         'fname_architecture': '{architecture}',
                          'rpm_filename_platform': 'el5.{architecture}',
                          'checksummer': hashlib.sha1,
                          'checksummer_name': "sha1",
@@ -125,6 +126,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'repomd_url': 'http://mirror.centos.org/centos/6.9/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos6-linux-gnu',
                          'host_subdir': 'linux-{bits}',
+                         'fname_architecture': '{architecture}',
                          'rpm_filename_platform': 'el6.{architecture}',
                          'checksummer': hashlib.sha256,
                          'checksummer_name': "sha256",
@@ -148,6 +150,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                # 'sbase_url': 'http://download.opensuse.org/source/distribution/leap/42.2/repo/oss/suse/src/',  # noqa
                                'host_machine': 'aarch64-conda_rpi3-linux-gnueabi',
                                'host_subdir': 'linux-aarch64',
+                               'fname_architecture': '{architecture}',
                                'rpm_filename_platform': '{architecture}',
                                'checksummer': hashlib.sha256,
                                'checksummer_name': "sha256",
@@ -156,6 +159,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                'cdt_short_name': 'rrpi2',
                                'host_machine': 'armv7a-conda_rpi2-linux-gnueabi',
                                'host_subdir': 'armv7a-32',
+                               'fname_architecture': '{architecture}',
                                'checksummer': hashlib.sha256,
                                'checksummer_name': "sha256",
                                'macros': {}},
@@ -517,7 +521,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                  override_arch,
                                                  src_cache)
 
-    sn = cdt['short_name'] + '-' + arch
+    sn = cdt['short_name'] + '-' + cdt['fname_architecture']
     if len(depends):
         depends_specs = ["{}-{}-{} {}{}".format(depend['name'].lower().replace('+', 'x'),
                                                 cdt['short_name'], depend['arch'],
