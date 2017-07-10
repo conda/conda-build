@@ -11,8 +11,6 @@ import yaml
 
 import pytest
 
-from conda_build.conda_interface import download
-import conda
 from conda_build.conda_interface import download, reset_context
 from conda_build.tarcheck import TarCheck
 
@@ -88,11 +86,12 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
     args = ['--output', os.path.join(testing_workdir)]
     main_render.execute(args)
     _hash = metadata._hash_dependencies()
-    test_path = "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
-                                      sys.version_info.major, sys.version_info.minor, _hash)
+    test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
+                                  "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
+                                      sys.version_info.major, sys.version_info.minor, _hash))
     output, error = capfd.readouterr()
-    # assert error == ""
-    assert os.path.basename(output.rstrip()) == test_path, error
+    assert output.rstrip() == test_path, error
+    assert error == ""
 
 
 def test_build_output_build_path(testing_workdir, testing_metadata, testing_config, capfd):
@@ -107,8 +106,8 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
                                   "test_build_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor, _hash))
     output, error = capfd.readouterr()
-    # assert error == ""
-    assert test_path in output.rstrip(), error
+    assert test_path == output.rstrip(), error
+    assert error == ""
 
 
 def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metadata,
