@@ -147,7 +147,9 @@ def execute(args):
 
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):
-            paths = api.get_output_file_paths(metadata_tuples)
+            config.verbose = False
+            config.debug = False
+            paths = api.get_output_file_paths(metadata_tuples, config=config)
             print('\n'.join(sorted(paths)))
     else:
         logging.basicConfig(level=logging.INFO)

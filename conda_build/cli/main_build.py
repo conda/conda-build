@@ -261,7 +261,9 @@ different sets of packages."""
 
 def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
-        paths = api.get_output_file_paths(recipe)
+        config.verbose = False
+        config.debug = False
+        paths = api.get_output_file_paths(recipe, config=config)
         print('\n'.join(sorted(paths)))
 
 
