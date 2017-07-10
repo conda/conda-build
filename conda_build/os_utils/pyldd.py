@@ -796,7 +796,9 @@ def codefile_class(filename, skip_symlinks=False):
         if skip_symlinks:
             return None
         else:
-            filename = os.readlink(filename)
+            filename = os.path.realpath(filename)
+    if os.path.isdir(filename):
+        return None
     if not os.path.exists(filename) or os.path.getsize(filename) < 4:
         return None
     with open(filename, 'rb') as file:
