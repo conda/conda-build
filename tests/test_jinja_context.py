@@ -125,6 +125,7 @@ def test_load_setup_py_data_from_setup_cfg(testing_config, tmpdir):
     )
     setup_file = str(setup_py)
     setuptools_data = jinja_context.load_setup_py_data(testing_config, setup_file)
-    assert setuptools_data['name'] == 'name_from_setup_py'
+    # ensure that setup.cfg has priority over setup.py
+    assert setuptools_data['name'] == 'name_from_setup_cfg'
     assert setuptools_data['version'] == 'version_from_setup_cfg'
     assert setuptools_data['extras_require'] == {'extra': ['extra_package']}

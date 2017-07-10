@@ -101,20 +101,6 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
                                                     recipe_dir=recipe_dir,
                                                     work_dir=config.work_dir,
                                                     permit_undefined_jinja=permit_undefined_jinja)
-        try:
-            from setuptools.config import read_configuration
-        except ImportError:
-            pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
-        else:
-            setup_cfg = os.path.join(os.path.dirname(setup_file), 'setup.cfg')
-            if os.path.isfile(setup_cfg):
-                # read_configuration returns a dict of dicts. Each dict (keys: 'metadata',
-                # 'options'), if present, provides keyword arguments for the setup function.
-                for kwargs in read_configuration(setup_cfg).values():
-                    # explicit arguments to setup.py take priority over values in setup.cfg
-                    for k, v in kwargs.items():
-                        if k not in _setuptools_data:
-                            _setuptools_data[k] = v
     # cleanup: we must leave the source tree empty unless the source code is already present
     rm_rf(os.path.join(config.work_dir, '_load_setup_py_data.py'))
     return _setuptools_data if _setuptools_data else None
