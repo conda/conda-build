@@ -466,6 +466,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         return
     if override_arch:
         arch = architectures[0]
+    else:
+        arch = cdt['fname_architecture']
     package = entry_name
     rpm_url = dirname(dirname(cdt['base_url'])) + '/' + entry['location']
     srpm_url = cdt['sbase_url'] + entry['source']
@@ -500,8 +502,6 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
                                                                  architectures,
                                                                  depend)
-        if override_arch:
-            dep_arch = architectures[0]
         depend['arch'] = dep_arch
         # Because something else may provide a substitute for the wanted package
         # we need to also overwrite the versions with those of the provider, e.g.
@@ -521,7 +521,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                  override_arch,
                                                  src_cache)
 
-    sn = cdt['short_name'] + '-' + cdt['fname_architecture']
+    sn = cdt['short_name'] + '-' + arch
     if len(depends):
         depends_specs = ["{}-{}-{} {}{}".format(depend['name'].lower().replace('+', 'x'),
                                                 cdt['short_name'], depend['arch'],

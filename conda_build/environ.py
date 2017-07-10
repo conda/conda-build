@@ -878,7 +878,8 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
     # if os.path.basename(prefix) == '_build_env' or not is_cross:
 
     # Hack, do not SYMLINK_CONDA when we're building conda.
-    if not any(include in ('bin/deactivate', 'Scripts/deactivate.bat') for include in always_include_files):
+    if not any(include in ('bin/deactivate', 'Scripts/deactivate.bat')
+               for include in always_include_files):
         if utils.on_win:
             shell = "cmd.exe"
         else:

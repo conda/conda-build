@@ -877,8 +877,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     specs.append(vcs_source)
 
                     log.warn("Your recipe depends on %s at build time (for templates), "
-                            "but you have not listed it as a build dependency.  Doing "
-                                "so for this build.", vcs_source)
+                             "but you have not listed it as a build dependency.  Doing "
+                             "so for this build.", vcs_source)
                 else:
                     raise ValueError("Your recipe uses mercurial in build, but mercurial"
                                     " does not yet support Python 3.  Please handle all of "
@@ -952,7 +952,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
                                subdir=m.config.build_subdir, is_cross=m.is_cross,
-                               always_include_files = m.always_include_files())
+                               always_include_files=m.always_include_files())
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
