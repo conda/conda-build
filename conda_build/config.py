@@ -160,6 +160,8 @@ class Config(object):
         def set_lang(variant, lang):
             value = env(lang, self.variant.get(lang))
             if value:
+                if '.' not in str(value):
+                    value = '.'.join((value[0], value[1:]))
                 variant[lang] = value
 
         # this is where we override any variant config files with the legacy CONDA_* vars
