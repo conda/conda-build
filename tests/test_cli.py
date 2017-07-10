@@ -478,3 +478,10 @@ def test_no_force_upload(mocker, testing_workdir, testing_metadata):
         f.write('anaconda_upload: True\n')
     main_build.execute(args)
     assert call.called_once_with(['anaconda', 'upload', '--force', pkg])
+
+
+def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
+    monkeypatch.setenv('CONDA_PY', '34')
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    outputs = api.build(testing_workdir)
+    assert any('py34' in output for output in outputs)
