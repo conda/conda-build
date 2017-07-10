@@ -1006,7 +1006,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         "are already built in {0}, skipping.".format(package_locations))
                 return default_return
             else:
-                package_locations = [bldpkg_path(om) for om, _, _ in output_metas]
+                package_locations = [bldpkg_path(om) for _, om in output_metas]
         else:
             package_locations = [bldpkg_path(om) for _, om in output_metas]
 
