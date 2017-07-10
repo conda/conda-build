@@ -626,7 +626,7 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
         write_conda_recipes(recursive,
                             repo_primary,
                             package,
-                            [base_architecture, "noarch"],
+                            [architecture, "noarch"],
                             cdt,
                             output_dir,
                             override_arch,
