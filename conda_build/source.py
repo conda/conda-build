@@ -101,7 +101,7 @@ def hoist_single_extracted_folder(nested_folder):
     rm_rf(nested_folder)
 
 
-def unpack(source_dict, src_dir, cache_folder, recipe_path, verbose=False,
+def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False,
            timeout=90, locking=True):
     ''' Uncompress a downloaded source. '''
     src_path = download_to_cache(cache_folder, recipe_path, source_dict)
@@ -110,7 +110,7 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, verbose=False,
         os.makedirs(src_dir)
     if verbose:
         print("Extracting download")
-    with TemporaryDirectory() as tmpdir:
+    with TemporaryDirectory(dir=croot) as tmpdir:
         if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
                 '.tar', 'tar.z')):
             tar_xf(src_path, tmpdir)
@@ -590,8 +590,8 @@ def provide(metadata, patch=True):
                    metadata.config.work_dir)
         if any(k in source_dict for k in ('fn', 'url')):
             unpack(source_dict, src_dir, metadata.config.src_cache, recipe_path=metadata.path,
-                   verbose=metadata.config.verbose, timeout=metadata.config.timeout,
-                   locking=metadata.config.locking)
+                   croot=metadata.config.croot, verbose=metadata.config.verbose,
+                   timeout=metadata.config.timeout, locking=metadata.config.locking)
         elif 'git_url' in source_dict:
             git = git_source(source_dict, metadata.config.git_cache, src_dir, metadata.path,
                              verbose=metadata.config.verbose)
