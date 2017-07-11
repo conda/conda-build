@@ -114,6 +114,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'repomd_url': 'http://vault.centos.org/5.11/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos5-linux-gnu',
                          'host_subdir': 'linux-{bits}',
+                         'fname_architecture': '{architecture}',
                          'rpm_filename_platform': 'el5.{architecture}',
                          'checksummer': hashlib.sha1,
                          'checksummer_name': "sha1",
@@ -125,6 +126,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'repomd_url': 'http://mirror.centos.org/centos/6.9/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos6-linux-gnu',
                          'host_subdir': 'linux-{bits}',
+                         'fname_architecture': '{architecture}',
                          'rpm_filename_platform': 'el6.{architecture}',
                          'checksummer': hashlib.sha256,
                          'checksummer_name': "sha256",
@@ -148,6 +150,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                # 'sbase_url': 'http://download.opensuse.org/source/distribution/leap/42.2/repo/oss/suse/src/',  # noqa
                                'host_machine': 'aarch64-conda_rpi3-linux-gnueabi',
                                'host_subdir': 'linux-aarch64',
+                               'fname_architecture': '{architecture}',
                                'rpm_filename_platform': '{architecture}',
                                'checksummer': hashlib.sha256,
                                'checksummer_name': "sha256",
@@ -156,6 +159,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                'cdt_short_name': 'rrpi2',
                                'host_machine': 'armv7a-conda_rpi2-linux-gnueabi',
                                'host_subdir': 'armv7a-32',
+                               'fname_architecture': '{architecture}',
                                'checksummer': hashlib.sha256,
                                'checksummer_name': "sha256",
                                'macros': {}},
@@ -462,6 +466,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         return
     if override_arch:
         arch = architectures[0]
+    else:
+        arch = cdt['fname_architecture']
     package = entry_name
     rpm_url = dirname(dirname(cdt['base_url'])) + '/' + entry['location']
     srpm_url = cdt['sbase_url'] + entry['source']
@@ -496,8 +502,6 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
                                                                  architectures,
                                                                  depend)
-        if override_arch:
-            dep_arch = architectures[0]
         depend['arch'] = dep_arch
         # Because something else may provide a substitute for the wanted package
         # we need to also overwrite the versions with those of the provider, e.g.
