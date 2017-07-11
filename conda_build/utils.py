@@ -851,6 +851,21 @@ class HashableDict(dict):
         return hash(json.dumps(self, sort_keys=True))
 
 
+def represent_hashabledict(dumper, data):
+    value = []
+
+    for item_key, item_value in data.items():
+        node_key = dumper.represent_data(item_key)
+        node_value = dumper.represent_data(item_value)
+
+        value.append((node_key, node_value))
+
+    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+
+
+yaml.add_representer(HashableDict, represent_hashabledict)
+
+
 # http://stackoverflow.com/a/10743550/1170370
 @contextlib.contextmanager
 def capture():
@@ -922,9 +937,13 @@ def conda_43():
     return LooseVersion(conda_version) >= LooseVersion('4.3')
 
 
-def _increment(version):
+def _increment(version, alpha_ver):
     try:
-        last_version = str(int(version) + 1)
+        if alpha_ver:
+            suffix = 'a'
+        else:
+            suffix = '.0a0'
+        last_version = str(int(version) + 1) + suffix
     except ValueError:
         last_version = chr(ord(version) + 1)
     return last_version
@@ -942,11 +961,17 @@ def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
         else:
             flat_list.append(item)
     versions = ['', '']
+    # first idx is lower bound pin; second is upper bound pin.
+    #    pin value is number of places to pin.
     for p_idx, pin in enumerate(pins):
         if pin:
+            # flat_list is the blown-out representation of the version
             for v_idx, v in enumerate(flat_list[:pin]):
+                # upper bound pin
                 if p_idx == 1 and v_idx == pin - 1:
-                    v = _increment(v)
+                    # is the last place an alphabetic character?  OpenSSL, JPEG
+                    alpha_ver = str(flat_list[min(pin, len(flat_list) - 1)]).isalpha()
+                    v = _increment(v, alpha_ver)
                 versions[p_idx] += str(v)
                 if v_idx != nesting_position:
                     versions[p_idx] += '.'
