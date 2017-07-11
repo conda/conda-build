@@ -136,7 +136,7 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, verbose=False,
 
 
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
-                                  git_depth=-1, is_top_level=True, verbose=True):
+                                  git_depth=-1, is_top_level=True, verbose=True, cache=True):
     """ Mirror (and checkout) a Git repository recursively.
 
         It's not possible to use `git submodule` on a bare
@@ -160,13 +160,17 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         stdout = FNULL
         stderr = FNULL
 
-    if not mirror_dir.startswith(git_cache + os.sep):
-        sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
-                 % (mirror_dir, git_cache))
-
-    # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
-    git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir)
     git_checkout_dir = convert_path_for_cygwin_or_msys2(git, checkout_dir)
+    if cache:
+        if not mirror_dir.startswith(git_cache + os.sep):
+            sys.exit("Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
+                    % (mirror_dir, git_cache))
+
+        # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
+        git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir)
+    else:
+        mirror_dir = git_checkout_dir
+        git_mirror_dir = git_checkout_dir
 
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
@@ -202,18 +206,21 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
         assert isdir(mirror_dir)
 
-    # Now clone from mirror_dir into checkout_dir.
-    check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
-    if is_top_level:
-        checkout = git_ref
-        if git_url.startswith('.'):
-            output = check_output_env([git, "rev-parse", checkout], stdout=stdout, stderr=stderr)
-            checkout = output.decode('utf-8')
-        if verbose:
-            print('checkout: %r' % checkout)
-        if checkout:
-            check_call_env([git, 'checkout', checkout],
-                           cwd=checkout_dir, stdout=stdout, stderr=stderr)
+    if cache:
+        # Now clone from mirror_dir into checkout_dir.
+        check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir], stdout=stdout,
+                       stderr=stderr)
+        if is_top_level:
+            checkout = git_ref
+            if git_url.startswith('.'):
+                output = check_output_env([git, "rev-parse", checkout], stdout=stdout,
+                                          stderr=stderr)
+                checkout = output.decode('utf-8')
+            if verbose:
+                print('checkout: %r' % checkout)
+            if checkout:
+                check_call_env([git, 'checkout', checkout],
+                            cwd=checkout_dir, stdout=stdout, stderr=stderr)
 
     # submodules may have been specified using relative paths.
     # Those paths are relative to git_url, and will not exist
@@ -240,7 +247,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
                 git_mirror_checkout_recursive(git, submod_mirror_dir, temp_checkout_dir, submod_url,
                                               git_cache=git_cache, git_ref=git_ref,
                                               git_depth=git_depth, is_top_level=False,
-                                              verbose=verbose)
+                                              verbose=verbose, cache=cache)
 
     if is_top_level:
         # Now that all relative-URL-specified submodules are locally mirrored to
@@ -252,7 +259,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         FNULL.close()
 
 
-def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
+def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True, cache=True):
     ''' Download a source from a Git repo (or submodule, recursively) '''
     if not isdir(git_cache):
         os.makedirs(git_cache)
@@ -280,7 +287,7 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     mirror_dir = join(git_cache, git_dn)
     git_mirror_checkout_recursive(
         git, mirror_dir, src_dir, git_url, git_cache=git_cache, git_ref=git_ref,
-        git_depth=git_depth, is_top_level=True, verbose=verbose)
+        git_depth=git_depth, is_top_level=True, verbose=verbose, cache=cache)
     return git
 
 
