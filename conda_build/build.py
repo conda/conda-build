@@ -1491,7 +1491,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             raise
         if need_cleanup:
             utils.rm_rf(recipe_dir)
-        utils.rm_rf(metadata.config.test_prefix)
         print("TEST END:", test_package_name)
 
     return True
