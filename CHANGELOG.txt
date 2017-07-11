@@ -1,3 +1,27 @@
+2017-07-11 3.0.4:
+
+Bug fixes:
+----------
+
+* Don't symlink conda when building conda (clobbers actual scripts)  #2167
+* Fix pyldd following links  #2170
+* Preserve mode bit on noarch python bin/Scripts files  #2171
+* remove logging output showing up with --output option #2174
+* Fix CONDA_* variables without .  #2176
+* pass croot to extraction (file path length issue on win)  #2178
+* fix uncorrect unpacking of tuples with --skip-existing  #2179
+* Fix priority of setup.cfg over setup.py  #2180
+* Remove overly aggressive removal of test prefix at end of test phase  #2182
+* Fix upper bound increment to account for pre-release versions (alpha, beta, rc, etc.)  #2183
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @mingwandroid
+* @msarahan
+
+
 2017-07-07 3.0.3:
 
 Bug fixes:
