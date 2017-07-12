@@ -5,7 +5,7 @@ import tempfile
 import pytest
 
 from conda_build import environ, api
-from conda_build.conda_interface import PaddingError, LinkError, CondaError, subdir
+from conda_build.conda_interface import PaddingError, LinkError, CondaError, subdir, MatchSpec
 from conda_build.utils import on_win
 
 from .utils import metadata_dir
@@ -68,3 +68,4 @@ def test_ensure_valid_spec():
     assert environ._ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
     assert environ._ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
     assert environ._ensure_valid_spec('numpy x.x') == 'numpy x.x'
+    assert environ._ensure_valid_spec(MatchSpec('numpy x.x')) == MatchSpec('numpy x.x')

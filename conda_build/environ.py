@@ -641,7 +641,8 @@ def _ensure_valid_spec(spec):
     if isinstance(spec, MatchSpec):
         if (hasattr(spec, 'version') and spec.version and
                 spec_ver_needing_star_re.match(str(spec.version))):
-            spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
+            if str(spec.name) != 'numpy' or str(spec.version) != 'x.x':
+                spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
     else:
         match = spec_needing_star_re.match(spec)
         # ignore exact pins (would be a 3rd group)

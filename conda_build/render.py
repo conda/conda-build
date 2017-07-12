@@ -34,6 +34,8 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
+numpy_re = re.compile(r'^numpy\s*x\.x')
+
 
 def bldpkg_path(m):
     '''
@@ -372,12 +374,20 @@ def reparse(metadata):
 def insert_variant_versions(metadata, env):
     reqs = metadata.get_value('requirements/' + env)
     for key, val in metadata.config.variant.items():
-        matches = [re.match(r'^%s(?:\s*$|(?=(?:\s*[#\[])))' % key, pkg, re.M) for pkg in reqs]
+        regex = re.compile(r'^%s(?:\s*$|(?=(?:\s*[#\[])))' % key)
+        matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):
                 if x:
                     del reqs[i]
                     reqs.insert(i, ' '.join((key, val)))
+
+    matches = [numpy_re.match(pkg) for pkg in reqs]
+    if any(matches):
+        for i, x in enumerate(matches):
+            if x:
+                del reqs[i]
+                reqs.insert(i, ' '.join(('numpy', metadata.config.variant.get('numpy'))))
     metadata.meta['requirements'][env] = reqs
 
 
