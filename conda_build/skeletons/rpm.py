@@ -502,6 +502,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
                                                                  architectures,
                                                                  depend)
+        if override_arch:
+            dep_arch = architectures[0]
         depend['arch'] = dep_arch
         # Because something else may provide a substitute for the wanted package
         # we need to also overwrite the versions with those of the provider, e.g.
