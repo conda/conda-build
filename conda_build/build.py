@@ -1816,11 +1816,11 @@ def is_package_built(metadata, env):
                                       locking=metadata.config.locking,
                                       timeout=metadata.config.timeout,
                                       clear_cache=True)
-    urls = [url_path(metadata.config.croot)] + get_rc_urls()
+    urls = [url_path(metadata.config.output_folder)] + get_rc_urls()
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 
     # will be empty if none found, and evalute to False
     found_urls = [url for url in urls
-            if dist_str_in_index(index, url + '::' + metadata.pkg_fn())]
+            if dist_str_in_index(index, url + '::' + metadata.dist())]
     return found_urls[0] if found_urls else None

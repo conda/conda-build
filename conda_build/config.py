@@ -70,7 +70,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('timeout', 90),
             Setting('set_build_id', True),
             Setting('disable_pip', False),
-            Setting('output_folder', None),
+            Setting('_output_folder', None),
             Setting('prefix_length_fallback', True),
             Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
             Setting('long_test_prefix', True),
@@ -297,6 +297,14 @@ class Config(object):
     def croot(self, croot):
         """Set croot - if None is passed, then the default value will be used"""
         self._croot = croot
+
+    @property
+    def output_folder(self):
+        return self._output_folder or self.croot
+
+    @output_folder.setter
+    def output_folder(self, value):
+        self._output_folder = value
 
     @property
     def build_folder(self):

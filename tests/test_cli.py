@@ -485,3 +485,15 @@ def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     api.output_yaml(testing_metadata, 'meta.yaml')
     outputs = api.build(testing_workdir)
     assert any('py34' in output for output in outputs)
+
+
+@pytest.mark.serial
+def test_build_skip_existing(testing_workdir, testing_config):
+    # build the recipe first
+    empty_sections = os.path.join(metadata_dir, "empty_sections")
+    args = ['--no-anaconda-upload', empty_sections]
+    main_build.execute(args)
+    args.insert(0, '--skip-existing')
+    main_build.execute(args)
+    # output, error = capfd.readouterr()
+    # assert "are already built" in output
