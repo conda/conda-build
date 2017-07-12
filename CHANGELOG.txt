@@ -1,3 +1,17 @@
+2017-07-12 3.0.5:
+
+Bug fixes:
+----------
+
+* Fix --skip-existing (was not matching output-dir/croot locations correctly)  #2192
+* Fix numpy x.x getting .* appended, resulting in unsatisfiable numpy  #2193
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-07-11 3.0.4:
 
 Bug fixes:
