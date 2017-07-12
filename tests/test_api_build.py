@@ -16,8 +16,7 @@ import uuid
 # for version
 import conda
 
-from conda_build.conda_interface import PY3, url_path, LinkError, CondaError
-from conda_build.conda_interface import PY3, url_path, cc_conda_build
+from conda_build.conda_interface import PY3, url_path, LinkError, CondaError, cc_conda_build
 import conda_build
 
 from binstar_client.commands import remove, show
