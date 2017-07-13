@@ -459,7 +459,7 @@ def build_string_from_metadata(metadata):
                 for name in ensure_list(names):
                     if ms.name == name and name in build_pkg_names:
                         # only append numpy when it is actually pinned
-                        if name == 'numpy' and (not hasattr(ms, 'version') or not ms.version):
+                        if name == 'numpy' and not metadata.numpy_xx:
                             continue
                         if metadata.noarch == name or (metadata.get_value('build/noarch_python') and
                                                     name == 'python'):
@@ -1400,6 +1400,21 @@ class MetaData(object):
                               recipe_text, flags=re.MULTILINE | re.DOTALL)
             text = match.group(1) if match else ""
         return text
+
+    @property
+    def numpy_xx(self):
+        '''This is legacy syntax that we need to support for a while.  numpy x.x means
+        "pin run as build" for numpy.  It was special-cased to only numpy.'''
+        text = self.extract_requirements_text()
+        uses_xx = bool(re.search(r'numpy\s*x\.x', text))
+        if uses_xx:
+            log = utils.get_logger(__name__)
+            log.warn("Recipe at {path} uses numpy x.x.  This is deprecated as of conda-build 3.0, "
+                     "and will be removed in conda-build 4.0.  Please consider using variants with "
+                     "pin_run_as_build instead.  More info at "
+                     "https://conda.io/docs/building/variants.html#customizing-compatibility"
+                     .format(path=self.path))
+        return uses_xx
 
     @property
     def uses_subpackage(self):

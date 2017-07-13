@@ -4,8 +4,6 @@ package:
 
 requirements:
   build:
-    - numpy  1.11.2
-    - python
+    - zlib   1.2.8
   run:
-    - {{ pin_compatible('numpy') }}
-    - python
+    - {{ pin_compatible('zlib') }}

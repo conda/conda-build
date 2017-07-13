@@ -1,0 +1,11 @@
+package:
+  name: conda-build-test-numpy-build-run
+  version: 1.0
+
+requirements:
+  host:
+    - python
+    - numpy  x.x
+  run:
+    - python
+    - numpy
