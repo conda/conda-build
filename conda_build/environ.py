@@ -69,7 +69,7 @@ def get_lua_include_dir(config):
 
 
 @memoized
-def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expected_rev='HEAD'):
+def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev='HEAD'):
     env = os.environ.copy()
     log = utils.get_logger(__name__)
 
@@ -87,14 +87,14 @@ def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expect
     env['GIT_DIR'] = git_dir
     try:
         # Verify current commit (minus our locally applied patches) matches expected commit
-        current_commit = utils.check_output_env(["git",
+        current_commit = utils.check_output_env([git_exe,
                                                  "log",
                                                  "-n1",
                                                  "--format=%H",
                                                  "HEAD" + "^" * git_commits_since_tag],
                                                 env=env, stderr=stderr)
         current_commit = current_commit.decode('utf-8')
-        expected_tag_commit = utils.check_output_env(["git", "log", "-n1", "--format=%H",
+        expected_tag_commit = utils.check_output_env([git_exe, "log", "-n1", "--format=%H",
                                                       expected_rev],
                                                      env=env, stderr=stderr)
         expected_tag_commit = expected_tag_commit.decode('utf-8')
@@ -104,7 +104,7 @@ def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expect
 
         # Verify correct remote url. Need to find the git cache directory,
         # and check the remote from there.
-        cache_details = utils.check_output_env(["git", "remote", "-v"], env=env,
+        cache_details = utils.check_output_env([git_exe, "remote", "-v"], env=env,
                                                stderr=stderr)
         cache_details = cache_details.decode('utf-8')
         cache_dir = cache_details.split('\n')[0].split()[1]
@@ -114,13 +114,13 @@ def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expect
             cache_dir = cache_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
         try:
-            remote_details = utils.check_output_env(["git", "--git-dir", cache_dir,
+            remote_details = utils.check_output_env([git_exe, "--git-dir", cache_dir,
                                                      "remote", "-v"],
                                                      env=env, stderr=stderr)
         except subprocess.CalledProcessError:
             if sys.platform == 'win32' and cache_dir.startswith('/'):
                 cache_dir = utils.convert_unix_path_to_win(cache_dir)
-            remote_details = utils.check_output_env(["git", "--git-dir", cache_dir,
+            remote_details = utils.check_output_env([git_exe, "--git-dir", cache_dir,
                                                       "remote", "-v"],
                                                      env=env, stderr=stderr)
         remote_details = remote_details.decode('utf-8')
@@ -153,7 +153,7 @@ def verify_git_repo(git_dir, git_url, git_commits_since_tag, debug=False, expect
 
 
 @memoized
-def get_git_info(repo, debug):
+def get_git_info(git_exe, repo, debug):
     """
     Given a repo to a git repo, return a dictionary of:
       GIT_DESCRIBE_TAG
@@ -179,7 +179,7 @@ def get_git_info(repo, debug):
     keys = ["GIT_DESCRIBE_TAG", "GIT_DESCRIBE_NUMBER", "GIT_DESCRIBE_HASH"]
 
     try:
-        output = utils.check_output_env(["git", "describe", "--tags", "--long", "HEAD"],
+        output = utils.check_output_env([git_exe, "describe", "--tags", "--long", "HEAD"],
                                         env=env, cwd=os.path.dirname(repo),
                                         stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
@@ -196,7 +196,7 @@ def get_git_info(repo, debug):
 
     try:
         # get the _full_ hash of the current HEAD
-        output = utils.check_output_env(["git", "rev-parse", "HEAD"],
+        output = utils.check_output_env([git_exe, "rev-parse", "HEAD"],
                                          env=env, cwd=os.path.dirname(repo),
                                          stderr=stderr).splitlines()[0]
         output = output.decode('utf-8')
@@ -378,7 +378,8 @@ def meta_vars(meta, config):
         # On Windows, subprocess env can't handle unicode.
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-    if external.find_executable('git', config.build_prefix) and os.path.exists(git_dir):
+    git_exe = external.find_executable('git', config.build_prefix)
+    if git_exe and os.path.exists(git_dir):
         git_url = meta.get_value('source/git_url')
 
         if os.path.exists(git_url):
@@ -390,14 +391,15 @@ def meta_vars(meta, config):
         _x = False
 
         if git_url:
-            _x = verify_git_repo(git_dir,
+            _x = verify_git_repo(git_exe,
+                                 git_dir,
                                  git_url,
                                  config.git_commits_since_tag,
                                  config.debug,
                                  meta.get_value('source/git_rev', 'HEAD'))
 
         if _x or meta.get_value('source/path'):
-            d.update(get_git_info(git_dir, config.debug))
+            d.update(get_git_info(git_exe, git_dir, config.debug))
 
     elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):
         d.update(get_hg_build_info(hg_dir))

@@ -257,7 +257,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
             del kwargs[arg]
     with config:
         skeleton_return = module.skeletonize(packages, output_dir=output_dir, version=version,
-                                                recursive=recursive, config=config, **kwargs)
+                                             recursive=recursive, config=config, **kwargs)
     return skeleton_return
 
 
