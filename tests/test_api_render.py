@@ -105,11 +105,7 @@ def test_output_without_jinja_does_not_download(mock_source, testing_workdir, te
 def test_pin_compatible_semver(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_pin_compatible')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
-    assert 'numpy  >=1.11.2,<2.0a0' in metadata.get_value('requirements/run')
-    # not terribly important, but might be nice for continuity's sake
-    #    This is broken right now, because compound pins like we do here have never been supported
-    #    in the build string.
-    # assert 'np111' in api.get_output_file_path(metadata)
+    assert 'zlib  >=1.2.8,<2.0a0' in metadata.get_value('requirements/run')
 
 
 def test_host_entries_finalized(testing_config):

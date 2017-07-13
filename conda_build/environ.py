@@ -69,7 +69,8 @@ def get_lua_include_dir(config):
 
 
 @memoized
-def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False, expected_rev='HEAD'):
+def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False,
+                    expected_rev='HEAD'):
     env = os.environ.copy()
     log = utils.get_logger(__name__)
 

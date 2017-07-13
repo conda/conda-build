@@ -63,7 +63,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
     if env == 'build' and m.is_cross and m.config.build_subdir == m.config.host_subdir:
         specs.extend([ms.spec for ms in m.ms_depends('host')])
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
-    if env == 'build':
+    if env in ('build', 'host'):
         specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
     subpackages = []
     dependencies = []
@@ -449,7 +449,16 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         if 'python' in build_reqs or 'python' in host_reqs:
             conform_dict['python'] = variant['python']
 
+        pin_run_as_build = variant.get('pin_run_as_build', {})
+        if mv.numpy_xx and 'numpy' not in pin_run_as_build:
+            pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
+
         mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
+        numpy_pinned_variants = []
+        for _variant in mv.config.variants:
+            _variant['pin_run_as_build'] = pin_run_as_build
+            numpy_pinned_variants.append(_variant)
+        mv.config.variants = numpy_pinned_variants
 
         if not need_reparse_in_env:
             mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
