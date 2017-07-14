@@ -1,3 +1,22 @@
+2017-07-14 3.0.6:
+
+Bug fixes:
+----------
+
+* Find git more intelligently, because build_prefix isn't always on PATH  #2196
+* Fix up assorted RPM skeleton issues  #2196
+* Fix and test "numpy x.x" recipes  #2198
+* Fix and test --skip-existing.  Ensure that it also works with --croot.  #2200
+* Fix and test "python x.x" recipes  #2201
+* Fix inappropriate insertion of variant versions that led to conflicts (for example, numpy)  #2202
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2017-07-12 3.0.5:
 
 Bug fixes:
