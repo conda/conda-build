@@ -34,8 +34,6 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
-numpy_re = re.compile(r'^numpy\s*x\.x')
-
 
 def bldpkg_path(m):
     '''
@@ -64,7 +62,14 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
         specs.extend([ms.spec for ms in m.ms_depends('host')])
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ('build', 'host'):
-        specs = [spec.replace(' x.x', ' {}'.format(variant.get('numpy', ""))) for spec in specs]
+        no_xx_specs = []
+        for spec in specs:
+            if ' x.x' in spec:
+                pkg_name = spec.split()[0]
+                no_xx_specs.append(' '.join((pkg_name, variant.get(pkg_name, ""))))
+            else:
+                no_xx_specs.append(spec)
+        specs = no_xx_specs
     subpackages = []
     dependencies = []
     pass_through_deps = []
@@ -382,12 +387,14 @@ def insert_variant_versions(metadata, env):
                     del reqs[i]
                     reqs.insert(i, ' '.join((key, val)))
 
-    matches = [numpy_re.match(pkg) for pkg in reqs]
+    xx_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+x\.x")
+
+    matches = [xx_re.match(pkg) for pkg in reqs]
     if any(matches):
         for i, x in enumerate(matches):
             if x:
                 del reqs[i]
-                reqs.insert(i, ' '.join(('numpy', metadata.config.variant.get('numpy'))))
+                reqs.insert(i, ' '.join((x.group(1), metadata.config.variant.get(x.group(1)))))
     metadata.meta['requirements'][env] = reqs
 
 

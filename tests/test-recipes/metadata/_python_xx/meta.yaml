@@ -1,0 +1,10 @@
+package:
+  name: conda-build-test-python-xx
+  version: 1.0
+
+requirements:
+  build:
+    # legacy "pin run as build"
+    - python x.x
+  run:
+    - python

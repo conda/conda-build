@@ -1083,3 +1083,8 @@ def test_numpy_xx(testing_config):
 def test_numpy_xx_host(testing_config):
     recipe = os.path.join(metadata_dir, '_numpy_xx_host')
     api.build(recipe, config=testing_config, numpy='1.12')
+
+
+def test_python_xx(testing_config):
+    recipe = os.path.join(metadata_dir, '_python_xx')
+    api.build(recipe, config=testing_config, python='3.4')
