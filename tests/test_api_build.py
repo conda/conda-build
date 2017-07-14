@@ -1088,3 +1088,9 @@ def test_numpy_xx_host(testing_config):
 def test_python_xx(testing_config):
     recipe = os.path.join(metadata_dir, '_python_xx')
     api.build(recipe, config=testing_config, python='3.4')
+
+
+def test_indirect_numpy_dependency(testing_metadata):
+    testing_metadata.meta['requirements']['build'] = ['arrow-cpp 0.5.*']
+    testing_metadata.config.channel_urls = ['conda-forge']
+    api.build(testing_metadata, numpy=1.13)
