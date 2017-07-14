@@ -488,12 +488,24 @@ def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
 
 
 @pytest.mark.serial
-def test_build_skip_existing(testing_workdir, testing_config):
+def test_build_skip_existing(testing_workdir, capfd):
     # build the recipe first
     empty_sections = os.path.join(metadata_dir, "empty_sections")
     args = ['--no-anaconda-upload', empty_sections]
     main_build.execute(args)
     args.insert(0, '--skip-existing')
     main_build.execute(args)
-    # output, error = capfd.readouterr()
-    # assert "are already built" in output
+    output, error = capfd.readouterr()
+    assert "are already built" in output
+
+
+@pytest.mark.serial
+def test_build_skip_existing_croot(testing_workdir, capfd):
+    # build the recipe first
+    empty_sections = os.path.join(metadata_dir, "empty_sections")
+    args = ['--no-anaconda-upload', '--croot', testing_workdir, empty_sections]
+    main_build.execute(args)
+    args.insert(0, '--skip-existing')
+    main_build.execute(args)
+    output, error = capfd.readouterr()
+    assert "are already built" in output

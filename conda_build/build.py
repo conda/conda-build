@@ -1816,7 +1816,7 @@ def is_package_built(metadata, env):
                                       locking=metadata.config.locking,
                                       timeout=metadata.config.timeout,
                                       clear_cache=True)
-    urls = [url_path(metadata.config.output_folder)] + get_rc_urls()
+    urls = [url_path(metadata.config.output_folder), 'local'] + get_rc_urls()
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 
