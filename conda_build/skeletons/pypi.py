@@ -395,6 +395,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
             rendered_recipe = PYPI_META_HEADER.format(**d)
+
             ordered_recipe = ruamel_yaml.comments.CommentedMap()
             # Create all keys in expected ordered
             for key in EXPECTED_SECTION_ORDER:
@@ -439,7 +440,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             content = ruamel_yaml.dump(ordered_recipe,
                                        Dumper=ruamel_yaml.RoundTripDumper,
-                                       default_flow_style=False)
+                                       default_flow_style=False,
+                                       width=200)
 
             rendered_recipe += content
             f.write(rendered_recipe)
@@ -781,14 +783,12 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             d['home'] = "The package home page"
 
     if pkginfo.get('summary'):
-        d['summary'] = repr(pkginfo['summary'])
+        d['summary'] = pkginfo['summary']
     else:
         if data:
-            d['summary'] = repr(data['summary'])
+            d['summary'] = data['summary']
         else:
             d['summary'] = "Summary of the package"
-    if d['summary'].startswith("u'") or d['summary'].startswith('u"'):
-        d['summary'] = d['summary'][1:]
 
     license_classifier = "License :: OSI Approved :: "
     if pkginfo.get('classifiers'):
