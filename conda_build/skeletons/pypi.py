@@ -237,7 +237,7 @@ diff core.py core.py
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
 +    data['summary'] = kwargs.get('description', None)
-+    data['homeurl'] = kwargs.get('url', None)
++    data['home'] = kwargs.get('url', None)
 +    data['license'] = kwargs.get('license', None)
 +    data['name'] = kwargs.get('name', '??PACKAGE-NAME-UNKNOWN??')
 +    data['classifiers'] = kwargs.get('classifiers', None)
@@ -424,9 +424,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 ordered_recipe['test']['requires'] = d['tests_require']
 
             ordered_recipe['about'] = {}
-            # Yuck. But don't want to change homeurl to home everywhere today, just
-            # want this to work.
-            d['home'] = d['homeurl']
+
             for key in ABOUT_ORDER:
                 try:
                     ordered_recipe['about'][key] = d[key]
@@ -774,13 +772,13 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['tests_require'] = sorted([spec_from_line(pkg) for pkg
                                      in ensure_list(pkginfo['tests_require'])])
 
-    if pkginfo.get('homeurl'):
-        d['homeurl'] = pkginfo['homeurl']
+    if pkginfo.get('home'):
+        d['home'] = pkginfo['home']
     else:
-        if data and 'homeurl' in data:
-            d['homeurl'] = data['homeurl']
+        if data and 'home' in data:
+            d['home'] = data['home']
         else:
-            d['homeurl'] = "The package home page"
+            d['home'] = "The package home page"
 
     if pkginfo.get('summary'):
         d['summary'] = repr(pkginfo['summary'])
