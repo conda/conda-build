@@ -307,17 +307,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 'run_depends': '',
                 'build_depends': '',
                 'entry_points': '',
-                'build_comment': '# ',
-                'noarch_python_comment': '# ',
                 'test_commands': '',
-                'requires_comment': '#',
                 'tests_require': '',
-                'usemd5': '',
-                'test_comment': '',
-                'entry_comment': '# ',
-                'egg_comment': '# ',
-                'summary_comment': '',
-                'home_comment': '',
             })
         if is_url:
             del d['packagename']
@@ -374,30 +365,12 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                                                                         is_url, all_urls,
                                                                         noprompt, manual_url)
 
-        if d['md5'] == '':
-            d['usemd5'] = '# '
-        else:
-            d['usemd5'] = ''
-
         d['import_tests'] = ''
 
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
                              noprompt, packages, extra_specs, config=config,
                              setup_options=setup_options)
-
-        if d['import_tests'] == '':
-            d['import_comment'] = '# '
-        else:
-            d['import_comment'] = ''
-
-        if d['tests_require'] == '':
-            d['requires_comment'] = '# '
-        else:
-            d['requires_comment'] = ''
-
-        if d['entry_comment'] == d['import_comment'] == '# ':
-            d['test_comment'] = '# '
 
         d['recipe_setup_options'] = ' '.join(setup_options)
 
@@ -428,15 +401,16 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 try:
                     ordered_recipe[key] = PYPI_META_STATIC[key]
                 except KeyError:
-                    ordered_recipe[key] = {} # OrderedDict()
+                    ordered_recipe[key] = {}
 
             if d['entry_points']:
                 ordered_recipe['build']['entry_points'] = d['entry_points']
 
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
+
             # Always require python as a dependency
-            ordered_recipe['requirements'] = {} # OrderedDict()
+            ordered_recipe['requirements'] = {}
             ordered_recipe['requirements']['build'] = ['python'] + d['build_depends']
             ordered_recipe['requirements']['run'] = ['python'] + d['run_depends']
 
@@ -449,7 +423,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if d['tests_require']:
                 ordered_recipe['test']['requires'] = d['tests_require']
 
-            ordered_recipe['about'] = {} # OrderedDict()
+            ordered_recipe['about'] = {}
             # Yuck. But don't want to change homeurl to home everywhere today, just
             # want this to work.
             d['home'] = d['homeurl']
@@ -465,7 +439,6 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 if not ordered_recipe[key]:
                     del ordered_recipe[key]
 
-            #ordered_recipe = ruamel_yaml.comments.CommentedMap(ordered_recipe)
             content = ruamel_yaml.dump(ordered_recipe,
                                        Dumper=ruamel_yaml.RoundTripDumper,
                                        default_flow_style=False)
@@ -747,8 +720,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             entry_list = (cs + gs)
             if len(cs + gs) != 0:
                 d['entry_points'] = entry_list
-                d['entry_comment'] = ''
-                d['build_comment'] = ''
                 d['test_commands'] = make_entry_tests(entry_list)
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
@@ -774,8 +745,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         if 'setuptools' in deps:
             setuptools_build = False
             setuptools_run = False
-            d['egg_comment'] = ''
-            d['build_comment'] = ''
         d['build_depends'] = ['setuptools'] * setuptools_build + deps
         d['run_depends'] = ['setuptools'] * setuptools_run + deps
 
@@ -785,10 +754,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 if not exists(join(output_dir, dep)):
                     if dep not in created_recipes:
                         packages.append(dep)
-
-    if noarch_python:
-        d['build_comment'] = ''
-        d['noarch_python_comment'] = ''
 
     if 'packagename' not in d:
         d['packagename'] = pkginfo['name'].lower()
@@ -805,7 +770,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                         if x != '-']
             deps = set(olddeps) | deps
         d['import_tests'] = sorted(deps)
-        d['import_comment'] = ''
 
         d['tests_require'] = sorted([spec_from_line(pkg) for pkg
                                      in ensure_list(pkginfo['tests_require'])])
@@ -817,7 +781,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             d['homeurl'] = data['homeurl']
         else:
             d['homeurl'] = "The package home page"
-            d['home_comment'] = '#'
 
     if pkginfo.get('summary'):
         d['summary'] = repr(pkginfo['summary'])
@@ -826,7 +789,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             d['summary'] = repr(data['summary'])
         else:
             d['summary'] = "Summary of the package"
-            d['summary_comment'] = '#'
     if d['summary'].startswith("u'") or d['summary'].startswith('u"'):
         d['summary'] = d['summary'][1:]
 
