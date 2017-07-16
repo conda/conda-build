@@ -35,7 +35,7 @@ from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import string_types, url_path, get_rc_urls
 from .conda_interface import memoized
 from .conda_interface import StringIO
-from .conda_interface import VersionOrder
+from .conda_interface import VersionOrder, MatchSpec
 from .conda_interface import cc_conda_build
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
@@ -1201,3 +1201,48 @@ def sort_list_in_nested_structure(dictionary, omissions=''):
                 value.sort()
             except TypeError:
                 pass
+
+
+spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+)\s+([0-9a-zA-Z\.\+]+)(\s+[0-9a-zA-Z\.\_]+)?")
+spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
+
+
+def ensure_valid_spec(spec):
+    if isinstance(spec, MatchSpec):
+        if (hasattr(spec, 'version') and spec.version and
+                spec_ver_needing_star_re.match(str(spec.version))):
+            if str(spec.name) not in ('python', 'numpy') or str(spec.version) != 'x.x':
+                spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
+    else:
+        match = spec_needing_star_re.match(spec)
+        # ignore exact pins (would be a 3rd group)
+        if match and not match.group(3):
+            if match.group(1) in ('python', 'numpy') and match.group(2) == 'x.x':
+                spec = spec_needing_star_re.sub(r"\1 \2", spec)
+            else:
+                if "*" not in spec:
+                    spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
+    return spec
+
+
+def insert_variant_versions(metadata, env):
+    reqs = metadata.get_value('requirements/' + env)
+    for key, val in metadata.config.variant.items():
+        regex = re.compile(r'^%s(?:\s*$|(?=(?:\s*[#\[])))' % key)
+        matches = [regex.match(pkg) for pkg in reqs]
+        if any(matches):
+            for i, x in enumerate(matches):
+                if x:
+                    del reqs[i]
+                    reqs.insert(i, ensure_valid_spec(' '.join((key, val))))
+
+    xx_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+x\.x")
+
+    matches = [xx_re.match(pkg) for pkg in reqs]
+    if any(matches):
+        for i, x in enumerate(matches):
+            if x:
+                del reqs[i]
+                reqs.insert(i, ensure_valid_spec(' '.join((x.group(1),
+                                                metadata.config.variant.get(x.group(1))))))
+    metadata.meta['requirements'][env] = reqs

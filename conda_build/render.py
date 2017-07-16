@@ -379,28 +379,6 @@ def reparse(metadata):
     return metadata
 
 
-def insert_variant_versions(metadata, env):
-    reqs = metadata.get_value('requirements/' + env)
-    for key, val in metadata.config.variant.items():
-        regex = re.compile(r'^%s(?:\s*$|(?=(?:\s*[#\[])))' % key)
-        matches = [regex.match(pkg) for pkg in reqs]
-        if any(matches):
-            for i, x in enumerate(matches):
-                if x:
-                    del reqs[i]
-                    reqs.insert(i, ' '.join((key, val)))
-
-    xx_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+x\.x")
-
-    matches = [xx_re.match(pkg) for pkg in reqs]
-    if any(matches):
-        for i, x in enumerate(matches):
-            if x:
-                del reqs[i]
-                reqs.insert(i, ' '.join((x.group(1), metadata.config.variant.get(x.group(1)))))
-    metadata.meta['requirements'][env] = reqs
-
-
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         allow_no_other_outputs=False, bypass_env_check=False):
     rendered_metadata = {}
@@ -479,7 +457,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             # if python is in the build specs, but doesn't have a specific associated
             #    version, make sure to add one to newly parsed 'requirements/build'.
             for env in ('build', 'host', 'run'):
-                insert_variant_versions(mv, env)
+                utils.insert_variant_versions(mv, env)
             fm = mv.copy()
             # HACK: trick conda-build into thinking this is final, and computing a hash based
             #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is

@@ -59,13 +59,3 @@ def test_env_creation_with_prefix_fallback_disabled(testing_config):
         environ.create_env(testing_config.build_prefix,
                            specs_or_actions=["python", metadata.name()],
                            env='build', config=testing_config, subdir=subdir)
-
-
-def test_ensure_valid_spec():
-    assert environ._ensure_valid_spec('python') == 'python'
-    assert environ._ensure_valid_spec('python 2.7') == 'python 2.7.*'
-    assert environ._ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
-    assert environ._ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
-    assert environ._ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
-    assert environ._ensure_valid_spec('numpy x.x') == 'numpy x.x'
-    assert environ._ensure_valid_spec(MatchSpec('numpy x.x')) == MatchSpec('numpy x.x')
