@@ -4,7 +4,7 @@ Tools for converting PyPI packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 import keyword
 import os
 from os import makedirs, listdir, getcwd, chdir
@@ -155,11 +155,10 @@ REQUIREMENTS_ORDER = ['build', 'run']
 ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
                'description', 'doc_url', 'dev_url']
 
-PYPI_META_HEADER = """
-{{% set name = "{packagename}" %}}
+PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 {{% set version = "{version}" %}}
 {{% set md5 = "{md5}" %}}
-# See http://docs.continuum.io/conda/build.html for more about meta.yaml
+
 """
 
 PYPI_META_STATIC = {
@@ -169,7 +168,7 @@ PYPI_META_STATIC = {
     },
     'source': {
         'fn': '{{ name }}-{{ version }}.tar.gz',
-        'url': 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz',
+        'url': 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz',  # NOQA
         'md5': '{{ md5 }}',
 
     },
@@ -181,29 +180,6 @@ PYPI_META_STATIC = {
     },
 }
 
-
-PYPI_BUILD_SH = """\
-#!/bin/bash
-
-$PYTHON setup.py install {recipe_setup_options}
-
-# Add more build steps here, if they are necessary.
-
-# See
-# http://docs.continuum.io/conda/build.html
-# for a list of environment variables that are set during the build process.
-"""
-
-PYPI_BLD_BAT = """\
-"%PYTHON%" setup.py install {recipe_setup_options}
-if errorlevel 1 exit 1
-
-:: Add more build steps here, if they are necessary.
-
-:: See
-:: http://docs.continuum.io/conda/build.html
-:: for a list of environment variables that are set during the build process.
-"""
 
 # Note the {} formatting bits here
 DISTUTILS_PATCH = '''\
@@ -410,6 +386,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
+            ordered_recipe['build']['script'] = 'python setup.py install'
+            if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
+                ordered_recipe['build']['script'] += (' --single-version-externally-managed '
+                                                      '--record=record.txt')
+
             # Always require python as a dependency
             ordered_recipe['requirements'] = {}
             ordered_recipe['requirements']['build'] = ['python'] + d['build_depends']
@@ -437,18 +418,15 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             for key in EXPECTED_SECTION_ORDER:
                 if not ordered_recipe[key]:
                     del ordered_recipe[key]
-
-            content = ruamel_yaml.dump(ordered_recipe,
-                                       Dumper=ruamel_yaml.RoundTripDumper,
-                                       default_flow_style=False,
-                                       width=200)
-
-            rendered_recipe += content
+                else:
+                    rendered_recipe += ruamel_yaml.dump({key: ordered_recipe[key]},
+                                                Dumper=ruamel_yaml.RoundTripDumper,
+                                                default_flow_style=False,
+                                                width=200)
+                    rendered_recipe += '\n'
+            # make sure that recipe ends with one newline, by god.
+            rendered_recipe.rstrip()
             f.write(rendered_recipe)
-        with open(join(output_dir, name, 'build.sh'), 'w') as f:
-            f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
-            f.write(PYPI_BLD_BAT.format(**d))
 
 
 def add_parser(repos):
@@ -587,9 +565,11 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
             urls[0]['filename'] = U.path.rsplit('/')[-1]
             fragment = U.fragment or ''
             if fragment.startswith('md5='):
-                md5 = fragment[len('md5='):]
+                md5_or_sha256 = fragment[len('md5='):]
+            elif fragment.startswith('sha256='):
+                md5_or_sha256 = fragment[len('sha256='):]
             else:
-                md5 = ''
+                md5_or_sha256 = ''
         else:
             sys.exit("Error: No source urls found for %s" % package)
     if len(urls) > 1 and not noprompt:
@@ -612,20 +592,22 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
         print("Using url %s (%s) for %s." % (urls[n]['url'],
             human_bytes(urls[n]['size'] or 0), package))
         pypiurl = urls[n]['url']
-        md5 = urls[n]['md5_digest']
+        md5_or_sha256 = urls[n].get('sha256_digest', urls[n].get('md5_digest'))
         filename = urls[n]['filename'] or 'package'
     else:
         print("Using url %s" % package)
         pypiurl = package
         U = parse_url(package)
         if U.fragment and U.fragment.startswith('md5='):
-            md5 = U.fragment[len('md5='):]
+            md5_or_sha256 = U.fragment[len('md5='):]
+        elif U.fragment and U.fragment.startswith('sha256='):
+            md5_or_sha256 = U.fragment[len('sha256='):]
         else:
-            md5 = ''
+            md5_or_sha256 = ''
         # TODO: 'package' won't work with unpack()
         filename = U.path.rsplit('/', 1)[-1] or 'package'
 
-    return (data, pypiurl, filename, md5)
+    return (data, pypiurl, filename, md5_or_sha256)
 
 
 def version_compare(package, versions):
