@@ -4,7 +4,7 @@ Tools for converting PyPI packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import keyword
 import os
 from os import makedirs, listdir, getcwd, chdir
@@ -20,6 +20,7 @@ import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
 import yaml
+import ruamel_yaml
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
@@ -143,68 +144,43 @@ Use the --pypi-url flag to point to a PyPI mirror url:
     conda skeleton pypi --pypi-url <mirror-url> package_name
 """
 
-PYPI_META = """\
-package:
-  name: {packagename}
-  version: "{version}"
+# Definitions of EXPECTED_SECTION_ORDER and REQUIREMENTS_ORDER below are from
+# https://github.com/conda-forge/conda-smithy/blob/master/conda_smithy/lint_recipe.py#L16
+EXPECTED_SECTION_ORDER = ['package', 'source', 'build', 'requirements',
+                          'test', 'app', 'about', 'extra']
 
-source:
-  fn: {filename}
-  url: {pypiurl}
-  {usemd5}md5: {md5}
-#  patches:
-   # List any patch files here
-   # - fix.patch
+REQUIREMENTS_ORDER = ['build', 'run']
 
-{build_comment}build:
-  {noarch_python_comment}noarch: python
-  {egg_comment}preserve_egg_dir: True
-  {entry_comment}entry_points:
-    # Put any entry points (scripts to be generated automatically) here. The
-    # syntax is module:function.  For example
-    #
-    # - {packagename} = {packagename}:main
-    #
-    # Would create an entry point called {packagename} that calls {packagename}.main()
-{entry_points}
+# Definition of ABOUT_ORDER reflect current practice
+ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
+               'description', 'doc_url', 'dev_url']
 
-  # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  # number: 1
-
-requirements:
-  build:
-    - python{build_depends}
-
-  run:
-    - python{run_depends}
-
-{test_comment}test:
-  # Python imports
-  {import_comment}imports:{import_tests}
-
-  {entry_comment}commands:
-    # You can put test commands to be run here.  Use this to test that the
-    # entry points work.
-{test_commands}
-
-  # You can also put a file called run_test.py in the recipe that will be run
-  # at test time.
-
-  {requires_comment}requires:{tests_require}
-    # Put any additional test requirements here.  For example
-    # - nose
-
-about:
-  {home_comment}home: {homeurl}
-  license: {license}
-  {summary_comment}summary: {summary}
-  license_family: {license_family}
-
-# See
-# http://docs.continuum.io/conda/build.html for
-# more information about meta.yaml
+PYPI_META_HEADER = """
+{{% set name = "{packagename}" %}}
+{{% set version = "{version}" %}}
+{{% set md5 = "{md5}" %}}
+# See http://docs.continuum.io/conda/build.html for more about meta.yaml
 """
+
+PYPI_META_STATIC = {
+    'package': {
+        'name': '{{ name|lower }}',
+        'version': '{{ version }}',
+    },
+    'source': {
+        'fn': '{{ name }}-{{ version }}.tar.gz',
+        'url': 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz',
+        'md5': '{{ md5 }}',
+
+    },
+    'build': {
+        'number': 0,
+    },
+    'extra': {
+        'recipe-maintainers': ''
+    },
+}
+
 
 PYPI_BUILD_SH = """\
 #!/bin/bash
@@ -414,13 +390,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             d['import_comment'] = '# '
         else:
             d['import_comment'] = ''
-            d['import_tests'] = INDENT + d['import_tests']
 
         if d['tests_require'] == '':
             d['requires_comment'] = '# '
         else:
             d['requires_comment'] = ''
-            d['tests_require'] = INDENT + d['tests_require']
 
         if d['entry_comment'] == d['import_comment'] == '# ':
             d['test_comment'] = '# '
@@ -432,14 +406,14 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         # the version is included in the build string.
         if pin_numpy:
             for depends in ['build_depends', 'run_depends']:
-                deps = d[depends].split(INDENT)
+                deps = d[depends]
                 numpy_dep = [idx for idx, dep in enumerate(deps)
                              if 'numpy' in dep]
                 if numpy_dep:
                     # Turns out this needs to be inserted before the rest
                     # of the numpy spec.
                     deps.insert(numpy_dep[0], 'numpy x.x')
-                    d[depends] = INDENT.join(deps)
+                    d[depends] = deps
 
     for package in package_dicts:
         d = package_dicts[package]
@@ -447,7 +421,57 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(PYPI_META.format(**d))
+            rendered_recipe = PYPI_META_HEADER.format(**d)
+            ordered_recipe = ruamel_yaml.comments.CommentedMap()
+            # Create all keys in expected ordered
+            for key in EXPECTED_SECTION_ORDER:
+                try:
+                    ordered_recipe[key] = PYPI_META_STATIC[key]
+                except KeyError:
+                    ordered_recipe[key] = {} # OrderedDict()
+
+            if d['entry_points']:
+                ordered_recipe['build']['entry_points'] = d['entry_points']
+
+            if noarch_python:
+                ordered_recipe['build']['noarch'] = 'python'
+            # Always require python as a dependency
+            ordered_recipe['requirements'] = {} # OrderedDict()
+            ordered_recipe['requirements']['build'] = ['python'] + d['build_depends']
+            ordered_recipe['requirements']['run'] = ['python'] + d['run_depends']
+
+            if d['import_tests']:
+                ordered_recipe['test']['imports'] = d['import_tests']
+
+            if d['test_commands']:
+                ordered_recipe['test']['commands'] = d['test_commands']
+
+            if d['tests_require']:
+                ordered_recipe['test']['requires'] = d['tests_require']
+
+            ordered_recipe['about'] = {} # OrderedDict()
+            # Yuck. But don't want to change homeurl to home everywhere today, just
+            # want this to work.
+            d['home'] = d['homeurl']
+            for key in ABOUT_ORDER:
+                try:
+                    ordered_recipe['about'][key] = d[key]
+                except KeyError:
+                    ordered_recipe['about'][key] = ''
+            ordered_recipe['extra']['recipe-maintainers'] = ''
+
+            # Prune any top-level sections that are empty
+            for key in EXPECTED_SECTION_ORDER:
+                if not ordered_recipe[key]:
+                    del ordered_recipe[key]
+
+            #ordered_recipe = ruamel_yaml.comments.CommentedMap(ordered_recipe)
+            content = ruamel_yaml.dump(ordered_recipe,
+                                       Dumper=ruamel_yaml.RoundTripDumper,
+                                       default_flow_style=False)
+
+            rendered_recipe += content
+            f.write(rendered_recipe)
         with open(join(output_dir, name, 'build.sh'), 'w') as f:
             f.write(PYPI_BUILD_SH.format(**d))
         with open(join(output_dir, name, 'bld.bat'), 'w') as f:
@@ -722,10 +746,10 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             # TODO: Use pythonw for gui scripts
             entry_list = (cs + gs)
             if len(cs + gs) != 0:
-                d['entry_points'] = INDENT.join([''] + entry_list)
+                d['entry_points'] = entry_list
                 d['entry_comment'] = ''
                 d['build_comment'] = ''
-                d['test_commands'] = INDENT.join([''] + make_entry_tests(entry_list))
+                d['test_commands'] = make_entry_tests(entry_list)
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
@@ -752,12 +776,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             setuptools_run = False
             d['egg_comment'] = ''
             d['build_comment'] = ''
-        d['build_depends'] = INDENT.join([''] +
-                                            ['setuptools'] * setuptools_build +
-                                            deps)
-        d['run_depends'] = INDENT.join([''] +
-                                        ['setuptools'] * setuptools_run +
-                                        deps)
+        d['build_depends'] = ['setuptools'] * setuptools_build + deps
+        d['run_depends'] = ['setuptools'] * setuptools_run + deps
 
         if recursive:
             for dep in deps:
@@ -784,11 +804,11 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 olddeps = [x for x in d['import_tests'].split()
                         if x != '-']
             deps = set(olddeps) | deps
-        d['import_tests'] = INDENT.join(sorted(deps))
+        d['import_tests'] = sorted(deps)
         d['import_comment'] = ''
 
-        d['tests_require'] = INDENT.join(sorted([spec_from_line(pkg) for pkg
-                                                 in ensure_list(pkginfo['tests_require'])]))
+        d['tests_require'] = sorted([spec_from_line(pkg) for pkg
+                                     in ensure_list(pkginfo['tests_require'])])
 
     if pkginfo.get('homeurl'):
         d['homeurl'] = pkginfo['homeurl']
