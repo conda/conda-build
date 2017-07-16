@@ -393,8 +393,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             # Always require python as a dependency
             ordered_recipe['requirements'] = {}
-            ordered_recipe['requirements']['build'] = ['python'] + d['build_depends']
-            ordered_recipe['requirements']['run'] = ['python'] + d['run_depends']
+            ordered_recipe['requirements']['build'] = ['python'] + ensure_list(d['build_depends'])
+            ordered_recipe['requirements']['run'] = ['python'] + ensure_list(d['run_depends'])
 
             if d['import_tests']:
                 ordered_recipe['test']['imports'] = d['import_tests']
