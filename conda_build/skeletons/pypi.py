@@ -151,7 +151,7 @@ EXPECTED_SECTION_ORDER = ['package', 'source', 'build', 'requirements',
 
 REQUIREMENTS_ORDER = ['build', 'run']
 
-# Definition of ABOUT_ORDER reflect current practice
+# Definition of ABOUT_ORDER reflects current practice
 ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
                'description', 'doc_url', 'dev_url']
 
