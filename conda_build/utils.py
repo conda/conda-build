@@ -622,6 +622,8 @@ def create_entry_point(path, module, func, config):
             copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
                     path + '.exe', config.timeout)
     else:
+        if os.path.islink(path):
+            os.remove(path)
         with open(path, 'w') as fo:
             if not config.noarch:
                 fo.write('#!%s\n' % config.build_python)
