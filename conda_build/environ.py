@@ -20,7 +20,6 @@ from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFound
 from .conda_interface import package_cache
 from .conda_interface import install_actions, display_actions, execute_actions, execute_plan
 from .conda_interface import memoized
-from .conda_interface import MatchSpec
 
 
 from conda_build.os_utils import external
@@ -636,28 +635,6 @@ class Environment(object):
         return specs
 
 
-spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+)\s+([0-9a-zA-Z\.\+]+)(\s+[0-9a-zA-Z\.\_]+)?")
-spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
-
-
-def _ensure_valid_spec(spec):
-    if isinstance(spec, MatchSpec):
-        if (hasattr(spec, 'version') and spec.version and
-                spec_ver_needing_star_re.match(str(spec.version))):
-            if str(spec.name) not in ('python', 'numpy') or str(spec.version) != 'x.x':
-                spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
-    else:
-        match = spec_needing_star_re.match(spec)
-        # ignore exact pins (would be a 3rd group)
-        if match and not match.group(3):
-            if match.group(1) in ('python', 'numpy') and match.group(2) == 'x.x':
-                spec = spec_needing_star_re.sub(r"\1 \2", spec)
-            else:
-                if "*" not in spec:
-                    spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
-    return spec
-
-
 cached_actions = {}
 last_index_ts = 0
 
@@ -687,7 +664,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     index, index_ts = get_build_index(subdir, list(bldpkgs_dirs)[0], output_folder=output_folder,
                                       channel_urls=channel_urls, debug=debug, verbose=verbose,
                                       locking=locking, timeout=timeout)
-    specs = tuple(_ensure_valid_spec(spec) for spec in specs)
+    specs = tuple(utils.ensure_valid_spec(spec) for spec in specs)
 
     if (specs, env, subdir, channel_urls) in cached_actions and last_index_ts >= index_ts:
         actions = cached_actions[(specs, env, subdir, channel_urls)].copy()

@@ -272,3 +272,25 @@ root:
     assert 'test message' in out
     # make sure that it is not in stderr - this is testing override of defaults.
     assert 'test message' not in err
+
+
+def test_ensure_valid_spec():
+    assert utils.ensure_valid_spec('python') == 'python'
+    assert utils.ensure_valid_spec('python 2.7') == 'python 2.7.*'
+    assert utils.ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
+    assert utils.ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
+    assert utils.ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
+    assert utils.ensure_valid_spec('numpy x.x') == 'numpy x.x'
+    assert utils.ensure_valid_spec(utils.MatchSpec('numpy x.x')) == utils.MatchSpec('numpy x.x')
+
+
+def test_insert_variant_versions(testing_metadata):
+    testing_metadata.meta['requirements']['build'] = ['python', 'numpy 1.13']
+    testing_metadata.config.variant = {'python': '2.7', 'numpy': '1.11'}
+    utils.insert_variant_versions(testing_metadata, 'build')
+    # this one gets inserted
+    assert 'python 2.7.*' in testing_metadata.meta['requirements']['build']
+    # this one should not be altered
+    assert 'numpy 1.13' in testing_metadata.meta['requirements']['build']
+    # the overall length does not change
+    assert len(testing_metadata.meta['requirements']['build']) == 2

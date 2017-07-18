@@ -24,7 +24,7 @@ from conda_build import exceptions, utils, variants
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
-                               HashableDict, trim_empty_keys, filter_files)
+                               HashableDict, trim_empty_keys, filter_files, insert_variant_versions)
 from conda_build.license_family import ensure_valid_license_family
 
 try:
@@ -1533,6 +1533,8 @@ class MetaData(object):
         if constrain_reqs:
             requirements['run_constrained'] = constrain_reqs
         output_metadata.meta['requirements'] = requirements
+        for env in ('build', 'host'):
+            insert_variant_versions(output_metadata, env)
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
         if self.name() == output.get('name') and 'requirements' not in output:
