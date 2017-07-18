@@ -330,13 +330,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 d['version'] = versions[-1]
 
         data, d['pypiurl'], d['filename'], d['digest'] = get_download_data(pypi_data,
-                                                                        package,
-                                                                        d['version'],
-                                                                        is_url, all_urls,
-                                                                        noprompt, manual_url)
+                                                                           package,
+                                                                           d['version'],
+                                                                           is_url, all_urls,
+                                                                           noprompt, manual_url)
 
-        d['hash_type'] = d['digest'][0]
-        d['hash_value'] = d['digest'][1]
         d['import_tests'] = ''
 
         get_package_metadata(package, d, data, output_dir, python_version,
@@ -344,6 +342,10 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                              noprompt, packages, extra_specs, config=config,
                              setup_options=setup_options)
 
+        # Set these *after* get_package_metadata so that the preferred hash
+        # can be calculated from the downloaded file, if necessary.
+        d['hash_type'] = d['digest'][0]
+        d['hash_value'] = d['digest'][1]
         d['recipe_setup_options'] = ' '.join(setup_options)
 
         # Change requirements to use format that guarantees the numpy
@@ -847,7 +849,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         license_name = ' or '.join(licenses)
     d['license'] = license_name
     d['license_family'] = guess_license_family(license_name, allowed_license_families)
-
+    if 'new_hash_value' in pkginfo:
+        d['digest'] = pkginfo['new_hash_value']
 
 def valid(name):
     if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name) and not keyword.iskeyword(name)):
@@ -955,8 +958,20 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         if not isfile(download_path) or \
                 hashsum_file(download_path, hash_type) != hash_value:
             download(pypiurl, join(config.src_cache, filename))
+            if not hashsum_file(download_path, hash_type) != hash_value:
+                raise RuntimeError(' Download of {} failed'
+                                   ' checksum matching. Please'
+                                   ' try again.'.format(package))
         else:
             print("Using cached download")
+        # Calculate the preferred hash type here if necessary.
+        # Needs to be done in this block because this is where we have
+        # access to the source file.
+        if hash_type != POSSIBLE_DIGESTS[0]:
+            new_hash_value = hashsum_file(download_path, POSSIBLE_DIGESTS[0])
+        else:
+            new_hash_value = ''
+
         print("Unpacking %s..." % package)
         unpack(join(config.src_cache, filename), tempdir)
         print("done")
@@ -970,6 +985,8 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
                 pkg_info = yaml.load(fn)
         except IOError:
             pkg_info = pkginfo.SDist(download_path).__dict__
+        if new_hash_value:
+            pkg_info['new_hash_value'] = (POSSIBLE_DIGESTS[0], new_hash_value)
     finally:
         rm_rf(tempdir)
 
