@@ -874,10 +874,10 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         if not isfile(download_path) or \
                 hashsum_file(download_path, hash_type) != hash_value:
             download(pypiurl, join(config.src_cache, filename))
-            if not hashsum_file(download_path, hash_type) != hash_value:
+            if not hashsum_file(download_path, hash_type) == hash_value:
                 raise RuntimeError(' Download of {} failed'
-                                   ' checksum matching. Please'
-                                   ' try again.'.format(package))
+                                   ' checksum type {} expected value {}. Please'
+                                   ' try again.'.format(package, hash_type, hash_value))
         else:
             print("Using cached download")
         # Calculate the preferred hash type here if necessary.
