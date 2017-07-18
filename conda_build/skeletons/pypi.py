@@ -37,97 +37,6 @@ from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
 
-if PY3:
-    try:
-        from xmlrpc.client import ServerProxy, Transport, ProtocolError
-    except ImportError:
-        print(sys.path)
-        raise
-else:
-    try:
-        from xmlrpclib import ServerProxy, Transport, ProtocolError
-    except ImportError:
-        print(sys.path)
-        raise
-
-
-# https://gist.github.com/chrisguitarguy/2354951
-
-
-class RequestsTransport(Transport):
-    """
-    Drop in Transport for xmlrpclib that uses Requests instead of httplib
-    """
-    # change our user agent to reflect Requests
-    user_agent = "Python XMLRPC with Requests (python-requests.org)"
-
-    # override this if you'd like to https
-    use_https = True
-
-    session = CondaSession()
-
-    def request(self, host, handler, request_body, verbose):
-        """
-        Make an xmlrpc request.
-        """
-        headers = {
-            'User-Agent': self.user_agent,
-            'Content-Type': 'text/xml',
-        }
-        url = self._build_url(host, handler)
-
-        try:
-            resp = self.session.post(url,
-                                     data=request_body,
-                                     headers=headers,
-                                     proxies=self.session.proxies)
-            resp.raise_for_status()
-
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 407:  # Proxy Authentication Required
-                handle_proxy_407(url, self.session)
-                # Try again
-                return self.request(host, handler, request_body, verbose)
-            else:
-                raise
-
-        except requests.exceptions.ConnectionError as e:
-            # requests isn't so nice here. For whatever reason, https gives this
-            # error and http gives the above error. Also, there is no status_code
-            # attribute here. We have to just check if it looks like 407.  See
-            # https://github.com/kennethreitz/requests/issues/2061.
-            if "407" in str(e):  # Proxy Authentication Required
-                handle_proxy_407(url, self.session)
-                # Try again
-                return self.request(host, handler, request_body, verbose)
-            else:
-                raise
-
-        except requests.RequestException as e:
-            raise ProtocolError(url, resp.status_code, str(e), resp.headers)
-
-        else:
-            return self.parse_response(resp)
-
-    def parse_response(self, resp):
-        """
-        Parse the xmlrpc response.
-        """
-        p, u = self.getparser()
-        p.feed(resp.text.encode("utf-8"))
-        p.close()
-        ret = u.close()
-        return ret
-
-    def _build_url(self, host, handler):
-        """
-        Build a url for our request based on the host, handler and use_http
-        property
-        """
-        scheme = 'https' if self.use_https else 'http'
-        return '%s://%s/%s' % (scheme, host, handler)
-
-
 pypi_example = """
 Examples:
 
@@ -259,15 +168,6 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
     if not config:
         config = Config()
-
-    # all_packages = client.list_packages()
-    # searching is faster than listing all packages, but we need to separate URLs from names
-    all_packages = []
-
-    urls = [package for package in packages if ':' in package]
-    names = [package for package in packages if package not in urls]
-    all_packages = urls + [name for name in names if package_exists(name)]
-    all_packages_lower = [i.lower() for i in all_packages]
 
     created_recipes = []
     while packages:
