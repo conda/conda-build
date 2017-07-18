@@ -185,7 +185,6 @@ PYPI_META_STATIC = {
     },
 }
 
-
 # Note the {} formatting bits here
 DISTUTILS_PATCH = '''\
 diff core.py core.py
@@ -424,6 +423,26 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                     rendered_recipe += '\n'
             # make sure that recipe ends with one newline, by god.
             rendered_recipe.rstrip()
+
+            # This hackery is necessary because
+            #  - the default indentation of lists is not what we would like.
+            #    Ideally we'd contact the ruamel.yaml auther to find the right
+            #    way to do this. See this PR thread for more:
+            #    https://github.com/conda/conda-build/pull/2205#issuecomment-315803714
+            #    Brute force fix below.
+
+            # Fix the indents
+            recipe_lines = []
+            for line in rendered_recipe.splitlines():
+                match = re.search('^\s+(-) ', line,
+                                  flags=re.MULTILINE)
+                if match:
+                    pre, sep, post = line.partition('-')
+                    sep = '  ' + sep
+                    line = pre + sep + post
+                recipe_lines.append(line)
+            rendered_recipe = '\n'.join(recipe_lines)
+
             f.write(rendered_recipe)
 
 
