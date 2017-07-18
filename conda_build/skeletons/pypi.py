@@ -35,6 +35,7 @@ from conda_build.environ import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
+from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
 
 pypi_example = """
 Examples:
@@ -52,11 +53,8 @@ Use the --pypi-url flag to point to a PyPI mirror url:
     conda skeleton pypi --pypi-url <mirror-url> package_name
 """
 
-# Definitions of EXPECTED_SECTION_ORDER and REQUIREMENTS_ORDER below are from
+# Definition of REQUIREMENTS_ORDER below are from
 # https://github.com/conda-forge/conda-smithy/blob/master/conda_smithy/lint_recipe.py#L16
-EXPECTED_SECTION_ORDER = ['package', 'source', 'build', 'requirements',
-                          'test', 'app', 'about', 'extra']
-
 REQUIREMENTS_ORDER = ['build', 'run']
 
 # Definition of ABOUT_ORDER reflects current practice
@@ -64,7 +62,7 @@ ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
                'description', 'doc_url', 'dev_url']
 
 # This may be overkill, but some day sha256 won't be enough. Might as well be
-# ready...list this in order of decreasing preference.
+# ready...list these in order of decreasing preference.
 POSSIBLE_DIGESTS = ['sha256', 'md5']
 
 PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
@@ -547,7 +545,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         else:
             # That didn't work, even though as of 7/17/2017 some packages
             # have a 'digests' entry.
-            # As a last-ditch effort, try for this entry
+            # As a last-ditch effort, try for the md5_digest entry
             try:
                 digest = ('md5', url['md5_digest'])
             except KeyError:

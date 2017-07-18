@@ -580,11 +580,13 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
 
     return rendered_metadata
 
+# Keep this out of the function below so it can be imported by other modules.
+FIELDS = ["package", "source", "build", "requirements", "test", "app", "outputs", "about", "extra"]
 
 # Next bit of stuff is to support YAML output in the order we expect.
 # http://stackoverflow.com/a/17310199/1170370
 class _MetaYaml(dict):
-    fields = ["package", "source", "build", "requirements", "test", "outputs", "about", "extra"]
+    fields = FIELDS
 
     def to_omap(self):
         return [(field, self[field]) for field in _MetaYaml.fields if field in self]
