@@ -24,8 +24,7 @@ import ruamel_yaml
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
-from conda_build.conda_interface import CondaSession
-from conda_build.conda_interface import download, handle_proxy_407
+from conda_build.conda_interface import download
 from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
