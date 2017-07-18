@@ -19,6 +19,7 @@ from tempfile import mkdtemp
 import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
+from six.moves.urllib.parse import urljoin
 import yaml
 import ruamel_yaml
 
@@ -176,7 +177,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         if is_url:
             package_pypi_url = ''
         else:
-            package_pypi_url = '/'.join([pypi_url, package, 'json'])
+            package_pypi_url = urljoin(pypi_url, '/'.join((package, 'json')))
 
         if not is_url:
             dir_path = join(output_dir, package.lower())
@@ -237,8 +238,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         # from PyPI. summary will be pulled from package information in
         # get_package_metadata or a default value set if it turns out that
         # data['summary'] is empty.
-        d['summary'] = data['summary']
-        d['description'] = data['description']
+        d['summary'] = data.get('summary', '')
+        d['description'] = data.get('description', '')
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
                              noprompt, packages, extra_specs, config=config,
@@ -248,7 +249,6 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         # can be calculated from the downloaded file, if necessary.
         d['hash_type'] = d['digest'][0]
         d['hash_value'] = d['digest'][1]
-        d['recipe_setup_options'] = ' '.join(setup_options)
 
         # Change requirements to use format that guarantees the numpy
         # version will be pinned when the recipe is built and that
@@ -286,7 +286,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = 'python setup.py install'
+            ordered_recipe['build']['script'] = 'python setup.py install ' + ' '.join(setup_options)
             if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
                 ordered_recipe['build']['script'] += (' --single-version-externally-managed '
                                                       '--record=record.txt')
@@ -355,7 +355,7 @@ def add_parser(repos):
         "pypi",
         help="""
     Create recipe skeleton for packages hosted on the Python Packaging Index
-    (PyPI) (pypi.python.org).
+    (PyPI) (pypi.io).
         """,
         epilog=pypi_example,
     )
@@ -383,7 +383,7 @@ def add_parser(repos):
     )
     pypi.add_argument(
         "--pypi-url",
-        default='https://pypi.python.org/pypi',
+        default='https://pypi.io/pypi/',
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
@@ -491,7 +491,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
     digest : dict
         Key is type of checksum, value is the checksum.
     """
-    data = pypi_data['info'] if not is_url else None
+    data = pypi_data['info'] if not is_url else {}
 
     # PyPI will typically have several downloads (source, wheels) for one
     # package/version.
@@ -773,6 +773,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
     if 'new_hash_value' in pkginfo:
         d['digest'] = pkginfo['new_hash_value']
 
+
 def valid(name):
     if (re.match("[_A-Za-z][_a-zA-Z0-9]*$", name) and not keyword.iskeyword(name)):
         return name
@@ -879,7 +880,7 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         if not isfile(download_path) or \
                 hashsum_file(download_path, hash_type) != hash_value:
             download(pypiurl, join(config.src_cache, filename))
-            if not hashsum_file(download_path, hash_type) == hash_value:
+            if hashsum_file(download_path, hash_type) != hash_value:
                 raise RuntimeError(' Download of {} failed'
                                    ' checksum type {} expected value {}. Please'
                                    ' try again.'.format(package, hash_type, hash_value))
