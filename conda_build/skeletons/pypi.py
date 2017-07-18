@@ -155,9 +155,14 @@ REQUIREMENTS_ORDER = ['build', 'run']
 ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
                'description', 'doc_url', 'dev_url']
 
+# This may be overkill, but some day sha256 won't be enough. Might as well be
+# ready...list this in order of decreasing preference.
+POSSIBLE_DIGESTS = ['sha256', 'md5']
+
 PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 {{% set version = "{version}" %}}
-{{% set md5 = "{md5}" %}}
+{{% set hash_type = "{hash_type}" %}}
+{{% set hash_value = "{hash_value}" %}}
 
 """
 
@@ -169,7 +174,7 @@ PYPI_META_STATIC = {
     'source': {
         'fn': '{{ name }}-{{ version }}.tar.gz',
         'url': 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz',  # NOQA
-        'md5': '{{ md5 }}',
+        '{{ hash_type }}': '{{ hash_value }}',
 
     },
     'build': {
@@ -233,19 +238,18 @@ INDENT = '\n    - '
 
 def package_exists(package_name, pypi_url=None):
     if not pypi_url:
-        pypi_url = 'https://pypi.python.org/pypi'
+        pypi_url = 'https://pypi.io/pypi'
     # request code will be 404 if the package does not exist.  Requires exact match.
     r = requests.get(pypi_url + '/' + package_name)
     return r.status_code != 404
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                all_urls=False, pypi_url='https://pypi.python.org/pypi', noprompt=False,
+                all_urls=False, pypi_url='https://pypi.io/pypi/', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
                 extra_specs=[],
                 pin_numpy=False):
-    client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
 
     if not setup_options:
@@ -263,7 +267,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
     urls = [package for package in packages if ':' in package]
     names = [package for package in packages if package not in urls]
-    all_packages = urls + [match["name"] for match in client.search({"name": names}, "or")]
+    all_packages = urls + [name for name in names if package_exists(name)]
     all_packages_lower = [i.lower() for i in all_packages]
 
     created_recipes = []
@@ -272,6 +276,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         created_recipes.append(package)
 
         is_url = ':' in package
+
+        if is_url:
+            package_pypi_url = ''
+        else:
+            package_pypi_url = '/'.join([pypi_url, package, 'json'])
 
         if not is_url:
             dir_path = join(output_dir, package.lower())
@@ -291,19 +300,14 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         if is_url:
             d['version'] = 'UNKNOWN'
+            # Make sure there is always something to pass in for this
+            pypi_data = {}
         else:
-            # need to treat hidden and visible packages separately.
-            # the behavior of PyPI XML API differs from the documentation in certain
-            # cases. See
-            # https://github.com/pypa/pypi-legacy/issues/189#issuecomment-275515861
-
             sort_by_version = lambda l: sorted(l, key=parse_version)
 
-            hidden_versions = sort_by_version(client.package_releases(package, True))
-            visible_versions = sort_by_version(client.package_releases(package, False))
+            pypi_data = requests.get(package_pypi_url).json()
 
-            # this list of available versions is the union of hidden and visible ones.
-            versions = sort_by_version(set(hidden_versions + visible_versions))
+            versions = sort_by_version(pypi_data['releases'].keys())
 
             if version_compare:
                 version_compare(versions)
@@ -314,33 +318,25 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 d['version'] = version
             else:
                 # select the most visible version from PyPI.
-                if not visible_versions:
-                    # The xmlrpc interface is case sensitive, but the index itself
-                    # is apparently not (the last time I checked,
-                    # len(set(all_packages_lower)) == len(set(all_packages)))
-                    if package.lower() in all_packages_lower:
-                        cased_package = all_packages[all_packages_lower.index(package.lower())]
-                        if cased_package != package:
-                            print("%s not found, trying %s" % (package, cased_package))
-                            packages.append(cased_package)
-                            del package_dicts[package]
-                            continue
+                if not versions:
                     sys.exit("Error: Could not find any versions of package %s" % package)
-                if len(visible_versions) > 1:
+                if len(versions) > 1:
                     print("Warning, the following versions were found for %s" %
                           package)
-                    for ver in visible_versions:
+                    for ver in versions:
                         print(ver)
-                    print("Using %s" % visible_versions[-1])
+                    print("Using %s" % versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = visible_versions[-1]
+                d['version'] = versions[-1]
 
-        data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(client,
+        data, d['pypiurl'], d['filename'], d['digest'] = get_download_data(pypi_data,
                                                                         package,
                                                                         d['version'],
                                                                         is_url, all_urls,
                                                                         noprompt, manual_url)
 
+        d['hash_type'] = d['digest'][0]
+        d['hash_value'] = d['digest'][1]
         d['import_tests'] = ''
 
         get_package_metadata(package, d, data, output_dir, python_version,
@@ -541,17 +537,48 @@ def add_parser(repos):
     )
 
 
-def get_xmlrpc_client(pypi_url):
-    return ServerProxy(pypi_url, transport=RequestsTransport())
+def digest_from_fragment(fragment):
+    """
+    Try to parse a checksum from a URL fragment.
+    """
+    for p in POSSIBLE_DIGESTS:
+        search_for = p + '='
+        if fragment.startswith(search_for):
+            digest = (p, fragment[len(search_for):])
+            break
+    else:
+        digest = ()
+    return digest
 
 
-def get_download_data(client, package, version, is_url, all_urls, noprompt, manual_url):
-    data = client.release_data(package, version) if not is_url else None
-    urls = client.release_urls(package, version) if not is_url else [package]
+def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, manual_url):
+    """
+    Get at least one valid *source* download URL or fail.
+
+    Returns
+    -------
+
+    data : dict
+        Summary of package information
+    pypiurl : str
+        Download URL of package, which may or may not actually be from PyPI.
+    filename : str
+        Name of file; used to check cache
+    digest : dict
+        Key is type of checksum, value is the checksum.
+    """
+    data = pypi_data['info'] if not is_url else None
+
+    # PyPI will typically have several downloads (source, wheels) for one
+    # package/version.
+    urls = [url for url in pypi_data['releases'][version]] if not is_url else [package]
+
     if not is_url and not all_urls:
         # Try to find source urls
-        urls = [url for url in urls if url['python_version'] == 'source']
+        urls = [url for url in urls if url['packagetype'] == 'sdist']
+
     if not urls:
+        # Try harder for a download location
         if 'download_url' in data:
             urls = [defaultdict(str, {'url': data['download_url']})]
             if not urls[0]['url']:
@@ -564,12 +591,7 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
                     (package, U))
             urls[0]['filename'] = U.path.rsplit('/')[-1]
             fragment = U.fragment or ''
-            if fragment.startswith('md5='):
-                md5_or_sha256 = fragment[len('md5='):]
-            elif fragment.startswith('sha256='):
-                md5_or_sha256 = fragment[len('sha256='):]
-            else:
-                md5_or_sha256 = ''
+            digest = digest_from_fragment(fragment)
         else:
             sys.exit("Error: No source urls found for %s" % package)
     if len(urls) > 1 and not noprompt:
@@ -589,25 +611,39 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
         n = 0
 
     if not is_url:
-        print("Using url %s (%s) for %s." % (urls[n]['url'],
-            human_bytes(urls[n]['size'] or 0), package))
-        pypiurl = urls[n]['url']
-        md5_or_sha256 = urls[n].get('sha256_digest', urls[n].get('md5_digest'))
-        filename = urls[n]['filename'] or 'package'
+        # Found a location from PyPI.
+        url = urls[n]
+        pypiurl = url['url']
+        print("Using url %s (%s) for %s." % (pypiurl,
+            human_bytes(url['size'] or 0), package))
+        # List of digests we might get in order of preference
+        for p in POSSIBLE_DIGESTS:
+            try:
+                if url['digests'][p]:
+                    digest = (p, url['digests'][p])
+                    break
+            except KeyError:
+                continue
+        else:
+            # That didn't work, even though as of 7/17/2017 some packages
+            # have a 'digests' entry.
+            # As a last-ditch effort, try for this entry
+            try:
+                digest = ('md5', url['md5_digest'])
+            except KeyError:
+                # Give up
+                digest = ()
+        filename = url['filename'] or 'package'
     else:
+        # User provided a URL, try to use it.
         print("Using url %s" % package)
         pypiurl = package
         U = parse_url(package)
-        if U.fragment and U.fragment.startswith('md5='):
-            md5_or_sha256 = U.fragment[len('md5='):]
-        elif U.fragment and U.fragment.startswith('sha256='):
-            md5_or_sha256 = U.fragment[len('sha256='):]
-        else:
-            md5_or_sha256 = ''
+        digest = digest_from_fragment(U.fragment)
         # TODO: 'package' won't work with unpack()
         filename = U.path.rsplit('/', 1)[-1] or 'package'
 
-    return (data, pypiurl, filename, md5_or_sha256)
+    return (data, pypiurl, filename, digest)
 
 
 def version_compare(package, versions):
@@ -646,11 +682,11 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                          extra_specs, config, setup_options):
 
     print("Downloading %s" % package)
-
+    print("PyPI URL: ", d['pypiurl'])
     pkginfo = get_pkginfo(package,
                           filename=d['filename'],
                           pypiurl=d['pypiurl'],
-                          md5=d['md5'],
+                          digest=d['digest'],
                           python_version=python_version,
                           extra_specs=extra_specs,
                           setup_options=setup_options,
@@ -897,7 +933,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, config,
+def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs, config,
                 setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
@@ -910,12 +946,14 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, co
     if not isdir(config.src_cache):
         makedirs(config.src_cache)
 
+    hash_type = digest[0]
+    hash_value = digest[1]
     try:
         # Download it to the build source cache. That way, you have
         # it.
         download_path = join(config.src_cache, filename)
         if not isfile(download_path) or \
-                hashsum_file(download_path, 'md5') != md5:
+                hashsum_file(download_path, hash_type) != hash_value:
             download(pypiurl, join(config.src_cache, filename))
         else:
             print("Using cached download")
