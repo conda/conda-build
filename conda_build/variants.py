@@ -18,9 +18,11 @@ DEFAULT_EXTEND_KEYS = ['pin_run_as_build', 'ignore_version']
 DEFAULT_VARIANTS = {
     'python': ['{0}.{1}'.format(sys.version_info.major, sys.version_info.minor)],
     'numpy': ['1.11'],
+    # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
+    #    version to say what's in their standard library.
     'perl': ['5.22.2'],
-    'lua': ['5.2'],
-    'r_base': ['3.3.2'],
+    'lua': ['5'],
+    'r_base': ['3'],
     'cpu_optimization_target': ['nocona'],
     'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
     'ignore_version': [],
