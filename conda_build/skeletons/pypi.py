@@ -233,6 +233,12 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         d['import_tests'] = ''
 
+        # Get summary and description directly from the metadata returned
+        # from PyPI. summary will be pulled from package information in
+        # get_package_metadata or a default value set if it turns out that
+        # data['summary'] is empty.
+        d['summary'] = data['summary']
+        d['description'] = data['description']
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
                              noprompt, packages, extra_specs, config=config,
@@ -545,7 +551,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         else:
             # That didn't work, even though as of 7/17/2017 some packages
             # have a 'digests' entry.
-            # As a last-ditch effort, try for the md5_digest entry
+            # As a last-ditch effort, try for the md5_digest entry.
             try:
                 digest = ('md5', url['md5_digest'])
             except KeyError:
@@ -719,12 +725,11 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             d['home'] = "The package home page"
 
     if pkginfo.get('summary'):
-        d['summary'] = pkginfo['summary']
+        if 'summary' in d and not d['summary']:
+            # Need something here, use what the package had
+            d['summary'] = pkginfo['summary']
     else:
-        if data:
-            d['summary'] = data['summary']
-        else:
-            d['summary'] = "Summary of the package"
+        d['summary'] = "Summary of the package"
 
     license_classifier = "License :: OSI Approved :: "
     if pkginfo.get('classifiers'):
