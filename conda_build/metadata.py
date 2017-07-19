@@ -105,8 +105,9 @@ def ns_cfg(config):
 # Notes:
 # - [([^\[\]]+)\] means "find a pair of brackets containing any
 #                 NON-bracket chars, and capture the contents"
-# - (?(2).*)$ means "allow trailing characters iff group 2 (#.*) was found."
-sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2).*)$')
+# - (?(2)[^\(\)]*)$ means "allow trailing characters iff group 2 (#.*) was found."
+#                 Skip markdown link syntax.
+sel_pat = re.compile(r'(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2)[^\(\)]*)$')
 
 
 # this function extracts the variable name from a NameError exception, it has the form of:

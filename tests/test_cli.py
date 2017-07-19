@@ -252,24 +252,17 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
 
     # Deliberately bypass metadata reading in conda build to get as
     # close to the "ground truth" as possible.
-    with open('msumastro/meta.yaml') as f:
-        actual = yaml.load(f)
-
-    assert 'numpy x.x' in actual['requirements']['run']
-    assert 'numpy x.x' in actual['requirements']['build']
+    with open(os.path.join('msumastro', 'meta.yaml')) as f:
+        assert f.read().count('numpy x.x') == 2
 
     args = ['pypi', 'photutils', '--version=0.2.2', '--setup-options=--offline']
     main_skeleton.execute(args)
     assert os.path.isdir('photutils')
     # Check that the setup option occurs in bld.bat and build.sh.
-    for script in ['bld.bat', 'build.sh']:
-        with open('photutils/{}'.format(script)) as f:
-            content = f.read()
-            assert '--offline' in content
 
-    with open(os.path.join('photutils', 'meta.yaml')) as f:
-        content = f.read()
-        assert 'version: "0.2.2"' in content
+    m = api.render('photutils')[0][0]
+    assert '--offline' in m.meta['build']['script']
+    assert m.version() == '0.2.2'
 
 
 def test_metapackage(testing_config, testing_workdir):

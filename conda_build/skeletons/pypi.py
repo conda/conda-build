@@ -19,12 +19,13 @@ from tempfile import mkdtemp
 import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
+from six.moves.urllib.parse import urljoin
 import yaml
+import ruamel_yaml
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
-from conda_build.conda_interface import CondaSession
-from conda_build.conda_interface import download, handle_proxy_407
+from conda_build.conda_interface import download
 from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
@@ -35,97 +36,7 @@ from conda_build.environ import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
-
-if PY3:
-    try:
-        from xmlrpc.client import ServerProxy, Transport, ProtocolError
-    except ImportError:
-        print(sys.path)
-        raise
-else:
-    try:
-        from xmlrpclib import ServerProxy, Transport, ProtocolError
-    except ImportError:
-        print(sys.path)
-        raise
-
-
-# https://gist.github.com/chrisguitarguy/2354951
-
-
-class RequestsTransport(Transport):
-    """
-    Drop in Transport for xmlrpclib that uses Requests instead of httplib
-    """
-    # change our user agent to reflect Requests
-    user_agent = "Python XMLRPC with Requests (python-requests.org)"
-
-    # override this if you'd like to https
-    use_https = True
-
-    session = CondaSession()
-
-    def request(self, host, handler, request_body, verbose):
-        """
-        Make an xmlrpc request.
-        """
-        headers = {
-            'User-Agent': self.user_agent,
-            'Content-Type': 'text/xml',
-        }
-        url = self._build_url(host, handler)
-
-        try:
-            resp = self.session.post(url,
-                                     data=request_body,
-                                     headers=headers,
-                                     proxies=self.session.proxies)
-            resp.raise_for_status()
-
-        except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 407:  # Proxy Authentication Required
-                handle_proxy_407(url, self.session)
-                # Try again
-                return self.request(host, handler, request_body, verbose)
-            else:
-                raise
-
-        except requests.exceptions.ConnectionError as e:
-            # requests isn't so nice here. For whatever reason, https gives this
-            # error and http gives the above error. Also, there is no status_code
-            # attribute here. We have to just check if it looks like 407.  See
-            # https://github.com/kennethreitz/requests/issues/2061.
-            if "407" in str(e):  # Proxy Authentication Required
-                handle_proxy_407(url, self.session)
-                # Try again
-                return self.request(host, handler, request_body, verbose)
-            else:
-                raise
-
-        except requests.RequestException as e:
-            raise ProtocolError(url, resp.status_code, str(e), resp.headers)
-
-        else:
-            return self.parse_response(resp)
-
-    def parse_response(self, resp):
-        """
-        Parse the xmlrpc response.
-        """
-        p, u = self.getparser()
-        p.feed(resp.text.encode("utf-8"))
-        p.close()
-        ret = u.close()
-        return ret
-
-    def _build_url(self, host, handler):
-        """
-        Build a url for our request based on the host, handler and use_http
-        property
-        """
-        scheme = 'https' if self.use_https else 'http'
-        return '%s://%s/%s' % (scheme, host, handler)
-
+from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
 
 pypi_example = """
 Examples:
@@ -143,91 +54,43 @@ Use the --pypi-url flag to point to a PyPI mirror url:
     conda skeleton pypi --pypi-url <mirror-url> package_name
 """
 
-PYPI_META = """\
-package:
-  name: {packagename}
-  version: "{version}"
+# Definition of REQUIREMENTS_ORDER below are from
+# https://github.com/conda-forge/conda-smithy/blob/master/conda_smithy/lint_recipe.py#L16
+REQUIREMENTS_ORDER = ['build', 'run']
 
-source:
-  fn: {filename}
-  url: {pypiurl}
-  {usemd5}md5: {md5}
-#  patches:
-   # List any patch files here
-   # - fix.patch
+# Definition of ABOUT_ORDER reflects current practice
+ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
+               'description', 'doc_url', 'dev_url']
 
-{build_comment}build:
-  {noarch_python_comment}noarch: python
-  {egg_comment}preserve_egg_dir: True
-  {entry_comment}entry_points:
-    # Put any entry points (scripts to be generated automatically) here. The
-    # syntax is module:function.  For example
-    #
-    # - {packagename} = {packagename}:main
-    #
-    # Would create an entry point called {packagename} that calls {packagename}.main()
-{entry_points}
+# This may be overkill, but some day sha256 won't be enough. Might as well be
+# ready...list these in order of decreasing preference.
+POSSIBLE_DIGESTS = ['sha256', 'md5']
 
-  # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  # number: 1
+PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
+{{% set version = "{version}" %}}
+{{% set hash_type = "{hash_type}" %}}
+{{% set hash_value = "{hash_value}" %}}
 
-requirements:
-  build:
-    - python{build_depends}
-
-  run:
-    - python{run_depends}
-
-{test_comment}test:
-  # Python imports
-  {import_comment}imports:{import_tests}
-
-  {entry_comment}commands:
-    # You can put test commands to be run here.  Use this to test that the
-    # entry points work.
-{test_commands}
-
-  # You can also put a file called run_test.py in the recipe that will be run
-  # at test time.
-
-  {requires_comment}requires:{tests_require}
-    # Put any additional test requirements here.  For example
-    # - nose
-
-about:
-  {home_comment}home: {homeurl}
-  license: {license}
-  {summary_comment}summary: {summary}
-  license_family: {license_family}
-
-# See
-# http://docs.continuum.io/conda/build.html for
-# more information about meta.yaml
 """
 
-PYPI_BUILD_SH = """\
-#!/bin/bash
+PYPI_META_STATIC = {
+    'package': {
+        'name': '{{ name|lower }}',
+        'version': '{{ version }}',
+    },
+    'source': {
+        'fn': '{{ name }}-{{ version }}.tar.gz',
+        'url': 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz',  # NOQA
+        '{{ hash_type }}': '{{ hash_value }}',
 
-$PYTHON setup.py install {recipe_setup_options}
-
-# Add more build steps here, if they are necessary.
-
-# See
-# http://docs.continuum.io/conda/build.html
-# for a list of environment variables that are set during the build process.
-"""
-
-PYPI_BLD_BAT = """\
-"%PYTHON%" setup.py install {recipe_setup_options}
-if errorlevel 1 exit 1
-
-:: Add more build steps here, if they are necessary.
-
-:: See
-:: http://docs.continuum.io/conda/build.html
-:: for a list of environment variables that are set during the build process.
-"""
+    },
+    'build': {
+        'number': 0,
+    },
+    'extra': {
+        'recipe-maintainers': ''
+    },
+}
 
 # Note the {} formatting bits here
 DISTUTILS_PATCH = '''\
@@ -261,7 +124,7 @@ diff core.py core.py
 +    data['packages'] = kwargs.get('packages', [])
 +    data['setuptools'] = 'setuptools' in sys.modules
 +    data['summary'] = kwargs.get('description', None)
-+    data['homeurl'] = kwargs.get('url', None)
++    data['home'] = kwargs.get('url', None)
 +    data['license'] = kwargs.get('license', None)
 +    data['name'] = kwargs.get('name', '??PACKAGE-NAME-UNKNOWN??')
 +    data['classifiers'] = kwargs.get('classifiers', None)
@@ -281,19 +144,18 @@ INDENT = '\n    - '
 
 def package_exists(package_name, pypi_url=None):
     if not pypi_url:
-        pypi_url = 'https://pypi.python.org/pypi'
+        pypi_url = 'https://pypi.io/pypi'
     # request code will be 404 if the package does not exist.  Requires exact match.
     r = requests.get(pypi_url + '/' + package_name)
     return r.status_code != 404
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                all_urls=False, pypi_url='https://pypi.python.org/pypi', noprompt=False,
+                all_urls=False, pypi_url='https://pypi.io/pypi/', noprompt=False,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
                 extra_specs=[],
                 pin_numpy=False):
-    client = get_xmlrpc_client(pypi_url)
     package_dicts = {}
 
     if not setup_options:
@@ -305,21 +167,17 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     if not config:
         config = Config()
 
-    # all_packages = client.list_packages()
-    # searching is faster than listing all packages, but we need to separate URLs from names
-    all_packages = []
-
-    urls = [package for package in packages if ':' in package]
-    names = [package for package in packages if package not in urls]
-    all_packages = urls + [match["name"] for match in client.search({"name": names}, "or")]
-    all_packages_lower = [i.lower() for i in all_packages]
-
     created_recipes = []
     while packages:
         package = packages.pop()
         created_recipes.append(package)
 
         is_url = ':' in package
+
+        if is_url:
+            package_pypi_url = ''
+        else:
+            package_pypi_url = urljoin(pypi_url, '/'.join((package, 'json')))
 
         if not is_url:
             dir_path = join(output_dir, package.lower())
@@ -331,36 +189,22 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 'run_depends': '',
                 'build_depends': '',
                 'entry_points': '',
-                'build_comment': '# ',
-                'noarch_python_comment': '# ',
                 'test_commands': '',
-                'requires_comment': '#',
                 'tests_require': '',
-                'usemd5': '',
-                'test_comment': '',
-                'entry_comment': '# ',
-                'egg_comment': '# ',
-                'summary_comment': '',
-                'home_comment': '',
             })
         if is_url:
             del d['packagename']
 
         if is_url:
             d['version'] = 'UNKNOWN'
+            # Make sure there is always something to pass in for this
+            pypi_data = {}
         else:
-            # need to treat hidden and visible packages separately.
-            # the behavior of PyPI XML API differs from the documentation in certain
-            # cases. See
-            # https://github.com/pypa/pypi-legacy/issues/189#issuecomment-275515861
-
             sort_by_version = lambda l: sorted(l, key=parse_version)
 
-            hidden_versions = sort_by_version(client.package_releases(package, True))
-            visible_versions = sort_by_version(client.package_releases(package, False))
+            pypi_data = requests.get(package_pypi_url).json()
 
-            # this list of available versions is the union of hidden and visible ones.
-            versions = sort_by_version(set(hidden_versions + visible_versions))
+            versions = sort_by_version(pypi_data['releases'].keys())
 
             if version_compare:
                 version_compare(versions)
@@ -371,75 +215,54 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 d['version'] = version
             else:
                 # select the most visible version from PyPI.
-                if not visible_versions:
-                    # The xmlrpc interface is case sensitive, but the index itself
-                    # is apparently not (the last time I checked,
-                    # len(set(all_packages_lower)) == len(set(all_packages)))
-                    if package.lower() in all_packages_lower:
-                        cased_package = all_packages[all_packages_lower.index(package.lower())]
-                        if cased_package != package:
-                            print("%s not found, trying %s" % (package, cased_package))
-                            packages.append(cased_package)
-                            del package_dicts[package]
-                            continue
+                if not versions:
                     sys.exit("Error: Could not find any versions of package %s" % package)
-                if len(visible_versions) > 1:
+                if len(versions) > 1:
                     print("Warning, the following versions were found for %s" %
                           package)
-                    for ver in visible_versions:
+                    for ver in versions:
                         print(ver)
-                    print("Using %s" % visible_versions[-1])
+                    print("Using %s" % versions[-1])
                     print("Use --version to specify a different version.")
-                d['version'] = visible_versions[-1]
+                d['version'] = versions[-1]
 
-        data, d['pypiurl'], d['filename'], d['md5'] = get_download_data(client,
-                                                                        package,
-                                                                        d['version'],
-                                                                        is_url, all_urls,
-                                                                        noprompt, manual_url)
-
-        if d['md5'] == '':
-            d['usemd5'] = '# '
-        else:
-            d['usemd5'] = ''
+        data, d['pypiurl'], d['filename'], d['digest'] = get_download_data(pypi_data,
+                                                                           package,
+                                                                           d['version'],
+                                                                           is_url, all_urls,
+                                                                           noprompt, manual_url)
 
         d['import_tests'] = ''
 
+        # Get summary and description directly from the metadata returned
+        # from PyPI. summary will be pulled from package information in
+        # get_package_metadata or a default value set if it turns out that
+        # data['summary'] is empty.
+        d['summary'] = data.get('summary', '')
+        d['description'] = data.get('description', '')
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
                              noprompt, packages, extra_specs, config=config,
                              setup_options=setup_options)
 
-        if d['import_tests'] == '':
-            d['import_comment'] = '# '
-        else:
-            d['import_comment'] = ''
-            d['import_tests'] = INDENT + d['import_tests']
-
-        if d['tests_require'] == '':
-            d['requires_comment'] = '# '
-        else:
-            d['requires_comment'] = ''
-            d['tests_require'] = INDENT + d['tests_require']
-
-        if d['entry_comment'] == d['import_comment'] == '# ':
-            d['test_comment'] = '# '
-
-        d['recipe_setup_options'] = ' '.join(setup_options)
+        # Set these *after* get_package_metadata so that the preferred hash
+        # can be calculated from the downloaded file, if necessary.
+        d['hash_type'] = d['digest'][0]
+        d['hash_value'] = d['digest'][1]
 
         # Change requirements to use format that guarantees the numpy
         # version will be pinned when the recipe is built and that
         # the version is included in the build string.
         if pin_numpy:
             for depends in ['build_depends', 'run_depends']:
-                deps = d[depends].split(INDENT)
+                deps = d[depends]
                 numpy_dep = [idx for idx, dep in enumerate(deps)
                              if 'numpy' in dep]
                 if numpy_dep:
                     # Turns out this needs to be inserted before the rest
                     # of the numpy spec.
                     deps.insert(numpy_dep[0], 'numpy x.x')
-                    d[depends] = INDENT.join(deps)
+                    d[depends] = deps
 
     for package in package_dicts:
         d = package_dicts[package]
@@ -447,11 +270,83 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(PYPI_META.format(**d))
-        with open(join(output_dir, name, 'build.sh'), 'w') as f:
-            f.write(PYPI_BUILD_SH.format(**d))
-        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
-            f.write(PYPI_BLD_BAT.format(**d))
+            rendered_recipe = PYPI_META_HEADER.format(**d)
+
+            ordered_recipe = ruamel_yaml.comments.CommentedMap()
+            # Create all keys in expected ordered
+            for key in EXPECTED_SECTION_ORDER:
+                try:
+                    ordered_recipe[key] = PYPI_META_STATIC[key]
+                except KeyError:
+                    ordered_recipe[key] = {}
+
+            if d['entry_points']:
+                ordered_recipe['build']['entry_points'] = d['entry_points']
+
+            if noarch_python:
+                ordered_recipe['build']['noarch'] = 'python'
+
+            ordered_recipe['build']['script'] = 'python setup.py install ' + ' '.join(setup_options)
+            if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
+                ordered_recipe['build']['script'] += (' --single-version-externally-managed '
+                                                      '--record=record.txt')
+
+            # Always require python as a dependency
+            ordered_recipe['requirements'] = {}
+            ordered_recipe['requirements']['build'] = ['python'] + ensure_list(d['build_depends'])
+            ordered_recipe['requirements']['run'] = ['python'] + ensure_list(d['run_depends'])
+
+            if d['import_tests']:
+                ordered_recipe['test']['imports'] = d['import_tests']
+
+            if d['test_commands']:
+                ordered_recipe['test']['commands'] = d['test_commands']
+
+            if d['tests_require']:
+                ordered_recipe['test']['requires'] = d['tests_require']
+
+            ordered_recipe['about'] = {}
+
+            for key in ABOUT_ORDER:
+                try:
+                    ordered_recipe['about'][key] = d[key]
+                except KeyError:
+                    ordered_recipe['about'][key] = ''
+            ordered_recipe['extra']['recipe-maintainers'] = ''
+
+            # Prune any top-level sections that are empty
+            for key in EXPECTED_SECTION_ORDER:
+                if not ordered_recipe[key]:
+                    del ordered_recipe[key]
+                else:
+                    rendered_recipe += ruamel_yaml.dump({key: ordered_recipe[key]},
+                                                Dumper=ruamel_yaml.RoundTripDumper,
+                                                default_flow_style=False,
+                                                width=200)
+                    rendered_recipe += '\n'
+            # make sure that recipe ends with one newline, by god.
+            rendered_recipe.rstrip()
+
+            # This hackery is necessary because
+            #  - the default indentation of lists is not what we would like.
+            #    Ideally we'd contact the ruamel.yaml auther to find the right
+            #    way to do this. See this PR thread for more:
+            #    https://github.com/conda/conda-build/pull/2205#issuecomment-315803714
+            #    Brute force fix below.
+
+            # Fix the indents
+            recipe_lines = []
+            for line in rendered_recipe.splitlines():
+                match = re.search('^\s+(-) ', line,
+                                  flags=re.MULTILINE)
+                if match:
+                    pre, sep, post = line.partition('-')
+                    sep = '  ' + sep
+                    line = pre + sep + post
+                recipe_lines.append(line)
+            rendered_recipe = '\n'.join(recipe_lines)
+
+            f.write(rendered_recipe)
 
 
 def add_parser(repos):
@@ -460,7 +355,7 @@ def add_parser(repos):
         "pypi",
         help="""
     Create recipe skeleton for packages hosted on the Python Packaging Index
-    (PyPI) (pypi.python.org).
+    (PyPI) (pypi.io).
         """,
         epilog=pypi_example,
     )
@@ -488,7 +383,7 @@ def add_parser(repos):
     )
     pypi.add_argument(
         "--pypi-url",
-        default='https://pypi.python.org/pypi',
+        default='https://pypi.io/pypi/',
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
@@ -566,17 +461,48 @@ def add_parser(repos):
     )
 
 
-def get_xmlrpc_client(pypi_url):
-    return ServerProxy(pypi_url, transport=RequestsTransport())
+def digest_from_fragment(fragment):
+    """
+    Try to parse a checksum from a URL fragment.
+    """
+    for p in POSSIBLE_DIGESTS:
+        search_for = p + '='
+        if fragment.startswith(search_for):
+            digest = (p, fragment[len(search_for):])
+            break
+    else:
+        digest = ()
+    return digest
 
 
-def get_download_data(client, package, version, is_url, all_urls, noprompt, manual_url):
-    data = client.release_data(package, version) if not is_url else None
-    urls = client.release_urls(package, version) if not is_url else [package]
+def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, manual_url):
+    """
+    Get at least one valid *source* download URL or fail.
+
+    Returns
+    -------
+
+    data : dict
+        Summary of package information
+    pypiurl : str
+        Download URL of package, which may or may not actually be from PyPI.
+    filename : str
+        Name of file; used to check cache
+    digest : dict
+        Key is type of checksum, value is the checksum.
+    """
+    data = pypi_data['info'] if not is_url else {}
+
+    # PyPI will typically have several downloads (source, wheels) for one
+    # package/version.
+    urls = [url for url in pypi_data['releases'][version]] if not is_url else [package]
+
     if not is_url and not all_urls:
         # Try to find source urls
-        urls = [url for url in urls if url['python_version'] == 'source']
+        urls = [url for url in urls if url['packagetype'] == 'sdist']
+
     if not urls:
+        # Try harder for a download location
         if 'download_url' in data:
             urls = [defaultdict(str, {'url': data['download_url']})]
             if not urls[0]['url']:
@@ -589,10 +515,7 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
                     (package, U))
             urls[0]['filename'] = U.path.rsplit('/')[-1]
             fragment = U.fragment or ''
-            if fragment.startswith('md5='):
-                md5 = fragment[len('md5='):]
-            else:
-                md5 = ''
+            digest = digest_from_fragment(fragment)
         else:
             sys.exit("Error: No source urls found for %s" % package)
     if len(urls) > 1 and not noprompt:
@@ -612,23 +535,39 @@ def get_download_data(client, package, version, is_url, all_urls, noprompt, manu
         n = 0
 
     if not is_url:
-        print("Using url %s (%s) for %s." % (urls[n]['url'],
-            human_bytes(urls[n]['size'] or 0), package))
-        pypiurl = urls[n]['url']
-        md5 = urls[n]['md5_digest']
-        filename = urls[n]['filename'] or 'package'
+        # Found a location from PyPI.
+        url = urls[n]
+        pypiurl = url['url']
+        print("Using url %s (%s) for %s." % (pypiurl,
+            human_bytes(url['size'] or 0), package))
+        # List of digests we might get in order of preference
+        for p in POSSIBLE_DIGESTS:
+            try:
+                if url['digests'][p]:
+                    digest = (p, url['digests'][p])
+                    break
+            except KeyError:
+                continue
+        else:
+            # That didn't work, even though as of 7/17/2017 some packages
+            # have a 'digests' entry.
+            # As a last-ditch effort, try for the md5_digest entry.
+            try:
+                digest = ('md5', url['md5_digest'])
+            except KeyError:
+                # Give up
+                digest = ()
+        filename = url['filename'] or 'package'
     else:
+        # User provided a URL, try to use it.
         print("Using url %s" % package)
         pypiurl = package
         U = parse_url(package)
-        if U.fragment and U.fragment.startswith('md5='):
-            md5 = U.fragment[len('md5='):]
-        else:
-            md5 = ''
+        digest = digest_from_fragment(U.fragment)
         # TODO: 'package' won't work with unpack()
         filename = U.path.rsplit('/', 1)[-1] or 'package'
 
-    return (data, pypiurl, filename, md5)
+    return (data, pypiurl, filename, digest)
 
 
 def version_compare(package, versions):
@@ -667,11 +606,11 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                          extra_specs, config, setup_options):
 
     print("Downloading %s" % package)
-
+    print("PyPI URL: ", d['pypiurl'])
     pkginfo = get_pkginfo(package,
                           filename=d['filename'],
                           pypiurl=d['pypiurl'],
-                          md5=d['md5'],
+                          digest=d['digest'],
                           python_version=python_version,
                           extra_specs=extra_specs,
                           setup_options=setup_options,
@@ -722,10 +661,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             # TODO: Use pythonw for gui scripts
             entry_list = (cs + gs)
             if len(cs + gs) != 0:
-                d['entry_points'] = INDENT.join([''] + entry_list)
-                d['entry_comment'] = ''
-                d['build_comment'] = ''
-                d['test_commands'] = INDENT.join([''] + make_entry_tests(entry_list))
+                d['entry_points'] = entry_list
+                d['test_commands'] = make_entry_tests(entry_list)
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
@@ -750,14 +687,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         if 'setuptools' in deps:
             setuptools_build = False
             setuptools_run = False
-            d['egg_comment'] = ''
-            d['build_comment'] = ''
-        d['build_depends'] = INDENT.join([''] +
-                                            ['setuptools'] * setuptools_build +
-                                            deps)
-        d['run_depends'] = INDENT.join([''] +
-                                        ['setuptools'] * setuptools_run +
-                                        deps)
+        d['build_depends'] = ['setuptools'] * setuptools_build + deps
+        d['run_depends'] = ['setuptools'] * setuptools_run + deps
 
         if recursive:
             for dep in deps:
@@ -765,10 +696,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 if not exists(join(output_dir, dep)):
                     if dep not in created_recipes:
                         packages.append(dep)
-
-    if noarch_python:
-        d['build_comment'] = ''
-        d['noarch_python_comment'] = ''
 
     if 'packagename' not in d:
         d['packagename'] = pkginfo['name'].lower()
@@ -784,31 +711,25 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 olddeps = [x for x in d['import_tests'].split()
                         if x != '-']
             deps = set(olddeps) | deps
-        d['import_tests'] = INDENT.join(sorted(deps))
-        d['import_comment'] = ''
+        d['import_tests'] = sorted(deps)
 
-        d['tests_require'] = INDENT.join(sorted([spec_from_line(pkg) for pkg
-                                                 in ensure_list(pkginfo['tests_require'])]))
+        d['tests_require'] = sorted([spec_from_line(pkg) for pkg
+                                     in ensure_list(pkginfo['tests_require'])])
 
-    if pkginfo.get('homeurl'):
-        d['homeurl'] = pkginfo['homeurl']
+    if pkginfo.get('home'):
+        d['home'] = pkginfo['home']
     else:
-        if data and 'homeurl' in data:
-            d['homeurl'] = data['homeurl']
+        if data and 'home' in data:
+            d['home'] = data['home']
         else:
-            d['homeurl'] = "The package home page"
-            d['home_comment'] = '#'
+            d['home'] = "The package home page"
 
     if pkginfo.get('summary'):
-        d['summary'] = repr(pkginfo['summary'])
+        if 'summary' in d and not d['summary']:
+            # Need something here, use what the package had
+            d['summary'] = pkginfo['summary']
     else:
-        if data:
-            d['summary'] = repr(data['summary'])
-        else:
-            d['summary'] = "Summary of the package"
-            d['summary_comment'] = '#'
-    if d['summary'].startswith("u'") or d['summary'].startswith('u"'):
-        d['summary'] = d['summary'][1:]
+        d['summary'] = "Summary of the package"
 
     license_classifier = "License :: OSI Approved :: "
     if pkginfo.get('classifiers'):
@@ -849,6 +770,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         license_name = ' or '.join(licenses)
     d['license'] = license_name
     d['license_family'] = guess_license_family(license_name, allowed_license_families)
+    if 'new_hash_value' in pkginfo:
+        d['digest'] = pkginfo['new_hash_value']
 
 
 def valid(name):
@@ -935,7 +858,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     return requires
 
 
-def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, config,
+def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs, config,
                 setup_options):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
@@ -948,15 +871,29 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, co
     if not isdir(config.src_cache):
         makedirs(config.src_cache)
 
+    hash_type = digest[0]
+    hash_value = digest[1]
     try:
         # Download it to the build source cache. That way, you have
         # it.
         download_path = join(config.src_cache, filename)
         if not isfile(download_path) or \
-                hashsum_file(download_path, 'md5') != md5:
+                hashsum_file(download_path, hash_type) != hash_value:
             download(pypiurl, join(config.src_cache, filename))
+            if hashsum_file(download_path, hash_type) != hash_value:
+                raise RuntimeError(' Download of {} failed'
+                                   ' checksum type {} expected value {}. Please'
+                                   ' try again.'.format(package, hash_type, hash_value))
         else:
             print("Using cached download")
+        # Calculate the preferred hash type here if necessary.
+        # Needs to be done in this block because this is where we have
+        # access to the source file.
+        if hash_type != POSSIBLE_DIGESTS[0]:
+            new_hash_value = hashsum_file(download_path, POSSIBLE_DIGESTS[0])
+        else:
+            new_hash_value = ''
+
         print("Unpacking %s..." % package)
         unpack(join(config.src_cache, filename), tempdir)
         print("done")
@@ -970,6 +907,8 @@ def get_pkginfo(package, filename, pypiurl, md5, python_version, extra_specs, co
                 pkg_info = yaml.load(fn)
         except IOError:
             pkg_info = pkginfo.SDist(download_path).__dict__
+        if new_hash_value:
+            pkg_info['new_hash_value'] = (POSSIBLE_DIGESTS[0], new_hash_value)
     finally:
         rm_rf(tempdir)
 
