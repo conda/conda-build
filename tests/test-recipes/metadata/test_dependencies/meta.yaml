@@ -1,0 +1,14 @@
+package:
+  name: conda-build-test-depedencies
+  version: 1.0
+
+build:
+  string: abc
+
+requirements:
+  build:
+    - python
+
+test:
+  requires:
+    - somenonexistentpackage1

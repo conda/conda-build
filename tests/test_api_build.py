@@ -1094,3 +1094,8 @@ def test_indirect_numpy_dependency(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['arrow-cpp 0.5.*']
     testing_metadata.config.channel_urls = ['conda-forge']
     api.build(testing_metadata, numpy=1.13)
+
+
+def test_dependencies_with_notest(testing_workdir, testing_config):
+    recipe = os.path.join(metadata_dir, 'test_dependencies')
+    api.build(recipe, config=testing_config, notest=True)
