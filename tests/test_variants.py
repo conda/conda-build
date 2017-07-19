@@ -5,21 +5,14 @@ import yaml
 
 from conda_build import api, exceptions, variants
 
-global_specs = {"python": ["2.7.*", "3.5.*"],
-                "numpy": ["1.10.*", "1.11.*"]}
-
-single_version = {"python": "2.7.*",
-                  "numpy": "1.11.*"}
-
-no_numpy_version = {"python": ["2.7.*", "3.5.*"]}
 
 thisdir = os.path.dirname(__file__)
 recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
 
 
-def test_later_spec_priority():
+def test_later_spec_priority(single_version, no_numpy_version):
     # override a single key
-    combined_spec, extend_keys = variants.combine_specs([global_specs, single_version])
+    combined_spec, extend_keys = variants.combine_specs([no_numpy_version, single_version])
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
     assert extend_keys == {'ignore_version', 'pin_run_as_build'}
@@ -30,11 +23,9 @@ def test_later_spec_priority():
     assert len(combined_spec["python"]) == 2
 
 
-def test_get_package_variants_from_file(testing_workdir, testing_config):
-    variants = global_specs.copy()
-    variants['ignore_version'] = ['numpy']
+def test_get_package_variants_from_file(testing_workdir, testing_config, no_numpy_version):
     with open('variant_example.yaml', 'w') as f:
-        yaml.dump(variants, f, default_flow_style=False)
+        yaml.dump(no_numpy_version, f, default_flow_style=False)
     testing_config.variant_config_files = [os.path.join(testing_workdir, 'variant_example.yaml')]
     testing_config.ignore_system_config = True
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
@@ -53,16 +44,13 @@ def test_use_selectors_in_variants(testing_workdir, testing_config):
     variants.get_package_variants(testing_workdir, testing_config)
 
 
-def test_get_package_variants_from_dictionary_of_lists(testing_config):
+def test_get_package_variants_from_dictionary_of_lists(testing_config, no_numpy_version):
     testing_config.ignore_system_config = True
-    variants = global_specs.copy()
-    variants['ignore_version'] = ['numpy']
-    # Note: variant is coming from up above: global_specs
     metadata = api.render(os.path.join(thisdir, "variant_recipe"),
                           no_download_source=False, config=testing_config,
-                          variants=variants)
+                          variants=no_numpy_version)
     # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
-    assert len(metadata) == 2
+    assert len(metadata) == 2, metadata
     assert sum('python >=2.7,<2.8' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
     assert sum('python >=3.5,<3.6' in req for (m, _, _) in metadata
@@ -80,13 +68,13 @@ def test_combine_variants():
     assert combined['dict']['some'] == 'other'
 
 
-def test_variant_with_numpy_not_pinned_reduces_matrix():
+def test_variant_with_ignore_numpy_version_reduces_matrix(numpy_version_ignored):
     # variants are defined in yaml file in this folder
     # there are two python versions and two numpy versions.  However, because numpy is not pinned,
     #    the numpy dimensions should get collapsed.
     recipe = os.path.join(recipe_dir, '03_numpy_matrix')
-    metadata = api.render(recipe)
-    assert len(metadata) == 2
+    metadata = api.render(recipe, variants=numpy_version_ignored)
+    assert len(metadata) == 2, metadata
 
 
 def test_variant_with_numpy_pinned_has_matrix():
