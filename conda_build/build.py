@@ -1335,11 +1335,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         print("TEST START:", test_package_name)
 
         if metadata.config.remove_work_dir:
-            dest = os.path.join(os.path.dirname(metadata.config.work_dir),
-                                'work_moved_' + metadata.dist())
-            # Needs to come after create_files in case there's test/source_files
-            print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
-            os.rename(config.work_dir, dest)
+            # nested if so that there's no warning when we just leave the empty workdir in place
+            if os.listdir(metadata.config.work_dir):
+                dest = os.path.join(os.path.dirname(metadata.config.work_dir),
+                                    'work_moved_' + metadata.dist())
+                # Needs to come after create_files in case there's test/source_files
+                print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+                os.rename(config.work_dir, dest)
         else:
             log.warn("Not moving work directory after build.  Your package may depend on files "
                      "in the work directory that are not included with your package")
@@ -1427,50 +1429,51 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         # Python 2 Windows requires that envs variables be string, not unicode
         env = {str(key): str(value) for key, value in env.items()}
         suffix = "bat" if utils.on_win else "sh"
-        test_script = join(config.test_dir, "conda_test_runner.{suffix}".format(suffix=suffix))
+        test_script = join(metadata.config.test_dir,
+                           "conda_test_runner.{suffix}".format(suffix=suffix))
 
         with open(test_script, 'w') as tf:
             if not utils.on_win:
                 tf.write('set -x -e\n')
-            if config.activate:
+            if metadata.config.activate:
                 ext = ".bat" if utils.on_win else ""
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
                     conda_root=utils.root_script_dir + os.path.sep,
                     source="call" if utils.on_win else "source",
                     ext=ext,
-                    test_env=config.test_prefix))
+                    test_env=metadata.config.test_prefix))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if py_files:
-                test_python = config.test_python
+                test_python = metadata.config.test_python
                 # use pythonw for import tests when osx_is_app is set
                 if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
                     test_python = test_python + 'w'
                 tf.write('"{python}" -s "{test_file}"\n'.format(
                     python=config.test_python,
-                    test_file=join(config.test_dir, 'run_test.py')))
+                    test_file=join(metadata.config.test_dir, 'run_test.py')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if pl_files:
                 tf.write('"{perl}" "{test_file}"\n'.format(
-                    perl=config.perl_bin(config.test_prefix),
-                    test_file=join(config.test_dir, 'run_test.pl')))
+                    perl=config.perl_bin(metadata.config.test_prefix),
+                    test_file=join(metadata.config.test_dir, 'run_test.pl')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if lua_files:
                 tf.write('"{lua}" "{test_file}"\n'.format(
-                    lua=config.lua_bin(config.test_prefix),
-                    test_file=join(config.test_dir, 'run_test.lua')))
+                    lua=metadata.config.lua_bin(config.test_prefix),
+                    test_file=join(metadata.config.test_dir, 'run_test.lua')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if r_files:
                 tf.write('"{r}" CMD BATCH "{test_file}"\n'.format(
-                    r=config.r_bin(config.test_prefix),
-                    test_file=join(config.test_dir, 'run_test.r')))
+                    r=metadata.config.r_bin(metadata.config.test_prefix),
+                    test_file=join(metadata.config.test_dir, 'run_test.r')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if shell_files:
-                test_file = join(config.test_dir, 'run_test.' + suffix)
+                test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
                 if utils.on_win:
                     tf.write('call "{test_file}"\n'.format(test_file=test_file))
                     if utils.on_win:
