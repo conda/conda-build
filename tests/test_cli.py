@@ -509,3 +509,12 @@ def test_build_skip_existing_croot(testing_workdir, capfd):
     main_build.execute(args)
     output, error = capfd.readouterr()
     assert "are already built" in output
+
+
+@pytest.mark.serial
+def test_package_test(testing_workdir, testing_metadata):
+    """Test calling conda build -t <package file> - rather than <recipe dir>"""
+    api.output_yaml(testing_metadata, 'recipe/meta.yaml')
+    output = api.build(testing_workdir, config=testing_metadata.config, notest=True)[0]
+    args = ['-t', output]
+    main_build.execute(args)
