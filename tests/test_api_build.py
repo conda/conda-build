@@ -32,6 +32,7 @@ from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file, check_output_env, get_conda_operation_locks)
 from conda_build.os_utils.external import find_executable
+from conda_build.exceptions import DependencyNeedsBuildingError
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
 
@@ -1094,3 +1095,14 @@ def test_indirect_numpy_dependency(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['arrow-cpp 0.5.*']
     testing_metadata.config.channel_urls = ['conda-forge']
     api.build(testing_metadata, numpy=1.13)
+
+
+def test_dependencies_with_notest(testing_workdir, testing_config):
+    recipe = os.path.join(metadata_dir, '_test_dependencies')
+    api.build(recipe, config=testing_config, notest=True)
+
+    with pytest.raises(DependencyNeedsBuildingError) as excinfo:
+        api.build(recipe, config=testing_config, notest=False)
+
+    assert 'Unsatisfiable dependencies for platform' in str(excinfo.value)
+    assert 'somenonexistentpackage1' in str(excinfo.value)

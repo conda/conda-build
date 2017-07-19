@@ -830,7 +830,8 @@ bundlers = {
 }
 
 
-def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None):
+def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None,
+          notest=False):
     '''
     Build the package with the specified metadata.
 
@@ -928,19 +929,20 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                     channel_urls=tuple(m.config.channel_urls))
 
         try:
-            # make sure test deps are available before taking time to create build env
-            environ.get_install_actions(m.config.test_prefix,
-                                        tuple(test_run_ms_deps), 'test',
-                                        subdir=m.config.build_subdir,
-                                        debug=m.config.debug,
-                                        verbose=m.config.verbose,
-                                        locking=m.config.locking,
-                                        bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
-                                        timeout=m.config.timeout,
-                                        disable_pip=m.config.disable_pip,
-                                        max_env_retry=m.config.max_env_retry,
-                                        output_folder=m.config.output_folder,
-                                        channel_urls=tuple(m.config.channel_urls))
+            if not notest:
+                # make sure test deps are available before taking time to create build env
+                environ.get_install_actions(m.config.test_prefix,
+                                            tuple(test_run_ms_deps), 'test',
+                                            subdir=m.config.build_subdir,
+                                            debug=m.config.debug,
+                                            verbose=m.config.verbose,
+                                            locking=m.config.locking,
+                                            bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                            timeout=m.config.timeout,
+                                            disable_pip=m.config.disable_pip,
+                                            max_env_retry=m.config.max_env_retry,
+                                            output_folder=m.config.output_folder,
+                                            channel_urls=tuple(m.config.channel_urls))
         except DependencyNeedsBuildingError as e:
             # subpackages are not actually missing.  We just haven't built them yet.
             missing_deps = set(e.packages) - set(out.name()
@@ -1616,6 +1618,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                                            need_source_download=need_source_download,
                                            need_reparse_in_env=need_reparse_in_env,
                                            built_packages=built_packages,
+                                           notest=notest,
                                            )
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
