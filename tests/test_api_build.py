@@ -1098,7 +1098,7 @@ def test_indirect_numpy_dependency(testing_metadata):
 
 
 def test_dependencies_with_notest(testing_workdir, testing_config):
-    recipe = os.path.join(metadata_dir, 'test_dependencies')
+    recipe = os.path.join(metadata_dir, '_test_dependencies')
     api.build(recipe, config=testing_config, notest=True)
 
     with pytest.raises(DependencyNeedsBuildingError) as excinfo:
