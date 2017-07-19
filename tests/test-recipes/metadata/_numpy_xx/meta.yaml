@@ -9,4 +9,4 @@ requirements:
     - numpy x.x
   run:
     - python
-    - numpy
+    - numpy x.x

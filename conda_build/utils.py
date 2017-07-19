@@ -1205,7 +1205,7 @@ def sort_list_in_nested_structure(dictionary, omissions=''):
                 pass
 
 
-spec_needing_star_re = re.compile("([0-9a-zA-Z\.]+)\s+([0-9a-zA-Z\.\+]+)(\s+[0-9a-zA-Z\.\_]+)?")
+spec_needing_star_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+([0-9a-zA-Z\.\+]+)(\s+[0-9a-zA-Z\.\_]+)?")
 spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
 
 
@@ -1230,13 +1230,13 @@ def ensure_valid_spec(spec):
 def insert_variant_versions(metadata, env):
     reqs = metadata.get_value('requirements/' + env)
     for key, val in metadata.config.variant.items():
-        regex = re.compile(r'^%s(?:\s*$|(?=(?:\s*[#\[])))' % key)
+        regex = re.compile(r'^(%s)(?:\s*$)' % key.replace('_', '[-_]'))
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):
                 if x:
                     del reqs[i]
-                    reqs.insert(i, ensure_valid_spec(' '.join((key, val))))
+                    reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), val))))
 
     xx_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+x\.x")
 
