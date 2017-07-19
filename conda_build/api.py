@@ -45,7 +45,8 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     output_metas = OrderedDict()
     for meta, download, render_in_env in metadata_tuples:
         for od, om in meta.get_output_metadata_set(
-                permit_unsatisfiable_variants=permit_unsatisfiable_variants):
+                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                permit_undefined_jinja=not finalize):
             # only show conda packages right now
             if 'type' not in od or od['type'] == 'conda':
                 assert hasattr(om.config, 'variants')
