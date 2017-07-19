@@ -407,7 +407,7 @@ class Config(object):
         """The temporary folder where the build environment is created.  The build env contains
         libraries that may be linked, but only if the host env is not specified.  It is placed on
         PATH."""
-        if self.host_subdir != self.build_subdir:
+        if (self.host_subdir != self.build_subdir and self.host_subdir != 'noarch'):
             prefix = join(self.build_folder, '_build_env')
         else:
             prefix = self.host_prefix

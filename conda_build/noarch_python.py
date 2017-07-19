@@ -110,7 +110,8 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
     if entry_point_scripts:
         for entry_point in entry_point_scripts:
             src = join(prefix, entry_point)
-            os.unlink(src)
+            if os.path.isfile(src):
+                os.unlink(src)
 
     return d
 

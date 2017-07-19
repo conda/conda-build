@@ -893,7 +893,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         build_ms_deps = None
         test_run_ms_deps = m.get_value('test/requires', []) + m.get_value('requirements/run', [])
 
-        if m.config.host_subdir != m.config.build_subdir:
+        if (m.config.host_subdir != m.config.build_subdir and
+                m.config.host_subdir != "noarch"):
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
             host_ms_deps = m.ms_depends('host')
@@ -1138,7 +1139,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
 
-                        if m.config.host_subdir != m.config.build_subdir:
+                        if (m.config.host_subdir != m.config.build_subdir and
+                                m.config.host_subdir != 'noarch'):
                             host_ms_deps = m.ms_depends('host')
                             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                     tuple(host_ms_deps), 'host',
