@@ -679,6 +679,11 @@ def bundle_conda(output, metadata, env, **kw):
 
     files = output.get('files', [])
 
+    try:
+        os.makedirs(metadata.config.host_prefix)
+    except OSError:
+        pass
+
     if not files and output.get('script'):
         with utils.path_prepended(metadata.config.build_prefix):
             env = environ.get_dict(config=metadata.config, m=metadata)

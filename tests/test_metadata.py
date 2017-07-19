@@ -202,8 +202,8 @@ def test_hash_build_id(testing_metadata):
             assert testing_metadata._hash_dependencies() == 'h5e09b76'
             assert testing_metadata.build_id() == 'h5e09b76_1'
         else:
-            assert testing_metadata._hash_dependencies() == 'h9802f05'
-            assert testing_metadata.build_id() == 'h9802f05_1'
+            assert testing_metadata._hash_dependencies() == 'h32e72be'
+            assert testing_metadata.build_id() == 'h32e72be_1'
     else:
         assert testing_metadata._hash_dependencies() == 'hbcfeb9f'
         assert testing_metadata.build_id() == 'hbcfeb9f_1'
@@ -236,7 +236,7 @@ def test_hash_applies_to_custom_build_string(testing_metadata):
         if sys.version_info[0] == 2:
             assert testing_metadata.build_id() == 'steveh5e09b76'
         else:
-            assert testing_metadata.build_id() == 'steveh9802f05'
+            assert testing_metadata.build_id() == 'steveh32e72be'
     else:
         assert testing_metadata.build_id() == 'stevehbcfeb9f'
 
