@@ -1,3 +1,31 @@
+2017-07-20 3.0.7:
+
+Enhancements:
+-------------
+
+* Rewrite skeleton pypi template; match conda-forge standard  #2205
+
+
+Bug fixes:
+----------
+
+* Remove entry point links to avoid write-through to root envs  #2209
+* Properly insert variant versions for x.x in outputs (not just parent recipe)  #2210
+* Relax version constraints for lua and R in default variant  #2213
+* fix test of package directly using wrong config object  #2214
+* Don't check test env satisfiability when --no-test is passed  #2218
+* Iron out prefix when noarch as host env.  Was creating separate build/host envs inappropriately.  #2219
+* Fix skipping finalization with finalize=False (for c3i speedup).  #2219
+* Fix implicit variant looping - wasn't keeping track of "used variables" that are used implicitly.  #2219
+
+Contributors:
+-------------
+
+* @mandeep
+* @mwcraig
+* @msarahan
+
+
 2017-07-14 3.0.6:
 
 Bug fixes:
