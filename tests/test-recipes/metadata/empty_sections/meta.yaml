@@ -2,6 +2,9 @@ package:
   name: empty_sections
   version: 0.0
 
+source:
+  path: ../../../../../conda_build_test_recipe
+
 build:
 
 requirements:

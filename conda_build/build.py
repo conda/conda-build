@@ -867,6 +867,23 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if post in [False, None]:
+        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
+
+        if m.config.skip_existing:
+            # TODO: should we check both host and build envs?  These are the same, except when
+            #    cross compiling.
+            package_locations = [is_package_built(om, 'host') for _, om in output_metas]
+            if all(package_locations):
+                print("Packages for ", m.path or m.name(),
+                        "are already built in {0}, skipping.".format(package_locations))
+                return default_return
+            else:
+                package_locations = [bldpkg_path(om) for _, om in output_metas]
+        else:
+            package_locations = [bldpkg_path(om) for _, om in output_metas]
+
+        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
+
         specs = [ms.spec for ms in m.ms_depends('build')]
         if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
             specs.extend(['pip', 'wheel'])
@@ -896,7 +913,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # installed files at packaging-time.
         host_ms_deps = None
         build_ms_deps = None
-        test_run_ms_deps = m.get_value('test/requires', []) + m.get_value('requirements/run', [])
+
+        for env in ('build', 'host'):
+            utils.insert_variant_versions(m, env)
 
         if (m.config.host_subdir != m.config.build_subdir and
                 m.config.host_subdir != "noarch"):
@@ -936,6 +955,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         try:
             if not notest:
+                utils.insert_variant_versions(m, 'run')
+                test_run_ms_deps = m.get_value('test/requires', []) + \
+                                   m.get_value('requirements/run', [])
                 # make sure test deps are available before taking time to create build env
                 environ.get_install_actions(m.config.test_prefix,
                                             tuple(test_run_ms_deps), 'test',
@@ -1003,23 +1025,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
-
-        output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
-
-        if m.config.skip_existing:
-            # TODO: should we check both host and build envs?  These are the same, except when
-            #    cross compiling.
-            package_locations = [is_package_built(om, 'host') for _, om in output_metas]
-            if all(package_locations):
-                print("Packages for ", m.path or m.name(),
-                        "are already built in {0}, skipping.".format(package_locations))
-                return default_return
-            else:
-                package_locations = [bldpkg_path(om) for _, om in output_metas]
-        else:
-            package_locations = [bldpkg_path(om) for _, om in output_metas]
-
-        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
         # Use script from recipe?
         script = utils.ensure_list(m.get_value('build/script', None))
