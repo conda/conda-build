@@ -1205,7 +1205,15 @@ def sort_list_in_nested_structure(dictionary, omissions=''):
                 pass
 
 
-spec_needing_star_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+([0-9a-zA-Z\.\+]+)(\s+[0-9a-zA-Z\.\_]+)?")
+# group one: package name
+# group two: version (allows _, +, . in version)
+# group three: build string - mostly not used here.  Match primarily matters
+#        to specify when not to add .*
+
+# if you are seeing mysterious unsatisfiable errors, with the package you're building being the
+#    unsatisfiable part, then you probably need to update this regex.
+
+spec_needing_star_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+([0-9a-zA-Z\.\+\_]+)(\s+[0-9a-zA-Z\.\_]+)?")  # NOQA
 spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
 
 

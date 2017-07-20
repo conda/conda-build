@@ -1,6 +1,6 @@
 package:
   name: conda-build
-  version: {{ GIT_DESCRIBE_TAG }}
+  version: {{ GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
 
 source:
   git_url: ../
