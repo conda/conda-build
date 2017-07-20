@@ -82,13 +82,13 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
     api.output_yaml(testing_metadata, 'meta.yaml')
-    metadata = api.render(testing_workdir)[0][0]
+    metadata = api.render(testing_workdir, debug=False, verbose=False)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_render.execute(args)
     _hash = metadata._hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
-                                  "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
-                                      sys.version_info.major, sys.version_info.minor, _hash))
+                             "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
+                                 sys.version_info.major, sys.version_info.minor, _hash))
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
     assert error == ""
