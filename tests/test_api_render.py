@@ -29,7 +29,8 @@ def test_render_need_download(testing_workdir, testing_config):
     metadata, need_download, need_reparse_in_env = api.render(
         os.path.join(metadata_dir, "source_git_jinja2"),
         config=testing_config,
-        no_download_source=False)[0]
+        no_download_source=False,
+        finalize=False)[0]
     assert not need_download
     assert metadata.meta["package"]["version"] == "1.20.2"
 

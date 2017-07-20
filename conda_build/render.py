@@ -422,6 +422,10 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
                 conform_dict[key] = variant[key]
 
+        conform_dict.update({key: val for key, val in variant.items()
+                                  if key in mv.meta.get('requirements').get('build', []) +
+                                            mv.meta.get('requirements').get('host', [])})
+
         compiler_matches = re.findall(r"compiler\([\'\"](.*)[\'\"].*\)",
                                         recipe_requirements)
         if compiler_matches:
