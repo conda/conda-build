@@ -89,7 +89,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
             for key, value in variant.items():
                 # for sake of comparison, ignore dashes and underscores
                 if (dash_or_under.sub("", key) == dash_or_under.sub("", spec_name) and
-                        not re.search(r'%s\s+[0-9a-zA-Z\_\.]' % spec_name, spec)):
+                        not re.search(r'%s\s+[0-9a-zA-Z\_\.\<\>\=\*]' % spec_name, spec)):
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
             pass_through_deps.append(spec)
@@ -236,7 +236,6 @@ def get_upstream_pins(m, actions, env):
             else:
                 raise RuntimeError("Didn't find expected package {} in package cache ({})"
                                     .format(pkg_dist, _pkgs_dirs))
-
     return additional_specs
 
 
