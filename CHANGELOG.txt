@@ -1,3 +1,19 @@
+2017-07-20 3.0.8:
+
+Bug fixes:
+----------
+
+* Fix internal conda-build recipe to include missing setuptools and not use pip  #2221
+* Try to avoid downloading anything until we absolutely need it for rendering or build  #2222
+* Fix regexes that were leading to unsatisfiable dependencies, especially with perl  #2222
+* Tweak internal recipe to include more git info; adjust regex accordingly for this practice #2223
+
+Contributors:
+-------------
+
+@msarahan
+
+
 2017-07-20 3.0.7:
 
 Enhancements:
