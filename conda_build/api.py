@@ -185,7 +185,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
-    """Run tests on either a package or a recipe folder
+    """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
     it from your currently configuured channels."""
@@ -197,13 +197,11 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
         config = get_or_merge_config(config, **kwargs)
 
     with config:
-        # This will create a new local build folder if and only if config doesn't already have one.
-        #   What this means is that if we're running a test immediately after build, we use the one
-        #   that the build already provided
-
-        test_result = test(recipedir_or_package_or_metadata, config=config,
-                           move_broken=move_broken)
-
+        # This will create a new local build folder if and only if config
+        #   doesn't already have one. What this means is that if we're
+        #   running a test immediately after build, we use the one that the
+        #   build already provided
+        test_result = test(recipedir_or_package_or_metadata, config=config, move_broken=move_broken)
     return test_result
 
 

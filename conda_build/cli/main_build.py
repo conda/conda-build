@@ -253,6 +253,11 @@ different sets of packages."""
         help=("Do not use a long prefix for the test prefix, as well as the build prefix."
               "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  ")
     )
+    p.add_argument(
+        '--keep-going', '-k', action='store_true',
+        help=("When running tests, keep going after each failure.  Default is to stop on the first "
+              "failure.")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)
@@ -325,7 +330,27 @@ def execute(args):
     elif args.check:
         action = check_action
 
-    if action:
+    if action == test_action:
+        failed_recipes = []
+        for recipe in args.recipe:
+            try:
+                action(recipe, config)
+            except:
+                if not args.keep_going:
+                    raise
+                else:
+                    failed_recipes.append(recipe)
+                    continue
+        if failed_recipes:
+            print("Failed recipes:")
+            for recipe in failed_recipes:
+                print("  - %s" % recipe)
+            sys.exit(1)
+        else:
+            print("All tests passed")
+        outputs = []
+
+    elif action:
         outputs = [action(recipe, config) for recipe in args.recipe]
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
