@@ -99,7 +99,7 @@ def get_recipe_abspath(recipe):
             print("Ignoring non-recipe: %s" % recipe)
             return (None, None)
     else:
-        recipe_dir = abspath(recipe)
+        recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
         need_cleanup = False
     if not os.path.exists(recipe_dir):
         raise ValueError("Package or recipe at path {0} does not exist".format(recipe_dir))
