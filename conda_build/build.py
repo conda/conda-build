@@ -1464,19 +1464,19 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
                     test_python = test_python + 'w'
                 tf.write('"{python}" -s "{test_file}"\n'.format(
-                    python=config.test_python,
+                    python=test_python,
                     test_file=join(metadata.config.test_dir, 'run_test.py')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if pl_files:
                 tf.write('"{perl}" "{test_file}"\n'.format(
-                    perl=config.perl_bin(metadata.config.test_prefix),
+                    perl=metadata.config.perl_bin(metadata.config.test_prefix),
                     test_file=join(metadata.config.test_dir, 'run_test.pl')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
             if lua_files:
                 tf.write('"{lua}" "{test_file}"\n'.format(
-                    lua=metadata.config.lua_bin(config.test_prefix),
+                    lua=metadata.config.lua_bin(metadata.config.test_prefix),
                     test_file=join(metadata.config.test_dir, 'run_test.lua')))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
