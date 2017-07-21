@@ -1319,10 +1319,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     with open(os.path.join(info_dir, 'hash_input.json')) as f:
                         hash_input = json.load(f)
 
-            if os.path.isdir(recipedir_or_package_or_metadata):
-                local_location = os.path.dirname(recipe_dir)
-            else:
-                local_location = os.path.dirname(recipedir_or_package_or_metadata)
+            local_location = os.path.dirname(recipe_dir)
             # strip off extra subdir folders
             for platform in ('win', 'linux', 'osx'):
                 if os.path.basename(local_location).startswith(platform + "-"):
