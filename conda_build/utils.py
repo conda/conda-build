@@ -93,6 +93,12 @@ def get_recipe_abspath(recipe):
             recipe_dir = tempfile.mkdtemp()
             t = tarfile.open(recipe, 'r:*')
             t.extractall(path=recipe_dir)
+            # At some stage the old build system started to tar up recipes.
+            recipe_tarfile = os.path.join(recipe_dir, 'info', 'recipe.tar')
+            if isfile(recipe_tarfile):
+                t2 = tarfile.open(recipe_tarfile, 'r:*')
+                t2.extractall(path=os.path.join(recipe_dir, 'info'))
+                t2.close()
             t.close()
             need_cleanup = True
         else:
