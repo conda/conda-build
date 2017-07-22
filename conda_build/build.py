@@ -1355,9 +1355,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     test_files = os.path.join(info_dir, 'test')
                     if os.path.exists(test_files) and os.path.isdir(test_files):
                         utils.copy_into(test_files, metadata.config.work_dir,
-                                        metadata.config.timeout,
-                                        symlinks=True, locking=metadata.config.locking,
-                                        clobber=True)
+                                        metadata.config.timeout, symlinks=True,
+                                        locking=metadata.config.locking, clobber=True)
                     else:
                         try_download(metadata, no_download_source=False)
         except IOError:

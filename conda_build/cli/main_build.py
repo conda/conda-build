@@ -272,6 +272,7 @@ different sets of packages."""
               "the source archive(s) containing the files could become unavailable sometime "
               "in the future.")
     )
+
     add_parser_channels(p)
 
     args = p.parse_args(args)
