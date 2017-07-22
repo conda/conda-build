@@ -83,6 +83,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('filename_hashing', True),
             Setting('keep_old_work', False),
             Setting('_src_cache_root', None),
+            Setting('copy_test_source_files', True),
 
             Setting('index', None),
 

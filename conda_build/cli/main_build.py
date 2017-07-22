@@ -263,6 +263,15 @@ different sets of packages."""
         '--cache-dir',
         help=('Path to store the source files (archives, git clones, etc.) during the build.'),
     )
+    p.add_argument(
+        "--no-copy-test-source-files", dest="copy_test_source_files", action="store_false",
+        default=cc_conda_build.get('copy_test_source_files', 'true').lower() == 'true',
+        help=("Disables copying the files necessary for testing the package into "
+              "the info/test folder.  Passing this argument means it may not be possible "
+              "to test the package without internet access.  There is also a danger that "
+              "the source archive(s) containing the files could become unavailable sometime "
+              "in the future.")
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)

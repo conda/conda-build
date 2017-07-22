@@ -56,8 +56,7 @@ from conda_build.index import update_index
 from conda_build.exceptions import indent, DependencyNeedsBuildingError
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
                                   get_package_variants)
-from conda_build.create_test import (create_files, create_shell_files, create_r_files,
-                                     create_py_files, create_pl_files, create_lua_files)
+from conda_build.create_test import create_all_test_files
 
 import conda_build.noarch_python as noarch_python
 from conda_verify.verify import Verify
@@ -251,6 +250,10 @@ def copy_license(m):
         utils.copy_into(join(m.config.work_dir, license_file),
                         join(m.config.info_dir, 'LICENSE.txt'), m.config.timeout,
                         locking=m.config.locking)
+
+
+def copy_test_source_files(m):
+    create_all_test_files(m, join(m.config.info_dir, 'test'))
 
 
 def write_hash_input(m):
@@ -491,6 +494,8 @@ def create_info_files(m, files, prefix):
     copy_recipe(m)
     copy_readme(m)
     copy_license(m)
+    if m.config.copy_test_source_files:
+        copy_test_source_files(m)
 
     write_info_files_file(m, files)
 
@@ -1338,12 +1343,17 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
 
-            metadata_tuples = render_recipe(recipe_dir, config=config, reset_build_id=False)
+            metadata_tuples = render_recipe(os.path.join(info_dir, 'recipe'), config=config, reset_build_id=False)
 
             metadata = metadata_tuples[0][0]
-            if (metadata.meta.get('test', {}).get('source_files') and
-                    not os.listdir(metadata.config.work_dir)):
-                try_download(metadata, no_download_source=False)
+            if metadata.meta.get('test', {}).get('source_files'):
+                if not os.listdir(metadata.config.work_dir):
+                    test_files = os.path.join(info_dir, 'test')
+                    if os.path.exists(test_files) and os.path.isdir(test_files):
+                        utils.copy_into(test_files, metadata.config.work_dir, metadata.config.timeout,
+                                        symlinks=True, locking=metadata.config.locking, clobber=True)
+                    else:
+                        try_download(metadata, no_download_source=False)
         except IOError:
             raise IOError("Didn't find recipe in folder or package under test.  Can't test "
                           "this after exiting build.")
@@ -1360,12 +1370,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                             else recipedir_or_package_or_metadata)
 
         # this is also copying tests/source_files from work_dir to testing workdir
-        create_files(metadata)
-        pl_files = create_pl_files(metadata)
-        py_files = create_py_files(metadata)
-        r_files = create_r_files(metadata)
-        lua_files = create_lua_files(metadata)
-        shell_files = create_shell_files(metadata)
+        _, pl_files, py_files, r_files, lua_files, shell_files = \
+            create_all_test_files(metadata)
         if not any([py_files, shell_files, pl_files, lua_files, r_files]):
             print("Nothing to test for:", test_package_name)
             return True
