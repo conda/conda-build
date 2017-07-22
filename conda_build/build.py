@@ -1316,8 +1316,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 if subdir != 'noarch':
                     config.host_subdir = subdir
                 if config.filename_hashing:
-                    with open(os.path.join(info_dir, 'hash_input.json')) as f:
-                        hash_input = json.load(f)
+                    # We may be testing an (old) package built without filename hashing.
+                    try:
+                        with open(os.path.join(info_dir, 'hash_input.json')) as f:
+                            hash_input = json.load(f)
+                    except:
+                        config.filename_hashing = False
 
             local_location = os.path.dirname(recipe_dir)
             # strip off extra subdir folders
