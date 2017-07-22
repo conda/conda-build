@@ -1124,9 +1124,11 @@ def test_source_cache_build(testing_workdir):
 
 def test_copy_test_source_files(testing_config):
     recipe = os.path.join(metadata_dir, '_test_test_source_files')
+    filenames = set()
     for copy in (False, True):
         testing_config.copy_test_source_files = copy
         outputs = api.build(recipe, notest=False, config=testing_config)
+        filenames.add(os.path.basename(outputs[0]))
         tf = tarfile.open(outputs[0])
         found = False
         for f in tf.getmembers():
@@ -1137,3 +1139,4 @@ def test_copy_test_source_files(testing_config):
             assert copy, "'info/test/' found in tar.bz2 but not copying test source files"
         else:
             assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
+    assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
