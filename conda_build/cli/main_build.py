@@ -323,6 +323,7 @@ def execute(args):
         return
 
     action = None
+    outputs = None
     if args.output:
         action = output_action
         config.verbose = False
