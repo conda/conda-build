@@ -1120,3 +1120,20 @@ def test_source_cache_build(testing_workdir):
              for filename in filenames]
 
     assert len(files) > 0
+
+
+def test_copy_test_source_files(testing_config):
+    recipe = os.path.join(metadata_dir, '_test_test_source_files')
+    for copy in (False, True):
+        testing_config.copy_test_source_files = copy
+        outputs = api.build(recipe, notest=False, config=testing_config)
+        tf = tarfile.open(outputs[0])
+        found = False
+        for f in tf.getmembers():
+            if f.name.startswith('info/test/'):
+                found = True
+                break
+        if found:
+            assert copy, "'info/test/' found in tar.bz2 but not copying test source files"
+        else:
+            assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
