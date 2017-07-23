@@ -146,7 +146,7 @@ def create_py_files(m):
         imports = [item for item in imports if (not hasattr(item, 'keys') or
                                                 'lang' in item and item['lang'] == 'python')]
     if imports:
-        with open(tf, 'a+') as fo:
+        with open(tf, 'a') as fo:
             for name in imports:
                 fo.write('print("import: %r")\n' % name)
                 fo.write('import %s\n' % name)
@@ -170,7 +170,7 @@ def create_r_files(m):
                 imports = import_item['imports']
                 break
     if imports:
-        with open(tf, 'a+') as fo:
+        with open(tf, 'a') as fo:
             for name in imports:
                 fo.write('print("library(%r)")\n' % name)
                 fo.write('library(%s)\n' % name)
@@ -189,8 +189,8 @@ def create_pl_files(m):
                     import_item['lang'] == 'perl'):
                 imports = import_item['imports']
                 break
-    if tf or imports:
-        with open(tf, 'a+') as fo:
+    if tf_exists or imports:
+        with open(tf, 'a') as fo:
             print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
                     file=fo)
             if imports:
