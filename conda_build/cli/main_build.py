@@ -363,7 +363,7 @@ def execute(args):
             print("Failed recipes:")
             for recipe in failed_recipes:
                 print("  - %s" % recipe)
-            sys.exit(1)
+            sys.exit(len(failed_recipes))
         else:
             print("All tests passed")
         outputs = []
