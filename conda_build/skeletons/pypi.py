@@ -658,8 +658,13 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             gs = entry_points.get('gui_scripts', [])
             if isinstance(cs, string_types):
                 cs = [cs]
+            elif isinstance(cs, list):
+                # We can have lists of lists here
+                cs = [item for sublist in [s for s in cs] for item in sublist]
             if isinstance(gs, string_types):
                 gs = [gs]
+            elif isinstance(gs, list):
+                gs = [item for sublist in [s for s in gs] for item in sublist]
             # We have *other* kinds of entry-points so we need
             # setuptools at run-time
             if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
