@@ -1106,3 +1106,15 @@ def test_dependencies_with_notest(testing_workdir, testing_config):
 
     assert 'Unsatisfiable dependencies for platform' in str(excinfo.value)
     assert 'somenonexistentpackage1' in str(excinfo.value)
+
+
+def test_member_information_stripped(testing_workdir, testing_config):
+    recipe = os.path.join(metadata_dir, 'jinja2')
+    outputs = api.build(recipe, config=testing_config, notest=True)
+
+    with tarfile.open(outputs[0]) as archive:
+        assert all(member.uid == 0 for member in archive.getmembers())
+        assert all(member.gid == 0 for member in archive.getmembers())
+        assert all(member.uname == 'base' for member in archive.getmembers())
+        assert all(member.gname == 'base' for member in archive.getmembers())
+        assert all(member.mtime == 86400 for member in archive.getmembers())
