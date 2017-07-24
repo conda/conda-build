@@ -745,11 +745,19 @@ def bundle_conda(output, metadata, env, **kw):
             info_order = int(os.path.dirname(f) != 'info')
             return info_order, fsize
 
+        def reset(tarinfo):
+            """Resets tarinfo objects when given to tarfile.add()."""
+            tarinfo.uid = tarinfo.gid = 0
+            tarinfo.uname = tarinfo.gname = "base"
+            # an arbritrary time of one day since epoch
+            tarinfo.mtime = 86400
+            return tarinfo
+
         # add files in order of a) in info directory, b) increasing size so
         # we can access small manifest or json files without decompressing
         # possible large binary or data files
         for f in sorted(files, key=order):
-            t.add(join(metadata.config.host_prefix, f), f)
+            t.add(join(metadata.config.host_prefix, f), f, filter=reset)
         t.close()
 
         # we're done building, perform some checks
