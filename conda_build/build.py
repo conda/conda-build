@@ -432,6 +432,10 @@ def write_info_json(m):
             info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
                                      for dist in dists]
 
+    # change index.json timestamp for reproducibility
+    if 'timestamp' in info_index:
+        info_index['timestamp'] = 86400
+
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(m.config.info_dir, 'index.json'), **mode_dict) as fo:
