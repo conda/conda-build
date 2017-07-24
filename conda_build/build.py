@@ -39,7 +39,7 @@ from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
 from .conda_interface import url_path
-from .conda_interface import cc_platform, root_dir
+from .conda_interface import cc_platform, root_dir, pkgs_dirs
 from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index, Dist
 
@@ -1366,7 +1366,14 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     for (metadata, _, _) in metadata_tuples:
         metadata.append_metadata_sections(hash_input, merge=False)
         metadata.config.compute_build_id(metadata.name())
-        environ.clean_pkg_cache(metadata.dist(), metadata.config)
+        # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
+        # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
+        # I think we can remove this call to clean_pkg_cache().
+        in_pkg_cache = True if (os.path.isfile(recipedir_or_package_or_metadata) and
+                                recipedir_or_package_or_metadata.endswith('.tar.bz2') and
+                                os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[:1]) else False
+        if not in_pkg_cache:
+            environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
         # store this name to keep it consistent.  By changing files, we change the hash later.
         #    It matches the build hash now, so let's keep it around.
