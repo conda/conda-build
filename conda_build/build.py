@@ -752,7 +752,7 @@ def bundle_conda(output, metadata, env, **kw):
             fsize = os.stat(join(metadata.config.host_prefix, f)).st_size or 100000
             # info/* records will be False == 0, others will be 1.
             info_order = int(os.path.dirname(f) != 'info')
-            return info_order, fsize
+            return info_order, fsize, f
 
         # add files in order of a) in info directory, b) increasing size so
         # we can access small manifest or json files without decompressing
