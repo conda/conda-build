@@ -1258,3 +1258,14 @@ def insert_variant_versions(metadata, env):
                 reqs.insert(i, ensure_valid_spec(' '.join((x.group(1),
                                                 metadata.config.variant.get(x.group(1))))))
     metadata.meta['requirements'][env] = reqs
+
+
+def patch_pyc_timestamp(filepath):
+    with open(filepath, 'rb') as pyc_file:
+        pyc_bytes = pyc_file.read()
+
+    new_timestamp = (DUMMY_TIMESTAMP + 1).to_bytes(4, byteorder='little')
+    new_pyc_bytes = pyc_bytes[:4] + new_timestamp + pyc_bytes[8:]
+
+    with open(filepath, 'wb') as new_pyc_file:
+        new_pyc_file.write(new_pyc_bytes)

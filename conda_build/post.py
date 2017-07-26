@@ -221,6 +221,14 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
                 call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
 
 
+def patch_pyc_files(directory):
+    for dirpath, _, filenames in os.walk(directory):
+        for filename in filenames:
+            filepath = os.path.join(dirpath, filename)
+            if filepath.endswith('.pyc'):
+                utils.patch_pyc_timestamp(filepath)
+
+
 def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
     rm_pyo(files, prefix)
     if noarch:
@@ -230,6 +238,7 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
                             skip_compile_pyc=skip_compile_pyc)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
+    patch_pyc_files(prefix)
 
 
 def find_lib(link, prefix, path=None):
