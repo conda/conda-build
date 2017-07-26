@@ -382,30 +382,6 @@ def write_about_json(m):
             if value:
                 d[key] = value
 
-        # for sake of reproducibility, record some conda info
-        d['conda_version'] = conda_version
-        d['conda_build_version'] = conda_build_version
-        # conda env will be in most, but not necessarily all installations.
-        #    Don't die if we don't see it.
-        stripped_channels = []
-        for channel in get_rc_urls() + list(m.config.channel_urls):
-            stripped_channels.append(sanitize_channel(channel))
-        d['channels'] = stripped_channels
-        evars = ['PATH', 'PYTHONPATH', 'PYTHONHOME', 'CONDA_DEFAULT_ENV',
-                 'CIO_TEST', 'CONDA_ENVS_PATH']
-
-        if cc_platform == 'linux':
-            evars.append('LD_LIBRARY_PATH')
-        elif cc_platform == 'osx':
-            evars.append('DYLD_LIBRARY_PATH')
-        d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
-        # this information will only be present in conda 4.2.10+
-        try:
-            d['conda_private'] = conda_private
-        except (KeyError, AttributeError):
-            pass
-        env = environ.Environment(root_dir)
-        d['root_pkgs'] = env.package_specs()
         json.dump(d, fo, indent=2, sort_keys=True)
 
 

@@ -620,19 +620,10 @@ def test_noarch_foo_value(testing_config):
 def test_about_json_content(testing_metadata):
     outputs = api.build(testing_metadata)
     about = json.loads(package_has_file(outputs[0], 'info/about.json').decode())
-    assert 'conda_version' in about and about['conda_version'] == conda.__version__
-    assert 'conda_build_version' in about and about['conda_build_version'] == __version__
-    assert 'channels' in about and about['channels']
-    try:
-        assert 'env_vars' in about and about['env_vars']
-    except AssertionError:
-        # new versions of conda support this, so we should raise errors.
-        if VersionOrder(conda.__version__) >= VersionOrder('4.2.10'):
-            raise
-        else:
-            pass
 
-    assert 'root_pkgs' in about and about['root_pkgs']
+    assert 'sweet home' in about['home']
+    assert 'contract in blood' in about['license']
+    assert 'a test package' in about['summary']
 
 
 @pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
