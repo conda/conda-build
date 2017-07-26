@@ -1117,8 +1117,8 @@ def test_member_information_stripped(testing_workdir, testing_config):
         assert all(member.gid == 0 for member in archive.getmembers())
         assert all(member.uname == 'base' for member in archive.getmembers())
         assert all(member.gname == 'base' for member in archive.getmembers())
-        assert all(member.mtime == 86400 for member in archive.getmembers())
+        assert all(member.mtime == 0 for member in archive.getmembers())
 
     metadata = json.loads(package_has_file(outputs[0], 'info/index.json').decode())
 
-    assert metadata['timestamp'] == 86400
+    assert metadata['timestamp'] == 0

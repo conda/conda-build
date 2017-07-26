@@ -77,6 +77,8 @@ if __name__ == '__main__':
     sys.exit(%(func)s())
 """
 
+DUMMY_TIMESTAMP = int(os.environ.get('SOURCE_DATE_EPOCH', 0))
+
 
 def get_recipe_abspath(recipe):
     """resolve recipe dir as absolute path.  If recipe is a tarball rather than a folder,

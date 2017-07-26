@@ -434,7 +434,7 @@ def write_info_json(m):
 
     # change index.json timestamp for reproducibility
     if 'timestamp' in info_index:
-        info_index['timestamp'] = 86400
+        info_index['timestamp'] = utils.DUMMY_TIMESTAMP
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
@@ -754,7 +754,7 @@ def bundle_conda(output, metadata, env, **kw):
             tarinfo.uid = tarinfo.gid = 0
             tarinfo.uname = tarinfo.gname = "base"
             # an arbritrary time of one day since epoch
-            tarinfo.mtime = 86400
+            tarinfo.mtime = utils.DUMMY_TIMESTAMP
             return tarinfo
 
         # add files in order of a) in info directory, b) increasing size so
