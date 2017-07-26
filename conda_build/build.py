@@ -1042,6 +1042,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 windows.build(m, build_file)
             else:
                 build_file = join(m.path, 'build.sh')
+                if isfile(build_file) and script:
+                    utils.get_logger(__name__).warn("Found a build.sh script and a build script "
+                                      "inside meta.yaml. The build script in meta.yaml "
+                                      "will be used.")
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
 
@@ -1075,7 +1079,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                  m.config.host_prefix))
                         if script:
                                 bf.write(script)
-                        if isfile(build_file):
+                        if isfile(build_file) and not script:
                             bf.write(open(build_file).read())
 
                     os.chmod(work_file, 0o766)
