@@ -18,6 +18,7 @@ import stat
 import subprocess
 import sys
 import shutil
+import struct
 import tarfile
 import tempfile
 import time
@@ -1264,7 +1265,9 @@ def patch_pyc_timestamp(filepath):
     with open(filepath, 'rb') as pyc_file:
         pyc_bytes = pyc_file.read()
 
-    new_timestamp = (DUMMY_TIMESTAMP + 1).to_bytes(4, byteorder='little')
+    # we convert the time since epoch using the '=i' int formatter
+    # to achieve a length of 4 bytes
+    new_timestamp = struct.pack('=i', (DUMMY_TIMESTAMP + 1))
     new_pyc_bytes = pyc_bytes[:4] + new_timestamp + pyc_bytes[8:]
 
     with open(filepath, 'wb') as new_pyc_file:
