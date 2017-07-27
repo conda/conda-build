@@ -1,12 +1,16 @@
 import os
+import shutil
 import stat
+import struct
 import sys
+import time
 import unittest
 import zipfile
 
 import pytest
 
 import conda_build.utils as utils
+from .utils import metadata_dir
 
 
 def makefile(name, contents=""):
@@ -294,3 +298,29 @@ def test_insert_variant_versions(testing_metadata):
     assert 'numpy 1.13' in testing_metadata.meta['requirements']['build']
     # the overall length does not change
     assert len(testing_metadata.meta['requirements']['build']) == 2
+
+
+def test_patch_pyc_timestamp(testing_workdir):
+    pyc_file = os.path.join(metadata_dir, '__init__.pyc')
+
+    with open(pyc_file, 'rb') as test_pyc_file:
+        pyc_bytes = test_pyc_file.read()
+
+    utils.patch_pyc_timestamp(pyc_file)
+
+    with open(pyc_file, 'rb') as updated_test_pyc_file:
+        updated_pyc_bytes = updated_test_pyc_file.read()
+
+    timestamp = pyc_bytes[4:8]
+    timestamp_to_date = time.localtime(struct.unpack('<L', timestamp)[0])
+    updated_timestamp = updated_pyc_bytes[4:8]
+    updated_timestamp_to_date = time.localtime(struct.unpack('<L', updated_timestamp)[0])
+
+    years = [1969, 1970]
+    months = [12, 1]
+    days = [31, 1]
+
+    assert timestamp_to_date.tm_year not in years
+    assert updated_timestamp_to_date.tm_year in years
+    assert updated_timestamp_to_date.tm_mon in months
+    assert updated_timestamp_to_date.tm_mday in days

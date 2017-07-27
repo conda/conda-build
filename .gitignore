@@ -12,3 +12,5 @@ venv
 junit.xml
 .cache
 .DS_Store
+
+!tests/test-recipes/metadata/__init__.pyc
