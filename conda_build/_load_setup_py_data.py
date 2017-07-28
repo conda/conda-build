@@ -77,8 +77,9 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
         '__file__': setup_file,
     }
     if os.path.isfile(setup_file):
-        code = compile(open(setup_file).read(), setup_file, 'exec', dont_inherit=1)
-        exec(code, ns, ns)
+        with open(setup_file) as f:
+            code = compile(f.read(), setup_file, 'exec', dont_inherit=1)
+            exec(code, ns, ns)
     else:
         if not permit_undefined_jinja:
             raise TypeError('{} is not a file that can be read'.format(setup_file))
