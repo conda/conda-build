@@ -10,7 +10,7 @@ from glob import glob
 import io
 import json
 import os
-from os.path import isdir, isfile, islink, join
+from os.path import isdir, isfile, islink, join, dirname
 import re
 import shutil
 import stat
@@ -973,8 +973,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                             channel_urls=tuple(m.config.channel_urls))
         except DependencyNeedsBuildingError as e:
             # subpackages are not actually missing.  We just haven't built them yet.
-            missing_deps = set(e.packages) - set(out.name()
-                        for _, out in m.get_output_metadata_set(permit_undefined_jinja=True))
+            from .conda_interface import MatchSpec
+            missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(
+                out.name() for _, out in m.get_output_metadata_set(permit_undefined_jinja=True)
+            )
             if missing_deps:
                 e.packages = missing_deps
                 raise e
@@ -1058,6 +1060,14 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                             bf.write('source "{0}activate" "{1}"\n'
                                      .format(utils.root_script_dir + os.path.sep,
                                              m.config.build_prefix))
+
+                            # conda 4.4 requires a conda-meta/history file for a valid conda prefix
+                            history_file = join(m.config.build_prefix, 'conda-meta', 'history')
+                            if not isfile(history_file):
+                                if not isdir(dirname(history_file)):
+                                    os.makedirs(dirname(history_file))
+                                open(history_file, 'a').close()
+
                             if m.is_cross:
                                 # HACK: we need both build and host envs
                                 #     "active" - i.e. on PATH, and with their
@@ -1069,6 +1079,16 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 # Net effect: binaries come from host first, then build
                                 #
                                 # Conda 4.4 may break this by reworking the activate scripts.
+                                #  ^^ shouldn't be true
+                                # In conda 4.4, export CONDA_MAX_SHLVL=2 to stack envs to two
+                                #   levels deep.
+                                # conda 4.4 does require that a conda-meta/history file
+                                #   exists to identify a valid conda environment
+                                history_file = join(m.config.host_prefix, 'conda-meta', 'history')
+                                if not isfile(history_file):
+                                    if not isdir(dirname(history_file)):
+                                        os.makedirs(dirname(history_file))
+                                    open(history_file, 'a').close()
                                 bf.write('unset CONDA_PATH_BACKUP\n')
                                 bf.write('source "{0}activate" "{1}"\n'
                                          .format(utils.root_script_dir + os.path.sep,
