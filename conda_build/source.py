@@ -605,7 +605,7 @@ def provide(metadata, patch=True):
                        verbose=metadata.config.verbose, timeout=metadata.config.timeout,
                        locking=metadata.config.locking)
         elif 'path' in source_dict:
-            path = normpath(abspath(join(metadata.path, metadata.get_value('source/path'))))
+            path = normpath(abspath(join(metadata.path, source_dict['path'])))
             if metadata.config.verbose:
                 print("Copying %s to %s" % (path, src_dir))
             # careful here: we set test path to be outside of conda-build root in setup.cfg.
