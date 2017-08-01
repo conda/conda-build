@@ -380,7 +380,8 @@ def meta_vars(meta, config):
 
     git_exe = external.find_executable('git', config.build_prefix)
     if git_exe and os.path.exists(git_dir):
-        git_url = meta.get_value('source/git_url')
+        # We set all 'source' metavars using the FIRST source entry in meta.yaml.
+        git_url = meta.get_value('source/0/git_url')
 
         if os.path.exists(git_url):
             if sys.platform == 'win32':
@@ -396,9 +397,9 @@ def meta_vars(meta, config):
                                  git_url,
                                  config.git_commits_since_tag,
                                  config.debug,
-                                 meta.get_value('source/git_rev', 'HEAD'))
+                                 meta.get_value('source/0/git_rev', 'HEAD'))
 
-        if _x or meta.get_value('source/path'):
+        if _x or meta.get_value('source/0/path'):
             d.update(get_git_info(git_exe, git_dir, config.debug))
 
     elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):

@@ -873,22 +873,52 @@ class MetaData(object):
     def get_section(self, section):
         return self.meta.get(section, {})
 
-    def get_value(self, field, default=None, autotype=True):
+    def get_value(self, name, default=None, autotype=True):
         """
         Get a value from a meta.yaml.
-        :param field: Field to return
+        :param field: Field to return, e.g. 'package/name'.
+                      If the section might be a list, specify an index,
+                      e.g. 'source/0/git_url'.
         :param default: Default object to return if field doesn't exist
         :param autotype: If True, return the default type of field if one exists.
-        False will return the default object.
-        :return:
+                         False will return the default object.
+        :return: The named value from meta.yaml
         """
-        section, key = field.split('/')
+        names = name.split('/')
+        assert len(names) in (2,3), "Bad field name: " + name
+        if len(names) == 2:
+            section, key = names
+            index = None
+        elif len(names) == 3:
+            section, index, key = names
+            assert section == 'source', "Section is not a list: " + section
+            index = int(index)
 
         # get correct default
+        field = section + '/' + key
         if autotype and default is None and field in default_structs:
             default = default_structs[field]()
 
-        value = self.get_section(section).get(key, default)
+        section_data = self.get_section(section)
+        if isinstance(section_data, dict):
+            assert not index, \
+                "Got non-zero index ({}), but section {} is not a list.".format(index, section)
+        elif isinstance(section_data, list):
+            # The 'source' section can be written a list, in which case the name
+            # is passed in with an index, e.g. get_value('source/0/git_url')
+            if index is None:
+                log = utils.get_logger(__name__)
+                log.warn("No index specified in get_value('{}'). Assuming index 0.".format(name))
+                index = 0
+
+            if len(section_data) == 0:
+                section_data = {}
+            else:
+                section_data = section_data[0]
+                assert isinstance(section_data, dict), \
+                    "Expected {}/{} to be a dict".format(section, index)
+
+        value = section_data.get(key, default)
 
         # handle yaml 1.1 boolean values
         if isinstance(value, text_type):
