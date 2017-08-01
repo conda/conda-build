@@ -21,7 +21,14 @@ import requests
 from requests.packages.urllib3.util.url import parse_url
 from six.moves.urllib.parse import urljoin
 import yaml
-import ruamel_yaml
+try:
+    import ruamel_yaml
+except ImportError:
+    try:
+        import ruamel.yaml as ruamel_yaml
+    except ImportError:
+        raise ImportError("No ruamel_yaml library available.\n"
+                          "To proceed, conda install ruamel_yaml")
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
