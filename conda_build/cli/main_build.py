@@ -259,8 +259,8 @@ different sets of packages."""
               "failure.")
     )
     p.add_argument(
-        '--cache',
-        help=('Path to store the source files during the build.'),
+        '--cache-dir',
+        help=('Path to store the source files (archives, git clones, etc.) during the build.'),
     )
     add_parser_channels(p)
 

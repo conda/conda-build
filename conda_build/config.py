@@ -66,7 +66,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('token', None),
             Setting('user', None),
             Setting('verbose', True),
-            
+
             Setting('debug', False),
             Setting('timeout', 90),
             Setting('set_build_id', True),
@@ -172,7 +172,7 @@ class Config(object):
             set_lang(self.variant, lang)
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
-        source_cache = kwargs.get('cache')
+        source_cache = kwargs.get('cache_dir')
         croot = kwargs.get('croot')
 
         if source_cache:
