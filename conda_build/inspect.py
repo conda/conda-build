@@ -164,6 +164,10 @@ def test_installable(channel='defaults'):
             if name in {'conda', 'conda-build'}:
                 # conda can only be installed in the root environment
                 continue
+            if name.endswith('@'):
+                # this is a 'virtual' feature record that conda adds to the index for the solver
+                # and should be ignored here
+                continue
             # Don't fail just because the package is a different version of Python
             # than the default.  We should probably check depends rather than the
             # build string.
