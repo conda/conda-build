@@ -1435,6 +1435,30 @@ class MetaData(object):
             text = match.group(1) if match else ""
         return text
 
+    def extract_source_text(self):
+        text = ""
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                recipe_text = f.read()
+            if PY3 and hasattr(recipe_text, 'decode'):
+                recipe_text = recipe_text.decode()
+            match = re.search(r'(\s*source:.*?)(^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',  # NOQA
+                              recipe_text, flags=re.MULTILINE | re.DOTALL)
+            text = match.group(1) if match else ""
+        return text
+
+    def extract_package_and_build_text(self):
+        text = ""
+        if self.meta_path:
+            with open(self.meta_path) as f:
+                recipe_text = f.read()
+            if PY3 and hasattr(recipe_text, 'decode'):
+                recipe_text = recipe_text.decode()
+            match = re.search(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',
+                              recipe_text, flags=re.MULTILINE | re.DOTALL)
+            text = match.group(1) if match else ""
+        return text
+
     @property
     def numpy_xx(self):
         '''This is legacy syntax that we need to support for a while.  numpy x.x means
@@ -1503,6 +1527,23 @@ class MetaData(object):
             self.config.reset_platform()
         elif value:
             self.config.host_platform = 'noarch'
+
+    @property
+    def variant_in_source(self):
+        variant = self.config.variant
+        self.config.variant = {}
+        self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True,
+                         bypass_env_check=True)
+        vars_in_recipe = set(self.undefined_jinja_vars)
+        self.config.variant = variant
+
+        for key in (vars_in_recipe & set(variant.keys())):
+            # We use this variant in the top-level recipe.
+            # constrain the stored variants to only this version in the output
+            #     variant mapping
+            if re.search(r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, self.extract_source_text()):
+                return True
+        return False
 
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
         output_metadata.meta['package']['name'] = output_dict.get('name', self.name())
@@ -1596,6 +1637,7 @@ class MetaData(object):
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=False):
+        from conda_build.source import provide
         out_metadata_map = {}
 
         for variant in (self.config.variants if hasattr(self.config, 'variants')
@@ -1603,6 +1645,11 @@ class MetaData(object):
             om = self.copy()
             om.final = False
             om.config.variant = variant
+            if om.needs_source_for_render and om.variant_in_source:
+                om.parse_again()
+                utils.rm_rf(om.config.work_dir)
+                provide(om)
+                om.parse_again()
             om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
             outputs = get_output_dicts_from_metadata(om)
 

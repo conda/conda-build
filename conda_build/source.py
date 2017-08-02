@@ -571,8 +571,6 @@ def provide(metadata, patch=True):
         os.makedirs(metadata.config.build_folder)
     git = None
 
-    meta = metadata.get_section('source')
-
     if hasattr(meta, 'keys'):
         dicts = [meta]
     else:

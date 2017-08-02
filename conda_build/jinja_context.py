@@ -79,6 +79,7 @@ class FilteredLoader(jinja2.BaseLoader):
 
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                        permit_undefined_jinja=True):
+    _setuptools_data = None
     # we must copy the script into the work folder to avoid incompatible pyc files
     origin_setup_script = os.path.join(os.path.dirname(__file__), '_load_setup_py_data.py')
     dest_setup_script = os.path.join(config.work_dir, '_load_setup_py_data.py')
@@ -96,14 +97,18 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
         with open(os.path.join(config.work_dir, 'conda_build_loaded_setup_py.json')) as f:
             _setuptools_data = json.load(f)
     else:
-        _setuptools_data = _load_setup_py_data.load_setup_py_data(setup_file,
+        try:
+            _setuptools_data = _load_setup_py_data.load_setup_py_data(setup_file,
                                                     from_recipe_dir=from_recipe_dir,
                                                     recipe_dir=recipe_dir,
                                                     work_dir=config.work_dir,
                                                     permit_undefined_jinja=permit_undefined_jinja)
+        except (TypeError, OSError):
+            # setup.py file doesn't yet exist.  Will get picked up in future parsings
+            pass
     # cleanup: we must leave the source tree empty unless the source code is already present
     rm_rf(os.path.join(config.work_dir, '_load_setup_py_data.py'))
-    return _setuptools_data if _setuptools_data else None
+    return _setuptools_data if _setuptools_data else {}
 
 
 def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
