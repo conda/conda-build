@@ -514,3 +514,16 @@ def test_package_test(testing_workdir, testing_metadata):
     output = api.build(testing_workdir, config=testing_metadata.config, notest=True)[0]
     args = ['-t', output]
     main_build.execute(args)
+
+
+@pytest.mark.serial
+def test_activate_scripts_not_included(testing_workdir):
+    recipe = os.path.join(metadata_dir, '_activate_scripts_not_included')
+    args = ['--no-anaconda-upload', '--croot', testing_workdir, recipe]
+    main_build.execute(args)
+    out = api.get_output_file_paths(recipe, croot=testing_workdir)[0]
+    for f in ('bin/activate', 'bin/deactivate', 'bin/conda',
+              'Scripts/activate.bat', 'Scripts/deactivate.bat', 'Scripts/conda.bat',
+              'Scripts/activate.exe', 'Scripts/deactivate.exe', 'Scripts/conda.exe',
+              'Scripts/activate', 'Scripts/deactivate', 'Scripts/conda'):
+        assert not package_has_file(out, f)

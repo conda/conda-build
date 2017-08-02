@@ -585,7 +585,7 @@ def get_output_dicts_from_metadata(metadata):
             outputs.append(output_dict_from_top_level_meta(metadata))
     for out in outputs:
         if (metadata.name() == out.get('name', '') and not (out.get('files') or
-                                                        out.get('script'))):
+                                                            out.get('script'))):
             out['requirements'] = out.get('requirements', metadata.meta.get('requirements', {}))
             out['noarch_python'] = out.get('noarch_python',
                                             metadata.get_value('build/noarch_python'))

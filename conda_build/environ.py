@@ -852,20 +852,13 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                     else:
                         log.error("Failed to create env, max retries exceeded.")
                         raise
-    # We must not symlink conda across different platforms when cross-compiling.
-    #  On second thought, I think we must, because activating the host env does
-    #     the symlink for us anyway, and when activate does it, we end up with
-    #     conda symlinks in every package. =()
-    # if os.path.basename(prefix) == '_build_env' or not is_cross:
-
-    # Hack, do not SYMLINK_CONDA when we're building conda.
-    if not any(include in ('bin/deactivate', 'Scripts/deactivate.bat')
-               for include in always_include_files):
-        if utils.on_win:
-            shell = "cmd.exe"
-        else:
-            shell = "bash"
-            symlink_conda(prefix, sys.prefix, shell)
+    # Symlinking conda is critical here to make sure that activate scripts are not
+    #    accidentally included in packages.
+    if utils.on_win:
+        shell = "cmd.exe"
+    else:
+        shell = "bash"
+    symlink_conda(prefix, sys.prefix, shell)
 
 
 def clean_pkg_cache(dist, config):
