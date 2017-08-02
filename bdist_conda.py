@@ -255,14 +255,14 @@ class bdist_conda(install):
             d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
 
         d = dict(d)
-        self.config.dirty = True
+        self.config.keep_old_work = True
         m = MetaData.fromdict(d, config=self.config)
         # Shouldn't fail, but do you really trust the code above?
         m.check_fields()
         m.config.set_build_id = False
         m.config.variant['python'] = ".".join((str(sys.version_info.major),
                                                str(sys.version_info.minor)))
-        api.build(m, build_only=True)
+        api.build(m, build_only=True, notest=True)
         self.config = m.config
         # prevent changes in the build ID from here, so that we're working in the same prefix
         # Do the install
@@ -271,7 +271,7 @@ class bdist_conda(install):
             install.run(self)
         else:
             super().run()
-        output = api.build(m, post=True)[0]
+        output = api.build(m, post=True, notest=True)[0]
         api.test(output, config=m.config)
         m.config.clean()
         if self.anaconda_upload:

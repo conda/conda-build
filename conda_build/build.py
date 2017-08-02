@@ -1652,6 +1652,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             name = recipe.name() if hasattr(recipe, 'name') else recipe
             if hasattr(recipe, 'config'):
                 metadata = recipe
+                metadata.config.anaconda_upload = config.anaconda_upload
                 config = metadata.config
                 # this code is duplicated below because we need to be sure that the build id is set
                 #    before downloading happens - or else we lose where downloads are

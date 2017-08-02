@@ -26,7 +26,8 @@ def create_files(m, test_dir=None):
         test_dir = m.config.test_dir
     has_files = False
     rm_rf(test_dir)
-    os.makedirs(test_dir, exist_ok=True)
+    if not os.path.isdir(test_dir):
+        os.makedirs(test_dir)
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
