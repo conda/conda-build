@@ -217,8 +217,13 @@ def get_upstream_pins(m, actions, env):
                     # TODO: this is a vile hack reaching into conda's internals. Replace with
                     #    proper conda API when available.
                     try:
-                        pfe = ProgressiveFetchExtract(link_dists=[pkg],
-                                                    index=index)
+                        try:
+                            # the conda 4.4 API uses a single `link_prefs` kwarg
+                            # whereas conda 4.3 used `index` and `link_dists` kwargs
+                            pfe = ProgressiveFetchExtract(link_prefs=(index[pkg],))
+                        except TypeError:
+                            # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
+                            pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
                         with utils.LoggingContext():
                             pfe.execute()
                         for pkgs_dir in _pkgs_dirs:
