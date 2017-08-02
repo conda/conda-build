@@ -258,6 +258,10 @@ different sets of packages."""
         help=("When running tests, keep going after each failure.  Default is to stop on the first "
               "failure.")
     )
+    p.add_argument(
+        '--cache-dir',
+        help=('Path to store the source files (archives, git clones, etc.) during the build.'),
+    )
     add_parser_channels(p)
 
     args = p.parse_args(args)

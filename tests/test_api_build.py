@@ -1106,3 +1106,17 @@ def test_dependencies_with_notest(testing_workdir, testing_config):
 
     assert 'Unsatisfiable dependencies for platform' in str(excinfo.value)
     assert 'somenonexistentpackage1' in str(excinfo.value)
+
+
+def test_source_cache_build(testing_workdir):
+    recipe = os.path.join(metadata_dir, 'source_git_jinja2')
+    config = api.Config(src_cache_root=testing_workdir)
+    api.build(recipe, notest=True, config=config)
+
+    git_cache_directory = '{}/git_cache' .format(testing_workdir)
+    assert os.path.isdir(git_cache_directory)
+
+    files = [filename for _, _, filenames in os.walk(git_cache_directory)
+             for filename in filenames]
+
+    assert len(files) > 0

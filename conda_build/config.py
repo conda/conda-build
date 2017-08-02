@@ -66,6 +66,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('token', None),
             Setting('user', None),
             Setting('verbose', True),
+
             Setting('debug', False),
             Setting('timeout', 90),
             Setting('set_build_id', True),
@@ -81,6 +82,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('_host_arch', None),
             Setting('filename_hashing', True),
             Setting('keep_old_work', False),
+            Setting('_src_cache_root', None),
 
             Setting('index', None),
 
@@ -170,7 +172,11 @@ class Config(object):
             set_lang(self.variant, lang)
 
         self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
+        source_cache = kwargs.get('cache_dir')
         croot = kwargs.get('croot')
+
+        if source_cache:
+            self._src_cache_root = os.path.abspath(os.path.normpath(source_cache))
         if croot:
             self._croot = os.path.abspath(os.path.normpath(croot))
         else:
@@ -276,6 +282,14 @@ class Config(object):
     @target_subdir.setter
     def target_subdir(self, value):
         self._target_subdir = value
+
+    @property
+    def src_cache_root(self):
+        return self._src_cache_root if self._src_cache_root else self.croot
+
+    @src_cache_root.setter
+    def src_cache_root(self, value):
+        self._src_cache_root = value
 
     @property
     def croot(self):
@@ -503,28 +517,28 @@ class Config(object):
     @property
     def src_cache(self):
         """Where tarballs and zip files are downloaded and stored"""
-        path = join(self.croot, 'src_cache')
+        path = join(self.src_cache_root, 'src_cache')
         _ensure_dir(path)
         return path
 
     @property
     def git_cache(self):
         """Where local clones of git sources are stored"""
-        path = join(self.croot, 'git_cache')
+        path = join(self.src_cache_root, 'git_cache')
         _ensure_dir(path)
         return path
 
     @property
     def hg_cache(self):
         """Where local clones of hg sources are stored"""
-        path = join(self.croot, 'hg_cache')
+        path = join(self.src_cache_root, 'hg_cache')
         _ensure_dir(path)
         return path
 
     @property
     def svn_cache(self):
         """Where local checkouts of svn sources are stored"""
-        path = join(self.croot, 'svn_cache')
+        path = join(self.src_cache_root, 'svn_cache')
         _ensure_dir(path)
         return path
 
