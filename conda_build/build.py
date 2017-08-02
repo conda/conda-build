@@ -1343,15 +1343,18 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
             config.channel_urls = list(config.channel_urls)
             config.channel_urls.insert(0, local_url)
 
-            metadata_tuples = render_recipe(os.path.join(info_dir, 'recipe'), config=config, reset_build_id=False)
+            metadata_tuples = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
+                                            reset_build_id=False)
 
             metadata = metadata_tuples[0][0]
             if metadata.meta.get('test', {}).get('source_files'):
                 if not os.listdir(metadata.config.work_dir):
                     test_files = os.path.join(info_dir, 'test')
                     if os.path.exists(test_files) and os.path.isdir(test_files):
-                        utils.copy_into(test_files, metadata.config.work_dir, metadata.config.timeout,
-                                        symlinks=True, locking=metadata.config.locking, clobber=True)
+                        utils.copy_into(test_files, metadata.config.work_dir,
+                                        metadata.config.timeout,
+                                        symlinks=True, locking=metadata.config.locking,
+                                        clobber=True)
                     else:
                         try_download(metadata, no_download_source=False)
         except IOError:

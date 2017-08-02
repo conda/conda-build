@@ -14,7 +14,7 @@ from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_
 from conda_build import source
 
 
-def create_files(m, test_dir = None):
+def create_files(m, test_dir=None):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
@@ -58,7 +58,7 @@ def create_files(m, test_dir = None):
     return has_files
 
 
-def create_shell_files(m, test_dir = None):
+def create_shell_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     has_tests = False
@@ -127,7 +127,7 @@ def _create_test_files(m, test_dir, ext, comment_char='# '):
     return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
 
 
-def create_py_files(m, test_dir = None):
+def create_py_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     tf, tf_exists = _create_test_files(m, test_dir, '.py')
@@ -161,7 +161,7 @@ def create_py_files(m, test_dir = None):
     return tf if (tf_exists or imports) else False
 
 
-def create_r_files(m, test_dir = None):
+def create_r_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     tf, tf_exists = _create_test_files(m, test_dir, '.r')
@@ -187,7 +187,7 @@ def create_r_files(m, test_dir = None):
     return tf if (tf_exists or imports) else False
 
 
-def create_pl_files(m, test_dir = None):
+def create_pl_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     tf, tf_exists = _create_test_files(m, test_dir, '.pl')
@@ -221,7 +221,7 @@ def create_pl_files(m, test_dir = None):
     return tf if (tf_exists or imports) else False
 
 
-def create_lua_files(m, test_dir = None):
+def create_lua_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     tf, tf_exists = _create_test_files(m, test_dir, '.lua')
@@ -242,7 +242,7 @@ def create_lua_files(m, test_dir = None):
     return tf if (tf_exists or imports) else False
 
 
-def create_all_test_files(m, test_dir = None):
+def create_all_test_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     files = create_files(m, test_dir)

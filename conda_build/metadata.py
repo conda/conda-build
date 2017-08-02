@@ -885,7 +885,7 @@ class MetaData(object):
         :return: The named value from meta.yaml
         """
         names = name.split('/')
-        assert len(names) in (2,3), "Bad field name: " + name
+        assert len(names) in (2, 3), "Bad field name: " + name
         if len(names) == 2:
             section, key = names
             index = None

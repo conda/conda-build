@@ -348,7 +348,8 @@ def execute(args):
     if action == test_action:
         failed_recipes = []
         recipes = [item for sublist in
-                   [glob(os.path.abspath(recipe)) if '*' in recipe else [recipe] for recipe in args.recipe]
+                   [glob(os.path.abspath(recipe)) if '*' in recipe
+                                                  else [recipe] for recipe in args.recipe]
                    for item in sublist]
         for recipe in recipes:
             try:
