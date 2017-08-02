@@ -144,7 +144,8 @@ def test_no_include_recipe_config_arg(testing_metadata):
     # make sure that it is not there when the command line flag is passed
     testing_metadata.config.include_recipe = False
     testing_metadata.meta['build']['number'] = 2
-    output_file = api.build(testing_metadata)[0]
+    # We cannot test packages without recipes as we cannot render them
+    output_file = api.build(testing_metadata, notest=True)[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 
@@ -1120,3 +1121,23 @@ def test_source_cache_build(testing_workdir):
              for filename in filenames]
 
     assert len(files) > 0
+
+
+def test_copy_test_source_files(testing_config):
+    recipe = os.path.join(metadata_dir, '_test_test_source_files')
+    filenames = set()
+    for copy in (False, True):
+        testing_config.copy_test_source_files = copy
+        outputs = api.build(recipe, notest=False, config=testing_config)
+        filenames.add(os.path.basename(outputs[0]))
+        tf = tarfile.open(outputs[0])
+        found = False
+        for f in tf.getmembers():
+            if f.name.startswith('info/test/'):
+                found = True
+                break
+        if found:
+            assert copy, "'info/test/' found in tar.bz2 but not copying test source files"
+        else:
+            assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
+    assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"

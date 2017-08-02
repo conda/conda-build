@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+from glob2 import glob
 import logging
 import os
 import sys
@@ -262,6 +263,16 @@ different sets of packages."""
         '--cache-dir',
         help=('Path to store the source files (archives, git clones, etc.) during the build.'),
     )
+    p.add_argument(
+        "--no-copy-test-source-files", dest="copy_test_source_files", action="store_false",
+        default=cc_conda_build.get('copy_test_source_files', 'true').lower() == 'true',
+        help=("Disables copying the files necessary for testing the package into "
+              "the info/test folder.  Passing this argument means it may not be possible "
+              "to test the package without internet access.  There is also a danger that "
+              "the source archive(s) containing the files could become unavailable sometime "
+              "in the future.")
+    )
+
     add_parser_channels(p)
 
     args = p.parse_args(args)
@@ -322,6 +333,7 @@ def execute(args):
         return
 
     action = None
+    outputs = None
     if args.output:
         action = output_action
         config.verbose = False
@@ -336,7 +348,11 @@ def execute(args):
 
     if action == test_action:
         failed_recipes = []
-        for recipe in args.recipe:
+        recipes = [item for sublist in
+                   [glob(os.path.abspath(recipe)) if '*' in recipe
+                                                  else [recipe] for recipe in args.recipe]
+                   for item in sublist]
+        for recipe in recipes:
             try:
                 action(recipe, config)
             except:
@@ -349,7 +365,7 @@ def execute(args):
             print("Failed recipes:")
             for recipe in failed_recipes:
                 print("  - %s" % recipe)
-            sys.exit(1)
+            sys.exit(len(failed_recipes))
         else:
             print("All tests passed")
         outputs = []

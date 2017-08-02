@@ -885,7 +885,7 @@ class MetaData(object):
         :return: The named value from meta.yaml
         """
         names = name.split('/')
-        assert len(names) in (2,3), "Bad field name: " + name
+        assert len(names) in (2, 3), "Bad field name: " + name
         if len(names) == 2:
             section, key = names
             index = None
@@ -1034,6 +1034,9 @@ class MetaData(object):
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
         requirements['build'] = build_reqs
         composite['requirements'] = requirements
+        if 'copy_test_source_files' in self.meta.get('extra', {}):
+            composite['extra'] = HashableDict({'copy_test_source_files':
+                                               self.meta['extra']['copy_test_source_files']})
 
         # remove the build number from the hash, so that we can bump it without changing the hash
         if 'number' in composite['build']:

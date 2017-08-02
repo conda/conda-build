@@ -318,6 +318,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         versioned_test_deps = list({get_pin_from_build(m, dep, full_build_dep_versions)
                                     for dep in test_deps})
         rendered_metadata.meta['test']['requires'] = versioned_test_deps
+    rendered_metadata.meta['extra']['copy_test_source_files'] = m.config.copy_test_source_files
 
     # if source/path is relative, then the output package makes no sense at all.  The next
     #   best thing is to hard-code the absolute path.  This probably won't exist on any

@@ -14,7 +14,7 @@ from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_
 from conda_build import source
 
 
-def create_files(m):
+def create_files(m, test_dir=None):
     """
     Create the test files for pkg in the directory given.  The resulting
     test files are configuration (i.e. platform, architecture, Python and
@@ -22,13 +22,17 @@ def create_files(m):
     Return False, if the package has no tests (for any configuration), and
     True if it has.
     """
+    if not test_dir:
+        test_dir = m.config.test_dir
     has_files = False
-    rm_rf(m.config.test_dir)
+    rm_rf(test_dir)
+    if not os.path.isdir(test_dir):
+        os.makedirs(test_dir)
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
         path = join(m.path, fn)
         # disable locking to avoid locking a temporary directory (the extracted test folder)
-        copy_into(path, join(m.config.test_dir, fn), m.config.timeout, locking=False,
+        copy_into(path, join(test_dir, fn), m.config.timeout, locking=False,
                   clobber=True)
     # need to re-download source in order to do tests
     if m.get_value('test/source_files') and not isdir(m.config.work_dir):
@@ -44,18 +48,20 @@ def create_files(m):
         for f in files:
             try:
                 # disable locking to avoid locking a temporary directory (the extracted test folder)
-                copy_into(f, f.replace(m.config.work_dir, m.config.test_dir), m.config.timeout,
+                copy_into(f, f.replace(m.config.work_dir, test_dir), m.config.timeout,
                           locking=False)
             except OSError as e:
                 log = logging.getLogger(__name__)
                 log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
         for ext in '.pyc', '.pyo':
-            for f in get_ext_files(m.config.test_dir, ext):
+            for f in get_ext_files(test_dir, ext):
                 os.remove(f)
     return has_files
 
 
-def create_shell_files(m):
+def create_shell_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
     has_tests = False
     ext = '.bat' if sys.platform == 'win32' else '.sh'
     name = 'no-file'
@@ -73,12 +79,12 @@ def create_shell_files(m):
 
     if exists(join(m.path, name)):
         # disable locking to avoid locking a temporary directory (the extracted test folder)
-        copy_into(join(m.path, name), m.config.test_dir, m.config.timeout, locking=False)
+        copy_into(join(m.path, name), test_dir, m.config.timeout, locking=False)
         has_tests = True
 
     commands = ensure_list(m.get_value('test/commands', []))
     if commands:
-        with open(join(m.config.test_dir, name), 'a') as f:
+        with open(join(test_dir, name), 'a') as f:
             f.write('\n\n')
             for cmd in commands:
                 f.write(cmd)
@@ -90,7 +96,7 @@ def create_shell_files(m):
     return has_tests
 
 
-def _create_test_files(m, ext, comment_char='# '):
+def _create_test_files(m, test_dir, ext, comment_char='# '):
     # the way this works is that each output needs to explicitly define a test script to run
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
     name = 'run_test' + ext
@@ -102,7 +108,7 @@ def _create_test_files(m, ext, comment_char='# '):
                 break
 
     test_file = os.path.join(m.path, name)
-    out_file = join(m.config.test_dir, 'run_test' + ext)
+    out_file = join(test_dir, 'run_test' + ext)
 
     if os.path.isfile(test_file):
         with open(out_file, 'w') as fo:
@@ -122,8 +128,10 @@ def _create_test_files(m, ext, comment_char='# '):
     return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
 
 
-def create_py_files(m):
-    tf, tf_exists = _create_test_files(m, '.py')
+def create_py_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
+    tf, tf_exists = _create_test_files(m, test_dir, '.py')
 
     # Ways in which we can mark imports as none python imports
     # 1. preface package name with r-, lua- or perl-
@@ -146,7 +154,7 @@ def create_py_files(m):
         imports = [item for item in imports if (not hasattr(item, 'keys') or
                                                 'lang' in item and item['lang'] == 'python')]
     if imports:
-        with open(tf, 'a+') as fo:
+        with open(tf, 'a') as fo:
             for name in imports:
                 fo.write('print("import: %r")\n' % name)
                 fo.write('import %s\n' % name)
@@ -154,8 +162,10 @@ def create_py_files(m):
     return tf if (tf_exists or imports) else False
 
 
-def create_r_files(m):
-    tf, tf_exists = _create_test_files(m, '.r')
+def create_r_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
+    tf, tf_exists = _create_test_files(m, test_dir, '.r')
 
     imports = None
     # two ways we can enable R import tests:
@@ -170,7 +180,7 @@ def create_r_files(m):
                 imports = import_item['imports']
                 break
     if imports:
-        with open(tf, 'a+') as fo:
+        with open(tf, 'a') as fo:
             for name in imports:
                 fo.write('print("library(%r)")\n' % name)
                 fo.write('library(%s)\n' % name)
@@ -178,8 +188,10 @@ def create_r_files(m):
     return tf if (tf_exists or imports) else False
 
 
-def create_pl_files(m):
-    tf, tf_exists = _create_test_files(m, '.pl')
+def create_pl_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
+    tf, tf_exists = _create_test_files(m, test_dir, '.pl')
     imports = None
     if m.name().startswith('perl-'):
         imports = ensure_list(m.get_value('test/imports', []))
@@ -189,8 +201,8 @@ def create_pl_files(m):
                     import_item['lang'] == 'perl'):
                 imports = import_item['imports']
                 break
-    if tf or imports:
-        with open(tf, 'a+') as fo:
+    if tf_exists or imports:
+        with open(tf, 'a') as fo:
             print(r'my $expected_version = "%s";' % m.version().rstrip('0'),
                     file=fo)
             if imports:
@@ -210,8 +222,10 @@ def create_pl_files(m):
     return tf if (tf_exists or imports) else False
 
 
-def create_lua_files(m):
-    tf, tf_exists = _create_test_files(m, '.lua')
+def create_lua_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
+    tf, tf_exists = _create_test_files(m, test_dir, '.lua')
     imports = None
     if m.name().startswith('lua-'):
         imports = ensure_list(m.get_value('test/imports', []))
@@ -227,3 +241,15 @@ def create_lua_files(m):
                 print(r'print("require \"%s\"\n");' % name, file=fo)
                 print('require "%s"\n' % name, file=fo)
     return tf if (tf_exists or imports) else False
+
+
+def create_all_test_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
+    files = create_files(m, test_dir)
+    pl_files = create_pl_files(m, test_dir)
+    py_files = create_py_files(m, test_dir)
+    r_files = create_r_files(m, test_dir)
+    lua_files = create_lua_files(m, test_dir)
+    shell_files = create_shell_files(m, test_dir)
+    return files, pl_files, py_files, r_files, lua_files, shell_files

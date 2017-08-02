@@ -25,9 +25,11 @@ build:
 
 test:
   commands:
+  - echo $(strings ${PREFIX}/bin/helloworld)
   # Test that information from build requirements can make it into host artefacts:
   - strings ${PREFIX}/bin/helloworld | grep "XZ Utils"
   # Test that the correct cross-compilers were used:
+  - echo $(file ${PREFIX}/bin/helloworld)
   - file ${PREFIX}/bin/helloworld | grep "ELF 32-bit LSB executable, ARM, "
   # Not working at present for two reasons:
   # 1. We do not provide qemu

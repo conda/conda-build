@@ -15,9 +15,10 @@ def main():
     with open(source_file, 'r') as fh:
         source = yaml.load(fh)
 
-    assert source['extra'] == {"custom": "metadata",
-                               "however": {"we": "want"},
-                               "final": True}
+    assert 'custom' in source['extra']
+    assert 'however' in source['extra']
+    assert source['extra']['custom'] == 'metadata'
+    assert source['extra']['however'] == {'we': 'want'}
 
 
 if __name__ == '__main__':

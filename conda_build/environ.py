@@ -667,8 +667,9 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
                                       locking=locking, timeout=timeout)
     specs = tuple(utils.ensure_valid_spec(spec) for spec in specs)
 
-    if (specs, env, subdir, channel_urls) in cached_actions and last_index_ts >= index_ts:
-        actions = cached_actions[(specs, env, subdir, channel_urls)].copy()
+    if ((specs, env, subdir, channel_urls, disable_pip) in cached_actions and
+            last_index_ts >= index_ts):
+        actions = cached_actions[(specs, env, subdir, channel_urls, disable_pip)].copy()
         if "PREFIX" in actions:
             actions['PREFIX'] = prefix
     elif specs:
@@ -720,11 +721,12 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
                         raise
         if disable_pip:
             for pkg in ('pip', 'setuptools', 'wheel'):
+                # specs are the raw specifications, not the conda-derived actual specs
+                #   We're testing that pip etc. are manually specified
                 if not any(re.match('^%s(?:$| .*)' % pkg, str(dep)) for dep in specs):
-                    actions['LINK'] = [spec for spec in actions['LINK']
-                                       if not spec.name == pkg]
+                    actions['LINK'] = [spec for spec in actions['LINK'] if spec.name != pkg]
         utils.trim_empty_keys(actions)
-        cached_actions[(specs, env, subdir, channel_urls)] = actions.copy()
+        cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
         last_index_ts = index_ts
     return actions
 
