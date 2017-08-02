@@ -53,7 +53,7 @@ from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
 from conda_build.index import update_index
-from conda_build.exceptions import indent, DependencyNeedsBuildingError
+from conda_build.exceptions import indent, DependencyNeedsBuildingError, CondaBuildException
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
                                   get_package_variants)
 from conda_build.create_test import (create_files, create_shell_files, create_r_files,
@@ -1043,9 +1043,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             else:
                 build_file = join(m.path, 'build.sh')
                 if isfile(build_file) and script:
-                    utils.get_logger(__name__).warn("Found a build.sh script and a build script "
-                                      "inside meta.yaml. The build script in meta.yaml "
-                                      "will be used.")
+                    raise CondaBuildException("Found a build.sh script and a build script "
+                                              "inside meta.yaml. Either remove the build.sh "
+                                              "script or remove the build script in meta.yaml.")
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
 
