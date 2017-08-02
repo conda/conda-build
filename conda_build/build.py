@@ -49,6 +49,7 @@ from conda_build.index import get_build_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse,
                                 distribute_variants, expand_outputs, try_download)
 import conda_build.os_utils.external as external
+from conda_build.metadata import MetaData
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
@@ -253,7 +254,10 @@ def copy_license(m):
 
 
 def copy_test_source_files(m):
-    create_all_test_files(m, join(m.config.info_dir, 'test'))
+    test_dest = join(m.config.info_dir, 'test')
+    create_all_test_files(m, test_dest)
+    with open(os.path.join(test_dest, 'test_time_dependencies.json'), 'w') as f:
+        json.dump(m.meta.get('test', {}).get('requires', []), f)
 
 
 def write_hash_input(m):
@@ -1290,6 +1294,80 @@ def warn_on_use_of_SRC_DIR(metadata):
                              "or pass the --no-remove-work-dir flag.")
 
 
+def construct_metadata_for_test(recipedir_or_package, config):
+    recipe_dir, need_cleanup = utils.get_recipe_abspath(recipedir_or_package)
+    config.need_cleanup = need_cleanup
+    hash_input = {}
+
+    info_dir = os.path.normpath(os.path.join(recipe_dir, 'info'))
+    with open(os.path.join(info_dir, 'index.json')) as f:
+        package_data = json.load(f)
+
+    if package_data['subdir'] != 'noarch':
+        config.host_subdir = package_data['subdir']
+    if config.filename_hashing:
+        # We may be testing an (old) package built without filename hashing.
+        hash_input = os.path.join(info_dir, 'hash_input.json')
+        if os.path.isfile(hash_input):
+            with open(os.path.join(info_dir, 'hash_input.json')) as f:
+                hash_input = json.load(f)
+        else:
+            config.filename_hashing = False
+            hash_input = {}
+
+    if os.path.isdir(recipedir_or_package):
+        local_location = os.path.dirname(recipe_dir)
+    else:
+        local_location = os.path.dirname(recipedir_or_package)
+    # strip off extra subdir folders
+    for platform in ('win', 'linux', 'osx'):
+        if os.path.basename(local_location).startswith(platform + "-"):
+            local_location = os.path.dirname(local_location)
+
+    if not os.path.abspath(local_location):
+        local_location = os.path.normpath(os.path.abspath(
+            os.path.join(os.getcwd(), local_location)))
+    local_url = url_path(local_location)
+    # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
+    #    how to add elements.
+    config.channel_urls = list(config.channel_urls)
+    config.channel_urls.insert(0, local_url)
+
+    try:
+        metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
+                                        reset_build_id=False)[0][0]
+
+    # no recipe in package.  Fudge metadata
+    except (IOError, SystemExit, OSError):
+        # force the build string to line up - recomputing it would
+        #    yield a different result
+        metadata = MetaData.fromdict({'package': {'name': package_data['name'],
+                                                  'version': package_data['version']},
+                                      'requirements': {'run': package_data['depends']}
+                                      }, config=config)
+
+    test_files = os.path.join(info_dir, 'test')
+    if os.path.exists(test_files) and os.path.isdir(test_files):
+        utils.copy_into(test_files, metadata.config.work_dir,
+                        metadata.config.timeout, symlinks=True,
+                        locking=metadata.config.locking, clobber=True)
+        dependencies_file = os.path.join(test_files, 'test_time_dependencies.json')
+        test_deps = []
+        if os.path.isfile(dependencies_file):
+            with open(dependencies_file) as f:
+                test_deps = json.load(f)
+        test_section = metadata.meta.get('test', {})
+        test_section['requires'] = test_deps
+        metadata.meta['test'] = test_section
+
+    else:
+        if metadata.meta.get('test', {}).get('source_files'):
+            if not os.listdir(metadata.config.work_dir):
+                try_download(metadata, no_download_source=False)
+
+    return metadata, hash_input
+
+
 def test(recipedir_or_package_or_metadata, config, move_broken=True):
     '''
     Execute any test scripts for the given package.
@@ -1301,256 +1379,202 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     need_cleanup = False
     hash_input = {}
+    recipe_dir = ''
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
-        metadata_tuples = [(recipedir_or_package_or_metadata, None, None)]
-        config = recipedir_or_package_or_metadata.config
-        local_url = None
+        metadata = recipedir_or_package_or_metadata
     else:
-        recipe_dir, need_cleanup = utils.get_recipe_abspath(recipedir_or_package_or_metadata)
-        config.need_cleanup = need_cleanup
+        metadata, hash_input = construct_metadata_for_test(recipedir_or_package_or_metadata,
+                                                                  config)
 
-        # This will create a new local build folder if and only if config doesn't already have one.
-        #   What this means is that if we're running a test immediately after build, we use the one
-        #   that the build already provided
-        try:
-            info_dir = os.path.normpath(os.path.join(recipe_dir, 'info'))
-            if os.path.isdir(info_dir):
-                with open(os.path.join(info_dir, 'index.json')) as f:
-                    subdir = json.load(f)['subdir']
-                if subdir != 'noarch':
-                    config.host_subdir = subdir
-                if config.filename_hashing:
-                    # We may be testing an (old) package built without filename hashing.
-                    try:
-                        with open(os.path.join(info_dir, 'hash_input.json')) as f:
-                            hash_input = json.load(f)
-                    except:
-                        config.filename_hashing = False
+    metadata.append_metadata_sections(hash_input, merge=False)
+    metadata.config.compute_build_id(metadata.name())
+    # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
+    # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
+    # I think we can remove this call to clean_pkg_cache().
+    in_pkg_cache = (not hasattr(recipedir_or_package_or_metadata, 'config') and
+                    os.path.isfile(recipedir_or_package_or_metadata) and
+                    recipedir_or_package_or_metadata.endswith('.tar.bz2') and
+                    os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[:1])
+    if not in_pkg_cache:
+        environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
-            if os.path.isdir(recipedir_or_package_or_metadata):
-                local_location = os.path.dirname(recipe_dir)
-            else:
-                local_location = os.path.dirname(recipedir_or_package_or_metadata)
-            # strip off extra subdir folders
-            for platform in ('win', 'linux', 'osx'):
-                if os.path.basename(local_location).startswith(platform + "-"):
-                    local_location = os.path.dirname(local_location)
+    # store this name to keep it consistent.  By changing files, we change the hash later.
+    #    It matches the build hash now, so let's keep it around.
+    test_package_name = (recipedir_or_package_or_metadata.dist()
+                        if hasattr(recipedir_or_package_or_metadata, 'dist')
+                        else recipedir_or_package_or_metadata)
 
-            if not os.path.abspath(local_location):
-                local_location = os.path.normpath(os.path.abspath(
-                    os.path.join(os.getcwd(), local_location)))
-            local_url = url_path(local_location)
-            # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
-            #    how to add elements.
-            config.channel_urls = list(config.channel_urls)
-            config.channel_urls.insert(0, local_url)
+    # this is also copying tests/source_files from work_dir to testing workdir
+    _, pl_files, py_files, r_files, lua_files, shell_files = \
+        create_all_test_files(metadata)
+    if not any([py_files, shell_files, pl_files, lua_files, r_files]):
+        print("Nothing to test for:", test_package_name)
+        return True
 
-            metadata_tuples = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
-                                            reset_build_id=False)
+    print("TEST START:", test_package_name)
 
-            metadata = metadata_tuples[0][0]
-            if metadata.meta.get('test', {}).get('source_files'):
-                if not os.listdir(metadata.config.work_dir):
-                    test_files = os.path.join(info_dir, 'test')
-                    if os.path.exists(test_files) and os.path.isdir(test_files):
-                        utils.copy_into(test_files, metadata.config.work_dir,
-                                        metadata.config.timeout, symlinks=True,
-                                        locking=metadata.config.locking, clobber=True)
-                    else:
-                        try_download(metadata, no_download_source=False)
-        except IOError:
-            raise IOError("Didn't find recipe in folder or package under test.  Can't test "
-                          "this after exiting build.")
+    if metadata.config.remove_work_dir:
+        # nested if so that there's no warning when we just leave the empty workdir in place
+        if os.listdir(metadata.config.work_dir):
+            dest = os.path.join(os.path.dirname(metadata.config.work_dir),
+                                'work_moved_' + metadata.dist())
+            # Needs to come after create_files in case there's test/source_files
+            print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+            os.rename(config.work_dir, dest)
+    else:
+        log.warn("Not moving work directory after build.  Your package may depend on files "
+                    "in the work directory that are not included with your package")
 
-    for (metadata, _, _) in metadata_tuples:
-        metadata.append_metadata_sections(hash_input, merge=False)
-        metadata.config.compute_build_id(metadata.name())
-        # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
-        # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
-        # I think we can remove this call to clean_pkg_cache().
-        in_pkg_cache = True if (os.path.isfile(recipedir_or_package_or_metadata) and
-                                recipedir_or_package_or_metadata.endswith('.tar.bz2') and
-                                os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[:1]) else False
-        if not in_pkg_cache:
-            environ.clean_pkg_cache(metadata.dist(), metadata.config)
+    get_build_metadata(metadata)
+    specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
 
-        # store this name to keep it consistent.  By changing files, we change the hash later.
-        #    It matches the build hash now, so let's keep it around.
-        test_package_name = (recipedir_or_package_or_metadata.dist()
-                            if hasattr(recipedir_or_package_or_metadata, 'dist')
-                            else recipedir_or_package_or_metadata)
+    # add packages listed in the run environment and test/requires
+    specs.extend(ms.spec for ms in metadata.ms_depends('run'))
+    specs += utils.ensure_list(metadata.get_value('test/requires', []))
 
-        # this is also copying tests/source_files from work_dir to testing workdir
-        _, pl_files, py_files, r_files, lua_files, shell_files = \
-            create_all_test_files(metadata)
-        if not any([py_files, shell_files, pl_files, lua_files, r_files]):
-            print("Nothing to test for:", test_package_name)
-            return True
+    if py_files:
+        # as the tests are run by python, ensure that python is installed.
+        # (If they already provided python as a run or test requirement,
+        #  this won't hurt anything.)
+        specs += ['python']
+    if pl_files:
+        # as the tests are run by perl, we need to specify it
+        specs += ['perl']
+    if lua_files:
+        # not sure how this shakes out
+        specs += ['lua']
+    if r_files:
+        # not sure how this shakes out
+        specs += ['r-base']
 
-        print("TEST START:", test_package_name)
+    with utils.path_prepended(metadata.config.test_prefix):
+        env = dict(os.environ.copy())
+        env.update(environ.get_dict(config=metadata.config, m=metadata,
+                                    prefix=config.test_prefix))
+        env["CONDA_BUILD_STATE"] = "TEST"
+        if env_path_backup_var_exists:
+            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
-        if metadata.config.remove_work_dir:
-            # nested if so that there's no warning when we just leave the empty workdir in place
-            if os.listdir(metadata.config.work_dir):
-                dest = os.path.join(os.path.dirname(metadata.config.work_dir),
-                                    'work_moved_' + metadata.dist())
-                # Needs to come after create_files in case there's test/source_files
-                print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
-                os.rename(config.work_dir, dest)
-        else:
-            log.warn("Not moving work directory after build.  Your package may depend on files "
-                     "in the work directory that are not included with your package")
+    if not metadata.config.activate:
+        # prepend bin (or Scripts) directory
+        env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
 
-        get_build_metadata(metadata)
-        specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
+    if utils.on_win:
+        env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
-        # add packages listed in the run environment and test/requires
-        specs.extend(ms.spec for ms in metadata.ms_depends('run'))
-        specs += utils.ensure_list(metadata.get_value('test/requires', []))
+    suffix = "bat" if utils.on_win else "sh"
+    test_script = join(metadata.config.test_dir,
+                        "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        if py_files:
-            # as the tests are run by python, ensure that python is installed.
-            # (If they already provided python as a run or test requirement,
-            #  this won't hurt anything.)
-            specs += ['python']
-        if pl_files:
-            # as the tests are run by perl, we need to specify it
-            specs += ['perl']
-        if lua_files:
-            # not sure how this shakes out
-            specs += ['lua']
-        if r_files:
-            # not sure how this shakes out
-            specs += ['r-base']
+    # In the future, we will need to support testing cross compiled
+    #     packages on physical hardware. until then it is expected that
+    #     something like QEMU or Wine will be used on the build machine,
+    #     therefore, for now, we use host_subdir.
 
-        with utils.path_prepended(metadata.config.test_prefix):
-            env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=metadata.config, m=metadata,
-                                        prefix=config.test_prefix))
-            env["CONDA_BUILD_STATE"] = "TEST"
-            if env_path_backup_var_exists:
-                env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
+    subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
+                else metadata.config.host_subdir)
+    actions = environ.get_install_actions(metadata.config.test_prefix,
+                                            tuple(specs), 'host',
+                                            subdir=subdir,
+                                            debug=metadata.config.debug,
+                                            verbose=metadata.config.verbose,
+                                            locking=metadata.config.locking,
+                                            bldpkgs_dirs=tuple(metadata.config.bldpkgs_dirs),
+                                            timeout=metadata.config.timeout,
+                                            disable_pip=metadata.config.disable_pip,
+                                            max_env_retry=metadata.config.max_env_retry,
+                                            output_folder=metadata.config.output_folder,
+                                            channel_urls=tuple(metadata.config.channel_urls))
+    environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
+                        subdir=subdir, is_cross=metadata.is_cross)
 
-        if not metadata.config.activate:
-            # prepend bin (or Scripts) directory
-            env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
+    with utils.path_prepended(metadata.config.test_prefix):
+        env = dict(os.environ.copy())
+        env.update(environ.get_dict(config=metadata.config, m=metadata,
+                                    prefix=metadata.config.test_prefix))
+        env["CONDA_BUILD_STATE"] = "TEST"
+        if env_path_backup_var_exists:
+            env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
+    if not metadata.config.activate:
+        # prepend bin (or Scripts) directory
+        env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
         if utils.on_win:
             env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
-        suffix = "bat" if utils.on_win else "sh"
-        test_script = join(metadata.config.test_dir,
-                           "conda_test_runner.{suffix}".format(suffix=suffix))
+    # set variables like CONDA_PY in the test environment
+    env.update(set_language_env_vars(metadata.config.variant))
 
-        # In the future, we will need to support testing cross compiled
-        #     packages on physical hardware. until then it is expected that
-        #     something like QEMU or Wine will be used on the build machine,
-        #     therefore, for now, we use host_subdir.
+    # Python 2 Windows requires that envs variables be string, not unicode
+    env = {str(key): str(value) for key, value in env.items()}
+    suffix = "bat" if utils.on_win else "sh"
+    test_script = join(metadata.config.test_dir,
+                        "conda_test_runner.{suffix}".format(suffix=suffix))
 
-        subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
-                  else metadata.config.host_subdir)
-        actions = environ.get_install_actions(metadata.config.test_prefix,
-                                              tuple(specs), 'host',
-                                              subdir=subdir,
-                                              debug=metadata.config.debug,
-                                              verbose=metadata.config.verbose,
-                                              locking=metadata.config.locking,
-                                              bldpkgs_dirs=tuple(metadata.config.bldpkgs_dirs),
-                                              timeout=metadata.config.timeout,
-                                              disable_pip=metadata.config.disable_pip,
-                                              max_env_retry=metadata.config.max_env_retry,
-                                              output_folder=metadata.config.output_folder,
-                                              channel_urls=tuple(metadata.config.channel_urls))
-        environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
-                           subdir=subdir, is_cross=metadata.is_cross)
-
-        with utils.path_prepended(metadata.config.test_prefix):
-            env = dict(os.environ.copy())
-            env.update(environ.get_dict(config=metadata.config, m=metadata,
-                                        prefix=metadata.config.test_prefix))
-            env["CONDA_BUILD_STATE"] = "TEST"
-            if env_path_backup_var_exists:
-                env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
-
-        if not metadata.config.activate:
-            # prepend bin (or Scripts) directory
-            env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
+    with open(test_script, 'w') as tf:
+        if not utils.on_win:
+            tf.write('set -x -e\n')
+        if metadata.config.activate:
+            ext = ".bat" if utils.on_win else ""
+            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
+                conda_root=utils.root_script_dir + os.path.sep,
+                source="call" if utils.on_win else "source",
+                ext=ext,
+                test_env=metadata.config.test_prefix))
             if utils.on_win:
-                env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
-
-        # set variables like CONDA_PY in the test environment
-        env.update(set_language_env_vars(metadata.config.variant))
-
-        # Python 2 Windows requires that envs variables be string, not unicode
-        env = {str(key): str(value) for key, value in env.items()}
-        suffix = "bat" if utils.on_win else "sh"
-        test_script = join(metadata.config.test_dir,
-                           "conda_test_runner.{suffix}".format(suffix=suffix))
-
-        with open(test_script, 'w') as tf:
-            if not utils.on_win:
-                tf.write('set -x -e\n')
-            if metadata.config.activate:
-                ext = ".bat" if utils.on_win else ""
-                tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                    conda_root=utils.root_script_dir + os.path.sep,
-                    source="call" if utils.on_win else "source",
-                    ext=ext,
-                    test_env=metadata.config.test_prefix))
+                tf.write("if errorlevel 1 exit 1\n")
+        if py_files:
+            test_python = metadata.config.test_python
+            # use pythonw for import tests when osx_is_app is set
+            if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
+                test_python = test_python + 'w'
+            tf.write('"{python}" -s "{test_file}"\n'.format(
+                python=test_python,
+                test_file=join(metadata.config.test_dir, 'run_test.py')))
+            if utils.on_win:
+                tf.write("if errorlevel 1 exit 1\n")
+        if pl_files:
+            tf.write('"{perl}" "{test_file}"\n'.format(
+                perl=metadata.config.perl_bin(metadata.config.test_prefix),
+                test_file=join(metadata.config.test_dir, 'run_test.pl')))
+            if utils.on_win:
+                tf.write("if errorlevel 1 exit 1\n")
+        if lua_files:
+            tf.write('"{lua}" "{test_file}"\n'.format(
+                lua=metadata.config.lua_bin(metadata.config.test_prefix),
+                test_file=join(metadata.config.test_dir, 'run_test.lua')))
+            if utils.on_win:
+                tf.write("if errorlevel 1 exit 1\n")
+        if r_files:
+            tf.write('"{r}" CMD BATCH "{test_file}"\n'.format(
+                r=metadata.config.r_bin(metadata.config.test_prefix),
+                test_file=join(metadata.config.test_dir, 'run_test.r')))
+            if utils.on_win:
+                tf.write("if errorlevel 1 exit 1\n")
+        if shell_files:
+            test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
+            if utils.on_win:
+                tf.write('call "{test_file}"\n'.format(test_file=test_file))
                 if utils.on_win:
                     tf.write("if errorlevel 1 exit 1\n")
-            if py_files:
-                test_python = metadata.config.test_python
-                # use pythonw for import tests when osx_is_app is set
-                if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
-                    test_python = test_python + 'w'
-                tf.write('"{python}" -s "{test_file}"\n'.format(
-                    python=test_python,
-                    test_file=join(metadata.config.test_dir, 'run_test.py')))
-                if utils.on_win:
-                    tf.write("if errorlevel 1 exit 1\n")
-            if pl_files:
-                tf.write('"{perl}" "{test_file}"\n'.format(
-                    perl=metadata.config.perl_bin(metadata.config.test_prefix),
-                    test_file=join(metadata.config.test_dir, 'run_test.pl')))
-                if utils.on_win:
-                    tf.write("if errorlevel 1 exit 1\n")
-            if lua_files:
-                tf.write('"{lua}" "{test_file}"\n'.format(
-                    lua=metadata.config.lua_bin(metadata.config.test_prefix),
-                    test_file=join(metadata.config.test_dir, 'run_test.lua')))
-                if utils.on_win:
-                    tf.write("if errorlevel 1 exit 1\n")
-            if r_files:
-                tf.write('"{r}" CMD BATCH "{test_file}"\n'.format(
-                    r=metadata.config.r_bin(metadata.config.test_prefix),
-                    test_file=join(metadata.config.test_dir, 'run_test.r')))
-                if utils.on_win:
-                    tf.write("if errorlevel 1 exit 1\n")
-            if shell_files:
-                test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
-                if utils.on_win:
-                    tf.write('call "{test_file}"\n'.format(test_file=test_file))
-                    if utils.on_win:
-                        tf.write("if errorlevel 1 exit 1\n")
-                else:
-                    # TODO: Run the test/commands here instead of in run_test.py
-                    tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
-                                                                        test_file=test_file))
-        if utils.on_win:
-            cmd = ['cmd.exe', "/d", "/c", test_script]
-        else:
-            cmd = [shell_path, '-x', '-e', test_script]
-        try:
-            utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
-        except subprocess.CalledProcessError:
-            tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
-                         config=metadata.config)
-            raise
-        if need_cleanup:
-            utils.rm_rf(recipe_dir)
-        print("TEST END:", test_package_name)
+            else:
+                # TODO: Run the test/commands here instead of in run_test.py
+                tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                    test_file=test_file))
+    if utils.on_win:
+        cmd = ['cmd.exe', "/d", "/c", test_script]
+    else:
+        cmd = [shell_path, '-x', '-e', test_script]
+    try:
+        utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
+    except subprocess.CalledProcessError:
+        tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
+                        config=metadata.config)
+        raise
+    if need_cleanup:
+        utils.rm_rf(recipe_dir)
+    print("TEST END:", test_package_name)
 
     return True
 
@@ -1678,19 +1702,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
-                            try:
-                                test(pkg, config=metadata.config)
-                            # IOError means recipe not included with package. use metadata
-                            except (OSError, IOError):
-                                # force the build string to line up - recomputing it would
-                                #    yield a different result
-                                index_contents = utils.package_has_file(pkg,
-                                                            'info/index.json').decode()
-                                build_str = json.loads(index_contents)['build']
-                                build_meta = dict_and_meta[1].meta.get('build', {})
-                                build_meta['string'] = build_str
-                                dict_and_meta[1].meta['build'] = build_meta
-                                test(dict_and_meta[1], config=metadata.config)
+                            test(pkg, config=metadata.config)
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
