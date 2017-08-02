@@ -205,8 +205,8 @@ def test_hash_build_id(testing_metadata):
             assert testing_metadata._hash_dependencies() == 'h32e72be'
             assert testing_metadata.build_id() == 'h32e72be_1'
     else:
-        assert testing_metadata._hash_dependencies() == 'hbcfeb9f'
-        assert testing_metadata.build_id() == 'hbcfeb9f_1'
+        assert testing_metadata._hash_dependencies() == 'hed137b3'
+        assert testing_metadata.build_id() == 'hed137b3_1'
 
 
 def test_hash_build_id_key_order(testing_metadata):
