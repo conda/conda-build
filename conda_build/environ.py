@@ -411,6 +411,10 @@ def meta_vars(meta, config):
     d['PKG_BUILDNUM'] = str(meta.build_number() or 0)
     if meta.final:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
+        d['PKG_HASH'] = meta.hash_dependencies()
+    else:
+        d['PKG_BUILD_STRING'] = 'placeholder'
+        d['PKG_HASH'] = '1234567'
     d['RECIPE_DIR'] = (meta.path if meta.path else
                        meta.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
     return d

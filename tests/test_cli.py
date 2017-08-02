@@ -85,7 +85,7 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
     metadata = api.render(testing_workdir, debug=False, verbose=False)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_render.execute(args)
-    _hash = metadata._hash_dependencies()
+    _hash = metadata.hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
                              "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
                                  sys.version_info.major, sys.version_info.minor, _hash))
@@ -101,7 +101,7 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
     metadata = api.render(testing_workdir, config=testing_config)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_build.execute(args)
-    _hash = metadata._hash_dependencies()
+    _hash = metadata.hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                                   "test_build_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
                                       sys.version_info.major, sys.version_info.minor, _hash))
@@ -120,7 +120,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metad
 
     main_build.execute(args)
 
-    _hash = metadata._hash_dependencies()
+    _hash = metadata.hash_dependencies()
     test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir, pkg)
     test_paths = [test_path(
         "test_build_output_build_path_multiple_recipes-1.0-py{}{}{}_1.tar.bz2".format(
@@ -216,7 +216,7 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
     args = ['--output', testing_workdir, '--python', version]
     main_render.execute(args)
 
-    _hash = metadata._hash_dependencies()
+    _hash = metadata.hash_dependencies()
     test_path = "test_render_output_build_path_set_python-1.0-py{}{}{}_1.tar.bz2".format(
                                       version.split('.')[0], version.split('.')[1], _hash)
     output, error = capfd.readouterr()

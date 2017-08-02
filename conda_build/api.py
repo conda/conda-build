@@ -89,7 +89,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     elif isinstance(recipe_path_or_metadata, string_types):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
-                            variants=variants, config=config, **kwargs)
+                            variants=variants, config=config, finalize=True, **kwargs)
     else:
         assert hasattr(recipe_path_or_metadata, 'config'), ("Expecting metadata object - got {}"
                                                             .format(recipe_path_or_metadata))

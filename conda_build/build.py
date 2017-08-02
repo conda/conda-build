@@ -207,12 +207,18 @@ def copy_recipe(m):
                 utils.copy_into(src_path, dst_path, timeout=output_metadata.config.timeout,
                                 locking=output_metadata.config.locking, clobber=True)
 
+        # hard code the build string, so that tests don't get it mixed up
+        build = output_metadata.meta.get('build', {})
+        build['string'] = output_metadata.build_id()
+        output_metadata.meta['build'] = build
+
         # just for lack of confusion, don't show outputs in final rendered recipes
         if 'outputs' in output_metadata.meta:
             del output_metadata.meta['outputs']
 
         utils.sort_list_in_nested_structure(output_metadata.meta,
                                             ('build/script', 'test/commands'))
+
         rendered = output_yaml(output_metadata)
 
         if not original_recipe or not open(original_recipe).read() == rendered:
@@ -1492,6 +1498,9 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                                             max_env_retry=metadata.config.max_env_retry,
                                             output_folder=metadata.config.output_folder,
                                             channel_urls=tuple(metadata.config.channel_urls))
+
+    # ensure that the test prefix isn't kept between variants
+    utils.rm_rf(metadata.config.test_prefix)
     environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
                         subdir=subdir, is_cross=metadata.is_cross)
 
