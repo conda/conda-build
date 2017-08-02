@@ -144,7 +144,8 @@ def test_no_include_recipe_config_arg(testing_metadata):
     # make sure that it is not there when the command line flag is passed
     testing_metadata.config.include_recipe = False
     testing_metadata.meta['build']['number'] = 2
-    output_file = api.build(testing_metadata)[0]
+    # We cannot test packages without recipes as we cannot render them
+    output_file = api.build(testing_metadata, notest=True)[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
 
