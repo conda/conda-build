@@ -1,0 +1,10 @@
+package:
+  name: scratch
+  version: 0
+
+build:
+  script: echo weee
+
+requirements:
+  build:
+    - python
