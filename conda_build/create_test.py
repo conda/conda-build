@@ -85,13 +85,16 @@ def create_shell_files(m, test_dir=None):
     commands = ensure_list(m.get_value('test/commands', []))
     if commands:
         with open(join(test_dir, name), 'a') as f:
+            if not on_win:
+                f.write('set -ex\n\n')
             f.write('\n\n')
             for cmd in commands:
                 f.write(cmd)
                 f.write('\n')
-                if sys.platform == 'win32':
+                if on_win:
                     f.write("if errorlevel 1 exit 1\n")
                 has_tests = True
+            f.write('exit 0\n')
 
     return has_tests
 
