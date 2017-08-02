@@ -1043,9 +1043,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             else:
                 build_file = join(m.path, 'build.sh')
                 if isfile(build_file) and script:
-                    raise CondaBuildException("Found a build.sh script and a build script "
+                    raise CondaBuildException("Found a build.sh script and a build/script section"
                                               "inside meta.yaml. Either remove the build.sh "
-                                              "script or remove the build script in meta.yaml.")
+                                              "script or remove the build/script section in meta.yaml.")
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
 
