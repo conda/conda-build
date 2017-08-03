@@ -8,7 +8,7 @@ import sys
 import six
 import yaml
 
-from conda_build.utils import ensure_list, HashableDict
+from conda_build.utils import ensure_list, HashableDict, trim_empty_keys
 from conda_build.conda_interface import string_types
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
@@ -257,6 +257,9 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
     # here's where we add in the zipped dimensions
     for group in _get_zip_groups(combined):
         dimensions.update(group)
+
+    # in case selectors nullify any groups - or else zip reduces whole set to nil
+    trim_empty_keys(dimensions)
 
     for x in product(*dimensions.values()):
         remapped = dict(six.moves.zip(dimensions, x))
