@@ -1062,8 +1062,8 @@ class MetaData(object):
                 # is this a subpackage?  If so, add only the files relevant to exactly this
                 if 'parent_recipe' in self.meta.get('extra', {}):
                     parent_recipe_path = self.meta['extra']['parent_recipe'].get('path')
-                    this_output = [out for out in self.meta.get('outputs', [])
-                                   if out.get('name') == self.name()][0]
+                    outputs = self.meta.get('outputs', [])
+                    this_output = [out for out in outputs if out.get('name') == self.name()][0]
                     install_script = this_output.get('script')
                     # # HACK: conda-build renames the actual test script from the recipe into
                     # #    run_test.* in the package.  This makes the test discovery code work.
@@ -1088,7 +1088,7 @@ class MetaData(object):
         trim_empty_keys(composite)
         return composite, sorted(file_paths)
 
-    def _hash_dependencies(self):
+    def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
         build_string_from_metadata - there's just too much info.  Instead, we keep that as-is, to
         not be disruptive, but we add this extra hash, which is just a way of distinguishing files
@@ -1108,24 +1108,29 @@ class MetaData(object):
         return hash_
 
     def build_id(self):
-        out = self.get_value('build/string')
-        if out:
-            check_bad_chrs(out, 'build/string')
-        else:
+        manual_build_string = re.search("\s*string:", self.extract_package_and_build_text())
+        # default; build/string not set
+        if not manual_build_string or re.findall('h\{\{\s*PKG_HASH\s*\}\}',
+                                                 manual_build_string.string):
             out = build_string_from_metadata(self)
-        if self.config.filename_hashing and self.final:
-            if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
-                ret = out.rsplit('_', 1)
-                try:
-                    int(ret[0])
-                    out = self._hash_dependencies() + '_' + str(ret[0])
-                except ValueError:
-                    out = ret[0] + self._hash_dependencies()
-                if len(ret) > 1:
-                    out = '_'.join([out] + ret[1:])
-            else:
-                out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, self._hash_dependencies(),
-                             out)
+            if self.config.filename_hashing and self.final:
+                if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
+                    ret = out.rsplit('_', 1)
+                    try:
+                        int(ret[0])
+                        out = self.hash_dependencies() + '_' + str(ret[0])
+                    except ValueError:
+                        out = ret[0] + self.hash_dependencies()
+                    if len(ret) > 1:
+                        out = '_'.join([out] + ret[1:])
+                else:
+                    out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length,
+                                 self.hash_dependencies(),
+                                 out)
+        # user setting their own build string.  Don't modify it.
+        else:
+            out = self.get_value('build/string')
+            check_bad_chrs(out, 'build/string')
         return out
 
     def dist(self):

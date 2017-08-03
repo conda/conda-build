@@ -54,7 +54,7 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
     build_path = api.get_output_file_path(os.path.join(testing_workdir, 'recipe'),
                                           config=testing_metadata.config,
                                           no_download_source=True)[0]
-    _hash = testing_metadata._hash_dependencies()
+    _hash = testing_metadata.hash_dependencies()
     python = ''.join(testing_metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_metadata.config.croot,
                                       testing_metadata.config.host_subdir,
@@ -65,7 +65,7 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
 def test_get_output_file_path_metadata_object(testing_metadata):
     testing_metadata.final = True
     build_path = api.get_output_file_path(testing_metadata)[0]
-    _hash = testing_metadata._hash_dependencies()
+    _hash = testing_metadata.hash_dependencies()
     python = ''.join(testing_metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_metadata.config.croot,
                                       testing_metadata.config.host_subdir,
@@ -80,16 +80,16 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
 
     # First get metadata with a recipe that is known to need a download:
     with pytest.raises((ValueError, SystemExit)):
-        build_path = api.get_output_file_path(recipe,
-                                              config=testing_config,
-                                              no_download_source=True)[0]
+        build_path = api.get_output_file_paths(recipe,
+                                               config=testing_config,
+                                               no_download_source=True)[0]
 
     metadata, need_download, need_reparse_in_env = api.render(
         recipe,
         config=testing_config,
         no_download_source=False)[0]
-    build_path = api.get_output_file_path(metadata)[0]
-    _hash = metadata._hash_dependencies()
+    build_path = api.get_output_file_paths(metadata)[0]
+    _hash = metadata.hash_dependencies()
     python = ''.join(metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_config.croot, testing_config.host_subdir,
                                       "conda-build-test-source-git-jinja2-1.20.2-"
@@ -116,3 +116,13 @@ def test_host_entries_finalized(testing_config):
     outputs = api.get_output_file_paths(recipe, config=testing_config)
     assert any('py27h' in out for out in outputs)
     assert any('py36h' in out for out in outputs)
+
+
+def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir):
+    testing_metadata.meta['build']['string'] = 'steve'
+    testing_metadata.meta['requirements']['build'] = ['zlib 1.2.8']
+
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    metadata = api.render(testing_workdir)[0][0]
+
+    assert metadata.build_id() == 'steve'

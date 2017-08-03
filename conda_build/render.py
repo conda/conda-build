@@ -337,8 +337,6 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
 
     if not rendered_metadata.meta.get('build'):
         rendered_metadata.meta['build'] = {}
-    # hard-code build string so that any future "renderings" can't go wrong based on user env
-    rendered_metadata.meta['build']['string'] = rendered_metadata.build_id()
 
     if build_unsat or host_unsat:
         rendered_metadata.final = False

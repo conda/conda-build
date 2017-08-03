@@ -129,9 +129,9 @@ def test_git_describe_info_on_branch(testing_config):
     recipe_path = os.path.join(metadata_dir, "_git_describe_number_branch")
     m = api.render(recipe_path, config=testing_config)[0][0]
     output = api.get_output_file_path(m)[0]
-    _hash = m._hash_dependencies()
+    # missing hash because we set custom build string in meta.yaml
     test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
-                    "git_describe_number_branch-1.20.2.0-{}_1_g82c6ba6.tar.bz2".format(_hash))
+                    "git_describe_number_branch-1.20.2.0-1_g82c6ba6.tar.bz2")
     assert test_path == output
 
 
@@ -172,7 +172,7 @@ def test_output_build_path_git_source(testing_workdir, testing_config):
     recipe_path = os.path.join(metadata_dir, "source_git_jinja2")
     m = api.render(recipe_path, config=testing_config)[0][0]
     output = api.get_output_file_paths(m)[0]
-    _hash = m._hash_dependencies()
+    _hash = m.hash_dependencies()
     test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
                     "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
                         sys.version_info.major, sys.version_info.minor, _hash))
@@ -426,7 +426,7 @@ def test_build_metadata_object(testing_metadata):
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
     m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
-    _hash = m._hash_dependencies()
+    _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \
                             "load_setup_py_test-1.0a1-np111py{0}{1}{2}_1.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
