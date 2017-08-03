@@ -1,3 +1,40 @@
+2017-08-02 3.0.9:
+
+Enhancements:
+-------------
+
+* store test files specifed by test/source_files directly in packages.  This allows testing of packages that do not include recipes.  Recommendation: make subpackages for large data files.  #2232
+* add new syntax to get_value for accessing list items, such as multiple sources  #2247
+* add independently configurable source cache path (--cache-dir)  #2249
+* add PKG_HASH env var, available in meta.yaml.  Use this to put the package hash where you want it in your custom build/string field in meta.yaml.  #2250
+
+Bug fixes:
+----------
+
+* Fix test python using incorrect metadata config object, and then using wrong prefix  #2226
+* Allow testing multiple conda packages or folders at once with wildcard CLI arguments  #2227
+* Fallback path for ruamel_yaml to ruamel.yaml  #2233
+* raise exception when both build/script in meta.yaml and build script (build.sh/bld.bat) are provided  #2238
+* Fix unclosed file handle when loading setup.py data #2242
+* Fix 'path' source with multiple source  #2247
+* improve compatibility with conda 4.4  #2248
+* remove hash from manually-specified build/string fields.  Use new PKG_HASH env var instead.  #2250
+* fix windows activate scripts getting included in windows packages  #2251
+* ignore feature records in index for 'conda inspect'  #2253
+* fix variant handling when variants affect the downloaded source (need re-extract, re-parse with new source at each step)  #2254
+
+Contributors:
+-------------
+
+* @Bezier89
+* @jjhelmus
+* @kalefranz
+* @msarahan
+* @mandeep
+* @mingwandroid
+* @stuarteberg
+
+
 2017-07-20 3.0.8:
 
 Bug fixes:
