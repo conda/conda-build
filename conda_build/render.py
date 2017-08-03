@@ -352,8 +352,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
 
 
 def try_download(metadata, no_download_source):
-    need_source_download = (metadata.get_section('source') and
-                            len(os.listdir(metadata.config.work_dir)) == 0)
+    need_source_download = len(os.listdir(metadata.config.work_dir)) == 0
     if need_source_download and not no_download_source:
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
@@ -387,7 +386,6 @@ def reparse(metadata):
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         allow_no_other_outputs=False, bypass_env_check=False):
     rendered_metadata = {}
-    need_reparse_in_env = False
     need_source_download = True
 
     # don't bother distributing python if it's a noarch package
@@ -402,7 +400,12 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     metadata.config.input_variants = variants
 
     recipe_requirements = metadata.extract_requirements_text()
-
+    recipe_package_and_build_text = metadata.extract_package_and_build_text()
+    recipe_text = recipe_package_and_build_text + recipe_requirements
+    if PY3 and hasattr(recipe_text, 'decode'):
+        recipe_text = recipe_text.decode()
+    elif not PY3 and hasattr(recipe_text, 'encode'):
+        recipe_text = recipe_text.encode()
     for variant in variants:
         mv = metadata.copy()
 
@@ -417,15 +420,12 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         mv.config.variant = variant
         conform_dict = {}
         for key in vars_in_recipe:
-            if PY3 and hasattr(recipe_requirements, 'decode'):
-                recipe_requirements = recipe_requirements.decode()
-            elif not PY3 and hasattr(recipe_requirements, 'encode'):
-                recipe_requirements = recipe_requirements.encode()
             # We use this variant in the top-level recipe.
             # constrain the stored variants to only this version in the output
             #     variant mapping
-            if re.search(r"\s+\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_requirements):
-                conform_dict[key] = variant[key]
+            if re.search(r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_text):
+                if key in variant:
+                    conform_dict[key] = variant[key]
 
         conform_dict.update({key: val for key, val in variant.items()
                                   if key in mv.meta.get('requirements').get('build', []) +
@@ -457,22 +457,26 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             numpy_pinned_variants.append(_variant)
         mv.config.variants = numpy_pinned_variants
 
-        if not need_reparse_in_env:
-            mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
-                                    bypass_env_check=bypass_env_check)
-            need_source_download = (bool(mv.meta.get('source')) and
-                                    not mv.needs_source_for_render and
-                                    not os.listdir(mv.config.work_dir))
-            # if python is in the build specs, but doesn't have a specific associated
-            #    version, make sure to add one to newly parsed 'requirements/build'.
-            for env in ('build', 'host', 'run'):
-                utils.insert_variant_versions(mv, env)
-            fm = mv.copy()
-            # HACK: trick conda-build into thinking this is final, and computing a hash based
-            #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
-            #     our ability to differentiate configurations
-            fm.final = True
-            rendered_metadata[fm.dist()] = (mv, need_source_download, need_reparse_in_env)
+        if mv.needs_source_for_render and mv.variant_in_source:
+            mv.parse_again()
+            utils.rm_rf(mv.config.work_dir)
+            source.provide(mv)
+            mv.parse_again()
+        mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
+                                bypass_env_check=bypass_env_check)
+        need_source_download = (bool(mv.meta.get('source')) and
+                                not mv.needs_source_for_render and
+                                not os.listdir(mv.config.work_dir))
+        # if python is in the build specs, but doesn't have a specific associated
+        #    version, make sure to add one to newly parsed 'requirements/build'.
+        for env in ('build', 'host', 'run'):
+            utils.insert_variant_versions(mv, env)
+        fm = mv.copy()
+        # HACK: trick conda-build into thinking this is final, and computing a hash based
+        #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
+        #     our ability to differentiate configurations
+        fm.final = True
+        rendered_metadata[fm.dist()] = (mv, need_source_download, None)
 
     # list of tuples.
     # each tuple item is a tuple of 3 items:

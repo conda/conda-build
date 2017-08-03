@@ -18,7 +18,10 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
         setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
     elif os.path.exists(work_dir):
         cd_to_work = True
-        cwd = os.getcwd()
+        try:
+            cwd = os.getcwd()
+        except OSError:
+            cwd = recipe_dir or work_dir
         os.chdir(work_dir)
         if not os.path.isabs(setup_file):
             setup_file = os.path.join(work_dir, setup_file)

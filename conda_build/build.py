@@ -1055,8 +1055,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 build_file = join(m.path, 'build.sh')
                 if isfile(build_file) and script:
                     raise CondaBuildException("Found a build.sh script and a build/script section"
-                                              "inside meta.yaml. Either remove the build.sh "
-                                              "script or remove the build/script section in meta.yaml.")
+                                              "inside meta.yaml. Either remove the build.sh script "
+                                              "or remove the build/script section in meta.yaml.")
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
 
@@ -1177,7 +1177,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
-                    if len(outputs) > 1 or output_d.get('requirements', {}).get('build', {}):
+                    output_reqs = output_d.get('requirements', {})
+                    if len(outputs) > 1 or output_reqs and (isinstance(output_reqs, list) or
+                                                            output_reqs.get('build', {})):
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)

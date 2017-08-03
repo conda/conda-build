@@ -837,19 +837,20 @@ def test_workdir_removal_warning(testing_config, caplog):
         assert "work dir is removed" in str(exc)
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'),
-                    reason="cross compiler packages created only on Linux right now")
-@pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
-                   reason="not completely implemented yet")
-def test_cross_compiler(testing_workdir, testing_config, capfd):
-    # TODO: testing purposes.  Package from @mingwandroid's channel, copied to conda_build_test
-    testing_config.channel_urls = ('conda_build_test', )
-    # activation is necessary to set the appropriate toolchain env vars
-    testing_config.activate = True
-    # testing_config.debug = True
-    recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
-    output = api.build(recipe_dir, config=testing_config)[0]
-    assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
+# @pytest.mark.serial
+# @pytest.mark.skipif(not sys.platform.startswith('linux'),
+#                     reason="cross compiler packages created only on Linux right now")
+# @pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
+#                    reason="not completely implemented yet")
+# def test_cross_compiler(testing_workdir, testing_config, capfd):
+#     # TODO: testing purposes.  Package from @mingwandroid's channel, copied to conda_build_test
+#     testing_config.channel_urls = ('conda_build_test', )
+#     # activation is necessary to set the appropriate toolchain env vars
+#     testing_config.activate = True
+#     # testing_config.debug = True
+#     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
+#     output = api.build(recipe_dir, config=testing_config)[0]
+#     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
 
 
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
