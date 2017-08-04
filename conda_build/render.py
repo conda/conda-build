@@ -29,7 +29,7 @@ from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
-                                  conform_variants_to_value)
+                                  conform_variants_to_value, list_of_dicts_to_dict_of_lists)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
@@ -396,6 +396,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     # These are always the full set.  just 'variants' is the one that gets
     #     used mostly, and can be reduced
     metadata.config.input_variants = variants
+    squished_variants = list_of_dicts_to_dict_of_lists(variants)
 
     recipe_requirements = metadata.extract_requirements_text()
     recipe_package_and_build_text = metadata.extract_package_and_build_text()
@@ -423,7 +424,18 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     variant mapping
             if re.search(r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_text):
                 if key in variant:
-                    conform_dict[key] = variant[key]
+                    variant_index = squished_variants[key].index(variant[key])
+                    zipped_keys = [key]
+                    if 'zip_keys' in variant:
+                        zip_key_groups = variant['zip_keys']
+                        if zip_key_groups and not isinstance(zip_key_groups[0], list):
+                            zip_key_groups = [zip_key_groups]
+                        for group in zip_key_groups:
+                            if key in group:
+                                zipped_keys = group
+                                break
+                    for zipped_key in zipped_keys:
+                        conform_dict[zipped_key] = squished_variants[zipped_key][variant_index]
 
         conform_dict.update({key: val for key, val in variant.items()
                                   if key in mv.meta.get('requirements').get('build', []) +

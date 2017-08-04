@@ -95,6 +95,12 @@ def ns_cfg(config):
     for feature, value in feature_list:
         d[feature] = value
     d.update(os.environ)
+    for k, v in config.variant.items():
+        if k not in d:
+            try:
+                d[k] = int(v)
+            except (TypeError, ValueError):
+                d[k] = v
     return d
 
 
@@ -124,19 +130,20 @@ def parseNameNotFound(error):
 # We evaluate the selector and return True (keep this line) or False (drop this line)
 # If we encounter a NameError (unknown variable in selector), then we replace it by False and
 #     re-run the evaluation
-def eval_selector(selector_string, namespace):
+def eval_selector(selector_string, namespace, variants_in_place):
     try:
         # TODO: is there a way to do this without eval?  Eval allows arbitrary
         #    code execution.
         return eval(selector_string, namespace, {})
     except NameError as e:
         missing_var = parseNameNotFound(e)
-        print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
+        if variants_in_place:
+            print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
         next_string = selector_string.replace(missing_var, "False")
-        return eval_selector(next_string, namespace)
+        return eval_selector(next_string, namespace, variants_in_place)
 
 
-def select_lines(data, namespace):
+def select_lines(data, namespace, variants_in_place):
     lines = []
 
     for i, line in enumerate(data.splitlines()):
@@ -153,13 +160,16 @@ def select_lines(data, namespace):
         if m:
             cond = m.group(3)
             try:
-                if eval_selector(cond, namespace):
+                if eval_selector(cond, namespace, variants_in_place):
                     lines.append(m.group(1) + trailing_quote)
-            except:
+            except Exception as e:
                 sys.exit('''\
 Error: Invalid selector in meta.yaml line %d:
+offending line:
 %s
-''' % (i + 1, line))
+exception:
+%s
+''' % (i + 1, line, str(e)))
         else:
             lines.append(line)
     return '\n'.join(lines) + '\n'
@@ -270,7 +280,7 @@ def ensure_matching_hashes(output_metadata):
 
 
 def parse(data, config, path=None):
-    data = select_lines(data, ns_cfg(config))
+    data = select_lines(data, ns_cfg(config), variants_in_place=bool(config.variant))
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:

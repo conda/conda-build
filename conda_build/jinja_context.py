@@ -74,7 +74,8 @@ class FilteredLoader(jinja2.BaseLoader):
         from .metadata import select_lines, ns_cfg
         contents, filename, uptodate = self._unfiltered_loader.get_source(environment,
                                                                           template)
-        return select_lines(contents, ns_cfg(self.config)), filename, uptodate
+        return (select_lines(contents, ns_cfg(self.config),
+                             variants_in_place=bool(self.config.variant)), filename, uptodate)
 
 
 def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,

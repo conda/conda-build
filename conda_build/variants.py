@@ -48,7 +48,7 @@ def parse_config_file(path, config):
     from conda_build.metadata import select_lines, ns_cfg
     with open(path) as f:
         contents = f.read()
-    contents = select_lines(contents, ns_cfg(config))
+    contents = select_lines(contents, ns_cfg(config), variants_in_place=False)
     content = yaml.load(contents, Loader=yaml.loader.BaseLoader)
     return content
 
@@ -278,6 +278,40 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
                     del remapped[k]
         dicts.append(remapped)
     return dicts
+
+
+def list_of_dicts_to_dict_of_lists(list_of_dicts):
+    """Opposite of above function.
+
+    Take broken out collection of variants, and squish it into a dict, where each value is a list.
+    Only squishes string/int values; does "update" for dict keys
+    """
+    if not list_of_dicts:
+        return
+    squished = {}
+    all_zip_keys = set()
+    if 'zip_keys' in list_of_dicts[0]:
+        if ('zip_keys' in list_of_dicts[0]['zip_keys'] and
+                isinstance(list_of_dicts[0]['zip_keys'][0], list)):
+            groups = list_of_dicts[0]['zip_keys']
+        else:
+            groups = [list_of_dicts[0]['zip_keys']]
+        for group in groups:
+            for item in group:
+                all_zip_keys.add(item)
+    for variant in list_of_dicts:
+        for k, v in variant.items():
+            if hasattr(v, 'keys'):
+                existing_value = squished.get(k, {})
+                existing_value.update(v)
+                squished[k] = existing_value
+            elif isinstance(v, list):
+                squished[k] = squished.get(k, set()) | {tuple(v)}
+            else:
+                squished[k] = squished.get(k, []) + ensure_list(v)
+                if k not in all_zip_keys:
+                    squished[k] = list(set(squished[k]))
+    return squished
 
 
 def conform_variants_to_value(list_of_dicts, dict_of_values):
