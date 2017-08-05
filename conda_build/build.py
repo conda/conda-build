@@ -1073,7 +1073,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     work_file = join(m.config.work_dir, 'conda_build.sh')
                     with open(work_file, 'w') as bf:
                         for k, v in env.items():
-                            bf.write('export {0}="{1}"\n'.format(k, v))
+                            if v:
+                                bf.write('export {0}="{1}"\n'.format(k, v))
 
                         if m.config.activate:
                             bf.write('source "{0}activate" "{1}"\n'
