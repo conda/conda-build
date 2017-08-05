@@ -46,7 +46,7 @@ test {{ JINJA_VAR[:2] }} # [abc] stuff yes
 {{ environ["test"] }}  # [abc]
 """
 
-    assert select_lines(lines, {'abc': True}) == """
+    assert select_lines(lines, {'abc': True}, variants_in_place=True) == """
 test
 test [abc] no
 test [abc] # no
@@ -61,7 +61,7 @@ test {{ JINJA_VAR[:2] }}
 test {{ JINJA_VAR[:2] }}
 {{ environ["test"] }}
 """
-    assert select_lines(lines, {'abc': False}) == """
+    assert select_lines(lines, {'abc': False}, variants_in_place=True) == """
 test
 test [abc] no
 test [abc] # no
