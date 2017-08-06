@@ -46,7 +46,7 @@ from .conda_interface import dist_str_in_index, Dist
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index
-from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse,
+from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
                                 distribute_variants, expand_outputs, try_download)
 import conda_build.os_utils.external as external
 from conda_build.metadata import MetaData
@@ -1306,8 +1306,20 @@ def warn_on_use_of_SRC_DIR(metadata):
                              "or pass the --no-remove-work-dir flag.")
 
 
-def construct_metadata_for_test(recipedir_or_package, config):
-    recipe_dir, need_cleanup = utils.get_recipe_abspath(recipedir_or_package)
+def _construct_metadata_for_test_from_recipe(recipe_dir, config):
+    config.need_cleanup = False
+    hash_input = {}
+    metadata = render_recipe(recipe_dir, config=config, reset_build_id=False)[0][0]
+    if metadata.meta.get('test', {}).get('source_files'):
+        if not os.listdir(metadata.config.work_dir):
+            try_download(metadata, no_download_source=False)
+    if not metadata.final:
+        metadata = finalize_metadata(metadata)
+    return metadata, hash_input
+
+
+def _construct_metadata_for_test_from_package(package, config):
+    recipe_dir, need_cleanup = utils.get_recipe_abspath(package)
     config.need_cleanup = need_cleanup
     hash_input = {}
 
@@ -1327,10 +1339,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
             config.filename_hashing = False
             hash_input = {}
 
-    if os.path.isdir(recipedir_or_package):
-        local_location = os.path.dirname(recipe_dir)
-    else:
-        local_location = os.path.dirname(recipedir_or_package)
+    local_location = os.path.dirname(package)
     # strip off extra subdir folders
     for platform in ('win', 'linux', 'osx'):
         if os.path.basename(local_location).startswith(platform + "-"):
@@ -1378,6 +1387,14 @@ def construct_metadata_for_test(recipedir_or_package, config):
                 try_download(metadata, no_download_source=False)
 
     return metadata, hash_input
+
+
+def construct_metadata_for_test(recipedir_or_package, config):
+    if os.path.isdir(recipedir_or_package) or os.path.basename(recipedir_or_package) == 'meta.yaml':
+        m, hash_input = _construct_metadata_for_test_from_recipe(recipedir_or_package, config)
+    else:
+        m, hash_input = _construct_metadata_for_test_from_package(recipedir_or_package, config)
+    return m, hash_input
 
 
 def test(recipedir_or_package_or_metadata, config, move_broken=True):
