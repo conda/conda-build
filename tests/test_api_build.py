@@ -1142,3 +1142,12 @@ def test_copy_test_source_files(testing_config):
         else:
             assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
     assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
+
+
+@pytest.mark.skipif(not on_win, reason="windows-only variables tested here")
+def test_cpu_vars_win(testing_metadata):
+    testing_metadata.meta['build']['script'] = ['echo %PROCESSOR_ARCHITECTURE%',
+            ("python -c \"import os; "
+             "assert os.environ['PROCESSOR_ARCHITECTURE'] == 'AMD64', "
+             "'PROCESSOR_ARCHITECTURE is {}'.format(os.environ['PROCESSOR_ARCHITECTURE'])\"")]
+    api.build(testing_metadata)
