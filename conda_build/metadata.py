@@ -924,7 +924,7 @@ class MetaData(object):
             if len(section_data) == 0:
                 section_data = {}
             else:
-                section_data = section_data[0]
+                section_data = section_data[index]
                 assert isinstance(section_data, dict), \
                     "Expected {}/{} to be a dict".format(section, index)
 
