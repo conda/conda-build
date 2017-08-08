@@ -65,6 +65,30 @@ def test_build_without_channel_fails(testing_workdir):
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
+def test_render_add_channel():
+    """This recipe requires the conda_build_test_requirement package, which is
+    only on the conda_build_test channel. This verifies that the -c argument
+    works for rendering."""
+    with TemporaryDirectory() as tmpdir:
+        rendered_filename = os.path.join(tmpdir, 'out.yaml')
+        args = ['-c', 'conda_build_test', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
+        main_render.execute(args)
+        rendered_meta = yaml.load(open(rendered_filename, 'r'))
+        required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if 'conda_build_test_requirement' in pkg][0]
+        required_package_details = required_package_string.split(' ')
+        assert len(required_package_details) > 1, "Expected version number on successful rendering, but got only {}".format(required_package_details)
+        assert required_package_details[1] == '1.0', "Expected version number 1.0 on successful rendering, but got {}".format(required_package_details[1])
+
+def test_render_without_channel_fails():
+    # do make extra channel available, so the required package should not be found
+    with TemporaryDirectory() as tmpdir:
+        rendered_filename = os.path.join(tmpdir, 'out.yaml')
+        args = ['--override-channels', '-c', 'conda', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
+        main_render.execute(args)
+        rendered_meta = yaml.load(open(rendered_filename, 'r'))
+        required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if 'conda_build_test_requirement' in pkg][0]
+        assert required_package_string == 'conda_build_test_requirement', \
+               "Expected to get only base package name because it should not be found, but got :{}".format(required_package_string)
 
 def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
