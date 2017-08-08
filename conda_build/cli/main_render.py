@@ -8,8 +8,9 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import sys
+import os
 
-from conda_build.conda_interface import ArgumentParser, add_parser_channels, cc_conda_build
+from conda_build.conda_interface import ArgumentParser, add_parser_channels, cc_conda_build, url_path
 
 from conda_build import __version__, api
 
@@ -141,6 +142,21 @@ def execute(args):
     config = get_or_merge_config(None, **args.__dict__)
     variants = get_package_variants(args.recipe, config)
     set_language_env_vars(variants)
+
+    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
+    config.channel_urls = []
+
+    for url in channel_urls:
+        # allow people to specify relative or absolute paths to local channels
+        #    These channels still must follow conda rules - they must have the
+        #    appropriate platform-specific subdir (e.g. win-64)
+        if os.path.isdir(url):
+            if not os.path.isabs(url):
+                url = os.path.normpath(os.path.abspath(os.path.join(os.getcwd(), url)))
+            url = url_path(url)
+        config.channel_urls.append(url)
+
+    config.override_channels = args.override_channels
 
     metadata_tuples = api.render(args.recipe, config=config,
                                  no_download_source=args.no_source)
