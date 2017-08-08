@@ -85,6 +85,7 @@ def create_shell_files(m, test_dir=None):
     commands = ensure_list(m.get_value('test/commands', []))
     if commands:
         with open(join(test_dir, name), 'a') as f:
+            f.write('\n\n')
             if not on_win:
                 f.write('set -ex\n\n')
             f.write('\n\n')
