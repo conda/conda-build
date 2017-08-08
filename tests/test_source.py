@@ -63,6 +63,11 @@ def test_multiple_different_sources(testing_metadata):
     assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'f1', 'a'))
     assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'f2', 'README.md'))
 
+    # Test get_value() indexing syntax.
+    assert testing_metadata.get_value('source/url') == testing_metadata.meta['source'][0]['url']
+    assert testing_metadata.get_value('source/0/url') == testing_metadata.meta['source'][0]['url']
+    assert (testing_metadata.get_value('source/1/git_url')
+            == testing_metadata.meta['source'][1]['git_url'])
 
 def test_git_into_existing_populated_folder_raises(testing_metadata):
     """Git will not clone into a non-empty folder.  This should raise an exception."""
