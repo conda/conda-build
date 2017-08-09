@@ -82,7 +82,7 @@ class TarCheck(object):
 
     def correct_subdir(self):
         info = json.loads(self.t.extractfile('info/index.json').read().decode('utf-8'))
-        assert info['subdir'] in [self.config.host_subdir, 'noarch'], \
+        assert info['subdir'] in [self.config.host_subdir, 'noarch', self.config.target_subdir], \
             ("Inconsistent subdir in package - index.json expecting {0},"
              " got {1}".format(self.config.host_subdir, info['subdir']))
 
