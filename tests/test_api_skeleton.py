@@ -4,6 +4,16 @@ import sys
 from pkg_resources import parse_version
 import pytest
 
+try:
+    import ruamel_yaml
+except ImportError:
+    try:
+        import ruamel.yaml as ruamel_yaml
+    except ImportError:
+        raise ImportError("No ruamel_yaml library available.\n"
+                          "To proceed, conda install ruamel_yaml")
+
+
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
 
@@ -152,3 +162,35 @@ def test_setuptools_test_requirements(testing_workdir):
     api.skeletonize(packages='hdf5storage', repo='pypi')
     m = api.render('hdf5storage')[0][0]
     assert m.meta['test']['requires'] == ['nose >=1.0']
+
+
+@pytest.mark.serial
+def test_pypi_section_order_preserved(testing_workdir):
+    """
+    Test whether sections have been written in the correct order.
+    """
+    from conda_build.render import FIELDS
+    from conda_build.skeletons.pypi import (ABOUT_ORDER,
+                                            REQUIREMENTS_ORDER,
+                                            PYPI_META_STATIC)
+
+    api.skeletonize(packages='sympy', repo='pypi')
+    # Since we want to check the order of items in the recipe (not whether
+    # the metadata values themselves are sensible), read the file as (ordered)
+    # yaml, and check the order.
+    with open('sympy/meta.yaml', 'r') as file:
+        lines = [l for l in file.readlines() if not l.startswith("{%")]
+
+    # The loader below preserves the order of entries...
+    recipe = ruamel_yaml.load('\n'.join(lines),
+                              Loader=ruamel_yaml.RoundTripLoader)
+
+    major_sections = list(recipe.keys())
+    # Blank fields are omitted when skeletonizing, so prune any missing ones
+    # before comparing.
+    pruned_fields = [f for f in FIELDS if f in major_sections]
+    assert major_sections == pruned_fields
+    assert list(recipe['about']) == ABOUT_ORDER
+    assert list(recipe['requirements']) == REQUIREMENTS_ORDER
+    for k, v in PYPI_META_STATIC.items():
+        assert list(v.keys()) == list(recipe[k])

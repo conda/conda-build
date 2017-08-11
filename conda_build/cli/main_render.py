@@ -10,7 +10,8 @@ import logging
 import sys
 import os
 
-from conda_build.conda_interface import ArgumentParser, add_parser_channels, cc_conda_build, url_path
+from conda_build.conda_interface import (ArgumentParser, add_parser_channels, cc_conda_build,
+                                         url_path)
 
 from conda_build import __version__, api
 
