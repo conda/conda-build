@@ -700,7 +700,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             setuptools_build = False
             setuptools_run = False
         d['build_depends'] = ['setuptools'] * setuptools_build + deps
-        d['run_depends'] = ['setuptools'] * setuptools_run + deps
+        # Never add setuptools to runtime dependencies.
+        d['run_depends'] = deps
 
         if recursive:
             for dep in deps:
