@@ -239,3 +239,10 @@ def test_subpackage_hash_inputs(testing_config):
         else:
             assert utils.package_has_file(out, 'info/recipe/install-script.sh')
             assert utils.package_has_file(out, 'info/recipe/build.sh')
+
+
+def test_overlapping_files(testing_config, caplog):
+    recipe_dir = os.path.join(subpackage_dir, '_overlapping_files')
+    outputs = api.build(recipe_dir, config=testing_config)
+    assert len(outputs) == 3
+    assert caplog.text().count('Exact overlap') == 2

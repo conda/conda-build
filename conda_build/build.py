@@ -1239,6 +1239,17 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(config=m.config, m=m)
                     built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
+                    # warn about overlapping files.
+                    if 'checksums' in output_d:
+                        for file, csum in output_d['checksums'].items():
+                            for _, prev_om in new_pkgs.items():
+                                prev_output_d, _ = prev_om
+                                if file in prev_output_d['checksums']:
+                                    prev_csum = prev_output_d['checksums'][file]
+                                    nature = 'Exact' if csum == prev_csum else 'Inexact'
+                                    log.warn("{} overlap between {} in packages {} and {}"
+                                             .format(nature, file, output_d['name'],
+                                                     prev_output_d['name']))
                     new_pkgs[built_package] = (output_d, m)
 
                     # must rebuild index because conda has no way to incrementally add our last
