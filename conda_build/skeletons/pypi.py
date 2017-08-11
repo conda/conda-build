@@ -80,23 +80,26 @@ PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 
 """
 
+# To preserve order of the output in each of the sections the data type
+# needs to be ordered.
+# The top-level ordering is irrelevant because the write order of 'package',
+# etc. is determined by EXPECTED_SECTION_ORDER.
 PYPI_META_STATIC = {
-    'package': {
-        'name': '{{ name|lower }}',
-        'version': '{{ version }}',
-    },
-    'source': {
-        'fn': '{{ name }}-{{ version }}.tar.gz',
-        'url': 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz',  # NOQA
-        '{{ hash_type }}': '{{ hash_value }}',
-
-    },
-    'build': {
-        'number': 0,
-    },
-    'extra': {
-        'recipe-maintainers': ''
-    },
+    'package': ruamel_yaml.comments.CommentedMap([
+        ('name', '{{ name|lower }}'),
+        ('version', '{{ version }}'),
+    ]),
+    'source': ruamel_yaml.comments.CommentedMap([
+        ('fn', '{{ name }}-{{ version }}.tar.gz'),
+        ('url', 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz'),  # NOQA
+        ('{{ hash_type }}', '{{ hash_value }}'),
+    ]),
+    'build': ruamel_yaml.comments.CommentedMap([
+        ('number', 0),
+    ]),
+    'extra': ruamel_yaml.comments.CommentedMap([
+        ('recipe-maintainers', '')
+    ]),
 }
 
 # Note the {} formatting bits here
@@ -285,7 +288,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 try:
                     ordered_recipe[key] = PYPI_META_STATIC[key]
                 except KeyError:
-                    ordered_recipe[key] = {}
+                    ordered_recipe[key] = ruamel_yaml.comments.CommentedMap()
 
             if d['entry_points']:
                 ordered_recipe['build']['entry_points'] = d['entry_points']
@@ -299,7 +302,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                                                       '--record=record.txt')
 
             # Always require python as a dependency
-            ordered_recipe['requirements'] = {}
+            ordered_recipe['requirements'] = ruamel_yaml.comments.CommentedMap()
             ordered_recipe['requirements']['build'] = ['python'] + ensure_list(d['build_depends'])
             ordered_recipe['requirements']['run'] = ['python'] + ensure_list(d['run_depends'])
 
@@ -312,7 +315,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if d['tests_require']:
                 ordered_recipe['test']['requires'] = d['tests_require']
 
-            ordered_recipe['about'] = {}
+            ordered_recipe['about'] = ruamel_yaml.comments.CommentedMap()
 
             for key in ABOUT_ORDER:
                 try:
