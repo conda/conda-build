@@ -288,7 +288,8 @@ def dict_from_cran_lines(lines):
             line = line.split(':')
             if len(line) < 2 and line[0] in CRAN_KEYS_CAN_BE_BLANK:
                 continue
-            (k, v) = line[:2]
+            k = line[0]
+            v = ':'.join(line[1:])
         except ValueError:
             sys.exit("Error: Could not parse metadata (%s)" % line)
         d[k.strip()] = v.strip()
