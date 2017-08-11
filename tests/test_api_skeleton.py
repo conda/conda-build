@@ -193,4 +193,4 @@ def test_pypi_section_order_preserved(testing_workdir):
     assert list(recipe['about']) == ABOUT_ORDER
     assert list(recipe['requirements']) == REQUIREMENTS_ORDER
     for k, v in PYPI_META_STATIC.items():
-        assert v.keys() == list(recipe[k])
+        assert list(v.keys()) == list(recipe[k])
