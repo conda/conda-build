@@ -1,3 +1,34 @@
+2017-08-11 3.0.10:
+
+Enhancements:
+-------------
+
+* Provide variant variables for use in selector expressions  #2258
+
+Bug fixes:
+----------
+
+* fix ordering of recipe elements in skeletonized pypi recipes  #2230
+* Trim empty variant sections (due to selectors) prior to zipping keys  #2258
+* Don't set blank env vars in build scripts  #2259
+* Fix testing with recipe paths  #2262
+* add newlines to test scripts  #2265
+* Fix render command not considering provided channels  #2267
+* fix get_value being hardcoded to only first entry  #2268
+* fix setting target (target platform) in output section causing tarcheck validation error  #2271
+* don't add setuptools to runtime dependencies in skeletonized pypi recipes (only build)  #2272
+
+Contributors:
+-------------
+
+* @chaubold
+* @msarahan
+* @mwcraig
+* @neok-m4700
+* @ratstache
+* @stuarteberg
+
+
 2017-08-02 3.0.9:
 
 Enhancements:
