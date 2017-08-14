@@ -1747,6 +1747,9 @@ class MetaData(object):
                     self.config.variants)
         return variants.get_loop_vars(_variants)
 
+    def get_variants_as_dict_of_lists(self):
+        return variants.list_of_dicts_to_dict_of_lists(self.config.variants)
+
     def clean(self):
         """This ensures that clean is called with the correct build id"""
         self.config.clean()

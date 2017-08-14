@@ -57,7 +57,8 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                     except (DependencyNeedsBuildingError, NoPackagesFoundError):
                         if not permit_unsatisfiable_variants:
                             raise
-                output_metas[om.dist()] = ((om, download, render_in_env))
+                output_metas[om.dist(), om.config.variant.get('target_platform')] = \
+                    ((om, download, render_in_env))
     return list(output_metas.values())
 
 
