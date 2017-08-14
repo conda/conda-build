@@ -91,7 +91,11 @@ def hoist_single_extracted_folder(nested_folder):
     flist = os.listdir(nested_folder)
     parent = os.path.dirname(nested_folder)
     for thing in flist:
-        shutil.move(os.path.join(nested_folder, thing), os.path.join(parent, thing))
+        if not os.path.isdir(os.path.join(parent, thing)):
+            shutil.move(os.path.join(nested_folder, thing), os.path.join(parent, thing))
+        else:
+            copy_into(os.path.join(nested_folder, thing), os.path.join(parent, thing))
+            nested_folder = os.path.join(nested_folder, thing)
     rm_rf(nested_folder)
 
 
