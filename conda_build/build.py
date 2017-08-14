@@ -881,6 +881,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
     if env_path_backup_var_exists:
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
+    # this should be a no-op if source is already here
+    if m.needs_source_for_render:
+        try_download(m, False)
+
     if post in [False, None]:
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
