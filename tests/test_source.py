@@ -66,8 +66,9 @@ def test_multiple_different_sources(testing_metadata):
     # Test get_value() indexing syntax.
     assert testing_metadata.get_value('source/url') == testing_metadata.meta['source'][0]['url']
     assert testing_metadata.get_value('source/0/url') == testing_metadata.meta['source'][0]['url']
-    assert (testing_metadata.get_value('source/1/git_url')
-            == testing_metadata.meta['source'][1]['git_url'])
+    assert (testing_metadata.get_value('source/1/git_url') ==
+            testing_metadata.meta['source'][1]['git_url'])
+
 
 def test_git_into_existing_populated_folder_raises(testing_metadata):
     """Git will not clone into a non-empty folder.  This should raise an exception."""
@@ -99,3 +100,24 @@ def test_source_user_expand(testing_workdir):
                 source_dict = {"url": os.path.join(prefix, os.path.basename(tmp), "cb-test.tar.bz2")}
                 with TemporaryDirectory() as tmp2:
                     download_to_cache(tmp2, '', source_dict)
+
+
+def test_hoist_same_name(testing_workdir):
+    testdir = os.path.join(testing_workdir, 'test', 'test')
+    outer_dir = os.path.join(testing_workdir, 'test')
+    os.makedirs(testdir)
+    with open(os.path.join(testdir, 'somefile'), 'w') as f:
+        f.write('weeeee')
+    source.hoist_single_extracted_folder(outer_dir)
+    assert os.path.isfile(os.path.join(outer_dir, 'somefile'))
+    assert not os.path.isdir(testdir)
+
+
+def test_hoist_different_name(testing_workdir):
+    testdir = os.path.join(testing_workdir, 'test')
+    os.makedirs(testdir)
+    with open(os.path.join(testdir, 'somefile'), 'w') as f:
+        f.write('weeeee')
+    source.hoist_single_extracted_folder(testdir)
+    assert os.path.isfile(os.path.join(testing_workdir, 'somefile'))
+    assert not os.path.isdir(testdir)
