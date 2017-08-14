@@ -153,9 +153,14 @@ def test_variants_in_output_names():
     assert len(outputs) == 4
 
 
-def test_variants_in_versions_with_setup_py_data(testing_metadata, testing_workdir):
+def test_variants_in_versions_with_setup_py_data(testing_workdir):
     recipe = os.path.join(recipe_dir, '12_variant_versions')
     outputs = api.get_output_file_paths(recipe)
     assert len(outputs) == 2
     assert any(os.path.basename(pkg).startswith('my_package-470.470') for pkg in outputs)
     assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
+
+
+def test_git_variables_with_variants(testing_workdir, testing_config):
+    recipe = os.path.join(recipe_dir, '13_git_vars')
+    api.build(recipe, config=testing_config)
