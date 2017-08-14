@@ -1504,6 +1504,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
                 else metadata.config.host_subdir)
+    utils.rm_rf(metadata.config.test_prefix)
     actions = environ.get_install_actions(metadata.config.test_prefix,
                                             tuple(specs), 'host',
                                             subdir=subdir,
@@ -1518,7 +1519,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                                             channel_urls=tuple(metadata.config.channel_urls))
 
     # ensure that the test prefix isn't kept between variants
-    utils.rm_rf(metadata.config.test_prefix)
     environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
                         subdir=subdir, is_cross=metadata.is_cross)
 
