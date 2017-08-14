@@ -563,11 +563,12 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         rendered_metadata = [(m, False, False), ]
     else:
         index, index_ts = get_build_index(m.config.build_subdir,
-                                        bldpkgs_dir=m.config.bldpkgs_dir,
-                                        output_folder=m.config.output_folder,
-                                        channel_urls=m.config.channel_urls,
-                                        debug=m.config.debug, verbose=m.config.verbose,
-                                        locking=m.config.locking, timeout=m.config.timeout)
+                                          bldpkgs_dir=m.config.bldpkgs_dir,
+                                          output_folder=m.config.output_folder,
+                                          channel_urls=m.config.channel_urls,
+                                          omit_defaults=m.config.override_channels,
+                                          debug=m.config.debug, verbose=m.config.verbose,
+                                          locking=m.config.locking, timeout=m.config.timeout)
         # when building, we don't want to fully expand all outputs into metadata, only expand
         #    whatever variants we have.
         variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
