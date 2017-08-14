@@ -1089,9 +1089,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 open(history_file, 'a').close()
 
                             if m.is_cross:
-                                # HACK: we need both build and host envs
-                                #     "active" - i.e. on PATH, and with their
-                                #     activate.d scripts sourced. Conda only
+                                # HACK: we need both build and host envs "active" - i.e. on PATH,
+                                #     and with their activate.d scripts sourced. Conda only
                                 #     lets us activate one, though. This is a
                                 #     vile hack to trick conda into "stacking"
                                 #     two environments.
@@ -1110,6 +1109,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                         os.makedirs(dirname(history_file))
                                     open(history_file, 'a').close()
                                 bf.write('unset CONDA_PATH_BACKUP\n')
+                                bf.write('export CONDA_MAX_SHLVL=2\n')
                                 bf.write('source "{0}activate" "{1}"\n'
                                          .format(utils.root_script_dir + os.path.sep,
                                                  m.config.host_prefix))

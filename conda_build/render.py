@@ -449,7 +449,10 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                 compiler_key = '{}_compiler'.format(match)
                 conform_dict[compiler_key] = variant.get(compiler_key,
                                         native_compiler(match, mv.config))
-                conform_dict['target_platform'] = variant['target_platform']
+
+        # target_platform is *always* a locked dimension, because top-level recipe is always
+        #    particular to a platform.
+        conform_dict['target_platform'] = variant['target_platform']
 
         build_reqs = mv.meta.get('requirements', {}).get('build', [])
         host_reqs = mv.meta.get('requirements', {}).get('host', [])
@@ -486,7 +489,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
         #     our ability to differentiate configurations
         fm.final = True
-        rendered_metadata[fm.dist()] = (mv, need_source_download, None)
+        rendered_metadata[(fm.dist(), fm.config.variant['target_platform'])] = \
+                          (mv, need_source_download, None)
 
     # list of tuples.
     # each tuple item is a tuple of 3 items:

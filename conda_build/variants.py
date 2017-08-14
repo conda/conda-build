@@ -290,6 +290,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
         return
     squished = {}
     all_zip_keys = set()
+    groups = None
     if 'zip_keys' in list_of_dicts[0]:
         if ('zip_keys' in list_of_dicts[0]['zip_keys'] and
                 isinstance(list_of_dicts[0]['zip_keys'][0], list)):
@@ -311,6 +312,12 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
                 squished[k] = squished.get(k, []) + ensure_list(v)
                 if k not in all_zip_keys:
                     squished[k] = list(set(squished[k]))
+    # reduce the combinatoric space of the zipped keys, too:
+    if groups:
+        for group in groups:
+            values = list(zip(*set(zip(*(squished[key] for key in group)))))
+            for idx, key in enumerate(group):
+                squished[key] = values[idx]
     return squished
 
 
@@ -364,5 +371,6 @@ def get_loop_vars(variants):
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
     special_keys = ('pin_run_as_build', 'zip_keys', 'ignore_version')
-    return [k for k in variants[0] if k not in special_keys and
+    loop_vars = [k for k in variants[0] if k not in special_keys and
             any(variant[k] != variants[0][k] for variant in variants[1:])]
+    return loop_vars
