@@ -1680,7 +1680,7 @@ class MetaData(object):
                           "the conda-build tracker at https://github.com/conda/conda-build/issues")
 
         # format here is {output_dict: metadata_object}
-        render_order = toposort(out_metadata_map, phase='build')
+        render_order = toposort(out_metadata_map, phase='run')
         check_circular_dependencies(render_order)
 
         conda_packages = OrderedDict()
