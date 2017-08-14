@@ -82,7 +82,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('_host_arch', None),
             Setting('filename_hashing', True),
             Setting('keep_old_work', False),
-            Setting('_src_cache_root', None),
+            Setting('_src_cache_root', cc_conda_build.get('cache_dir')),
             Setting('copy_test_source_files', True),
 
             Setting('index', None),
@@ -136,6 +136,8 @@ class Config(object):
         # default variant is set in render's distribute_variants
         self.variant = variant or {}
         self.set_keys(**kwargs)
+        if self._src_cache_root:
+            self._src_cache_root = os.path.expanduser(self._src_cache_root)
 
     def _set_attribute_from_kwargs(self, kwargs, attr, default):
         value = kwargs.get(attr, getattr(self, attr) if hasattr(self, attr) else default)
@@ -177,7 +179,8 @@ class Config(object):
         croot = kwargs.get('croot')
 
         if source_cache:
-            self._src_cache_root = os.path.abspath(os.path.normpath(source_cache))
+            self._src_cache_root = os.path.abspath(os.path.normpath(
+                os.path.expanduser(source_cache)))
         if croot:
             self._croot = os.path.abspath(os.path.normpath(croot))
         else:
