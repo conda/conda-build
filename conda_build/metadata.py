@@ -1448,6 +1448,7 @@ class MetaData(object):
             match = re.search(r'(^requirements:.*?)(^test:|^extra:|^about:|^outputs:|\Z)',
                               recipe_text, flags=re.MULTILINE | re.DOTALL)
             text = match.group(1) if match else ""
+        text = select_lines(text, ns_cfg(self.config), variants_in_place=bool(self.config.variant))
         return text
 
     def extract_source_text(self):
@@ -1460,6 +1461,7 @@ class MetaData(object):
             match = re.search(r'(\s*source:.*?)(^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',  # NOQA
                               recipe_text, flags=re.MULTILINE | re.DOTALL)
             text = match.group(1) if match else ""
+        text = select_lines(text, ns_cfg(self.config), variants_in_place=bool(self.config.variant))
         return text
 
     def extract_package_and_build_text(self):
@@ -1472,6 +1474,7 @@ class MetaData(object):
             match = re.search(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',
                               recipe_text, flags=re.MULTILINE | re.DOTALL)
             text = match.group(1) if match else ""
+        text = select_lines(text, ns_cfg(self.config), variants_in_place=bool(self.config.variant))
         return text
 
     @property
