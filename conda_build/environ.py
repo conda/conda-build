@@ -1,33 +1,32 @@
 from __future__ import absolute_import, division, print_function
 
 import contextlib
-from glob import glob
 import json
 import logging
 import multiprocessing
 import os
 import re
+import subprocess
 import sys
 import warnings
 from collections import defaultdict
+from glob import glob
 from os.path import join, normpath
-import subprocess
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import root_dir, symlink_conda, pkgs_dirs
-from .conda_interface import PaddingError, LinkError, LockError, NoPackagesFoundError, CondaError
-from .conda_interface import package_cache
-from .conda_interface import install_actions, display_actions, execute_actions, execute_plan
+from .conda_interface import CondaError, LinkError, LockError, NoPackagesFoundError, PaddingError
+from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import memoized
+from .conda_interface import package_cache
+from .conda_interface import pkgs_dirs, root_dir, symlink_conda
 
-
-from conda_build.os_utils import external
 from conda_build import utils
-from conda_build.features import feature_list
-from conda_build.utils import prepend_bin_path, ensure_list
-from conda_build.index import get_build_index
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.features import feature_list
+from conda_build.index import get_build_index
+from conda_build.os_utils import external
+from conda_build.utils import ensure_list, prepend_bin_path
 from conda_build.variants import get_default_variants
 
 
@@ -447,7 +446,10 @@ def get_shlib_ext():
         raise NotImplementedError(sys.platform)
 
 
-def windows_vars(prefix):
+def windows_vars(prefix, config):
+    # We have gone for the clang values here.
+    win_arch = 'i386' if config.arch == 32 else 'amd64'
+    win_msvc = '19.0.0' if sys.py_ver[0] >= 3 else '15.0.0'
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
     return {
@@ -490,6 +492,7 @@ def windows_vars(prefix):
         'PROCESSOR_ARCHITEW6432': os.getenv('PROCESSOR_ARCHITEW6432'),
         'PROCESSOR_ARCHITECTURE': os.getenv('PROCESSOR_ARCHITECTURE'),
         'PROCESSOR_IDENTIFIER': os.getenv('PROCESSOR_IDENTIFIER'),
+        'BUILD': win_arch + '-pc-windows-' + win_msvc,
     }
 
 
@@ -517,6 +520,7 @@ def osx_vars(compiler_vars, config):
         'MACOSX_DEPLOYMENT_TARGET': MACOSX_DEPLOYMENT_TARGET,
         'LC_ALL': os.getenv('LC_ALL', ''),
         'LANG': os.getenv('LANG', ''),
+        'BUILD': OSX_ARCH + '-apple-darwin13.4.0',
     }
 
 
@@ -527,8 +531,11 @@ def linux_vars(compiler_vars, prefix, config):
     else:
         compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
     if config.arch == 32:
+        arch = 'i686'
         compiler_vars['CFLAGS'] += ' -m32'
         compiler_vars['CXXFLAGS'] += ' -m32'
+    else:
+        arch = 'x86_64'
     return {
         # There is also QEMU_SET_ENV, but that needs to be
         # filtered so it only contains the result of `linux_vars`
@@ -540,6 +547,7 @@ def linux_vars(compiler_vars, prefix, config):
         'DISPLAY': os.getenv('DISPLAY'),
         'LC_ALL': os.getenv('LC_ALL', ''),
         'LANG': os.getenv('LANG', ''),
+        'BUILD': arch + '-conda_cos6-linux-gnu',
     }
 
 
@@ -565,7 +573,7 @@ def system_vars(env_dict, prefix, config):
         d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
-        d.update(windows_vars(prefix))
+        d.update(windows_vars(prefix, config))
     else:
         d.update(unix_vars(prefix))
 
