@@ -453,7 +453,7 @@ def post_build(m, files, prefix, build_python, croot):
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
-        if binary_relocation is True or (isinstance(f, list) and f in binary_relocation):
+        if binary_relocation is True or (isinstance(binary_relocation, list) and f in binary_relocation):
             mk_relative(m, f, prefix)
 
 
