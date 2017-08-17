@@ -449,7 +449,7 @@ def get_shlib_ext():
 def windows_vars(prefix, config):
     # We have gone for the clang values here.
     win_arch = 'i386' if config.arch == 32 else 'amd64'
-    win_msvc = '19.0.0' if sys.py_ver[0] >= 3 else '15.0.0'
+    win_msvc = '19.0.0' if PY3 else '15.0.0'
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
     return {

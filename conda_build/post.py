@@ -226,7 +226,9 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
     if noarch:
         rm_pyc(files, prefix)
     else:
-        compile_missing_pyc(files, cwd=prefix, python_exe=config.build_python,
+        python_exe = (config.build_python if os.path.isfile(config.build_python) else
+                      config.host_python)
+        compile_missing_pyc(files, cwd=prefix, python_exe=python_exe,
                             skip_compile_pyc=skip_compile_pyc)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
@@ -453,7 +455,8 @@ def post_build(m, files, prefix, build_python, croot):
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
-        if binary_relocation is True or (isinstance(binary_relocation, list) and f in binary_relocation):
+        if binary_relocation is True or (isinstance(binary_relocation, list) and
+                                         f in binary_relocation):
             mk_relative(m, f, prefix)
 
 

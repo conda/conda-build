@@ -641,6 +641,8 @@ def post_process_files(m, initial_prefix_files):
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
     current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
 
+    python = (m.config.build_python if os.path.isfile(m.config.build_python) else
+              m.config.host_python)
     post_process(sorted(current_prefix_files - initial_prefix_files),
                     prefix=m.config.host_prefix,
                     config=m.config,
@@ -659,7 +661,7 @@ def post_process_files(m, initial_prefix_files):
         sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
 This error usually comes from using conda in the build script.  Avoid doing this, as it
 can lead to packages that include their dependencies.""" % meta_files))
-    post_build(m, new_files, prefix=m.config.host_prefix, build_python=m.config.build_python,
+    post_build(m, new_files, prefix=m.config.host_prefix, build_python=python,
                croot=m.config.croot)
 
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
@@ -1519,6 +1521,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
                 else metadata.config.host_subdir)
+    # ensure that the test prefix isn't kept between variants
     utils.rm_rf(metadata.config.test_prefix)
     actions = environ.get_install_actions(metadata.config.test_prefix,
                                             tuple(specs), 'host',
@@ -1533,7 +1536,6 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                                             output_folder=metadata.config.output_folder,
                                             channel_urls=tuple(metadata.config.channel_urls))
 
-    # ensure that the test prefix isn't kept between variants
     environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
                         subdir=subdir, is_cross=metadata.is_cross)
 
