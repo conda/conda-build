@@ -1,3 +1,36 @@
+2017-08-17 3.0.11:
+
+Enhancements:
+-------------
+
+* set BUILD environment variable (triplet used by cross-compiling)  #2285
+* respect condarc cache_dir setting for changing the source cache dir location #2278
+* run selectors before returning meta.yaml extractions  #2284
+
+Bug fixes:
+----------
+
+* fix CRAN skeleton field truncation with ; characters  #2274
+* Warn about overlapping files in subpackages within a recipe  #2275
+* fix --override-channels not taking effect  #2277
+* fix double-activation on Windows for cross compiling  #2280
+* fix variant entry duplication with zipped keys  #2280
+* fix folder hoisting when folder name in archive matches package name  #2281
+* fix test env showing old cached packages when test env has actually been removed  #2282
+* fix source code not being present for render when source necessary for render and more than one variant  #2283
+* fix binary_relocation not allowing lists of files  #2288
+* fix incorrect python (or none at all) being used for pyc compilation with python only in host reqs  #2290
+
+Contributors:
+-------------
+
+* @dsludwig
+* @jdblischak
+* @jjhelmus
+* @mingwandroid
+* @msarahan
+
+
 2017-08-11 3.0.10:
 
 Enhancements:
