@@ -507,7 +507,7 @@ def unix_vars(prefix):
 
 def osx_vars(compiler_vars, config):
     OSX_ARCH = 'i386' if config.arch == 32 else 'x86_64'
-    MACOSX_DEPLOYMENT_TARGET = os.environ.get('MACOSX_DEPLOYMENT_TARGET', '10.7')
+    MACOSX_DEPLOYMENT_TARGET = os.environ.get('MACOSX_DEPLOYMENT_TARGET', '10.9')
 
     compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
