@@ -189,12 +189,10 @@ def yamlize(data):
 
 
 def ensure_valid_fields(meta):
-    try:
-        pin_depends = meta['build']['pin_depends']
-    except KeyError:
-        pin_depends = ''
-    if pin_depends not in ('', 'record', 'strict'):
-        raise RuntimeError("build/pin_depends cannot be '%s'" % pin_depends)
+    pin_depends = meta.get('build', {}).get('pin_depends', '')
+    if pin_depends and pin_depends not in ('', 'record', 'strict'):
+        raise RuntimeError("build/pin_depends must be 'record' or 'strict' - "
+                           "not '%s'" % pin_depends)
 
 
 def _trim_None_strings(meta_dict):
@@ -1562,6 +1560,10 @@ class MetaData(object):
             if re.search(r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, self.extract_source_text()):
                 return True
         return False
+
+    @property
+    def pin_depends(self):
+        return self.get_value('build/pin_depends', '').lower()
 
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
         output_metadata.meta['package']['name'] = output_dict.get('name', self.name())

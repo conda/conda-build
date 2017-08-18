@@ -4,6 +4,7 @@ should go in test_render.py
 """
 
 import os
+import re
 
 import mock
 import pytest
@@ -126,3 +127,11 @@ def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir)
     metadata = api.render(testing_workdir)[0][0]
 
     assert metadata.build_id() == 'steve'
+
+
+def test_pin_depends(testing_config):
+    """This is deprecated functionality - replaced by the more general variants pinning scheme"""
+    recipe = os.path.join(metadata_dir, '_pin_depends_strict')
+    m = api.render(recipe, config=testing_config)[0][0]
+    # the recipe python is not pinned, but having pin_depends set will force it to be.
+    assert any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])

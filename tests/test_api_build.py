@@ -950,12 +950,6 @@ def test_recursion_layers(testing_config):
     api.build(recipe, config=testing_config)
 
 
-def test_pin_depends(testing_metadata):
-    """This is deprecated functionality - replaced by the more general variants pinning scheme"""
-    testing_metadata.meta['build']['pin_depends'] = 'record'
-    api.build(testing_metadata)
-
-
 @pytest.mark.skipif(sys.platform != 'win32', reason=("spaces break openssl prefix "
                                                      "replacement on *nix"))
 def test_croot_with_spaces(testing_metadata, testing_workdir):
@@ -1142,3 +1136,19 @@ def test_copy_test_source_files(testing_config):
         else:
             assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
     assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
+
+
+def test_pin_depends(testing_config):
+    """purpose of 'record' argument is to put a 'requires' file that records pinned run
+    dependencies
+    """
+    recipe = os.path.join(metadata_dir, '_pin_depends_record')
+    m = api.render(recipe, config=testing_config)[0][0]
+    # the recipe python is not pinned, and having pin_depends set to record will not show it in record
+    assert not any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
+    output = api.build(m, config=testing_config)[0]
+    requires = package_has_file(output, 'info/requires')
+    assert requires
+    if PY3 and hasattr(requires, 'decode'):
+        requires = requires.decode()
+    assert re.search('python\=[23]\.', requires), "didn't find pinned python in info/requires"

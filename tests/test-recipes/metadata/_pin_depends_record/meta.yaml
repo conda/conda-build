@@ -1,0 +1,10 @@
+package:
+  name: pintest
+  version: 1.0
+
+build:
+  pin_depends: record
+
+requirements:
+  run:
+    - python
