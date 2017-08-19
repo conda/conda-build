@@ -100,8 +100,8 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
     args = ['--no-anaconda-upload', '--no-activate', testing_workdir, '--old-build-string']
     main_build.execute(args)
     output, error = capfd.readouterr()
-    assert not re.search('h[0-9a-f]{%d}' % testing_metadata.config.hash_length, output)
-    assert not re.search('h[0-9a-f]{%d}' % testing_metadata.config.hash_length, error)
+    assert not re.search('test_no_filename_hash.*h[0-9a-f]{%d}' % testing_metadata.config.hash_length, output)
+    assert not re.search('test_no_filename_hash.*h[0-9a-f]{%d}' % testing_metadata.config.hash_length, error)
 
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):

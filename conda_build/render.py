@@ -169,7 +169,14 @@ def get_upstream_pins(m, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
     additional_specs = []
+
+    # this attribute is added in the first pass of finalize_outputs_pass
+    raw_specs = (m.original_meta.get('requirements', {}).get(env, []) if hasattr(m, 'original_meta')
+                 else [])
+    explicit_specs = [req.split(' ')[0] for req in raw_specs]
     linked_packages = actions.get('LINK', [])
+    linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
+
     # edit the plan to download all necessary packages
     for key in ('LINK', 'EXTRACT', 'UNLINK'):
         if key in actions:
@@ -183,8 +190,8 @@ def get_upstream_pins(m, actions, env):
                                       channel_urls=m.config.channel_urls,
                                       debug=m.config.debug, verbose=m.config.verbose,
                                       locking=m.config.locking, timeout=m.config.timeout)
-
     if actions:
+        # this is to force the download
         execute_actions(actions, index, verbose=m.config.debug)
         ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
@@ -377,6 +384,7 @@ def reparse(metadata):
     py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
     metadata.parse_until_resolved()
+    metadata.original_meta = metadata.meta.copy()
     metadata = finalize_metadata(metadata)
     return metadata
 
@@ -452,7 +460,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 
         # target_platform is *always* a locked dimension, because top-level recipe is always
         #    particular to a platform.
-        conform_dict['target_platform'] = variant['target_platform']
+        conform_dict['target_platform'] = variant.get('target_platform', metadata.config.subdir)
 
         build_reqs = mv.meta.get('requirements', {}).get('build', [])
         host_reqs = mv.meta.get('requirements', {}).get('host', [])
@@ -489,8 +497,9 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
         #     our ability to differentiate configurations
         fm.final = True
-        rendered_metadata[(fm.dist(), fm.config.variant['target_platform'])] = \
-                          (mv, need_source_download, None)
+        rendered_metadata[(fm.dist(),
+                           fm.config.variant.get('target_platform', fm.config.subdir))] = \
+                                    (mv, need_source_download, None)
 
     # list of tuples.
     # each tuple item is a tuple of 3 items:

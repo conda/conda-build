@@ -1017,8 +1017,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         with utils.path_prepended(m.config.build_prefix):
             try_download(m, no_download_source=False)
-        if need_source_download:
-            m.final = False
+        if need_source_download and not m.final:
             m.parse_until_resolved(allow_no_other_outputs=True)
 
         elif need_reparse_in_env:

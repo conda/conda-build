@@ -51,7 +51,7 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
     testing_metadata = render.finalize_metadata(testing_metadata)
     api.output_yaml(testing_metadata, 'recipe/meta.yaml')
 
-    build_path = api.get_output_file_path(os.path.join(testing_workdir, 'recipe'),
+    build_path = api.get_output_file_paths(os.path.join(testing_workdir, 'recipe'),
                                           config=testing_metadata.config,
                                           no_download_source=True)[0]
     _hash = testing_metadata.hash_dependencies()
@@ -64,7 +64,7 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
 
 def test_get_output_file_path_metadata_object(testing_metadata):
     testing_metadata.final = True
-    build_path = api.get_output_file_path(testing_metadata)[0]
+    build_path = api.get_output_file_paths(testing_metadata)[0]
     _hash = testing_metadata.hash_dependencies()
     python = ''.join(testing_metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_metadata.config.croot,

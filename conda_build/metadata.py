@@ -616,7 +616,12 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
                 log.info("Attempting to finalize metadata for {}".format(metadata.name()))
+            if pass_no == 0:
+                base_metadata.original_meta = base_metadata.meta.copy()
             om = base_metadata.copy()
+            # store a copy of the metadata before finalization, so that we know what is
+            #     original stuff.  This is especially important for only applying run_exports
+            #     to things that are actually specified in the recipe, not installed as deps.
             # match up the old variant with the current one from this output
             om.config.variant = metadata.config.variant
             if not hasattr(om, 'other_outputs'):
@@ -1046,7 +1051,7 @@ class MetaData(object):
         composite['requirements'] = requirements
         if 'copy_test_source_files' in self.meta.get('extra', {}):
             composite['extra'] = HashableDict({'copy_test_source_files':
-                                               self.meta['extra']['copy_test_source_files']})
+                            str(self.meta['extra']['copy_test_source_files']).lower() == 'true'})
 
         # remove the build number from the hash, so that we can bump it without changing the hash
         if 'number' in composite['build']:
@@ -1658,92 +1663,96 @@ class MetaData(object):
         from conda_build.source import provide
         out_metadata_map = {}
 
-        for variant in (self.config.variants if hasattr(self.config, 'variants')
-                        else [self.config.variant]):
-            om = self.copy()
-            om.final = False
-            om.config.variant = variant
-            if om.needs_source_for_render and om.variant_in_source:
-                om.parse_again()
-                utils.rm_rf(om.config.work_dir)
-                provide(om)
-                om.parse_again()
-            om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
-            outputs = get_output_dicts_from_metadata(om)
+        if self.final:
+            outputs = get_output_dicts_from_metadata(self)[0]
+            output_tuples = [(outputs, self)]
+        else:
+            for variant in (self.config.variants if hasattr(self.config, 'variants')
+                            else [self.config.variant]):
+                om = self.copy()
+                om.config.variant = variant
+                if om.needs_source_for_render and om.variant_in_source:
+                    om.parse_again()
+                    utils.rm_rf(om.config.work_dir)
+                    provide(om)
+                    om.parse_again()
+                om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+                outputs = get_output_dicts_from_metadata(om)
 
-            try:
-                for out in outputs:
-                    out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
-            except SystemExit:
-                if not permit_undefined_jinja:
-                    raise
-                out_metadata_map = {}
+                try:
+                    for out in outputs:
+                        out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
+                except SystemExit:
+                    if not permit_undefined_jinja:
+                        raise
+                    out_metadata_map = {}
 
-        assert out_metadata_map, ("Error: output metadata set is empty.  Please file an issue on "
-                          "the conda-build tracker at https://github.com/conda/conda-build/issues")
+            assert out_metadata_map, ("Error: output metadata set is empty.  Please file an issue"
+                    " on the conda-build tracker at https://github.com/conda/conda-build/issues")
 
-        # format here is {output_dict: metadata_object}
-        render_order = toposort(out_metadata_map, phase='run')
-        check_circular_dependencies(render_order)
+            # format here is {output_dict: metadata_object}
+            render_order = toposort(out_metadata_map, phase='run')
+            check_circular_dependencies(render_order)
 
-        conda_packages = OrderedDict()
-        non_conda_packages = []
-        for output_d, m in render_order.items():
-            if not output_d.get('type') or output_d['type'] == 'conda':
-                conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
-            elif output_d.get('type') == 'wheel':
-                if (not output_d.get('requirements', {}).get('build') or
-                        not any('wheel' in req for req in output_d['requirements']['build'])):
-                    build_reqs = output_d.get('requirements', {}).get('build', [])
-                    build_reqs.extend(['wheel', 'python {}'.format(m.config.variant['python'])])
-                    output_d['requirements'] = output_d.get('requirements', {})
-                    output_d['requirements']['build'] = build_reqs
-                    m.meta['requirements'] = m.meta.get('requirements', {})
-                    m.meta['requirements']['build'] = build_reqs
-                non_conda_packages.append((output_d, m))
-            else:
-                # for wheels and other non-conda packages, just append them at the end.
-                #    no deduplication with hashes currently.
-                # hard part about including any part of output_d
-                #    outside of this func is that it is harder to
-                #    obtain an exact match elsewhere
-                non_conda_packages.append((output_d, m))
+            conda_packages = OrderedDict()
+            non_conda_packages = []
+            for output_d, m in render_order.items():
+                if not output_d.get('type') or output_d['type'] == 'conda':
+                    conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
+                elif output_d.get('type') == 'wheel':
+                    if (not output_d.get('requirements', {}).get('build') or
+                            not any('wheel' in req for req in output_d['requirements']['build'])):
+                        build_reqs = output_d.get('requirements', {}).get('build', [])
+                        build_reqs.extend(['wheel', 'python {}'.format(m.config.variant['python'])])
+                        output_d['requirements'] = output_d.get('requirements', {})
+                        output_d['requirements']['build'] = build_reqs
+                        m.meta['requirements'] = m.meta.get('requirements', {})
+                        m.meta['requirements']['build'] = build_reqs
+                    non_conda_packages.append((output_d, m))
+                else:
+                    # for wheels and other non-conda packages, just append them at the end.
+                    #    no deduplication with hashes currently.
+                    # hard part about including any part of output_d
+                    #    outside of this func is that it is harder to
+                    #    obtain an exact match elsewhere
+                    non_conda_packages.append((output_d, m))
 
-        # early stages don't need to do the finalization.  Skip it until the later stages
-        #     when we need it.
-        if not permit_undefined_jinja:
-            # The loop above gives us enough info to determine the build order.  After that,
-            #    we can "finalize" the metadata (fill in version pins) for the build metadata.
-            #    This does not, however, account for circular dependencies
-            #    where a runtime exact dependency pin on a downstream build
-            #    subpackage in an upstream subpackage changes the upstream's
-            #    hash, which then changes the downstream package's hash, which
-            #    then recurses infinitely
+            # early stages don't need to do the finalization.  Skip it until the later stages
+            #     when we need it.
+            if not permit_undefined_jinja:
+                # The loop above gives us enough info to determine the build order.  After that,
+                #    we can "finalize" the metadata (fill in version pins) for the build metadata.
+                #    This does not, however, account for circular dependencies
+                #    where a runtime exact dependency pin on a downstream build
+                #    subpackage in an upstream subpackage changes the upstream's
+                #    hash, which then changes the downstream package's hash, which
+                #    then recurses infinitely
 
-            # In general, given upstream a and downstream b, b can depend on a
-            # exactly, but a can only have version constraints on b at run or
-            # run_exports, not exact=True
+                # In general, given upstream a and downstream b, b can depend on a
+                # exactly, but a can only have version constraints on b at run or
+                # run_exports, not exact=True
 
-            # 3 passes here:
-            #    1. fill in fully-resolved build-time dependencies
-            #    2. fill in fully-resolved run-time dependencies.  Note that circular dependencies
-            #       are allowed, but you can't have exact=True for circular run-time dependencies
-            #    3. finally, everything should be filled in and done.
-            conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
-                                permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+                # 3 passes here:
+                #    1. fill in fully-resolved build-time dependencies
+                #    2. fill in fully-resolved run-time dependencies.  Note that circular deps
+                #       are allowed, but you can't have exact=True for circular run-time deps
+                #    3. finally, everything should be filled in and done.
+                conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
 
-            # Sanity check: if any exact pins of any subpackages, make sure that they match
-            ensure_matching_hashes(conda_packages)
-        # We arbitrarily mark all output metadata as final, regardless of if it truly is or not.
-        #    This is done to add sane hashes to unfinalizable packages, so that they are
-        #    differentiable from one another.  This is mostly a test concern than an actual one,
-        #    as any "final" recipe returned here will still barf if anyone tries to actually build
-        #    it.
-        final_conda_packages = []
-        for (out_d, m) in conda_packages.values():
-            m.final = True
-            final_conda_packages.append((out_d, m))
-        return final_conda_packages + non_conda_packages
+                # Sanity check: if any exact pins of any subpackages, make sure that they match
+                ensure_matching_hashes(conda_packages)
+            # We arbitrarily mark all output metadata as final, regardless of if it truly is or not.
+            #    This is done to add sane hashes to unfinalizable packages, so that they are
+            #    differentiable from one another.  This is mostly a test concern than an actual one,
+            #    as any "final" recipe returned here will still barf if anyone tries to actually
+            #    build it.
+            final_conda_packages = []
+            for (out_d, m) in conda_packages.values():
+                m.final = True
+                final_conda_packages.append((out_d, m))
+            output_tuples = final_conda_packages + non_conda_packages
+        return output_tuples
 
     def get_loop_vars(self):
         _variants = (self.config.input_variants if hasattr(self.config, 'input_variants') else
