@@ -28,9 +28,9 @@ import encodings.idna  # NOQA
 import yaml
 
 # used to get version
-from .conda_interface import envs_dirs, env_path_backup_var_exists
+from .conda_interface import env_path_backup_var_exists
 from .conda_interface import PY3
-from .conda_interface import prefix_placeholder, linked
+from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
 from .conda_interface import text_type
@@ -41,7 +41,7 @@ from .conda_interface import get_rc_urls
 from .conda_interface import url_path
 from .conda_interface import cc_platform, root_dir, pkgs_dirs
 from .conda_interface import conda_private
-from .conda_interface import dist_str_in_index, Dist
+from .conda_interface import dist_str_in_index
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -164,16 +164,6 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
         fo.write(data)
     os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
     return data
-
-
-# TODO: this is mostly duplicated with the scheme of pin_run_as_build.  Could be refactored
-#     away, probably.
-def get_run_dists(m, env='host'):
-    prefix = join(envs_dirs[0], '_run')
-    utils.rm_rf(prefix)
-    environ.create_env(prefix, [ms.spec for ms in m.ms_depends('run')], config=m.config,
-                       env=env, subdir=m.config.host_subdir, is_cross=m.is_cross)
-    return sorted(linked(prefix))
 
 
 def copy_recipe(m):
@@ -424,9 +414,13 @@ def write_about_json(m):
 
 def write_info_json(m):
     info_index = m.info_index()
-    pin_depends = m.get_value('build/pin_depends')
-    if pin_depends:
-        dists = get_run_dists(m)
+    if m.pin_depends:
+        # Wtih 'strict' depends, we will have pinned run deps during rendering
+        if m.pin_depends == 'strict':
+            runtime_deps = m.meta.get('requirements', {}).get('run', [])
+            info_index['depends'] = runtime_deps
+        else:
+            runtime_deps = environ.get_pinned_deps(m, 'run')
         with open(join(m.config.info_dir, 'requires'), 'w') as fo:
             fo.write("""\
 # This file as created when building:
@@ -436,14 +430,8 @@ def write_info_json(m):
 # It can be used to create the runtime environment of this package using:
 # $ conda create --name <env> --file <this file>
 """ % (m.dist(), m.config.build_subdir))
-            dist = m.dist()
-            if hasattr(dists[0], 'version'):
-                dist = Dist(dist)
-            for dist in sorted(dists + [dist]):
-                fo.write('%s\n' % '='.join(dist.split('::', 1)[-1].rsplit('-', 2)))
-        if pin_depends == 'strict':
-            info_index['depends'] = [' '.join(dist.split('::', 1)[-1].rsplit('-', 2))
-                                     for dist in dists]
+            for dist in sorted(runtime_deps + [' '.join(m.dist().rsplit('-', 2))]):
+                fo.write('%s\n' % '='.join(dist.split()))
 
     # Deal with Python 2 and 3's different json module type reqs
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
@@ -1789,8 +1777,12 @@ for Python 3.5 and needs to be rebuilt."""
                 # conda-forge style.  meta.yaml lives one level deeper.
                 if not recipe_glob:
                     recipe_glob = glob(os.path.join(recipe_parent_dir, '..', pkg))
-                if recipe_glob:
-                    for recipe_dir in recipe_glob:
+                feedstock_glob = glob(os.path.join(recipe_parent_dir, pkg + '-feedstock'))
+                if not feedstock_glob:
+                    feedstock_glob = glob(os.path.join(recipe_parent_dir, '..',
+                                                       pkg + '-feedstock'))
+                if recipe_glob or feedstock_glob:
+                    for recipe_dir in recipe_glob + feedstock_glob:
                         print(("Missing dependency {0}, but found" +
                                 " recipe directory, so building " +
                                 "{0} first").format(pkg))

@@ -18,7 +18,7 @@ from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import CondaError, LinkError, LockError, NoPackagesFoundError, PaddingError
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import memoized
-from .conda_interface import package_cache
+from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, symlink_conda
 
 from conda_build import utils
@@ -915,3 +915,21 @@ def clean_pkg_cache(dist, config):
                             del cache[pkg_id]
                     for entry in glob(os.path.join(folder, dist + '*')):
                         utils.rm_rf(entry)
+
+
+def get_pinned_deps(m, section):
+    with TemporaryDirectory() as tmpdir:
+        actions = get_install_actions(tmpdir,
+                                    tuple(m.ms_depends(section)), section,
+                                    subdir=m.config.target_subdir,
+                                    debug=m.config.debug,
+                                    verbose=m.config.verbose,
+                                    locking=m.config.locking,
+                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                    timeout=m.config.timeout,
+                                    disable_pip=m.config.disable_pip,
+                                    max_env_retry=m.config.max_env_retry,
+                                    output_folder=m.config.output_folder,
+                                    channel_urls=tuple(m.config.channel_urls))
+    runtime_deps = [' '.join(link.dist_name.rsplit('-', 2)) for link in actions.get('LINK', [])]
+    return runtime_deps

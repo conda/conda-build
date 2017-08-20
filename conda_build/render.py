@@ -320,6 +320,9 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
             requirements[_env] = list({strip_channel(dep) for dep in values})
     rendered_metadata.meta['requirements'] = requirements
 
+    if rendered_metadata.pin_depends == 'strict':
+        rendered_metadata.meta['requirements']['run'] = environ.get_pinned_deps(rendered_metadata,
+                                                                                'run')
     test_deps = rendered_metadata.get_value('test/requires')
     if test_deps:
         versioned_test_deps = list({get_pin_from_build(m, dep, full_build_dep_versions)
