@@ -1176,3 +1176,18 @@ def test_pin_depends(testing_config):
     if PY3 and hasattr(requires, 'decode'):
         requires = requires.decode()
     assert re.search('python\=[23]\.', requires), "didn't find pinned python in info/requires"
+
+
+def test_archive_ordering(testing_workdir):
+    recipe = os.path.join(metadata_dir, '_conda_build')
+    outputs = api.build(recipe)
+
+    archive = tarfile.open(outputs[0])
+
+    # the last three files in 'archive' have identical file sizes
+    # so we will test them for ordering
+    archive_names = [tarinfo.name for tarinfo in archive]
+    archive_sizes = [tarinfo.size for tarinfo in archive]
+
+    assert archive_names[-3:] == sorted(archive_names[-3:])
+    assert archive_sizes[-3:] == sorted(archive_sizes[-3:])
