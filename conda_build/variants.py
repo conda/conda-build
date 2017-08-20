@@ -30,13 +30,6 @@ DEFAULT_VARIANTS = {
 
 arch_name = subdir.rsplit('-', 1)[-1]
 
-DEFAULT_PLATFORMS = {
-    'linux': 'linux-' + arch_name,
-    'osx': 'osx-' + arch_name,
-    'win': 'win-' + arch_name,
-}
-
-
 SUFFIX_MAP = {'PY': 'python',
               'NPY': 'numpy',
               'LUA': 'lua',
@@ -241,11 +234,10 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
 
     combined, extend_keys = combine_specs(specs)
 
-    if 'target_platform' not in combined or not combined['target_platform']:
-        try:
-            combined['target_platform'] = [DEFAULT_PLATFORMS[platform]]
-        except KeyError:
-            combined['target_platform'] = [DEFAULT_PLATFORMS[platform.split('-')[0]]]
+    # default target platform is native subdir
+    # if 'target_platform' not in combined:
+    #     from conda_build.config import Config
+    #     combined['target_platform'] = [Config().subdir]
 
     if 'extend_keys' in combined:
         del combined['extend_keys']
@@ -342,12 +334,14 @@ def get_package_variants(recipedir_or_metadata, config=None):
 
     specs = get_default_variants(config.platform) + [parse_config_file(f, config) for f in files]
 
+    target_platform_default = [{'target_platform': config.subdir}]
     # this is the override of the variants from files and args with values from CLI or env vars
     if config.variant:
-        combined_spec, extend_keys = combine_specs(specs + [config.variant])
+        combined_spec, extend_keys = combine_specs(target_platform_default + specs +
+                                                   [config.variant])
     else:
         # this tweaks behavior from clobbering to appending/extending
-        combined_spec, extend_keys = combine_specs(specs)
+        combined_spec, extend_keys = combine_specs(target_platform_default + specs)
 
     # clobber the variant with anything in the config (stuff set via CLI flags or env vars)
     for k, v in config.variant.items():

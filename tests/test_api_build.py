@@ -882,11 +882,11 @@ def test_append_python_app_osx(testing_config):
 
 
 @pytest.mark.serial
-def test_run_exports(testing_metadata, testing_config):
+def test_run_exports(testing_metadata, testing_config, testing_workdir):
     api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
-    testing_metadata.config.index = None
-    m = finalize_metadata(testing_metadata)
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    m = api.render(testing_workdir, config=testing_config)[0][0]
     assert 'downstream_pinned_package 1.0' in m.meta['requirements']['run']
 
 
