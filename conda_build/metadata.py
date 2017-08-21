@@ -614,8 +614,6 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
                 log.info("Attempting to finalize metadata for {}".format(metadata.name()))
-            if pass_no == 0:
-                base_metadata.original_meta = base_metadata.meta.copy()
             om = base_metadata.copy()
             # store a copy of the metadata before finalization, so that we know what is
             #     original stuff.  This is especially important for only applying run_exports
@@ -1700,6 +1698,7 @@ class MetaData(object):
             non_conda_packages = []
             for output_d, m in render_order.items():
                 if not output_d.get('type') or output_d['type'] == 'conda':
+                    m.original_meta = m.meta.copy()
                     conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
                 elif output_d.get('type') == 'wheel':
                     if (not output_d.get('requirements', {}).get('build') or
