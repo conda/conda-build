@@ -331,18 +331,19 @@ def compiler(language, config, permit_undefined_jinja=False):
     native architecture).
     """
 
-    compiler = None
-    nc = native_compiler(language, config)
-    if config.variant and 'target_platform' in config.variant:
+    compiler = native_compiler(language, config)
+    if config.variant:
+        target_platform = config.variant.get('target_platform', config.subdir)
         language_compiler_key = '{}_compiler'.format(language)
         # fall back to native if language-compiler is not explicitly set in variant
-        compiler = config.variant.get(language_compiler_key, nc)
+        compiler = config.variant.get(language_compiler_key, compiler)
+    else:
+        target_platform = config.subdir
 
-        # support cross compilers.  A cross-compiler package will have a name such as
-        #    gcc_target
-        #    gcc_linux-cos6-64
-        compiler = '_'.join([compiler, config.variant['target_platform']])
-    return compiler
+    # support cross compilers.  A cross-compiler package will have a name such as
+    #    gcc_target
+    #    gcc_linux-cos6-64
+    return '_'.join([compiler, target_platform])
 
 
 def cdt(package_name, config, permit_undefined_jinja=False):
