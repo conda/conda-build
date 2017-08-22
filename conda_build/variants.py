@@ -139,12 +139,19 @@ def combine_variants(*variants):
 
 
 def set_language_env_vars(variant):
-    """Given args passed into conda command, set language env vars to be made available"""
+    """Given args passed into conda command, set language env vars to be made available.
+
+    Search terms: CONDA_PY, CONDA_R, CONDA_PERL, CONDA_LUA, CONDA_NPY
+    """
     inverse_map = {v: k for k, v in SUFFIX_MAP.items()}
     env = {}
     for variant_name, env_var_name in inverse_map.items():
         if variant_name in variant:
-            env['CONDA_' + env_var_name] = str(variant[variant_name])
+            value = str(variant[variant_name])
+            # legacy compatibility: python should be just first
+            if env_var_name == 'PY':
+                value = ''.join(value.split('.')[:2])
+            env['CONDA_' + env_var_name] = value
     return env
 
 

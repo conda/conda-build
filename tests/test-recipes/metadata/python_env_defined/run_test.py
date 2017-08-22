@@ -3,6 +3,7 @@ import os
 assert os.getenv('PYTHON')
 assert os.getenv('PY_VER')
 assert os.getenv('CONDA_PY')
+assert '.' not in os.getenv('CONDA_PY')
 assert os.getenv('STDLIB_DIR')
 assert os.getenv('SP_DIR')
 assert os.getenv('PY3K')
