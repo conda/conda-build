@@ -39,8 +39,8 @@ def bldpkg_path(m):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
-    output_dir = 'noarch' if m.noarch or m.noarch_python else m.config.host_subdir
-    return os.path.join(os.path.dirname(m.config.bldpkgs_dir), output_dir, '%s.tar.bz2' % m.dist())
+    subdir = 'noarch' if m.noarch or m.noarch_python else m.config.host_subdir
+    return os.path.join(m.config.output_folder, subdir, '%s.tar.bz2' % m.dist())
 
 
 def actions_to_pins(actions):
