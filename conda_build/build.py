@@ -45,7 +45,7 @@ from .conda_interface import dist_str_in_index
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
-from conda_build.index import get_build_index
+from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
                                 distribute_variants, expand_outputs, try_download)
 import conda_build.os_utils.external as external
@@ -53,7 +53,6 @@ from conda_build.metadata import MetaData
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
-from conda_build.index import update_index
 from conda_build.exceptions import indent, DependencyNeedsBuildingError, CondaBuildException
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
                                   get_package_variants)
@@ -1353,6 +1352,10 @@ def _construct_metadata_for_test_from_package(package, config):
     if not os.path.abspath(local_location):
         local_location = os.path.normpath(os.path.abspath(
             os.path.join(os.getcwd(), local_location)))
+
+    log = utils.get_logger(__name__)
+    log.info("Updating index at %s to make package installable with dependencies" % local_location)
+    update_index(local_location)
     local_url = url_path(local_location)
     # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
     #    how to add elements.
@@ -1633,7 +1636,11 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     dest = join(broken_dir, os.path.basename(pkg))
 
     if move_broken:
+        log = utils.get_logger(__name__)
+        log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
+                 broken_dir))
         shutil.move(pkg, dest)
+        update_index(os.path.dirname(pkg))
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
