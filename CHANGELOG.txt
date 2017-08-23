@@ -1,3 +1,29 @@
+2017-08-23 3.0.12:
+
+Enhancements:
+-------------
+
+* update default MACOSX_DEPLOYMENT_TARGET to 10.9  #2293
+* modernize pin_depends so that it works with conda render  #2294
+* environment variable pass-throughs now respect variant (env var highest priority; variant, finally default)  #2310
+
+Bug fixes:
+----------
+
+* fix run_exports getting picked up transitively  #2298
+* fix default compiler not having platform  #2300
+* fix CONDA_PY formatting (should not have period).  PY_VER does have period.  #2304
+* update index before testing a package, so that that package is conda-installable.  #2308
+* update index after moving a package after test failure, so that the index is current.  #2308
+* fix --output-folder not being respected by --output preview of output path  #2309
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2017-08-17 3.0.11:
 
 Enhancements:
