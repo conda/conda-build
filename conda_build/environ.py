@@ -446,7 +446,7 @@ def get_shlib_ext():
         raise NotImplementedError(sys.platform)
 
 
-def windows_vars(prefix, config):
+def windows_vars(prefix, config, get_default):
     # We have gone for the clang values here.
     win_arch = 'i386' if config.arch == 32 else 'amd64'
     win_msvc = '19.0.0' if PY3 else '15.0.0'
@@ -460,93 +460,77 @@ def windows_vars(prefix, config):
         'LIBRARY_LIB': join(library_prefix, 'lib'),
         'CYGWIN_PREFIX': ''.join(('/cygdrive/', drive.lower(), tail.replace('\\', '/'))),
         # see https://en.wikipedia.org/wiki/Environment_variable#Default_values
-        'ALLUSERSPROFILE': os.getenv('ALLUSERSPROFILE'),
-        'APPDATA': os.getenv('APPDATA'),
-        'CommonProgramFiles': os.getenv('CommonProgramFiles'),
-        'CommonProgramFiles(x86)': os.getenv('CommonProgramFiles(x86)'),
-        'CommonProgramW6432': os.getenv('CommonProgramW6432'),
-        'COMPUTERNAME': os.getenv('COMPUTERNAME'),
-        'ComSpec': os.getenv('ComSpec'),
-        'HOMEDRIVE': os.getenv('HOMEDRIVE'),
-        'HOMEPATH': os.getenv('HOMEPATH'),
-        'LOCALAPPDATA': os.getenv('LOCALAPPDATA'),
-        'LOGONSERVER': os.getenv('LOGONSERVER'),
-        'NUMBER_OF_PROCESSORS': os.getenv('NUMBER_OF_PROCESSORS'),
-        'PATHEXT': os.getenv('PATHEXT'),
-        'ProgramData': os.getenv('ProgramData'),
-        'ProgramFiles': os.getenv('ProgramFiles'),
-        'ProgramFiles(x86)': os.getenv('ProgramFiles(x86)'),
-        'ProgramW6432': os.getenv('ProgramW6432'),
-        'PROMPT': os.getenv('PROMPT'),
-        'PSModulePath': os.getenv('PSModulePath'),
-        'PUBLIC': os.getenv('PUBLIC'),
-        'SystemDrive': os.getenv('SystemDrive'),
-        'SystemRoot': os.getenv('SystemRoot'),
-        'TEMP': os.getenv('TEMP'),
-        'TMP': os.getenv('TMP'),
-        'USERDOMAIN': os.getenv('USERDOMAIN'),
-        'USERNAME': os.getenv('USERNAME'),
-        'USERPROFILE': os.getenv('USERPROFILE'),
-        'windir': os.getenv('windir'),
+        'ALLUSERSPROFILE': get_default('ALLUSERSPROFILE'),
+        'APPDATA': get_default('APPDATA', ''),
+        'CommonProgramFiles': get_default('CommonProgramFiles'),
+        'CommonProgramFiles(x86)': get_default('CommonProgramFiles(x86)'),
+        'CommonProgramW6432': get_default('CommonProgramW6432'),
+        'COMPUTERNAME': get_default('COMPUTERNAME'),
+        'ComSpec': get_default('ComSpec'),
+        'HOMEDRIVE': get_default('HOMEDRIVE'),
+        'HOMEPATH': get_default('HOMEPATH'),
+        'LOCALAPPDATA': get_default('LOCALAPPDATA'),
+        'LOGONSERVER': get_default('LOGONSERVER'),
+        'NUMBER_OF_PROCESSORS': get_default('NUMBER_OF_PROCESSORS'),
+        'PATHEXT': get_default('PATHEXT'),
+        'ProgramData': get_default('ProgramData'),
+        'ProgramFiles': get_default('ProgramFiles'),
+        'ProgramFiles(x86)': get_default('ProgramFiles(x86)'),
+        'ProgramW6432': get_default('ProgramW6432'),
+        'PROMPT': get_default('PROMPT'),
+        'PSModulePath': get_default('PSModulePath'),
+        'PUBLIC': get_default('PUBLIC'),
+        'SystemDrive': get_default('SystemDrive'),
+        'SystemRoot': get_default('SystemRoot'),
+        'TEMP': get_default('TEMP'),
+        'TMP': get_default('TMP'),
+        'USERDOMAIN': get_default('USERDOMAIN'),
+        'USERNAME': get_default('USERNAME'),
+        'USERPROFILE': get_default('USERPROFILE'),
+        'windir': get_default('windir'),
         # CPU data, see https://github.com/conda/conda-build/issues/2064
-        'PROCESSOR_ARCHITEW6432': os.getenv('PROCESSOR_ARCHITEW6432'),
-        'PROCESSOR_ARCHITECTURE': os.getenv('PROCESSOR_ARCHITECTURE'),
-        'PROCESSOR_IDENTIFIER': os.getenv('PROCESSOR_IDENTIFIER'),
+        'PROCESSOR_ARCHITEW6432': get_default('PROCESSOR_ARCHITEW6432'),
+        'PROCESSOR_ARCHITECTURE': get_default('PROCESSOR_ARCHITECTURE'),
+        'PROCESSOR_IDENTIFIER': get_default('PROCESSOR_IDENTIFIER'),
         'BUILD': win_arch + '-pc-windows-' + win_msvc,
     }
 
 
-def unix_vars(prefix):
+def unix_vars(prefix, get_default):
     return {
-        'HOME': os.getenv('HOME', 'UNKNOWN'),
+        'HOME': get_default('HOME', 'UNKNOWN'),
         'PKG_CONFIG_PATH': join(prefix, 'lib', 'pkgconfig'),
         'CMAKE_GENERATOR': 'Unix Makefiles',
-        'SSL_CERT_FILE': os.getenv('SSL_CERT_FILE', ''),
+        'SSL_CERT_FILE': get_default('SSL_CERT_FILE', ''),
     }
 
 
-def osx_vars(compiler_vars, config):
+def osx_vars(compiler_vars, config, get_default):
     OSX_ARCH = 'i386' if config.arch == 32 else 'x86_64'
-    MACOSX_DEPLOYMENT_TARGET = os.environ.get('MACOSX_DEPLOYMENT_TARGET',
-                                       config.variant.get('MACOSX_DEPLOYMENT_TARGET', '10.9'))
-    compiler_vars['CFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
-    compiler_vars['CXXFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
-    compiler_vars['LDFLAGS'] += ' -arch {0}'.format(OSX_ARCH)
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     return {
         'OSX_ARCH': OSX_ARCH,
-        'MACOSX_DEPLOYMENT_TARGET': MACOSX_DEPLOYMENT_TARGET,
-        'LC_ALL': os.getenv('LC_ALL', ''),
-        'LANG': os.getenv('LANG', ''),
+        'MACOSX_DEPLOYMENT_TARGET': get_default('MACOSX_DEPLOYMENT_TARGET', '10.9'),
         'BUILD': OSX_ARCH + '-apple-darwin13.4.0',
     }
 
 
-def linux_vars(compiler_vars, prefix, config):
-    # This is effectively saying "if any host env is installed, then prefer it over the build env"
-    if glob(os.path.join(config.host_prefix, '*')):
-        compiler_vars['LD_RUN_PATH'] = config.host_prefix + '/lib'
-    else:
-        compiler_vars['LD_RUN_PATH'] = prefix + '/lib'
-    if config.arch == 32:
-        arch = 'i686'
-        compiler_vars['CFLAGS'] += ' -m32'
-        compiler_vars['CXXFLAGS'] += ' -m32'
-    else:
-        arch = 'x86_64'
+def linux_vars(compiler_vars, config, get_default):
+    arch = 'i686' if config.arch == 32 else 'x86_64'
     return {
         # There is also QEMU_SET_ENV, but that needs to be
         # filtered so it only contains the result of `linux_vars`
         # which, before this change was empty, and after it only
         # contains other QEMU env vars.
-        'QEMU_LD_PREFIX': os.getenv('QEMU_LD_PREFIX', ''),
-        'QEMU_UNAME': os.getenv('QEMU_UNAME', ''),
-        'DEJAGNU': os.getenv('DEJAGNU', ''),
-        'DISPLAY': os.getenv('DISPLAY'),
-        'LC_ALL': os.getenv('LC_ALL', ''),
-        'LANG': os.getenv('LANG', ''),
+        'CFLAGS': get_default('CFLAGS'),
+        'CXXFLAGS': get_default('CXXFLAGS'),
+        'LDFLAGS': get_default('LDFLAGS'),
+        'QEMU_LD_PREFIX': get_default('QEMU_LD_PREFIX'),
+        'QEMU_UNAME': get_default('QEMU_UNAME'),
+        'DEJAGNU': get_default('DEJAGNU'),
+        'DISPLAY': get_default('DISPLAY'),
         'BUILD': arch + '-conda_cos6-linux-gnu',
     }
 
@@ -555,32 +539,27 @@ def linux_vars(compiler_vars, prefix, config):
 def system_vars(env_dict, prefix, config):
     d = dict()
     compiler_vars = defaultdict(text_type)
+    get_default = lambda key, default='': os.getenv(key, config.variant.get(key, default))
 
-    if 'MAKEFLAGS' in os.environ:
-        d['MAKEFLAGS'] = os.environ['MAKEFLAGS']
-
-    if 'CPU_COUNT' in os.environ:
-        d['CPU_COUNT'] = os.environ['CPU_COUNT']
-    else:
-        d['CPU_COUNT'] = get_cpu_count()
-
+    d['CPU_COUNT'] = get_default('CPU_COUNT', get_cpu_count())
+    d['LANG'] = get_default('LANG')
+    d['LC_ALL'] = get_default('LC_ALL')
+    d['MAKEFLAGS'] = get_default('MAKEFLAGS')
     d['SHLIB_EXT'] = get_shlib_ext()
-
-    if "LANG" in os.environ:
-        d['LANG'] = os.environ['LANG']
     d['PATH'] = os.environ.copy()['PATH']
+
     if not config.activate:
         d = prepend_bin_path(d, prefix)
 
     if sys.platform == 'win32':
-        d.update(windows_vars(prefix, config))
+        d.update(windows_vars(prefix, config, get_default))
     else:
-        d.update(unix_vars(prefix))
+        d.update(unix_vars(prefix, get_default))
 
     if sys.platform == 'darwin':
-        d.update(osx_vars(compiler_vars, config))
+        d.update(osx_vars(compiler_vars, config, get_default))
     elif sys.platform.startswith('linux'):
-        d.update(linux_vars(compiler_vars, prefix, config))
+        d.update(linux_vars(compiler_vars, config, get_default))
 
     # make sure compiler_vars get appended to anything already set, including build/script_env
     for key in compiler_vars:
