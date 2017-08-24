@@ -29,6 +29,11 @@ else:
     from urlparse import urljoin
 
 git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
+ext_re = re.compile(r"(.*?)((?:\.tar)?\.[^.]+?)")
+
+
+def append_hash_to_fn(fn, hash_value):
+    return ext_re.sub(r"\1_{}\2".format(hash_value), fn)
 
 
 def download_to_cache(cache_folder, recipe_path, source_dict):
@@ -38,6 +43,16 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
         os.makedirs(cache_folder)
 
     fn = source_dict['fn'] if 'fn' in source_dict else basename(source_dict['url'])
+    hash_added = False
+    for hash_type in ('md5', 'sha1', 'sha256'):
+        if hash_type in source_dict:
+            fn = append_hash_to_fn(fn, source_dict[hash_type])
+            hash_added = True
+            break
+    else:
+        log = get_logger(__name__)
+        log.warn("No hash (md5, sha1, sha256) provided.  Source download forced.  "
+                 "Add hash to recipe to use source cache.")
     path = join(cache_folder, fn)
     if isfile(path):
         print('Found source in cache: %s' % fn)
@@ -70,15 +85,24 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
         else:  # no break
             raise RuntimeError("Could not download %s" % url)
 
+    hashed = None
     for tp in ('md5', 'sha1', 'sha256'):
-        try:
+        if 'tp' in source_dict:
             expected_hash = source_dict[tp]
             hashed = hashsum_file(path, tp)
             if expected_hash != hashed:
                 raise RuntimeError("%s mismatch: '%s' != '%s'" %
                            (tp.upper(), hashed, expected_hash))
-        except KeyError:
-            continue
+            break
+
+    # this is really a fallback.  If people don't provide the hash, we still need to prevent
+    #    collisions in our source cache, but the end user will get no benefirt from the cache.
+    if not hash_added:
+        if not hashed:
+            hashed = hashsum_file(path, 'sha256')
+        dest_path = append_hash_to_fn(path, hashed)
+        os.rename(path, dest_path)
+        path = dest_path
 
     return path
 
