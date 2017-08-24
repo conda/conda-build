@@ -303,7 +303,7 @@ def python_vars(config, prefix):
     py_ver = get_py_ver(config)
     vars_ = {
             'CONDA_PY': ''.join(py_ver.split('.')[:2]),
-            'PY3K': str(int(py_ver[0]) >= 3),
+            'PY3K': str(int(int(py_ver[0]) >= 3)),
             'PY_VER': py_ver,
             'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
             'SP_DIR': utils.get_site_packages(prefix, py_ver),
