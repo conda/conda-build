@@ -1653,10 +1653,15 @@ class MetaData(object):
         if (not (output_metadata.noarch or output_metadata.noarch_python) and
                 self.config.platform != output_metadata.config.platform):
             output_metadata.config.platform = self.config.platform
+
+        build = output_metadata.meta.get('build', {})
+        if 'number' in output:
+            build['number'] = ['number']
+        if 'string' in output:
+            build['string'] = output['string']
         if 'run_exports' in output and output['run_exports']:
-            build = output_metadata.meta.get('build', {})
             build['run_exports'] = output['run_exports']
-            output_metadata.meta['build'] = build
+        output_metadata.meta['build'] = build
 
         return output_metadata
 
