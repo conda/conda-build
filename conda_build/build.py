@@ -703,7 +703,7 @@ def bundle_conda(output, metadata, env, **kw):
         env_output['PKG_NAME'] = metadata.get_value('package/name')
         utils.check_call_env(interpreter.split(' ') +
                     [os.path.join(metadata.config.work_dir, output['script'])],
-                             cwd=metadata.config.host_prefix, env=env_output)
+                             cwd=metadata.config.work_dir, env=env_output)
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
