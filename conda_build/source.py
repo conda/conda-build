@@ -33,7 +33,7 @@ ext_re = re.compile(r"(.*?)((?:\.tar)?\.[^.]+?)")
 
 
 def append_hash_to_fn(fn, hash_value):
-    return ext_re.sub(r"\1_{}\2".format(hash_value), fn)
+    return ext_re.sub(r"\1_{}\2".format(hash_value[:10]), fn)
 
 
 def download_to_cache(cache_folder, recipe_path, source_dict):
