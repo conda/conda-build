@@ -73,7 +73,7 @@ def test_render_add_channel():
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
         args = ['-c', 'conda_build_test', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
-        rendered_meta = yaml.load(open(rendered_filename, 'r'))
+        rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
         required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if 'conda_build_test_requirement' in pkg][0]
         required_package_details = required_package_string.split(' ')
         assert len(required_package_details) > 1, "Expected version number on successful rendering, but got only {}".format(required_package_details)
@@ -85,7 +85,7 @@ def test_render_without_channel_fails():
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
         args = ['--override-channels', '-c', 'conda', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
-        rendered_meta = yaml.load(open(rendered_filename, 'r'))
+        rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
         required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if 'conda_build_test_requirement' in pkg][0]
         assert required_package_string == 'conda_build_test_requirement', \
                "Expected to get only base package name because it should not be found, but got :{}".format(required_package_string)

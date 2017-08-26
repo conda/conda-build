@@ -155,20 +155,19 @@ def get_pin_from_build(m, dep, build_dep_versions):
 
 
 def _filter_run_exports(specs, ignore_list):
-    filtered_specs = []
-    for spec in specs:
+    filtered_specs = {}
+    for agent, spec in specs.items():
         if hasattr(spec, 'decode'):
             spec = spec.decode()
         if not any((spec == ignore_spec or spec.startswith(ignore_spec + ' '))
                    for ignore_spec in ignore_list):
-            filtered_specs.append(spec)
+            filtered_specs[agent] = spec
     return filtered_specs
 
 
 def get_upstream_pins(m, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
-    additional_specs = []
 
     # this attribute is added in the first pass of finalize_outputs_pass
     raw_specs = (m.original_meta.get('requirements', {}).get(env, []) if hasattr(m, 'original_meta')
@@ -190,64 +189,71 @@ def get_upstream_pins(m, actions, env):
                                       channel_urls=m.config.channel_urls,
                                       debug=m.config.debug, verbose=m.config.verbose,
                                       locking=m.config.locking, timeout=m.config.timeout)
-    if actions:
+    if 'FETCH' in actions or 'EXTRACT' in actions:
         # this is to force the download
         execute_actions(actions, index, verbose=m.config.debug)
-        ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
+    ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
-        _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
-        for pkg in linked_packages:
-            for pkgs_dir in _pkgs_dirs:
-                if hasattr(pkg, 'dist_name'):
-                    pkg_dist = pkg.dist_name
-                else:
-                    pkg = strip_channel(pkg)
-                    pkg_dist = pkg.split(' ')[0]
+    _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
+    additional_specs = {}
+    for pkg in linked_packages:
+        pkg_loc = None
+        if hasattr(pkg, 'dist_name'):
+            pkg_dist = pkg.dist_name
+        else:
+            pkg = strip_channel(pkg)
+            pkg_dist = pkg.split(' ')[0]
+        for pkgs_dir in _pkgs_dirs:
+            pkg_dir = os.path.join(pkgs_dir, pkg_dist)
+            pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
 
-                pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-                pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
-                if os.path.isdir(pkg_dir):
-                    downstream_file = os.path.join(pkg_dir, 'info/run_exports')
-                    if os.path.isfile(downstream_file):
-                        specs = open(downstream_file).read().splitlines()
-                        additional_specs.extend(_filter_run_exports(specs, ignore_list))
+            if os.path.isdir(pkg_dir):
+                pkg_loc = pkg_dir
+                break
+            elif os.path.isfile(pkg_file):
+                pkg_loc = pkg_file
+                break
+
+        # ran through all pkgs_dirs, and did not find package or folder.  Download it.
+        # TODO: this is a vile hack reaching into conda's internals. Replace with
+        #    proper conda API when available.
+        if not pkg_loc and utils.conda_43():
+            try:
+                # the conda 4.4 API uses a single `link_prefs` kwarg
+                # whereas conda 4.3 used `index` and `link_dists` kwargs
+                pfe = ProgressiveFetchExtract(link_prefs=(index[pkg],))
+            except TypeError:
+                # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
+                pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
+            with utils.LoggingContext():
+                pfe.execute()
+            for pkg_dir in pkgs_dirs:
+                _loc = os.path.join(pkg_dir, index[pkg].fn)
+                if os.path.isfile(_loc):
+                    pkg_loc = _loc
                     break
-                elif os.path.isfile(pkg_file):
-                    extra_specs = utils.package_has_file(pkg_file, 'info/run_exports')
-                    if extra_specs:
-                        # exclude packages pinning themselves (makes no sense)
-                        extra_specs = [spec for spec in extra_specs.splitlines()
-                            if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]
-                        additional_specs.extend(_filter_run_exports(extra_specs, ignore_list))
-                    break
-                elif utils.conda_43():
-                    # TODO: this is a vile hack reaching into conda's internals. Replace with
-                    #    proper conda API when available.
-                    try:
-                        try:
-                            # the conda 4.4 API uses a single `link_prefs` kwarg
-                            # whereas conda 4.3 used `index` and `link_dists` kwargs
-                            pfe = ProgressiveFetchExtract(link_prefs=(index[pkg],))
-                        except TypeError:
-                            # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
-                            pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
-                        with utils.LoggingContext():
-                            pfe.execute()
-                        for pkgs_dir in _pkgs_dirs:
-                            pkg_file = os.path.join(pkgs_dir, pkg.dist_name + '.tar.bz2')
-                            if os.path.isfile(pkg_file):
-                                extra_specs = utils.package_has_file(pkg_file,
-                                                                    'info/run_exports')
-                                if extra_specs:
-                                    specs = extra_specs.splitlines()
-                                    additional_specs.extend(_filter_run_exports(specs, ignore_list))
-                                break
-                        break
-                    except KeyError:
-                        raise DependencyNeedsBuildingError(packages=[pkg.name])
-            else:
-                raise RuntimeError("Didn't find expected package {} in package cache ({})"
-                                    .format(pkg_dist, _pkgs_dirs))
+
+        specs = {}
+        if os.path.isdir(pkg_loc):
+            downstream_file = os.path.join(pkg_dir, 'info/run_exports')
+            if os.path.isfile(downstream_file):
+                with open(downstream_file) as f:
+                    specs = {'weak': [spec.rstrip() for spec in f.readlines()]}
+            # a later attempt: record more info in the yaml file, to support "strong" run exports
+            elif os.path.isfile(downstream_file + '.yaml'):
+                with open(downstream_file + '.yaml') as f:
+                    specs = yaml.safe_load(f)
+        elif os.path.isfile(pkg_file):
+            legacy_specs = utils.package_has_file(pkg_file, 'info/run_exports')
+            specs_yaml = utils.package_has_file(pkg_file, 'info/run_exports.yaml')
+            if specs:
+                # exclude packages pinning themselves (makes no sense)
+                specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
+                                  if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]}
+            elif specs_yaml:
+                specs = yaml.safe_load(specs_yaml)
+
+        additional_specs.update(_filter_run_exports(specs, ignore_list))
     return additional_specs
 
 
@@ -279,12 +285,12 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
                                         exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-    # optimization: we don't need the index after here, and copying them takes a lot of time.
     rendered_metadata = m.copy()
 
-    extra_run_specs = get_upstream_pins(m, build_actions, 'build')
+    extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
 
-    if m.is_cross and m.config.host_subdir != m.config.build_subdir:
+    # is there a 'host' section?
+    if m.is_cross:
         host_reqs = m.get_value('requirements/host')
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one
@@ -294,10 +300,15 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         host_deps, host_actions, host_unsat = get_env_dependencies(m, 'host', m.config.variant,
                                         exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-        extra_run_specs += get_upstream_pins(m, host_actions, 'host')
+        extra_run_specs_from_host = get_upstream_pins(m, host_actions, 'host')
+        extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
+                              extra_run_specs_from_host.get('weak', []) +
+                              extra_run_specs_from_build.get('strong', []))
     else:
         host_deps = []
         host_unsat = None
+        extra_run_specs = (extra_run_specs_from_build.get('strong', []) +
+                           extra_run_specs_from_build.get('weak', []))
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package

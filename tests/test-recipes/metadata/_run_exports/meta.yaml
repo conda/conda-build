@@ -4,4 +4,7 @@ package:
 
 build:
   run_exports:
-    - downstream_pinned_package 1.0
+    strong:
+      - strong_pinned_package 1.0
+    weak:
+      - weak_pinned_package 1.0

@@ -920,7 +920,7 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
                     setup_options=setup_options)
         try:
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
-                pkg_info = yaml.load(fn)
+                pkg_info = yaml.safe_load(fn)
         except IOError:
             pkg_info = pkginfo.SDist(download_path).__dict__
         if new_hash_value:
@@ -944,7 +944,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     #    needs it in recent versions.  At time of writing, it is not a package in defaults, so this
     #    actually breaks conda-build right now.  Omit it until packaging is on defaults.
     # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
-    specs = ['python %s*' % python_version, 'pyyaml']
+    specs = ['python %s*' % python_version, 'pyyaml', 'setuptools']
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:

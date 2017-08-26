@@ -1069,7 +1069,7 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
     # should be able to override conda-build's logger settings here.
     if config_file:
         with open(config_file) as f:
-            config_dict = yaml.load(f)
+            config_dict = yaml.safe_load(f)
         logging.config.dictConfig(config_dict)
         level = config_dict.get('loggers', {}).get(name, {}).get('level', level)
     log = logging.getLogger(name)
