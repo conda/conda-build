@@ -462,10 +462,15 @@ def get_entry_point_script_names(entry_point_scripts):
 
 
 def write_run_exports(m):
-    if m.meta.get('build', {}).get('run_exports'):
-        with open(os.path.join(m.config.info_dir, 'run_exports'), 'w') as f:
-            for pin in utils.ensure_list(m.meta['build']['run_exports']):
-                f.write(pin + "\n")
+    run_exports = m.meta.get('build', {}).get('run_exports', {})
+    if run_exports:
+        with open(os.path.join(m.config.info_dir, 'run_exports.yaml'), 'w') as f:
+            if not hasattr(run_exports, 'keys'):
+                run_exports = {'weak': run_exports}
+            for k in ('weak', 'strong'):
+                if k in run_exports:
+                    run_exports[k] = utils.ensure_list(run_exports[k])
+            yaml.dump(run_exports, f)
 
 
 def create_info_files(m, files, prefix):

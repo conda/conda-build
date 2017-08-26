@@ -13,7 +13,7 @@ def main():
     source_file = os.path.join(info['link']['source'],
                                'info', 'recipe', 'meta.yaml')
     with open(source_file, 'r') as fh:
-        source = yaml.load(fh)
+        source = yaml.safe_load(fh)
 
     assert 'custom' in source['extra']
     assert 'however' in source['extra']

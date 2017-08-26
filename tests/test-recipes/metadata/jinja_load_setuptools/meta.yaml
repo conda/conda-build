@@ -10,6 +10,7 @@ source:
 requirements:
   build:
     - python
+    - setuptools
     {% for req in data.get('install_requires', []) -%}
     - {{req}}
     {% endfor %}

@@ -182,8 +182,7 @@ def test_pypi_section_order_preserved(testing_workdir):
         lines = [l for l in file.readlines() if not l.startswith("{%")]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel_yaml.load('\n'.join(lines),
-                              Loader=ruamel_yaml.RoundTripLoader)
+    recipe = ruamel_yaml.load('\n'.join(lines), Loader=ruamel_yaml.RoundTripLoader)
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones

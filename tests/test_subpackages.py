@@ -67,7 +67,7 @@ def test_subpackage_independent_hash(testing_metadata):
 def test_run_exports_in_subpackage(testing_metadata):
     p1 = testing_metadata.copy()
     p1.meta['outputs'] = [{'name': 'has_run_exports', 'run_exports': 'bzip2 1.0'}]
-    api.build(p1)[0]
+    api.build(p1, config=testing_metadata.config)[0]
     # api.update_index(os.path.dirname(output), config=testing_metadata.config)
     p2 = testing_metadata.copy()
     p2.meta['requirements']['build'] = ['has_run_exports']
