@@ -897,7 +897,7 @@ def clean_pkg_cache(dist, config):
 
 
 def get_pinned_deps(m, section):
-    with TemporaryDirectory() as tmpdir:
+    with TemporaryDirectory(prefix='_') as tmpdir:
         actions = get_install_actions(tmpdir,
                                     tuple(m.ms_depends(section)), section,
                                     subdir=m.config.target_subdir,
