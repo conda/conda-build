@@ -728,7 +728,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
 
 
 def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, retry=0,
-               locks=None, is_cross=False, always_include_files=[]):
+               locks=None, is_cross=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
