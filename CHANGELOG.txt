@@ -1,3 +1,27 @@
+2017-08-26 3.0.13:
+
+Enhancements:
+-------------
+
+* allow output build number and string to be set independently of top-level metadata  #2311
+* add file hash to source cache filenames to avoid collisions  #2312
+* add notion of "strong" or "weak" run exports.  Strong apply to run whether parent is in build or host.  Weak apply only if in host, or in build with no host present.  #2320
+
+Bug fixes:
+----------
+
+* Fix PY3K value changing from 0/1 to True/False.  Keep 0/1.
+* make work_dir the cwd when running output bundling scripts.  It was the host prefix before now.
+* start tmpdir prefixes when getting dependency versions with _ so that conda can be one of the deps  #2321
+* avoid setting empty compiler variables  #2322
+* remove meaningless error with glob_files and always_include_files during env creation  #2323
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-08-23 3.0.12:
 
 Enhancements:
