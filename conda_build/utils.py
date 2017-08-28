@@ -1128,6 +1128,15 @@ def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
     return base
 
 
+def merge_dicts_of_lists(dol1, dol2):
+  '''
+  From Alex Martelli: https://stackoverflow.com/a/1495821/3257826
+  '''
+  keys = set(dol1).union(dol2)
+  no = []
+  return dict((k, dol1.get(k, no) + dol2.get(k, no)) for k in keys)
+
+
 def prefix_files(prefix):
     '''
     Returns a set of all files in prefix.

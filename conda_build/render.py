@@ -156,12 +156,13 @@ def get_pin_from_build(m, dep, build_dep_versions):
 
 def _filter_run_exports(specs, ignore_list):
     filtered_specs = {}
-    for agent, spec in specs.items():
-        if hasattr(spec, 'decode'):
-            spec = spec.decode()
-        if not any((spec == ignore_spec or spec.startswith(ignore_spec + ' '))
-                   for ignore_spec in ignore_list):
-            filtered_specs[agent] = spec
+    for agent, specs_list in specs.items():
+        for spec in specs_list:
+            if hasattr(spec, 'decode'):
+                spec = spec.decode()
+            if not any((spec == ignore_spec or spec.startswith(ignore_spec + ' '))
+                       for ignore_spec in ignore_list):
+                filtered_specs[agent] = filtered_specs.get(agent, []) + [spec]
     return filtered_specs
 
 
@@ -253,7 +254,8 @@ def get_upstream_pins(m, actions, env):
             elif specs_yaml:
                 specs = yaml.safe_load(specs_yaml)
 
-        additional_specs.update(_filter_run_exports(specs, ignore_list))
+        additional_specs = utils.merge_dicts_of_lists(additional_specs,
+                                                      _filter_run_exports(specs, ignore_list))
     return additional_specs
 
 
