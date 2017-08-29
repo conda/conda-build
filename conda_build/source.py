@@ -29,7 +29,7 @@ else:
     from urlparse import urljoin
 
 git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
-ext_re = re.compile(r"(.*?)((?:\.tar)?\.[^.]+?)")
+ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 
 
 def append_hash_to_fn(fn, hash_value):
