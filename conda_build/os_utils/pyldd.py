@@ -799,6 +799,9 @@ def codefile_class(filename, skip_symlinks=False):
             filename = os.path.realpath(filename)
     if os.path.isdir(filename):
         return None
+    # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
+    if filename.endswith('.class'):
+        return None
     if not os.path.exists(filename) or os.path.getsize(filename) < 4:
         return None
     with open(filename, 'rb') as file:
