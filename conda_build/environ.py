@@ -528,6 +528,7 @@ def linux_vars(compiler_vars, config, get_default):
     get_default('QEMU_UNAME')
     get_default('DEJAGNU')
     get_default('DISPLAY')
+    get_default('LD_RUN_PATH', config.host_prefix + '/lib')
     get_default('BUILD', arch + '-conda_cos6-linux-gnu')
 
 
