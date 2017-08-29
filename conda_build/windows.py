@@ -88,9 +88,9 @@ def build_vcvarsall_vs_path(version):
 
 def msvc_env_cmd(bits, config, override=None):
     log = get_logger(__name__)
-    log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0.  "
-             "Use {{compiler('c')}} jinja2 in requirements/build or explicitly list compiler "
-             "package as build dependency instead.")
+    log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
+             "If this recipe does not use a compiler, this message is safe to ignore.  "
+             "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build.")
     arch_selector = 'x86' if bits == 32 else 'amd64'
 
     msvc_env_lines = []
@@ -224,8 +224,9 @@ def build(m, bld_bat):
             for key, value in env.items():
                 if value:
                     fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            fo.write(msvc_env_cmd(bits=bits, config=m.config,
-                                  override=m.get_value('build/msvc_compiler', None)))
+            if not m.uses_new_style_compiler_activation:
+                fo.write(msvc_env_cmd(bits=bits, config=m.config,
+                                    override=m.get_value('build/msvc_compiler', None)))
             # Reset echo on, because MSVC scripts might have turned it off
             fo.write('@echo on\n')
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
