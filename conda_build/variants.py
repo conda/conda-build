@@ -251,7 +251,7 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
         del combined['extend_keys']
 
     dicts = []
-    dimensions = {k: v for k, v in combined.items() if k not in (['extend_keys'] +
+    dimensions = {k: v for k, v in combined.items() if k not in (['extend_keys', 'zip_keys'] +
                                                                  list(extend_keys) +
                                                                  list(_get_zip_key_set(combined)))}
     # here's where we add in the zipped dimensions

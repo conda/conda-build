@@ -164,3 +164,17 @@ def test_variants_in_versions_with_setup_py_data(testing_workdir):
 def test_git_variables_with_variants(testing_workdir, testing_config):
     recipe = os.path.join(recipe_dir, '13_git_vars')
     api.build(recipe, config=testing_config)
+
+
+def test_variant_input_with_zip_keys_keeps_zip_keys_list():
+    variants_ = [{'icu': '58', 'jpeg': '9', 'libdap4': '3.19', 'libkml': '1.3', 'libnetcdf': '4.4',
+                 'libpng': '1.6', 'libtiff': '4.0', 'libxml2': '2.9', 'mkl': '2018',
+                 'openblas': '0.2.19', 'proj4': '4', 'scipy': '0.17', 'sqlite': '3',
+                 'zlib': '1.2', 'xz': '5',
+                 'zip_keys': ['macos_min_version', 'macos_machine', 'MACOSX_DEPLOYMENT_TARGET',
+                              'CONDA_BUILD_SYSROOT'],
+                 'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
+                 'macos_min_version': '10.9', 'macos_machine': 'x86_64-apple-darwin13.4.0',
+                 'MACOSX_DEPLOYMENT_TARGET': '10.9', 'CONDA_BUILD_SYSROOT': '/opt/MacOSX10.9.sdk'}]
+    variant_list = variants.dict_of_lists_to_list_of_dicts(variants_)
+    assert len(variant_list) == 1

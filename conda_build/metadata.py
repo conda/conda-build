@@ -1510,6 +1510,11 @@ class MetaData(object):
                     subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
         return in_reqs or bool(subpackage_pin)
 
+    @property
+    def uses_new_style_compiler_activation(self):
+        text = self.extract_requirements_text()
+        return bool(re.search(r'\{\{\s*compiler\(.*\)\s*\}\}', text))
+
     def validate_features(self):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
             raise ValueError("- is a disallowed character in features.  Please change this "
