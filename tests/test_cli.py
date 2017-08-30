@@ -554,12 +554,30 @@ def test_activate_scripts_not_included(testing_workdir):
 
 @pytest.mark.serial
 def test_relative_path_croot():
+    # this tries to build a package while specifying the croot with a relative path:
+    # conda-build --no-test --croot ./relative/path
 
     empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    relative_path = os.path.join('.','relative','path')
-    print(os.path.abspath(os.path.normpath(relative_path)))
-    args = ['--no-anaconda-upload', '--croot', relative_path, empty_sections]
+    croot_rel = os.path.join('.','relative','path')
+    args = ['--no-anaconda-upload', '--croot', croot_rel, empty_sections]
     main_build.execute(args)
 
+@pytest.mark.serial
+def test_relative_path_test_artifact():
+    # this test builds a package into (cwd)/relative/path and then calls:
+    # conda-build --test ./relative/path/{platform}/{artifact}.tar.bz2
 
+    empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
+    croot_rel = os.path.join('.','relative','path')
+    croot_abs = os.path.abspath(os.path.normpath(croot_rel))
 
+    # build the package
+    args = ['--no-anaconda-upload','--no-test', '--croot', croot_abs, empty_sections]
+    output_file_abs = main_build.execute(args)
+    assert(len(output_file_abs) == 1)
+
+    output_file_rel = os.path.join(croot_rel, os.path.relpath(output_file_abs[0], croot_abs))
+
+    # run the test stage with relative path
+    args = ['--no-anaconda-upload','--test', output_file_rel]
+    main_build.execute(args)
