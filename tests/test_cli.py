@@ -551,3 +551,15 @@ def test_activate_scripts_not_included(testing_workdir):
               'Scripts/activate.exe', 'Scripts/deactivate.exe', 'Scripts/conda.exe',
               'Scripts/activate', 'Scripts/deactivate', 'Scripts/conda'):
         assert not package_has_file(out, f)
+
+@pytest.mark.serial
+def test_relative_path_croot():
+
+    empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
+    relative_path = os.path.join('.','relative','path')
+    print(os.path.abspath(os.path.normpath(relative_path)))
+    args = ['--no-anaconda-upload', '--croot', relative_path, empty_sections]
+    main_build.execute(args)
+
+
+
