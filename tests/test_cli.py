@@ -560,7 +560,10 @@ def test_relative_path_croot():
     empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
     croot_rel = os.path.join('.','relative','path')
     args = ['--no-anaconda-upload', '--croot', croot_rel, empty_sections]
-    main_build.execute(args)
+    outputfile = main_build.execute(args)
+
+    assert len(outputfile) == 1
+    assert os.path.isfile(outputfile[0])
 
 @pytest.mark.serial
 def test_relative_path_test_artifact():
@@ -580,4 +583,22 @@ def test_relative_path_test_artifact():
 
     # run the test stage with relative path
     args = ['--no-anaconda-upload','--test', output_file_rel]
+    main_build.execute(args)
+
+@pytest.mark.serial
+def test_relative_path_test_recipe():
+    # this test builds a package into (cwd)/relative/path and then calls:
+    # conda-build --test --croot ./relative/path/ /abs/path/to/recipe
+
+    empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
+    croot_rel = os.path.join('.','relative','path')
+    croot_abs = os.path.abspath(os.path.normpath(croot_rel))
+
+    # build the package
+    args = ['--no-anaconda-upload','--no-test', '--croot', croot_abs, empty_sections]
+    output_file_abs = main_build.execute(args)
+    assert(len(output_file_abs) == 1)
+
+    # run the test stage with relative croot
+    args = ['--no-anaconda-upload','--test', '--croot', croot_rel, empty_sections]
     main_build.execute(args)
