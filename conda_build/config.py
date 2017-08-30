@@ -147,7 +147,7 @@ class Config(object):
 
     def set_keys(self, **kwargs):
         def env(lang, default):
-            version = kwargs.get(lang)
+            version = kwargs.pop(lang, None)
             if not version:
                 # Hooray for corner cases.
                 if lang == 'python':
@@ -174,9 +174,9 @@ class Config(object):
         for lang in ('perl', 'lua', 'python', 'numpy', 'r_base'):
             set_lang(self.variant, lang)
 
-        self._build_id = kwargs.get('build_id', getattr(self, '_build_id', ""))
-        source_cache = kwargs.get('cache_dir')
-        croot = kwargs.get('croot')
+        self._build_id = kwargs.pop('build_id', getattr(self, '_build_id', ""))
+        source_cache = kwargs.pop('cache_dir', None)
+        croot = kwargs.pop('croot', None)
 
         if source_cache:
             self._src_cache_root = os.path.abspath(os.path.normpath(
