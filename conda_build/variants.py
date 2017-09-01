@@ -120,7 +120,7 @@ def combine_specs(specs):
                         values[k] = list(set(values[k]))
                 elif k == 'zip_keys':
                     # should always be a list of lists, but users may specify as just a list
-                    if not isinstance(v[0], list):
+                    if not isinstance(v[0], list) and not isinstance(v[0], tuple):
                         v = [v]
                     values[k] = values.get(k, [])
                     values[k].extend(v)

@@ -927,7 +927,7 @@ def collect_channels(config, is_host=False):
 
 def trim_empty_keys(dict_):
     to_remove = set()
-    negative_means_empty = ('final', 'noarch_python')
+    negative_means_empty = ('final', 'noarch_python', 'zip_keys')
     for k, v in dict_.items():
         if hasattr(v, 'keys'):
             trim_empty_keys(v)
@@ -938,6 +938,8 @@ def trim_empty_keys(dict_):
         #     false, and we need to keep that setting.
         if not v and k in negative_means_empty:
             to_remove.add(k)
+    if 'zip_keys' in dict_ and not any(v for v in dict_['zip_keys']):
+        to_remove.add('zip_keys')
     for k in to_remove:
         del dict_[k]
 
