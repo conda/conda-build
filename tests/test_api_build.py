@@ -1184,10 +1184,11 @@ def test_archive_ordering(testing_workdir):
 
     archive = tarfile.open(outputs[0])
 
-    # the last three files in 'archive' have identical file sizes
-    # so we will test them for ordering
-    archive_names = [tarinfo.name for tarinfo in archive]
-    archive_sizes = [tarinfo.size for tarinfo in archive]
+    member_information = [(tarinfo.name, tarinfo.size) for tarinfo in archive]
 
-    assert archive_names[-3:] == sorted(archive_names[-3:])
-    assert archive_sizes[-3:] == sorted(archive_sizes[-3:])
+    # if two consecutive files have the same filesize, we need to check
+    # that their filenames are sorted correctly
+    for i in range(len(member_information) - 1):
+        if member_information[i][1] == member_information[i + 1][1]:
+            same_sized_files = [member_information[i][0], member_information[i + 1][0]]
+            assert same_sized_files == sorted(same_sized_files)
