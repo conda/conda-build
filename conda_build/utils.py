@@ -844,7 +844,10 @@ def _convert_lists_to_sets(_dict):
         if hasattr(v, 'keys'):
             _dict[k] = HashableDict(_convert_lists_to_sets(v))
         elif hasattr(v, '__iter__') and not isinstance(v, string_types):
-            _dict[k] = sorted(list(set(v)))
+            try:
+                _dict[k] = sorted(list(set(v)))
+            except TypeError:
+                _dict[k] = sorted(list(set(tuple(_) for _ in v)))
     return _dict
 
 
