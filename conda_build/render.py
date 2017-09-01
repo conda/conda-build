@@ -429,6 +429,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         recipe_text = recipe_text.decode()
     elif not PY3 and hasattr(recipe_text, 'encode'):
         recipe_text = recipe_text.encode()
+
     for variant in variants:
         mv = metadata.copy()
 
