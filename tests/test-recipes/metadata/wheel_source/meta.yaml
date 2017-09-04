@@ -8,3 +8,8 @@ source:
 build:
   # this recipe is testing that the hashing of source files doesn't break our simpler file naming here
   script: pip install setuptools-36.4.0-py2.py3-none-any.whl
+
+requirements:
+  build:
+    - python
+    - pip
