@@ -1360,8 +1360,7 @@ def _construct_metadata_for_test_from_package(package, config):
             is_channel = True
 
     if not is_channel:
-        log.error("Your package must reside in a channel structure with platform-subfolders!")
-        sys.exit(1)
+        raise ValueError("Your package must reside in a channel structure with platform-subfolders!")
 
     # get channel url
     local_channel = os.path.dirname(local_pkg_location)
