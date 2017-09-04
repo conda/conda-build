@@ -42,7 +42,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
     if not isdir(cache_folder):
         os.makedirs(cache_folder)
 
-    fn = source_dict['fn'] if 'fn' in source_dict else basename(source_dict['url'])
+    unhashed_fn = fn = source_dict['fn'] if 'fn' in source_dict else basename(source_dict['url'])
     hash_added = False
     for hash_type in ('md5', 'sha1', 'sha256'):
         if hash_type in source_dict:
@@ -104,7 +104,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
         os.rename(path, dest_path)
         path = dest_path
 
-    return path
+    return path, unhashed_fn
 
 
 def hoist_single_extracted_folder(nested_folder):
@@ -126,13 +126,14 @@ def hoist_single_extracted_folder(nested_folder):
 def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False,
            timeout=90, locking=True):
     ''' Uncompress a downloaded source. '''
-    src_path = download_to_cache(cache_folder, recipe_path, source_dict)
+    src_path, unhashed_fn = download_to_cache(cache_folder, recipe_path, source_dict)
 
     if not isdir(src_dir):
         os.makedirs(src_dir)
     if verbose:
         print("Extracting download")
     with TemporaryDirectory(dir=croot) as tmpdir:
+        unhashed_dest = os.path.join(tmpdir, unhashed_fn)
         if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
                 '.tar', 'tar.z')):
             tar_xf(src_path, tmpdir)
@@ -143,11 +144,11 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             # This allows test_files or about.license_file to locate files in the wheel,
             # as well as `pip install name-version.whl` as install command
             unzip(src_path, tmpdir)
-            copy_into(src_path, tmpdir, timeout, locking=locking)
+            copy_into(src_path, unhashed_dest, timeout, locking=locking)
         else:
             # In this case, the build script will need to deal with unpacking the source
             print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
-            copy_into(src_path, tmpdir, timeout, locking=locking)
+            copy_into(src_path, unhashed_dest, timeout, locking=locking)
         flist = os.listdir(tmpdir)
         folder = os.path.join(tmpdir, flist[0])
         if len(flist) == 1 and os.path.isdir(folder):
