@@ -1347,24 +1347,39 @@ def _construct_metadata_for_test_from_package(package, config):
             config.filename_hashing = False
             hash_input = {}
 
-    local_location = os.path.dirname(package)
-    # strip off extra subdir folders
-    for platform in ('win', 'linux', 'osx'):
-        if os.path.basename(local_location).startswith(platform + "-"):
-            local_location = os.path.dirname(local_location)
-
-    if not os.path.abspath(local_location):
-        local_location = os.path.normpath(os.path.abspath(
-            os.path.join(os.getcwd(), local_location)))
-
     log = utils.get_logger(__name__)
-    log.info("Updating index at %s to make package installable with dependencies" % local_location)
-    update_index(local_location)
-    local_url = url_path(local_location)
+
+    # get absolute file location
+    local_pkg_location = os.path.normpath(os.path.abspath(os.path.dirname(package)))
+
+    # get last part of the path
+    last_element = os.path.basename(local_pkg_location)
+    is_channel = False
+    for platform in ('win-', 'linux-', 'osx-', 'noarch'):
+        if last_element.startswith(platform):
+            is_channel = True
+
+    if not is_channel:
+        raise ValueError("Your package must reside in a channel structure with "
+                         "platform-subfolders.  See more info at what a valid channel is "
+                         "at https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
+
+    # get channel url
+    local_channel = os.path.dirname(local_pkg_location)
+
+    # update indices in the channel
+    for pattern in ('win-*', 'linux-*', 'osx-*', 'noarch'):
+        for folder in glob(os.path.join(local_channel, pattern)):
+            log.info("Updating index at %s to make package installable with dependencies" % folder)
+            update_index(folder)
+
+    # make an url out of the channel and add to channel list
+    local_channel_url = url_path(local_channel)
+
     # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
     #    how to add elements.
     config.channel_urls = list(config.channel_urls)
-    config.channel_urls.insert(0, local_url)
+    config.channel_urls.insert(0, local_channel_url)
 
     try:
         metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
