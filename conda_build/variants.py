@@ -10,7 +10,7 @@ import yaml
 
 from conda_build.utils import ensure_list, HashableDict, trim_empty_keys
 from conda_build.conda_interface import string_types
-from conda_build.conda_interface import subdir
+from conda_build.conda_interface import subdir, memoized
 from conda_build.conda_interface import cc_conda_build
 from conda_build.conda_interface import cc_platform
 
@@ -118,6 +118,14 @@ def combine_specs(specs):
                         values[k].extend(ensure_list(v))
                         # uniquify
                         values[k] = list(set(values[k]))
+                elif k == 'zip_keys':
+                    # should always be a list of lists, but users may specify as just a list
+                    if not isinstance(v[0], list) and not isinstance(v[0], tuple):
+                        v = [v]
+                    values[k] = values.get(k, [])
+                    values[k].extend(v)
+                    values[k] = list(list(set_group) for set_group in set(tuple(group)
+                                                                          for group in values[k]))
                 else:
                     if hasattr(v, 'keys'):
                         values[k] = v
@@ -185,13 +193,12 @@ def _get_zip_key_set(combined_variant):
             key_set = set(zip_keys)
         else:
             # make sure that each key only occurs in one set
-            key_sets = [set(group) for group in zip_keys]
-            _all_unique = all_unique(key_sets)
+            _all_unique = all_unique(zip_keys)
             if _all_unique is not True:
                 raise ValueError("All package in zip keys must belong to only one group.  "
                                 "'{}' is in more than one group.".format(_all_unique))
-            for ks in key_sets:
-                key_set.update(ks)
+            for ks in zip_keys:
+                key_set.update(set(ks))
     # omit
     key_set = {key for key in key_set if key in combined_variant}
     return key_set
@@ -251,9 +258,9 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
         del combined['extend_keys']
 
     dicts = []
-    dimensions = {k: v for k, v in combined.items() if k not in (['extend_keys', 'zip_keys'] +
-                                                                 list(extend_keys) +
-                                                                 list(_get_zip_key_set(combined)))}
+    pass_through_keys = (['extend_keys', 'zip_keys'] + list(extend_keys) +
+                         list(_get_zip_key_set(combined)))
+    dimensions = {k: v for k, v in combined.items() if k not in pass_through_keys}
     # here's where we add in the zipped dimensions
     for group in _get_zip_groups(combined):
         dimensions.update(group)
@@ -263,10 +270,10 @@ def dict_of_lists_to_list_of_dicts(dict_or_list_of_dicts, platform=cc_platform):
 
     for x in product(*dimensions.values()):
         remapped = dict(six.moves.zip(dimensions, x))
-        for col in list(extend_keys):
+        for col in pass_through_keys:
             v = combined.get(col)
             if v:
-                remapped[col] = v if hasattr(v, 'keys') else list(set(v))
+                remapped[col] = v
         # split out zipped keys
         for k, v in remapped.copy().items():
             if isinstance(k, string_types) and isinstance(v, string_types):
@@ -291,9 +298,11 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
     squished = {}
     all_zip_keys = set()
     groups = None
-    if 'zip_keys' in list_of_dicts[0]:
-        if ('zip_keys' in list_of_dicts[0]['zip_keys'] and
-                isinstance(list_of_dicts[0]['zip_keys'][0], list)):
+    zip_key_groups = (list_of_dicts[0]['zip_keys'] if 'zip_keys' in list_of_dicts[0] and
+                      list_of_dicts[0]['zip_keys'] else [])
+    if zip_key_groups:
+        if (isinstance(list_of_dicts[0]['zip_keys'][0], list) or
+                  isinstance(list_of_dicts[0]['zip_keys'][0], tuple)):
             groups = list_of_dicts[0]['zip_keys']
         else:
             groups = [list_of_dicts[0]['zip_keys']]
@@ -302,6 +311,8 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
                 all_zip_keys.add(item)
     for variant in list_of_dicts:
         for k, v in variant.items():
+            if k == 'zip_keys':
+                continue
             if hasattr(v, 'keys'):
                 existing_value = squished.get(k, {})
                 existing_value.update(v)
@@ -318,6 +329,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
             values = list(zip(*set(zip(*(squished[key] for key in group)))))
             for idx, key in enumerate(group):
                 squished[key] = values[idx]
+    squished['zip_keys'] = zip_key_groups
     return squished
 
 
@@ -358,6 +370,10 @@ def get_package_variants(recipedir_or_metadata, config=None):
                 combined_spec[k].update(v)
             else:
                 combined_spec[k].extend(v)
+        elif k == 'zip_keys':
+            combined_spec[k].extend(v)
+            combined_spec[k] = list(list(set_group) for set_group in set(tuple(group)
+                                                            for group in combined_spec[k]))
         else:
             combined_spec[k] = [v]
 
@@ -365,6 +381,7 @@ def get_package_variants(recipedir_or_metadata, config=None):
     return dict_of_lists_to_list_of_dicts(combined_spec, config.platform)
 
 
+@memoized
 def get_default_variants(platform=cc_platform):
     return dict_of_lists_to_list_of_dicts(DEFAULT_VARIANTS, platform)
 

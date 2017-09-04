@@ -260,8 +260,10 @@ def ensure_matching_hashes(output_metadata):
     for (_, m) in output_metadata.values():
         for (_, om) in output_metadata.values():
             if m != om:
-                deps = (_get_all_dependencies(om, envs) +
-                        om.meta.get('build', {}).get('run_exports', []))
+                run_exports = om.meta.get('build', {}).get('run_exports', [])
+                if hasattr(run_exports, 'keys'):
+                    run_exports = run_exports.get('strong', []) + run_exports.get('weak', [])
+                deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
                             dep.split(' ')[-1] != m.build_id()):
@@ -1661,7 +1663,7 @@ class MetaData(object):
 
         build = output_metadata.meta.get('build', {})
         if 'number' in output:
-            build['number'] = ['number']
+            build['number'] = output['number']
         if 'string' in output:
             build['string'] = output['string']
         if 'run_exports' in output and output['run_exports']:

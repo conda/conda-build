@@ -1762,7 +1762,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
-            recipe_list.extendleft([metadata if metadata else recipe])
+            recipe_list.extendleft([recipe])
             for pkg in e.packages:
                 pkg_name = pkg.split(' ')[0]
                 # if we hit missing dependencies at test time, the error we get says that our

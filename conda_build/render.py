@@ -429,6 +429,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         recipe_text = recipe_text.decode()
     elif not PY3 and hasattr(recipe_text, 'encode'):
         recipe_text = recipe_text.encode()
+
     for variant in variants:
         mv = metadata.copy()
 
@@ -448,24 +449,13 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     variant mapping
             if re.search(r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_text):
                 if key in variant:
-                    variant_index = squished_variants[key].index(variant[key])
-                    zipped_keys = [key]
-                    if 'zip_keys' in variant:
-                        zip_key_groups = variant['zip_keys']
-                        if zip_key_groups and not isinstance(zip_key_groups[0], list):
-                            zip_key_groups = [zip_key_groups]
-                        for group in zip_key_groups:
-                            if key in group:
-                                zipped_keys = group
-                                break
-                    for zipped_key in zipped_keys:
-                        conform_dict[zipped_key] = squished_variants[zipped_key][variant_index]
+                    conform_dict[key] = variant[key]
 
         conform_dict.update({key: val for key, val in variant.items()
-                                  if key in mv.meta.get('requirements').get('build', []) +
-                                            mv.meta.get('requirements').get('host', [])})
+                if key in mv.meta.get('requirements').get('build', []) +
+                        mv.meta.get('requirements').get('host', [])})
 
-        compiler_matches = re.findall(r"compiler\([\'\"](.*)[\'\"].*\)",
+        compiler_matches = re.findall(r"\{\{\s*compiler\([\'\"](.*)[\'\"].*\)\s*\}\}",
                                         recipe_requirements)
         if compiler_matches:
             from conda_build.jinja_context import native_compiler
@@ -477,6 +467,24 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         # target_platform is *always* a locked dimension, because top-level recipe is always
         #    particular to a platform.
         conform_dict['target_platform'] = variant.get('target_platform', metadata.config.subdir)
+
+        # handle grouping from zip_keys for everything in conform_dict
+        if 'zip_keys' in variant:
+            zip_key_groups = variant['zip_keys']
+            if zip_key_groups and not isinstance(zip_key_groups[0], list):
+                zip_key_groups = [zip_key_groups]
+            for key in list(conform_dict.keys()):
+                zipped_keys = None
+                for group in zip_key_groups:
+                    if key in group:
+                        zipped_keys = group
+                    if zipped_keys:
+                        # here we zip the values of the keys, so that we can match the combination
+                        zipped_values = list(zip(*[squished_variants[key] for key in zipped_keys]))
+                        variant_index = zipped_values.index(tuple(variant[key]
+                                                                  for key in zipped_keys))
+                        for zipped_key in zipped_keys:
+                            conform_dict[zipped_key] = squished_variants[zipped_key][variant_index]
 
         build_reqs = mv.meta.get('requirements', {}).get('build', [])
         host_reqs = mv.meta.get('requirements', {}).get('host', [])
@@ -493,6 +501,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             _variant['pin_run_as_build'] = pin_run_as_build
             numpy_pinned_variants.append(_variant)
         mv.config.variants = numpy_pinned_variants
+
+        mv.config.squished_variants = list_of_dicts_to_dict_of_lists(mv.config.variants)
 
         if mv.needs_source_for_render and mv.variant_in_source:
             mv.parse_again()
