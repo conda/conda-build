@@ -1,0 +1,21 @@
+# in this recipe, both the click variant and the pytest variant are underspecified for conda.
+#   In conda-build <3.0.15, this recipe will fail, with unsatisfiable dependencies.  In 3.0.15,
+#   we add .* to underspecified variant versions in run and test deps, but we also warn people
+#   that it would be better if they used better specs (provide .* themselves, or use >/< expressions
+
+package:
+  name: test_variant_in_run_and_test
+  version: 1.0
+
+requirements:
+  build:
+    - python
+  run:
+    - click  {{ click }}
+
+test:
+  requires:
+    - pytest  {{ pytest }}
+    # neither of these two should have warning messages
+    - pytest-cov  {{ pytest_cov }}.*
+    - pytest-mock  >={{ pytest_mock }}
