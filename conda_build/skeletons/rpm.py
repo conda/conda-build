@@ -177,7 +177,7 @@ def cache_file(src_cache, url, fn=None, checksummer=hashlib.sha256):
         source = dict({'url': url, 'fn': fn})
     else:
         source = dict({'url': url})
-    cached_path = download_to_cache(src_cache, '', source)
+    cached_path, _ = download_to_cache(src_cache, '', source)
     csum = checksummer()
     csum.update(open(cached_path, 'rb').read())
     csumstr = csum.hexdigest()
@@ -216,7 +216,7 @@ def rpm_url_generate(url_dirname, rpm_name, version, release, platform, src_cach
     """
     result = rpm_filename_generate(rpm_name, version, release, platform)
     url = join(url_dirname, result)
-    path = download_to_cache(src_cache, '', dict({'url': url}))
+    path, _ = download_to_cache(src_cache, '', dict({'url': url}))
     assert path, "Failed to cache generated RPM url {}".format(result)
     return url
 
