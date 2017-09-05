@@ -892,8 +892,8 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
-    assert 'strong_pinned_package 1.0' in m.meta['requirements']['run']
-    assert 'weak_pinned_package 1.0' in m.meta['requirements']['run']
+    assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
+    assert 'weak_pinned_package 1.0.*' in m.meta['requirements']['run']
 
     #    2. host present.  Use run_exports from host, ignore 'weak' ones from build.  All are
     #           weak by default.
@@ -901,7 +901,7 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['host'] = ['python']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
-    assert 'weak_pinned_package 2.0' not in m.meta['requirements']['run']
+    assert 'weak_pinned_package 2.0.*' not in m.meta['requirements']['run']
 
     #    3. host present, and deps in build have "strong" run_exports section.  use host, add
     #           in "strong" from build.
@@ -909,10 +909,11 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['host'] = ['test_has_run_exports_implicit_weak']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
-    assert 'strong_pinned_package 1.0' in m.meta['requirements']['run']
+    assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
     # weak one from test_has_run_exports should be excluded, since it is a build dep
-    assert 'weak_pinned_package 1.0' not in m.meta['requirements']['run']
-    assert 'weak_pinned_package 2.0' in m.meta['requirements']['run']
+    assert 'weak_pinned_package 1.0.*' not in m.meta['requirements']['run']
+    assert 'weak_pinned_package 2.0.*' in m.meta['requirements']['run']
+
 
 @pytest.mark.serial
 def test_ignore_run_exports(testing_metadata, testing_config):

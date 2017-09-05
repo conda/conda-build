@@ -7,6 +7,7 @@ import pytest
 from conda_build import source
 from conda_build.conda_interface import TemporaryDirectory
 from conda_build.source import download_to_cache
+from conda_build.utils import reset_deduplicator
 from .utils import thisdir
 
 
@@ -123,6 +124,7 @@ def test_hoist_different_name(testing_workdir):
     assert not os.path.isdir(testdir)
 
 
+@pytest.mark.serial
 def test_append_hash_to_fn(testing_metadata, caplog):
     relative_zip = 'testfn.zip'
     assert source.append_hash_to_fn(relative_zip, '123') == 'testfn_123.zip'
@@ -136,9 +138,14 @@ def test_append_hash_to_fn(testing_metadata, caplog):
     assert source.append_hash_to_fn(absolute_win_zip, '123') == 'C:\\abc\\testfn_123.zip'
     absolute_win_tar_gz = 'C:\\abc\\testfn.tar.gz'
     assert source.append_hash_to_fn(absolute_win_tar_gz, '123') == 'C:\\abc\\testfn_123.tar.gz'
+    relative_whl = 'setuptools-36.4.0-py2.py3-none-any.whl'
+    assert source.append_hash_to_fn(relative_whl, '123') == 'setuptools-36.4.0-py2.py3-none-any_123.whl'
 
     testing_metadata.meta['source'] = [
         {'folder': 'f1', 'url': os.path.join(thisdir, 'archives', 'a.tar.bz2')}]
+    reset_deduplicator()
     source.provide(testing_metadata)
-    # would be nice if this worked, but broken on Travis.  Works locally.  Catchlog 1.2.2
-    # assert caplog.text.count('No hash (md5, sha1, sha256) provided.') == 1
+    # TODO: Can't seem to get this to work.  Test passes when run by itself, but fails when run in whole
+    #     serial suite.  Some residual state, somehow.  I suspect the deduplicator logic with the logger,
+    #     but attempts to reset it have not been successful.
+    # assert any("No hash (md5, sha1, sha256) provided." in rec.message for rec in caplog.records)

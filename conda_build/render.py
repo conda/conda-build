@@ -327,6 +327,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
+    versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps]
 
     for _env, values in (('build', build_deps), ('host', host_deps), ('run', versioned_run_deps)):
         if values:
@@ -340,6 +341,8 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     if test_deps:
         versioned_test_deps = list({get_pin_from_build(m, dep, full_build_dep_versions)
                                     for dep in test_deps})
+        versioned_test_deps = [utils.ensure_valid_spec(spec, warn=True)
+                               for spec in versioned_test_deps]
         rendered_metadata.meta['test']['requires'] = versioned_test_deps
     rendered_metadata.meta['extra']['copy_test_source_files'] = m.config.copy_test_source_files
 

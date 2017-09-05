@@ -1068,6 +1068,13 @@ info_debug_stdout_filter = LessThanFilter(logging.WARNING)
 warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
 
 
+def reset_deduplicator():
+    """Most of the time, we want the deduplication.  There are some cases (tests especially)
+    where we want to be able to control the duplication."""
+    global dedupe_filter
+    dedupe_filter = DuplicateFilter()
+
+
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
     config_file = cc_conda_build.get('log_config_file')
     # by loading config file here, and then only adding handlers later, people
@@ -1233,11 +1240,11 @@ def sort_list_in_nested_structure(dictionary, omissions=''):
 # if you are seeing mysterious unsatisfiable errors, with the package you're building being the
 #    unsatisfiable part, then you probably need to update this regex.
 
-spec_needing_star_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+([0-9a-zA-Z\.\+\_]+)(\s+[0-9a-zA-Z\.\_]+)?")  # NOQA
+spec_needing_star_re = re.compile(r"([\w\d\.\-\_]+)\s+((?<![><=])[\w\d\.\-\_]+?(?!\*))(\s+[\w\d\.\_]+)?$")  # NOQA
 spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
 
 
-def ensure_valid_spec(spec):
+def ensure_valid_spec(spec, warn=False):
     if isinstance(spec, MatchSpec):
         if (hasattr(spec, 'version') and spec.version and
                 spec_ver_needing_star_re.match(str(spec.version))):
@@ -1251,6 +1258,15 @@ def ensure_valid_spec(spec):
                 spec = spec_needing_star_re.sub(r"\1 \2", spec)
             else:
                 if "*" not in spec:
+                    if match.group(1) != 'python' and warn:
+                        log = get_logger(__name__)
+                        log.warn("Adding .* to spec '{}' to ensure satisfiability.  Please "
+                                 "consider putting {{{{ var_name }}}}.* or some relational "
+                                 "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
+                                 "also a build req, using {{{{ pin_compatible() }}}} jinja2 "
+                                 "function instead.  See "
+                "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level"  # NOQA
+                        .format(spec))
                     spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
     return spec
 

@@ -73,7 +73,7 @@ def test_run_exports_in_subpackage(testing_metadata):
     p2.meta['requirements']['build'] = ['has_run_exports']
     p2.original_meta = p2.meta.copy()
     p2_final = finalize_metadata(p2)
-    assert 'bzip2 1.0' in p2_final.meta['requirements']['run']
+    assert 'bzip2 1.0.*' in p2_final.meta['requirements']['run']
 
 
 # @pytest.mark.serial
@@ -241,9 +241,10 @@ def test_subpackage_hash_inputs(testing_config):
             assert utils.package_has_file(out, 'info/recipe/build.sh')
 
 
+@pytest.mark.serial
 def test_overlapping_files(testing_config, caplog):
     recipe_dir = os.path.join(subpackage_dir, '_overlapping_files')
+    utils.reset_deduplicator()
     outputs = api.build(recipe_dir, config=testing_config)
     assert len(outputs) == 3
-    # would be nice if this worked, but broken on Travis.  Works locally.  Catchlog 1.2.2
-    # assert caplog.text().count('Exact overlap') == 2
+    assert sum(int("Exact overlap" in rec.message) for rec in caplog.records) == 1

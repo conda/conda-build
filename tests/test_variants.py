@@ -178,3 +178,15 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
                  'MACOSX_DEPLOYMENT_TARGET': '10.9', 'CONDA_BUILD_SYSROOT': '/opt/MacOSX10.9.sdk'}]
     variant_list = variants.dict_of_lists_to_list_of_dicts(variants_)
     assert len(variant_list) == 1
+
+
+@pytest.mark.serial
+def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
+    recipe = os.path.join(recipe_dir, '14_variant_in_run_and_test')
+    api.render(recipe, config=testing_config)
+
+    text = caplog.text
+    assert "Adding .* to spec 'click  6'" in text
+    assert "Adding .* to spec 'pytest  3.2'" in text
+    assert "Adding .* to spec 'pytest-cov  2.3'" not in text
+    assert "Adding .* to spec 'pytest-mock  1.6'" not in text
