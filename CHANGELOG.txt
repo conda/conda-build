@@ -1,3 +1,24 @@
+2017-09-04 3.0.15:
+
+Bug fixes:
+----------
+
+* fix relative paths for croot argument to CLI; test  #2335
+* fix several issues with zip_keys  #2340
+* fix output build number never applying  #2340
+* fix ensure_matching_hashes for strong/weak run_exports  #2340
+* fix indexing of channels, especially before testing packages  #2341
+* copy wheels and unextractable files (.sh) into the workdir with their original, un-hashed filename, for simplicity in working with them.  #2343
+* avoid attempting to overwrite existing files in the source cache  #2343
+* avoid unsatisfiable requirement errors by adding .* to specs that lack .* or >/</>=/<=  #2344
+
+Contributors:
+-------------
+
+* @gabm
+* @msarahan
+
+
 2017-08-29 3.0.14:
 
 Bug fixes:
