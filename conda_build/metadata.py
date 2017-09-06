@@ -48,7 +48,7 @@ ARCH_MAP = {'32': 'x86',
 
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
-    plat = config.build_subdir
+    plat = config.host_subdir
     d = dict(
         linux=plat.startswith('linux-'),
         linux32=bool(plat == 'linux-32'),
