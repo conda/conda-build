@@ -677,9 +677,7 @@ class MetaData(object):
     def __init__(self, path, config=None, variant=None):
 
         self.undefined_jinja_vars = []
-        # decouple this config from whatever was fed in.  People must change config by
-        #    accessing and changing this attribute.
-        self.config = get_or_merge_config(config, variant=variant).copy()
+        self.config = get_or_merge_config(config, variant=variant)
 
         if isfile(path):
             self.meta_path = path

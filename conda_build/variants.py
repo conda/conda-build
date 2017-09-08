@@ -112,7 +112,7 @@ def combine_specs(specs):
                         if k in values and hasattr(values[k], 'keys'):
                             values[k].update(v)
                         else:
-                            values[k] = v
+                            values[k] = v.copy()
                     else:
                         values[k] = ensure_list(values.get(k, []))
                         values[k].extend(ensure_list(v))
@@ -128,7 +128,7 @@ def combine_specs(specs):
                                                                           for group in values[k]))
                 else:
                     if hasattr(v, 'keys'):
-                        values[k] = v
+                        values[k] = v.copy()
                     else:
                         values[k] = ensure_list(v)
     return values, set(extend_keys)

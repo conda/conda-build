@@ -621,6 +621,8 @@ def get_or_merge_config(config, variant=None, **kwargs):
     if not config:
         config = Config(variant=variant)
     else:
+        # decouple this config from whatever was fed in.  People must change config by
+        #    accessing and changing this attribute.
         config = config.copy()
     if kwargs:
         config.set_keys(**kwargs)
