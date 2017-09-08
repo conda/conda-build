@@ -77,12 +77,15 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
                     download(url, path)
             except CondaHTTPError as e:
                 print("Error: %s" % str(e).strip(), file=sys.stderr)
+                rm_rf(path)
             except RuntimeError as e:
                 print("Error: %s" % str(e).strip(), file=sys.stderr)
+                rm_rf(path)
             else:
                 print("Success")
                 break
         else:  # no break
+            rm_rf(path)
             raise RuntimeError("Could not download %s" % url)
 
     hashed = None
@@ -91,6 +94,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
             expected_hash = source_dict[tp]
             hashed = hashsum_file(path, tp)
             if expected_hash != hashed:
+                rm_rf(path)
                 raise RuntimeError("%s mismatch: '%s' != '%s'" %
                            (tp.upper(), hashed, expected_hash))
             break
