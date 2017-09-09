@@ -1,10 +1,11 @@
 import os
+import json
 
 import pytest
 import yaml
 
 from conda_build import api, exceptions, variants
-
+from conda_build.utils import package_has_file
 
 thisdir = os.path.dirname(__file__)
 recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
@@ -190,3 +191,13 @@ def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, capl
     assert "Adding .* to spec 'pytest  3.2'" in text
     assert "Adding .* to spec 'pytest-cov  2.3'" not in text
     assert "Adding .* to spec 'pytest-mock  1.6'" not in text
+
+
+def test_serial_builds_have_independent_configs(testing_config):
+    recipe = os.path.join(recipe_dir, '17_multiple_recipes_independent_config')
+    recipes = [os.path.join(recipe, dirname) for dirname in ('a', 'b')]
+    outputs = api.build(recipes, config=testing_config)
+    index_json = json.loads(package_has_file(outputs[0], 'info/index.json'))
+    assert 'bzip2 >=1,<1.0.7.0a0' in index_json['depends']
+    index_json = json.loads(package_has_file(outputs[1], 'info/index.json'))
+    assert 'bzip2 >=1.0.6,<2.0a0' in index_json['depends']

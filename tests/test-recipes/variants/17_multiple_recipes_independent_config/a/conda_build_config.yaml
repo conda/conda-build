@@ -1,0 +1,6 @@
+bzip2:
+  - 1.0.6
+pin_run_as_build:
+  bzip2:
+    min_pin: x
+    max_pin: x.x.x
