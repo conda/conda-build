@@ -27,7 +27,7 @@ from os.path import expanduser
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
-           finalize=True, **kwargs):
+           finalize=True, bypass_env_check=False, **kwargs):
     """Given path to a recipe, return the MetaData object(s) representing that recipe, with jinja2
        templates evaluated.
 
@@ -38,7 +38,7 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
 
-    metadata_tuples = render_recipe(recipe_path,
+    metadata_tuples = render_recipe(recipe_path, bypass_env_check=bypass_env_check,
                                     no_download_source=config.no_download_source,
                                     config=config, variants=variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
