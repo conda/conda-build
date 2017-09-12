@@ -218,7 +218,7 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     if not compatibility and not permit_undefined_jinja and not bypass_env_check:
         raise RuntimeError("Could not get compatibility information for {} package.  "
                            "Is it one of your build dependencies?".format(package_name))
-    return "  ".join((package_name, compatibility)) if compatibility is not None else None
+    return "  ".join((package_name, compatibility)) if compatibility is not None else package_name
 
 
 def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit_undefined_jinja):
