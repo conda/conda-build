@@ -1,3 +1,26 @@
+2017-09-12 2.1.18:
+------------------
+
+Bug fixes:
+----------
+
+* add SSL_CERT_FILE and REQUESTS_CA_BUNDLE to build env pass-through variables
+* allow blank values for certain keys in cran-skeleton  #2153
+* Ignore feature records in index for ``conda inspect``  #2253
+* backport relax entry_points syntax from #1894  #2348
+* delete "cc" (conda config instance) only after all usage  #2365
+* backport "only set env vars in build scripts that actually have values" from #2259; #2528
+
+Contributors:
+-------------
+
+* @aburgm
+* @jakirkham
+* @jjhelmus
+* @kalefranz
+* @nehaljwani
+
+
 2017-06-30 2.1.17:
 
 Bug fixes:
