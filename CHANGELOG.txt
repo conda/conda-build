@@ -1,3 +1,26 @@
+2017-09-12 3.0.16:
+
+Enhancements:
+-------------
+
+* allow env check to be bypassed when rendering (for c3i)  #2353
+* provide mechanism for compiler version to be passed to compiler jinja2 function (match name with _version)  #2356
+
+Bug fixes:
+----------
+
+* use host_subdir instead of build_subdir when setting selectors  #2345
+* remove downloaded files from source cache if they failed at any download step  #2349
+* fix variants being merged across multiple builds due to modification of global  #2350
+* disable pyldd disagrees warning output for now  #2352
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2017-09-04 3.0.15:
 
 Bug fixes:
