@@ -1666,6 +1666,10 @@ class MetaData(object):
             build['string'] = output['string']
         if 'run_exports' in output and output['run_exports']:
             build['run_exports'] = output['run_exports']
+        if 'track_features' in output and output['track_features']:
+            build['track_features'] = output['track_features']
+        if 'features' in output and output['features']:
+            build['features'] = output['features']
         output_metadata.meta['build'] = build
 
         return output_metadata
