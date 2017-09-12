@@ -1,3 +1,21 @@
+2017-09-12 3.0.17:
+
+Enhancements:
+-------------
+
+* add track_features and features to output options, to allow per-output configuration of features  #2358
+
+Bug fixes:
+----------
+
+* Fix conda symlinks misbehaving when building conda package  #2359
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-09-12 3.0.16:
 
 Enhancements:
