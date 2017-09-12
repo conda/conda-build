@@ -12,7 +12,7 @@ from .environ import get_dict as get_environ
 from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
                     string_types)
 from .render import get_env_dependencies
-from .utils import copy_into, check_call_env, rm_rf
+from .utils import copy_into, check_call_env, rm_rf, ensure_valid_spec
 from . import _load_setup_py_data
 
 
@@ -332,18 +332,24 @@ def compiler(language, config, permit_undefined_jinja=False):
     """
 
     compiler = native_compiler(language, config)
+    version = None
     if config.variant:
         target_platform = config.variant.get('target_platform', config.subdir)
         language_compiler_key = '{}_compiler'.format(language)
         # fall back to native if language-compiler is not explicitly set in variant
         compiler = config.variant.get(language_compiler_key, compiler)
+        version = config.variant.get(language_compiler_key + '_version')
     else:
         target_platform = config.subdir
 
     # support cross compilers.  A cross-compiler package will have a name such as
     #    gcc_target
     #    gcc_linux-cos6-64
-    return '_'.join([compiler, target_platform])
+    compiler = '_'.join([compiler, target_platform])
+    if version:
+        compiler = ' '.join((compiler, version))
+        compiler = ensure_valid_spec(compiler, warn=False)
+    return compiler
 
 
 def cdt(package_name, config, permit_undefined_jinja=False):
