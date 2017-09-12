@@ -60,18 +60,18 @@ def get_linkages(obj_files, prefix, sysroot):
         finally:
             res_py = inspect_linkages(path, sysroot=sysroot)
             res_py = [(basename(lp), lp) for lp in res_py]
-            print("set(res_py) {}".format(set(res_py)))
+            # print("set(res_py) {}".format(set(res_py)))
             if ldd_failed:
                 res[f] = res_py
-            else:
-                print("set(res[f]) = {}".format(set(res[f])))
-                if set(res[f]) != set(res_py):
-                    print("WARNING: pyldd disagrees with ldd/otool. This will not cause any")
-                    print("WARNING: problems for this build, but please file a bug at:")
-                    print("WARNING: https://github.com/conda/conda-build")
-                    print("WARNING: and (if possible) attach file {}".format(path))
-                    print("WARNING: ldd/tool gives {}, pyldd gives {}"
-                              .format(set(res[f]), set(res_py)))
+            # else:
+            #   print("set(res[f]) = {}".format(set(res[f])))
+            #   if set(res[f]) != set(res_py):
+            #       print("WARNING: pyldd disagrees with ldd/otool. This will not cause any")
+            #       print("WARNING: problems for this build, but please file a bug at:")
+            #       print("WARNING: https://github.com/conda/conda-build")
+            #       print("WARNING: and (if possible) attach file {}".format(path))
+            #       print("WARNING: ldd/tool gives {}, pyldd gives {}"
+            #             .format(set(res[f]), set(res_py)))
 
     return res
 
