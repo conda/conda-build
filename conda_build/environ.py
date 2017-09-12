@@ -729,7 +729,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
 
 
 def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, retry=0,
-               locks=None, is_cross=False):
+               locks=None, is_cross=False, is_conda=False):
     '''
     Create a conda envrionment for the given prefix and specs.
     '''
@@ -852,13 +852,15 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                     else:
                         log.error("Failed to create env, max retries exceeded.")
                         raise
-    # Symlinking conda is critical here to make sure that activate scripts are not
-    #    accidentally included in packages.
-    if utils.on_win:
-        shell = "cmd.exe"
-    else:
-        shell = "bash"
-    symlink_conda(prefix, sys.prefix, shell)
+
+    if not is_conda:
+        # Symlinking conda is critical here to make sure that activate scripts are not
+        #    accidentally included in packages.
+        if utils.on_win:
+            shell = "cmd.exe"
+        else:
+            shell = "bash"
+        symlink_conda(prefix, sys.prefix, shell)
 
 
 def clean_pkg_cache(dist, config):

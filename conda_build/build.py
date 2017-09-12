@@ -948,7 +948,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                        output_folder=m.config.output_folder,
                                                        channel_urls=tuple(m.config.channel_urls))
             environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
-                               subdir=m.config.host_subdir, is_cross=m.is_cross)
+                               subdir=m.config.host_subdir, is_cross=m.is_cross,
+                               is_conda=m.name() == 'conda')
             build_ms_deps = m.ms_depends('build')
         else:
             # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
@@ -996,7 +997,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
             environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
-                               subdir=m.config.build_subdir, is_cross=m.is_cross)
+                               subdir=m.config.build_subdir, is_cross=m.is_cross,
+                               is_conda=m.name() == 'conda')
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -1072,7 +1074,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                             if v:
                                 bf.write('export {0}="{1}"\n'.format(k, v))
 
-                        if m.config.activate:
+                        if m.config.activate and not m.name() == 'conda':
                             bf.write('source "{0}activate" "{1}"\n'
                                      .format(utils.root_script_dir + os.path.sep,
                                              m.config.build_prefix))
@@ -1203,7 +1205,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                     output_folder=m.config.output_folder,
                                                     channel_urls=tuple(m.config.channel_urls))
                             environ.create_env(m.config.host_prefix, host_actions, env='host',
-                                            config=m.config, subdir=subdir, is_cross=m.is_cross)
+                                               config=m.config, subdir=subdir, is_cross=m.is_cross,
+                                               is_conda=m.name() == 'conda')
                             sub_build_ms_deps = m.ms_depends('build')
                         else:
                             # When not cross-compiling, the build deps aggregate 'build' and 'host'.
@@ -1221,8 +1224,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                                     output_folder=m.config.output_folder,
                                                     channel_urls=tuple(m.config.channel_urls))
                         environ.create_env(m.config.build_prefix, build_actions, env='build',
-                                        config=m.config, subdir=m.config.build_subdir,
-                                        is_cross=m.is_cross)
+                                           config=m.config, subdir=m.config.build_subdir,
+                                           is_cross=m.is_cross,
+                                           is_conda=m.name() == 'conda')
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
@@ -1512,7 +1516,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
-    if not metadata.config.activate:
+    if not metadata.config.activate or metadata.name() == 'conda':
         # prepend bin (or Scripts) directory
         env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
 
@@ -1546,7 +1550,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                                             channel_urls=tuple(metadata.config.channel_urls))
 
     environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
-                        subdir=subdir, is_cross=metadata.is_cross)
+                       subdir=subdir, is_cross=metadata.is_cross,
+                       is_conda=metadata.name() == 'conda')
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
@@ -1556,7 +1561,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
-    if not metadata.config.activate:
+    if not metadata.config.activate or metadata.name() == 'conda':
         # prepend bin (or Scripts) directory
         env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
         if utils.on_win:
@@ -1574,7 +1579,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     with open(test_script, 'w') as tf:
         if not utils.on_win:
             tf.write('set -x -e\n')
-        if metadata.config.activate:
+        if metadata.config.activate and not metadata.name() == 'conda':
             ext = ".bat" if utils.on_win else ""
             tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
                 conda_root=utils.root_script_dir + os.path.sep,
