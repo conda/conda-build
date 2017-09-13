@@ -270,12 +270,11 @@ def get_dict(config, m=None, prefix=None, for_env=True):
 
 def conda_build_vars(prefix, config):
     src_dir = config.test_dir if os.path.basename(prefix)[:2] == '_t' else config.work_dir
-    arch = config.host_arch or config.arch
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
         'CONDA_DEFAULT_ENV': config.build_prefix,
-        'ARCH': str(arch),
+        'ARCH': str(config.host_arch),
         # This is the one that is most important for where people put artifacts that get bundled.
         #     It is fed from our function argument, and can be any of:
         #     1. Build prefix - when host requirements are not explicitly set,
@@ -450,8 +449,7 @@ def get_shlib_ext():
 def windows_vars(prefix, config, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
     # We have gone for the clang values here.
-    arch = config.host_arch or config.arch
-    win_arch = 'i386' if arch == '32' else 'amd64'
+    win_arch = 'i386' if str(config.host_arch) == '32' else 'amd64'
     win_msvc = '19.0.0' if PY3 else '15.0.0'
     library_prefix = join(prefix, 'Library')
     drive, tail = prefix.split(':')
@@ -507,8 +505,7 @@ def unix_vars(prefix, get_default):
 
 def osx_vars(compiler_vars, config, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
-    arch = config.host_arch or config.arch
-    OSX_ARCH = 'i386' if arch == '32' else 'x86_64'
+    OSX_ARCH = 'i386' if str(config.host_arch) == '32' else 'x86_64'
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
@@ -519,8 +516,7 @@ def osx_vars(compiler_vars, config, get_default):
 
 def linux_vars(compiler_vars, config, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
-    arch = config.host_arch or config.arch
-    linux_arch = 'i686' if arch == '32' else 'x86_64'
+    linux_arch = 'i686' if str(config.host_arch) == '32' else 'x86_64'
     # There is also QEMU_SET_ENV, but that needs to be
     # filtered so it only contains the result of `linux_vars`
     # which, before this change was empty, and after it only
