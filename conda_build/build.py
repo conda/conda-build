@@ -1417,6 +1417,10 @@ def _construct_metadata_for_test_from_package(package, config):
             if not os.listdir(metadata.config.work_dir):
                 try_download(metadata, no_download_source=False)
 
+    reqs = metadata.meta.get('requirements', {})
+    reqs['run'] = package_data.get('depends', [])
+    metadata.meta['requirements'] = reqs
+
     return metadata, hash_input
 
 
