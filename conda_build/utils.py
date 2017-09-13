@@ -625,7 +625,7 @@ def create_entry_point(path, module, func, config):
             if os.path.isfile(os.path.join(config.host_prefix, 'python_d.exe')):
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-            copy_into(join(dirname(__file__), 'cli-{}.exe'.format(config.arch)),
+            copy_into(join(dirname(__file__), 'cli-{}.exe'.format(str(config.host_arch))),
                     path + '.exe', config.timeout)
     else:
         if os.path.islink(path):
