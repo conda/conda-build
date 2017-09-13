@@ -90,7 +90,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
 
     hashed = None
     for tp in ('md5', 'sha1', 'sha256'):
-        if 'tp' in source_dict:
+        if tp in source_dict:
             expected_hash = source_dict[tp]
             hashed = hashsum_file(path, tp)
             if expected_hash != hashed:
