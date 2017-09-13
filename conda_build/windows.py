@@ -267,4 +267,4 @@ def build(m, bld_bat):
         cmd = ['cmd.exe', '/c', 'bld.bat']
         check_call_env(cmd, cwd=src_dir)
 
-    fix_staged_scripts(join(m.config.build_prefix, 'Scripts'))
+    fix_staged_scripts(join(m.config.host_prefix, 'Scripts'))
