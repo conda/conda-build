@@ -20,9 +20,9 @@ DEFAULT_VARIANTS = {
     'numpy': ['1.11'],
     # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
     #    version to say what's in their standard library.
-    'perl': ['5.22.2'],
+    'perl': ['5.26.0'],
     'lua': ['5'],
-    'r_base': ['3'],
+    'r_base': ['3.4'],
     'cpu_optimization_target': ['nocona'],
     'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
     'ignore_version': [],
