@@ -1,3 +1,23 @@
+2017-09-14 3.0.18:
+
+Bug fixes:
+----------
+
+* fix source hash not being verified  #2367
+* fix several references to arch that should be host_arch to support cross compiling (win-32 on win-64, for example)  #2369, #2368
+* replace recipe run requirements with contents of index.json's "depends" when testing packages  #2370
+* update R and perl versions in DEFAULT_VARIANTS  #2373
+* fix versioneer showing unknown version on windows due to --match argument  #2375
+* add subdir to moved work folder dirname, to avoid clobbering when cross compiling  #2376
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @mingwandroid
+* @msarahan
+
+
 2017-09-12 3.0.17:
 
 Enhancements:
