@@ -1482,7 +1482,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         # nested if so that there's no warning when we just leave the empty workdir in place
         if os.listdir(metadata.config.work_dir):
             dest = os.path.join(os.path.dirname(metadata.config.work_dir),
-                                'work_moved_' + metadata.dist())
+                                '_'.join(('work_moved', metadata.dist(),
+                                          metadata.config.host_subdir)))
             # Needs to come after create_files in case there's test/source_files
             print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
             os.rename(config.work_dir, dest)
