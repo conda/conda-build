@@ -331,9 +331,7 @@ def write_info_files_file(m, files):
 
     mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
     with open(join(m.config.info_dir, 'files'), **mode_dict) as fo:
-        if m.get_value('build/noarch_python'):
-            fo.write('\n')
-        elif m.noarch == 'python':
+        if m.noarch == 'python':
             for f in sorted(files):
                 if f.find("site-packages") >= 0:
                     fo.write(f[f.find("site-packages"):] + '\n')
