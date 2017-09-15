@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 import json
 from os.path import basename
-import re
 import tarfile
 
 from conda_build.utils import codec
