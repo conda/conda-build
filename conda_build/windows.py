@@ -203,7 +203,8 @@ def msvc_env_cmd(bits, config, override=None):
 
 def build(m, bld_bat):
     with path_prepended(m.config.build_prefix):
-        env = environ.get_dict(config=m.config, m=m)
+        with path_prepended(m.config.host_prefix):
+            env = environ.get_dict(config=m.config, m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # set variables like CONDA_PY in the test environment
@@ -231,7 +232,7 @@ def build(m, bld_bat):
             fo.write('@echo on\n')
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
             fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
-            if m.config.activate:
+            if m.config.activate and m.name() != 'conda':
                 fo.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
                     conda_root=root_script_dir,
                     prefix=m.config.build_prefix))
