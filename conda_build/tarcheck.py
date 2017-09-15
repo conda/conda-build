@@ -20,9 +20,6 @@ def dist_fn(fn):
 class TarCheck(object):
     def __init__(self, path, config):
         self.t = tarfile.open(path)
-        self.paths = set(m.path for m in self.t.getmembers())
-        self.dist = dist_fn(basename(path))
-        self.name, self.version, self.build = self.dist.split('::', 1)[-1].rsplit('-', 2)
         self.config = config
 
     def __enter__(self):
