@@ -1,3 +1,19 @@
+2017-09-15 3.0.19:
+------------------
+
+Bug fixes:
+----------
+
+* write info/files for noarch.  Always sanity check info/files.  #2379
+* fix build_prefix -> host_prefix in write_pth, fixes cross compiling python packages  #2380
+
+Contributors:
+-------------
+
+* @Bezier89
+* @msarahan
+
+
 2017-09-14 3.0.18:
 
 Bug fixes:
