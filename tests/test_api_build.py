@@ -1025,7 +1025,7 @@ def test_only_r_env_vars_defined(testing_config):
 
 def test_only_perl_env_vars_defined(testing_config):
     recipe = os.path.join(metadata_dir, '_perl_env_defined')
-    testing_config.channel_urls = ('conda-forge', )
+    testing_config.channel_urls = ('c3i_test', )
     api.build(recipe, config=testing_config)
 
 
