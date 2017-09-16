@@ -302,6 +302,10 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         host_deps, host_actions, host_unsat = get_env_dependencies(m, 'host', m.config.variant,
                                         exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+        # extend host deps with strong build run exports.  This is important for things like
+        #    vc feature activation to work correctly in the host env.
+        if host_deps:
+            host_deps.extend(extra_run_specs_from_build.get('strong', []))
         extra_run_specs_from_host = get_upstream_pins(m, host_actions, 'host')
         extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
                               extra_run_specs_from_host.get('weak', []) +
