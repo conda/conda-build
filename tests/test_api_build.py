@@ -909,6 +909,7 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['host'] = ['test_has_run_exports_implicit_weak']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
+    assert any('strong_pinned_package 1.0' in req for req in m.meta['requirements']['host'])
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
     # weak one from test_has_run_exports should be excluded, since it is a build dep
     assert 'weak_pinned_package 1.0.*' not in m.meta['requirements']['run']
