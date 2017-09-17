@@ -1,3 +1,17 @@
+2017-09-16 3.0.20:
+
+Bug fixes:
+----------
+
+* Never activate build or host env when building conda, so that symlinks or .bat files are never created.  #2381
+* Apply "strong" run_exports from build section to host section, not just run section.  This is necessary for ensuring that features activated by packages in the build section are used to line up the host section also.  #2382
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-09-15 3.0.19:
 ------------------
 
