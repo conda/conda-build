@@ -296,16 +296,16 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         host_reqs = m.get_value('requirements/host')
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one
-        if host_reqs and 'python' in host_reqs:
-            host_reqs.append('python {}'.format(m.config.variant['python']))
-            m.meta['requirements']['host'] = host_reqs
+        if host_reqs:
+            if 'python' in host_reqs:
+                host_reqs.append('python {}'.format(m.config.variant['python']))
+            host_reqs.extend(extra_run_specs_from_build.get('strong', []))
+            m.meta['requirements']['host'] = [utils.ensure_valid_spec(spec) for spec in host_reqs]
         host_deps, host_actions, host_unsat = get_env_dependencies(m, 'host', m.config.variant,
                                         exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
         # extend host deps with strong build run exports.  This is important for things like
         #    vc feature activation to work correctly in the host env.
-        if host_deps:
-            host_deps.extend(extra_run_specs_from_build.get('strong', []))
         extra_run_specs_from_host = get_upstream_pins(m, host_actions, 'host')
         extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
                               extra_run_specs_from_host.get('weak', []) +
@@ -319,7 +319,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
     #     names to have this behavior.
-    requirements = rendered_metadata.meta.get('requirements', {})
+    requirements = m.meta.get('requirements', {})
     run_deps = requirements.get('run', [])
     if output_excludes:
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
