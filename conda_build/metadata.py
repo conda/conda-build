@@ -1575,6 +1575,11 @@ class MetaData(object):
     def pin_depends(self):
         return self.get_value('build/pin_depends', '').lower()
 
+    @property
+    def source_provided(self):
+        return (not bool(self.meta.get('source')) or
+                (os.path.isdir(self.config.work_dir) and len(os.listdir(self.config.work_dir)) > 0))
+
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
         output_metadata.meta['package']['name'] = output_dict.get('name', self.name())
 

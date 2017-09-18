@@ -379,24 +379,25 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     return rendered_metadata
 
 
-def try_download(metadata, no_download_source):
-    need_source_download = len(os.listdir(metadata.config.work_dir)) == 0
-    if need_source_download and not no_download_source:
+def try_download(metadata, no_download_source, raise_error=False):
+    if not metadata.source_provided and not no_download_source:
         # this try/catch is for when the tool to download source is actually in
         #    meta.yaml, and not previously installed in builder env.
         try:
             source.provide(metadata)
-            need_source_download = len(os.listdir(metadata.config.work_dir)) > 0
         except subprocess.CalledProcessError as error:
             print("Warning: failed to download source.  If building, will try "
                 "again after downloading recipe dependencies.")
             print("Error was: ")
             print(error)
 
-    if need_source_download and no_download_source:
-        raise ValueError("no_download_source specified, but can't fully render recipe without"
-                         " downloading source.  Please fix the recipe, or don't use "
-                         "no_download_source.")
+    if not metadata.source_provided:
+        if no_download_source:
+            raise ValueError("no_download_source specified, but can't fully render recipe without"
+                             " downloading source.  Please fix the recipe, or don't use "
+                             "no_download_source.")
+        elif raise_error:
+            raise RuntimeError("Failed to download or patch source. Please see build log for info.")
 
 
 def reparse(metadata):
@@ -518,9 +519,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             mv.parse_again()
         mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
                                 bypass_env_check=bypass_env_check)
-        need_source_download = (bool(mv.meta.get('source')) and
-                                not mv.needs_source_for_render and
-                                not os.listdir(mv.config.work_dir))
+        need_source_download = (not mv.needs_source_for_render or not mv.source_provided)
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one to newly parsed 'requirements/build'.
         for env in ('build', 'host', 'run'):
@@ -599,8 +598,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     #   There's no way around it AFAICT.  We must download the source to be able to render
     #   the recipe (from anything like GIT_FULL_HASH), but we can't know the final build
     #   folder until rendering is complete, because package names can have variant jinja2 in them.
-    if m.needs_source_for_render and (not os.path.isdir(m.config.work_dir) or
-                                      len(os.listdir(m.config.work_dir)) == 0):
+    if m.needs_source_for_render and not m.source_provided:
         try_download(m, no_download_source=no_download_source)
 
     if m.final:
