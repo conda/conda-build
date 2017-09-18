@@ -1,0 +1,13 @@
+diff --git a/tests/test-recipes/test-package/setup.py b/tests/test-recipes/test-package/setup.py
+index 7beb952e..9af03759 100644
+--- a/tests/test-recipes/test-package/setup.py
++++ b/tests/test-recipes/test-package/setup.py
+@@ -10,8 +10,6 @@ if sys.version_info[:2] == (3, 4):
+ setup(
+     name="conda-build-test-project",
+     version='2.0',
+-    author="Continuum Analytics, Inc.",
+-    url="https://github.com/conda/conda-build",
+     LIcense="BSD",
+     classifiers=[
+         "Development Status :: 4 - Beta",

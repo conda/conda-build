@@ -1007,7 +1007,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         # dependencies.
 
         with utils.path_prepended(m.config.build_prefix):
-            try_download(m, no_download_source=False)
+            try_download(m, no_download_source=False, raise_error=True)
         if need_source_download and not m.final:
             m.parse_until_resolved(allow_no_other_outputs=True)
 
@@ -1321,7 +1321,7 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     hash_input = {}
     metadata = render_recipe(recipe_dir, config=config, reset_build_id=False)[0][0]
     if metadata.meta.get('test', {}).get('source_files'):
-        if not os.listdir(metadata.config.work_dir):
+        if not metadata.source_provided:
             try_download(metadata, no_download_source=False)
     if not metadata.final:
         metadata = finalize_metadata(metadata)
@@ -1412,7 +1412,7 @@ def _construct_metadata_for_test_from_package(package, config):
 
     else:
         if metadata.meta.get('test', {}).get('source_files'):
-            if not os.listdir(metadata.config.work_dir):
+            if not metadata.source_provided:
                 try_download(metadata, no_download_source=False)
 
     reqs = metadata.meta.get('requirements', {})
@@ -1478,7 +1478,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     if metadata.config.remove_work_dir:
         # nested if so that there's no warning when we just leave the empty workdir in place
-        if os.listdir(metadata.config.work_dir):
+        if metadata.source_provided:
             dest = os.path.join(os.path.dirname(metadata.config.work_dir),
                                 '_'.join(('work_moved', metadata.dist(),
                                           metadata.config.host_subdir)))

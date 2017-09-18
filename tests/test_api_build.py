@@ -1178,3 +1178,8 @@ def test_pin_depends(testing_config):
     if PY3 and hasattr(requires, 'decode'):
         requires = requires.decode()
     assert re.search('python\=[23]\.', requires), "didn't find pinned python in info/requires"
+
+
+def test_failed_patch_exits_build(testing_config):
+    with pytest.raises(RuntimeError):
+        api.build(os.path.join(metadata_dir, '_bad_patch'), config=testing_config)

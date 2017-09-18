@@ -375,9 +375,7 @@ class Config(object):
                 # Use the most recent build with matching recipe name
                 self._build_id = build_folders[-1]
             else:
-                old_dir = ""
-                if os.listdir(self.work_dir):
-                    old_dir = self.work_dir
+                old_dir = self.work_dir if len(os.listdir(self.work_dir)) > 0 else ""
                 # here we uniquely name folders, so that more than one build can happen concurrently
                 #    keep 6 decimal places so that prefix < 80 chars
                 build_id = package_name + "_" + str(int(time.time() * 1000))

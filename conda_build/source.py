@@ -583,6 +583,8 @@ def apply_patch(src_dir, path, config, git=None):
                     patch_args[-1] = win_ending_file
                     try:
                         check_call_env([patch] + patch_args, cwd=src_dir)
+                    except:
+                        raise
                     finally:
                         if os.path.exists(win_ending_file):
                             os.remove(win_ending_file)  # clean up .patch_win file
@@ -593,7 +595,7 @@ def apply_patch(src_dir, path, config, git=None):
                 raise
 
 
-def provide(metadata, patch=True):
+def provide(metadata):
     """
     given a recipe_dir:
       - download (if necessary)
@@ -610,41 +612,46 @@ def provide(metadata, patch=True):
     else:
         dicts = meta
 
-    for source_dict in dicts:
-        folder = source_dict.get('folder')
-        src_dir = (os.path.join(metadata.config.work_dir, folder) if folder else
-                   metadata.config.work_dir)
-        if any(k in source_dict for k in ('fn', 'url')):
-            unpack(source_dict, src_dir, metadata.config.src_cache, recipe_path=metadata.path,
-                   croot=metadata.config.croot, verbose=metadata.config.verbose,
-                   timeout=metadata.config.timeout, locking=metadata.config.locking)
-        elif 'git_url' in source_dict:
-            git = git_source(source_dict, metadata.config.git_cache, src_dir, metadata.path,
-                             verbose=metadata.config.verbose)
-        # build to make sure we have a work directory with source in it.  We want to make sure that
-        #    whatever version that is does not interfere with the test we run next.
-        elif 'hg_url' in source_dict:
-            hg_source(source_dict, src_dir, metadata.config.hg_cache,
-                      verbose=metadata.config.verbose)
-        elif 'svn_url' in source_dict:
-            svn_source(source_dict, src_dir, metadata.config.svn_cache,
-                       verbose=metadata.config.verbose, timeout=metadata.config.timeout,
-                       locking=metadata.config.locking)
-        elif 'path' in source_dict:
-            path = normpath(abspath(join(metadata.path, source_dict['path'])))
-            if metadata.config.verbose:
-                print("Copying %s to %s" % (path, src_dir))
-            # careful here: we set test path to be outside of conda-build root in setup.cfg.
-            #    If you don't do that, this is a recursive function
-            copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
-                    locking=metadata.config.locking, clobber=True)
-        else:  # no source
-            if not isdir(src_dir):
-                os.makedirs(src_dir)
+    try:
+        for source_dict in dicts:
+            folder = source_dict.get('folder')
+            src_dir = (os.path.join(metadata.config.work_dir, folder) if folder else
+                    metadata.config.work_dir)
+            if any(k in source_dict for k in ('fn', 'url')):
+                unpack(source_dict, src_dir, metadata.config.src_cache, recipe_path=metadata.path,
+                    croot=metadata.config.croot, verbose=metadata.config.verbose,
+                    timeout=metadata.config.timeout, locking=metadata.config.locking)
+            elif 'git_url' in source_dict:
+                git = git_source(source_dict, metadata.config.git_cache, src_dir, metadata.path,
+                                verbose=metadata.config.verbose)
+            # build to make sure we have a work directory with source in it. We
+            #    want to make sure that whatever version that is does not
+            #    interfere with the test we run next.
+            elif 'hg_url' in source_dict:
+                hg_source(source_dict, src_dir, metadata.config.hg_cache,
+                        verbose=metadata.config.verbose)
+            elif 'svn_url' in source_dict:
+                svn_source(source_dict, src_dir, metadata.config.svn_cache,
+                        verbose=metadata.config.verbose, timeout=metadata.config.timeout,
+                        locking=metadata.config.locking)
+            elif 'path' in source_dict:
+                path = normpath(abspath(join(metadata.path, source_dict['path'])))
+                if metadata.config.verbose:
+                    print("Copying %s to %s" % (path, src_dir))
+                # careful here: we set test path to be outside of conda-build root in setup.cfg.
+                #    If you don't do that, this is a recursive function
+                copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
+                        locking=metadata.config.locking, clobber=True)
+            else:  # no source
+                if not isdir(src_dir):
+                    os.makedirs(src_dir)
 
-        if patch:
             patches = ensure_list(source_dict.get('patches', []))
             for patch in patches:
                 apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
+
+    except CalledProcessError:
+        os.rename(metadata.config.work_dir, metadata.config.work_dir + '_failed_provide')
+        raise
 
     return metadata.config.work_dir
