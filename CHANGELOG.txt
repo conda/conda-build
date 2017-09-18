@@ -1,3 +1,17 @@
+2017-09-18 3.0.21:
+
+Bug fixes:
+----------
+
+* Fix strong run_exports from build being applied to host too late, running into conflicts (especially with VC features)  #2383
+* crash properly when patching fails, rather than proceeding with build  #2384
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-09-16 3.0.20:
 
 Bug fixes:
