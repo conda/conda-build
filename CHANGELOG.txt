@@ -1,3 +1,20 @@
+2017-09-20 3.0.22:
+
+Bug fixes:
+----------
+
+* fix filename_hashing setting being ignored when using conda-build API  #2385
+* fix relpath causing cross-drive issues on windows  #2386
+* examine .a files when considering prefix replacement  #2390
+* fix run/test deps check looking at build_subdir rather than host_subdir (broke cross compiling)  #2391
+
+Contributors:
+-------------
+
+* @Bezier89
+* @mingwandroid
+* @msarahan
+
 2017-09-18 3.0.21:
 
 Bug fixes:
