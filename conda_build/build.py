@@ -108,7 +108,7 @@ def have_prefix_files(files, prefix):
         double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
 
     for f in files:
-        if f.endswith(('.pyc', '.pyo', '.a')):
+        if f.endswith(('.pyc', '.pyo')):
             continue
         path = join(prefix, f)
         if not isfile(path):
