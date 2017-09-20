@@ -973,7 +973,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 # make sure test deps are available before taking time to create build env
                 environ.get_install_actions(m.config.test_prefix,
                                             tuple(test_run_ms_deps), 'test',
-                                            subdir=m.config.build_subdir,
+                                            subdir=m.config.host_subdir,
                                             debug=m.config.debug,
                                             verbose=m.config.verbose,
                                             locking=m.config.locking,
