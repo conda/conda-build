@@ -6,16 +6,19 @@ from __future__ import absolute_import, division, print_function
 
 import bz2
 import contextlib
+from datetime import datetime
 from functools import partial
 import json
 import logging
 import os
 import tarfile
-from os.path import isfile, join, getmtime
+from os.path import isfile, join, getmtime, basename
+
+from jinja2 import Environment, PackageLoader
 
 from conda_build.utils import file_info, get_lock, try_acquire_locks
 from conda_build import utils, conda_interface
-from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index
+from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, human_bytes
 
 local_index_timestamp = 0
 cached_index = None
@@ -61,7 +64,8 @@ def write_repodata(repodata, dir_path, lock, locking=90, timeout=90):
 
 
 def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
-                 could_be_mirror=True, verbose=True, locking=True, timeout=90):
+                 could_be_mirror=True, verbose=True, locking=True, timeout=90,
+                 channel_name=None):
     """
     Update all index files in dir_path with changed packages.
 
@@ -130,6 +134,12 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
         with open(index_path, **mode_dict) as fo:
             json.dump(index, fo, indent=2, sort_keys=True, default=str)
+
+        # mtime is dumped when the repodata dict is created, so we need to run this block here
+        if channel_name:
+            rendered_html = make_index_html(index, channel_name, basename(dir_path))
+            with open(join(dir_path, 'index.html'), 'w') as fh:
+                fh.write(rendered_html)
 
         # --- new repodata
         for fn in index:
@@ -228,3 +238,19 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
         local_subdir = subdir
         cached_channels = channel_urls
     return cached_index, local_index_timestamp
+
+
+def make_index_html(index, channel_name, subdir):
+    environment = Environment(
+        loader=PackageLoader('conda_build', 'templates'),
+    )
+    environment.filters['human_bytes'] = human_bytes
+    template = environment.get_template('subdir-index.html.j2')
+    rendered_html = template.render(
+        title="%s/%s" % (channel_name, subdir),
+        index=index,
+        current_time=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z"),
+    )
+    return rendered_html
+
+
