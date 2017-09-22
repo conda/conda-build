@@ -51,15 +51,26 @@
       <th>Last Modified</th>
       <th>MD5</th>
     </tr>
-{% for fn, record in index|dictsort %}
+{% for path in ('repodata.json', 'repodata.json.bz2') %}
+  {% if path in extra_paths %}
+    {% set record = extra_paths[path] %}
+    <tr>
+      <td><a href="{{ path }}">{{ path }}</a></td>
+      <td class="s">{{ record.size | human_bytes }}</td>
+      <td>{{ record.mtime|strftime("%Y-%m-%d %H:%M:%S UTC") }}</td>
+      <td>{{ record.md5 }}</td>
+    </tr>
+  {%- endif %}
+{%- endfor %}
+{% for fn, record in packages|dictsort %}
     <tr>
       <td><a href="{{ fn }}">{{ fn }}</a></td>
       <td class="s">{{ record.size | human_bytes }}</td>
-      <td>{{ record.mtime }}</td>
+      <td>{{ record.mtime|strftime("%Y-%m-%d %H:%M:%S UTC") }}</td>
       <td>{{ record.md5 }}</td>
     </tr>
 {%- endfor %}
   </table>
-  <address>Updated: {{ current_time }} - Files: {{ index|length }}</address>
+  <address>Updated: {{ current_time|strftime("%Y-%m-%d %H:%M:%S UTC") }} - Files: {{ packages|length }}</address>
 </body>
 </html>

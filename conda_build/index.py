@@ -10,9 +10,10 @@ from datetime import datetime
 from functools import partial
 import json
 import logging
+from numbers import Number
 import os
 import tarfile
-from os.path import isfile, join, getmtime, basename
+from os.path import isfile, join, getmtime, basename, getsize
 
 from jinja2 import Environment, PackageLoader
 
@@ -135,16 +136,10 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         with open(index_path, **mode_dict) as fo:
             json.dump(index, fo, indent=2, sort_keys=True, default=str)
 
-        # mtime is dumped when the repodata dict is created, so we need to run this block here
-        if channel_name:
-            rendered_html = make_index_html(index, channel_name, basename(dir_path))
-            with open(join(dir_path, 'index.html'), 'w') as fh:
-                fh.write(rendered_html)
-
         # --- new repodata
         for fn in index:
             info = index[fn]
-            for varname in 'arch', 'platform', 'mtime', 'ucs':
+            for varname in 'arch', 'platform', 'ucs':
                 try:
                     del info[varname]
                 except KeyError:
@@ -155,6 +150,21 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
 
         repodata = {'packages': index, 'info': {}}
         write_repodata(repodata, dir_path, lock=lock, locking=locking, timeout=timeout)
+
+        if channel_name:
+            extra_paths = {}
+            def add_extra_path(path):
+                if isfile(path):
+                    extra_paths[basename(path)] = {
+                        'size': getsize(path),
+                        'mtime': getmtime(path),
+                        'md5': md5_file(path),
+                    }
+            add_extra_path(join(dir_path, 'repodata.json'))
+            add_extra_path(join(dir_path, 'repodata.json.bz2'))
+            rendered_html = make_index_html(channel_name, basename(dir_path), repodata, extra_paths)
+            with open(join(dir_path, 'index.html'), 'w') as fh:
+                fh.write(rendered_html)
 
 
 def ensure_valid_channel(local_folder, subdir, verbose=True, locking=True, timeout=90):
@@ -240,16 +250,23 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     return cached_index, local_index_timestamp
 
 
-def make_index_html(index, channel_name, subdir):
+def make_index_html(channel_name, subdir, repodata, extra_paths):
+    def _filter_strftime(dt, dt_format):
+        if isinstance(dt, Number):
+            dt = datetime.utcfromtimestamp(dt)
+        return dt.strftime(dt_format)
+
     environment = Environment(
         loader=PackageLoader('conda_build', 'templates'),
     )
     environment.filters['human_bytes'] = human_bytes
+    environment.filters['strftime'] = _filter_strftime
     template = environment.get_template('subdir-index.html.j2')
     rendered_html = template.render(
         title="%s/%s" % (channel_name, subdir),
-        index=index,
-        current_time=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
+        packages=repodata['packages'],
+        current_time=datetime.utcnow(),
+        extra_paths=extra_paths,
     )
     return rendered_html
 
