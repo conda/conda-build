@@ -249,7 +249,7 @@ def make_index_html(index, channel_name, subdir):
     rendered_html = template.render(
         title="%s/%s" % (channel_name, subdir),
         index=index,
-        current_time=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z"),
+        current_time=datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"),
     )
     return rendered_html
 
