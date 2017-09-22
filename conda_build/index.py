@@ -139,7 +139,11 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         # --- new repodata
         for fn in index:
             info = index[fn]
-            for varname in 'arch', 'platform', 'ucs':
+            if 'timestamp' not in info and 'mtime' in info:
+                info['timestamp'] = int(info['mtime'])
+            if info['timestamp'] > 253402300799:  # 9999-12-31
+                info['timestamp'] /= 1000  # convert milliseconds to seconds; see #1988
+            for varname in 'arch', 'mtime', 'platform', 'ucs':
                 try:
                     del info[varname]
                 except KeyError:
@@ -157,7 +161,7 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                 if isfile(path):
                     extra_paths[basename(path)] = {
                         'size': getsize(path),
-                        'mtime': getmtime(path),
+                        'timestamp': int(getmtime(path)),
                         'md5': md5_file(path),
                     }
             add_extra_path(join(dir_path, 'repodata.json'))
@@ -253,6 +257,8 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
 def make_index_html(channel_name, subdir, repodata, extra_paths):
     def _filter_strftime(dt, dt_format):
         if isinstance(dt, Number):
+            if dt > 253402300799:  # 9999-12-31
+                dt /= 1000  # convert milliseconds to seconds; see #1988
             dt = datetime.utcfromtimestamp(dt)
         return dt.strftime(dt_format)
 
