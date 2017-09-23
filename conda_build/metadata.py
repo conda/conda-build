@@ -1184,7 +1184,7 @@ class MetaData(object):
             subdir=self.config.target_subdir,
             depends=sorted(' '.join(ms.spec.split())
                              for ms in self.ms_depends()),
-            timestamp=int(time.time() * 1000) / 1000,
+            timestamp=int(time.time() * 1000),
         )
         for key in ('license', 'license_family'):
             value = self.get_value('about/' + key)
