@@ -80,7 +80,8 @@ DEFAULTS = [Setting('activate', True),
             Setting('remove_work_dir', True),
             Setting('_host_platform', None),
             Setting('_host_arch', None),
-            Setting('filename_hashing', cc_conda_build.get('filename_hashing', 'true').lower() == 'true'),
+            Setting('filename_hashing', cc_conda_build.get('filename_hashing',
+                                                           'true').lower() == 'true'),
             Setting('keep_old_work', False),
             Setting('_src_cache_root', cc_conda_build.get('cache_dir')),
             Setting('copy_test_source_files', True),
@@ -123,6 +124,12 @@ DEFAULTS = [Setting('activate', True),
                     cc_conda_build.get('run_package_verify_scripts', [])),
             Setting('run_package_verify_scripts',
                     cc_conda_build.get('run_package_verify_scripts', [])),
+
+            # Recipes that have no host section, only build, should bypass the build/host line.
+            # This is to make older recipes still work with cross-compiling.  True cross-compiling
+            # involving compilers (not just python) will still require recipe modification to have
+            # distinct host and build sections, but simple python stuff should work without.
+            Setting('build_prefix_override', False)
             ]
 
 
@@ -423,7 +430,8 @@ class Config(object):
         """The temporary folder where the build environment is created.  The build env contains
         libraries that may be linked, but only if the host env is not specified.  It is placed on
         PATH."""
-        if (self.host_subdir != self.build_subdir and self.host_subdir != 'noarch'):
+        if (self.host_subdir != self.build_subdir and self.host_subdir != 'noarch' and not
+                self.build_prefix_override):
             prefix = join(self.build_folder, '_build_env')
         else:
             prefix = self.host_prefix

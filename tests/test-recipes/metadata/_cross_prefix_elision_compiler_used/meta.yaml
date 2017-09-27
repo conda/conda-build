@@ -1,0 +1,14 @@
+# for packages that list only build requirements (not host), we should treat build as host
+#      otherwise, we can end up with python in build, and then new things don't get installed, because host
+#      is where we bundle stuff from.  However, when {{ compiler() }} is in the recipe, we don't do this,
+#      because people are then using advanced features and shouldn't need the training wheels, which might
+#      get in the way.
+
+package:
+  name: test_cross_prefix_elision_compiler_used
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    - {{ compiler('c') }}

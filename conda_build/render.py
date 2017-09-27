@@ -287,7 +287,6 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
                                         exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-    rendered_metadata = m.copy()
 
     extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
 
@@ -311,6 +310,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                               extra_run_specs_from_host.get('weak', []) +
                               extra_run_specs_from_build.get('strong', []))
     else:
+        m.config.build_prefix_override = not m.uses_new_style_compiler_activation
         host_deps = []
         host_unsat = None
         extra_run_specs = (extra_run_specs_from_build.get('strong', []) +
@@ -336,6 +336,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     for _env, values in (('build', build_deps), ('host', host_deps), ('run', versioned_run_deps)):
         if values:
             requirements[_env] = list({strip_channel(dep) for dep in values})
+    rendered_metadata = m.copy()
     rendered_metadata.meta['requirements'] = requirements
 
     if rendered_metadata.pin_depends == 'strict':

@@ -16,7 +16,7 @@ def main():
 
     # numpy with no version, python with no version, python with version pin
     depends = sorted(info['depends'])
-    assert depends[0].startswith('python ')
+    assert any(dep.startswith('python ') for dep in depends), depends
     assert sys.version[:3] == ("3.4")
 
 
