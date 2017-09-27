@@ -149,10 +149,6 @@ CRAN_KEYS = [
     'Maintainer',
 ]
 
-CRAN_KEYS_CAN_BE_BLANK = [
-    'Suggests'
-]
-
 # The following base/recommended package names are derived from R's source
 # tree (R-3.0.2/share/make/vars.mk).  Hopefully they don't change too much
 # between versions.
@@ -285,14 +281,16 @@ def dict_from_cran_lines(lines):
         if not line:
             continue
         try:
-            line = line.split(':')
-            if len(line) < 2 and line[0] in CRAN_KEYS_CAN_BE_BLANK:
-                continue
-            k = line[0]
-            v = ':'.join(line[1:])
+            if ': ' in line:
+                (k, v) = line.split(': ', 1)
+            else:
+                # Sometimes fields are included but left blank, e.g.:
+                #   - Enhances in data.tree
+                #   - Suggests in corpcor
+                (k, v) = line.split(':', 1)
         except ValueError:
             sys.exit("Error: Could not parse metadata (%s)" % line)
-        d[k.strip()] = v.strip()
+        d[k] = v
         # if k not in CRAN_KEYS:
         #     print("Warning: Unknown key %s" % k)
     d['orig_lines'] = lines
