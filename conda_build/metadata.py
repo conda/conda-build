@@ -415,14 +415,14 @@ def _git_clean(source_meta):
 # If you update this please update the example in
 # conda-docs/docs/source/build.rst
 FIELDS = {
-    'package': ['name', 'version'],
-    'source': ['fn', 'url', 'md5', 'sha1', 'sha256', 'path',
+    'package': {'name', 'version'},
+    'source': {'fn', 'url', 'md5', 'sha1', 'sha256', 'path',
                'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'patches'
-               ],
-    'build': ['number', 'string', 'entry_points', 'osx_is_app',
+               },
+    'build': {'number', 'string', 'entry_points', 'osx_is_app',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
@@ -431,15 +431,15 @@ FIELDS = {
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
               'ignore_run_exports',
-              ],
-    'requirements': ['build', 'host', 'run', 'conflicts', 'run_constrained'],
-    'app': ['entry', 'icon', 'summary', 'type', 'cli_opts',
-            'own_environment'],
-    'test': ['requires', 'commands', 'files', 'imports', 'source_files'],
-    'about': ['home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
+              },
+    'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
+    'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
+            'own_environment'},
+    'test': {'requires', 'commands', 'files', 'imports', 'source_files'},
+    'about': {'home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
-              ],
+              },
 }
 
 
