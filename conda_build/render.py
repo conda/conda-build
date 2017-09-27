@@ -602,8 +602,12 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         try_download(m, no_download_source=no_download_source)
 
     if m.final:
-        if not hasattr(m.config, 'variants'):
-            m.config.variants = [m.config.variant]
+        if not hasattr(m.config, 'variants') or not m.config.variant:
+            m.config.ignore_system_variants = True
+            if os.path.isfile(os.path.join(m.path, 'conda_build_config.yaml')):
+                m.config.variant_config_files = [os.path.join(m.path, 'conda_build_config.yaml')]
+            m.config.variants = get_package_variants(m)
+            m.config.variant = m.config.variants[0]
         rendered_metadata = [(m, False, False), ]
     else:
         index, index_ts = get_build_index(m.config.build_subdir,
