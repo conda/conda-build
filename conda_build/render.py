@@ -138,7 +138,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
     pin = None
     version = build_dep_versions.get(dep_name) or m.config.variant.get(dep_name)
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
-            not (dep_name == 'python' and m.noarch) and
+            not (dep_name == 'python' and (m.noarch or m.noarch_python)) and
             dep_name in build_dep_versions):
         pin_cfg = m.config.variant['pin_run_as_build'][dep_name]
         if isinstance(pin_cfg, str):
