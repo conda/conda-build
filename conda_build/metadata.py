@@ -1441,44 +1441,29 @@ class MetaData(object):
                             return vcs
         return None
 
-    def extract_requirements_text(self):
-        text = ""
+    def get_recipe_text(self, extract_pattern=None):
+        recipe_text = ""
         if self.meta_path:
             with open(self.meta_path) as f:
                 recipe_text = f.read()
             if PY3 and hasattr(recipe_text, 'decode'):
                 recipe_text = recipe_text.decode()
-            match = re.search(r'(^requirements:.*?)(^test:|^extra:|^about:|^outputs:|\Z)',
-                              recipe_text, flags=re.MULTILINE | re.DOTALL)
-            text = match.group(1) if match else ""
-        text = select_lines(text, ns_cfg(self.config), variants_in_place=bool(self.config.variant))
-        return text
+            if extract_pattern:
+                match = re.search(extract_pattern, recipe_text, flags=re.MULTILINE | re.DOTALL)
+                recipe_text = match.group(1) if match else ""
+        recipe_text = select_lines(recipe_text, ns_cfg(self.config),
+                                   variants_in_place=bool(self.config.variant))
+        return recipe_text
+
+    def extract_requirements_text(self):
+        return self.get_recipe_text(r'(^requirements:.*?)(^test:|^extra:|^about:|^outputs:|\Z)')
 
     def extract_source_text(self):
-        text = ""
-        if self.meta_path:
-            with open(self.meta_path) as f:
-                recipe_text = f.read()
-            if PY3 and hasattr(recipe_text, 'decode'):
-                recipe_text = recipe_text.decode()
-            match = re.search(r'(\s*source:.*?)(^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',  # NOQA
-                              recipe_text, flags=re.MULTILINE | re.DOTALL)
-            text = match.group(1) if match else ""
-        text = select_lines(text, ns_cfg(self.config), variants_in_place=bool(self.config.variant))
-        return text
+        return self.get_recipe_text(
+            r'(\s*source:.*?)(^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
     def extract_package_and_build_text(self):
-        text = ""
-        if self.meta_path:
-            with open(self.meta_path) as f:
-                recipe_text = f.read()
-            if PY3 and hasattr(recipe_text, 'decode'):
-                recipe_text = recipe_text.decode()
-            match = re.search(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',
-                              recipe_text, flags=re.MULTILINE | re.DOTALL)
-            text = match.group(1) if match else ""
-        text = select_lines(text, ns_cfg(self.config), variants_in_place=bool(self.config.variant))
-        return text
+        return self.get_recipe_text(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
     @property
     def numpy_xx(self):
@@ -1779,6 +1764,30 @@ class MetaData(object):
         _variants = (self.config.input_variants if hasattr(self.config, 'input_variants') else
                     self.config.variants)
         return variants.get_loop_vars(_variants)
+
+    def get_used_loop_vars(self):
+        used_variables = set()
+        # recipe text is the best, because variables can be used anywhere in it.
+        #   we promise to detect anything in meta.yaml, but not elsewhere.
+        recipe_text = self.get_recipe_text()
+        # fall back to requirements when recipe text is unavailable
+        if not recipe_text:
+            requirements = (self.get_value('requirements/build') +
+                    self.get_value('requirements/run') +
+                    self.get_value('requirements/host'))
+            recipe_text = '- ' + "\n- ".join(requirements)
+        for v in self.get_loop_vars():
+            variant_regex = r"(\s*\{\{\s*%s\s*(?:.*?)?\}\})" % v
+            requirement_regex = r"(\-\s+%s(?:\s+|$))" % v
+            all_res = '|'.join((variant_regex, requirement_regex))
+            compiler_match = re.match(r'(.*?)_compiler$', v)
+            if compiler_match:
+                compiler_regex = (
+                    r"(\s*\{\{\s*compiler\([\'\"]%s[\"\'].*\)\s*\}\})" % compiler_match.group(1))
+                all_res = '|'.join((all_res, compiler_regex))
+            if re.search(all_res, recipe_text, flags=re.MULTILINE | re.DOTALL):
+                used_variables.add(v)
+        return used_variables
 
     def get_variants_as_dict_of_lists(self):
         return variants.list_of_dicts_to_dict_of_lists(self.config.variants)

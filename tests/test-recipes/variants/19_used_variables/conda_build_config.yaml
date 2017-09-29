@@ -1,0 +1,12 @@
+python:
+  - 2.7
+  - 3.5
+unused_var:
+  - abc
+  - 123
+zlib:
+  - 1.2.8
+  - 1.2.11
+some_package:
+  - mooo
+  - llama
