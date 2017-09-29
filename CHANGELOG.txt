@@ -1,3 +1,22 @@
+2017-09-29 3.0.23:
+
+Bug fixes:
+----------
+
+* simplify handling of blank fields in CRAN metadata  #2393
+* load conda_build_config.yaml from inside package when testing package separately from build process  #2399
+* use sets instead of lists for field descriptions  #2403
+* fix noarch_python packages getting pinned to a specific python version  #2409
+
+Contributors:
+-------------
+
+* @Bezier89
+* @CJ-Wright
+* @jdblischak
+* @msarahan
+
+
 2017-09-20 3.0.22:
 
 Bug fixes:
