@@ -73,8 +73,11 @@ ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
 # ready...list these in order of decreasing preference.
 POSSIBLE_DIGESTS = ['sha256', 'md5']
 
+POSSIBLE_FILE_EXTENSIONS = ['tar.gz', 'tar.bz2', 'zip', 'tar', 'gz']
+
 PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 {{% set version = "{version}" %}}
+{{% set file_ext = "{file_ext}" %}}
 {{% set hash_type = "{hash_type}" %}}
 {{% set hash_value = "{hash_value}" %}}
 
@@ -90,8 +93,8 @@ PYPI_META_STATIC = {
         ('version', '{{ version }}'),
     ]),
     'source': ruamel_yaml.comments.CommentedMap([
-        ('fn', '{{ name }}-{{ version }}.tar.gz'),
-        ('url', 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz'),  # NOQA
+        ('fn', '{{ name }}-{{ version }}.{{ file_ext }}'),
+        ('url', 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
         ('{{ hash_type }}', '{{ hash_value }}'),
     ]),
     'build': ruamel_yaml.comments.CommentedMap([
@@ -717,6 +720,11 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['packagename'] = pkginfo['name'].lower()
     if d['version'] == 'UNKNOWN':
         d['version'] = pkginfo['version']
+
+    for ext in POSSIBLE_FILE_EXTENSIONS:
+        if d['pypiurl'].split('#')[0].endswith(ext):
+            d['file_ext'] = ext
+            break
 
     if pkginfo.get('packages'):
         deps = set(pkginfo['packages'])
