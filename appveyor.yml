@@ -49,6 +49,7 @@ install:
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
+  - ps: $blockRdp = $true; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
   - pip install --no-deps .
   - pip install pytest-xdist==1.16.0 pytest-catchlog pytest-env pytest-mock filelock pkginfo
   - set PATH
