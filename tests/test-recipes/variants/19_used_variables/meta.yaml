@@ -1,0 +1,11 @@
+package:
+  # an explicit usage
+  name: test_used_variables_{{ some_package }}
+  version: 1.0
+
+requirements:
+  build:
+    # an implicit usage
+    - python
+    # an implicit usage other than python
+    - zlib

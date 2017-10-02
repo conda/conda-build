@@ -201,3 +201,11 @@ def test_serial_builds_have_independent_configs(testing_config):
     assert 'bzip2 >=1,<1.0.7.0a0' in index_json['depends']
     index_json = json.loads(package_has_file(outputs[1], 'info/index.json'))
     assert 'bzip2 >=1.0.6,<2.0a0' in index_json['depends']
+
+
+def test_get_used_loop_vars(testing_config):
+    ms = api.render(os.path.join(recipe_dir, '19_used_variables'))
+    # conda_build_config.yaml has 4 loop variables defined, but only 3 are used.
+    #   python and zlib are both implicitly used (depend on name matching), while
+    #   some_package is explicitly used as a jinja2 variable
+    assert ms[0][0].get_used_loop_vars() == {'python', 'some_package', 'zlib'}
