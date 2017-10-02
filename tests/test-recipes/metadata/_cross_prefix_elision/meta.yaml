@@ -1,0 +1,11 @@
+# for packages that list only build requirements (not host), we should treat build as host
+#      otherwise, we can end up with python in build, and then new things don't get installed, because host
+#      is where we bundle stuff from.
+
+package:
+  name: test_cross_prefix_elision
+  version: 1.0
+
+requirements:
+  build:
+    - python
