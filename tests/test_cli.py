@@ -354,7 +354,7 @@ def test_inspect_linkages(testing_workdir, capfd):
     else:
         main_inspect.execute(args)
         output, error = capfd.readouterr()
-        assert 'openssl' in output
+        assert 'libncursesw' in output
 
 
 def test_inspect_objects(testing_workdir, capfd):
