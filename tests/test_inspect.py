@@ -12,7 +12,7 @@ def test_inspect_linkages():
             assert 'conda inspect linkages is only implemented in Linux and OS X' in exc
     else:
         out_string = api.inspect_linkages("python")
-        assert 'openssl' in out_string
+        assert 'libncursesw' in out_string
 
 
 def test_inspect_objects():
