@@ -5,8 +5,9 @@ Tools for converting Cran packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 from itertools import chain
-from os import makedirs, listdir
-from os.path import join, exists, isfile, basename, isdir
+from os import makedirs, listdir, sep
+from os.path import (basename, commonprefix, dirname, exists, isabs,
+                     isdir, isfile, join, normpath, realpath)
 import re
 import subprocess
 import sys
@@ -18,8 +19,9 @@ except ImportError:
     from urllib2 import urlopen
 
 import requests
-import yaml
+import tarfile
 import unicodedata
+import yaml
 
 # try to import C dumper
 try:
@@ -29,9 +31,9 @@ except ImportError:
 
 from conda_build import source, metadata
 from conda_build.config import Config
-from conda_build.utils import rm_rf
 from conda_build.conda_interface import text_type, iteritems
 from conda_build.license_family import allowed_license_families, guess_license_family
+from conda_build.utils import rm_rf
 
 CRAN_META = """\
 {{% set version = '{cran_version}' %}}
@@ -46,22 +48,20 @@ package:
 source:
   {fn_key} {filename}
   {url_key} {cranurl}
+  {hash_entry}
   {git_url_key} {git_url}
   {git_tag_key} {git_tag}
-  {hash_entry}
-  # patches:
-   # List any patch files here
-   # - fix.patch
+  {patches}
 
 build:
   # If this is a new build for the same version, increment the build number.
-  number: 0
+  number: {build_number}
 
   # This is required to make R link correctly on Linux.
   rpaths:
     - lib/R/lib/
     - lib/
-
+  {script_env}
 {suggests}
 requirements:
   build:{build_depends}
@@ -71,7 +71,7 @@ requirements:
 test:
   commands:
     # You can put additional test commands to be run here.
-    - $R -e "library('{cran_packagename}')"  # [not win]
+    - $R -e "library('{cran_packagename}')"           # [not win]
     - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
 
   # You can also put a file called run_test.py, run_test.sh, or run_test.bat
@@ -85,6 +85,8 @@ about:
   license: {license}
   {summary_comment}summary:{summary}
   license_family: {license_family}
+
+{extra_recipe_maintainers}
 
 # The original CRAN metadata for this package was:
 
@@ -224,6 +226,16 @@ def add_parser(repos):
         default=".",
     )
     cran.add_argument(
+        "--output-suffix",
+        help="Suffix to add to recipe dir, can contain other dirs (eg: -feedstock/recipe).",
+        default="",
+    )
+    cran.add_argument(
+        "--add-maintainer",
+        help="Add this github username as a maintainer if not already present.",
+        default=None,
+    )
+    cran.add_argument(
         "--version",
         help="Version to use. Applies to all packages.",
     )
@@ -267,13 +279,22 @@ def add_parser(repos):
         on CRAN. Exits 1 if a newer version is available and 0 otherwise."""
     )
     cran.add_argument(
-        "--update-outdated",
-        action="store_true",
-        help="""Update outdated packages in the output directory (set by
-        --output-dir).  If packages are given, they are updated; otherwise, all
-        recipes in the output directory are updated.""",
+        "--update-policy",
+        action='store',
+        choices=('error',
+                 'skip-up-to-date',
+                 'skip-existing',
+                 'overwrite',
+                 'merge-keep-build-num',
+                 'merge-incr-build-num'),
+        default='error',
+        help="""Dictates what to do when existing packages are encountered in the
+        output directory (set by --output-dir). In the present implementation, the
+        merge options avoid overwriting bld.bat and build.sh and only manage copying
+        across patches, and the `build/{number,script_env}` fields. When the version
+        changes, both merge options reset `build/number` to 0. When the version does
+        not change they either keep the old `build/number` or else increase it by one."""
     )
-
 
 def dict_from_cran_lines(lines):
     d = {}
@@ -414,7 +435,7 @@ def get_session(output_dir, verbose=True):
         import cachecontrol.caches
     except ImportError:
         if verbose:
-            print("Tip: install CacheControl (conda package) to cache the CRAN metadata")
+            print("Tip: install CacheControl and lockfile (conda packages) to cache the CRAN metadata")
     else:
         session = cachecontrol.CacheControl(session,
             cache=cachecontrol.caches.FileCache(join(output_dir,
@@ -435,46 +456,171 @@ def get_cran_metadata(cran_url, output_dir, verbose=True):
         package_list)}
 
 
-def skeletonize(packages, output_dir=".", version=None, git_tag=None,
-                cran_url="https://cran.r-project.org/", recursive=False, archive=True,
-                version_compare=False, update_outdated=False, config=None):
+def make_array(m, key, allow_empty=False):
+    result = []
+    try:
+        old_vals = m.get_value(key, [])
+    except:
+        old_vals = []
+    if old_vals or allow_empty:
+        result.append(key.split('/')[-1]+":")
+    for old_val in old_vals:
+        result.append("{indent}{old_val}".format(indent=INDENT, old_val=old_val))
+    return result
+
+
+def existing_recipe_dir(output_dir, output_suffix, package):
+    result = None
+    if exists(join(output_dir, package)):
+        result = normpath(join(output_dir, package))
+    elif exists(join(output_dir, package+output_suffix)):
+        result = normpath(join(output_dir, package+output_suffix))
+    elif exists(join(output_dir, 'r-'+package+output_suffix)):
+        result = normpath(join(output_dir, 'r-'+package+output_suffix))
+    return result
+
+
+def strip_end(string, end):
+    if string.endswith(end):
+        return string[:-len(end)]
+    return string
+
+
+def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
+    """
+    Converts `package` (*) into a tuple of:
+
+    pkg_name (without leading 'r-')
+    location (in a subdir of output_dir - may not exist - or at GitHub)
+    old_git_rev (from existing metadata, so corresponds to the *old* version)
+    metadata or None (if a recipe does *not* already exist)
+
+    (*) `package` could be:
+    1. A package name beginning (or not) with 'r-'
+    2. A GitHub URL
+    3. A relative path to a recipe from output_dir
+    4. An absolute path to a recipe (fatal unless in the output_dir hierarchy)
+    5. Any of the above ending (or not) in sep or '/'
+
+    So this function cleans all that up:
+
+    Some packages may be from GitHub but we'd like the user not to have to worry
+    about that on the command-line (for pre-existing recipes). Also, we may want
+    to get version information from them (or existing metadata to merge) so lets
+    load *all* existing recipes (later we will add or replace this metadata with
+    any that we create).
+    """
+    if isfile(package):
+        return None
+    print("Parsing input package %s:" % package)
+    package = strip_end(package, '/')
+    package = strip_end(package, sep)
+    if 'github.com' in package:
+        package = strip_end(package, '.git')
+    pkg_name = basename(package).lower()
+    pkg_name = strip_end(pkg_name, '-feedstock')
+    if output_suffix:
+        pkg_name = strip_end(pkg_name, output_suffix)
+    if pkg_name.startswith('r-'):
+        pkg_name = pkg_name[2:]
+    if isabs(package):
+        commp = commonprefix((package, output_dir))
+        if commp != output_dir:
+            raise RuntimeError("package %s specified with abs path outside of output-dir %s" % (package,
+                                                                                                output_dir))
+        location = package
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+    elif 'github.com' in package:
+        location = package
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+    else:
+        location = existing_location = existing_recipe_dir(output_dir, output_suffix, package)
+    if existing_location:
+        try:
+            m = metadata.MetaData(existing_location)
+        except:
+            # Happens when the folder exists but contains no recipe.
+            m = None
+    else:
+        m = None
+
+    # It can still be the case that a package without 'github.com' in the location does really
+    # come from there, for that we need to inspect the existing metadata's source/git_url.
+    old_git_rev = git_tag
+    if location and m and 'github.com' not in location:
+        git_url = m.get_value('source/git_url', '')
+        if 'github.com' in git_url:
+            location = git_url
+            old_git_rev = m.get_value('source/git_rev', None)
+
+    new_location = join(output_dir, 'r-'+pkg_name+output_suffix)
+    print(".. name: %s location: %s new_location: %s" % (pkg_name, location, new_location))
+
+    return dict({'pkg-name': pkg_name,
+                 'location': location,
+                 'old-git-rev': old_git_rev,
+                 'old-metadata': m,
+                 'new-location': new_location})
+
+
+def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
+                git_tag=None, cran_url="https://cran.r-project.org/", recursive=False, archive=True,
+                version_compare=False, update_policy='', config=None):
+
+    output_dir = realpath(output_dir)
 
     if not config:
         config = Config()
 
-    if len(packages) > 1 and version_compare:
+    if len(in_packages) > 1 and version_compare:
         raise ValueError("--version-compare only works with one package at a time")
-    if not update_outdated and not packages:
+    if update_policy == 'error' and not in_packages:
         raise ValueError("At least one package must be supplied")
 
     package_dicts = {}
+    package_list = []
 
     cran_metadata = get_cran_metadata(cran_url, output_dir)
 
-    if update_outdated:
-        packages = get_outdated(output_dir, cran_metadata, packages)
-        for pkg in packages:
-            rm_rf(join(output_dir[0], 'r-' + pkg))
+    # r_recipes_in_output_dir = []
+    # recipes = listdir(output_dir)
+    # for recipe in recipes:
+    #     if not recipe.startswith('r-') or not isdir(recipe):
+    #         continue
+    #     r_recipes_in_output_dir.append(recipe)
 
-    while packages:
-        package = packages.pop()
+    for package in in_packages:
+        inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, package)
+        if inputs_dict:
+            package_dicts.update({inputs_dict['pkg-name']: {'inputs': inputs_dict}})
 
-        is_github_url = 'github.com' in package
-        url = package
+    for package_name, package_dict in package_dicts.items():
+        package_list.append(package_name)
 
+    while package_list:
+        inputs = package_dicts[package_list.pop()]['inputs']
+        location = inputs['location']
+        pkg_name = inputs['pkg-name']
+        is_github_url = location and 'github.com' in location
+        url = inputs['location']
+
+        dir_path = inputs['new-location']
+        print("Making/refreshing recipe for {}".format(pkg_name))
+
+        # Bodges GitHub packages into cran_metadata
         if is_github_url:
             rm_rf(config.work_dir)
-            m = metadata.MetaData.fromdict({'source': {'git_url': package}}, config=config)
+            m = metadata.MetaData.fromdict({'source': {'git_url': location}}, config=config)
             source.git_source(m.get_section('source'), m.config.git_cache, m.config.work_dir)
-            git_tag = git_tag[0] if git_tag else get_latest_git_tag(config)
-            p = subprocess.Popen(['git', 'checkout', git_tag], stdout=subprocess.PIPE,
+            new_git_tag = git_tag if git_tag else get_latest_git_tag(config)
+            p = subprocess.Popen(['git', 'checkout', new_git_tag], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, cwd=config.work_dir)
             stdout, stderr = p.communicate()
             stdout = stdout.decode('utf-8')
             stderr = stderr.decode('utf-8')
             if p.returncode:
                 sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" %
-                         (git_tag, stderr.strip()))
+                         (new_git_tag, stderr.strip()))
             if stdout:
                 print(stdout, file=sys.stdout)
             if stderr:
@@ -483,7 +629,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             DESCRIPTION = join(config.work_dir, "DESCRIPTION")
             if not isfile(DESCRIPTION):
                 sub_description_pkg = join(config.work_dir, 'pkg', "DESCRIPTION")
-                sub_description_name = join(config.work_dir, package.split('/')[-1], "DESCRIPTION")
+                sub_description_name = join(config.work_dir, location.split('/')[-1], "DESCRIPTION")
                 if isfile(sub_description_pkg):
                     DESCRIPTION = sub_description_pkg
                 elif isfile(sub_description_name):
@@ -491,7 +637,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                 else:
                     sys.exit("%s does not appear to be a valid R package "
                              "(no DESCRIPTION file in %s, %s)"
-                                 % (package, sub_description_pkg, sub_description_name))
+                                 % (location, sub_description_pkg, sub_description_name))
 
             with open(DESCRIPTION) as f:
                 description_text = clear_trailing_whitespace(f.read())
@@ -501,15 +647,13 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['orig_description'] = description_text
             package = d['Package'].lower()
             cran_metadata[package] = d
+        else:
+            package = pkg_name
 
-        if package.startswith('r-'):
-            package = package[2:]
-        if package.endswith('/'):
-            package = package[:-1]
-        if package.lower() not in cran_metadata:
-            sys.exit("Package %s not found" % package)
+        if pkg_name not in cran_metadata:
+            sys.exit("Package %s not found" % pkg_name)
 
-        # Make sure package is always uses the CRAN capitalization
+        # Make sure package always uses the CRAN capitalization
         package = cran_metadata[package.lower()]['Package']
 
         if not is_github_url:
@@ -517,16 +661,14 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             cran_metadata[package.lower()].update(get_package_metadata(cran_url,
             package, session))
 
-        dir_path = join(output_dir, 'r-' + package.lower())
-        if exists(dir_path) and not version_compare:
-            raise RuntimeError("directory already exists: %s" % dir_path)
-
         cran_package = cran_metadata[package.lower()]
 
-        d = package_dicts.setdefault(package,
+        package_dicts[package.lower()].update(
             {
                 'cran_packagename': package,
                 'packagename': 'r-' + package.lower(),
+                'patches': '',
+                'build_number': 0,
                 'build_depends': '',
                 'run_depends': '',
                 # CRAN doesn't seem to have this metadata :(
@@ -535,7 +677,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                 'summary_comment': '#',
                 'summary': '',
             })
-
+        d = package_dicts[package.lower()]
         if is_github_url:
             d['url_key'] = ''
             d['fn_key'] = ''
@@ -545,7 +687,7 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             d['filename'] = ''
             d['cranurl'] = ''
             d['git_url'] = url
-            d['git_tag'] = git_tag
+            d['git_tag'] = new_git_tag
         else:
             d['url_key'] = 'url:'
             d['fn_key'] = 'fn:'
@@ -565,6 +707,38 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
         if version_compare:
             sys.exit(not version_compare(dir_path, d['conda_version']))
 
+        patches = []
+        script_env = []
+        extra_recipe_maintainers = []
+        build_number = 0
+        if update_policy.startswith('merge') and inputs['old-metadata']:
+            m = inputs['old-metadata']
+            patches = make_array(m, 'source/patches')
+            script_env = make_array(m, 'build/script_env')
+            extra_recipe_maintainers = make_array(m, 'extra/recipe-maintainers', add_maintainer)
+            if m.version() == d['conda_version']:
+                build_number = int(m.get_value('build/number', 0))
+                build_number += 1 if update_policy == 'merge-incr-build-num' else 0
+        if not len(patches):
+            patches.append("# patches:\n")
+            patches.append("   # List any patch files here\n")
+            patches.append("   # - fix.patch")
+        if add_maintainer:
+            new_maintainer = "{indent}{add_maintainer}".format(indent=INDENT,add_maintainer=add_maintainer)
+            if new_maintainer not in extra_recipe_maintainers:
+                if not len(extra_recipe_maintainers):
+                    # We hit this case when there is no existing recipe.
+                    extra_recipe_maintainers = make_array({}, 'extra/recipe-maintainers', True)
+                extra_recipe_maintainers.append(new_maintainer)
+        if len(extra_recipe_maintainers):
+            extra_recipe_maintainers[1:].sort()
+            extra_recipe_maintainers.insert(0, "extra:\n  ")
+        d['extra_recipe_maintainers'] = ''.join(extra_recipe_maintainers)
+        d['patches'] = ''.join(patches)
+        d['script_env'] = ''.join(script_env)
+        d['build_number'] = build_number
+
+        cached_path = None
         if not is_github_url:
             filename = '{}_{}.tar.gz'
             contrib_url = cran_url + 'src/contrib/'
@@ -573,7 +747,9 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             # calculate sha256 by downloading source
             sha256 = hashlib.sha256()
             print("Downloading source from {}".format(package_url))
-            sha256.update(urlopen(package_url).read())
+            # We may need to inspect the file later to determine which compilers are needed.
+            cached_path, _ = source.download_to_cache(config.src_cache, '', dict({'url': package_url}))
+            sha256.update(open(cached_path, 'rb').read())
             d['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
 
             d['filename'] = filename.format(package, '{{ version }}')
@@ -602,7 +778,10 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
         else:
             # use CRAN page as homepage if nothing has been specified
             d['home_comment'] = ''
-            d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
+            if is_github_url:
+                d['homeurl'] = ' {}'.format(location)
+            else:
+                d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
         if 'Description' in cran_package:
             d['summary_comment'] = ''
@@ -636,22 +815,66 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
             seen.add(name)
             archs = match.group('archs')
             relop = match.group('relop') or ''
-            version = match.group('version') or ''
-            version = version.replace('-', '_')
+            ver = match.group('version') or ''
+            ver = ver.replace('-', '_')
             # If there is a relop there should be a version
-            assert not relop or version
+            assert not relop or ver
 
             if archs:
                 sys.exit("Don't know how to handle archs from dependency of "
                 "package %s: %s" % (package, s))
 
-            dep_dict[name] = '{relop}{version}'.format(relop=relop, version=version)
+            dep_dict[name] = '{relop}{version}'.format(relop=relop, version=ver)
 
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
 
+        need_git = is_github_url
+        if cran_package.get("NeedsCompilation", 'no') == 'yes':
+            with tarfile.open(cached_path) as tf:
+                need_f_compiler = any([f.name.lower().endswith(('.f', '.f90', '.f77')) for f in tf])
+                # Fortran builds use CC to perform the link (they do not call the linker directly).
+                need_c_compiler = True if need_f_compiler else \
+                    any([f.name.lower().endswith('.c') for f in tf])
+                need_cxx_compiler = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++')) for f in tf])
+                need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
+                need_make = True if (need_autotools or
+                                     need_f_compiler or
+                                     need_cxx_compiler or
+                                     need_c_compiler) else \
+                    any([f.name.lower().endswith(('/makefile', '/makevars'))
+                        for f in tf])
+        else:
+            need_c_compiler = need_cxx_compiler = need_f_compiler = need_autotools = need_make = False
         for dep_type in ['build', 'run']:
+
             deps = []
+            # Put non-R dependencies first.
+            if dep_type == 'build':
+                if need_c_compiler:
+                    deps.append("{indent}{{{{ compiler('c') }}}}        # [not win]".format(indent=INDENT))
+                if need_cxx_compiler:
+                    deps.append("{indent}{{{{ compiler('cxx') }}}}      # [not win]".format(indent=INDENT))
+                if need_f_compiler:
+                    deps.append("{indent}{{{{ compiler('fortran') }}}}  # [not win]".format(indent=INDENT))
+                if need_c_compiler or need_cxx_compiler or need_f_compiler:
+                    deps.append("{indent}{{{{native}}}}toolchain        # [win]".format(indent=INDENT))
+                if need_autotools or need_make or need_git:
+                    deps.append("{indent}{{{{posix}}}}filesystem        # [win]".format(indent=INDENT))
+                if need_git:
+                    deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
+                if need_autotools:
+                    deps.append("{indent}{{{{posix}}}}sed               # [win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}grep              # [win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}autoconf".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}automake".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
+                if need_make:
+                    deps.append("{indent}{{{{posix}}}}make".format(indent=INDENT))
+            elif dep_type == 'run':
+                if need_c_compiler or need_cxx_compiler or need_f_compiler:
+                    deps.append("{indent}{{{{native}}}}gcc-libs         # [win]".format(indent=INDENT))
+
             for name in sorted(dep_dict):
                 if name in R_BASE_PACKAGE_NAMES:
                     continue
@@ -675,37 +898,45 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
                         deps.append('{indent}{name}'.format(name=conda_name,
                             indent=INDENT))
                     if recursive:
-                        if not exists(join(output_dir, conda_name)):
-                            packages.append(name)
+                        lower_name = name.lower()
+                        if lower_name not in package_dicts:
+                            inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, lower_name)
+                            assert lower_name == inputs_dict['pkg-name'], "name %s != inputs_dict['pkg-name'] %s" % (name,inputs_dict['pkg-name'])
+                            assert lower_name not in package_list
+                            package_dicts.update({lower_name: {'inputs': inputs_dict}})
+                            package_list.append(lower_name)
 
-            if cran_package.get("NeedsCompilation", 'no') == 'yes':
-                if dep_type == 'build':
-                    deps.append('{indent}posix                # [win]'.format(indent=INDENT))
-                    deps.append('{indent}{{{{native}}}}toolchain  # [win]'.format(indent=INDENT))
-                    deps.append('{indent}gcc                  # [not win]'.format(indent=INDENT))
-                elif dep_type == 'run':
-                    deps.append('{indent}{{{{native}}}}gcc-libs   # [win]'.format(indent=INDENT))
-                    deps.append('{indent}libgcc               # [not win]'.format(indent=INDENT))
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
         d = package_dicts[package]
-        name = d['packagename']
+        dir_path = d['inputs']['new-location']
+        if exists(dir_path) and not version_compare:
+            if update_policy == 'error':
+                raise RuntimeError("directory already exists (and --update-policy is 'error'): %s" % dir_path)
+            elif update_policy == 'overwrite':
+                rm_rf(dir_path)
+        elif update_policy == 'skip-up-to-date' and up_to_date(cran_metadata, d['inputs']['old-metadata']):
+            continue
+        elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
+            continue
 
-        # Normalize the metadata values
+    # Normalize the metadata values
         d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
              .decode() for k, v in iteritems(d)}
-
-        makedirs(join(output_dir, name))
+        try:
+            makedirs(join(dir_path))
+        except:
+            pass
         print("Writing recipe for %s" % package.lower())
-        with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
+        with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(clear_trailing_whitespace(CRAN_META.format(**d)))
-        with open(join(output_dir, name, 'build.sh'), 'w') as f:
-            f.write(CRAN_BUILD_SH.format(**d))
-        with open(join(output_dir, name, 'bld.bat'), 'w') as f:
-            f.write(CRAN_BLD_BAT.format(**d))
-
-    print("Done")
+        if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
+            with open(join(dir_path, 'build.sh'), 'w') as f:
+                f.write(CRAN_BUILD_SH.format(**d))
+        if not exists(join(dir_path, 'bld.bat')) or update_policy == 'overwrite':
+            with open(join(dir_path, 'bld.bat'), 'w') as f:
+                f.write(CRAN_BLD_BAT.format(**d))
 
 
 def version_compare(recipe_dir, newest_conda_version):
@@ -729,10 +960,6 @@ def get_outdated(output_dir, cran_metadata, packages=()):
 
         recipe_name = recipe[2:]
 
-        for i, package in enumerate(packages):
-            if package.endswith('/'):
-                packages[i] = package[:-1]
-
         if packages and not (recipe_name in packages or recipe in packages):
             continue
 
@@ -743,11 +970,46 @@ def get_outdated(output_dir, cran_metadata, packages=()):
         up_to_date = version_compare(join(output_dir, recipe),
             cran_metadata[recipe_name]['Version'].replace('-', '_'))
 
-        if up_to_date:
-            print("%s is up-to-date." % recipe)
-            continue
-
         print("Updating %s" % recipe)
         to_update.append(recipe_name)
 
     return to_update
+
+
+def get_existing(output_dir, cran_metadata, packages=()):
+
+    existing = []
+    recipes = listdir(output_dir)
+    for recipe in recipes:
+        if not recipe.startswith('r-') or not isdir(recipe):
+            continue
+
+        recipe_name = recipe[2:]
+
+        if packages and not (recipe_name in packages or recipe in packages):
+            continue
+
+        existing.append(recipe_name)
+
+    return existing
+
+
+def up_to_date(cran_metadata, package):
+    r_pkg_name, location, old_git_rev, m = package
+    cran_pkg_name = r_pkg_name[2:]
+
+    # Does not exist, so is not up to date.
+    if not m:
+        return False
+
+    # For now. We can do better; need to collect *all* information upfront.
+    if 'github.com' in location:
+        return False
+    else:
+        if cran_pkg_name not in cran_metadata:
+            return False
+
+    if m.version() != cran_metadata[cran_pkg_name]['Version'].replace('-', '_'):
+        return False
+
+    return True
