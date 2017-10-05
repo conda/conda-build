@@ -1067,6 +1067,9 @@ dedupe_filter = DuplicateFilter()
 info_debug_stdout_filter = LessThanFilter(logging.WARNING)
 warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
 
+# set filelock's logger to only show warnings by default
+logging.getLogger('filelock').setLevel(logging.WARN)
+
 
 def reset_deduplicator():
     """Most of the time, we want the deduplication.  There are some cases (tests especially)
