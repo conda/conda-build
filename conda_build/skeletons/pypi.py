@@ -698,6 +698,12 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 dep = dep.split('#')[0].strip()
                 if dep:  # ... and empty (or comment only) lines
                     spec = spec_from_line(dep)
+                    if '~' in spec:
+                        version = spec.split()[-1]
+                        tilde_version = '~ {}' .format(version)
+                        max_pin = int(version.split('.')[0]) + 1
+                        pin_compatible = ' >={},<{}' .format(version, max_pin)
+                        spec = spec.replace(tilde_version, pin_compatible)
                     if spec is None:
                         sys.exit("Error: Could not parse: %s" % dep)
                     deps.append(spec)
