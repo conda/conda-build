@@ -1699,7 +1699,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
         # delete_trash(None)
 
     extra_help = ""
-    built_packages = {}
+    built_packages = OrderedDict()
     retried_recipes = []
 
     # this is primarily for exception handling.  It's OK that it gets clobbered by
