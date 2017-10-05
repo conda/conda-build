@@ -85,10 +85,11 @@ def handle_file(f, d, prefix):
     # Include examples in the metadata doc
     elif f.startswith(('Examples/', 'Examples\\')):
         d['Examples'].append(f[9:])
+    # No special treatment for other files
+    # leave them as-is
     else:
         log = logging.getLogger(__name__)
-        log.warn("Don't know how to handle file: %s.  Omitting it from package." % f)
-        os.unlink(path)
+        log.debug("Don't know how to handle file: %s.  Including it as-is." % f)
 
 
 def populate_files(m, files, prefix, entry_point_scripts=None):
