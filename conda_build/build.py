@@ -42,6 +42,7 @@ from .conda_interface import url_path
 from .conda_interface import cc_platform, root_dir, pkgs_dirs
 from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index
+from .conda_interface import MatchSpec
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -1783,10 +1784,11 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             metadata.clean()
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
+            built_package_paths = [entry[1][1].path for entry in built_packages.items()]
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([recipe])
-            for pkg in e.packages:
+            for pkg, matchspec in zip(e.packages, e.matchspecs):
                 pkg_name = pkg.split(' ')[0]
                 # if we hit missing dependencies at test time, the error we get says that our
                 #    package that we just built needs to be built.  Very confusing.  Bomb out
@@ -1815,13 +1817,19 @@ for Python 3.5 and needs to be rebuilt."""
                 if not feedstock_glob:
                     feedstock_glob = glob(os.path.join(recipe_parent_dir, '..',
                                                        pkg + '-feedstock'))
+                available = False
                 if recipe_glob or feedstock_glob:
                     for recipe_dir in recipe_glob + feedstock_glob:
-                        print(("Missing dependency {0}, but found" +
-                                " recipe directory, so building " +
-                                "{0} first").format(pkg))
-                        add_recipes.append(recipe_dir)
-                else:
+                        if not any(path.startswith(recipe_dir) for path in built_package_paths):
+                            dep_metas = render_recipe(recipe_dir, config=metadata.config)
+                            for dep_meta in dep_metas:
+                                if utils.match_peer_job(MatchSpec(matchspec), dep_meta[0], metadata):
+                                    print(("Missing dependency {0}, but found" +
+                                        " recipe directory, so building " +
+                                        "{0} first").format(pkg))
+                                    add_recipes.append(recipe_dir)
+                                    available = True
+                if not available:
                     config.clean(remove_folders=False)
                     raise
             # if we failed to render due to unsatisfiable dependencies, we should only bail out

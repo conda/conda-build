@@ -61,6 +61,7 @@ class VerifyError(CondaBuildException):
 class DependencyNeedsBuildingError(CondaBuildException):
     def __init__(self, conda_exception=None, packages=None, subdir=None, *args, **kwargs):
         self.subdir = subdir
+        self.matchspecs = []
         if packages:
             self.packages = packages
         else:
@@ -69,6 +70,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
                 if not line.startswith('  - '):
                     continue
                 pkg = line.lstrip('  - ').split(' -> ')[-1]
+                self.matchspecs.append(pkg)
                 pkg = pkg.strip().split(' ')[0]
                 self.packages.append(pkg)
         if not self.packages:
@@ -80,7 +82,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
 
     @property
     def message(self):
-        return "Unsatisfiable dependencies for platform {}: {}".format(self.subdir, self.packages)
+        return "Unsatisfiable dependencies for platform {}: {}".format(self.subdir, self.matchspecs)
 
 
 class RecipeError(CondaBuildException):
