@@ -1183,3 +1183,14 @@ def test_pin_depends(testing_config):
 def test_failed_patch_exits_build(testing_config):
     with pytest.raises(RuntimeError):
         api.build(os.path.join(metadata_dir, '_bad_patch'), config=testing_config)
+
+
+def test_version_mismatch_in_variant_does_not_infinitely_rebuild_folder(testing_config):
+    # unsatisfiable; also not buildable (test_a recipe version is 2.0)
+    testing_config.variant['test_a'] = "1.0"
+    recipe = os.path.join(metadata_dir, '_build_deps_no_infinite_loop', 'test_b')
+    with pytest.raises(DependencyNeedsBuildingError):
+        api.build(recipe, config=testing_config)
+    # passes now, because package can be built, or is already built.  Doesn't matter which.
+    testing_config.variant['test_a'] = "2.0"
+    api.build(recipe, config=testing_config)

@@ -37,6 +37,7 @@ from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder, MatchSpec
 from .conda_interface import cc_conda_build
+from .conda_interface import conda_43, Dist
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
 from conda_build.os_utils import external
@@ -1295,3 +1296,30 @@ def insert_variant_versions(metadata, env):
                 reqs.insert(i, ensure_valid_spec(' '.join((x.group(1),
                                                 metadata.config.variant.get(x.group(1))))))
     metadata.meta['requirements'][env] = reqs
+
+
+def match_peer_job(target_matchspec, other_m, this_m=None):
+    """target_matchspec comes from the recipe.  target_variant is the variant from the recipe whose
+    deps we are matching.  m is the peer job, which must satisfy conda and also have matching keys
+    for any keys that are shared between target_variant and m.config.variant"""
+    match_dict = {'name': other_m.name(),
+                'version': other_m.version(),
+                'build': '', }
+    if conda_43:
+        match_dict = Dist(name=match_dict['name'],
+                          dist_name='-'.join((match_dict['name'],
+                                              match_dict['version'],
+                                              match_dict['build'])),
+                          version=match_dict['version'],
+                          build_string=match_dict['build'],
+                          build_number=int(other_m.build_number() or 0),
+                          channel=None)
+    matchspec_matches = target_matchspec.match(match_dict)
+
+    variant_matches = True
+    if this_m:
+        other_m_used_vars = other_m.get_used_loop_vars()
+        for v in this_m.get_used_loop_vars():
+            if v in other_m_used_vars:
+                variant_matches &= this_m.config.variant[v] == other_m.config.variant[v]
+    return matchspec_matches and variant_matches

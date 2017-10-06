@@ -1,0 +1,9 @@
+package:
+  name: test_b
+  version: 1.0
+
+requirements:
+  build:
+    # unsatisfiable.  Folder can produce version 2.0.*
+    #   we control pinning in variant in test definition
+    - test_a {{ test_a }}
