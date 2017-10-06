@@ -1071,6 +1071,11 @@ warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
 # set filelock's logger to only show warnings by default
 logging.getLogger('filelock').setLevel(logging.WARN)
 
+# quiet some of conda's less useful output
+logging.getLogger('conda.core.linked_data').setLevel(logging.WARN)
+logging.getLogger('conda.gateways.disk.delete').setLevel(logging.WARN)
+logging.getLogger('conda.gateways.disk.test').setLevel(logging.WARN)
+
 
 def reset_deduplicator():
     """Most of the time, we want the deduplication.  There are some cases (tests especially)

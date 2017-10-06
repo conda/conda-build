@@ -367,7 +367,7 @@ def test_inspect_objects(testing_workdir, capfd):
     else:
         main_inspect.execute(args)
         output, error = capfd.readouterr()
-        assert 'rpath: @loader_path' in output
+        assert re.search('rpath:.*@loader_path', output)
 
 
 @pytest.mark.serial
