@@ -1823,7 +1823,8 @@ for Python 3.5 and needs to be rebuilt."""
                         if not any(path.startswith(recipe_dir) for path in built_package_paths):
                             dep_metas = render_recipe(recipe_dir, config=metadata.config)
                             for dep_meta in dep_metas:
-                                if utils.match_peer_job(MatchSpec(matchspec), dep_meta[0], metadata):
+                                if utils.match_peer_job(MatchSpec(matchspec), dep_meta[0],
+                                                        metadata):
                                     print(("Missing dependency {0}, but found" +
                                         " recipe directory, so building " +
                                         "{0} first").format(pkg))

@@ -24,10 +24,7 @@ import time
 import yaml
 import zipfile
 
-from distutils.version import LooseVersion
 import filelock
-
-from conda import __version__ as conda_version
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
@@ -943,12 +940,6 @@ def trim_empty_keys(dict_):
         to_remove.add('zip_keys')
     for k in to_remove:
         del dict_[k]
-
-
-def conda_43():
-    """Conda 4.3 broke compatibility in lots of new fun and exciting ways.  This function is for
-    changing conda-build's behavior when conda 4.3 or higher is installed."""
-    return LooseVersion(conda_version) >= LooseVersion('4.3')
 
 
 def _increment(version, alpha_ver):
