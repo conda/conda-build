@@ -1,3 +1,28 @@
+2017-10-06 3.0.24:
+
+Enhancements:
+-------------
+
+* add get_used_loop_vars() function to MetaData object, to show which loop variables are actually used by recipe  #2410
+* Allow multiple file extensions for pypi skeletons, not just .tar.gz  #2412
+
+Bug fixes:
+----------
+
+* make build reqs equivalent to host when cross-compiling and no host section present (helps reduce need to modify python-only recipes)  #2406
+* reduce logging output from filelock and conda  #2418 #2422
+* Don't strip files in noarch: python when they are not known file types  #2420
+* fix infinite loop when trying to build dep from found recipe, but that recipe is wrong version  #2423
+* update perl used on appveyor for testing to 5.26
+
+Contributors:
+-------------
+
+* @minrk
+* @msarahan
+* @nehaljwani
+
+
 2017-09-29 3.0.23:
 
 Bug fixes:
