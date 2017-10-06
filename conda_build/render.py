@@ -24,6 +24,7 @@ from .conda_interface import (PY3, UnsatisfiableError, ProgressiveFetchExtract,
                               TemporaryDirectory)
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
+from .conda_interface import conda_43
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
@@ -45,7 +46,7 @@ def bldpkg_path(m):
 
 def actions_to_pins(actions):
     specs = []
-    if utils.conda_43():
+    if conda_43:
         spec_name = lambda x: x.dist_name
     else:
         spec_name = lambda x: x
@@ -218,7 +219,7 @@ def get_upstream_pins(m, actions, env):
         # ran through all pkgs_dirs, and did not find package or folder.  Download it.
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
-        if not pkg_loc and utils.conda_43():
+        if not pkg_loc and conda_43:
             try:
                 # the conda 4.4 API uses a single `link_prefs` kwarg
                 # whereas conda 4.3 used `index` and `link_dists` kwargs
