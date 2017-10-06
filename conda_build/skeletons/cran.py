@@ -624,12 +624,16 @@ def skeletonize(packages, output_dir=".", version=None, git_tag=None,
 
         dep_dict = {}
 
-        for s in set(chain(depends, imports, links)):
+        seen = set()
+        for s in list(chain(imports, depends, links)):
             match = VERSION_DEPENDENCY_REGEX.match(s)
             if not match:
                 sys.exit("Could not parse version from dependency of %s: %s" %
                     (package, s))
             name = match.group('name')
+            if name in seen:
+                continue
+            seen.add(name)
             archs = match.group('archs')
             relop = match.group('relop') or ''
             version = match.group('version') or ''
