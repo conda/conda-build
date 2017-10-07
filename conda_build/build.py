@@ -1117,7 +1117,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
                     os.chmod(work_file, 0o766)
 
-                    cmd = [shell_path, '-x', '-e', work_file]
+                    cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
                     utils.remove_pycache_from_scripts(m.config.build_prefix)
@@ -1450,6 +1450,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         metadata, hash_input = construct_metadata_for_test(recipedir_or_package_or_metadata,
                                                                   config)
 
+    trace = '-x ' if metadata.config.debug else ''
+
     metadata.append_metadata_sections(hash_input, merge=False)
     metadata.config.compute_build_id(metadata.name())
     # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
@@ -1582,7 +1584,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     with open(test_script, 'w') as tf:
         if not utils.on_win:
-            tf.write('set -x -e\n')
+            tf.write('set {trace}-e\n'.format(trace=trace))
         if metadata.config.activate and not metadata.name() == 'conda':
             ext = ".bat" if utils.on_win else ""
             tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
@@ -1628,12 +1630,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     tf.write("if errorlevel 1 exit 1\n")
             else:
                 # TODO: Run the test/commands here instead of in run_test.py
-                tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
-                                                                    test_file=test_file))
+                tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                           test_file=test_file,
+                                                                           trace=trace))
     if utils.on_win:
         cmd = ['cmd.exe', "/d", "/c", test_script]
     else:
-        cmd = [shell_path, '-x', '-e', test_script]
+        cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
         utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
     except subprocess.CalledProcessError:
@@ -1765,7 +1768,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
-                packages_from_this = build(metadata, post=post,
+                packages_from_this = build(metadata,
+                                           post=post,
                                            need_source_download=need_source_download,
                                            need_reparse_in_env=need_reparse_in_env,
                                            built_packages=built_packages,
