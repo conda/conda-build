@@ -700,8 +700,12 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                     spec = spec_from_line(dep)
                     if '~' in spec:
                         version = spec.split()[-1]
+                        version_parts = version.split('.')
                         tilde_version = '~ {}' .format(version)
-                        max_pin = int(version.split('.')[0]) + 1
+                        # the max pin length is n-1, but in terms of index this is n-2
+                        max_ver_len = len(version_parts)-2
+                        version_parts[max_ver_len] = int(version_parts[max_ver_len]) + 1
+                        max_pin = '.'.join(str(v) for v in version_parts[:max_ver_len+1])
                         pin_compatible = ' >={},<{}' .format(version, max_pin)
                         spec = spec.replace(tilde_version, pin_compatible)
                     if spec is None:
