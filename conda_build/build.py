@@ -843,8 +843,8 @@ bundlers = {
 }
 
 
-def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None,
-          notest=False):
+def build(m, debug=False, post=None, need_source_download=True, need_reparse_in_env=False,
+          built_packages=None, notest=False):
     '''
     Build the package with the specified metadata.
 
@@ -1117,7 +1117,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
                     os.chmod(work_file, 0o766)
 
-                    cmd = [shell_path, '-x', '-e', work_file]
+                    cmd = [shell_path] + (['-x'] if debug else []) + ['-e', work_file]
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
                     utils.remove_pycache_from_scripts(m.config.build_prefix)
@@ -1431,7 +1431,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test(recipedir_or_package_or_metadata, config, move_broken=True):
+def test(recipedir_or_package_or_metadata, config, debug=False, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
@@ -1443,6 +1443,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     need_cleanup = False
     hash_input = {}
     recipe_dir = ''
+    trace = '-x ' if debug else ''
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
@@ -1582,7 +1583,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     with open(test_script, 'w') as tf:
         if not utils.on_win:
-            tf.write('set -x -e\n')
+            tf.write('set {trace}-e\n'.format(trace=trace))
         if metadata.config.activate and not metadata.name() == 'conda':
             ext = ".bat" if utils.on_win else ""
             tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
@@ -1628,12 +1629,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                     tf.write("if errorlevel 1 exit 1\n")
             else:
                 # TODO: Run the test/commands here instead of in run_test.py
-                tf.write('"{shell_path}" -x -e "{test_file}"\n'.format(shell_path=shell_path,
-                                                                    test_file=test_file))
+                tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                           test_file=test_file,
+                                                                           trace=trace))
     if utils.on_win:
         cmd = ['cmd.exe', "/d", "/c", test_script]
     else:
-        cmd = [shell_path, '-x', '-e', test_script]
+        cmd = [shell_path] + (['-x'] if debug else []) + ['-e', test_script]
     try:
         utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
     except subprocess.CalledProcessError:
@@ -1765,7 +1767,9 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
-                packages_from_this = build(metadata, post=post,
+                packages_from_this = build(metadata,
+                                           debug=config.debug,
+                                           post=post,
                                            need_source_download=need_source_download,
                                            need_reparse_in_env=need_reparse_in_env,
                                            built_packages=built_packages,
@@ -1775,7 +1779,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
-                            test(pkg, config=metadata.config)
+                            test(pkg, config=metadata.config, debug=config.debug)
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
