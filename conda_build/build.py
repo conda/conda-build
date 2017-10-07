@@ -843,8 +843,8 @@ bundlers = {
 }
 
 
-def build(m, debug=False, post=None, need_source_download=True, need_reparse_in_env=False,
-          built_packages=None, notest=False):
+def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None,
+          notest=False):
     '''
     Build the package with the specified metadata.
 
@@ -1117,7 +1117,7 @@ def build(m, debug=False, post=None, need_source_download=True, need_reparse_in_
 
                     os.chmod(work_file, 0o766)
 
-                    cmd = [shell_path] + (['-x'] if debug else []) + ['-e', work_file]
+                    cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
                     utils.remove_pycache_from_scripts(m.config.build_prefix)
@@ -1431,7 +1431,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test(recipedir_or_package_or_metadata, config, debug=False, move_broken=True):
+def test(recipedir_or_package_or_metadata, config, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
@@ -1443,13 +1443,14 @@ def test(recipedir_or_package_or_metadata, config, debug=False, move_broken=True
     need_cleanup = False
     hash_input = {}
     recipe_dir = ''
-    trace = '-x ' if debug else ''
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
     else:
         metadata, hash_input = construct_metadata_for_test(recipedir_or_package_or_metadata,
                                                                   config)
+
+    trace = '-x ' if metadata.config.debug else ''
 
     metadata.append_metadata_sections(hash_input, merge=False)
     metadata.config.compute_build_id(metadata.name())
@@ -1635,7 +1636,7 @@ def test(recipedir_or_package_or_metadata, config, debug=False, move_broken=True
     if utils.on_win:
         cmd = ['cmd.exe', "/d", "/c", test_script]
     else:
-        cmd = [shell_path] + (['-x'] if debug else []) + ['-e', test_script]
+        cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
         utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
     except subprocess.CalledProcessError:
@@ -1768,7 +1769,6 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
                 packages_from_this = build(metadata,
-                                           debug=config.debug,
                                            post=post,
                                            need_source_download=need_source_download,
                                            need_reparse_in_env=need_reparse_in_env,
@@ -1779,7 +1779,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
-                            test(pkg, config=metadata.config, debug=config.debug)
+                            test(pkg, config=metadata.config)
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
