@@ -646,6 +646,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     actions = {}
     log = utils.get_logger(__name__)
     conda_log_level = logging.WARN
+    specs = list(specs)
     if verbose:
         capture = contextlib.contextmanager(lambda: (yield))
     elif debug:
