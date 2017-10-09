@@ -248,3 +248,11 @@ def test_overlapping_files(testing_config, caplog):
     outputs = api.build(recipe_dir, config=testing_config)
     assert len(outputs) == 3
     assert sum(int("Exact overlap" in rec.message) for rec in caplog.records) == 1
+
+
+def test_per_output_tests(testing_config, capfd):
+    recipe_dir = os.path.join(subpackage_dir, '_per_output_tests')
+    api.build(recipe_dir, config=testing_config)
+    out, err = capfd.readouterr()
+    assert out.count("output-level test") == 1
+    assert out.count("top-level test") == 1
