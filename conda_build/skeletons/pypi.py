@@ -215,7 +215,13 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         else:
             sort_by_version = lambda l: sorted(l, key=parse_version)
 
-            pypi_data = requests.get(package_pypi_url).json()
+            pypi_resp = requests.get(package_pypi_url)
+
+            if pypi_resp.status_code != 200:
+                sys.exit("Request to fetch %s failed with status: %d"
+                        % (package_pypi_url, pypi_resp.status_code))
+
+            pypi_data = pypi_resp.json()
 
             versions = sort_by_version(pypi_data['releases'].keys())
 
