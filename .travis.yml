@@ -4,7 +4,7 @@ python:
   - 2.7
   - 3.6
 env:
-  - CONDA_VERSION=4.3.27
+  - CONDA_VERSION=4.3.x
   - CONDA_VERSION=4.4.x
 matrix:
   fast_finish: true
@@ -15,12 +15,12 @@ matrix:
     - python: 3.6
       env:
         - FLAKE8=true
-        - CONDA_VERSION=4.3.27
+        - CONDA_VERSION=4.3.x
       os: linux
   allow_failures:
     - env:
         - FLAKE8=true
-        - CONDA_VERSION=4.3.27
+        - CONDA_VERSION=4.3.x
       python: 3.6
 
 addons:
