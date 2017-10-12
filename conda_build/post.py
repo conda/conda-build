@@ -9,6 +9,7 @@ import locale
 import re
 import os
 import stat
+import tempfile
 from subprocess import call, check_output
 import sys
 try:
@@ -506,10 +507,8 @@ def make_hardlink_copy(path, prefix):
     if not os.path.isabs(path) and not os.path.exists(path):
         path = os.path.normpath(os.path.join(prefix, path))
     nlinks = os.lstat(path).st_nlink
-    dest = 'tmpfile'
-    if os.path.isabs(path):
-        dest = os.path.join(os.getcwd(), dest)
     if nlinks > 1:
+        dest = tempfile.mkdtemp()
         # copy file to new name
         utils.copy_into(path, dest)
         # remove old file
