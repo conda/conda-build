@@ -522,7 +522,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
 
     if not urls:
         # Try harder for a download location
-        if 'download_url' in data:
+        if data.get('download_url'):
             urls = [defaultdict(str, {'url': data['download_url']})]
             if not urls[0]['url']:
                 # The package doesn't have a url, or maybe it only has a wheel.
