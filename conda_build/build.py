@@ -762,7 +762,7 @@ def bundle_conda(output, metadata, env, **kw):
 
         # we're done building, perform some checks
         tarcheck.check_all(tmp_path, metadata.config)
-        if not getattr(metadata.config, "noverify", False):
+        if getattr(metadata.config, "verify", False):
             verifier = Verify()
             ignore_scripts = metadata.config.ignore_package_verify_scripts if \
                              metadata.config.ignore_package_verify_scripts else None

@@ -116,6 +116,9 @@ DEFAULTS = [Setting('activate', True),
             Setting('config_file', None),
             Setting('repository', 'pypitest'),
 
+            # conda-verify is disabled by default.  This is because it was inoperable for a long
+            #     time, and thus needs to be opt-in not opt-out.
+            Setting('verify', False),
             Setting('ignore_recipe_verify_scripts',
                   cc_conda_build.get('ignore_recipe_verify_scripts', [])),
             Setting('ignore_package_verify_scripts',

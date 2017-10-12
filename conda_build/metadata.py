@@ -1605,12 +1605,16 @@ class MetaData(object):
             host_reqs = output_reqs.get('host', [])
             run_reqs = output_reqs.get('run', [])
             constrain_reqs = output_reqs.get('run_constrained', [])
+            # pass through any other unrecognized req types
+            other_reqs = {k: v for k, v in output_reqs.items() if k not in
+                          ('build', 'host', 'run', 'run_constrained')}
         else:
             output_reqs = ensure_list(output_reqs)
             build_reqs = output_reqs
             host_reqs = []
             run_reqs = output_reqs
             constrain_reqs = []
+            other_reqs = {}
 
         if 'name' in output:
             # since we are copying reqs from the top-level package, which
@@ -1624,6 +1628,7 @@ class MetaData(object):
         requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
         if constrain_reqs:
             requirements['run_constrained'] = constrain_reqs
+        requirements.update(other_reqs)
         output_metadata.meta['requirements'] = requirements
         for env in ('build', 'host'):
             insert_variant_versions(output_metadata, env)

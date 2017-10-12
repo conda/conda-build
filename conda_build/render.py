@@ -462,8 +462,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                     conform_dict[key] = variant[key]
 
         conform_dict.update({key: val for key, val in variant.items()
-                if key in mv.meta.get('requirements').get('build', []) +
-                        mv.meta.get('requirements').get('host', [])})
+                if key in utils.ensure_list(mv.meta.get('requirements', {}).get('build', [])) +
+                        utils.ensure_list(mv.meta.get('requirements', {}).get('host', []))})
 
         compiler_matches = re.findall(r"\{\{\s*compiler\([\'\"](.*)[\'\"].*\)\s*\}\}",
                                         recipe_requirements)

@@ -195,10 +195,10 @@ different sets of packages."""
               "to this call of conda-build.")
     )
     p.add_argument(
-        "--no-verify",
+        "--verify",
         action="store_true",
         help="do not run verification on recipes or packages when building",
-        default=cc_conda_build.get('no_verify', 'false').lower() == 'true',
+        default=cc_conda_build.get('verify', 'false').lower() == 'true',
     )
     p.add_argument(
         "--output-folder",
@@ -376,7 +376,7 @@ def execute(args):
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
                             notest=args.notest, already_built=None, config=config,
-                            noverify=args.no_verify)
+                            verify=args.verify)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
