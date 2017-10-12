@@ -307,7 +307,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             ordered_recipe['build']['script'] = 'python setup.py install ' + ' '.join(setup_options)
             if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
-                ordered_recipe['build']['script'] += (' --single-version-externally-managed '
+                ordered_recipe['build']['script'] += ('--single-version-externally-managed '
                                                       '--record=record.txt')
 
             # Always require python as a dependency
