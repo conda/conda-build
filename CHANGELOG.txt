@@ -1,3 +1,33 @@
+2017-10-12 3.0.26:
+
+Enhancements:
+-------------
+
+* Conda index now generates html index pages in addition to repodata.json  #2395
+* make bash verbosity (-x flag) depend on setting of --debug flag  #2426
+* pass test and build sections in any outputs through wholesale, rather than picking out individual fields from them.  #2429
+* make conda-verify opt-in, rather than opt-out.  Use ``--verify`` cli argument or ``verify`` keyword to api.  #2436
+* implement requires_features and provides_features, for compatibility with conda 4.4's new key-value feature  #2440
+
+Bug fixes:
+----------
+
+* fix FEATURE_* variables not working due to a type error  #2428
+* fix misleading error when download_url present but empty  #2434
+* check HTTP status code of PyPI pkg manifest request before decoding it, to improve error message  #2435
+* fix 64-bit exe's showing up in 32-bit win packages due to not accounting for host_arch with script files  #2439
+* fix hardlink-breaking bug where path was being copied instead of specific file.  Use better tempdir.  #2437
+
+Contributors:
+-------------
+
+* @Bezier89
+* @eklitzke
+* @kalefranz
+* @maddenp
+* @msarahan
+* @nehaljwani
+
 2017-10-06 3.0.25:
 
 Bug fixes:
