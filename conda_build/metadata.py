@@ -1621,9 +1621,6 @@ class MetaData(object):
             host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
             run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
 
-        if 'about' in output:
-            output_metadata.meta['about'] = output['about']
-
         requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
         if constrain_reqs:
             requirements['run_constrained'] = constrain_reqs
@@ -1650,6 +1647,7 @@ class MetaData(object):
             output_metadata.config.platform = self.config.platform
 
         build = output_metadata.meta.get('build', {})
+        # legacy (conda build 2.1.x - 3.0.25)
         if 'number' in output:
             build['number'] = output['number']
         if 'string' in output:
@@ -1660,7 +1658,15 @@ class MetaData(object):
             build['track_features'] = output['track_features']
         if 'features' in output and output['features']:
             build['features'] = output['features']
+        # 3.0.26+ - just pass through the whole build section from the output.
+        #    It clobbers everything else.
+        if 'build' in output:
+            build = output['build']
         output_metadata.meta['build'] = build
+        if 'test' in output:
+            output_metadata.meta['test'] = output['test']
+        if 'about' in output:
+            output_metadata.meta['about'] = output['about']
 
         return output_metadata
 

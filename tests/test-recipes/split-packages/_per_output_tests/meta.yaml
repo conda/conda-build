@@ -1,0 +1,15 @@
+package:
+  name: test_per_output_tests
+  version: 1.0
+
+test:
+  commands:
+    - echo "top-level test"
+
+outputs:
+  # top-level recipe - ensure that its tests also get run
+  - name: test_per_output_tests
+  - name: output_1
+    test:
+      commands:
+        - echo "output-level test"
