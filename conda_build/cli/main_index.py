@@ -41,12 +41,20 @@ def parse_args(args):
         action="store_true",
         help="Don't show any output.",
     )
+
     p.add_argument(
         '--no-remove',
         action="store_false",
         dest="remove",
         default=True,
         help="Don't remove entries for files that don't exist.",
+    )
+
+    p.add_argument(
+        '--channel-name',
+        action="store",
+        default=None,
+        help="Adding a channel name will create an index.html file within the subdir.",
     )
 
     args = p.parse_args(args)
@@ -59,7 +67,8 @@ def execute(args):
     config.verbose = not args.quiet
 
     api.update_index(args.dir, config=config, force=args.force,
-            check_md5=args.check_md5, remove=args.remove)
+            check_md5=args.check_md5, remove=args.remove,
+                     channel_name=args.channel_name)
 
 
 def main():

@@ -1,0 +1,76 @@
+<html>
+<head>
+  <title>{{ title }}</title>
+  <style type="text/css">
+    a, a:active {
+      text-decoration: none; color: blue;
+    }
+    a:visited {
+      color: #48468F;
+    }
+    a:hover, a:focus {
+      text-decoration: underline; color: red;
+    }
+    body {
+      background-color: #F5F5F5;
+    }
+    h2 {
+      margin-bottom: 12px;
+    }
+    th, td {
+      font: 100% monospace; text-align: left;
+    }
+    th {
+      font-weight: bold; padding-right: 14px; padding-bottom: 3px;
+    }
+    td {
+      padding-right: 20px;
+    }
+    td.s, th.s {
+      text-align: right;
+    }
+    table {
+      background-color: white;
+      border-top: 1px solid #646464;
+      border-bottom: 1px solid #646464;
+      padding-top: 10px;
+      padding-bottom: 14px;
+    }
+    address {
+      color: #787878;
+      padding-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>{{ title }}</h2>
+  <table>
+    <tr>
+      <th>Filename</th>
+      <th>Size</th>
+      <th>Last Modified</th>
+      <th>MD5</th>
+    </tr>
+{% for path in ('repodata.json', 'repodata.json.bz2') %}
+  {% if path in extra_paths %}
+    {% set record = extra_paths[path] %}
+    <tr>
+      <td><a href="{{ path }}">{{ path }}</a></td>
+      <td class="s">{{ record.size | human_bytes }}</td>
+      <td>{{ record.timestamp|strftime("%Y-%m-%d %H:%M:%S UTC") }}</td>
+      <td>{{ record.md5 }}</td>
+    </tr>
+  {%- endif %}
+{%- endfor %}
+{% for fn, record in packages|dictsort %}
+    <tr>
+      <td><a href="{{ fn }}">{{ fn }}</a></td>
+      <td class="s">{{ record.size | human_bytes }}</td>
+      <td>{{ record.timestamp|strftime("%Y-%m-%d %H:%M:%S UTC") }}</td>
+      <td>{{ record.md5 }}</td>
+    </tr>
+{%- endfor %}
+  </table>
+  <address>Updated: {{ current_time|strftime("%Y-%m-%d %H:%M:%S UTC") }} - Files: {{ packages|length }}</address>
+</body>
+</html>
