@@ -53,7 +53,7 @@ def fix_staged_scripts(scripts_dir, config):
             with open(join(scripts_dir, fn + '-script.py'), 'wb') as fo:
                 fo.write(f.read())
             # now create the .exe file
-            copy_into(join(dirname(__file__), 'cli-%d.exe' % config.host_arch),
+            copy_into(join(dirname(__file__), 'cli-%s.exe' % config.host_arch),
                             join(scripts_dir, fn + '.exe'))
 
         # remove the original script
