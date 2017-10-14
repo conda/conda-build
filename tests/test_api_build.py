@@ -1194,3 +1194,13 @@ def test_version_mismatch_in_variant_does_not_infinitely_rebuild_folder(testing_
     # passes now, because package can be built, or is already built.  Doesn't matter which.
     testing_config.variant['test_a'] = "2.0"
     api.build(recipe, config=testing_config)
+
+
+def test_provides_features_metadata(testing_config):
+    recipe = os.path.join(metadata_dir, '_requires_provides_features')
+    out = api.build(recipe, config=testing_config)[0]
+    index = json.loads(package_has_file(out, 'info/index.json'))
+    assert 'requires_features' in index
+    assert index['requires_features'] == {'test': 'ok'}
+    assert 'provides_features' in index
+    assert index['provides_features'] == {'test2': 'also_ok'}

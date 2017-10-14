@@ -330,6 +330,8 @@ default_structs = {
     'build/preferred_env': text_type,
     'build/preferred_env_executable_paths': list,
     'build/ignore_run_exports': list,
+    'build/requires_features': dict,
+    'build/provides_features': dict,
     'requirements/build': list,
     'requirements/host': list,
     'requirements/run': list,
@@ -430,7 +432,7 @@ FIELDS = {
               'script_env', 'always_include_files', 'skip', 'msvc_compiler',
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
-              'ignore_run_exports',
+              'ignore_run_exports', 'requires_features', 'provides_features',
               },
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -1206,6 +1208,10 @@ class MetaData(object):
             d['features'] = ' '.join(self.get_value('build/features'))
         if self.get_value('build/track_features'):
             d['track_features'] = ' '.join(self.get_value('build/track_features'))
+        if self.get_value('build/provides_features'):
+            d['provides_features'] = self.get_value('build/provides_features')
+        if self.get_value('build/requires_features'):
+            d['requires_features'] = self.get_value('build/requires_features')
         if self.noarch:
             d['platform'] = d['arch'] = None
             d['subdir'] = 'noarch'

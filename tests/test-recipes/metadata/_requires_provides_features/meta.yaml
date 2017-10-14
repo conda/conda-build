@@ -1,0 +1,9 @@
+package:
+  name: test_requires_provides_features
+  version: 1.0
+
+build:
+  requires_features:
+    test: ok
+  provides_features:
+    test2: also_ok
