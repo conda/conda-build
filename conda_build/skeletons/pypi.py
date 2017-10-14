@@ -621,9 +621,9 @@ def convert_version(version):
     if any(suffix in version_parts[-1] for suffix in suffixes):
         version_parts.remove(version_parts[-1])
     # the max pin length is n-1, but in terms of index this is n-2
-    max_ver_len = len(version_parts)-2
+    max_ver_len = len(version_parts) - 2
     version_parts[max_ver_len] = int(version_parts[max_ver_len]) + 1
-    max_pin = '.'.join(str(v) for v in version_parts[:max_ver_len+1])
+    max_pin = '.'.join(str(v) for v in version_parts[:max_ver_len + 1])
     pin_compatible = ' >={},<{}' .format(version, max_pin)
     return pin_compatible
 
