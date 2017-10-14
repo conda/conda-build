@@ -26,6 +26,7 @@ import yaml
 import zipfile
 
 import filelock
+import psutil
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
@@ -1366,3 +1367,93 @@ def expand_reqs(reqs_entry):
         original = ensure_list(reqs_entry)[:]
         reqs_entry = {'host': original, 'run': original} if original else {}
     return reqs_entry
+
+
+class PopenWrapper(object):
+    # Small wrapper around subprocess.Popen to allow memory usage monitoring
+    # copied from ProtoCI, https://github.com/ContinuumIO/ProtoCI/blob/59159bc2c9f991fbfa5e398b6bb066d7417583ec/protoci/build2.py#L20  # NOQA
+
+    def __init__(self, *args, **kwargs):
+        self.elapsed = None
+        self.rss = None
+        self.vms = None
+        # set returncode to a bad one
+        # in case it is never defined
+        # after here.
+        self.returncode = 173
+        self.disk = None
+
+        self._execute(*args, **kwargs)
+
+    def _execute(self, *args, **kwargs):
+        # The polling interval (in seconds)
+        time_int = kwargs.pop('time_int', 1)
+
+        # Create a process of this (the parent) process
+        parent = psutil.Process(os.getpid())
+        initial_usage = psutil.disk_usage(sys.prefix).used
+
+        # Using the convenience Popen class provided by psutil
+        start_time = time.time()
+        _popen = psutil.Popen(*args, **kwargs)
+        try:
+            while _popen.is_running():
+                # We need to get all of the children of our process since our
+                # process spawns other processes.  Collect all of the child
+                # processes
+
+                try:
+                    # We use the parent process to get mem usage of all spawned processes
+                    child_pids = [_.memory_info() for _ in parent.children(recursive=True)
+                                  if _.is_running()]
+                    # Sum the memory usage of all the children together (2D columnwise sum)
+                    rss, vms = [sum(_) for _ in zip(*child_pids)]
+
+                    self.rss = max(rss, self.rss)
+                    self.vms = max(vms, self.vms)
+
+                    # Get disk usage
+                    used_disk = initial_usage - psutil.disk_usage(sys.prefix).used
+                    self.disk = max(used_disk, self.disk)
+
+                except psutil.AccessDenied as e:
+                    if _popen.status() == psutil.STATUS_ZOMBIE:
+                        _popen.wait()
+
+                time.sleep(time_int)
+                self.elapsed = time.time() - start_time
+                self.returncode = _popen.poll()
+                if _popen.returncode is not None:
+                    # without this if block
+                    # builds hang
+                    try:
+                        _popen.kill()
+                    except psutil.NoSuchProcess:
+                        pass
+                    break
+        except KeyboardInterrupt:
+            _popen.kill()
+            raise
+
+    def __repr__(self):
+        return str({'elapsed': self.elapsed,
+                    'rss': self.rss,
+                    'vms': self.vms,
+                    'returncode': self.returncode})
+
+
+def bytes2human(n):
+    # http://code.activestate.com/recipes/578019
+    # >>> bytes2human(10000)
+    # '9.8K'
+    # >>> bytes2human(100001221)
+    # '95.4M'
+    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+    prefix = {}
+    for i, s in enumerate(symbols):
+        prefix[s] = 1 << (i + 1) * 10
+    for s in reversed(symbols):
+        if n >= prefix[s]:
+            value = float(n) / prefix[s]
+            return '%.1f%s' % (value, s)
+    return "%sB" % n

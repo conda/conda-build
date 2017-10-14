@@ -143,7 +143,8 @@ def check(recipe_path, no_download_source=False, config=None, variants=None, **k
 
 
 def build(recipe_paths_or_metadata, post=None, need_source_download=True,
-          build_only=False, notest=False, config=None, variants=None, **kwargs):
+          build_only=False, notest=False, config=None, variants=None, stats=None,
+          **kwargs):
     """Run the build step.
 
     If recipe paths are provided, renders recipe before building.
@@ -190,10 +191,11 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     if not absolute_recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
     return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
-                      need_source_download=need_source_download, config=config, variants=variants)
+                      need_source_download=need_source_download, config=config, variants=variants,
+                      stats=stats)
 
 
-def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwargs):
+def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=None, **kwargs):
     """Run tests on either packages (.tar.bz2 or extracted) or recipe folders
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
@@ -210,7 +212,8 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, **kwar
         #   doesn't already have one. What this means is that if we're
         #   running a test immediately after build, we use the one that the
         #   build already provided
-        test_result = test(recipedir_or_package_or_metadata, config=config, move_broken=move_broken)
+        test_result = test(recipedir_or_package_or_metadata, config=config, move_broken=move_broken,
+                           stats=stats)
     return test_result
 
 
