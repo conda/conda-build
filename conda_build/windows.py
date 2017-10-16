@@ -11,8 +11,6 @@ import setuptools  # noqa
 from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 from distutils.msvc9compiler import Reg, WINSDK_BASE
 
-from .conda_interface import bits
-
 from conda_build import environ
 from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into, get_logger
 from conda_build.variants import set_language_env_vars, get_default_variants
@@ -31,7 +29,7 @@ VS_VERSION_STRING = {
 }
 
 
-def fix_staged_scripts(scripts_dir):
+def fix_staged_scripts(scripts_dir, config):
     """
     Fixes scripts which have been installed unix-style to have a .bat
     helper
@@ -55,7 +53,7 @@ def fix_staged_scripts(scripts_dir):
             with open(join(scripts_dir, fn + '-script.py'), 'wb') as fo:
                 fo.write(f.read())
             # now create the .exe file
-            copy_into(join(dirname(__file__), 'cli-%d.exe' % bits),
+            copy_into(join(dirname(__file__), 'cli-%s.exe' % config.host_arch),
                             join(scripts_dir, fn + '.exe'))
 
         # remove the original script
@@ -226,7 +224,7 @@ def build(m, bld_bat):
                 if value:
                     fo.write('set "{key}={value}"\n'.format(key=key, value=value))
             if not m.uses_new_style_compiler_activation:
-                fo.write(msvc_env_cmd(bits=bits, config=m.config,
+                fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
                                     override=m.get_value('build/msvc_compiler', None)))
             # Reset echo on, because MSVC scripts might have turned it off
             fo.write('@echo on\n')
@@ -268,4 +266,4 @@ def build(m, bld_bat):
         cmd = ['cmd.exe', '/c', 'bld.bat']
         check_call_env(cmd, cwd=src_dir)
 
-    fix_staged_scripts(join(m.config.host_prefix, 'Scripts'))
+    fix_staged_scripts(join(m.config.host_prefix, 'Scripts'), config=m.config)
