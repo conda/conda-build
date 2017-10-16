@@ -21,6 +21,7 @@ from .conda_interface import lchmod
 from .conda_interface import walk_prefix
 from .conda_interface import md5_file
 from .conda_interface import PY3
+from .conda_interface import TemporaryDirectory
 
 from conda_build import utils
 from conda_build.os_utils.pyldd import is_codefile
@@ -503,20 +504,17 @@ def check_symlinks(files, prefix, croot):
 def make_hardlink_copy(path, prefix):
     """Hardlinks create invalid packages.  Copy files to break the link.
     Symlinks are OK, and unaffected here."""
-    if not os.path.isabs(path) and not os.path.exists(path):
+    if not os.path.isabs(path):
         path = os.path.normpath(os.path.join(prefix, path))
-    nlinks = os.lstat(path).st_nlink
-    dest = 'tmpfile'
-    if os.path.isabs(path):
-        dest = os.path.join(os.getcwd(), dest)
-    if nlinks > 1:
-        # copy file to new name
-        utils.copy_into(path, dest)
-        # remove old file
-        utils.rm_rf(path)
-        # rename copy to original filename
-        utils.copy_into(dest, path)
-        utils.rm_rf(dest)
+    fn = os.path.basename(path)
+    if os.lstat(path).st_nlink > 1:
+        with TemporaryDirectory() as dest:
+            # copy file to new name
+            utils.copy_into(path, dest)
+            # remove old file
+            utils.rm_rf(path)
+            # rename copy to original filename
+            os.rename(os.path.join(dest, fn), path)
 
 
 def get_build_metadata(m):
