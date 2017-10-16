@@ -89,7 +89,9 @@ def msvc_env_cmd(bits, config, override=None):
     log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
              "If this recipe does not use a compiler, this message is safe to ignore.  "
              "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build.")
-    arch_selector = 'x86' if bits == 32 else 'amd64'
+    # this has been an int at times.  Make sure it's a string for consistency.
+    bits = str(bits)
+    arch_selector = 'x86' if bits == '32' else 'amd64'
 
     msvc_env_lines = []
 
@@ -132,7 +134,7 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append('set "VS_MAJOR={}"'.format(version.split('.')[0]))
     msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
     msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
-                                                            {64: ' Win64', 32: ''}[bits]))
+                                                            {'64': ' Win64', '32': ''}[bits]))
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
@@ -143,7 +145,7 @@ def msvc_env_cmd(bits, config, override=None):
                                             'installationfolder')
             WIN_SDK_71_BAT_PATH = os.path.join(WIN_SDK_71_PATH, 'Bin', 'SetEnv.cmd')
 
-            win_sdk_arch = '/Release /x86' if bits == 32 else '/Release /x64'
+            win_sdk_arch = '/Release /x86' if bits == '32' else '/Release /x64'
             win_sdk_cmd = build_vcvarsall_cmd(WIN_SDK_71_BAT_PATH, arch=win_sdk_arch)
 
             # There are two methods of building Python 3.3 and 3.4 extensions (both
