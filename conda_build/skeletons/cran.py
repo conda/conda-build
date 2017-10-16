@@ -114,7 +114,7 @@ $R CMD INSTALL --build .
 
 CRAN_BLD_BAT = """\
 "%R%" CMD INSTALL --build .
-if errorlevel 1 exit 1
+IF %ERRORLEVEL% NEQ 0 exit 1
 
 @rem Add more build steps here, if they are necessary.
 

@@ -93,7 +93,7 @@ def create_shell_files(m, test_dir=None):
                 f.write(cmd)
                 f.write('\n')
                 if on_win:
-                    f.write("if errorlevel 1 exit 1\n")
+                    f.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
                 has_tests = True
             f.write('exit 0\n')
 
