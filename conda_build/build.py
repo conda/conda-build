@@ -1593,7 +1593,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 ext=ext,
                 test_env=metadata.config.test_prefix))
             if utils.on_win:
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if py_files:
             test_python = metadata.config.test_python
             # use pythonw for import tests when osx_is_app is set
@@ -1603,31 +1603,31 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 python=test_python,
                 test_file=join(metadata.config.test_dir, 'run_test.py')))
             if utils.on_win:
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if pl_files:
             tf.write('"{perl}" "{test_file}"\n'.format(
                 perl=metadata.config.perl_bin(metadata.config.test_prefix),
                 test_file=join(metadata.config.test_dir, 'run_test.pl')))
             if utils.on_win:
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if lua_files:
             tf.write('"{lua}" "{test_file}"\n'.format(
                 lua=metadata.config.lua_bin(metadata.config.test_prefix),
                 test_file=join(metadata.config.test_dir, 'run_test.lua')))
             if utils.on_win:
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if r_files:
             tf.write('"{r}" CMD BATCH "{test_file}"\n'.format(
                 r=metadata.config.r_bin(metadata.config.test_prefix),
                 test_file=join(metadata.config.test_dir, 'run_test.r')))
             if utils.on_win:
-                tf.write("if errorlevel 1 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if shell_files:
             test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
             if utils.on_win:
                 tf.write('call "{test_file}"\n'.format(test_file=test_file))
                 if utils.on_win:
-                    tf.write("if errorlevel 1 exit 1\n")
+                    tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
             else:
                 # TODO: Run the test/commands here instead of in run_test.py
                 tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,

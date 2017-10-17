@@ -179,7 +179,7 @@ def msvc_env_cmd(bits, config, override=None):
         except (KeyError, TypeError):
             VCVARS64_VS9_BAT_PATH = None
 
-        error1 = 'if errorlevel 1 {}'
+        error1 = 'IF %ERRORLEVEL% NEQ 0 {}'
 
         # Prefer VS9 proper over Microsoft Visual C++ Compiler for Python 2.7
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
