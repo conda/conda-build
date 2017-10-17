@@ -12,6 +12,7 @@ import sys
 
 from conda_build.conda_interface import binstar_upload
 from conda_build.conda_interface import ArgumentParser
+from conda_build.conda_interface import add_parser_channels
 from conda_build import api
 
 logging.basicConfig(level=logging.INFO)
@@ -105,13 +106,15 @@ command line with the conda metapackage command.
         bsdiff4 that calls bsdiff4.cli.main_bsdiff4(). """,
     )
 
+    add_parser_channels(p)
     args = p.parse_args(args)
     return p, args
 
 
 def execute(args):
     _, args = parse_args(args)
-    api.create_metapackage(**args.__dict__)
+    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
+    api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
 
 
 def main():
