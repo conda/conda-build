@@ -380,7 +380,7 @@ class Config(object):
                                                      "to preserve croot during path joins")
             build_folders = sorted([os.path.basename(build_folder)
                             for build_folder in get_build_folders(self.croot)
-                            if os.path.basename(build_folder).startswith(package_name + "_")])
+                            if build_folder[:build_folder.rfind('_')] == package_name])
             if self.dirty and build_folders:
                 # Use the most recent build with matching recipe name
                 self._build_id = build_folders[-1]
