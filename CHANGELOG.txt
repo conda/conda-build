@@ -1,4 +1,22 @@
-2017-10-12 3.0.26:
+2017-10-17 3.0.27:
+
+Enhancements:
+-------------
+
+* For windows error checks, assert that the errorlevel is 0, rather than GEQ 1.  Makes negative return codes fail builds.  #2442
+* allow channels to be passed to the metapackage command.  Note that channels are not recorded to the package, and need to be passed at package install time, as well as metapackage creation time.  #2443
+
+Bug fixes:
+----------
+
+* Fix windows bits dictionary indexing incorrect type  #2441
+
+Contributors:
+-------------
+
+* @msarahan
+
+2017-10-16 3.0.26:
 
 Enhancements:
 -------------
