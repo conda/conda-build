@@ -514,7 +514,9 @@ def make_hardlink_copy(path, prefix):
             # remove old file
             utils.rm_rf(path)
             # rename copy to original filename
-            os.rename(os.path.join(dest, fn), path)
+            #   It is essential here to use copying (as opposed to os.rename), so that
+            #        crossing volume boundaries works
+            utils.copy_into(os.path.join(dest, fn), path)
 
 
 def get_build_metadata(m):
