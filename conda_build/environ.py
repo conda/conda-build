@@ -493,6 +493,9 @@ def windows_vars(prefix, config, get_default):
     get_default('PROCESSOR_ARCHITECTURE')
     get_default('PROCESSOR_IDENTIFIER')
     get_default('BUILD', win_arch + '-pc-windows-' + win_msvc)
+    for env_var in os.environ.keys():
+        if re.match('VS[0-9]{2,3}COMNTOOLS', env_var):
+            get_default(env_var)
 
 
 def unix_vars(prefix, get_default):

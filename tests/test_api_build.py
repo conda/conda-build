@@ -179,13 +179,11 @@ def test_output_build_path_git_source(testing_workdir, testing_config):
     assert output == test_path
 
 
-@pytest.mark.serial
 def test_build_with_no_activate_does_not_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False,
               anaconda_upload=False)
 
 
-@pytest.mark.serial
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
               anaconda_upload=False)

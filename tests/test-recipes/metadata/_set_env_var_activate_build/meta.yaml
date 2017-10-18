@@ -6,6 +6,11 @@ requirements:
   build:
     # having this as a build requirement should use the activate scripts that it contains
     - _conda-build-test-environment-vars-in-build-env
+    - {{ compiler('c') }}
+
+outputs:                            # [win]
+  - name: test_output               # [win]
+    script: install-output.bat      # [win]
 
 about:
   summary: test that scripts with activate.d and deactivate.d provide environment variables appropriately

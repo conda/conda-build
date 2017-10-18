@@ -315,7 +315,7 @@ def osx_ch_link(path, link_dict, prefix):
 
 def mk_relative_osx(path, prefix, build_prefix=None):
     '''
-    if build_prefix is None, the_n this is a standard conda build. The path
+    if build_prefix is None, then this is a standard conda build. The path
     and all dependencies are in the build_prefix.
 
     if package is built in develop mode, build_prefix is specified. Object
