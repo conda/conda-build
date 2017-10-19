@@ -4,6 +4,10 @@ Functions related to creating repodata index files.
 
 from __future__ import absolute_import, division, print_function
 
+from collections import defaultdict
+from conda_build.conda_interface import VersionOrder
+from glob import glob
+
 import bz2
 import contextlib
 from datetime import datetime
@@ -13,13 +17,16 @@ import logging
 from numbers import Number
 import os
 import tarfile
-from os.path import isfile, join, getmtime, basename, getsize
+from os.path import isfile, join, getmtime, basename, getsize, isdir
 
 from jinja2 import Environment, PackageLoader
+import yaml
 
 from conda_build.utils import file_info, get_lock, try_acquire_locks
 from conda_build import utils, conda_interface
 from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, human_bytes
+
+log = logging.getLogger(__name__)
 
 local_index_timestamp = 0
 cached_index = None
@@ -27,7 +34,7 @@ local_subdir = ""
 cached_channels = []
 
 
-def read_index_tar(tar_path, lock, locking=True, timeout=90):
+def _read_index_tar(tar_path, lock, locking=True, timeout=90):
     """ Returns the index.json dict inside the given package tarball. """
     locks = []
     if locking:
@@ -35,7 +42,7 @@ def read_index_tar(tar_path, lock, locking=True, timeout=90):
     with try_acquire_locks(locks, timeout):
         with tarfile.open(tar_path) as t:
             try:
-                return json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
+                index_json = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
             except EOFError:
                 raise RuntimeError("Could not extract %s. File probably corrupt."
                     % tar_path)
@@ -44,6 +51,21 @@ def read_index_tar(tar_path, lock, locking=True, timeout=90):
             except tarfile.ReadError:
                 raise RuntimeError("Could not extract metadata from %s. "
                                 "File probably corrupt." % tar_path)
+
+            try:
+                about_json = json.loads(t.extractfile('info/about.json').read().decode('utf-8'))
+            except Exception as e:
+                log.debug('%r', e, exc_info=True)
+                about_json = {}
+
+            try:
+                recipe_json = yaml.load(t.extractfile('info/recipe/meta.yaml').read().decode('utf-8'))
+            except Exception as e:
+                log.debug('%r', e, exc_info=True)
+                recipe_json = {}
+
+            return index_json, about_json, recipe_json
+
 
 
 def write_repodata(repodata, dir_path, lock, locking=90, timeout=90):
@@ -77,6 +99,98 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                  could_be_mirror=True, verbose=True, locking=True, timeout=90,
                  channel_name=None):
     """
+    If dir_path contains a directory named 'noarch', the path tree therein is treated
+    as though it's a full channel, with a level of subdirs, each subdir having an update
+    to repodata.json.  The full channel will also have a channeldata.json file.
+
+    If dir_path does not contain a directory named 'noarch', but instead contains at least
+    one '*.tar.bz2' file, the directory is assumed to be a standard subdir, and only repodata.json
+    information will be updated.
+
+    """
+    is_channel = isdir(join(dir_path, 'noarch'))
+
+    if is_channel:
+        subdir_paths = tuple(path for path in (join(dir_path, fn) for fn in os.listdir(dir_path))
+                             if isdir(path) and glob(join(path, '*.tar.bz2')))
+    else:
+        subdir_paths = (dir_path,)
+
+    for subdir_path in subdir_paths:
+        update_subdir_index(subdir_path, force, check_md5, remove, lock,
+                            could_be_mirror, verbose, locking, timeout,
+                            channel_name)
+
+    if is_channel:
+        _update_channeldata(dir_path, subdir_paths)
+
+        if channel_name:
+            pass
+
+
+def _update_channeldata(dir_path, subdir_paths):
+        index_data = {}
+        about_data = {}
+        recipe_data = {}
+        for subdir_path in subdir_paths:
+            with open(join(subdir_path, '.index.json')) as fh:
+                index_data[basename(subdir_path)] = json.loads(fh.read())
+            with open(join(subdir_path, '.about.json')) as fh:
+                about_data[basename(subdir_path)] = json.loads(fh.read())
+            with open(join(subdir_path, '.recipe.json')) as fh:
+                recipe_data[basename(subdir_path)] = json.loads(fh.read())
+
+        subdir_names = tuple(index_data)
+
+        package_groups = defaultdict(list)
+        for subdir_path in index_data:
+            for fn, record in index_data[subdir_path].items():
+                record.update(about_data.get(subdir_path, {}).get(fn, {}))
+                _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
+                for key in ('url', 'git_url', 'git_tag'):
+                    value = _source_section.get(key)
+                    if value:
+                        record['source_%s' % key] = value
+                package_groups[record['name']].append(record)
+
+        FIELDS = (
+            "description",
+            "dev_url",
+            "doc_url",
+            "doc_source_url",
+            "home",
+            "license",
+            "source_git_url",
+            "summary",
+            "version",
+            "source_git_tag",
+            "subdirs",
+
+            "icon_url",
+        )
+
+        package_data = {}
+        for name, package_group in package_groups.items():
+            latest_version = sorted(package_group, key=lambda x: VersionOrder(x['version']))[-1]['version']
+            best_record = sorted(
+                (rec for rec in package_group if rec['version'] == latest_version),
+                key=lambda x: x['build_number']
+            )[-1]
+            package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
+
+        channeldata = {
+            'channeldata_version': 1,
+            'subdirs': subdir_names,
+            'packages': package_data,
+        }
+        with open(join(dir_path, 'channeldata.json'), 'w') as fh:
+            fh.write(json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': ')))
+
+
+def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
+                        could_be_mirror=True, verbose=True, locking=True, timeout=90,
+                        channel_name=None):
+    """
     Update all index files in dir_path with changed packages.
 
     :param verbose: Should detailed status messages be output?
@@ -96,6 +210,8 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         os.makedirs(dir_path)
 
     index_path = join(dir_path, '.index.json')
+    about_path = join(dir_path, '.about.json')
+    recipe_path = join(dir_path, '.recipe.json')
 
     if not lock:
         lock = get_lock(dir_path)
@@ -105,6 +221,8 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         locks.append(lock)
 
     index = {}
+    about = {}
+    recipe = {}
 
     with try_acquire_locks(locks, timeout):
         if not force:
@@ -114,6 +232,13 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                     index = json.load(fi)
             except (IOError, ValueError):
                 index = {}
+
+            try:
+                mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+                with open(about_path, **mode_dict) as fi:
+                    about = json.load(fi)
+            except (IOError, ValueError):
+                about = {}
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
         for fn in files:
@@ -126,9 +251,11 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                     continue
             if verbose:
                 print('updating:', fn)
-            d = read_index_tar(path, lock=lock, locking=locking, timeout=timeout)
-            d.update(file_info(path))
-            index[fn] = d
+            index_json, about_json, recipe_json = _read_index_tar(path, lock=lock, locking=locking, timeout=timeout)
+            index_json.update(file_info(path))
+            index[fn] = index_json
+            about[fn] = about_json
+            recipe[fn] = recipe_json
 
         for fn in files:
             index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
@@ -144,6 +271,10 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
         with open(index_path, **mode_dict) as fo:
             json.dump(index, fo, indent=2, sort_keys=True, default=str)
+        with open(about_path, **mode_dict) as fo:
+            json.dump(about, fo, indent=2, sort_keys=True, default=str)
+        with open(recipe_path, **mode_dict) as fo:
+            json.dump(recipe, fo, indent=2, sort_keys=True, default=str)
 
         # --- new repodata
         for fn in index:
@@ -170,7 +301,7 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
             extra_paths = {}
             _add_extra_path(extra_paths, join(dir_path, 'repodata.json'))
             _add_extra_path(extra_paths, join(dir_path, 'repodata.json.bz2'))
-            rendered_html = make_index_html(channel_name, basename(dir_path), repodata, extra_paths)
+            rendered_html = _make_subdir_index_html(channel_name, basename(dir_path), repodata, extra_paths)
             with open(join(dir_path, 'index.html'), 'w') as fh:
                 fh.write(rendered_html)
 
@@ -258,7 +389,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     return cached_index, local_index_timestamp
 
 
-def make_index_html(channel_name, subdir, repodata, extra_paths):
+def _make_subdir_index_html(channel_name, subdir, repodata, extra_paths):
     def _filter_strftime(dt, dt_format):
         if isinstance(dt, Number):
             if dt > 253402300799:  # 9999-12-31
