@@ -145,7 +145,8 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
 
 
 def _clear_newline_chars(record, field_name):
-    record[field_name] = record[field_name].strip().replace('\n', ' ')
+    if field_name in record:
+        record[field_name] = record[field_name].strip().replace('\n', ' ')
 
 
 def _build_channeldata(dir_path, subdir_paths):
@@ -281,6 +282,20 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
                     about = json.load(fi)
             except (IOError, ValueError):
                 about = {}
+
+            try:
+                mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+                with open(paths_path, **mode_dict) as fi:
+                    paths = json.load(fi)
+            except (IOError, ValueError):
+                paths = {}
+
+            try:
+                mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+                with open(recipe_path, **mode_dict) as fi:
+                    recipe = json.load(fi)
+            except (IOError, ValueError):
+                recipe = {}
 
         files = set(fn for fn in os.listdir(dir_path) if fn.endswith('.tar.bz2'))
         for fn in files:
