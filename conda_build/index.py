@@ -59,13 +59,18 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                 about_json = {}
 
             try:
+                paths_json = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
+            except Exception as e:
+                log.debug('%r', e, exc_info=True)
+                paths_json = {}
+
+            try:
                 recipe_json = yaml.load(t.extractfile('info/recipe/meta.yaml').read().decode('utf-8'))
             except Exception as e:
                 log.debug('%r', e, exc_info=True)
                 recipe_json = {}
 
-            return index_json, about_json, recipe_json
-
+            return index_json, about_json, paths_json, recipe_json
 
 
 def write_repodata(repodata, dir_path, lock, locking=90, timeout=90):
@@ -108,7 +113,8 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
     information will be updated.
 
     """
-    is_channel = isdir(join(dir_path, 'noarch'))
+    base_subdirs = ('noarch', 'linux-64', 'linux-32', 'osx-64', 'win-64', 'win-32')
+    is_channel = any(isdir(join(dir_path, base_subdir)) for base_subdir in base_subdirs)
 
     if is_channel:
         subdir_paths = tuple(path for path in (join(dir_path, fn) for fn in os.listdir(dir_path))
@@ -122,21 +128,21 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                             channel_name)
 
     if is_channel:
-        _update_channeldata(dir_path, subdir_paths)
-
-        if channel_name:
-            pass
+        _build_channeldata(dir_path, subdir_paths)
 
 
-def _update_channeldata(dir_path, subdir_paths):
+def _build_channeldata(dir_path, subdir_paths):
         index_data = {}
         about_data = {}
+        paths_data = {}
         recipe_data = {}
         for subdir_path in subdir_paths:
             with open(join(subdir_path, '.index.json')) as fh:
                 index_data[basename(subdir_path)] = json.loads(fh.read())
             with open(join(subdir_path, '.about.json')) as fh:
                 about_data[basename(subdir_path)] = json.loads(fh.read())
+            with open(join(subdir_path, '.paths.json')) as fh:
+                paths_data[basename(subdir_path)] = json.loads(fh.read())
             with open(join(subdir_path, '.recipe.json')) as fh:
                 recipe_data[basename(subdir_path)] = json.loads(fh.read())
 
@@ -147,7 +153,7 @@ def _update_channeldata(dir_path, subdir_paths):
             for fn, record in index_data[subdir_path].items():
                 record.update(about_data.get(subdir_path, {}).get(fn, {}))
                 _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
-                for key in ('url', 'git_url', 'git_tag'):
+                for key in ('url', 'git_url', 'git_rev', 'git_tag'):
                     value = _source_section.get(key)
                     if value:
                         record['source_%s' % key] = value
@@ -160,10 +166,12 @@ def _update_channeldata(dir_path, subdir_paths):
             "doc_source_url",
             "home",
             "license",
+            "source_url",
             "source_git_url",
+            "source_git_tag",
+            "source_git_rev",
             "summary",
             "version",
-            "source_git_tag",
             "subdirs",
 
             "icon_url",
@@ -172,11 +180,13 @@ def _update_channeldata(dir_path, subdir_paths):
         package_data = {}
         for name, package_group in package_groups.items():
             latest_version = sorted(package_group, key=lambda x: VersionOrder(x['version']))[-1]['version']
-            best_record = sorted(
-                (rec for rec in package_group if rec['version'] == latest_version),
-                key=lambda x: x['build_number']
-            )[-1]
+            latest_version_records = tuple(rec for rec in package_group if rec['version'] == latest_version)
+            best_record = sorted(latest_version_records, key=lambda x: x['build_number'])[-1]
+            # Only subdirs that contain the latest version number are included here.
+            # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
+            subdirs = sorted(set(rec['subdir'] for rec in latest_version_records))
             package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
+            package_data[name]['subdirs'] = subdirs
 
         channeldata = {
             'channeldata_version': 1,
@@ -211,6 +221,7 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
 
     index_path = join(dir_path, '.index.json')
     about_path = join(dir_path, '.about.json')
+    paths_path = join(dir_path, '.paths.json')
     recipe_path = join(dir_path, '.recipe.json')
 
     if not lock:
@@ -222,6 +233,7 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
 
     index = {}
     about = {}
+    paths = {}
     recipe = {}
 
     with try_acquire_locks(locks, timeout):
@@ -251,14 +263,12 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
                     continue
             if verbose:
                 print('updating:', fn)
-            index_json, about_json, recipe_json = _read_index_tar(path, lock=lock, locking=locking, timeout=timeout)
+            index_json, about_json, paths_json, recipe_json = _read_index_tar(path, lock=lock, locking=locking, timeout=timeout)
             index_json.update(file_info(path))
             index[fn] = index_json
             about[fn] = about_json
+            paths[fn] = paths_json
             recipe[fn] = recipe_json
-
-        for fn in files:
-            index[fn]['sig'] = '.' if isfile(join(dir_path, fn + '.sig')) else None
 
         if remove:
             # remove files from the index which are not on disk
@@ -273,6 +283,8 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
             json.dump(index, fo, indent=2, sort_keys=True, default=str)
         with open(about_path, **mode_dict) as fo:
             json.dump(about, fo, indent=2, sort_keys=True, default=str)
+        with open(paths_path, **mode_dict) as fo:
+            json.dump(paths, fo, indent=2, sort_keys=True, default=str)
         with open(recipe_path, **mode_dict) as fo:
             json.dump(recipe, fo, indent=2, sort_keys=True, default=str)
 
