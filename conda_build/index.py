@@ -166,13 +166,10 @@ def _build_channeldata(dir_path, subdir_paths):
             for fn, record in index_data[subdir_path].items():
                 record.update(about_data.get(subdir_path, {}).get(fn, {}))
                 _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
+                if isinstance(_source_section, (list, tuple)):
+                    _source_section = _source_section[0]
                 for key in ('url', 'git_url', 'git_rev', 'git_tag'):
-                    try:
-                        value = _source_section.get(key)
-                    except AttributeError:
-                        print("WARNING: bad recipe detected for %s/%s" % (subdir_path, fn))
-                        # AttributeError: 'list' object has no attribute 'get'
-                        value = None
+                    value = _source_section.get(key)
                     if value:
                         record['source_%s' % key] = value
                 package_groups[record['name']].append(record)
@@ -203,7 +200,12 @@ def _build_channeldata(dir_path, subdir_paths):
             best_record = sorted(latest_version_records, key=lambda x: x['build_number'])[-1]
             # Only subdirs that contain the latest version number are included here.
             # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
-            subdirs = sorted(set(rec['subdir'] for rec in latest_version_records))
+            try:
+                subdirs = sorted(set(rec['subdir'] for rec in latest_version_records))
+            except Exception as e:
+                import pdb; pdb.set_trace()
+                subdirs = []
+                assert 1
             package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
             package_data[name]['subdirs'] = subdirs
 
