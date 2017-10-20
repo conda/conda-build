@@ -1,0 +1,54 @@
+# this is testing a few behaviors:
+#  1. Looping over top-level variables (ensure that source is clean each runner)
+#  2. looping over output-only variables (ensure that source with any build intermediaries are still present)
+
+# Ideal flow is:
+
+# outer loop (iter 0):
+# build shared_lib-top_a
+# build output_with_zipped_loops-output_zip_a against shared_lib-top_a
+# build output_with_zipped_loops-output_zip_b against shared_lib-top_a
+# inner loop:
+# build output_with_independent_loops-output_a against shared_lib-top_a
+# build output_with_independent_loops-output_b against shared_lib-top_a
+# (work dir moved, source re-provisioned)
+# outer loop (iter 1):
+# build shared_lib-top_a
+# build output_with_zipped_loops-output_zip_a against shared_lib-top_b
+# build output_with_zipped_loops-output_zip_b against shared_lib-top_b
+# inner loop:
+# build output_with_independent_loops-output_a against shared_lib-top_b
+# build output_with_independent_loops-output_b against shared_lib-top_b
+
+package:
+  name: test_reprovision_source
+  # this version is set to one of the loop vars, so that it becomes a "top level" variable
+  version: {{ shared_lib }}
+
+source:
+  path: ../../test-package
+
+# build.sh / bld.bat are creating files that are specific to the value of shared_lib loop var
+
+test:
+  commands:
+    - echo "weee"
+
+outputs:
+  # the "top-level" output, here explicitly because of other output
+  - name: test_reprovision_source
+
+  # There are 4 variants here.  Inner loop builds 2 per outer loop (source cache NOT cleaned between inner loop iters)
+  #    When using api.render, there should be 2 MetaData objects for this output.
+  - name: output_with_independent_loops
+    version: {{ output_loop_var }}
+    script: install-output.sh   # [unix]
+    script: install-output.bat  # [win]
+    requirements:
+      build:
+        - test_reprovision_source
+      run:
+        - test_reprovision_source  {{ shared_lib }}
+    test:
+      commands:
+        - echo "weee"
