@@ -144,6 +144,10 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         _build_channeldata(dir_path, subdir_paths)
 
 
+def _clear_newline_chars(record, field_name):
+    record[field_name] = record[field_name].strip().replace('\n', ' ')
+
+
 def _build_channeldata(dir_path, subdir_paths):
         index_data = {}
         about_data = {}
@@ -164,6 +168,7 @@ def _build_channeldata(dir_path, subdir_paths):
         package_groups = defaultdict(list)
         for subdir_path in index_data:
             for fn, record in index_data[subdir_path].items():
+                record['fn'] = fn
                 record.update(about_data.get(subdir_path, {}).get(fn, {}))
                 _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
                 if isinstance(_source_section, (list, tuple)):
@@ -172,6 +177,7 @@ def _build_channeldata(dir_path, subdir_paths):
                     value = _source_section.get(key)
                     if value:
                         record['source_%s' % key] = value
+                record['_has_icon'] = bool(recipe_data.get(subdir_path, {}).get(fn, {}).get('app', {}).get('icon'))
                 package_groups[record['name']].append(record)
 
         FIELDS = (
@@ -202,7 +208,15 @@ def _build_channeldata(dir_path, subdir_paths):
             # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
             subdirs = sorted(filter(None, set(rec.get('subdir') for rec in latest_version_records)))
             package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
+            _clear_newline_chars(package_data, 'description')
+            _clear_newline_chars(package_data, 'summary')
             package_data[name]['subdirs'] = subdirs
+            if best_record['_has_icon']:
+                icon_files = glob(join(dir_path, best_record['subdir'], '.icons', best_record['fn'] + '.*'))
+                if icon_files:
+                    icon_file = icon_files[0]
+                    icon_ext = icon_file.rsplit('.', 1)[-1]
+                    package_data['icon_url'] = 'icons/%s.%s' % (best_record['name'], icon_ext)
 
         channeldata = {
             'channeldata_version': 1,
