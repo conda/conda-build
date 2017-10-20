@@ -17,7 +17,7 @@ import logging
 from numbers import Number
 import os
 import tarfile
-from os.path import isfile, join, getmtime, basename, getsize, isdir
+from os.path import isfile, join, getmtime, basename, getsize, isdir, dirname
 
 from jinja2 import Environment, PackageLoader
 import yaml
@@ -69,6 +69,19 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
             except Exception as e:
                 log.debug('%r', e, exc_info=True)
                 recipe_json = {}
+
+            try:
+                app_icon = recipe_json.get('app', {}).get('icon')
+                if app_icon:
+                    icon_dir = join(dirname(tar_path), '.icons')
+                    if not isdir(icon_dir):
+                        os.makedirs(icon_dir)
+                    icon_filename = '.'.join((basename(tar_path), app_icon.rsplit('.')[-1]))
+                    with open(join(icon_dir, icon_filename), 'wb') as fh:
+                        icondata = t.extractfile(app_icon).read()
+                        fh.write(icondata)
+            except Exception as e:
+                log.debug('%r', e, exc_info=True)
 
             return index_json, about_json, paths_json, recipe_json
 
@@ -175,6 +188,7 @@ def _build_channeldata(dir_path, subdir_paths):
             "subdirs",
 
             "icon_url",
+            "icon_hash",  # "md5:abc123:12"
         )
 
         package_data = {}
