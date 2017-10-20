@@ -875,8 +875,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     # this should be a no-op if source is already here
-    if m.needs_source_for_render:
-        try_download(m, False)
+    try_download(m, no_download_source=False)
 
     if post in [False, None]:
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
@@ -927,7 +926,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         build_ms_deps = None
 
         for env in ('build', 'host'):
-            utils.insert_variant_versions(m, env)
+            utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, env)
 
         if (m.config.host_subdir != m.config.build_subdir and
                 m.config.host_subdir != "noarch"):
@@ -968,7 +967,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         try:
             if not notest:
-                utils.insert_variant_versions(m, 'run')
+                utils.insert_variant_versions(m.meta.get('requirements', {}),
+                                              m.config.variant, 'run')
                 test_run_ms_deps = m.get_value('test/requires', []) + \
                                    m.get_value('requirements/run', [])
                 # make sure test deps are available before taking time to create build env

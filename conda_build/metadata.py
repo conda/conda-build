@@ -254,6 +254,14 @@ def check_circular_dependencies(render_order):
         raise exceptions.RecipeError(error)
 
 
+def _variants_equal(metadata, output_metadata):
+    match = True
+    for key, val in metadata.config.variant:
+        if key in output_metadata.config.variant and val != output_metadata.config.variant[key]:
+            match = False
+    return match
+
+
 def ensure_matching_hashes(output_metadata):
     envs = 'build', 'host', 'run'
     problemos = []
@@ -266,7 +274,7 @@ def ensure_matching_hashes(output_metadata):
                 deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
-                            dep.split(' ')[-1] != m.build_id()):
+                            dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
                         problemos.append((m.name(), om.name()))
 
     if problemos:
@@ -1640,7 +1648,8 @@ class MetaData(object):
         requirements.update(other_reqs)
         output_metadata.meta['requirements'] = requirements
         for env in ('build', 'host'):
-            insert_variant_versions(output_metadata, env)
+            insert_variant_versions(output_metadata.meta.get('requirements', {}),
+                                    output_metadata.config.variant, env)
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
         if self.name() == output.get('name') and 'requirements' not in output:
@@ -1707,6 +1716,8 @@ class MetaData(object):
 
                 try:
                     for out in outputs:
+                        for env in ('build', 'host', 'run'):
+                            insert_variant_versions(out.get('requirements', {}), variant, env)
                         out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
                 except SystemExit:
                     if not permit_undefined_jinja:

@@ -1269,9 +1269,9 @@ def ensure_valid_spec(spec, warn=False):
     return spec
 
 
-def insert_variant_versions(metadata, env):
-    reqs = metadata.get_value('requirements/' + env)
-    for key, val in metadata.config.variant.items():
+def insert_variant_versions(requirements_dict, variant, env):
+    reqs = requirements_dict.get(env, [])
+    for key, val in variant.items():
         regex = re.compile(r'^(%s)(?:\s*$)' % key.replace('_', '[-_]'))
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
@@ -1287,9 +1287,8 @@ def insert_variant_versions(metadata, env):
         for i, x in enumerate(matches):
             if x:
                 del reqs[i]
-                reqs.insert(i, ensure_valid_spec(' '.join((x.group(1),
-                                                metadata.config.variant.get(x.group(1))))))
-    metadata.meta['requirements'][env] = reqs
+                reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), variant.get(x.group(1))))))
+    requirements_dict[env] = reqs
 
 
 def match_peer_job(target_matchspec, other_m, this_m=None):
