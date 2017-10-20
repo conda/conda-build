@@ -165,7 +165,12 @@ def _build_channeldata(dir_path, subdir_paths):
         for subdir_path in index_data:
             for fn, record in index_data[subdir_path].items():
                 record.update(about_data.get(subdir_path, {}).get(fn, {}))
-                _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
+                try:
+                    _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
+                except Exception as e:
+                    import pdb; pdb.set_trace()
+                    _source_section = {}
+                    assert True
                 for key in ('url', 'git_url', 'git_rev', 'git_tag'):
                     value = _source_section.get(key)
                     if value:
