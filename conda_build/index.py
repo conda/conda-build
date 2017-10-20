@@ -165,14 +165,14 @@ def _build_channeldata(dir_path, subdir_paths):
         for subdir_path in index_data:
             for fn, record in index_data[subdir_path].items():
                 record.update(about_data.get(subdir_path, {}).get(fn, {}))
-                try:
-                    _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
-                except Exception as e:
-                    import pdb; pdb.set_trace()
-                    _source_section = {}
-                    assert True
+                _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
                 for key in ('url', 'git_url', 'git_rev', 'git_tag'):
-                    value = _source_section.get(key)
+                    try:
+                        value = _source_section.get(key)
+                    except AttributeError:
+                        print("WARNING: bad recipe detected for %s/%s" % (subdir_path, fn))
+                        # AttributeError: 'list' object has no attribute 'get'
+                        value = None
                     if value:
                         record['source_%s' % key] = value
                 package_groups[record['name']].append(record)
