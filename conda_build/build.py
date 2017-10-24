@@ -1319,6 +1319,7 @@ def warn_on_use_of_SRC_DIR(metadata):
 
 def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
+    config.recipe_dir = None
     hash_input = {}
     metadata = render_recipe(recipe_dir, config=config, reset_build_id=False)[0][0]
     if metadata.meta.get('test', {}).get('source_files'):
@@ -1332,6 +1333,7 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
 def _construct_metadata_for_test_from_package(package, config):
     recipe_dir, need_cleanup = utils.get_recipe_abspath(package)
     config.need_cleanup = need_cleanup
+    config.recipe_dir = recipe_dir
     hash_input = {}
 
     info_dir = os.path.normpath(os.path.join(recipe_dir, 'info'))
@@ -1440,9 +1442,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     '''
     log = utils.get_logger(__name__)
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
-    need_cleanup = False
     hash_input = {}
-    recipe_dir = ''
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
@@ -1643,8 +1643,8 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
                         config=metadata.config)
         raise
-    if need_cleanup:
-        utils.rm_rf(recipe_dir)
+    if config.need_cleanup and config.recipe_dir is not None:
+        utils.rm_rf(config.recipe_dir)
     print("TEST END:", test_package_name)
 
     return True
