@@ -5,6 +5,9 @@ Functions related to creating repodata index files.
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+
+from shutil import copy2
+
 from conda_build.conda_interface import VersionOrder
 from glob import glob
 
@@ -22,7 +25,7 @@ from os.path import isfile, join, getmtime, basename, getsize, isdir, dirname
 from jinja2 import Environment, PackageLoader
 import yaml
 
-from conda_build.utils import file_info, get_lock, try_acquire_locks
+from conda_build.utils import file_info, get_lock, try_acquire_locks, rm_rf
 from conda_build import utils, conda_interface
 from .conda_interface import PY3, md5_file, url_path, CondaHTTPError, get_index, human_bytes
 
@@ -141,7 +144,10 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                             channel_name)
 
     if is_channel:
-        _build_channeldata(dir_path, subdir_paths)
+        channeldata = _build_channeldata(dir_path, subdir_paths)
+        with open(join(dir_path, 'channeldata.json'), 'w') as fh:
+            fh.write(json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': ')))
+
 
 
 def _clear_newline_chars(record, field_name):
@@ -150,82 +156,108 @@ def _clear_newline_chars(record, field_name):
 
 
 def _build_channeldata(dir_path, subdir_paths):
-        index_data = {}
-        about_data = {}
-        paths_data = {}
-        recipe_data = {}
-        for subdir_path in subdir_paths:
-            with open(join(subdir_path, '.index.json')) as fh:
-                index_data[basename(subdir_path)] = json.loads(fh.read())
-            with open(join(subdir_path, '.about.json')) as fh:
-                about_data[basename(subdir_path)] = json.loads(fh.read())
-            with open(join(subdir_path, '.paths.json')) as fh:
-                paths_data[basename(subdir_path)] = json.loads(fh.read())
-            with open(join(subdir_path, '.recipe.json')) as fh:
-                recipe_data[basename(subdir_path)] = json.loads(fh.read())
+    # channeldata_json_path = join(dir_path, 'channeldata.json')
+    # if isfile(channeldata_json_path):
+    #     with open(channeldata_json_path) as fh:
+    #         old_channeldata = json.loads(fh)
+    # else:
+    #     old_channeldata = {}
+    # old_packages = old_channeldata.get('packages', {})
 
-        subdir_names = tuple(index_data)
+    index_data = {}
+    about_data = {}
+    paths_data = {}
+    recipe_data = {}
+    for subdir_path in subdir_paths:
+        with open(join(subdir_path, '.index.json')) as fh:
+            index_data[basename(subdir_path)] = json.loads(fh.read())
+        with open(join(subdir_path, '.about.json')) as fh:
+            about_data[basename(subdir_path)] = json.loads(fh.read())
+        with open(join(subdir_path, '.paths.json')) as fh:
+            paths_data[basename(subdir_path)] = json.loads(fh.read())
+        with open(join(subdir_path, '.recipe.json')) as fh:
+            recipe_data[basename(subdir_path)] = json.loads(fh.read())
 
-        package_groups = defaultdict(list)
-        for subdir_path in index_data:
-            for fn, record in index_data[subdir_path].items():
-                record['fn'] = fn
-                record.update(about_data.get(subdir_path, {}).get(fn, {}))
-                _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
-                if isinstance(_source_section, (list, tuple)):
-                    _source_section = _source_section[0]
-                for key in ('url', 'git_url', 'git_rev', 'git_tag'):
-                    value = _source_section.get(key)
-                    if value:
-                        record['source_%s' % key] = value
-                record['_has_icon'] = bool(recipe_data.get(subdir_path, {}).get(fn, {}).get('app', {}).get('icon'))
-                package_groups[record['name']].append(record)
+    subdir_names = tuple(index_data)
 
-        FIELDS = (
-            "description",
-            "dev_url",
-            "doc_url",
-            "doc_source_url",
-            "home",
-            "license",
-            "source_url",
-            "source_git_url",
-            "source_git_tag",
-            "source_git_rev",
-            "summary",
-            "version",
-            "subdirs",
+    package_groups = defaultdict(list)
+    for subdir_path in index_data:
+        for fn, record in index_data[subdir_path].items():
+            record['fn'] = fn
+            record.update(about_data.get(subdir_path, {}).get(fn, {}))
+            _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
+            if isinstance(_source_section, (list, tuple)):
+                _source_section = _source_section[0]
+            for key in ('url', 'git_url', 'git_rev', 'git_tag'):
+                value = _source_section.get(key)
+                if value:
+                    record['source_%s' % key] = value
+            record['_has_icon'] = bool(recipe_data.get(subdir_path, {}).get(fn, {}).get('app', {}).get('icon'))
+            package_groups[record['name']].append(record)
 
-            "icon_url",
-            "icon_hash",  # "md5:abc123:12"
-        )
+    FIELDS = (
+        "description",
+        "dev_url",
+        "doc_url",
+        "doc_source_url",
+        "home",
+        "license",
+        "source_url",
+        "source_git_url",
+        "source_git_tag",
+        "source_git_rev",
+        "summary",
+        "version",
+        "subdirs",
 
-        package_data = {}
-        for name, package_group in package_groups.items():
-            latest_version = sorted(package_group, key=lambda x: VersionOrder(x['version']))[-1]['version']
-            latest_version_records = tuple(rec for rec in package_group if rec['version'] == latest_version)
-            best_record = sorted(latest_version_records, key=lambda x: x['build_number'])[-1]
-            # Only subdirs that contain the latest version number are included here.
-            # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
-            subdirs = sorted(filter(None, set(rec.get('subdir') for rec in latest_version_records)))
-            package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
-            _clear_newline_chars(package_data, 'description')
-            _clear_newline_chars(package_data, 'summary')
-            package_data[name]['subdirs'] = subdirs
-            if best_record['_has_icon']:
-                icon_files = glob(join(dir_path, best_record['subdir'], '.icons', best_record['fn'] + '.*'))
-                if icon_files:
-                    icon_file = icon_files[0]
-                    icon_ext = icon_file.rsplit('.', 1)[-1]
-                    package_data['icon_url'] = 'icons/%s.%s' % (best_record['name'], icon_ext)
+        "icon_url",
+        "icon_hash",  # "md5:abc123:12"
+    )
 
-        channeldata = {
-            'channeldata_version': 1,
-            'subdirs': subdir_names,
-            'packages': package_data,
-        }
-        with open(join(dir_path, 'channeldata.json'), 'w') as fh:
-            fh.write(json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': ')))
+    package_data = {}
+    for name, package_group in package_groups.items():
+        latest_version = sorted(package_group, key=lambda x: VersionOrder(x['version']))[-1]['version']
+        latest_version_records = tuple(rec for rec in package_group if rec['version'] == latest_version)
+        best_record = sorted(latest_version_records, key=lambda x: x['build_number'])[-1]
+        # Only subdirs that contain the latest version number are included here.
+        # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
+        subdirs = sorted(filter(None, set(rec.get('subdir') for rec in latest_version_records)))
+        package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
+        package_data["reference_package"] = "%s/%s" % (best_record['subdir'], best_record['fn'])
+        _clear_newline_chars(package_data, 'description')
+        _clear_newline_chars(package_data, 'summary')
+        package_data[name]['subdirs'] = subdirs
+
+        if best_record['_has_icon']:
+            icon_files = glob(join(dir_path, best_record['subdir'], '.icons', best_record['fn'] + '.*'))
+            if icon_files:
+                extracted_icon_path = join(dir_path, best_record['subdir'], '.icons', icon_files[0])
+                icon_ext = extracted_icon_path.rsplit('.', 1)[-1]
+
+                icon_md5 = md5_file(extracted_icon_path)
+                icon_size = getsize(extracted_icon_path)
+
+                artifact_icon_path = 'icons/%s.%s' % (best_record['name'], icon_ext)
+                if not isdir(dirname(artifact_icon_path)):
+                    os.makedirs(dirname(artifact_icon_path))
+                if isfile(artifact_icon_path):
+                    old_icon_md5 = md5_file(artifact_icon_path)
+                    old_icon_size = getsize(artifact_icon_path)
+                    if not (old_icon_md5 == icon_md5 and old_icon_size == icon_size):
+                        rm_rf(artifact_icon_path)
+                        copy2(extracted_icon_path, artifact_icon_path)
+                else:
+                    copy2(extracted_icon_path, artifact_icon_path)
+
+                package_data['icon_url'] = artifact_icon_path
+                package_data['icon_hash'] = "md5:%s:%s" % (icon_md5, icon_size)
+
+    channeldata = {
+        'channeldata_version': 1,
+        'subdirs': subdir_names,
+        'packages': package_data,
+    }
+    return channeldata
 
 
 def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
