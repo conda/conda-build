@@ -351,7 +351,13 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
             if 'requires' in info and 'depends' not in info:
                 info['depends'] = info['requires']
 
-        repodata = {'packages': index, 'info': {}}
+        subdir = basename(dir_path)
+        repodata = {
+            'packages': index,
+            'info': {
+                'subdir': subdir,
+            },
+        }
         write_repodata(repodata, dir_path, lock=lock, locking=locking, timeout=timeout)
 
         if channel_name:
