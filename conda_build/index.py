@@ -291,20 +291,23 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
             except tarfile.ReadError:
                 raise RuntimeError("Could not extract metadata from %s. "
                                 "File probably corrupt." % tar_path)
+            try:
+                about_json = json.loads(t.extractfile('info/about.json').read().decode('utf-8'))
+            except Exception as e:
+                log.warn('Error extracting info/about.json in %s: %r', tar_path, e, exc_info=True)
+                about_json = {}
 
-            def extract_single(path):
-                try:
-                    loader = {
-                        '.json': json.loads,
-                        '.yaml': yaml.load,
-                    }
-                    return loader[splitext(path)[-1]](t.extractfile(path).read().decode('utf-8'))
-                except Exception as e:
-                    log.warn('Error extracting %s in %s: %r', path, tar_path, e, exc_info=True)
-                    return {}
-            about_json = extract_single('info/about.json')
-            paths_json = extract_single('info/paths.json')
-            recipe_json = extract_single('info/recipe/meta.yaml')
+            try:
+                paths_json = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
+            except Exception as e:
+                log.warn('Error extracting info/paths.json in %s: %r', tar_path, e, exc_info=True)
+                paths_json = {}
+
+            try:
+                recipe_json = yaml.load(t.extractfile('info/recipe/meta.yaml').read().decode('utf-8'))
+            except Exception as e:
+                log.warn('Error extracting info/recipe/meta.yaml in %s: %r', tar_path, e, exc_info=True)
+                recipe_json = {}
 
             # If a conda package contains an icon, also extract and cache that in an .icon/
             # directory.  The icon file name is the name of the package, plus the extension
