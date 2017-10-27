@@ -80,8 +80,9 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                     if not isdir(icon_dir):
                         os.makedirs(icon_dir)
                     icon_filename = '.'.join((basename(tar_path), app_icon.rsplit('.')[-1]))
+                    icondata = t.extractfile(app_icon).read()
+                    assert len(icondata)
                     with open(join(icon_dir, icon_filename), 'wb') as fh:
-                        icondata = t.extractfile(app_icon).read()
                         fh.write(icondata)
             except Exception as e:
                 log.debug('%r', e, exc_info=True)
@@ -182,8 +183,11 @@ def _build_channeldata(dir_path, subdir_paths):
 
     package_groups = defaultdict(list)
     for subdir_path in index_data:
+        subdir = basename(subdir_path)
         for fn, record in index_data[subdir_path].items():
             record['fn'] = fn
+            if 'subdir' not in record:
+                record['subdir'] = subdir
             record.update(about_data.get(subdir_path, {}).get(fn, {}))
             _source_section = recipe_data.get(subdir_path, {}).get(fn, {}).get('source', {})
             if isinstance(_source_section, (list, tuple)):
