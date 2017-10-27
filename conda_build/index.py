@@ -376,7 +376,7 @@ def _build_channeldata(dir_path, subdir_paths):
         with open(join(subdir_path, '.recipe.json')) as fh:
             recipe_data[basename(subdir_path)] = json.loads(fh.read())
 
-    subdir_names = tuple(index_data)
+    subdir_names = tuple(sorted(index_data))
 
     package_groups = defaultdict(list)
     for subdir_path in index_data:
@@ -441,7 +441,6 @@ def _build_channeldata(dir_path, subdir_paths):
                 icon_size = getsize(extracted_icon_path)
 
                 artifact_icon_path = 'icons/%s.%s' % (best_record['name'], icon_ext)
-                print(">> artifact_icon_path: %s" % artifact_icon_path)
                 if not isdir(dirname(artifact_icon_path)):
                     os.makedirs(dirname(artifact_icon_path))
                 if isfile(artifact_icon_path):
