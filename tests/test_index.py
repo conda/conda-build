@@ -65,7 +65,9 @@ def test_index_on_single_subdir_1():
         with open(join(base_location, 'osx-64', 'repodata.json')) as fh:
             actual_repodata_json = json.loads(fh.read())
         expected_repodata_json = {
-            "info": {},
+            "info": {
+                'subdir': 'osx-64',
+            },
             "packages": {
                 "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
                     "build": "py27h5e241af_0",
@@ -96,18 +98,19 @@ def test_index_on_single_subdir_1():
             "channeldata_version": 1,
             "packages": {
                 "conda-index-pkg-a": {
-                    "description": "Description field for conda-index-pkg-a. Actually, this is just the python description.\n"
-                                   "Python is a widely used high-level, general-purpose, interpreted, dynamic\n"
-                                   "programming language. Its design philosophy emphasizes code\n"
-                                   "readability, and its syntax allows programmers to express concepts in\n"
-                                   "fewer lines of code than would be possible in languages such as C++ or\n"
-                                   "Java. The language provides constructs intended to enable clear programs\n"
-                                   "on both a small and large scale.\n",
+                    "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
+                                   "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                                   "programming language. Its design philosophy emphasizes code "
+                                   "readability, and its syntax allows programmers to express concepts in "
+                                   "fewer lines of code than would be possible in languages such as C++ or "
+                                   "Java. The language provides constructs intended to enable clear programs "
+                                   "on both a small and large scale.",
                     "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
                     "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
                     "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                     "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                     "license": "BSD",
+                    "reference_package": "osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
                     "source_git_rev": "master",
                     "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                     "subdirs": [
@@ -152,7 +155,9 @@ def test_index_noarch_osx64_1():
         with open(join(base_location, 'noarch', 'repodata.json')) as fh:
             actual_repodata_json = json.loads(fh.read())
         expected_repodata_json = {
-            "info": {},
+            "info": {
+                'subdir': 'noarch',
+            },
             "packages": {
                 "conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2": {
                     "build": "pyhed9eced_1",
@@ -184,18 +189,19 @@ def test_index_noarch_osx64_1():
             "channeldata_version": 1,
             "packages": {
                 "conda-index-pkg-a": {
-                    "description": "Description field for conda-index-pkg-a. Actually, this is just the python description.\n"
-                                   "Python is a widely used high-level, general-purpose, interpreted, dynamic\n"
-                                   "programming language. Its design philosophy emphasizes code\n"
-                                   "readability, and its syntax allows programmers to express concepts in\n"
-                                   "fewer lines of code than would be possible in languages such as C++ or\n"
-                                   "Java. The language provides constructs intended to enable clear programs\n"
-                                   "on both a small and large scale.\n",
+                    "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
+                                   "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                                   "programming language. Its design philosophy emphasizes code "
+                                   "readability, and its syntax allows programmers to express concepts in "
+                                   "fewer lines of code than would be possible in languages such as C++ or "
+                                   "Java. The language provides constructs intended to enable clear programs "
+                                   "on both a small and large scale.",
                     "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
                     "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
                     "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                     "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                     "license": "BSD",
+                    "reference_package": "noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2",
                     "source_git_rev": "master",
                     "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                     "subdirs": [

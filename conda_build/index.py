@@ -14,11 +14,12 @@ import json
 import logging
 from numbers import Number
 import os
-from os.path import basename, dirname, getmtime, getsize, isdir, isfile, join
+from os.path import basename, dirname, getmtime, getsize, isdir, isfile, join, splitext
 from shutil import copy2
 import tarfile
 
 from jinja2 import Environment, PackageLoader
+import yaml
 
 from . import conda_interface, utils
 from .conda_interface import (CondaHTTPError, VersionOrder, get_index, human_bytes, md5_file,
@@ -202,7 +203,7 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
             paths = read_json_caching_file(paths_path)
             recipe = read_json_caching_file(recipe_path)
 
-        files = glob(join(dir_path, '*.tar.bz2'))
+        files = tuple(basename(path) for path in glob(join(dir_path, '*.tar.bz2')))
         for fn in files:
             path = join(dir_path, fn)
             if fn in index:
@@ -228,14 +229,15 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
                 if verbose:
                     print("removing:", fn)
                 del index[fn]
-
-        with open(index_path) as fo:
+        if not isdir(dirname(index_path)):
+            os.makedirs(dirname(index_path))
+        with open(index_path, 'w') as fo:
             json.dump(index, fo, indent=2, sort_keys=True)
-        with open(about_path) as fo:
+        with open(about_path, 'w') as fo:
             json.dump(about, fo, indent=2, sort_keys=True)
-        with open(paths_path) as fo:
+        with open(paths_path, 'w') as fo:
             json.dump(paths, fo, indent=2, sort_keys=True)
-        with open(recipe_path) as fo:
+        with open(recipe_path, 'w') as fo:
             json.dump(recipe, fo, indent=2, sort_keys=True)
 
         for fn in index:
@@ -292,7 +294,11 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
 
             def extract_single(path):
                 try:
-                    return json.loads(t.extractfile(path).read().decode('utf-8'))
+                    loader = {
+                        '.json': json.loads,
+                        '.yaml': yaml.load,
+                    }
+                    return loader[splitext(path)[-1]](t.extractfile(path).read().decode('utf-8'))
                 except Exception as e:
                     log.warn('Error extracting %s in %s: %r', path, tar_path, e, exc_info=True)
                     return {}
@@ -414,9 +420,12 @@ def _build_channeldata(dir_path, subdir_paths):
         # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
         subdirs = sorted(filter(None, set(rec.get('subdir') for rec in latest_version_records)))
         package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
-        package_data["reference_package"] = "%s/%s" % (best_record['subdir'], best_record['fn'])
-        _clear_newline_chars(package_data, 'description')
-        _clear_newline_chars(package_data, 'summary')
+        package_data[name]["reference_package"] = "%s/%s" % (best_record['subdir'], best_record['fn'])
+
+        # recipe_data[best_record['subdir']][best_record['fn']]
+
+        _clear_newline_chars(package_data[name], 'description')
+        _clear_newline_chars(package_data[name], 'summary')
         package_data[name]['subdirs'] = subdirs
 
         if best_record['_has_icon']:
