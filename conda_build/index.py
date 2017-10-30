@@ -309,9 +309,12 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                 paths_json = {}
 
             try:
-                recipe_json = yaml.load(t.extractfile('info/recipe/meta.yaml').read().decode('utf-8'))
+                recipe_json = yaml.load(
+                    t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
+                )
             except Exception as e:
-                log.warn('Error extracting info/recipe/meta.yaml in %s: %r', tar_path, e, exc_info=True)
+                log.warn('Error extracting info/recipe/meta.yaml in %s: %r',
+                         tar_path, e, exc_info=True)
                 recipe_json = {}
 
             # If a conda package contains an icon, also extract and cache that in an .icon/
@@ -398,7 +401,9 @@ def _build_channeldata(dir_path, subdir_paths):
                 value = _source_section.get(key)
                 if value:
                     record['source_%s' % key] = value
-            record['_has_icon'] = bool(recipe_data.get(subdir_path, {}).get(fn, {}).get('app', {}).get('icon'))
+            record['_has_icon'] = bool(
+                recipe_data.get(subdir_path, {}).get(fn, {}).get('app', {}).get('icon')
+            )
             package_groups[record['name']].append(record)
 
     FIELDS = (
@@ -421,14 +426,19 @@ def _build_channeldata(dir_path, subdir_paths):
 
     package_data = {}
     for name, package_group in package_groups.items():
-        latest_version = sorted(package_group, key=lambda x: VersionOrder(x['version']))[-1]['version']
-        latest_version_records = tuple(rec for rec in package_group if rec['version'] == latest_version)
+        latest_version = sorted(
+            package_group, key=lambda x: VersionOrder(x['version'])
+        )[-1]['version']
+        latest_version_records = tuple(rec for rec in package_group
+                                       if rec['version'] == latest_version)
         best_record = sorted(latest_version_records, key=lambda x: x['build_number'])[-1]
         # Only subdirs that contain the latest version number are included here.
-        # Build numbers are ignored for reporting which subdirs contain the latest version of the package.
+        # Build numbers are ignored for reporting which subdirs contain the latest version
+        # of the package.
         subdirs = sorted(filter(None, set(rec.get('subdir') for rec in latest_version_records)))
         package_data[name] = {k: v for k, v in best_record.items() if k in FIELDS}
-        package_data[name]["reference_package"] = "%s/%s" % (best_record['subdir'], best_record['fn'])
+        package_data[name]["reference_package"] = "%s/%s" % (best_record['subdir'],
+                                                             best_record['fn'])
 
         # recipe_data[best_record['subdir']][best_record['fn']]
 
@@ -437,9 +447,11 @@ def _build_channeldata(dir_path, subdir_paths):
         package_data[name]['subdirs'] = subdirs
 
         if best_record['_has_icon']:
-            icon_files = glob(join(dir_path, best_record['subdir'], '.icons', best_record['fn'] + '.*'))
+            icon_files = glob(join(dir_path, best_record['subdir'], '.icons',
+                                   best_record['fn'] + '.*'))
             if icon_files:
-                extracted_icon_path = join(dir_path, best_record['subdir'], '.icons', icon_files[0])
+                extracted_icon_path = join(dir_path, best_record['subdir'], '.icons',
+                                           icon_files[0])
                 icon_ext = extracted_icon_path.rsplit('.', 1)[-1]
 
                 icon_md5 = md5_file(extracted_icon_path)
