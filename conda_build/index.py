@@ -145,8 +145,10 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
                             channel_name)
 
     if is_channel:
+        channeldata_path = join(dir_path, 'channeldata.json')
+        print('==> building: %s <==' % channeldata_path)
         channeldata = _build_channeldata(dir_path, subdir_paths)
-        with open(join(dir_path, 'channeldata.json'), 'w') as fh:
+        with open(channeldata_path, 'w') as fh:
             fh.write(json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': ')))
 
 
@@ -169,6 +171,9 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
     log = utils.get_logger(__name__)
 
     log.debug("updating index in: %s", dir_path)
+
+    print('==> indexing: %s <==' % dir_path)
+
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
 
