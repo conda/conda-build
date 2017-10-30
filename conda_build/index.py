@@ -14,7 +14,7 @@ import json
 import logging
 from numbers import Number
 import os
-from os.path import basename, dirname, getmtime, getsize, isdir, isfile, join, splitext
+from os.path import basename, dirname, getmtime, getsize, isdir, isfile, join
 from shutil import copy2
 import tarfile
 
@@ -140,6 +140,8 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
         subdir_paths = (dir_path,)
 
     for subdir_path in subdir_paths:
+        if len(subdir_paths) > 1:
+            print('==> indexing: %s <==' % dir_path)
         update_subdir_index(subdir_path, force, check_md5, remove, lock,
                             could_be_mirror, verbose, locking, timeout,
                             channel_name)
@@ -171,8 +173,6 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
     log = utils.get_logger(__name__)
 
     log.debug("updating index in: %s", dir_path)
-
-    print('==> indexing: %s <==' % dir_path)
 
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
