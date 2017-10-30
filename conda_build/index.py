@@ -457,8 +457,8 @@ def _build_channeldata(dir_path, subdir_paths):
                 else:
                     copy2(extracted_icon_path, artifact_icon_path)
 
-                package_data['icon_url'] = artifact_icon_path
-                package_data['icon_hash'] = "md5:%s:%s" % (icon_md5, icon_size)
+                package_data[name]['icon_url'] = artifact_icon_path
+                package_data[name]['icon_hash'] = "md5:%s:%s" % (icon_md5, icon_size)
 
     channeldata = {
         'channeldata_version': 1,
