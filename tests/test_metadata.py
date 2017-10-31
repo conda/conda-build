@@ -145,9 +145,10 @@ def test_build_bootstrap_env_by_path(testing_metadata):
 def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
     testing_config.platform = 'win'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
-                          variants={'python': py_ver[0], 'target_platform': 'win-x86_64'},
-                          permit_unsatisfiable_variants=True,
-                          finalize=False)[0][0]
+                          variants={'target_platform': 'win-x86_64'},
+                          permit_unsatisfiable_variants=True, finalize=False,
+                          bypass_env_check=True, python=py_ver[0])[0][0]
+    # see parameterization - py_ver[1] is the compiler package name
     assert any(dep.startswith(py_ver[1]) for dep in metadata.meta['requirements']['build'])
 
 
@@ -155,7 +156,7 @@ def test_native_compiler_metadata_linux(testing_config, mocker):
     testing_config.platform = 'linux'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config, permit_unsatisfiable_variants=True,
-                          finalize=False)[0][0]
+                          finalize=False, bypass_env_check=True)[0][0]
     _64 = '64' if conda_interface.bits == 64 else '32'
     assert any(dep.startswith('gcc_linux-' + _64) for dep in metadata.meta['requirements']['build'])
     assert any(dep.startswith('gxx_linux-' + _64) for dep in metadata.meta['requirements']['build'])
@@ -166,7 +167,7 @@ def test_native_compiler_metadata_osx(testing_config, mocker):
     testing_config.platform = 'osx'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config, permit_unsatisfiable_variants=True,
-                          finalize=False)[0][0]
+                          finalize=False, bypass_env_check=True)[0][0]
     _64 = '64' if conda_interface.bits == 64 else '32'
     assert any(dep.startswith('clang_osx-' + _64) for dep in metadata.meta['requirements']['build'])
     assert any(dep.startswith('clangxx_osx-' + _64) for dep in metadata.meta['requirements']['build'])

@@ -13,6 +13,7 @@ from .utils import (get_installed_packages, apply_pin_expressions, get_logger, H
                     string_types)
 from .render import get_env_dependencies
 from .utils import copy_into, check_call_env, rm_rf, ensure_valid_spec
+from .variants import DEFAULT_COMPILERS
 from . import _load_setup_py_data
 
 
@@ -280,43 +281,11 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
     return pin
 
 
-# map python version to default compiler on windows, to match upstream python
-#    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
-#    in the conda-build variant configuration
-compilers = {
-    'win': {
-        'c': {
-            '2.7': 'vs2008',
-            '3.3': 'vs2010',
-            '3.4': 'vs2010',
-            '3.5': 'vs2015',
-        },
-        'cxx': {
-            '2.7': 'vs2008',
-            '3.3': 'vs2010',
-            '3.4': 'vs2010',
-            '3.5': 'vs2015',
-        },
-        'fortran': 'gfortran',
-    },
-    'linux': {
-        'c': 'gcc',
-        'cxx': 'gxx',
-        'fortran': 'gfortran',
-    },
-    'osx': {
-        'c': 'clang',
-        'cxx': 'clangxx',
-        'fortran': 'gfortran',
-    },
-}
-
-
 def native_compiler(language, config):
     try:
-        compiler = compilers[config.platform][language]
+        compiler = DEFAULT_COMPILERS[config.platform][language]
     except KeyError:
-        compiler = compilers[config.platform.split('-')[0]][language]
+        compiler = DEFAULT_COMPILERS[config.platform.split('-')[0]][language]
     if hasattr(compiler, 'keys'):
         compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
     return compiler

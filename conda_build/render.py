@@ -29,8 +29,8 @@ from .conda_interface import conda_43
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
 import conda_build.source as source
-from conda_build.variants import (get_package_variants, dict_of_lists_to_list_of_dicts,
-                                  conform_variants_to_value, list_of_dicts_to_dict_of_lists)
+from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
+                                  filter_by_key_value)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
@@ -422,8 +422,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 
     # don't bother distributing python if it's a noarch package
     if metadata.noarch or metadata.noarch_python:
-        conform_dict = {'python': variants[0]['python']}
-        variants = conform_variants_to_value(variants, conform_dict)
+        variants = filter_by_key_value(variants, 'python', variants[0]['python'],
+                                       'noarch_reduction')
 
     # store these for reference later
     metadata.config.variants = variants
@@ -505,7 +505,10 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:
             pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
 
-        mv.config.variants = conform_variants_to_value(mv.config.variants, conform_dict)
+        for key, values in conform_dict.items():
+            mv.config.variants = (filter_by_key_value(mv.config.variants, key, values,
+                                                      'distribute_variants_reduction') or
+                                  mv.config.variants)
         numpy_pinned_variants = []
         for _variant in mv.config.variants:
             _variant['pin_run_as_build'] = pin_run_as_build
@@ -532,7 +535,9 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         #     our ability to differentiate configurations
         fm.final = True
         rendered_metadata[(fm.dist(),
-                           fm.config.variant.get('target_platform', fm.config.subdir))] = \
+                           fm.config.variant.get('target_platform', fm.config.subdir),
+                           tuple((var, fm.config.variant[var])
+                                 for var in fm.get_used_loop_vars()))] = \
                                     (mv, need_source_download, None)
 
     # list of tuples.
@@ -608,7 +613,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
             m.config.ignore_system_variants = True
             if os.path.isfile(os.path.join(m.path, 'conda_build_config.yaml')):
                 m.config.variant_config_files = [os.path.join(m.path, 'conda_build_config.yaml')]
-            m.config.variants = get_package_variants(m)
+            m.config.variants = get_package_variants(m, variants=variants)
             m.config.variant = m.config.variants[0]
         rendered_metadata = [(m, False, False), ]
     else:
@@ -619,10 +624,12 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                                           omit_defaults=m.config.override_channels,
                                           debug=m.config.debug, verbose=m.config.verbose,
                                           locking=m.config.locking, timeout=m.config.timeout)
+
+        # merge any passed-in variants with any files found
+        variants = get_package_variants(m, variants=variants)
+
         # when building, we don't want to fully expand all outputs into metadata, only expand
-        #    whatever variants we have.
-        variants = (dict_of_lists_to_list_of_dicts(variants) if variants else
-                    get_package_variants(m))
+        #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                     allow_no_other_outputs=True, bypass_env_check=bypass_env_check)

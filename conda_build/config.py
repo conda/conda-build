@@ -14,7 +14,7 @@ import time
 
 from .conda_interface import root_dir, root_writable
 from .conda_interface import binstar_upload
-from .variants import get_default_variants
+from .variants import get_default_variant
 from .conda_interface import cc_platform, cc_conda_build, subdir
 
 from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
@@ -359,7 +359,7 @@ class Config(object):
 
     # TODO: This is probably broken on Windows, but no one has a lua package on windows to test.
     def _get_lua(self, prefix):
-        lua_ver = self.variant.get('lua', get_default_variants()[0]['lua'])
+        lua_ver = self.variant.get('lua', get_default_variant(self)['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
         if sys.platform == 'win32':
             res = join(prefix, 'Library', 'bin', '{}.exe'.format(binary_name))

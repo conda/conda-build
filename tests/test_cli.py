@@ -65,19 +65,24 @@ def test_build_without_channel_fails(testing_workdir):
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
+
 def test_render_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
     works for rendering."""
     with TemporaryDirectory() as tmpdir:
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
-        args = ['-c', 'conda_build_test', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
+        args = ['-c', 'conda_build_test', os.path.join(metadata_dir,
+                            "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
         rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
-        required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if 'conda_build_test_requirement' in pkg][0]
+        required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if
+                                   'conda_build_test_requirement' in pkg][0]
         required_package_details = required_package_string.split(' ')
-        assert len(required_package_details) > 1, "Expected version number on successful rendering, but got only {}".format(required_package_details)
+        assert len(required_package_details) > 1, ("Expected version number on successful "
+                                    "rendering, but got only {}".format(required_package_details))
         assert required_package_details[1] == '1.0', "Expected version number 1.0 on successful rendering, but got {}".format(required_package_details[1])
+
 
 def test_render_without_channel_fails():
     # do make extra channel available, so the required package should not be found
@@ -89,6 +94,7 @@ def test_render_without_channel_fails():
         required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if 'conda_build_test_requirement' in pkg][0]
         assert required_package_string == 'conda_build_test_requirement', \
                "Expected to get only base package name because it should not be found, but got :{}".format(required_package_string)
+
 
 def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
@@ -552,18 +558,20 @@ def test_activate_scripts_not_included(testing_workdir):
               'Scripts/activate', 'Scripts/deactivate', 'Scripts/conda'):
         assert not package_has_file(out, f)
 
+
 @pytest.mark.serial
 def test_relative_path_croot():
     # this tries to build a package while specifying the croot with a relative path:
     # conda-build --no-test --croot ./relative/path
 
     empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    croot_rel = os.path.join('.','relative','path')
+    croot_rel = os.path.join('.', 'relative', 'path')
     args = ['--no-anaconda-upload', '--croot', croot_rel, empty_sections]
     outputfile = main_build.execute(args)
 
     assert len(outputfile) == 1
     assert os.path.isfile(outputfile[0])
+
 
 @pytest.mark.serial
 def test_relative_path_test_artifact():
@@ -571,19 +579,20 @@ def test_relative_path_test_artifact():
     # conda-build --test ./relative/path/{platform}/{artifact}.tar.bz2
 
     empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    croot_rel = os.path.join('.','relative','path')
+    croot_rel = os.path.join('.', 'relative', 'path')
     croot_abs = os.path.abspath(os.path.normpath(croot_rel))
 
     # build the package
-    args = ['--no-anaconda-upload','--no-test', '--croot', croot_abs, empty_sections]
+    args = ['--no-anaconda-upload', '--no-test', '--croot', croot_abs, empty_sections]
     output_file_abs = main_build.execute(args)
     assert(len(output_file_abs) == 1)
 
     output_file_rel = os.path.join(croot_rel, os.path.relpath(output_file_abs[0], croot_abs))
 
     # run the test stage with relative path
-    args = ['--no-anaconda-upload','--test', output_file_rel]
+    args = ['--no-anaconda-upload', '--test', output_file_rel]
     main_build.execute(args)
+
 
 @pytest.mark.serial
 def test_relative_path_test_recipe():
@@ -591,14 +600,35 @@ def test_relative_path_test_recipe():
     # conda-build --test --croot ./relative/path/ /abs/path/to/recipe
 
     empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
-    croot_rel = os.path.join('.','relative','path')
+    croot_rel = os.path.join('.', 'relative', 'path')
     croot_abs = os.path.abspath(os.path.normpath(croot_rel))
 
     # build the package
-    args = ['--no-anaconda-upload','--no-test', '--croot', croot_abs, empty_sections]
+    args = ['--no-anaconda-upload', '--no-test', '--croot', croot_abs, empty_sections]
     output_file_abs = main_build.execute(args)
     assert(len(output_file_abs) == 1)
 
     # run the test stage with relative croot
-    args = ['--no-anaconda-upload','--test', '--croot', croot_rel, empty_sections]
+    args = ['--no-anaconda-upload', '--test', '--croot', croot_rel, empty_sections]
     main_build.execute(args)
+
+
+@pytest.mark.serial
+def test_render_with_python_arg_reduces_subspace(capfd):
+    recipe = os.path.join(metadata_dir, "..", "variants", "20_subspace_selection_cli")
+    # build the package
+    args = [recipe, '--python=2.7', '--output']
+    main_render.execute(args)
+    out, err = capfd.readouterr()
+    assert(len(out.splitlines()) == 2)
+
+    args = [recipe, '--python=3.5', '--output']
+    main_render.execute(args)
+    out, err = capfd.readouterr()
+    assert(len(out.splitlines()) == 1)
+
+    # should raise an error, because python 3.6 is not in the matrix, so we don't know which vc
+    # to associate with
+    args = [recipe, '--python=3.6', '--output']
+    with pytest.raises(ValueError):
+        main_render.execute(args)

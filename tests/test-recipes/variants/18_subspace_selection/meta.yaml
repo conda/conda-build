@@ -1,0 +1,11 @@
+# this test ensures that we can merge and clobber fields that are part of zip_keys, and it will reduce
+#    any other associated zip keys
+
+package:
+  name: test_subspace_selection
+  version: 1.0
+
+requirements:
+  build:
+    - a
+    - b
