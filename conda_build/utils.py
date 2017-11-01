@@ -748,26 +748,23 @@ def tmp_chdir(dest):
 
 
 def expand_globs(path_list, root_dir):
-    log = get_logger(__name__)
     files = []
     for path in path_list:
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
-        if os.path.islink(path):
-            files.append(path.replace(root_dir + os.path.sep, ''))
+        if os.path.islink(path) or os.path.isfile(path):
+            files.append(path)
         elif os.path.isdir(path):
-            files.extend(os.path.join(root, f).replace(root_dir + os.path.sep, '')
-                            for root, _, fs in os.walk(path) for f in fs)
-        elif os.path.isfile(path):
-            files.append(path.replace(root_dir + os.path.sep, ''))
+            files.extend(os.path.join(root, f) for root, _, fs in os.walk(path) for f in fs)
         else:
             # File compared to the globs use / as separator indenpendently of the os
-            glob_files = [f.replace(root_dir + os.path.sep, '')
-                          for f in glob(path)]
+            glob_files = glob(path)
             if not glob_files:
+                log = get_logger(__name__)
                 log.error('invalid recipe path: {}'.format(path))
             files.extend(glob_files)
-    files = [f.replace(os.path.sep, '/') for f in files]
+    prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
+    files = [prefix_path_re.sub('', f, 1) for f in files]
     return files
 
 
@@ -999,7 +996,7 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
     for pattern in filter_patterns:
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
-    return [f.replace(prefix + os.path.sep, '') for f in files_list
+    return [f for f in files_list
             if not os.path.isdir(os.path.join(prefix, f)) or
             os.path.islink(os.path.join(prefix, f))]
 
