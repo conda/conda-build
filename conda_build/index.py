@@ -141,7 +141,7 @@ def update_index(dir_path, force=False, check_md5=False, remove=True, lock=None,
 
     for subdir_path in subdir_paths:
         if len(subdir_paths) > 1:
-            print('==> indexing: %s <==' % dir_path)
+            print('==> indexing: %s <==' % join(dir_path, subdir_path))
         update_subdir_index(subdir_path, force, check_md5, remove, lock,
                             could_be_mirror, verbose, locking, timeout,
                             channel_name)
