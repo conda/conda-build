@@ -337,6 +337,13 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
             return index_json, about_json, paths_json, recipe_json
 
 
+def write_repodata(repodata, dir_path, lock, locking=90, timeout=90, **kw):
+    """compatibility shim for conda-build-all"""
+    log.warn("Using unsupported internal conda-build api (write_repodata).  Please update your "
+             "code to use conda_build.api.update_index instead.")
+    return _write_repodata(repodata, dir_path, lock, locking, timeout)
+
+
 def _write_repodata(repodata, dir_path, lock, locking=90, timeout=90):
     """ Write updated repodata.json and repodata.json.bz2 """
     locks = []

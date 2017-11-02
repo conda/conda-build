@@ -744,7 +744,7 @@ class MetaData(object):
                                    raise_on_clobber=raise_on_clobber)
 
     def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False,
-                    bypass_env_check=False):
+                    bypass_env_check=False, **kw):
         """Redo parsing for key-value pairs that are not initialized in the
         first pass.
 
@@ -757,6 +757,9 @@ class MetaData(object):
         assert not self.final, "modifying metadata after finalization"
 
         log = utils.get_logger(__name__)
+        if kw:
+            log.warn("using unsupported internal conda-build function `parse_again`.  Please use "
+                     "conda_build.api.render instead.")
 
         if isfile(self.requirements_path) and not self.get_value('requirements/run'):
             self.meta.setdefault('requirements', {})
