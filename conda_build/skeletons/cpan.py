@@ -5,17 +5,16 @@ Tools for converting CPAN packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 import codecs
-from distutils.version import LooseVersion
+from pkg_resources import parse_version
 from glob import glob
 import gzip
 import json
 import os
-from os import makedirs, environ
+from os import makedirs
 from os.path import basename, dirname, join, exists
 import subprocess
 import sys
 import tempfile
-import re
 
 from conda_build.conda_interface import get_index
 from conda_build.conda_interface import TmpDownload, download
@@ -182,7 +181,7 @@ class PerlTmpDownload(TmpDownload):
 
 
 def loose_version(ver):
-    return str(LooseVersion(str(ver)))
+    return str(parse_version(str(ver)))
 
 
 def get_cpan_api_url(url, colons):
@@ -289,15 +288,11 @@ def skeletonize(packages, output_dir=".", version=None,
                                                'import_tests': ''})
 
         # Fetch all metadata from CPAN
-        # core_version = core_module_version(
-        #     package, perl_version, config=config)
-        core_version = metacpan_api_get_core_version(
-            meta_cpan_url, package)
         if version is None:
             release_data = latest_release_data
         else:
             release_data = get_release_info(meta_cpan_url, package,
-                                            LooseVersion(version),
+                                            parse_version(version),
                                             perl_version,
                                             config=config)
 
@@ -306,11 +301,6 @@ def skeletonize(packages, output_dir=".", version=None,
 
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
-        # if core_version is not None and ((version in [None, '']) or
-        #                                  (core_version >=
-        #                                   LooseVersion(version))):
-        # print('Core V {} V {}'.format(core_version, version))
-        # if is_core_version(core_version, version):
         if metacpan_api_is_core_version(meta_cpan_url, package):
 
             if not write_core:
@@ -324,10 +314,10 @@ def skeletonize(packages, output_dir=".", version=None,
             empty_recipe = True
         # Add dependencies to d if not in core, or newer than what's in core
         else:
-            build_deps, build_core_deps, run_deps, run_core_deps, packages_to_append = deps_for_package(
-                package, release_data=release_data, perl_version=perl_version,
-                output_dir=output_dir, meta_cpan_url=meta_cpan_url,
-                recursive=recursive, config=config)
+            build_deps, build_core_deps, run_deps, run_core_deps, packages_to_append = \
+                deps_for_package(package, release_data=release_data, perl_version=perl_version,
+                                 output_dir=output_dir, meta_cpan_url=meta_cpan_url,
+                                 recursive=recursive, config=config)
 
             # Get which deps are in perl_core
 
@@ -427,7 +417,7 @@ def is_core_version(core_version, version):
     if core_version is None:
         return False
     elif core_version is not None and ((version in [None, '']) or
-                                       (core_version >= LooseVersion(version))):
+                                       (core_version >= parse_version(version))):
         return True
     else:
         return False
@@ -480,71 +470,10 @@ def latest_pkg_version(pkg):
     except:
         pkg_list = None
     if pkg_list:
-        pkg_version = LooseVersion(pkg_list[-1].version)
+        pkg_version = parse_version(pkg_list[-1].version)
     else:
         pkg_version = None
     return pkg_version
-
-
-# @memoized
-# def core_module_version(module, version, config):
-#     '''
-#     :param module: Name of a Perl core module
-#     :type module: str
-#
-#     :returns: The version of the specified module that is currently available
-#               in the specified version of Perl. If the version is `undef`, but
-#               the module is actually part of the Perl core, the version of Perl
-#               passed in will be used as the module version.
-#     '''
-#     # In case we were given a dist, convert to module
-#
-#     module = module.replace('-', '::')
-#
-#     if version in [None, '']:
-#         version = LooseVersion(config.CONDA_PERL)
-#     else:
-#         version = LooseVersion(version)
-#     corelist = 'corelist' + ('.bat' if on_win else '')
-#     cmd = [corelist, '-v', str(version), module]
-#     if on_win:
-#         cmd.insert(0, '/c')
-#         cmd.insert(0, 'cmd.exe')
-#     try:
-#         output = subprocess.check_output(cmd, env=environ.copy())
-#         if hasattr(output, "decode"):
-#             output = output.decode('utf-8')
-#     except subprocess.CalledProcessError:
-#         sys.exit(('Error: command failed: %s\nPlease make sure you have ' +
-#                   'the perl conda package installed in your default ' +
-#                   'environment.') % ' '.join(cmd))
-#     mod_version = output.split()[1]
-#     # If undefined, that could either mean it's versionless or not in core
-#     if mod_version == 'undef':
-#         # Check if it's actually in core
-#         cmd = [corelist, module]
-#         if on_win:
-#             cmd.insert(0, '/c')
-#             cmd.insert(0, 'cmd.exe')
-#         output = subprocess.check_output(cmd)
-#         if hasattr(output, "decode"):
-#             output = output.decode('utf-8')
-#         # If it's in core...
-#         if 'perl v' in output:
-#             first_version = output.partition('perl v')[2].strip()
-#             first_version = LooseVersion(first_version)
-#             # If it's newer than the specified version, return None
-#             if loose_version(first_version) > loose_version(version):
-#                 mod_version = None
-#             else:
-#                 mod_version = version
-#         # If it's not, return None
-#         else:
-#             mod_version = None
-#     else:
-#         mod_version = LooseVersion(mod_version)
-#
-#     return mod_version
 
 
 def deps_for_package(package, release_data, perl_version, output_dir,
@@ -605,7 +534,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
                 # There is a dep version and a pkg_version ... why?
                 if dep_dict['version'] in {'', 'undef'}:
                     dep_dict['version'] = '0'
-                dep_version = LooseVersion(dep_dict['version'])
+                dep_version = parse_version(dep_dict['version'])
 
                 # Make sure specified version is valid
                 # TODO def valid_release_info
@@ -617,7 +546,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
                            'dependency for %s, %s, is not available on MetaCPAN, ' +
                            'so we are just assuming the latest version is ' +
                            'okay.') % (orig_dist, package, str(dep_version)))
-                    dep_version = LooseVersion('0')
+                    dep_version = parse_version('0')
 
                 # Add version number to dependency, if it's newer than latest
                 # we have package for.
@@ -638,9 +567,10 @@ def deps_for_package(package, release_data, perl_version, output_dir,
                     # requirements.
                     # J = Conda does support >= ?
                     try:
-                        if pkg_version is not None and (loose_version(dep_version) > loose_version(pkg_version)):
+                        if pkg_version is not None and (
+                                loose_version(dep_version) > loose_version(pkg_version)):
                             dep_entry += ' ' + dep_dict['version']
-                    except Exception as e:
+                    except Exception:
                         print(
                             'We have got an expected error with dependency versions')
                         print('Module {}'.format(dep_dict['module']))
@@ -719,7 +649,7 @@ def core_module_dict(cpan_url, module):
         mod_dict = get_cpan_api_url(
             '{0}/module/{1}'.format(cpan_url, module), colons=True)
         # If there was an error, report it
-    except CondaHTTPError as exc:
+    except CondaHTTPError:
         sys.exit(('Error: Could not find module or distribution named'
                   ' %s on MetaCPAN. Error was: %s') % (module))
     else:
@@ -754,7 +684,7 @@ def metacpan_api_get_core_version(cpan_url, module):
     module_dict = core_module_dict(cpan_url, module)
     try:
         version = module_dict['module'][-1]['version']
-    except Exception as e:
+    except Exception:
         version = None
 
     return version
@@ -777,8 +707,6 @@ def get_release_info(cpan_url, package, version, perl_version, config,
             '{0}/release/{1}'.format(cpan_url, package), colons=False)
         rel_dict['version'] = str(rel_dict['version']).lstrip('v')
     except CondaHTTPError:
-        # core_version = core_module_version(
-        #     orig_package, perl_version, config=config)
         core_version = metacpan_api_is_core_version(cpan_url, package)
         if core_version is not None and (version is None or
                                          (version == core_version)):
@@ -797,11 +725,12 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     if version is not None:
         version_str = str(version)
         rel_version = str(rel_dict['version'])
-        loose_str = str(LooseVersion(version_str))
+        loose_str = str(parse_version(version_str))
 
         try:
-            version_mismatch = (version is not None) and (loose_version('0') != loose_version(version_str)
-                                                          and LooseVersion(rel_version) != loose_version(version_str))
+            version_mismatch = (version is not None) and (
+                loose_version('0') != loose_version(version_str) and
+                parse_version(rel_version) != loose_version(version_str))
             # print(version_mismatch)
         except Exception as e:
             print('We have some strange version mismatches. Please investigate.')
