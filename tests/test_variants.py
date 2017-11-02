@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 import json
 
@@ -13,18 +14,19 @@ recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
 
 def test_later_spec_priority(single_version, no_numpy_version):
     # override a single key
-    combined_spec, extend_keys = variants.combine_specs({
-        'no_numpy': no_numpy_version,
-        'single_ver': single_version})
+    specs = OrderedDict()
+    specs['no_numpy'] = no_numpy_version
+    specs['single_ver'] = single_version
+    combined_spec, extend_keys = variants.combine_specs(specs)
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
     assert extend_keys == {'ignore_version', 'pin_run_as_build'}
 
     # keep keys that are not overwritten
-    combined_spec, extend_keys = variants.combine_specs({
-        'single_ver': single_version,
-        'no_numpy': no_numpy_version,
-        })
+    specs = OrderedDict()
+    specs['single_ver'] = single_version
+    specs['no_numpy'] = no_numpy_version
+    combined_spec, extend_keys = variants.combine_specs(specs)
     assert len(combined_spec) == 2
     assert len(combined_spec["python"]) == 2
 

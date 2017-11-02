@@ -136,6 +136,16 @@ DEFAULTS = [Setting('activate', True),
             ]
 
 
+def print_function_deprecation_warning(func):
+    def func_wrapper(*args, **kw):
+        log = get_logger(__name__)
+        log.warn("WARNING: attribute {} is deprecated and will be removed in conda-build 4.0.  "
+                "Please update your code - file issues on the conda-build issue tracker "
+                 "if you need help.".format(func.__name__))
+        return func(*args, **kw)
+    return func_wrapper
+
+
 class Config(object):
     __file__ = __path__ = __file__
     __package__ = __package__
@@ -339,6 +349,62 @@ class Config(object):
         """This is the core folder for a given build.
         It has the environments and work directories."""
         return os.path.join(self.croot, self.build_id)
+
+    # back compat for conda-build-all - expects CONDA_* vars to be attributes of the config object
+    @property
+    @print_function_deprecation_warning
+    def CONDA_LUA(self):
+        return self.variant.get('lua', get_default_variant(self)['lua'])
+
+    @CONDA_LUA.setter
+    @print_function_deprecation_warning
+    def CONDA_LUA(self, value):
+        self.variant['lua'] = value
+
+    @property
+    @print_function_deprecation_warning
+    def CONDA_PY(self):
+        value = self.variant.get('python', get_default_variant(self)['python'])
+        return int(''.join(value.split('.')))
+
+    @CONDA_PY.setter
+    @print_function_deprecation_warning
+    def CONDA_PY(self, value):
+        value = str(value)
+        self.variant['python'] = '.'.join((value[0], value[1:]))
+
+    @property
+    @print_function_deprecation_warning
+    def CONDA_NPY(self):
+        value = self.variant.get('numpy', get_default_variant(self)['numpy'])
+        return int(''.join(value.split('.')))
+
+    @CONDA_NPY.setter
+    @print_function_deprecation_warning
+    def CONDA_NPY(self, value):
+        value = str(value)
+        self.variant['numpy'] = '.'.join((value[0], value[1:]))
+
+    @property
+    @print_function_deprecation_warning
+    def CONDA_PERL(self):
+        return self.variant.get('perl', get_default_variant(self)['perl'])
+
+    @CONDA_PERL.setter
+    @print_function_deprecation_warning
+    def CONDA_PERL(self, value):
+        self.variant['perl'] = value
+
+    @property
+    @print_function_deprecation_warning
+    def CONDA_R(self):
+
+        return self.variant.get('r_base', get_default_variant(self)['r_base'])
+
+    @CONDA_R.setter
+    @print_function_deprecation_warning
+    def CONDA_R(self, value):
+        self.variant['r_base'] = value
 
     def _get_python(self, prefix):
         if sys.platform == 'win32':
