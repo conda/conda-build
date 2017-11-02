@@ -149,8 +149,8 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metad
     test_paths = [test_path(
         "test_build_output_build_path_multiple_recipes-1.0-py{}{}{}_1.tar.bz2".format(
             sys.version_info.major, sys.version_info.minor, _hash)),
-        "Skipped: {} defines build/skip for this "
-        "configuration.".format(os.path.abspath(skip_recipe))]
+        "Skipped: {} defines build/skip for this configuration ({{}}).".format(
+            os.path.abspath(skip_recipe))]
 
     output, error = capfd.readouterr()
     # assert error == ""

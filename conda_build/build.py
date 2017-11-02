@@ -860,7 +860,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         built_packages = {}
 
     if m.skip():
-        utils.print_skip_message(m)
+        print(utils.get_skip_message(m))
         return default_return
 
     log = utils.get_logger(__name__)

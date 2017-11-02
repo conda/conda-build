@@ -77,6 +77,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     """
     from conda_build.render import bldpkg_path
     from conda_build.conda_interface import string_types
+    from conda_build.utils import get_skip_message
     config = get_or_merge_config(config, **kwargs)
     if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
                                                                        string_types):
@@ -99,8 +100,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     outs = []
     for (m, _, _) in metadata:
         if m.skip():
-            outs.append("Skipped: {} defines build/skip for this configuration."
-                        .format(m.path))
+            outs.append(get_skip_message(m))
         else:
             outs.append(bldpkg_path(m))
     return sorted(list(set(outs)))
