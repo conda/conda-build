@@ -82,7 +82,8 @@ class DependencyNeedsBuildingError(CondaBuildException):
 
     @property
     def message(self):
-        return "Unsatisfiable dependencies for platform {}: {}".format(self.subdir, self.matchspecs)
+        return "Unsatisfiable dependencies for platform {}: {}".format(self.subdir,
+                                                                       set(self.matchspecs))
 
 
 class RecipeError(CondaBuildException):
