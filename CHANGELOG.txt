@@ -1,3 +1,32 @@
+2017-11-02 3.0.28:
+
+Enhancements:
+-------------
+
+* Implement "subspace selection" - so you can reduce a larger central set of variants to some smaller subset.  Fixes --python=X.Y on windows, with its zip_keys.  #2466
+* Update cpan skeleton  #2156
+* Pass through VSXY0COMNTOOLS env vars, so they're available in activate scripts called from outputs  #2453
+* Add additional index-related files for Anaconda Navigator to use  #2463
+* Add back CONDA_PY, CONDA_NPY, and friends, for backcompat with conda-build-all  #2469
+
+Bug fixes:
+----------
+
+* Fix build_folder selection in dirty envs  #2445
+* Fix an os.rename back to copy_into for cross-volume compatibility  #2451
+* Clean up leftovers created by utils.get_recipe_abspath  #2459
+* fix path globbing and filtering replacing prefix not at start of path, which broke file copying  #2468
+* Don't recreate envs unnecessarily for recipes with no outputs section  #2470
+
+Contributors:
+-------------
+
+* @jerowe
+* @kalefranz
+* @msarahan
+* @neok-m4700
+* @rendinam
+
 2017-10-17 3.0.27:
 
 Enhancements:
