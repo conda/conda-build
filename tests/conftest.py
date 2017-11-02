@@ -5,7 +5,7 @@ import sys
 import pytest
 
 from conda_build.config import Config
-from conda_build.variants import get_default_variants
+from conda_build.variants import get_default_variant
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, prepend_bin_path, copy_into
 
@@ -57,7 +57,7 @@ def testing_metadata(request, testing_config):
     d['about']['home'] = "sweet home"
     d['about']['license'] = "contract in blood"
     d['about']['summary'] = "a test package"
-    testing_config.variant = get_default_variants()[0]
+    testing_config.variant = get_default_variant(testing_config)
     return MetaData.fromdict(d, config=testing_config)
 
 

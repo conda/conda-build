@@ -1,0 +1,11 @@
+python:
+  - 2.7
+  - 2.7
+  - 3.5
+vc:
+  - 9
+  - 14
+  - 14
+zip_keys:
+  - python
+  - vc

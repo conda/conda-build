@@ -1,0 +1,27 @@
+# this test ensures that we can merge and clobber fields that are part of zip_keys, and it will reduce
+#    any other associated zip keys
+
+# There's two ways this will work:
+#   1. people specify one key, say a, but not b.  The value of that key must already exist in a.  We select
+#      the matching set.  Here, if we select a: coffe, the set we get is [{a: coffee, b: 123}, {a: coffee, b: abc}]
+#   2. people specify more than one key:
+#       - select dimensions when keys match
+#       - if any key does not match, assert that all dimensions in zip_keys are specified, and rather than selecting
+#         subspace, clobber the other existing space
+
+a:
+  - coffee
+  - coffee
+  - llama
+b:
+  - 123
+  - abc
+  - concrete
+c:
+  - mooo
+  - baaa
+  - woof
+zip_keys:
+  - a
+  - b
+  - c

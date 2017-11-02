@@ -13,7 +13,7 @@ from distutils.msvc9compiler import Reg, WINSDK_BASE
 
 from conda_build import environ
 from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into, get_logger
-from conda_build.variants import set_language_env_vars, get_default_variants
+from conda_build.variants import set_language_env_vars, get_default_variant
 
 
 assert sys.platform == 'win32'
@@ -110,7 +110,7 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append('set MSSdk=1')
 
     if not version:
-        py_ver = config.variant.get('python', get_default_variants()[0]['python'])
+        py_ver = config.variant.get('python', get_default_variant(config)['python'])
         if int(py_ver[0]) >= 3:
             if int(py_ver.split('.')[1]) < 5:
                 version = '10.0'

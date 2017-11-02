@@ -27,7 +27,7 @@ from conda_build.features import feature_list
 from conda_build.index import get_build_index
 from conda_build.os_utils import external
 from conda_build.utils import ensure_list, prepend_bin_path
-from conda_build.variants import get_default_variants
+from conda_build.variants import get_default_variant
 
 
 # these are things that we provide env vars for more explicitly.  This list disables the
@@ -36,26 +36,26 @@ LANGUAGES = ('PERL', 'LUA', 'R', "NUMPY", 'PYTHON')
 
 
 def get_perl_ver(config):
-    return '.'.join(config.variant.get('perl', get_default_variants()[0]['perl']).split('.')[:2])
+    return '.'.join(config.variant.get('perl', get_default_variant(config)['perl']).split('.')[:2])
 
 
 def get_lua_ver(config):
-    return '.'.join(config.variant.get('lua', get_default_variants()[0]['lua']).split('.')[:2])
+    return '.'.join(config.variant.get('lua', get_default_variant(config)['lua']).split('.')[:2])
 
 
 def get_py_ver(config):
     return '.'.join(config.variant.get('python',
-                                       get_default_variants()[0]['python']).split('.')[:2])
+                                       get_default_variant(config)['python']).split('.')[:2])
 
 
 def get_r_ver(config):
     return '.'.join(config.variant.get('r_base',
-                                       get_default_variants()[0]['r_base']).split('.')[:3])
+                                       get_default_variant(config)['r_base']).split('.')[:3])
 
 
 def get_npy_ver(config):
     conda_npy = ''.join(str(config.variant.get('numpy') or
-                            get_default_variants()[0]['numpy']).split('.'))
+                            get_default_variant(config)['numpy']).split('.'))
     # Convert int -> string, e.g.
     #   17 -> '1.7'
     #   110 -> '1.10'
@@ -313,7 +313,7 @@ def python_vars(config, prefix):
             'PYTHON': config.python_bin(prefix),
         })
 
-    np_ver = config.variant.get('numpy', get_default_variants()[0]['numpy'])
+    np_ver = config.variant.get('numpy', get_default_variant(config)['numpy'])
     vars_['NPY_VER'] = '.'.join(np_ver.split('.')[:2])
     vars_['CONDA_NPY'] = ''.join(np_ver.split('.')[:2])
     return vars_

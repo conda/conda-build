@@ -66,7 +66,7 @@ def ns_cfg(config):
         nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
 
-    defaults = variants.get_default_variants()[0]
+    defaults = variants.get_default_variant(config)
     py = config.variant.get('python', defaults['python'])
     py = int("".join(py.split('.')[:2]))
     d.update(dict(py=py,

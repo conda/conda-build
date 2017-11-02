@@ -1,0 +1,10 @@
+package:
+  name: test_subspace_selection_cli
+  version: 1.0
+
+requirements:
+  build:
+    - python
+    - vc
+  run:
+    - python

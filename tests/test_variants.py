@@ -13,13 +13,18 @@ recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
 
 def test_later_spec_priority(single_version, no_numpy_version):
     # override a single key
-    combined_spec, extend_keys = variants.combine_specs([no_numpy_version, single_version])
+    combined_spec, extend_keys = variants.combine_specs({
+        'no_numpy': no_numpy_version,
+        'single_ver': single_version})
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
     assert extend_keys == {'ignore_version', 'pin_run_as_build'}
 
     # keep keys that are not overwritten
-    combined_spec, extend_keys = variants.combine_specs([single_version, no_numpy_version])
+    combined_spec, extend_keys = variants.combine_specs({
+        'single_ver': single_version,
+        'no_numpy': no_numpy_version,
+        })
     assert len(combined_spec) == 2
     assert len(combined_spec["python"]) == 2
 
@@ -56,17 +61,6 @@ def test_get_package_variants_from_dictionary_of_lists(testing_config, no_numpy_
                for req in m.meta['requirements']['run']) == 1
     assert sum('python >=3.5,<3.6' in req for (m, _, _) in metadata
                for req in m.meta['requirements']['run']) == 1
-
-
-def test_combine_variants():
-    v1 = {'python': '2.7.*', 'extend_keys': ['dict', 'list'], 'list': 'steve',
-          'dict': {'some': 'value'}}
-    v2 = {'python': '3.5.*', 'list': 'frank', 'dict': {'some': 'other', 'test': 'value'}}
-    combined = variants.combine_variants(v1, v2)
-    assert combined['python'] == '3.5.*'
-    assert set(combined['list']) == {'steve', 'frank'}
-    assert len(combined['dict']) == 2
-    assert combined['dict']['some'] == 'other'
 
 
 @pytest.mark.xfail(reason="Strange failure 7/19/2017.  Can't reproduce locally.  Test runs fine "
@@ -134,7 +128,7 @@ def test_zip_fields():
     with pytest.raises(ValueError):
         ld = variants.dict_of_lists_to_list_of_dicts(v)
 
-    # when one is completely missing, it's OK.  The zip_field for the set gets ignored.
+    # WHEN one is completely missing, it's OK.  The zip_field for the set gets ignored.
     v = {'python': ['2.7', '3.5'], 'zip_keys': [('python', 'vc')]}
     ld = variants.dict_of_lists_to_list_of_dicts(v)
     assert len(ld) == 2
@@ -168,17 +162,14 @@ def test_git_variables_with_variants(testing_workdir, testing_config):
 
 
 def test_variant_input_with_zip_keys_keeps_zip_keys_list():
-    variants_ = [{'icu': '58', 'jpeg': '9', 'libdap4': '3.19', 'libkml': '1.3', 'libnetcdf': '4.4',
-                 'libpng': '1.6', 'libtiff': '4.0', 'libxml2': '2.9', 'mkl': '2018',
-                 'openblas': '0.2.19', 'proj4': '4', 'scipy': '0.17', 'sqlite': '3',
-                 'zlib': '1.2', 'xz': '5',
+    variants_ = {'scipy': ['0.17', '0.19'], 'sqlite': ['3'], 'zlib': ['1.2'], 'xz': ['5'],
                  'zip_keys': ['macos_min_version', 'macos_machine', 'MACOSX_DEPLOYMENT_TARGET',
                               'CONDA_BUILD_SYSROOT'],
-                 'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
-                 'macos_min_version': '10.9', 'macos_machine': 'x86_64-apple-darwin13.4.0',
-                 'MACOSX_DEPLOYMENT_TARGET': '10.9', 'CONDA_BUILD_SYSROOT': '/opt/MacOSX10.9.sdk'}]
-    variant_list = variants.dict_of_lists_to_list_of_dicts(variants_)
-    assert len(variant_list) == 1
+                 'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}}}
+    variant_list = variants.dict_of_lists_to_list_of_dicts(variants_,
+                        extend_keys=variants.DEFAULT_VARIANTS['extend_keys'])
+    assert len(variant_list) == 2
+    assert 'zip_keys' in variant_list[0] and variant_list[0]['zip_keys']
 
 
 @pytest.mark.serial
@@ -201,6 +192,50 @@ def test_serial_builds_have_independent_configs(testing_config):
     assert 'bzip2 >=1,<1.0.7.0a0' in index_json['depends']
     index_json = json.loads(package_has_file(outputs[1], 'info/index.json'))
     assert 'bzip2 >=1.0.6,<2.0a0' in index_json['depends']
+
+
+def test_subspace_selection(testing_config):
+    recipe = os.path.join(recipe_dir, '18_subspace_selection')
+    testing_config.variant = {'a': 'coffee'}
+    ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+    # there are two entries with a==coffee, so we should end up with 2 variants
+    assert len(ms) == 2
+    # ensure that the zipped keys still agree
+    assert sum(m.config.variant['b'] == '123' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['b'] == 'abc' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['b'] == 'concrete' for m, _, _ in ms) == 0
+    assert sum(m.config.variant['c'] == 'mooo' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['c'] == 'baaa' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['c'] == 'woof' for m, _, _ in ms) == 0
+
+    # test compound selection
+    testing_config.variant = {'a': 'coffee', 'b': '123'}
+    ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+    # there are two entries with a==coffee, but one with both 'coffee' for a, and '123' for b,
+    #     so we should end up with 1 variants
+    assert len(ms) == 1
+    # ensure that the zipped keys still agree
+    assert sum(m.config.variant['b'] == '123' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['b'] == 'abc' for m, _, _ in ms) == 0
+    assert sum(m.config.variant['b'] == 'concrete' for m, _, _ in ms) == 0
+    assert sum(m.config.variant['c'] == 'mooo' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['c'] == 'baaa' for m, _, _ in ms) == 0
+    assert sum(m.config.variant['c'] == 'woof' for m, _, _ in ms) == 0
+
+    # test when configuration leads to no valid combinations - only c provided, and its value
+    #   doesn't match any other existing values of c, so it's then ambiguous which zipped
+    #   values to choose
+    testing_config.variant = {'c': 'not an animal'}
+    with pytest.raises(ValueError):
+        ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+
+    # all zipped keys provided by the new variant.  It should clobber the old one.
+    testing_config.variant = {'a': 'some', 'b': 'new', 'c': 'animal'}
+    ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+    assert len(ms) == 1
+    assert ms[0][0].config.variant['a'] == 'some'
+    assert ms[0][0].config.variant['b'] == 'new'
+    assert ms[0][0].config.variant['c'] == 'animal'
 
 
 def test_get_used_loop_vars(testing_config):
