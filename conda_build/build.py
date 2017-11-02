@@ -1181,9 +1181,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
-                    output_reqs = output_d.get('requirements', {})
-                    if len(outputs) > 1 or output_reqs and (isinstance(output_reqs, list) or
-                                                            output_reqs.get('build', {})):
+                    if m.meta['extra'].get('parent_recipe'):
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
