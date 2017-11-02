@@ -703,9 +703,10 @@ def convert_path_for_cygwin_or_msys2(exe, path):
     return path
 
 
-def print_skip_message(metadata):
-    print("Skipped: {} defines build/skip for this "
-          "configuration.".format(metadata.path))
+def get_skip_message(metadata):
+    return ("Skipped: {} defines build/skip for this configuration ({}).".format(
+        metadata.path,
+        {k: metadata.config.variant[k] for k in metadata.get_used_loop_vars()}))
 
 
 @memoized
