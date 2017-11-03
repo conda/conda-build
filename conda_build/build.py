@@ -259,7 +259,7 @@ def copy_test_source_files(m):
 def write_hash_input(m):
     recipe_input, file_paths = m.get_hash_contents()
     with open(os.path.join(m.config.info_dir, 'hash_input.json'), 'w') as f:
-        json.dump(recipe_input, f)
+        json.dump(recipe_input, f, indent=2)
 
     if m.config.include_recipe and m.include_recipe():
         with codecs.open(os.path.join(m.config.info_dir, 'hash_input_files'), 'w', 'utf-8') as f:
