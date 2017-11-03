@@ -254,6 +254,14 @@ def check_circular_dependencies(render_order):
         raise exceptions.RecipeError(error)
 
 
+def _variants_equal(metadata, output_metadata):
+    match = True
+    for key, val in metadata.config.variant.items():
+        if key in output_metadata.config.variant and val != output_metadata.config.variant[key]:
+            match = False
+    return match
+
+
 def ensure_matching_hashes(output_metadata):
     envs = 'build', 'host', 'run'
     problemos = []
@@ -266,7 +274,7 @@ def ensure_matching_hashes(output_metadata):
                 deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
-                            dep.split(' ')[-1] != m.build_id()):
+                            dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
                         problemos.append((m.name(), om.name()))
 
     if problemos:
@@ -675,6 +683,14 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
+def _expand_reqs(reqs_entry):
+    if not hasattr(reqs_entry, 'keys'):
+        original = ensure_list(reqs_entry)[:]
+        reqs_entry = {'build': original,
+                        'run': original}
+    return reqs_entry
+
+
 class MetaData(object):
     def __init__(self, path, config=None, variant=None):
 
@@ -1045,12 +1061,16 @@ class MetaData(object):
 
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})
-        build_reqs = requirements.get('build', [])
+        build_section = 'host' if self.is_cross else 'build'
+        build_reqs = requirements.get(build_section, [])
         excludes = self.config.variant.get('ignore_version', [])
         if excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
-        requirements['build'] = build_reqs
+        # remove build section from hash when host is present
+        if build_section == 'host' and requirements.get('build'):
+            del requirements['build']
+        requirements[build_section] = build_reqs
         composite['requirements'] = requirements
         if 'copy_test_source_files' in self.meta.get('extra', {}):
             composite['extra'] = HashableDict({'copy_test_source_files':
@@ -1066,7 +1086,7 @@ class MetaData(object):
         if not composite['build']:
             del composite['build']
 
-        for key in 'build', 'run':
+        for key in build_section, 'run':
             if key in composite['requirements'] and not composite['requirements'].get(key):
                 del composite['requirements'][key]
 
@@ -1608,22 +1628,14 @@ class MetaData(object):
             name = output.get('name', self.name()) + '_' + output['type']
             output_metadata.meta['package']['name'] = name
 
-        output_reqs = output.get('requirements', {})
-        if hasattr(output_reqs, 'keys'):
-            build_reqs = output_reqs.get('build', [])
-            host_reqs = output_reqs.get('host', [])
-            run_reqs = output_reqs.get('run', [])
-            constrain_reqs = output_reqs.get('run_constrained', [])
-            # pass through any other unrecognized req types
-            other_reqs = {k: v for k, v in output_reqs.items() if k not in
-                          ('build', 'host', 'run', 'run_constrained')}
-        else:
-            output_reqs = ensure_list(output_reqs)
-            build_reqs = output_reqs
-            host_reqs = []
-            run_reqs = output_reqs
-            constrain_reqs = []
-            other_reqs = {}
+        output_reqs = _expand_reqs(output.get('requirements', {}))
+        build_reqs = output_reqs.get('build', [])
+        host_reqs = output_reqs.get('host', [])
+        run_reqs = output_reqs.get('run', [])
+        constrain_reqs = output_reqs.get('run_constrained', [])
+        # pass through any other unrecognized req types
+        other_reqs = {k: v for k, v in output_reqs.items() if k not in
+                        ('build', 'host', 'run', 'run_constrained')}
 
         if 'name' in output:
             # since we are copying reqs from the top-level package, which
@@ -1640,7 +1652,8 @@ class MetaData(object):
         requirements.update(other_reqs)
         output_metadata.meta['requirements'] = requirements
         for env in ('build', 'host'):
-            insert_variant_versions(output_metadata, env)
+            insert_variant_versions(output_metadata.meta.get('requirements', {}),
+                                    output_metadata.config.variant, env)
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
         if self.name() == output.get('name') and 'requirements' not in output:
@@ -1707,6 +1720,9 @@ class MetaData(object):
 
                 try:
                     for out in outputs:
+                        for env in ('build', 'host', 'run'):
+                            insert_variant_versions(_expand_reqs(out.get('requirements', {})),
+                                                    variant, env)
                         out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
                 except SystemExit:
                     if not permit_undefined_jinja:

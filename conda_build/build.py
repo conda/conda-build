@@ -252,8 +252,10 @@ def copy_license(m):
 def copy_test_source_files(m):
     test_dest = join(m.config.info_dir, 'test')
     create_all_test_files(m, test_dest)
-    with open(os.path.join(test_dest, 'test_time_dependencies.json'), 'w') as f:
-        json.dump(m.meta.get('test', {}).get('requires', []), f)
+    test_deps = m.meta.get('test', {}).get('requires', [])
+    if test_deps:
+        with open(os.path.join(test_dest, 'test_time_dependencies.json'), 'w') as f:
+            json.dump(test_deps, f)
 
 
 def write_hash_input(m):
@@ -876,7 +878,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
     # this should be a no-op if source is already here
     if m.needs_source_for_render:
-        try_download(m, False)
+        try_download(m, no_download_source=False)
 
     if post in [False, None]:
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
@@ -927,7 +929,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         build_ms_deps = None
 
         for env in ('build', 'host'):
-            utils.insert_variant_versions(m, env)
+            utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, env)
 
         if (m.config.host_subdir != m.config.build_subdir and
                 m.config.host_subdir != "noarch"):
@@ -968,7 +970,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         try:
             if not notest:
-                utils.insert_variant_versions(m, 'run')
+                utils.insert_variant_versions(m.meta.get('requirements', {}),
+                                              m.config.variant, 'run')
                 test_run_ms_deps = m.get_value('test/requires', []) + \
                                    m.get_value('requirements/run', [])
                 # make sure test deps are available before taking time to create build env
@@ -1399,7 +1402,12 @@ def _construct_metadata_for_test_from_package(package, config):
 
     test_files = os.path.join(info_dir, 'test')
     if os.path.exists(test_files) and os.path.isdir(test_files):
-        utils.copy_into(test_files, metadata.config.work_dir,
+        # things are re-extracted into the test dir because that's cwd when tests are run,
+        #    and provides the most intuitive experience.  This is a little tricky, because SRC_DIR
+        #    still needs to point at the original work_dir, for legacy behavior where people aren't
+        #    using test/source_files.  It would be better to change SRC_DIR in test phase to always
+        #    point to test_dir.  Maybe one day.
+        utils.copy_into(test_files, metadata.config.test_dir,
                         metadata.config.timeout, symlinks=True,
                         locking=metadata.config.locking, clobber=True)
         dependencies_file = os.path.join(test_files, 'test_time_dependencies.json')
@@ -1564,6 +1572,13 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         env["CONDA_BUILD_STATE"] = "TEST"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
+
+    # when workdir is removed, the source files are unavailable.  There's the test/source_files
+    #    entry that lets people keep these files around.  The files are copied into test_dir for
+    #    intuitive relative path behavior, though, not work_dir, so we need to adjust where
+    #    SRC_DIR points.  The initial CWD during tests is test_dir.
+    if metadata.config.remove_work_dir:
+        env['SRC_DIR'] = metadata.config.test_dir
 
     if not metadata.config.activate or metadata.name() == 'conda':
         # prepend bin (or Scripts) directory

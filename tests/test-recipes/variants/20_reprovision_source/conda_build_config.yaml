@@ -1,0 +1,16 @@
+shared_lib:
+  - top_a
+  - top_b
+output_loop_var:
+  - output_a
+  - output_b
+dep_tied_to_shared_lib:
+  - dep_a
+  - dep_b
+zlib:
+  - 1.2.8
+  - 1.2.11
+zip_keys:
+  -
+    - shared_lib
+    - dep_tied_to_shared_lib

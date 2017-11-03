@@ -246,3 +246,7 @@ def test_get_used_loop_vars(testing_config):
     #   python and zlib are both implicitly used (depend on name matching), while
     #   some_package is explicitly used as a jinja2 variable
     assert ms[0][0].get_used_loop_vars() == {'python', 'some_package', 'zlib'}
+
+
+def test_reprovisioning_source(testing_config):
+    ms = api.render(os.path.join(recipe_dir, '20_reprovision_source'))

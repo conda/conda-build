@@ -528,7 +528,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one to newly parsed 'requirements/build'.
         for env in ('build', 'host', 'run'):
-            utils.insert_variant_versions(mv, env)
+            utils.insert_variant_versions(mv.meta.get('requirements', {}),
+                                          mv.config.variant, env)
         fm = mv.copy()
         # HACK: trick conda-build into thinking this is final, and computing a hash based
         #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is

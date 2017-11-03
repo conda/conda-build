@@ -287,7 +287,8 @@ def test_ensure_valid_spec():
 def test_insert_variant_versions(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['python', 'numpy 1.13']
     testing_metadata.config.variant = {'python': '2.7', 'numpy': '1.11'}
-    utils.insert_variant_versions(testing_metadata, 'build')
+    utils.insert_variant_versions(testing_metadata.meta.get('requirements', {}),
+                                  testing_metadata.config.variant, 'build')
     # this one gets inserted
     assert 'python 2.7.*' in testing_metadata.meta['requirements']['build']
     # this one should not be altered
