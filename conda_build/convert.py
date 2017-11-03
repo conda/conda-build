@@ -197,7 +197,7 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
         index['depends'] = update_dependencies(dependencies, index['depends'])
 
     with open(index_file, 'w') as file:
-        json.dump(index, file)
+        json.dump(index, file, indent=2)
 
     return index_file
 
