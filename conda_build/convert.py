@@ -169,7 +169,14 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
         index = json.load(file)
 
     platform, architecture = target_platform.split('-')
-    source_architecture = '64' if index['arch'] == 'x86_64' else '32'
+    other_platforms = ['linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64']
+
+    if target_platform in other_platforms:
+        source_architecture = architecture
+    elif index.get('arch') == 'x86_64':
+        source_architecture = '64'
+    else:
+        source_architecture = '32'
 
     if verbose:
         print('Updating platform from {} to {}' .format(index['platform'], platform))
@@ -178,7 +185,13 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
 
     index['platform'] = platform
     index['subdir'] = target_platform
-    index['arch'] = 'x86_64' if architecture == '64' else 'x86'
+
+    if architecture == '64':
+        index['arch'] = 'x86_64'
+    elif architecture == '32':
+        index['arch'] = 'x86'
+    else:
+        index['arch'] = architecture
 
     if dependencies:
         index['depends'] = update_dependencies(dependencies, index['depends'])
@@ -705,7 +718,9 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
     source_platform_architecture = '{}-{}' .format(source_platform, architecture)
 
     if 'all' in platforms:
-        platforms = ['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64']
+        platforms = ['osx-64', 'linux-32', 'linux-64',
+                     'linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64'
+                     'win-32', 'win-64']
 
     for platform in platforms:
 
