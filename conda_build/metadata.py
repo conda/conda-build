@@ -1061,12 +1061,16 @@ class MetaData(object):
 
         # filter build requirements for ones that should not be in the hash
         requirements = composite.get('requirements', {})
-        build_reqs = requirements.get('build', [])
+        build_section = 'host' if self.is_cross else 'build'
+        build_reqs = requirements.get(build_section, [])
         excludes = self.config.variant.get('ignore_version', [])
         if excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
-        requirements['build'] = build_reqs
+        # remove build section from hash when host is present
+        if build_section == 'host' and requirements.get('build'):
+            del requirements['build']
+        requirements[build_section] = build_reqs
         composite['requirements'] = requirements
         if 'copy_test_source_files' in self.meta.get('extra', {}):
             composite['extra'] = HashableDict({'copy_test_source_files':
@@ -1082,7 +1086,7 @@ class MetaData(object):
         if not composite['build']:
             del composite['build']
 
-        for key in 'build', 'run':
+        for key in build_section, 'run':
             if key in composite['requirements'] and not composite['requirements'].get(key):
                 del composite['requirements'][key]
 
