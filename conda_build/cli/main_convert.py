@@ -60,7 +60,9 @@ all.""",
         '-p', "--platform",
         dest='platforms',
         action="append",
-        choices=['osx-64', 'linux-32', 'linux-64', 'win-32', 'win-64', 'all'],
+        choices=['osx-64', 'linux-32', 'linux-64',
+                 'linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64'
+                 'win-32', 'win-64', 'all'],
         help="Platform to convert the packages to.",
         default=None
     )
