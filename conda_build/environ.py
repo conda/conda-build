@@ -370,8 +370,10 @@ def meta_vars(meta, config):
         else:
             d[var_name] = value
 
-    git_dir = join(config.work_dir, '.git')
-    hg_dir = join(config.work_dir, '.hg')
+    folder = meta.get_value('source/0/folder', '')
+    repo_dir = join(config.work_dir, folder)
+    git_dir = join(repo_dir, '.git')
+    hg_dir = join(repo_dir, '.hg')
 
     if not isinstance(git_dir, str):
         # On Windows, subprocess env can't handle unicode.
