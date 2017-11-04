@@ -620,6 +620,20 @@ def version_compare(package, versions):
         sys.exit()
 
 
+def convert_version(version):
+    """Convert version into a pin-compatible format according to PEP440."""
+    version_parts = version.split('.')
+    suffixes = ('post', 'pre')
+    if any(suffix in version_parts[-1] for suffix in suffixes):
+        version_parts.pop()
+    # the max pin length is n-1, but in terms of index this is n-2
+    max_ver_len = len(version_parts) - 2
+    version_parts[max_ver_len] = int(version_parts[max_ver_len]) + 1
+    max_pin = '.'.join(str(v) for v in version_parts[:max_ver_len + 1])
+    pin_compatible = ' >={},<{}' .format(version, max_pin)
+    return pin_compatible
+
+
 def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
                          recursive, created_recipes, noarch_python, noprompt, packages,
                          extra_specs, config, setup_options):
@@ -704,6 +718,11 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 dep = dep.split('#')[0].strip()
                 if dep:  # ... and empty (or comment only) lines
                     spec = spec_from_line(dep)
+                    if '~' in spec:
+                        version = spec.split()[-1]
+                        tilde_version = '~ {}' .format(version)
+                        pin_compatible = convert_version(version)
+                        spec = spec.replace(tilde_version, pin_compatible)
                     if spec is None:
                         sys.exit("Error: Could not parse: %s" % dep)
                     deps.append(spec)
