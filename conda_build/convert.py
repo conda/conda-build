@@ -56,7 +56,13 @@ def retrieve_package_platform(file_path):
         index = json.loads(tar.extractfile('info/index.json').read().decode('utf-8'))
 
     platform = index['platform']
-    architecture = '64' if index['arch'] == 'x86_64' else '32'
+
+    if index.get('arch') == 'x86_64':
+        architecture = '64'
+    elif index.get('arch') == 'x86':
+        architecture = '32'
+    else:
+        architecture = index.get('arch')
 
     if platform.startswith('linux') or platform.startswith('osx'):
         return ('unix', platform, architecture)
