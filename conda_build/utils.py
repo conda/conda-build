@@ -1256,7 +1256,7 @@ def ensure_valid_spec(spec, warn=False):
                 spec = spec_needing_star_re.sub(r"\1 \2", spec)
             else:
                 if "*" not in spec:
-                    if match.group(1) != 'python' and warn:
+                    if match.group(1) not in ('python', 'vc') and warn:
                         log = get_logger(__name__)
                         log.warn("Adding .* to spec '{}' to ensure satisfiability.  Please "
                                  "consider putting {{{{ var_name }}}}.* or some relational "
