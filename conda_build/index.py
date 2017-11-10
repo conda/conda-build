@@ -199,8 +199,10 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
 
             def read_json_caching_file(path):
                 if isfile(path):
-                    with open(path) as fi:
-                        return json.load(fi)
+                    locks = [get_lock(path)] if locking else []
+                    with try_acquire_locks(locks, timeout):
+                        with open(path) as fi:
+                            return json.load(fi)
                 else:
                     return {}
             index = read_json_caching_file(index_path)
@@ -237,13 +239,21 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
         if not isdir(dirname(index_path)):
             os.makedirs(dirname(index_path))
         with open(index_path, 'w') as fo:
-            json.dump(index, fo, indent=2, sort_keys=True)
+            locks = [get_lock(index_path)] if locking else []
+            with try_acquire_locks(locks, timeout):
+                json.dump(index, fo, indent=2, sort_keys=True)
         with open(about_path, 'w') as fo:
-            json.dump(about, fo, indent=2, sort_keys=True)
+            locks = [get_lock(about_path)] if locking else []
+            with try_acquire_locks(locks, timeout):
+                json.dump(about, fo, indent=2, sort_keys=True)
         with open(paths_path, 'w') as fo:
-            json.dump(paths, fo, indent=2, sort_keys=True)
+            locks = [get_lock(paths_path)] if locking else []
+            with try_acquire_locks(locks, timeout):
+                json.dump(paths, fo, indent=2, sort_keys=True)
         with open(recipe_path, 'w') as fo:
-            json.dump(recipe, fo, indent=2, sort_keys=True)
+            locks = [get_lock(recipe_path)] if locking else []
+            with try_acquire_locks(locks, timeout):
+                json.dump(recipe, fo, indent=2, sort_keys=True)
 
         for fn in index:
             info = index[fn]
