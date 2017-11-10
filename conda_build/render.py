@@ -56,10 +56,12 @@ def actions_to_pins(actions):
 
 
 def get_env_dependencies(m, env, variant, exclude_pattern=None,
-                         permit_unsatisfiable_variants=False):
+                         permit_unsatisfiable_variants=False,
+                         merge_build_host_on_same_platform=True):
     dash_or_under = re.compile("[-_]")
     specs = [ms.spec for ms in m.ms_depends(env)]
-    if env == 'build' and m.is_cross and m.config.build_subdir == m.config.host_subdir:
+    if (merge_build_host_on_same_platform and env == 'build' and m.is_cross and
+             m.config.build_subdir == m.config.host_subdir):
         specs.extend([ms.spec for ms in m.ms_depends('host')])
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ('build', 'host'):
@@ -260,6 +262,26 @@ def get_upstream_pins(m, actions, env):
     return additional_specs
 
 
+def add_upstream_pins(m):
+    """Applies run_exports from any build deps to host and run sections"""
+    # if we have host deps, they're more important than the build deps.
+    build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
+                                    exclude_pattern=None,
+                                    permit_unsatisfiable_variants=True,
+                                    merge_build_host_on_same_platform=False)
+
+    extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
+    # defaults to empty list if not there
+    host_reqs = m.get_value('requirements/host')
+    key = 'host'
+    # legacy recipe without host entry.  Add dep to build reqs instead.
+    if not host_reqs:
+        host_reqs = m.get_value('requirements/build')
+        key = 'build'
+    host_reqs.extend(extra_run_specs_from_build.get('strong', []))
+    m.meta['requirements'][key] = [utils.ensure_valid_spec(spec) for spec in host_reqs]
+
+
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
     """Fully render a recipe.  Fill in versions for build/host dependencies."""
     exclude_pattern = None
@@ -284,23 +306,24 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         build_reqs.append('python {}'.format(m.config.variant['python']))
         m.meta['requirements']['build'] = build_reqs
 
+    add_upstream_pins(m)
+
     # if we have host deps, they're more important than the build deps.
     build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
-                                        exclude_pattern,
-                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+                                    exclude_pattern,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
 
     extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
 
     # is there a 'host' section?
     if m.is_cross:
-        host_reqs = m.get_value('requirements/host')
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one
+        host_reqs = m.get_value('requirements/host')
         if host_reqs:
             if 'python' in host_reqs:
                 host_reqs.append('python {}'.format(m.config.variant['python']))
-            host_reqs.extend(extra_run_specs_from_build.get('strong', []))
-            m.meta['requirements']['host'] = [utils.ensure_valid_spec(spec) for spec in host_reqs]
+
         host_deps, host_actions, host_unsat = get_env_dependencies(m, 'host', m.config.variant,
                                         exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
@@ -311,6 +334,11 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                               extra_run_specs_from_host.get('weak', []) +
                               extra_run_specs_from_build.get('strong', []))
     else:
+        # redo this, but lump in the host deps too, to catch any run_exports stuff that gets merged
+        #    when build platform is same as host
+        build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
+                                        exclude_pattern,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
         m.config.build_prefix_override = not m.uses_new_style_compiler_activation
         host_deps = []
         host_unsat = None

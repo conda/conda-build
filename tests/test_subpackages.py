@@ -254,5 +254,7 @@ def test_per_output_tests(testing_config, capfd):
     recipe_dir = os.path.join(subpackage_dir, '_per_output_tests')
     api.build(recipe_dir, config=testing_config)
     out, err = capfd.readouterr()
-    assert out.count("output-level test") == 1
-    assert out.count("top-level test") == 1
+    # windows echoes commands, so we see the result and the command
+    count = 2 if utils.on_win else 1
+    assert out.count("output-level test") == count, out
+    assert out.count("top-level test") == count, out

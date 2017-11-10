@@ -1067,10 +1067,15 @@ class MetaData(object):
         if excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
+        requirements[build_section] = build_reqs
         # remove build section from hash when host is present
         if build_section == 'host' and requirements.get('build'):
-            del requirements['build']
-        requirements[build_section] = build_reqs
+            build_reqs = requirements.get('build', [])
+            excludes = self.config.variant.get('ignore_build_only_deps', [])
+            if excludes:
+                exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
+                build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
+            requirements['build'] = build_reqs
         composite['requirements'] = requirements
         if 'copy_test_source_files' in self.meta.get('extra', {}):
             composite['extra'] = HashableDict({'copy_test_source_files':
@@ -1437,10 +1442,10 @@ class MetaData(object):
         vcs_types = ["git", "svn", "hg"]
         # We would get here if we use Jinja2 templating, but specify source with path.
         if self.meta_path:
-            with open(self.meta_path) as f:
-                metayaml = f.read()
+            with open(self.meta_path, 'rb') as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
                 for _vcs in vcs_types:
-                    matches = re.findall(r"{}_[^\.\s\'\"]+".format(_vcs.upper()), metayaml)
+                    matches = re.findall(r"{}_[^\.\s\'\"]+".format(_vcs.upper()), meta_text)
                     if len(matches) > 0 and _vcs != self.meta['package']['name']:
                         if _vcs == "hg":
                             _vcs = "mercurial"
@@ -1455,8 +1460,8 @@ class MetaData(object):
         for recipe_file in (build_script, self.meta_path):
             if os.path.isfile(recipe_file):
                 vcs_types = ["git", "svn", "hg"]
-                with open(recipe_file) as f:
-                    build_script = f.read()
+                with open(self.meta_path, 'rb') as f:
+                    build_script = UnicodeDammit(f.read()).unicode_markup
                     for vcs in vcs_types:
                         # commands are assumed to have 3 parts:
                         #   1. the vcs command, optionally with an exe extension
@@ -1473,8 +1478,8 @@ class MetaData(object):
     def get_recipe_text(self, extract_pattern=None):
         recipe_text = ""
         if self.meta_path:
-            with open(self.meta_path) as f:
-                recipe_text = f.read()
+            with open(self.meta_path, 'rb') as f:
+                recipe_text = UnicodeDammit(f.read()).unicode_markup
             if PY3 and hasattr(recipe_text, 'decode'):
                 recipe_text = recipe_text.decode()
             if extract_pattern:

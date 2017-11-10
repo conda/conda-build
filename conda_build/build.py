@@ -25,6 +25,7 @@ import hashlib
 #    http://stackoverflow.com/a/13057751/1170370
 import encodings.idna  # NOQA
 
+from bs4 import UnicodeDammit
 import yaml
 
 # used to get version
@@ -48,7 +49,8 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs, try_download)
+                                distribute_variants, expand_outputs, try_download,
+                                add_upstream_pins)
 import conda_build.os_utils.external as external
 from conda_build.metadata import MetaData
 from conda_build.post import (post_process, post_build,
@@ -123,7 +125,12 @@ def have_prefix_files(files, prefix):
         if os.stat(path).st_size == 0:
             continue
 
-        fi = open(path, 'rb+')
+        try:
+            fi = open(path, 'rb+')
+        except IOError:
+            log = utils.get_logger(__name__)
+            log.warn("failed to open %s for detecting prefix.  Skipping it." % f)
+            continue
         try:
             mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
         except OSError:
@@ -211,7 +218,11 @@ def copy_recipe(m):
 
         rendered = output_yaml(output_metadata)
 
-        if not original_recipe or not open(original_recipe).read() == rendered:
+        if original_recipe:
+            with open(original_recipe, 'rb') as f:
+                original_recipe_text = UnicodeDammit(f.read()).unicode_markup
+
+        if not original_recipe or not original_recipe_text == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
                 f.write("# This file created by conda-build {}\n".format(__version__))
                 if original_recipe:
@@ -930,6 +941,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         for env in ('build', 'host'):
             utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, env)
+
+        add_upstream_pins(m)
 
         if (m.config.host_subdir != m.config.build_subdir and
                 m.config.host_subdir != "noarch"):

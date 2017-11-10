@@ -1112,7 +1112,7 @@ def test_python_xx(testing_config):
 
 
 def test_indirect_numpy_dependency(testing_metadata):
-    testing_metadata.meta['requirements']['build'] = ['arrow-cpp 0.5.*']
+    testing_metadata.meta['requirements']['build'] = ['pandas']
     testing_metadata.config.channel_urls = ['conda-forge']
     api.build(testing_metadata, numpy=1.13)
 
