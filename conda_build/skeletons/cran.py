@@ -6,17 +6,12 @@ from __future__ import absolute_import, division, print_function
 
 from itertools import chain
 from os import makedirs, listdir, sep
-from os.path import (basename, commonprefix, dirname, exists, isabs,
+from os.path import (basename, commonprefix, exists, isabs,
                      isdir, isfile, join, normpath, realpath)
 import re
 import subprocess
 import sys
 import hashlib
-
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
 import requests
 import tarfile
@@ -296,6 +291,7 @@ def add_parser(repos):
         not change they either keep the old `build/number` or else increase it by one."""
     )
 
+
 def dict_from_cran_lines(lines):
     d = {}
     for line in lines:
@@ -435,7 +431,8 @@ def get_session(output_dir, verbose=True):
         import cachecontrol.caches
     except ImportError:
         if verbose:
-            print("Tip: install CacheControl and lockfile (conda packages) to cache the CRAN metadata")
+            print("Tip: install CacheControl and lockfile (conda packages) to cache the "
+                  "CRAN metadata")
     else:
         session = cachecontrol.CacheControl(session,
             cache=cachecontrol.caches.FileCache(join(output_dir,
@@ -463,7 +460,7 @@ def make_array(m, key, allow_empty=False):
     except:
         old_vals = []
     if old_vals or allow_empty:
-        result.append(key.split('/')[-1]+":")
+        result.append(key.split('/')[-1] + ":")
     for old_val in old_vals:
         result.append("{indent}{old_val}".format(indent=INDENT, old_val=old_val))
     return result
@@ -473,10 +470,10 @@ def existing_recipe_dir(output_dir, output_suffix, package):
     result = None
     if exists(join(output_dir, package)):
         result = normpath(join(output_dir, package))
-    elif exists(join(output_dir, package+output_suffix)):
-        result = normpath(join(output_dir, package+output_suffix))
-    elif exists(join(output_dir, 'r-'+package+output_suffix)):
-        result = normpath(join(output_dir, 'r-'+package+output_suffix))
+    elif exists(join(output_dir, package + output_suffix)):
+        result = normpath(join(output_dir, package + output_suffix))
+    elif exists(join(output_dir, 'r-' + package + output_suffix)):
+        result = normpath(join(output_dir, 'r-' + package + output_suffix))
     return result
 
 
@@ -526,8 +523,8 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
     if isabs(package):
         commp = commonprefix((package, output_dir))
         if commp != output_dir:
-            raise RuntimeError("package %s specified with abs path outside of output-dir %s" % (package,
-                                                                                                output_dir))
+            raise RuntimeError("package %s specified with abs path outside of output-dir %s" % (
+                package, output_dir))
         location = package
         existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
     elif 'github.com' in package:
@@ -553,7 +550,7 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
             location = git_url
             old_git_rev = m.get_value('source/git_rev', None)
 
-    new_location = join(output_dir, 'r-'+pkg_name+output_suffix)
+    new_location = join(output_dir, 'r-' + pkg_name + output_suffix)
     print(".. name: %s location: %s new_location: %s" % (pkg_name, location, new_location))
 
     return dict({'pkg-name': pkg_name,
@@ -724,7 +721,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             patches.append("   # List any patch files here\n")
             patches.append("   # - fix.patch")
         if add_maintainer:
-            new_maintainer = "{indent}{add_maintainer}".format(indent=INDENT,add_maintainer=add_maintainer)
+            new_maintainer = "{indent}{add_maintainer}".format(indent=INDENT,
+                                                               add_maintainer=add_maintainer)
             if new_maintainer not in extra_recipe_maintainers:
                 if not len(extra_recipe_maintainers):
                     # We hit this case when there is no existing recipe.
@@ -748,7 +746,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             sha256 = hashlib.sha256()
             print("Downloading source from {}".format(package_url))
             # We may need to inspect the file later to determine which compilers are needed.
-            cached_path, _ = source.download_to_cache(config.src_cache, '', dict({'url': package_url}))
+            cached_path, _ = source.download_to_cache(config.src_cache, '',
+                                                      dict({'url': package_url}))
             sha256.update(open(cached_path, 'rb').read())
             d['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
 
@@ -836,7 +835,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 # Fortran builds use CC to perform the link (they do not call the linker directly).
                 need_c_compiler = True if need_f_compiler else \
                     any([f.name.lower().endswith('.c') for f in tf])
-                need_cxx_compiler = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++')) for f in tf])
+                need_cxx_compiler = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
+                                         for f in tf])
                 need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
                 need_make = True if (need_autotools or
                                      need_f_compiler or
@@ -845,27 +845,34 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     any([f.name.lower().endswith(('/makefile', '/makevars'))
                         for f in tf])
         else:
-            need_c_compiler = need_cxx_compiler = need_f_compiler = need_autotools = need_make = False
+            need_c = need_cxx = need_f = need_autotools = need_make = False
         for dep_type in ['build', 'run']:
 
             deps = []
             # Put non-R dependencies first.
             if dep_type == 'build':
-                if need_c_compiler:
-                    deps.append("{indent}{{{{ compiler('c') }}}}        # [not win]".format(indent=INDENT))
-                if need_cxx_compiler:
-                    deps.append("{indent}{{{{ compiler('cxx') }}}}      # [not win]".format(indent=INDENT))
-                if need_f_compiler:
-                    deps.append("{indent}{{{{ compiler('fortran') }}}}  # [not win]".format(indent=INDENT))
-                if need_c_compiler or need_cxx_compiler or need_f_compiler:
-                    deps.append("{indent}{{{{native}}}}toolchain        # [win]".format(indent=INDENT))
+                if need_c:
+                    deps.append("{indent}{{{{ compiler('c') }}}}        # [not win]".format(
+                        indent=INDENT))
+                if need_cxx:
+                    deps.append("{indent}{{{{ compiler('cxx') }}}}      # [not win]".format(
+                        indent=INDENT))
+                if need_f:
+                    deps.append("{indent}{{{{ compiler('fortran') }}}}  # [not win]".format(
+                        indent=INDENT))
+                if need_c or need_cxx or need_f:
+                    deps.append("{indent}{{{{native}}}}toolchain        # [win]".format(
+                        indent=INDENT))
                 if need_autotools or need_make or need_git:
-                    deps.append("{indent}{{{{posix}}}}filesystem        # [win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}filesystem        # [win]".format(
+                        indent=INDENT))
                 if need_git:
                     deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
                 if need_autotools:
-                    deps.append("{indent}{{{{posix}}}}sed               # [win]".format(indent=INDENT))
-                    deps.append("{indent}{{{{posix}}}}grep              # [win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}sed               # [win]".format(
+                        indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}grep              # [win]".format(
+                        indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}autoconf".format(indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}automake".format(indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
@@ -873,7 +880,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     deps.append("{indent}{{{{posix}}}}make".format(indent=INDENT))
             elif dep_type == 'run':
                 if need_c_compiler or need_cxx_compiler or need_f_compiler:
-                    deps.append("{indent}{{{{native}}}}gcc-libs         # [win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{native}}}}gcc-libs         # [win]".format(
+                        indent=INDENT))
 
             for name in sorted(dep_dict):
                 if name in R_BASE_PACKAGE_NAMES:
@@ -900,8 +908,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     if recursive:
                         lower_name = name.lower()
                         if lower_name not in package_dicts:
-                            inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, lower_name)
-                            assert lower_name == inputs_dict['pkg-name'], "name %s != inputs_dict['pkg-name'] %s" % (name,inputs_dict['pkg-name'])
+                            inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag,
+                                                                 lower_name)
+                            assert lower_name == inputs_dict['pkg-name'], \
+                                "name %s != inputs_dict['pkg-name'] %s" % (name,
+                                                                           inputs_dict['pkg-name'])
                             assert lower_name not in package_list
                             package_dicts.update({lower_name: {'inputs': inputs_dict}})
                             package_list.append(lower_name)
@@ -913,10 +924,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         dir_path = d['inputs']['new-location']
         if exists(dir_path) and not version_compare:
             if update_policy == 'error':
-                raise RuntimeError("directory already exists (and --update-policy is 'error'): %s" % dir_path)
+                raise RuntimeError("directory already exists "
+                                   "(and --update-policy is 'error'): %s" % dir_path)
             elif update_policy == 'overwrite':
                 rm_rf(dir_path)
-        elif update_policy == 'skip-up-to-date' and up_to_date(cran_metadata, d['inputs']['old-metadata']):
+        elif update_policy == 'skip-up-to-date' and up_to_date(cran_metadata,
+                                                               d['inputs']['old-metadata']):
             continue
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
             continue
@@ -967,7 +980,7 @@ def get_outdated(output_dir, cran_metadata, packages=()):
             print("Skipping %s, not found on CRAN" % recipe)
             continue
 
-        up_to_date = version_compare(join(output_dir, recipe),
+        version_compare(join(output_dir, recipe),
             cran_metadata[recipe_name]['Version'].replace('-', '_'))
 
         print("Updating %s" % recipe)
