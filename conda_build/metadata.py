@@ -1067,10 +1067,15 @@ class MetaData(object):
         if excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
             build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
+        requirements[build_section] = build_reqs
         # remove build section from hash when host is present
         if build_section == 'host' and requirements.get('build'):
-            del requirements['build']
-        requirements[build_section] = build_reqs
+            build_reqs = requirements.get('build', [])
+            excludes = self.config.variant.get('ignore_build_only_deps', [])
+            if excludes:
+                exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
+                build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
+            requirements['build'] = build_reqs
         composite['requirements'] = requirements
         if 'copy_test_source_files' in self.meta.get('extra', {}):
             composite['extra'] = HashableDict({'copy_test_source_files':

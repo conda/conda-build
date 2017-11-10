@@ -48,7 +48,8 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs, try_download)
+                                distribute_variants, expand_outputs, try_download,
+                                add_upstream_pins)
 import conda_build.os_utils.external as external
 from conda_build.metadata import MetaData
 from conda_build.post import (post_process, post_build,
@@ -930,6 +931,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         for env in ('build', 'host'):
             utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, env)
+
+        add_upstream_pins(m)
 
         if (m.config.host_subdir != m.config.build_subdir and
                 m.config.host_subdir != "noarch"):

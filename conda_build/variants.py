@@ -28,7 +28,8 @@ DEFAULT_VARIANTS = {
     'cpu_optimization_target': 'nocona',
     'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}},
     'ignore_version': [],
-    'extend_keys': ['pin_run_as_build', 'ignore_version'],
+    'ignore_build_only_deps': ['python'],
+    'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps'],
 }
 
 # map python version to default compiler on windows, to match upstream python

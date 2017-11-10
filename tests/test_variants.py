@@ -20,7 +20,7 @@ def test_later_spec_priority(single_version, no_numpy_version):
     combined_spec, extend_keys = variants.combine_specs(specs)
     assert len(combined_spec) == 2
     assert combined_spec["python"] == ["2.7.*"]
-    assert extend_keys == {'ignore_version', 'pin_run_as_build'}
+    assert extend_keys == {'ignore_version', 'pin_run_as_build', 'ignore_build_only_deps'}
 
     # keep keys that are not overwritten
     specs = OrderedDict()
