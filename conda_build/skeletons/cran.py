@@ -839,17 +839,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         need_git = is_github_url
         if cran_package.get("NeedsCompilation", 'no') == 'yes':
             with tarfile.open(cached_path) as tf:
-                need_f_compiler = any([f.name.lower().endswith(('.f', '.f90', '.f77')) for f in tf])
+                need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77')) for f in tf])
                 # Fortran builds use CC to perform the link (they do not call the linker directly).
-                need_c_compiler = True if need_f_compiler else \
+                need_c = True if need_f else \
                     any([f.name.lower().endswith('.c') for f in tf])
-                need_cxx_compiler = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
+                need_cxx = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
                                          for f in tf])
                 need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
-                need_make = True if (need_autotools or
-                                     need_f_compiler or
-                                     need_cxx_compiler or
-                                     need_c_compiler) else \
+                need_make = True if any(need_autotools, need_f, need_cxx, need_c) else \
                     any([f.name.lower().endswith(('/makefile', '/makevars'))
                         for f in tf])
         else:
@@ -887,7 +884,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if need_make:
                     deps.append("{indent}{{{{posix}}}}make".format(indent=INDENT))
             elif dep_type == 'run':
-                if need_c_compiler or need_cxx_compiler or need_f_compiler:
+                if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}gcc-libs         # [win]".format(
                         indent=INDENT))
 
