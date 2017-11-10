@@ -846,7 +846,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 need_cxx = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
                                          for f in tf])
                 need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
-                need_make = True if any(need_autotools, need_f, need_cxx, need_c) else \
+                need_make = True if any((need_autotools, need_f, need_cxx, need_c)) else \
                     any([f.name.lower().endswith(('/makefile', '/makevars'))
                         for f in tf])
         else:
