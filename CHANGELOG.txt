@@ -1,3 +1,31 @@
+2017-11-10 3.0.29:
+
+Enhancements:
+-------------
+
+* interpret ~= in pypi skeletons, map to compatible expressions  #2427
+* add arm and ppc architectures to conda convert  #2472, #2474
+* add indentation to index.json and hash_input.json for easier reading  #2476
+* check arch in index.json for platforms other than linux, mac, win  #2478
+* update cran skeletonizer for new compilers, add flags for updating, rather than replacing recipe.  #2481
+
+Bug fixes:
+----------
+
+* fix implicit pinning not taking effect in outputs, fix incorrect matching of hashed subpackages #2455
+* exclude python from build requirements for purposes of hash computation.  This was causing recipes that used python as a build tool to build too many similar packages.  #2455
+* Support GIT_* vars even when source folders are specified  #2477
+* silence warnings about ``.*`` being added to vc deps  #2483
+* fix non-finalized recipe being used for creating build env, resulting in too few variants in output  #2485
+
+Contributors:
+-------------
+
+* @mandeep
+* @mingwandroid
+* @msarahan
+* @stuarteberg
+
 2017-11-02 3.0.28:
 
 Enhancements:
