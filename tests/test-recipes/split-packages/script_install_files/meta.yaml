@@ -5,6 +5,10 @@ package:
 source:
   path: ../../test-package
 
+build:
+  # windows has a dumb error regarding cleanup of files with pip.  Just skip it.
+  skip: True  # [win and py27]
+
 requirements:
   run:
     - my_script_subpackage
