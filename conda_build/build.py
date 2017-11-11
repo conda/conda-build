@@ -52,7 +52,7 @@ from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse
                                 distribute_variants, expand_outputs, try_download,
                                 add_upstream_pins)
 import conda_build.os_utils.external as external
-from conda_build.metadata import MetaData
+from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
@@ -390,8 +390,7 @@ def write_link_json(m):
 def write_about_json(m):
     with open(join(m.config.info_dir, 'about.json'), 'w') as fo:
         d = {}
-        for key in ('home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',
-                    'license', 'summary', 'description', 'license_family'):
+        for key in FIELDS["about"]:
             value = m.get_value('about/%s' % key)
             if value:
                 d[key] = value
