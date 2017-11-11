@@ -651,6 +651,16 @@ def test_noarch_python_1(testing_config):
     assert 'package_metadata_version' in extra
 
 
+def test_noarch_python2_only(testing_config):
+    output = api.build(os.path.join(metadata_dir, "_noarch_python2"), config=testing_config)[0]
+    assert package_has_file(output, 'info/files') is not ''
+    extra = json.loads(package_has_file(output, 'info/link.json').decode())
+    assert 'noarch' in extra
+    assert 'entry_points' in extra['noarch']
+    assert 'type' in extra['noarch']
+    assert 'package_metadata_version' in extra
+
+
 def test_legacy_noarch_python(testing_config):
     output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"),
                        config=testing_config)[0]
