@@ -446,7 +446,8 @@ FIELDS = {
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
     'test': {'requires', 'commands', 'files', 'imports', 'source_files'},
-    'about': {'home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
+    'about': {'home', 'dev_url', 'doc_url', 'doc_source_url', # these are URLs
+              'license_url', 'recipe_url',  # these are more URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
               },
