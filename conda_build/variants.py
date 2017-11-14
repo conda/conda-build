@@ -412,7 +412,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
                 existing_value.update(v)
                 squished[k] = existing_value
             elif isinstance(v, list):
-                squished[k] = squished.get(k, set()) | {tuple(v)}
+                squished[k] = squished.get(k, set()) | set(v)
             else:
                 squished[k] = squished.get(k, []) + ensure_list(v)
                 if k not in all_zip_keys:
