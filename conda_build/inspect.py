@@ -26,19 +26,15 @@ from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_f
                                ensure_list)
 
 
-def which_package(path):
+def which_package(in_prefix_path, prefix):
     """
-    given the path (of a (presumably) conda installed file) iterate over
+    given the path of a conda installed file iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
-    path = abspath(path)
-    prefix = which_prefix(path)
-    if prefix is None:
-        raise RuntimeError("could not determine conda prefix from: %s" % path)
     for dist in linked(prefix):
         meta = is_linked(prefix, dist)
-        if any(abspath(join(prefix, f)) == path for f in meta['files']):
+        if any(f == in_prefix_path for f in meta['files']):
             yield dist
 
 
@@ -233,7 +229,9 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 path = replace_path(binary, path, prefix) if path not in {'',
                                                                             'not found'} else path
                 if path.startswith(prefix):
-                    deps = list(which_package(path))
+                    prefix2 = which_prefix(path)
+                    in_prefix_path = re.sub('^' + prefix + '/', '', path)
+                    deps = list(which_package(in_prefix_path, prefix))
                     if len(deps) > 1:
                         deps_str = [str(dep) for dep in deps]
                         get_logger(__name__).warn("Warning: %s comes from multiple "
