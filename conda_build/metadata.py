@@ -1281,7 +1281,7 @@ class MetaData(object):
         if on_win:
             files = [f.replace("/", "\\") for f in files]
 
-        return expand_globs(files, self.config.build_prefix)
+        return expand_globs(files, self.config.host_prefix)
 
     def binary_relocation(self):
         ret = self.get_value('build/binary_relocation', True)
