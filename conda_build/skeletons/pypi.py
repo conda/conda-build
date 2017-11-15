@@ -155,11 +155,20 @@ diff core.py core.py
 INDENT = '\n    - '
 
 
+def _ssl_no_verify():
+    """Gets whether the SSL_NO_VERIFY environment variable is set to 1 or True.
+
+    This provides a workaround for users in some corporate environments where
+    MITM style proxies make it difficult to fetch data over HTTPS.
+    """
+    return os.environ.get('SSL_NO_VERIFY', '').strip().lower() in ('1', 'true')
+
+
 def package_exists(package_name, pypi_url=None):
     if not pypi_url:
         pypi_url = 'https://pypi.io/pypi'
     # request code will be 404 if the package does not exist.  Requires exact match.
-    r = requests.get(pypi_url + '/' + package_name)
+    r = requests.get(pypi_url + '/' + package_name, verify=not _ssl_no_verify())
     return r.status_code != 404
 
 
@@ -215,7 +224,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         else:
             sort_by_version = lambda l: sorted(l, key=parse_version)
 
-            pypi_resp = requests.get(package_pypi_url)
+            pypi_resp = requests.get(package_pypi_url, verify=not _ssl_no_verify())
 
             if pypi_resp.status_code != 200:
                 sys.exit("Request to fetch %s failed with status: %d"
