@@ -119,13 +119,15 @@ def hoist_single_extracted_folder(nested_folder):
     know exactly what that folder is called."""
     flist = os.listdir(nested_folder)
     parent = os.path.dirname(nested_folder)
+    nested_folders_to_remove = [nested_folder]
     for thing in flist:
         if not os.path.isdir(os.path.join(parent, thing)):
             shutil.move(os.path.join(nested_folder, thing), os.path.join(parent, thing))
         else:
             copy_into(os.path.join(nested_folder, thing), os.path.join(parent, thing))
-            nested_folder = os.path.join(nested_folder, thing)
-    rm_rf(nested_folder)
+            nested_folders_to_remove.append(os.path.join(nested_folder, thing))
+    for folder in nested_folders_to_remove:
+        rm_rf(folder)
 
 
 def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False,

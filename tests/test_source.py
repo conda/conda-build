@@ -109,7 +109,7 @@ def test_hoist_same_name(testing_workdir):
     os.makedirs(testdir)
     with open(os.path.join(testdir, 'somefile'), 'w') as f:
         f.write('weeeee')
-    source.hoist_single_extracted_folder(outer_dir)
+    source.hoist_single_extracted_folder(testdir)
     assert os.path.isfile(os.path.join(outer_dir, 'somefile'))
     assert not os.path.isdir(testdir)
 
