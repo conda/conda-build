@@ -464,6 +464,14 @@ def check_bad_chrs(s, field):
             sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
 
 
+def get_package_version_pin(build_reqs, name):
+    version = ""
+    for spec in build_reqs:
+        if spec.split()[0] == name and len(spec.split()) > 1:
+            version = spec.split()[1]
+    return version
+
+
 def build_string_from_metadata(metadata):
     if metadata.meta.get('build', {}).get('string'):
         build_str = metadata.get_value('build/string')
@@ -471,6 +479,7 @@ def build_string_from_metadata(metadata):
         res = []
         build_or_host = 'host' if metadata.is_cross else 'build'
         build_pkg_names = [ms.name for ms in metadata.ms_depends(build_or_host)]
+        build_deps = metadata.meta.get('requirements', {}).get(build_or_host, [])
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
@@ -490,8 +499,9 @@ def build_string_from_metadata(metadata):
                             pkg_names.extend([_n.replace('-', '_')
                                               for _n in ensure_list(names) if '-' in _n])
                             for _n in pkg_names:
-                                _n = _n.replace('-', '_')
-                                variant_version = metadata.config.variant.get(_n, "")
+                                variant_version = (get_package_version_pin(build_deps, _n) or
+                                                   metadata.config.variant.get(_n.replace('-', '_'),
+                                                                               ''))
                                 if variant_version:
                                     break
                             res.append(''.join([s] + variant_version.split('.')[:places]))
