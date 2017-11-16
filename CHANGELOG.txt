@@ -1,3 +1,21 @@
+2017-11-15 3.0.30:
+
+Bug fixes:
+----------
+
+* write all 'about' metadata fields out, not just select few  #2488
+* fix lists getting nested during merging of configs, leading to TypeErrors  #2494
+* make always_include_files act on host_prefix, not build_prefix  #2497
+* warn users when script_env passes env vars through #2502
+* fix build string pyXY being just pyX when input didn't have full python version  #2504
+
+Contributors:
+-------------
+
+* @jakirkham
+* @msarahan
+
+
 2017-11-10 3.0.29:
 
 Enhancements:
