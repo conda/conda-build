@@ -1614,7 +1614,8 @@ class MetaData(object):
 
         # make sure that subpackages do not duplicate tests from top-level recipe
         test = output_metadata.meta.get('test', {})
-        if output_dict.get('name') != self.name():
+        if output_dict.get('name') != self.name() or not (output_dict.get('script') or
+                                                          output_dict.get('files')):
             if 'commands' in test:
                 del test['commands']
             if 'imports' in test:
@@ -1636,7 +1637,7 @@ class MetaData(object):
         if output.get('target'):
             self.config.target_subdir = output['target']
         output_metadata = self.copy()
-        if self.name() != output.get('name'):
+        if self.name() != output.get('name') or (output.get('script') or output.get('files')):
             self.reconcile_metadata_with_output_dict(output_metadata, output)
 
         if 'type' in output and output['type'] != 'conda':
@@ -1675,7 +1676,7 @@ class MetaData(object):
             output['requirements'] = requirements
         output_metadata.meta['extra'] = extra
         output_metadata.final = False
-        if self.name() != output_metadata.name():
+        if self.name() != output_metadata.name() or (output.get('script') or output.get('files')):
             extra = self.meta.get('extra', {})
             extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
                                       'version': self.version()}
