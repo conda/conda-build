@@ -4,6 +4,8 @@ from functools import partial
 import json
 import os
 import re
+import time
+import datetime
 
 import jinja2
 
@@ -413,6 +415,8 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
+        time=time,
+        datetime=datetime,
 
         environ=environ)
     return ctx
