@@ -1,8 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
+import re
 import sys
-from subprocess import Popen, check_output, PIPE
+from conda.utils import memoized
+from subprocess import Popen, check_output, PIPE, STDOUT
 from os.path import islink, isfile
+from conda_build.os_utils.pyldd import inspect_rpaths
 from itertools import islice
 
 NO_EXT = (
@@ -157,7 +160,11 @@ def otool(path, cb_filter=is_dylib_info):
     Any key values that can be converted to integers are converted
     to integers, the rest are strings.
     """
-    lines = check_output(['otool', '-l', path]).decode('utf-8').splitlines()
+    lines = check_output(['otool', '-l', path], stderr=STDOUT).decode('utf-8')
+    # llvm-objdump returns 0 for some things that are anything but successful completion.
+    if (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*', lines, re.MULTILINE)):
+        raise CalledProcessError
+    lines = lines.splitlines()
     return _get_matching_load_commands(lines, cb_filter)
 
 
@@ -178,8 +185,12 @@ def get_id(path):
 
 def get_rpaths(path):
     """Return a list of the dylib rpaths"""
-    rpaths = otool(path, is_rpath)
-    return [rpath['path'] for rpath in rpaths]
+    # rpaths = otool(path, is_rpath)
+    # res_otool = [rpath['path'] for rpath in rpaths]
+    res_pyldd = inspect_rpaths(path, resolve_dirnames=False, use_os_varnames=True)
+    # if set(res_otool) != set(res_pyldd):
+    #     print("disagreement about get_rpaths {} vs {}".format(set(res_otool), set(res_pyldd)))
+    return res_pyldd
 
 
 def add_rpath(path, rpath, verbose=False):
