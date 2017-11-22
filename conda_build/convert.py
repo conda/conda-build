@@ -253,7 +253,8 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         try:
             for lib_file in glob.iglob('{}/python*/**' .format(lib_directory)):
                 if 'site-packages' in lib_file:
-                    new_site_packages_path = os.path.join(temp_dir, 'lib/site-packages')
+                    new_site_packages_path = os.path.join(
+                        temp_dir, os.path.join('lib', 'site-packages'))
                     os.renames(lib_file, new_site_packages_path)
                 else:
                     if retrieve_python_version(lib_file) is not None:
