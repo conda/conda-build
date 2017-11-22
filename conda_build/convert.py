@@ -367,7 +367,7 @@ def update_paths_file(temp_dir, target_platform):
                     paths['paths'].remove(path)
 
         with open(paths_file, 'w') as file:
-            json.dump(paths, file)
+            json.dump(paths, file, indent=2)
 
 
 def retrieve_executable_name(executable):
