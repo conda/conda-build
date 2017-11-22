@@ -526,7 +526,6 @@ def update_files_file(temp_dir, verbose):
                 package_file_path = os.path.join(
                     dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
                 if not package_file_path.startswith('info'):
-                    # files.write(package_file_path + '\n')
                     file_paths.append(package_file_path)
 
                     if verbose:
