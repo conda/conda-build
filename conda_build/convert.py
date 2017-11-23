@@ -11,6 +11,8 @@ Tools for converting conda packages
 import glob
 import json
 import hashlib
+import ntpath
+import posixpath
 import os
 import re
 import shutil
@@ -253,7 +255,8 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         try:
             for lib_file in glob.iglob('{}/python*/**' .format(lib_directory)):
                 if 'site-packages' in lib_file:
-                    new_site_packages_path = os.path.join(temp_dir, 'lib/site-packages')
+                    new_site_packages_path = os.path.join(
+                        temp_dir, os.path.join('lib', 'site-packages'))
                     os.renames(lib_file, new_site_packages_path)
                 else:
                     if retrieve_python_version(lib_file) is not None:
@@ -276,7 +279,7 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
                 new_lib_file = re.sub('Lib', os.path.join('lib', python_version), lib_file)
                 os.renames(lib_file, new_lib_file)
 
-            os.rename(os.path.join(temp_dir, 'Lib'), os.path.join(temp_dir, 'lib'))
+            os.rename(ntpath.join(temp_dir, 'Lib'), posixpath.join(temp_dir, 'lib'))
 
         except OSError:
             pass
@@ -366,7 +369,7 @@ def update_paths_file(temp_dir, target_platform):
                     paths['paths'].remove(path)
 
         with open(paths_file, 'w') as file:
-            json.dump(paths, file)
+            json.dump(paths, file, indent=2)
 
 
 def retrieve_executable_name(executable):
@@ -525,7 +528,6 @@ def update_files_file(temp_dir, verbose):
                 package_file_path = os.path.join(
                     dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
                 if not package_file_path.startswith('info'):
-                    # files.write(package_file_path + '\n')
                     file_paths.append(package_file_path)
 
                     if verbose:
