@@ -11,6 +11,8 @@ Tools for converting conda packages
 import glob
 import json
 import hashlib
+import ntpath
+import posixpath
 import os
 import re
 import shutil
@@ -277,7 +279,7 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
                 new_lib_file = re.sub('Lib', os.path.join('lib', python_version), lib_file)
                 os.renames(lib_file, new_lib_file)
 
-            os.rename(os.path.join(temp_dir, 'Lib'), os.path.join(temp_dir, 'lib'))
+            os.rename(ntpath.join(temp_dir, 'Lib'), posixpath.join(temp_dir, 'lib'))
 
         except OSError:
             pass
