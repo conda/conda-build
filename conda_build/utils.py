@@ -1270,13 +1270,14 @@ def ensure_valid_spec(spec, warn=False):
 
 
 def insert_variant_versions(requirements_dict, variant, env):
+    build_deps = requirements_dict.get('build', []) + requirements_dict.get('host', [])
     reqs = requirements_dict.get(env, [])
     for key, val in variant.items():
         regex = re.compile(r'^(%s)(?:\s*$)' % key.replace('_', '[-_]'))
         matches = [regex.match(pkg) for pkg in reqs]
         if any(matches):
             for i, x in enumerate(matches):
-                if x:
+                if x and (env in ('build', 'host') or x.group(1) in build_deps):
                     del reqs[i]
                     reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), val))))
 
