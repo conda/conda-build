@@ -213,7 +213,8 @@ def build(m, bld_bat, config):
             # more debuggable with echo on
             fo.write('@echo on\n')
             for key, value in env.items():
-                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
+                if value:
+                    fo.write('set "{key}={value}"\n'.format(key=key, value=value))
             fo.write(msvc_env_cmd(bits=bits, config=config,
                                   override=m.get_value('build/msvc_compiler', None)))
             # Reset echo on, because MSVC scripts might have turned it off
