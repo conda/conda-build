@@ -245,7 +245,9 @@ def test_get_used_loop_vars(testing_config):
     # conda_build_config.yaml has 4 loop variables defined, but only 3 are used.
     #   python and zlib are both implicitly used (depend on name matching), while
     #   some_package is explicitly used as a jinja2 variable
-    assert ms[0][0].get_used_loop_vars() == {'python', 'some_package', 'zlib'}
+    assert ms[0][0].get_used_loop_vars() == {'python', 'some_package'}
+    # these are all used vars - including those with only one value (and thus not loop vars)
+    assert ms[0][0].get_used_vars() == {'python', 'some_package', 'zlib'}
 
 
 def test_reprovisioning_source(testing_config):

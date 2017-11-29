@@ -1815,9 +1815,12 @@ class MetaData(object):
     def get_loop_vars(self):
         _variants = (self.config.input_variants if hasattr(self.config, 'input_variants') else
                     self.config.variants)
-        return variants.get_loop_vars(_variants)
+        return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self):
+        return {var for var in self.get_used_vars() if var in self.get_loop_vars()}
+
+    def get_used_vars(self):
         used_variables = set()
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
@@ -1828,7 +1831,7 @@ class MetaData(object):
                     self.get_value('requirements/run') +
                     self.get_value('requirements/host'))
             recipe_text = '- ' + "\n- ".join(requirements)
-        for v in self.get_loop_vars():
+        for v in self.config.variant:
             variant_regex = r"(\s*\{\{\s*%s\s*(?:.*?)?\}\})" % v
             requirement_regex = r"(\-\s+%s(?:\s+|$))" % v
             all_res = '|'.join((variant_regex, requirement_regex))
