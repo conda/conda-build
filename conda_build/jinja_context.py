@@ -27,38 +27,56 @@ class UndefinedNeverFail(jinja2.Undefined):
     {{ MY_UNDEFINED_VAR|int }}. This can mask lots of errors in jinja templates, so it
     should only be used for a first-pass parse, when you plan on running a 'strict'
     second pass later.
+
+    Note:
+        When using this class, any usage of an undefined variable in a jinja template is recorded
+        in the (global) all_undefined_names class member.  Therefore, after jinja rendering,
+        you can detect which undefined names were used by inspecting that list.
+        Be sure to clear the all_undefined_names list before calling template.render().
     """
     all_undefined_names = []
 
     def __init__(self, hint=None, obj=jinja2.runtime.missing, name=None,
                  exc=jinja2.exceptions.UndefinedError):
-        UndefinedNeverFail.all_undefined_names.append(name)
         jinja2.Undefined.__init__(self, hint, obj, name, exc)
 
+    # Using any of these methods on an Undefined variable
+    # results in another Undefined variable.
     __add__ = __radd__ = __mul__ = __rmul__ = __div__ = __rdiv__ = \
     __truediv__ = __rtruediv__ = __floordiv__ = __rfloordiv__ = \
     __mod__ = __rmod__ = __pos__ = __neg__ = __call__ = \
     __getitem__ = __lt__ = __le__ = __gt__ = __ge__ = \
     __complex__ = __pow__ = __rpow__ = \
-        lambda self, *args, **kwargs: UndefinedNeverFail(hint=self._undefined_hint,
-                                                         obj=self._undefined_obj,
-                                                         name=self._undefined_name,
-                                                         exc=self._undefined_exception)
+        lambda self, *args, **kwargs: self._return_undefined(self._undefined_name)
 
-    __str__ = __repr__ = \
-        lambda *args, **kwargs: u''
-
-    __int__ = lambda _: 0
-    __float__ = lambda _: 0.0
-
+    # Accessing an attribute of an Undefined variable
+    # results in another Undefined variable.
     def __getattr__(self, k):
         try:
             return object.__getattr__(self, k)
         except AttributeError:
-            return UndefinedNeverFail(hint=self._undefined_hint,
-                                      obj=self._undefined_obj,
-                                      name=self._undefined_name + '.' + k,
-                                      exc=self._undefined_exception)
+            self._return_undefined(self._undefined_name + '.' + k)
+
+    # Unlike the methods above, Python requires that these
+    # few methods must always return the correct type
+    __str__ = __repr__ = lambda self: self._return_value(str())
+    __unicode__ = lambda self: self._return_value(u'')
+    __int__ = lambda self: self._return_value(0)
+    __float__ = lambda self: self._return_value(0.0)
+    __nonzero__ = lambda self: self._return_value(False)
+
+    def _return_undefined(self, result_name):
+        # Record that this undefined variable was actually used.
+        UndefinedNeverFail.all_undefined_names.append(self._undefined_name)
+        return UndefinedNeverFail(hint=self._undefined_hint,
+                                  obj=self._undefined_obj,
+                                  name=result_name,
+                                  exc=self._undefined_exception)
+
+    def _return_value(self, value=None):
+        # Record that this undefined variable was actually used.
+        UndefinedNeverFail.all_undefined_names.append(self._undefined_name)
+        return value
 
 
 class FilteredLoader(jinja2.BaseLoader):
