@@ -1,3 +1,32 @@
+2017-11-30 3.0.31:
+
+Enhancements:
+-------------
+
+* expose time and datetime modules in jinja2 context, for use in meta.yaml  #2513
+* jinja: permit recipes to check for existence of a variable without erroring  #2529
+* add method for getting all variant values used by a recipe, not just those variants with more than one value.  #2531
+
+Bug fixes:
+----------
+
+* allow SSL_NO_PROXY env var to disable SSL checking on proxied connections  #2505
+* Fix source hoisting issues (incorrectly flattening directory structure of extracted archives)  #2507
+* Fix build env for output getting lost when output name == top-level name  #2511
+* add global pin_run_as_build for R (x.x.x) to keep legacy R pinning behavior  #2518
+* Fix path conversion issues going from windows to unix  #2522
+* only insert variant versions when testing runtime availability for packages that are also present in build (not just run)  #2527
+
+Contributors:
+-------------
+
+* @anton-malakhov
+* @bheklilr
+* @mandeep
+* @msarahan
+* @stuarteberg
+
+
 2017-11-15 3.0.30:
 
 Bug fixes:
