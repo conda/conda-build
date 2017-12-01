@@ -119,7 +119,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'checksummer': hashlib.sha1,
                          'checksummer_name': "sha1",
                          'macros': {}},
-            'centos6': {'dirname': 'centos6',
+            'centos6':  {'dirname': 'centos6',
                          'short_name': 'cos6',
                          'base_url': 'http://mirror.centos.org/centos/6.9/os/{base_architecture}/CentOS/',  # noqa
                          'sbase_url': 'http://vault.centos.org/6.9/os/Source/SPackages/',
@@ -128,6 +128,22 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'host_subdir': 'linux-{bits}',
                          'fname_architecture': '{architecture}',
                          'rpm_filename_platform': 'el6.{architecture}',
+                         'checksummer': hashlib.sha256,
+                         'checksummer_name': "sha256",
+                         # Some macros are defined in /etc/rpm/macros.* but I cannot find where
+                         # these ones are defined. Also, rpm --eval "%{gdk_pixbuf_base_version}"
+                         # gives nothing nor does rpm --showrc | grep gdk
+                         'macros': {'pyver': '2.6.6',
+                                    'gdk_pixbuf_base_version': '2.24.1'}},
+            'centos7':  {'dirname': 'centos7',
+                         'short_name': 'cos7',
+                         'base_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
+                         'sbase_url': 'http://vault.centos.org/7.4.1708/os/Source/SPackages/',
+                         'repomd_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/repodata/repomd.xml',  # noqa
+                         'host_machine': '{gnu_architecture}-conda_cos7-linux-gnu',
+                         'host_subdir': 'linux-ppc64le',
+                         'fname_architecture': '{architecture}',
+                         'rpm_filename_platform': 'el7.{architecture}',
                          'checksummer': hashlib.sha256,
                          'checksummer_name': "sha256",
                          # Some macros are defined in /etc/rpm/macros.* but I cannot find where
@@ -593,12 +609,21 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
     cdt_name = distro
     bits = '32' if architecture in ('armv6', 'armv7a', 'i686', 'i386') else '64'
     base_architectures = dict({'i686': 'i386'})
+    # gnu_architectures are those recognized by the canonical config.sub / config.guess
+    # and crosstool-ng. They are returned from ${CC} -dumpmachine and are a part of the
+    # sysroot.
+    gnu_architectures = dict({'ppc64le': 'powerpc64le'})
     try:
         base_architecture = base_architectures[architecture]
     except:
         base_architecture = architecture
+    try:
+        gnu_architecture = gnu_architectures[architecture]
+    except:
+        gnu_architecture = architecture
     architecture_bits = dict({'architecture': architecture,
                               'base_architecture': base_architecture,
+                              'gnu_architecture': gnu_architecture,
                               'bits': bits})
     cdt = dict()
     for k, v in iteritems(CDTs[cdt_name]):

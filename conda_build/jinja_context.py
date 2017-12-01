@@ -404,7 +404,11 @@ def cdt(package_name, config, permit_undefined_jinja=False):
 
     cdt_name = 'cos6'
     arch = config.host_arch or config.arch
-    cdt_arch = 'x86_64' if arch == '64' else 'i686'
+    if arch == 'ppc64le':
+        cdt_name = 'cos7'
+        cdt_arch = arch
+    else:
+        cdt_arch = 'x86_64' if arch == '64' else 'i686'
     if config.variant:
         cdt_name = config.variant.get('cdt_name', cdt_name)
         cdt_arch = config.variant.get('cdt_arch', cdt_arch)
