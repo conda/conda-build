@@ -18,12 +18,19 @@ import tempfile
 from .conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
                               get_index, which_prefix)
 from .conda_interface import display_actions, install_actions
+from .conda_interface import memoized
 
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
                                ensure_list)
+
+
+@memoized
+def dist_files(prefix, dist):
+    meta = is_linked(prefix, dist)
+    return set(meta['files'])
 
 
 def which_package(in_prefix_path, prefix):
@@ -33,8 +40,7 @@ def which_package(in_prefix_path, prefix):
     only one package.
     """
     for dist in linked(prefix):
-        meta = is_linked(prefix, dist)
-        if any(f == in_prefix_path for f in meta['files']):
+        if in_prefix_path in dist_files(prefix, dist):
             yield dist
 
 
