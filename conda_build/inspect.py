@@ -16,7 +16,7 @@ import sys
 import tempfile
 
 from .conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
-                              get_index, which_prefix)
+                              get_index)
 from .conda_interface import display_actions, install_actions
 from .conda_interface import memoized
 
@@ -235,7 +235,6 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
                 path = replace_path(binary, path, prefix) if path not in {'',
                                                                             'not found'} else path
                 if path.startswith(prefix):
-                    prefix2 = which_prefix(path)
                     in_prefix_path = re.sub('^' + prefix + '/', '', path)
                     deps = list(which_package(in_prefix_path, prefix))
                     if len(deps) > 1:
