@@ -12,9 +12,9 @@ published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code
 @pytest.mark.serial
 def test_skeleton_pypi(testing_workdir):
     """published in docs at http://conda.pydata.org/docs/build_tutorials/pkgs.html"""
-    cmd = 'conda skeleton pypi pyinstrument'
+    cmd = 'conda skeleton pypi click'
     check_call_env(cmd.split())
-    cmd = 'conda build pyinstrument'
+    cmd = 'conda build click'
     check_call_env(cmd.split())
 
 
