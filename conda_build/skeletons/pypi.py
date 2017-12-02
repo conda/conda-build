@@ -173,7 +173,7 @@ def package_exists(package_name, pypi_url=None):
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
-                all_urls=False, pypi_url='https://pypi.io/pypi/', noprompt=False,
+                all_urls=False, pypi_url='https://pypi.io/pypi/', noprompt=True,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
                 extra_specs=[],
@@ -415,11 +415,11 @@ def add_parser(repos):
         help="URL to use for PyPI (default: %(default)s).",
     )
     pypi.add_argument(
-        "--no-prompt",
-        action="store_true",
-        default=False,
+        "--prompt",
+        action="store_false",
+        default=True,
         dest="noprompt",
-        help="""Don't prompt the user on ambiguous choices.  Instead, make the
+        help="""Prompt the user on ambiguous choices.  Default is to make the
         best possible choice and continue."""
     )
     pypi.add_argument(
