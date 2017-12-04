@@ -9,9 +9,16 @@ package:
 
 outputs:
   - name: a
-    run_exports:
-      - {{ pin_subpackage('b', exact=True) }}
+    build:
+      run_exports:
+        - {{ pin_subpackage('b', exact=True) }}
+    requirements:
+      build:
+        # compiler requirement is to force this package to have a hash
+        - {{ compiler('c') }}
   - name: b
     requirements:
       build:
         - {{ pin_subpackage('a', exact=True) }}
+        # compiler requirement is to force this package to have a hash
+        - {{ compiler('c') }}

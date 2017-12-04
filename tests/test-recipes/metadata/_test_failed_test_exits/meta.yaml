@@ -3,7 +3,5 @@ package:
     version: 1.0
 
 test:
-    requires:
-        - python
     commands:
-        - python -V
+        - exit 1

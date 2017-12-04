@@ -16,15 +16,15 @@ from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import md5_file
 from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
-from .conda_interface import specs_from_url
 from .conda_interface import envs_dirs
 from .conda_interface import string_types
+from .conda_interface import memoized
 
 from conda_build import exceptions, utils, variants
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
-                               HashableDict, trim_empty_keys, filter_files, insert_variant_versions)
+                               HashableDict, trim_empty_keys, insert_variant_versions)
 from conda_build.license_family import ensure_valid_license_family
 
 try:
@@ -693,12 +693,25 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
     return output_d
 
 
-def _expand_reqs(reqs_entry):
-    if not hasattr(reqs_entry, 'keys'):
-        original = ensure_list(reqs_entry)[:]
-        reqs_entry = {'build': original,
-                        'run': original}
-    return reqs_entry
+def _filter_recipe_text(text, extract_pattern=None):
+    if extract_pattern:
+        match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
+        text = match.group(1) if match else ""
+    return text
+
+
+@memoized
+def read_meta_file(meta_path):
+    with open(meta_path, 'rb') as f:
+        recipe_text = UnicodeDammit(f.read()).unicode_markup
+    if PY3 and hasattr(recipe_text, 'decode'):
+        recipe_text = recipe_text.decode()
+    return recipe_text
+
+
+def _output_filter_pattern(output_name):
+    return r'(^\s*\-\sname:\s+{}\n.*?)(^test:|^extra:|^about:|\Z|\s*\-\sname:)'.format(
+        output_name)
 
 
 class MetaData(object):
@@ -787,11 +800,6 @@ class MetaData(object):
             log.warn("using unsupported internal conda-build function `parse_again`.  Please use "
                      "conda_build.api.render instead.")
 
-        if isfile(self.requirements_path) and not self.get_value('requirements/run'):
-            self.meta.setdefault('requirements', {})
-            run_requirements = specs_from_url(self.requirements_path)
-            self.meta['requirements']['run'] = run_requirements
-
         os.environ["CONDA_BUILD_STATE"] = "RENDER"
         append_sections_file = None
         clobber_sections_file = None
@@ -803,12 +811,6 @@ class MetaData(object):
                                                      bypass_env_check=bypass_env_check),
                                   config=self.config,
                                   path=self.meta_path)
-
-                if (isfile(self.requirements_path) and
-                        not self.meta.get('requirements', {}).get('run', [])):
-                    self.meta.setdefault('requirements', {})
-                    run_requirements = specs_from_url(self.requirements_path)
-                    self.meta['requirements']['run'] = run_requirements
 
                 append_sections_file = os.path.join(self.path, 'recipe_append.yaml')
                 clobber_sections_file = os.path.join(self.path, 'recipe_clobber.yaml')
@@ -844,7 +846,6 @@ class MetaData(object):
                 raise ValueError("Dictionaries are not supported as values in requirements sections"
                                  ".  Note that pip requirements as used in conda-env "
                                  "environment.yml files are not supported by conda-build.")
-        self.append_requirements()
 
     def append_requirements(self):
         """For dynamic determination of build or run reqs, based on configuration"""
@@ -1025,7 +1026,7 @@ class MetaData(object):
             name_ver_list.extend([('r', self.config.variant['r_base']),
                                   ('r-base', self.config.variant['r_base']),
                                   ])
-        for spec in self.get_value('requirements/' + typ, []):
+        for spec in ensure_list(self.get_value('requirements/' + typ, [])):
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
@@ -1057,107 +1058,60 @@ class MetaData(object):
         return res
 
     def get_hash_contents(self):
-        sections = ['requirements', 'build']
-        # make a copy of values, so that no sorting occurs in place
-        composite = HashableDict({section: copy.copy(self.get_section(section))
-                                  for section in sections})
+        """
+        # A hash will be added if all of these are true for any dependency:
+        #
+        # 1. package is an explicit dependency in build, host, or run deps
+        # 2. package has a matching entry in conda_build_config.yaml which is a pin to a specific
+        #    version, not a lower bound
+        # 3. that package is not ignored by ignore_version
+        #
+        # The hash is computed based on the pinning value, NOT the build
+        #    dependency build string. This means hashes won't change as often,
+        #    but it also means that if run_exports is overly permissive,
+        #    software may break more often.
+        #
+        # A hash will also ALWAYS be added when a compiler package is a build
+        #    or host dependency. Reasoning for that is that the compiler
+        #    package represents compiler flags and other things that can and do
+        #    dramatically change compatibility. It is much more risky to drop
+        #    this info (by dropping the hash) than it is for other software.
 
-        if self.get_section('source'):
-            src = self.get_section('source')
-            if hasattr(src, 'keys'):
-                composite['source'] = HashableDict(src.copy())
-            else:
-                composite['source'] = [HashableDict(s.copy()) for s in src]
+        # used variables - anything with a value in conda_build_config.yaml that applies to this
+        #    recipe.  Includes compiler if compiler jinja2 function is used.
+        """
+        dependencies = self.get_used_vars()
 
-        # filter build requirements for ones that should not be in the hash
-        requirements = composite.get('requirements', {})
-        build_section = 'host' if self.is_cross else 'build'
-        build_reqs = requirements.get(build_section, [])
-        excludes = self.config.variant.get('ignore_version', [])
-        if excludes:
-            exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
-            build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
-        requirements[build_section] = build_reqs
-        # remove build section from hash when host is present
-        if build_section == 'host' and requirements.get('build'):
-            build_reqs = requirements.get('build', [])
-            excludes = self.config.variant.get('ignore_build_only_deps', [])
-            if excludes:
-                exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc) for exc in excludes))
-                build_reqs = [req for req in build_reqs if not exclude_pattern.match(req)]
-            requirements['build'] = build_reqs
-        composite['requirements'] = requirements
-        if 'copy_test_source_files' in self.meta.get('extra', {}):
-            composite['extra'] = HashableDict({'copy_test_source_files':
-                            str(self.meta['extra']['copy_test_source_files']).lower() == 'true'})
+        # filter out ignored versions
+        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'numpy']
+        build_string_excludes.extend(ensure_list(self.config.variant.get('ignore_version', [])))
+        # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
+        if build_string_excludes:
+            exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
+                                                  for exc in build_string_excludes))
+            dependencies = [req for req in dependencies if not exclude_pattern.match(req)]
 
-        # remove the build number from the hash, so that we can bump it without changing the hash
-        if 'number' in composite['build']:
-            del composite['build']['number']
-        # remove the build string, so that hashes don't affect themselves
-        for key in ('string', 'noarch', 'noarch_python'):
-            if key in composite['build']:
-                del composite['build'][key]
-        if not composite['build']:
-            del composite['build']
-
-        for key in build_section, 'run':
-            if key in composite['requirements'] and not composite['requirements'].get(key):
-                del composite['requirements'][key]
-
-        file_paths = []
-        if self.config.include_recipe and self.include_recipe():
-            recorded_input_files = os.path.join(self.path, '..', 'hash_input_files')
-            if os.path.exists(recorded_input_files):
-                with open(recorded_input_files) as f:
-                    file_paths = f.read().splitlines()
-            else:
-                # is this a subpackage?  If so, add only the files relevant to exactly this
-                if 'parent_recipe' in self.meta.get('extra', {}):
-                    parent_recipe_path = self.meta['extra']['parent_recipe'].get('path')
-                    outputs = self.meta.get('outputs', [])
-                    this_output = [out for out in outputs if out.get('name') == self.name()][0]
-                    install_script = this_output.get('script')
-                    # # HACK: conda-build renames the actual test script from the recipe into
-                    # #    run_test.* in the package.  This makes the test discovery code work.
-                    # if test_script:
-                    #     ext = os.path.splitext(test_script)[1]
-                    #     test_script = 'run_test' + ext
-                    build_inputs = []
-                    for build_input in ('build.sh', 'bld.bat'):
-                        if os.path.isfile(os.path.join(parent_recipe_path, build_input)):
-                            build_inputs.append(build_input)
-                    inputs = [install_script] + build_inputs
-                    file_paths = [script for script in inputs if script]
-                    file_paths = filter_files(file_paths, parent_recipe_path)
-                else:
-                    files = utils.rec_glob(self.path, "*")
-                    file_paths = sorted([f.replace(self.path + os.sep, '') for f in files])
-                    # exclude meta.yaml because the json dictionary captures its content
-                    file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
-                                                                f.startswith('run_test') or
-                                                                f == 'conda_build_config.yaml')]
-                    file_paths = filter_files(file_paths, self.path)
-        trim_empty_keys(composite)
-        return composite, sorted(file_paths)
+        # retrieve values - this dictionary is what makes up the hash.
+        return {key: self.config.variant[key] for key in dependencies}
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
         build_string_from_metadata - there's just too much info.  Instead, we keep that as-is, to
         not be disruptive, but we add this extra hash, which is just a way of distinguishing files
-        on disk.  The actual determination of dependencies is done in the repository metadata."""
-        # save only the first HASH_LENGTH characters - should be more than enough, since these only
-        #    need to be unique within one version
-        # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-        recipe_input, file_paths = self.get_hash_contents()
-        hash_ = hashlib.sha1(json.dumps(recipe_input, sort_keys=True).encode())
-        recipe_path = (self.path or
-                        self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-        if recipe_path:
-            for recipe_file in file_paths:
-                with open(os.path.join(recipe_path, recipe_file), 'rb') as f:
-                    hash_.update(f.read())
-        hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+        on disk.  The actual determination of dependencies is done in the repository metadata.
+
+        This was revised in conda-build 3.1.0: hashing caused too many package
+            rebuilds. We reduce the scope to include only the pins added by conda_build_config.yaml,
+            and no longer hash files that contribute to the recipe.
+        """
+        hash_ = ''
+        hashing_dependencies = self.get_hash_contents()
+        if hashing_dependencies:
+            hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
+            # save only the first HASH_LENGTH characters - should be more than
+            #    enough, since these only need to be unique within one version
+            # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
+            hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
         return hash_
 
     def build_id(self):
@@ -1167,19 +1121,18 @@ class MetaData(object):
                                                  manual_build_string.string):
             out = build_string_from_metadata(self)
             if self.config.filename_hashing and self.final:
+                hash_ = self.hash_dependencies()
                 if not re.findall('h[0-9a-f]{%s}' % self.config.hash_length, out):
                     ret = out.rsplit('_', 1)
                     try:
                         int(ret[0])
-                        out = self.hash_dependencies() + '_' + str(ret[0])
+                        out = '_'.join((hash_, str(ret[0]))) if hash_ else str(ret[0])
                     except ValueError:
-                        out = ret[0] + self.hash_dependencies()
+                        out = ret[0] + hash_
                     if len(ret) > 1:
                         out = '_'.join([out] + ret[1:])
                 else:
-                    out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length,
-                                 self.hash_dependencies(),
-                                 out)
+                    out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, hash_, out)
         # user setting their own build string.  Don't modify it.
         else:
             out = self.get_value('build/string')
@@ -1321,7 +1274,7 @@ class MetaData(object):
         return self.get_value('build/skip', False)
 
     def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False,
-                      bypass_env_check=False):
+                      bypass_env_check=False, template_string=None):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1379,7 +1332,11 @@ class MetaData(object):
         #     keep selectors and all that.
 
         try:
-            template = env.get_or_select_template(filename)
+            if template_string:
+                template = env.from_string(template_string)
+            else:
+                template = env.get_or_select_template(filename)
+
             rendered = template.render(environment=env)
 
             if permit_undefined_jinja:
@@ -1486,21 +1443,32 @@ class MetaData(object):
         return None
 
     def get_recipe_text(self, extract_pattern=None):
-        recipe_text = ""
-        if self.meta_path:
-            with open(self.meta_path, 'rb') as f:
-                recipe_text = UnicodeDammit(f.read()).unicode_markup
-            if PY3 and hasattr(recipe_text, 'decode'):
-                recipe_text = recipe_text.decode()
-            if extract_pattern:
-                match = re.search(extract_pattern, recipe_text, flags=re.MULTILINE | re.DOTALL)
-                recipe_text = match.group(1) if match else ""
+        is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        meta_path = self.meta_path or (os.path.join(is_output, 'meta.yaml') if is_output else '')
+        if meta_path:
+            recipe_text = read_meta_file(meta_path)
+            if (is_output and
+                  self.name() != self.meta.get('extra', {}).get('parent_recipe', {}).get('name')):
+                recipe_text = _filter_recipe_text(recipe_text, _output_filter_pattern(self.name()))
+        else:
+            recipe_text = yaml.dump(dict(self.meta), default_flow_style=False)
+        recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
         recipe_text = select_lines(recipe_text, ns_cfg(self.config),
                                    variants_in_place=bool(self.config.variant))
         return recipe_text
 
     def extract_requirements_text(self):
-        return self.get_recipe_text(r'(^requirements:.*?)(^test:|^extra:|^about:|^outputs:|\Z)')
+        is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        if not is_output:
+            # start of line means top-level requirements
+            filter_ = r'(^requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
+        else:
+            # outputs are already filtered into each output for us
+            filter_ = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
+        return self.get_recipe_text(filter_)
+
+    def extract_outputs_text(self):
+        return self.get_recipe_text(r'(^outputs:.*?)(^test:|^extra:|^about:|\Z)')
 
     def extract_source_text(self):
         return self.get_recipe_text(
@@ -1508,6 +1476,9 @@ class MetaData(object):
 
     def extract_package_and_build_text(self):
         return self.get_recipe_text(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
+
+    def extract_single_output_text(self, output_name):
+        return self.get_recipe_text(_output_filter_pattern(output_name))
 
     @property
     def numpy_xx(self):
@@ -1634,17 +1605,9 @@ class MetaData(object):
         output_metadata.meta_path = ""
 
     def get_output_metadata(self, output):
-        if output.get('target'):
-            self.config.target_subdir = output['target']
         output_metadata = self.copy()
-        if self.name() != output.get('name') or (output.get('script') or output.get('files')):
-            self.reconcile_metadata_with_output_dict(output_metadata, output)
 
-        if 'type' in output and output['type'] != 'conda':
-            name = output.get('name', self.name()) + '_' + output['type']
-            output_metadata.meta['package']['name'] = name
-
-        output_reqs = _expand_reqs(output.get('requirements', {}))
+        output_reqs = utils.expand_reqs(output.get('requirements', {}))
         build_reqs = output_reqs.get('build', [])
         host_reqs = output_reqs.get('host', [])
         run_reqs = output_reqs.get('run', [])
@@ -1652,6 +1615,16 @@ class MetaData(object):
         # pass through any other unrecognized req types
         other_reqs = {k: v for k, v in output_reqs.items() if k not in
                         ('build', 'host', 'run', 'run_constrained')}
+
+        if output.get('target'):
+            output_metadata.config.target_subdir = output['target']
+
+        if self.name() != output.get('name') or (output.get('script') or output.get('files')):
+            self.reconcile_metadata_with_output_dict(output_metadata, output)
+
+        if 'type' in output and output['type'] != 'conda':
+            name = output.get('name', self.name()) + '_' + output['type']
+            output_metadata.meta['package']['name'] = name
 
         if 'name' in output:
             # since we are copying reqs from the top-level package, which
@@ -1690,7 +1663,8 @@ class MetaData(object):
             output_metadata.config.platform = self.config.platform
 
         build = output_metadata.meta.get('build', {})
-        # legacy (conda build 2.1.x - 3.0.25)
+        # legacy (conda build 2.1.x - 3.0.25). Newer stuff should just emulate
+        #   the top-level recipe, with full sections for build, test, about
         if 'number' in output:
             build['number'] = output['number']
         if 'string' in output:
@@ -1737,7 +1711,7 @@ class MetaData(object):
                 try:
                     for out in outputs:
                         for env in ('build', 'host', 'run'):
-                            insert_variant_versions(_expand_reqs(out.get('requirements', {})),
+                            insert_variant_versions(utils.expand_reqs(out.get('requirements', {})),
                                                     variant, env)
                         out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
                 except SystemExit:
@@ -1821,28 +1795,43 @@ class MetaData(object):
         return {var for var in self.get_used_vars() if var in self.get_loop_vars()}
 
     def get_used_vars(self):
-        used_variables = set()
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
-        recipe_text = self.get_recipe_text()
-        # fall back to requirements when recipe text is unavailable
-        if not recipe_text:
-            requirements = (self.get_value('requirements/build') +
-                    self.get_value('requirements/run') +
-                    self.get_value('requirements/host'))
-            recipe_text = '- ' + "\n- ".join(requirements)
-        for v in self.config.variant:
-            variant_regex = r"(\s*\{\{\s*%s\s*(?:.*?)?\}\})" % v
-            requirement_regex = r"(\-\s+%s(?:\s+|$))" % v
-            all_res = '|'.join((variant_regex, requirement_regex))
-            compiler_match = re.match(r'(.*?)_compiler$', v)
-            if compiler_match:
-                compiler_regex = (
-                    r"(\s*\{\{\s*compiler\([\'\"]%s[\"\'].*\)\s*\}\})" % compiler_match.group(1))
-                all_res = '|'.join((all_res, compiler_regex))
-            if re.search(all_res, recipe_text, flags=re.MULTILINE | re.DOTALL):
-                used_variables.add(v)
-        return used_variables
+        is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        if is_output:
+            recipe_text = self.extract_single_output_text(self.name())
+        else:
+            recipe_text = self.get_recipe_text().replace(self.extract_outputs_text().strip(), '')
+
+        recipe_text_without_requirements = recipe_text.replace(
+            self.extract_requirements_text().strip(), "")
+
+        all_used = variants.find_used_variables_in_text(self.config.variant, recipe_text)
+        outside_reqs_used = variants.find_used_variables_in_text(self.config.variant,
+                                                                 recipe_text_without_requirements)
+        # things that are only used in requirements need further consideration,
+        #   for omitting things that are only used in run
+        requirements_only_used = all_used - outside_reqs_used
+
+        # filter out things that occur only in run requirements.  These don't actually affect the
+        #     outcome of the package.
+        output_reqs = utils.expand_reqs(self.meta.get('requirements', {}))
+        build_reqs = (ensure_list(output_reqs.get('build', [])) +
+                      ensure_list(output_reqs.get('host', [])))
+        run_reqs = output_reqs.get('run', [])
+        build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs}
+
+        # things can be used as dependencies or elsewhere in the recipe.  If it's only used
+        #    elsewhere, keep it. If it's a dep-related thing, only keep it if
+        #    it's in the build deps.
+        to_remove = set()
+        for dep in requirements_only_used:
+            # filter out stuff that's only in run deps
+            if dep in run_reqs:
+                if dep not in build_reqs and dep in requirements_only_used:
+                    to_remove.add(dep)
+        requirements_only_used -= to_remove
+        return outside_reqs_used | requirements_only_used
 
     def get_variants_as_dict_of_lists(self):
         return variants.list_of_dicts_to_dict_of_lists(self.config.variants)

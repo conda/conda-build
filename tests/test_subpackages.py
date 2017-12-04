@@ -2,6 +2,7 @@ import json
 import os
 import pytest
 import re
+import sys
 
 from conda_build.render import finalize_metadata
 from conda_build.conda_interface import subdir
@@ -47,14 +48,15 @@ def test_output_pkg_path_shows_all_subpackages(testing_metadata):
 
 def test_subpackage_version_provided(testing_metadata):
     testing_metadata.meta['outputs'] = [{'name': 'a', 'version': '2.0'}]
-    del testing_metadata.meta['requirements']
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
     outputs = api.get_output_file_path([(m, None, None) for (_, m) in out_dicts_and_metadata])
     assert len(outputs) == 1
-    assert "a-2.0-h" in outputs[0]
+    assert "a-2.0-1" in outputs[0]
 
 
 def test_subpackage_independent_hash(testing_metadata):
+    # this recipe is creating 2 outputs.  One is the output here, a.  The other is the top-level
+    #     output, implicitly created by adding the run requirement.
     testing_metadata.meta['outputs'] = [{'name': 'a', 'requirements': 'bzip2'}]
     testing_metadata.meta['requirements']['run'] = ['a']
     out_dicts_and_metadata = testing_metadata.get_output_metadata_set()
@@ -87,9 +89,13 @@ def test_run_exports_in_subpackage(testing_metadata):
 def test_subpackage_variant_override(testing_config):
     recipe = os.path.join(subpackage_dir, '_variant_override')
     outputs = api.build(recipe, config=testing_config)
+    # Three total:
+    #    one subpackage with no deps - one output
+    #    one subpackage with a python dep, and 2 python versions - 2 outputs
     assert len(outputs) == 3
 
 
+@pytest.mark.skipif(sys.platform == 'darwin', reason="R has dumb binary issues, just run this on linux/win")
 def test_intradependencies(testing_workdir, testing_config):
     # Only necessary because for conda<4.3, the `r` channel was not in `defaults`
     testing_config.channel_urls = ('r')
@@ -104,34 +110,13 @@ def test_intradependencies(testing_workdir, testing_config):
     outputs2_set = set([os.path.basename(p) for p in outputs2])
     assert outputs1_set == outputs2_set, 'pkgs differ :: get_output_file_paths()=%s but build()=%s' % (outputs1_set,
                                                                                                        outputs2_set)
-    pkg_hashes = api.inspect_hash_inputs(outputs2)
-    py_regex = re.compile('^python.*')
-    r_regex = re.compile('^r-base.*')
-    for pkg, hashes in pkg_hashes.items():
-        try:
-            reqs = hashes['recipe']['requirements']['build']
-        except:
-            reqs = []
-        # Assert that:
-        # 1. r-base does and python does not appear in the hash inspection for the R packages
-        if re.match('^r[0-9]-', pkg):
-            assert not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])
-            assert len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
-        # 2. python does and r-base does not appear in the hash inspection for the Python packages
-        elif re.match('^py[0-9]-', pkg):
-            assert not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
-            assert len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])
-        # 3. neither python nor r-base appear in the hash inspection for the lib packages
-        elif re.match('^lib[0-9]-', pkg):
-            assert not len([m.group(0) for r in reqs for m in [r_regex.search(r)] if m])
-            assert not len([m.group(0) for r in reqs for m in [py_regex.search(r)] if m])
 
 
 def test_git_in_output_version(testing_config):
     recipe = os.path.join(subpackage_dir, '_git_in_output_version')
-    outputs = api.build(recipe, config=testing_config)
+    outputs = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
     assert len(outputs) == 1
-    assert os.path.basename(outputs[0]).startswith("git_version-1.21.11-h")
+    assert outputs[0][0].version() == '1.21.11'
 
 
 def test_intradep_with_templated_output_name(testing_config):
@@ -217,10 +202,14 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
             raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
 
 
-def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
-    recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
-    with pytest.raises(exceptions.RecipeError):
-        api.build(recipe_dir, config=testing_config)
+# with cb3.1, this no longer raises an error, because the subpackage hashes no
+# longer depend on each other, only the external info in
+# conda_build_config.yaml. Thus there is no cyclical issue here.
+
+# def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
+#     recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
+#     with pytest.raises(exceptions.RecipeError):
+#         ms = api.render(recipe_dir, config=testing_config)
 
 
 def test_toplevel_subpackage_exact_does_not_raise_infinite_loop_error(testing_config):
@@ -258,3 +247,9 @@ def test_per_output_tests(testing_config, capfd):
     count = 2 if utils.on_win else 1
     assert out.count("output-level test") == count, out
     assert out.count("top-level test") == count, out
+
+
+def test_pin_compatible_in_outputs(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_pin_compatible_in_output')
+    m = api.render(recipe_dir, config=testing_config)[0][0]
+    assert any(re.search('numpy\s*>=.*,<.*', req) for req in m.meta['requirements']['run'])

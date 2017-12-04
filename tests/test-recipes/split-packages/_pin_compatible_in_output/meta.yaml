@@ -1,0 +1,13 @@
+package:
+  name: test_pin_compatible_in_output
+  version: 1.0
+
+outputs:
+  - name: test1
+    requirements:
+      build:
+        - python
+        - numpy
+      run:
+        - python
+        - {{ pin_compatible('numpy') }}

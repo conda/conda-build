@@ -2,6 +2,10 @@ package:
   name: foobar
   version: 1.0
 
+requirements:
+  run:
+    - python
+
 test:
   commands:
     - python --version

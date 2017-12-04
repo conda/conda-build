@@ -3,7 +3,6 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 '''
 from __future__ import absolute_import, division, print_function
 
-import codecs
 from collections import deque, OrderedDict
 import fnmatch
 from glob import glob
@@ -183,26 +182,47 @@ def copy_recipe(m):
             pass
 
         if os.path.isdir(output_metadata.path):
-            for fn in os.listdir(output_metadata.path):
-                src_path = join(output_metadata.path, fn)
-                dst_path = join(recipe_dir, fn)
-                utils.copy_into(src_path, dst_path, timeout=output_metadata.config.timeout,
-                                locking=output_metadata.config.locking, clobber=True)
-
+            files = utils.rec_glob(m.path, "*")
+            src_dir = m.path
+            file_paths = sorted([f.replace(m.path + os.sep, '') for f in files])
+            # exclude meta.yaml because the json dictionary captures its content
+            file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
+                                                        f == 'conda_build_config.yaml')]
+            file_paths = utils.filter_files(file_paths, m.path)
             # store the rendered meta.yaml file, plus information about where it came from
             #    and what version of conda-build created it
             original_recipe = os.path.join(output_metadata.path, 'meta.yaml')
-        # it's a subpackage.  We need to store our hash inputs
+        # it's a subpackage.
         else:
             original_recipe = ""
-            _, hash_inputs = m.get_hash_contents()
+            # this will be a subsection for just this output
+
             src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-            assert recipe_dir, "Conda-build bug: lost track of recipe path."
-            for fn in hash_inputs:
-                src_path = join(src_dir, fn)
-                dst_path = join(recipe_dir, fn)
-                utils.copy_into(src_path, dst_path, timeout=output_metadata.config.timeout,
-                                locking=output_metadata.config.locking, clobber=True)
+            if src_dir:
+                this_output = yaml.safe_load(m._get_contents(permit_undefined_jinja=True,
+                                              template_string=m.get_recipe_text())) or {}
+                if isinstance(this_output, list):
+                    this_output = this_output[0]
+                install_script = this_output.get('script')
+                # # HACK: conda-build renames the actual test script from the recipe into
+                # #    run_test.* in the package.  This makes the test discovery code work.
+                # if test_script:
+                #     ext = os.path.splitext(test_script)[1]
+                #     test_script = 'run_test' + ext
+                build_inputs = []
+                for build_input in ('build.sh', 'bld.bat'):
+                    if os.path.isfile(os.path.join(src_dir, build_input)):
+                        build_inputs.append(build_input)
+                inputs = [install_script] + build_inputs
+                file_paths = [script for script in inputs if script]
+                file_paths = utils.filter_files(file_paths, src_dir)
+            else:
+                file_paths = []
+
+        for f in file_paths:
+            utils.copy_into(os.path.join(src_dir, f), recipe_dir,
+                            timeout=output_metadata.config.timeout,
+                            locking=output_metadata.config.locking, clobber=True)
 
         # hard code the build string, so that tests don't get it mixed up
         build = output_metadata.meta.get('build', {})
@@ -270,14 +290,9 @@ def copy_test_source_files(m):
 
 
 def write_hash_input(m):
-    recipe_input, file_paths = m.get_hash_contents()
+    recipe_input = m.get_hash_contents()
     with open(os.path.join(m.config.info_dir, 'hash_input.json'), 'w') as f:
         json.dump(recipe_input, f, indent=2)
-
-    if m.config.include_recipe and m.include_recipe():
-        with codecs.open(os.path.join(m.config.info_dir, 'hash_input_files'), 'w', 'utf-8') as f:
-            for fname in file_paths:
-                f.write(fname + '\n')
 
 
 def get_files_with_prefix(m, files, prefix):
@@ -704,22 +719,27 @@ def bundle_conda(output, metadata, env, **kw):
     except OSError:
         pass
 
-    if not files and output.get('script'):
-        with utils.path_prepended(metadata.config.build_prefix):
-            env = environ.get_dict(config=metadata.config, m=metadata)
+    if not files:
+        if output.get('script'):
+            with utils.path_prepended(metadata.config.build_prefix):
+                env = environ.get_dict(config=metadata.config, m=metadata)
 
-        interpreter = output.get('script_interpreter')
-        if not interpreter:
-            interpreter = guess_interpreter(output['script'])
-        initial_files = utils.prefix_files(metadata.config.host_prefix)
-        env_output = env.copy()
-        env_output['TOP_PKG_NAME'] = env['PKG_NAME']
-        env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
-        env_output['PKG_VERSION'] = metadata.version()
-        env_output['PKG_NAME'] = metadata.get_value('package/name')
-        utils.check_call_env(interpreter.split(' ') +
-                    [os.path.join(metadata.config.work_dir, output['script'])],
-                             cwd=metadata.config.work_dir, env=env_output)
+            interpreter = output.get('script_interpreter')
+            if not interpreter:
+                interpreter = guess_interpreter(output['script'])
+            initial_files = utils.prefix_files(metadata.config.host_prefix)
+            env_output = env.copy()
+            env_output['TOP_PKG_NAME'] = env['PKG_NAME']
+            env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
+            env_output['PKG_VERSION'] = metadata.version()
+            env_output['PKG_NAME'] = metadata.get_value('package/name')
+            utils.check_call_env(interpreter.split(' ') +
+                        [os.path.join(metadata.config.work_dir, output['script'])],
+                                cwd=metadata.config.work_dir, env=env_output)
+        else:
+            initial_files = utils.prefix_files(metadata.config.host_prefix)
+            keep_files = []
+            pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
@@ -794,7 +814,7 @@ def bundle_conda(output, metadata, env, **kw):
             output_folder = os.path.join(os.path.dirname(metadata.config.bldpkgs_dir), subdir)
         final_output = os.path.join(output_folder, output_filename)
         if os.path.isfile(final_output):
-            os.remove(final_output)
+            utils.rm_rf(final_output)
 
         # disable locking here.  It's just a temp folder getting locked.  Removing it proved to be
         #    a major bottleneck.
@@ -1041,15 +1061,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
-        for pat in m.always_include_files():
-            has_matches = False
-            for f in set(files1):
-                if fnmatch.fnmatch(f, pat):
-                    print("Including in package existing file", f)
-                    files1.discard(f)
-                    has_matches = True
-            if not has_matches:
-                log.warn("Glob %s from always_include_files does not match any files", pat)
         # Save this for later
         with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
@@ -1239,6 +1250,27 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                            config=m.config, subdir=m.config.build_subdir,
                                            is_cross=m.is_cross,
                                            is_conda=m.name() == 'conda')
+
+                    for f in glob(os.path.join(m.config.host_prefix, 'conda-meta', '*.json')):
+                        with open(f) as fd:
+                            if 'files' in output_d:
+                                output_d['files'] -= set(json.load(fd).get('files', []))
+
+                    to_remove = set()
+                    for f in output_d.get('files', []):
+                        if f.startswith('conda-meta'):
+                            to_remove.add(f)
+
+                    if 'files' in output_d:
+                        output_d['files'] = set(output_d['files']) - to_remove
+
+                    # add always_include_files back in
+                    for pat in m.always_include_files():
+                        matches = set(glob(os.path.join(m.config.host_prefix, pat)))
+                        output_d['files'].update(matches)
+                        if not matches:
+                            log.warn("Glob %s from always_include_files does not match any files",
+                                     pat)
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:

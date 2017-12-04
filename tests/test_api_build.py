@@ -588,6 +588,8 @@ def test_noarch(testing_workdir):
 
 def test_disable_pip(testing_config, testing_metadata):
     testing_metadata.config.disable_pip = True
+    testing_metadata.meta['requirements'] = {'host': ['python'],
+                                             'run': ['python']}
     testing_metadata.meta['build']['script'] = 'python -c "import pip; print(pip.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
@@ -899,7 +901,7 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['host'] = ['python']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
-    assert 'weak_pinned_package 2.0.*' not in m.meta['requirements']['run']
+    assert 'weak_pinned_package 2.0.*' not in m.meta['requirements'].get('run', [])
 
     #    3. host present, and deps in build have "strong" run_exports section.  use host, add
     #           in "strong" from build.
@@ -919,20 +921,19 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     # need to clear conda's index, or else we somehow pick up the test_run_exports folder
     #     above for our package here.
     api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
-    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
+    testing_metadata.meta['requirements']['host'] = ['test_has_run_exports']
     testing_metadata.meta['build']['ignore_run_exports'] = ['downstream_pinned_package']
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert 'downstream_pinned_package 1.0' not in m.meta['requirements']['run']
+    assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
     ms = api.render(recipe, config=testing_config)
-    assert any(re.match(r'run_exports_subpkg 1.0 h[a-f0-9]{%s}_0' % testing_config.hash_length,
-                        req)
-              for (m, _, _) in ms for req in m.meta['requirements']['run'])
-    api.build(recipe, config=testing_config)
+    assert len(ms) == 2
+    assert any(re.match(r'run_exports_subpkg\ 1\.0\ 0', req)
+              for (m, _, _) in ms for req in m.meta.get('requirements', {}).get('run', []))
 
 
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
@@ -1159,7 +1160,8 @@ def test_copy_test_source_files(testing_config):
             assert copy, "'info/test/' found in tar.bz2 but not copying test source files"
         else:
             assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
-    assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
+    # cb3.1 bases the hash only on conda_build_config.yaml pinning.  This test no longer applies.
+    # assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
 
 
 def test_pin_depends(testing_config):

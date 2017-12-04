@@ -112,13 +112,10 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
     api.output_yaml(testing_metadata, 'meta.yaml')
-    metadata = api.render(testing_workdir, debug=False, verbose=False)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_render.execute(args)
-    _hash = metadata.hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
-                             "test_render_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
-                                 sys.version_info.major, sys.version_info.minor, _hash))
+                             "test_render_output_build_path-1.0-1.tar.bz2")
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
     assert error == ""
@@ -128,13 +125,10 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
     api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
     testing_config.debug = False
-    metadata = api.render(testing_workdir, config=testing_config)[0][0]
     args = ['--output', os.path.join(testing_workdir)]
     main_build.execute(args)
-    _hash = metadata.hash_dependencies()
     test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
-                                  "test_build_output_build_path-1.0-py{}{}{}_1.tar.bz2".format(
-                                      sys.version_info.major, sys.version_info.minor, _hash))
+                                  "test_build_output_build_path-1.0-1.tar.bz2")
     output, error = capfd.readouterr()
     assert test_path == output.rstrip(), error
     assert error == ""
@@ -144,17 +138,14 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metad
                                                   testing_config, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
-    metadata = api.render(testing_workdir, config=testing_config)[0][0]
     skip_recipe = os.path.join(metadata_dir, "build_skip")
     args = ['--output', testing_workdir, skip_recipe]
 
     main_build.execute(args)
 
-    _hash = metadata.hash_dependencies()
     test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir, pkg)
     test_paths = [test_path(
-        "test_build_output_build_path_multiple_recipes-1.0-py{}{}{}_1.tar.bz2".format(
-            sys.version_info.major, sys.version_info.minor, _hash)),
+        "test_build_output_build_path_multiple_recipes-1.0-1.tar.bz2"),
         "Skipped: {} defines build/skip for this configuration ({{}}).".format(
             os.path.abspath(skip_recipe))]
 
@@ -175,7 +166,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
 
 
 @pytest.mark.skipif(on_win, reason="prefix is always short on win.")
-def test_build_long_test_prefix_default_enabled(mocker, testing_workdir, testing_metadata):
+def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
     recipe_path = os.path.join(metadata_dir, '_test_long_test_prefix')
     args = [recipe_path, '--no-anaconda-upload']
     main_build.execute(args)
@@ -233,6 +224,8 @@ def test_build_source(testing_workdir):
 
 
 def test_render_output_build_path_set_python(testing_workdir, testing_metadata, capfd):
+    testing_metadata.meta['requirements'] = {'host': ['python'],
+                                             'run': ['python']}
     api.output_yaml(testing_metadata, 'meta.yaml')
     # build the other major thing, whatever it is
     if sys.version_info.major == 3:
@@ -259,7 +252,7 @@ def test_skeleton_pypi(testing_workdir, testing_config):
     assert os.path.isdir('click')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--croot', testing_config.croot, '--no-activate']
+    args = ['click', '--no-anaconda-upload', '--no-activate']
     main_build.execute(args)
     # output, error = capfd.readouterr()
     # if hasattr(output, 'decode'):
@@ -300,7 +293,7 @@ def test_metapackage(testing_config, testing_workdir):
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--no-anaconda-upload']
     main_metapackage.execute(args)
     test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
-                             'metapackage_test-1.0*_0.tar.bz2'))[0]
+                             'metapackage_test-1.0-0.tar.bz2'))[0]
     assert os.path.isfile(test_path)
 
 
@@ -310,7 +303,7 @@ def test_metapackage_build_number(testing_config, testing_workdir):
             '--no-anaconda-upload']
     main_metapackage.execute(args)
     test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
-                             'metapackage_test_build_number-1.0-*_1.tar.bz2'))[0]
+                             'metapackage_test_build_number-1.0-1.tar.bz2'))[0]
     assert os.path.isfile(test_path)
 
 
@@ -330,7 +323,7 @@ def test_metapackage_metadata(testing_config, testing_workdir):
     main_metapackage.execute(args)
 
     test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
-                             'metapackage_testing_metadata-1.0-*_0.tar.bz2'))[0]
+                             'metapackage_testing_metadata-1.0-0.tar.bz2'))[0]
     assert os.path.isfile(test_path)
     info = json.loads(package_has_file(test_path, 'info/index.json').decode('utf-8'))
     assert info['license'] == 'BSD'
@@ -405,12 +398,15 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 
 @pytest.mark.serial
 def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
+    testing_metadata.meta['requirements']['build'] = ['zlib']
     api.output_yaml(testing_metadata, 'meta.yaml')
     output = api.build(testing_workdir)[0]
+    with open(os.path.join(testing_workdir, 'conda_build_config.yaml'), 'w') as f:
+        yaml.dump({'zlib': ['1.2.11']}, f)
     args = ['hash-inputs', output]
     main_inspect.execute(args)
     output, error = capfd.readouterr()
-    assert 'requirements' in output
+    assert 'zlib' in output
 
 
 @pytest.mark.serial
@@ -505,6 +501,8 @@ def test_no_force_upload(mocker, testing_workdir, testing_metadata):
 
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     monkeypatch.setenv('CONDA_PY', '34')
+    testing_metadata.meta['requirements'] = {'host': ['python'],
+                                             'run': ['python']}
     api.output_yaml(testing_metadata, 'meta.yaml')
     outputs = api.build(testing_workdir)
     assert any('py34' in output for output in outputs)
