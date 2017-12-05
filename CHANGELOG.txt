@@ -1,3 +1,35 @@
+2017-12-05 3.1.0:
+
+Enhancements:
+-------------
+
+* Speed up package inspection by optimizing package file lookup  #2535
+* Simplify hashing scheme.  A hash will be added if all of these are true for any dependency:
+
+  * package is an explicit dependency in build, host, or run deps
+  * package has a matching entry in conda_build_config.yaml which is a pin to a specific version, not a lower bound
+  * that package is not ignored by ignore_version
+
+  OR
+
+  * package uses ``{{ compiler() }}`` jinja2 function
+
+  All other packages will no longer have hashes. The takeaway message is that
+  hashes will appear when binary compatibility matters, but not when it doesn't.  #2537
+
+Bug fixes:
+----------
+
+* Allow packages to store files in info folder  #2538
+* Fix source_files not working correctly when using test files in packages  #2539
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2017-11-30 3.0.31:
 
 Enhancements:
