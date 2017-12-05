@@ -1340,3 +1340,11 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
             if v in other_m_used_vars:
                 variant_matches &= this_m.config.variant[v] == other_m.config.variant[v]
     return matchspec_matches and variant_matches
+
+
+def expand_reqs(reqs_entry):
+    if not hasattr(reqs_entry, 'keys'):
+        original = ensure_list(reqs_entry)[:]
+        reqs_entry = {'host': original,
+                        'run': original}
+    return reqs_entry

@@ -56,23 +56,17 @@ def test_get_output_file_path(testing_workdir, testing_metadata):
     build_path = api.get_output_file_paths(os.path.join(testing_workdir, 'recipe'),
                                           config=testing_metadata.config,
                                           no_download_source=True)[0]
-    _hash = testing_metadata.hash_dependencies()
-    python = ''.join(testing_metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_metadata.config.croot,
                                       testing_metadata.config.host_subdir,
-                                      "test_get_output_file_path-1.0-py{}{}_1.tar.bz2".format(
-                                          python, _hash))
+                                      "test_get_output_file_path-1.0-1.tar.bz2")
 
 
 def test_get_output_file_path_metadata_object(testing_metadata):
     testing_metadata.final = True
     build_path = api.get_output_file_paths(testing_metadata)[0]
-    _hash = testing_metadata.hash_dependencies()
-    python = ''.join(testing_metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_metadata.config.croot,
                                       testing_metadata.config.host_subdir,
-                "test_get_output_file_path_metadata_object-1.0-py{}{}_1.tar.bz2".format(
-                    python, _hash))
+                "test_get_output_file_path_metadata_object-1.0-1.tar.bz2")
 
 
 def test_get_output_file_path_jinja2(testing_workdir, testing_config):
@@ -116,8 +110,8 @@ def test_host_entries_finalized(testing_config):
     metadata = api.render(recipe, config=testing_config)
     assert len(metadata) == 2
     outputs = api.get_output_file_paths(recipe, config=testing_config)
-    assert any('py27h' in out for out in outputs)
-    assert any('py36h' in out for out in outputs)
+    assert any('py27' in out for out in outputs)
+    assert any('py36' in out for out in outputs)
 
 
 def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir):

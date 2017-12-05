@@ -6,6 +6,7 @@ from itertools import product
 import logging
 import os
 from pkg_resources import parse_version
+import re
 import sys
 
 import six
@@ -480,3 +481,19 @@ def get_vars(variants, loop_only=False):
                  (not loop_only or
                   any(variant[k] != variants[0][k] for variant in variants[1:]))]
     return loop_vars
+
+
+def find_used_variables_in_text(variant, recipe_text):
+    used_variables = set()
+    for v in variant:
+        variant_regex = r"(\s*\{\{\s*%s\s*(?:.*?)?\}\})" % v
+        requirement_regex = r"(\-\s+%s(?:\s+|$))" % v
+        all_res = '|'.join((variant_regex, requirement_regex))
+        compiler_match = re.match(r'(.*?)_compiler$', v)
+        if compiler_match:
+            compiler_regex = (
+                r"(\s*\{\{\s*compiler\([\'\"]%s[\"\'].*\)\s*\}\})" % compiler_match.group(1))
+            all_res = '|'.join((all_res, compiler_regex))
+        if re.search(all_res, recipe_text, flags=re.MULTILINE | re.DOTALL):
+            used_variables.add(v)
+    return used_variables

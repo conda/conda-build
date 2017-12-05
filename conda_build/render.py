@@ -25,6 +25,7 @@ from .conda_interface import (PY3, UnsatisfiableError, ProgressiveFetchExtract,
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
+from .conda_interface import specs_from_url
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData
@@ -34,6 +35,9 @@ from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
+
+yaml.add_representer(set, yaml.representer.SafeRepresenter.represent_list)
+yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 
 
 def bldpkg_path(m):
@@ -272,14 +276,16 @@ def add_upstream_pins(m):
 
     extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
     # defaults to empty list if not there
-    host_reqs = m.get_value('requirements/host')
+    host_reqs = utils.ensure_list(m.get_value('requirements/host'))
     key = 'host'
     # legacy recipe without host entry.  Add dep to build reqs instead.
     if not host_reqs:
-        host_reqs = m.get_value('requirements/build')
+        host_reqs = utils.ensure_list(m.get_value('requirements/build'))
         key = 'build'
     host_reqs.extend(extra_run_specs_from_build.get('strong', []))
-    m.meta['requirements'][key] = [utils.ensure_valid_spec(spec) for spec in host_reqs]
+    requirements = m.meta.get('requirements', {})
+    requirements[key] = [utils.ensure_valid_spec(spec) for spec in host_reqs]
+    m.meta['requirements'] = requirements
 
 
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
@@ -299,7 +305,20 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in excludes | output_excludes))
 
-    build_reqs = m.meta.get('requirements', {}).get('build', [])
+    # extract the topmost section where variables are defined, and put it on top of the
+    #     requirements for a particular output
+    # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
+    extract_pattern = r'(.*)package:'
+    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern),
+                                m.extract_requirements_text()))
+    requirements = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
+                            template_string=template_string)) or {}).get('requirements', {})
+    requirements = utils.expand_reqs(requirements)
+
+    if isfile(m.requirements_path) and not requirements.get('run'):
+        requirements['run'] = specs_from_url(m.requirements_path)
+
+    build_reqs = requirements.get('build', [])
     # if python is in the build specs, but doesn't have a specific associated
     #    version, make sure to add one
     if build_reqs and 'python' in build_reqs:
@@ -345,11 +364,11 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         extra_run_specs = (extra_run_specs_from_build.get('strong', []) +
                            extra_run_specs_from_build.get('weak', []))
 
+    run_deps = requirements.get('run', [])
+
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
     #     names to have this behavior.
-    requirements = m.meta.get('requirements', {})
-    run_deps = requirements.get('run', [])
     if output_excludes:
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in output_excludes))
@@ -358,6 +377,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                                         exclude_pattern=exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
+
     versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
     versioned_run_deps.extend(extra_run_specs)
     versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps]
@@ -367,6 +387,9 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
             requirements[_env] = list({strip_channel(dep) for dep in values})
     rendered_metadata = m.copy()
     rendered_metadata.meta['requirements'] = requirements
+
+    # append other requirements, such as python.app, appropriately
+    rendered_metadata.append_requirements()
 
     if rendered_metadata.pin_depends == 'strict':
         rendered_metadata.meta['requirements']['run'] = environ.get_pinned_deps(rendered_metadata,
@@ -550,9 +573,11 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             utils.rm_rf(mv.config.work_dir)
             source.provide(mv)
             mv.parse_again()
+
         mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
                                 bypass_env_check=bypass_env_check)
         need_source_download = (not mv.needs_source_for_render or not mv.source_provided)
+
         # if python is in the build specs, but doesn't have a specific associated
         #    version, make sure to add one to newly parsed 'requirements/build'.
         for env in ('build', 'host', 'run'):

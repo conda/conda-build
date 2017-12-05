@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import os
 import json
+import re
 
 import pytest
 import yaml
@@ -140,8 +141,8 @@ def test_zip_fields():
 
 def test_cross_compilers():
     recipe = os.path.join(recipe_dir, '09_cross')
-    outputs = api.get_output_file_paths(recipe, permit_unsatisfiable_variants=True)
-    assert len(outputs) == 3
+    ms = api.render(recipe, permit_unsatisfiable_variants=True, finalize=False, bypass_env_check=True)
+    assert len(ms) == 3
 
 
 def test_variants_in_output_names():
@@ -160,7 +161,9 @@ def test_variants_in_versions_with_setup_py_data(testing_workdir):
 
 def test_git_variables_with_variants(testing_workdir, testing_config):
     recipe = os.path.join(recipe_dir, '13_git_vars')
-    api.build(recipe, config=testing_config)
+    m = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)[0][0]
+    assert m.version() == "1.20.2"
+    assert m.build_number() == 0
 
 
 def test_variant_input_with_zip_keys_keeps_zip_keys_list():
@@ -241,14 +244,35 @@ def test_subspace_selection(testing_config):
 
 
 def test_get_used_loop_vars(testing_config):
-    ms = api.render(os.path.join(recipe_dir, '19_used_variables'))
+    m = api.render(os.path.join(recipe_dir, '19_used_variables'), finalize=False, bypass_env_check=True)[0][0]
     # conda_build_config.yaml has 4 loop variables defined, but only 3 are used.
     #   python and zlib are both implicitly used (depend on name matching), while
     #   some_package is explicitly used as a jinja2 variable
-    assert ms[0][0].get_used_loop_vars() == {'python', 'some_package'}
+    assert m.get_used_loop_vars() == {'python', 'some_package'}
     # these are all used vars - including those with only one value (and thus not loop vars)
-    assert ms[0][0].get_used_vars() == {'python', 'some_package', 'zlib'}
+    assert m.get_used_vars() == {'python', 'some_package', 'zlib'}
 
 
 def test_reprovisioning_source(testing_config):
     ms = api.render(os.path.join(recipe_dir, '20_reprovision_source'))
+
+
+def test_reduced_hashing_behavior(testing_config):
+    # recipes using any compiler jinja2 function need a hash
+    m = api.render(os.path.join(recipe_dir, '09_cross'), finalize=False, bypass_env_check=True)[0][0]
+    assert 'c_compiler' in m.get_hash_contents(), "hash contents should contain c_compiler"
+    assert re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id()), \
+        "hash should be present when compiler jinja2 function is used"
+
+    # recipes that use some variable in conda_build_config.yaml to control what
+    #     versions are present at build time also must have a hash (except
+    #     python, r_base, and the other stuff covered by legacy build string
+    #     behavior)
+    m = api.render(os.path.join(recipe_dir, '19_used_variables'), finalize=False, bypass_env_check=True)[0][0]
+    assert 'zlib' in m.get_hash_contents()
+    assert re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())
+
+    # anything else does not get a hash
+    m = api.render(os.path.join(recipe_dir, '02_python_version'), finalize=False, bypass_env_check=True)[0][0]
+    assert not m.get_hash_contents()
+    assert not re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())

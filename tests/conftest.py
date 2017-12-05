@@ -51,8 +51,8 @@ def testing_metadata(request, testing_config):
     d['package']['version'] = '1.0'
     d['build']['number'] = '1'
     d['build']['entry_points'] = []
-    d['requirements']['build'] = ['python']
-    d['requirements']['run'] = ['python']
+    d['requirements']['build'] = []
+    d['requirements']['run'] = []
     d['test']['commands'] = ['echo "A-OK"', 'exit 0']
     d['about']['home'] = "sweet home"
     d['about']['license'] = "contract in blood"
