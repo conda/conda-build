@@ -1157,6 +1157,11 @@ def test_copy_test_source_files(testing_config):
                 break
         if found:
             assert copy, "'info/test/' found in tar.bz2 but not copying test source files"
+            if copy:
+                api.test(outputs[0])
+            else:
+                with pytest.raises(RuntimeError):
+                    api.test(outputs[0])
         else:
             assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
     assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
