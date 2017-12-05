@@ -1,0 +1,12 @@
+package:
+  name: test_arbitrary_file_in_info_dir
+  version: 1.0
+
+build:
+  script: mkdir -p $PREFIX/info && echo "test" > $PREFIX/info/testfile   # [unix]
+  script: mkdir %PREFIX%\info && echo "test" > $PREFIX/info/testfile   # [win]
+
+test:
+  commands:
+    - test -f $PREFIX/info/testfile  # [unix]
+    - if not exist %PREFIX%\info\testfile  exit 1  # [win]
