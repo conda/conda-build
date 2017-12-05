@@ -4,7 +4,7 @@ import json
 from os.path import basename
 import tarfile
 
-from conda_build.utils import codec
+from conda_build.utils import codec, filter_info_files
 
 
 def dist_fn(fn):
@@ -37,10 +37,10 @@ class TarCheck(object):
         if len(lista) != len(seta):
             raise Exception('info/files: duplicates')
 
-        listb = [m.path for m in self.t.getmembers()
-                 if not (m.path.startswith('info/') or m.isdir())]
-        setb = set(listb)
-        if len(listb) != len(setb):
+        files_in_tar = [m.path for m in self.t.getmembers()]
+        files_in_tar = filter_info_files(files_in_tar, '')
+        setb = set(files_in_tar)
+        if len(files_in_tar) != len(setb):
             raise Exception('info_files: duplicate members')
 
         if seta == setb:

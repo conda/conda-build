@@ -11,14 +11,14 @@ Tools for converting conda packages
 import glob
 import json
 import hashlib
-import ntpath
-import posixpath
 import os
 import re
 import shutil
 import sys
 import tarfile
 import tempfile
+
+from conda_build.utils import filter_info_files
 
 
 def retrieve_c_extensions(file_path, show_imports=False):
@@ -273,15 +273,14 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         os.rename(os.path.join(temp_dir, 'lib'), os.path.join(temp_dir, 'Lib'))
 
     elif target_platform == 'unix':
+        for lib_file in glob.iglob('{}/**' .format(lib_directory)):
+            python_version = retrieve_python_version(file_path)
+            new_lib_file = re.sub('Lib', os.path.join('lib', python_version), lib_file)
+            os.renames(lib_file, new_lib_file)
+
         try:
-            for lib_file in glob.iglob('{}/**' .format(lib_directory)):
-                python_version = retrieve_python_version(file_path)
-                new_lib_file = re.sub('Lib', os.path.join('lib', python_version), lib_file)
-                os.renames(lib_file, new_lib_file)
-
-            os.rename(ntpath.join(temp_dir, 'Lib'), posixpath.join(temp_dir, 'lib'))
-
-        except OSError:
+            os.rename(os.path.join(temp_dir, 'Lib'), os.path.join(temp_dir, 'lib'))
+        except:
             pass
 
 
@@ -521,17 +520,15 @@ def update_files_file(temp_dir, verbose):
     """
     files_file = os.path.join(temp_dir, 'info/files')
 
-    with open(files_file, 'w+') as files:
+    with open(files_file, 'w') as files:
         file_paths = []
         for dirpath, dirnames, filenames in os.walk(temp_dir):
-            for filename in filenames:
-                package_file_path = os.path.join(
-                    dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
-                if not package_file_path.startswith('info'):
-                    file_paths.append(package_file_path)
-
-                    if verbose:
-                        print('Updating {}' .format(package_file_path))
+            relative_dir = os.path.relpath(dirpath, temp_dir)
+            filenames = [os.path.join(relative_dir, f) for f in filenames]
+            for filename in filter_info_files(filenames, ''):
+                file_paths.append(filename)
+                if verbose:
+                    print('Updating {}' .format(filename))
 
         for file_path in sorted(file_paths):
             files.write(file_path + '\n')
@@ -556,10 +553,10 @@ def create_target_archive(file_path, temp_dir, platform, output_dir):
 
     with tarfile.open(destination, 'w:bz2') as target:
         for dirpath, dirnames, filenames in os.walk(temp_dir):
+            relative_dir = os.path.relpath(dirpath, temp_dir)
+            filenames = [os.path.join(relative_dir, f) for f in filenames]
             for filename in filenames:
-                destination_file_path = os.path.join(
-                    dirpath, filename).replace(temp_dir, '').lstrip(os.sep)
-                target.add(os.path.join(dirpath, filename), arcname=destination_file_path)
+                target.add(os.path.join(temp_dir, filename), arcname=filename)
 
 
 def convert_between_unix_platforms(file_path, output_dir, platform, dependencies, verbose):
