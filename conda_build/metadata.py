@@ -1442,12 +1442,12 @@ class MetaData(object):
                             return vcs
         return None
 
-    def get_recipe_text(self, extract_pattern=None):
+    def get_recipe_text(self, extract_pattern=None, force_top_level=False):
         is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
         meta_path = self.meta_path or (os.path.join(is_output, 'meta.yaml') if is_output else '')
         if meta_path:
             recipe_text = read_meta_file(meta_path)
-            if (is_output and
+            if (is_output and not force_top_level and
                   self.name() != self.meta.get('extra', {}).get('parent_recipe', {}).get('name')):
                 recipe_text = _filter_recipe_text(recipe_text, _output_filter_pattern(self.name()))
         else:
@@ -1464,7 +1464,7 @@ class MetaData(object):
             filter_ = r'(^requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
         else:
             # outputs are already filtered into each output for us
-            filter_ = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
+            filter_ = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
         return self.get_recipe_text(filter_)
 
     def extract_outputs_text(self):
