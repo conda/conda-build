@@ -1022,6 +1022,7 @@ def filter_info_files(files_list, prefix):
                     'info[\\\\/]platform',
                     'info[\\\\/]no_link',
                     'info[\\\\/]link.json',
+                    'info[\\\\/]icon.png',
             ))
 
 
