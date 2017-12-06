@@ -4,7 +4,7 @@ package:
 
 build:
   script: mkdir -p $PREFIX/info && echo "test" > $PREFIX/info/testfile   # [unix]
-  script: mkdir %PREFIX%\info && echo "test" > $PREFIX/info/testfile   # [win]
+  script: mkdir %PREFIX%\info && echo "test" > %PREFIX%\info\testfile   # [win]
 
 test:
   commands:
