@@ -6,7 +6,7 @@ import sys
 
 from conda_build.render import finalize_metadata
 from conda_build.conda_interface import subdir
-from conda_build import api, utils, exceptions
+from conda_build import api, utils
 
 from .utils import subpackage_dir, is_valid_dir
 

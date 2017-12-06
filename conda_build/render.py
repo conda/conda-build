@@ -309,7 +309,8 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     #     requirements for a particular output
     # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
     extract_pattern = r'(.*)package:'
-    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern),
+    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
+                                                   force_top_level=True),
                                 m.extract_requirements_text()))
     requirements = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
                             template_string=template_string)) or {}).get('requirements', {})
