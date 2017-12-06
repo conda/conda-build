@@ -551,6 +551,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         host_reqs = mv.meta.get('requirements', {}).get('host', [])
         if 'python' in build_reqs or 'python' in host_reqs:
             conform_dict['python'] = variant['python']
+        if 'r-base' in build_reqs or 'r-base' in host_reqs:
+            conform_dict['r_base'] = variant['r_base']
 
         pin_run_as_build = variant.get('pin_run_as_build', {})
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:
