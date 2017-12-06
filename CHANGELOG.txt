@@ -1,3 +1,21 @@
+2017-12-06 3.1.1:
+
+Bug fixes:
+----------
+
+* fix info files filters on windows  #2542
+* fix icon.png files that needed to be included in the app section of recipes, for usage with Navigator  #2545
+* fix package matching regex for packages with ``-`` in them (regex should find either ``-`` or ``_``)  #2546
+* fix detection of used variant variables within jinja2 conditionals  #2547
+* fix output extraction regex (was picking up whole outputs section, not just one
+  output). Also, fix top-level variables not being carried into later outputs.  #2549
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @msarahan
+
 2017-12-05 3.1.0:
 
 Enhancements:
