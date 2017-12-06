@@ -276,3 +276,11 @@ def test_reduced_hashing_behavior(testing_config):
     m = api.render(os.path.join(recipe_dir, '02_python_version'), finalize=False, bypass_env_check=True)[0][0]
     assert not m.get_hash_contents()
     assert not re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())
+
+
+def test_variants_used_in_jinja2_conditionals(testing_config):
+    ms = api.render(os.path.join(recipe_dir, '21_conditional_sections'),
+                    finalize=False, bypass_env_check=True)
+    assert len(ms) == 2
+    assert sum(m.config.variant['blas_impl'] == 'mkl' for m, _, _ in ms) == 1
+    assert sum(m.config.variant['blas_impl'] == 'openblas' for m, _, _ in ms) == 1
