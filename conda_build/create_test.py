@@ -8,6 +8,7 @@ import glob
 import logging
 import os
 from os.path import join, exists, isdir
+import re
 import sys
 
 from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_rf
@@ -28,7 +29,11 @@ def create_files(m, test_dir=None):
     rm_rf(test_dir)
     if not os.path.isdir(test_dir):
         os.makedirs(test_dir)
-    pkg_test_files_path = os.path.join(os.path.dirname(m.path), 'test')
+    info_test_dir = os.path.join(os.path.dirname(m.path), 'test')
+    if re.search("info[\\\\/]recipe$", m.path) and os.path.isdir(info_test_dir):
+        src_dir = info_test_dir
+    else:
+        src_dir = m.config.work_dir
 
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
@@ -37,8 +42,7 @@ def create_files(m, test_dir=None):
         copy_into(path, join(test_dir, fn), m.config.timeout, locking=False,
                   clobber=True)
     # need to re-download source in order to do tests
-    src_dir = pkg_test_files_path if os.path.isdir(pkg_test_files_path) else m.config.work_dir
-    if m.get_value('test/source_files') and not isdir(src_dir):
+    if m.get_value('test/source_files') and not isdir(src_dir) or not os.listdir(src_dir):
         source.provide(m)
     for pattern in ensure_list(m.get_value('test/source_files', [])):
         if on_win and '\\' in pattern:
