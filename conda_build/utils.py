@@ -963,6 +963,8 @@ def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
             flat_list.extend(item)
         else:
             flat_list.append(item)
+    if max_pin and len(max_pin.split('.')) > len(flat_list):
+        pins[1] = len(flat_list)
     versions = ['', '']
     # first idx is lower bound pin; second is upper bound pin.
     #    pin value is number of places to pin.

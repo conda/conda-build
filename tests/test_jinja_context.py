@@ -48,6 +48,13 @@ def test_pin_major_minor(testing_metadata, mocker):
     assert pin == 'test  >=1.2.3,<1.3.0a0'
 
 
+def test_pin_excessive_max_pin(testing_metadata, mocker):
+    get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
+    get_env_dependencies.return_value = ['test 1.2.3'], [], None
+    pin = jinja_context.pin_compatible(testing_metadata, 'test', max_pin='x.x.x.x.x.x')
+    assert pin == 'test  >=1.2.3,<1.2.4.0a0'
+
+
 def test_pin_upper_bound(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
