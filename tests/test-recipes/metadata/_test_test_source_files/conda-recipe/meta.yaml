@@ -1,0 +1,14 @@
+package:
+  name: testprg
+  version: "1.0"
+
+source:
+  path: ../
+
+test:
+  source_files:
+    - test
+
+  commands:
+    - test -e test/text.txt   # [unix]
+    - if not exist test\text.txt exit 1  # [win]
