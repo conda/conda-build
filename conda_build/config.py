@@ -410,8 +410,8 @@ class Config(object):
     def CONDA_R(self, value):
         self.variant['r_base'] = value
 
-    def _get_python(self, prefix):
-        if sys.platform == 'win32':
+    def _get_python(self, prefix, platform):
+        if platform.startswith('win'):
             if os.path.isfile(os.path.join(prefix, 'python_d.exe')):
                 res = join(prefix, 'python_d.exe')
             else:
@@ -420,26 +420,29 @@ class Config(object):
             res = join(prefix, 'bin/python')
         return res
 
-    def _get_perl(self, prefix):
-        if sys.platform == 'win32':
+    def _get_perl(self, prefix, platform):
+        if platform.startswith('win'):
             res = join(prefix, 'Library', 'bin', 'perl.exe')
         else:
             res = join(prefix, 'bin/perl')
         return res
 
     # TODO: This is probably broken on Windows, but no one has a lua package on windows to test.
-    def _get_lua(self, prefix):
+    def _get_lua(self, prefix, platform):
         lua_ver = self.variant.get('lua', get_default_variant(self)['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
-        if sys.platform == 'win32':
+        if platform.startswith('win'):
             res = join(prefix, 'Library', 'bin', '{}.exe'.format(binary_name))
         else:
             res = join(prefix, 'bin/{}'.format(binary_name))
         return res
 
-    def _get_r(self, prefix):
-        if sys.platform == 'win32':
+    def _get_r(self, prefix, platform):
+        if platform.startswith('win'):
             res = join(prefix, 'Scripts', 'R.exe')
+            # MRO test:
+            if not os.path.exists(res):
+                res = join(prefix, 'bin', 'R.exe')
         else:
             res = join(prefix, 'bin', 'R')
         return res
@@ -537,27 +540,27 @@ class Config(object):
 
     @property
     def build_python(self):
-        return self.python_bin(self.build_prefix)
+        return self.python_bin(self.build_prefix, self.platform)
 
     @property
     def host_python(self):
-        return self._get_python(self.host_prefix)
+        return self._get_python(self.host_prefix, self.host_platform)
 
     @property
     def test_python(self):
-        return self.python_bin(self.test_prefix)
+        return self.python_bin(self.test_prefix, self.host_platform)
 
-    def python_bin(self, prefix):
-        return self._get_python(prefix)
+    def python_bin(self, prefix, platform):
+        return self._get_python(prefix, platform)
 
-    def perl_bin(self, prefix):
-        return self._get_perl(prefix)
+    def perl_bin(self, prefix, platform):
+        return self._get_perl(prefix, platform)
 
-    def lua_bin(self, prefix):
-        return self._get_lua(prefix)
+    def lua_bin(self, prefix, platform):
+        return self._get_lua(prefix, platform)
 
-    def r_bin(self, prefix):
-        return self._get_r(prefix)
+    def r_bin(self, prefix, platform):
+        return self._get_r(prefix, platform)
 
     @property
     def info_dir(self):

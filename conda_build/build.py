@@ -1712,19 +1712,19 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if pl_files:
             tf.write('"{perl}" "{test_file}"\n'.format(
-                perl=metadata.config.perl_bin(metadata.config.test_prefix),
+                perl=metadata.config.perl_bin(metadata.config.test_prefix, metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.pl')))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if lua_files:
             tf.write('"{lua}" "{test_file}"\n'.format(
-                lua=metadata.config.lua_bin(metadata.config.test_prefix),
+                lua=metadata.config.lua_bin(metadata.config.test_prefix, metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.lua')))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if r_files:
             tf.write('"{r}" CMD BATCH "{test_file}"\n'.format(
-                r=metadata.config.r_bin(metadata.config.test_prefix),
+                r=metadata.config.r_bin(metadata.config.test_prefix, metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.r')))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")

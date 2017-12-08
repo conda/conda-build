@@ -247,10 +247,10 @@ def get_dict(config, m=None, prefix=None, for_env=True, skip_build_id=False):
     d = conda_build_vars(prefix, config)
 
     # languages
-    d.update(python_vars(config, prefix))
-    d.update(perl_vars(config, prefix))
-    d.update(lua_vars(config, prefix))
-    d.update(r_vars(config, prefix))
+    d.update(python_vars(config, prefix, config.host_platform))
+    d.update(perl_vars(config, prefix, config.host_platform))
+    d.update(lua_vars(config, prefix, config.host_platform))
+    d.update(r_vars(config, prefix, config.host_platform))
 
     if m:
         d.update(meta_vars(m, config, skip_build_id=skip_build_id))
@@ -299,7 +299,7 @@ def conda_build_vars(prefix, config):
     }
 
 
-def python_vars(config, prefix):
+def python_vars(config, prefix, platform):
     py_ver = get_py_ver(config)
     vars_ = {
             'CONDA_PY': ''.join(py_ver.split('.')[:2]),
@@ -308,9 +308,9 @@ def python_vars(config, prefix):
             'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
             'SP_DIR': utils.get_site_packages(prefix, py_ver),
             }
-    if os.path.isfile(config.python_bin(prefix)):
+    if os.path.isfile(config.python_bin(prefix, platform)):
         vars_.update({
-            'PYTHON': config.python_bin(prefix),
+            'PYTHON': config.python_bin(prefix, platform),
         })
 
     np_ver = config.variant.get('numpy', get_default_variant(config)['numpy'])
@@ -319,24 +319,24 @@ def python_vars(config, prefix):
     return vars_
 
 
-def perl_vars(config, prefix):
+def perl_vars(config, prefix, platform):
     vars_ = {
             'PERL_VER': get_perl_ver(config),
             'CONDA_PERL': get_perl_ver(config),
              }
-    if os.path.isfile(config.perl_bin(prefix)):
+    if os.path.isfile(config.perl_bin(prefix, platform)):
         vars_.update({
-            'PERL': config.perl_bin(prefix),
+            'PERL': config.perl_bin(prefix, platform),
         })
     return vars_
 
 
-def lua_vars(config, prefix):
+def lua_vars(config, prefix, platform):
     vars_ = {
             'LUA_VER': get_lua_ver(config),
             'CONDA_LUA': get_lua_ver(config),
              }
-    lua = config.lua_bin(prefix)
+    lua = config.lua_bin(prefix, platform)
     if os.path.isfile(lua):
         vars_.update({
             'LUA': lua,
@@ -345,12 +345,12 @@ def lua_vars(config, prefix):
     return vars_
 
 
-def r_vars(config, prefix):
+def r_vars(config, prefix, platform):
     vars_ = {
             'R_VER': get_r_ver(config),
             'CONDA_R': get_r_ver(config),
             }
-    r = config.r_bin(prefix)
+    r = config.r_bin(prefix, platform)
     if os.path.isfile(r):
         vars_.update({
             'R': r,
