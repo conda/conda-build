@@ -220,7 +220,7 @@ def copy_recipe(m):
                 file_paths = []
 
         for f in file_paths:
-            utils.copy_into(os.path.join(src_dir, f), recipe_dir,
+            utils.copy_into(join(src_dir, f), join(recipe_dir, f),
                             timeout=output_metadata.config.timeout,
                             locking=output_metadata.config.locking, clobber=True)
 
