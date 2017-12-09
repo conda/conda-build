@@ -129,7 +129,9 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
                 raise
 
     specs = actions_to_pins(actions)
-    return specs + subpackages + pass_through_deps, actions, unsat
+    return ((specs + subpackages + pass_through_deps) or
+                  m.meta.get('requirements', {}).get(env, []),
+            actions, unsat)
 
 
 def strip_channel(spec_str):
@@ -178,9 +180,19 @@ def get_upstream_pins(m, actions, env):
     downstream dependency specs.  Return these additional specs."""
 
     # this attribute is added in the first pass of finalize_outputs_pass
-    raw_specs = (m.original_meta.get('requirements', {}).get(env, []) if hasattr(m, 'original_meta')
-                 else [])
-    explicit_specs = [req.split(' ')[0] for req in raw_specs]
+    extract_pattern = r'(.*)package:'
+    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
+                                                   force_top_level=True),
+                                 # second item: the requirements text for this particular metadata
+                                 #    object (might be output)
+                                m.extract_requirements_text())).rstrip()
+    raw_specs = {}
+    if template_string:
+        raw_specs = yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
+                                    template_string=template_string)) or {}
+
+    env_specs = utils.expand_reqs(raw_specs.get('requirements', {})).get(env, [])
+    explicit_specs = [req.split(' ')[0] for req in env_specs] if env_specs else []
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
@@ -266,26 +278,51 @@ def get_upstream_pins(m, actions, env):
     return additional_specs
 
 
-def add_upstream_pins(m):
+def _read_upstream_pin_files(m, env, permit_unsatisfiable_variants, exclude_pattern):
+    deps, actions, unsat = get_env_dependencies(m, env, m.config.variant,
+                                exclude_pattern,
+                                permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+    # extend host deps with strong build run exports.  This is important for things like
+    #    vc feature activation to work correctly in the host env.
+    extra_run_specs = get_upstream_pins(m, actions, env)
+    return deps or m.meta.get('requirements', {}).get(env), unsat, extra_run_specs
+
+
+def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
     """Applies run_exports from any build deps to host and run sections"""
     # if we have host deps, they're more important than the build deps.
-    build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
-                                    exclude_pattern=None,
-                                    permit_unsatisfiable_variants=True,
-                                    merge_build_host_on_same_platform=False)
-
-    extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
-    # defaults to empty list if not there
-    host_reqs = utils.ensure_list(m.get_value('requirements/host'))
-    key = 'host'
-    # legacy recipe without host entry.  Add dep to build reqs instead.
-    if not host_reqs:
-        host_reqs = utils.ensure_list(m.get_value('requirements/build'))
-        key = 'build'
-    host_reqs.extend(extra_run_specs_from_build.get('strong', []))
     requirements = m.meta.get('requirements', {})
-    requirements[key] = [utils.ensure_valid_spec(spec) for spec in host_reqs]
+    build_deps, build_unsat, extra_run_specs_from_build = _read_upstream_pin_files(m, 'build',
+                                                    permit_unsatisfiable_variants, exclude_pattern)
+
+    # is there a 'host' section?
+    if m.is_cross:
+        host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
+                                                    permit_unsatisfiable_variants, exclude_pattern)
+        extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
+                              extra_run_specs_from_host.get('weak', []) +
+                              extra_run_specs_from_build.get('strong', []))
+    else:
+        # redo this, but lump in the host deps too, to catch any run_exports stuff that gets merged
+        #    when build platform is same as host
+        build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
+                                        exclude_pattern,
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+        m.config.build_prefix_override = not m.uses_new_style_compiler_activation
+        host_deps = []
+        host_unsat = []
+        extra_run_specs = set(extra_run_specs_from_build.get('strong', []) +
+                              extra_run_specs_from_build.get('weak', []))
+
+    host_deps.extend(extra_run_specs_from_build.get('strong', []))
+    run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
+
+    requirements.update({'build': [utils.ensure_valid_spec(spec, warn=True) for spec in build_deps],
+                         'host': [utils.ensure_valid_spec(spec, warn=True) for spec in host_deps],
+                         'run': [utils.ensure_valid_spec(spec, warn=True) for spec in run_deps]})
+
     m.meta['requirements'] = requirements
+    return build_unsat, host_unsat
 
 
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
@@ -311,7 +348,10 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     extract_pattern = r'(.*)package:'
     template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
                                                    force_top_level=True),
+                                 # second item: the requirements text for this particular metadata
+                                 #    object (might be output)
                                 m.extract_requirements_text()))
+
     requirements = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
                             template_string=template_string)) or {}).get('requirements', {})
     requirements = utils.expand_reqs(requirements)
@@ -319,53 +359,15 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     if isfile(m.requirements_path) and not requirements.get('run'):
         requirements['run'] = specs_from_url(m.requirements_path)
 
-    build_reqs = requirements.get('build', [])
-    # if python is in the build specs, but doesn't have a specific associated
-    #    version, make sure to add one
-    if build_reqs and 'python' in build_reqs:
-        build_reqs.append('python {}'.format(m.config.variant['python']))
-        m.meta['requirements']['build'] = build_reqs
+    rendered_metadata = m.copy()
+    rendered_metadata.meta['requirements'] = requirements
+    utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                  rendered_metadata.config.variant, 'build')
+    utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                  rendered_metadata.config.variant, 'host')
 
-    add_upstream_pins(m)
-
-    # if we have host deps, they're more important than the build deps.
-    build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
-                                    exclude_pattern,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-
-    extra_run_specs_from_build = get_upstream_pins(m, build_actions, 'build')
-
-    # is there a 'host' section?
-    if m.is_cross:
-        # if python is in the build specs, but doesn't have a specific associated
-        #    version, make sure to add one
-        host_reqs = m.get_value('requirements/host')
-        if host_reqs:
-            if 'python' in host_reqs:
-                host_reqs.append('python {}'.format(m.config.variant['python']))
-
-        host_deps, host_actions, host_unsat = get_env_dependencies(m, 'host', m.config.variant,
-                                        exclude_pattern,
-                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-        # extend host deps with strong build run exports.  This is important for things like
-        #    vc feature activation to work correctly in the host env.
-        extra_run_specs_from_host = get_upstream_pins(m, host_actions, 'host')
-        extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
-                              extra_run_specs_from_host.get('weak', []) +
-                              extra_run_specs_from_build.get('strong', []))
-    else:
-        # redo this, but lump in the host deps too, to catch any run_exports stuff that gets merged
-        #    when build platform is same as host
-        build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
-                                        exclude_pattern,
-                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-        m.config.build_prefix_override = not m.uses_new_style_compiler_activation
-        host_deps = []
-        host_unsat = None
-        extra_run_specs = (extra_run_specs_from_build.get('strong', []) +
-                           extra_run_specs_from_build.get('weak', []))
-
-    run_deps = requirements.get('run', [])
+    build_unsat, host_unsat = add_upstream_pins(rendered_metadata, permit_unsatisfiable_variants,
+                                                 exclude_pattern)
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -374,19 +376,29 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in output_excludes))
     pinning_env = 'host' if m.is_cross else 'build'
-    full_build_deps, _, _ = get_env_dependencies(m, pinning_env, m.config.variant,
+
+    build_reqs = requirements.get(pinning_env, [])
+    # if python is in the build specs, but doesn't have a specific associated
+    #    version, make sure to add one
+    if build_reqs and 'python' in build_reqs:
+        build_reqs.append('python {}'.format(m.config.variant['python']))
+        rendered_metadata.meta['requirements'][pinning_env] = build_reqs
+
+    full_build_deps, _, _ = get_env_dependencies(rendered_metadata, pinning_env,
+                                        rendered_metadata.config.variant,
                                         exclude_pattern=exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
 
-    versioned_run_deps = [get_pin_from_build(m, dep, full_build_dep_versions) for dep in run_deps]
-    versioned_run_deps.extend(extra_run_specs)
+    run_deps = rendered_metadata.meta.get('requirements', {}).get('run', [])
+
+    versioned_run_deps = [get_pin_from_build(rendered_metadata, dep, full_build_dep_versions)
+                          for dep in run_deps]
     versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps]
 
-    for _env, values in (('build', build_deps), ('host', host_deps), ('run', versioned_run_deps)):
-        if values:
-            requirements[_env] = list({strip_channel(dep) for dep in values})
-    rendered_metadata = m.copy()
+    requirements = rendered_metadata.meta.get('requirements', {})
+    requirements['run'] = versioned_run_deps
+
     rendered_metadata.meta['requirements'] = requirements
 
     # append other requirements, such as python.app, appropriately
@@ -462,7 +474,6 @@ def reparse(metadata):
     py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
     sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
     metadata.parse_until_resolved()
-    metadata.original_meta = metadata.meta.copy()
     metadata = finalize_metadata(metadata)
     return metadata
 

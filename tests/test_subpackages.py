@@ -72,8 +72,7 @@ def test_run_exports_in_subpackage(testing_metadata):
     api.build(p1, config=testing_metadata.config)[0]
     # api.update_index(os.path.dirname(output), config=testing_metadata.config)
     p2 = testing_metadata.copy()
-    p2.meta['requirements']['build'] = ['has_run_exports']
-    p2.original_meta = p2.meta.copy()
+    p2.meta['requirements']['host'] = ['has_run_exports']
     p2_final = finalize_metadata(p2)
     assert 'bzip2 1.0.*' in p2_final.meta['requirements']['run']
 

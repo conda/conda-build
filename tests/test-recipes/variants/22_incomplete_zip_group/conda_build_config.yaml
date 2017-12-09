@@ -1,0 +1,11 @@
+# tests that conda-build doesn't fall over when some field specified in zip_keys is missing.  This can
+#    happen when recording lists of only used variables.
+a:
+  - 1
+b:
+  - 2
+zip_keys:
+  -
+    - a
+    - b
+    - c

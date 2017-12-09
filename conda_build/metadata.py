@@ -18,7 +18,6 @@ from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
 from .conda_interface import envs_dirs
 from .conda_interface import string_types
-from .conda_interface import memoized
 
 from conda_build import exceptions, utils, variants
 from conda_build.features import feature_list
@@ -636,8 +635,6 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
                 log.info("Attempting to finalize metadata for {}".format(metadata.name()))
-            if pass_no == 0:
-                base_metadata.original_meta = base_metadata.meta.copy()
             om = base_metadata.copy()
             # store a copy of the metadata before finalization, so that we know what is
             #     original stuff.  This is especially important for only applying run_exports
@@ -700,7 +697,6 @@ def _filter_recipe_text(text, extract_pattern=None):
     return text
 
 
-@memoized
 def read_meta_file(meta_path):
     with open(meta_path, 'rb') as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup
@@ -1455,9 +1451,9 @@ class MetaData(object):
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
         recipe_text = select_lines(recipe_text, ns_cfg(self.config),
                                    variants_in_place=bool(self.config.variant))
-        return recipe_text
+        return recipe_text.rstrip()
 
-    def extract_requirements_text(self):
+    def extract_requirements_text(self, force_top_level=False):
         is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
         if not is_output:
             # start of line means top-level requirements
@@ -1465,10 +1461,11 @@ class MetaData(object):
         else:
             # outputs are already filtered into each output for us
             filter_ = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
-        return self.get_recipe_text(filter_)
+        return self.get_recipe_text(filter_, force_top_level=force_top_level)
 
     def extract_outputs_text(self):
-        return self.get_recipe_text(r'(^outputs:.*?)(^test:|^extra:|^about:|\Z)')
+        return self.get_recipe_text(r'(^outputs:.*?)(^test:|^extra:|^about:|\Z)',
+                                    force_top_level=True)
 
     def extract_source_text(self):
         return self.get_recipe_text(
@@ -1675,6 +1672,7 @@ class MetaData(object):
             build['track_features'] = output['track_features']
         if 'features' in output and output['features']:
             build['features'] = output['features']
+
         # 3.0.26+ - just pass through the whole build section from the output.
         #    It clobbers everything else.
         if 'build' in output:
@@ -1791,20 +1789,23 @@ class MetaData(object):
                     self.config.variants)
         return variants.get_vars(_variants, loop_only=True)
 
-    def get_used_loop_vars(self):
-        return {var for var in self.get_used_vars() if var in self.get_loop_vars()}
+    def get_used_loop_vars(self, force_top_level=False):
+        return {var for var in self.get_used_vars(force_top_level=force_top_level,
+                                                  add_zip_keys=False)
+                if var in self.get_loop_vars()}
 
-    def get_used_vars(self):
+    def get_used_vars(self, force_top_level=False, add_zip_keys=True):
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
         is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-        if is_output:
+        if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name())
         else:
-            recipe_text = self.get_recipe_text().replace(self.extract_outputs_text().strip(), '')
+            recipe_text = self.get_recipe_text(force_top_level=force_top_level).replace(
+                self.extract_outputs_text().strip(), '')
 
         recipe_text_without_requirements = recipe_text.replace(
-            self.extract_requirements_text().strip(), "")
+            self.extract_requirements_text(force_top_level=force_top_level).strip(), "")
 
         all_used = variants.find_used_variables_in_text(self.config.variant, recipe_text)
         outside_reqs_used = variants.find_used_variables_in_text(self.config.variant,
@@ -1831,7 +1832,20 @@ class MetaData(object):
                 if dep not in build_reqs and dep in requirements_only_used:
                     to_remove.add(dep)
         requirements_only_used -= to_remove
-        return outside_reqs_used | requirements_only_used
+        # force target_platform to always be included, because it determines conda-build behavior
+        if ('target_platform' in self.config.variant and
+                self.config.variant['target_platform'] != self.config.subdir):
+            outside_reqs_used.add('target_platform')
+        all_reqs = outside_reqs_used | requirements_only_used
+        zip_reqs = set()
+        if add_zip_keys:
+            zip_groups = variants._get_zip_groups(self.config.variant)
+            for req in all_reqs:
+                # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
+                for group in zip_groups:
+                    for group_key in group:
+                        zip_reqs.update(set(group_key.split('#')))
+        return all_reqs | zip_reqs
 
     def get_variants_as_dict_of_lists(self):
         return variants.list_of_dicts_to_dict_of_lists(self.config.variants)

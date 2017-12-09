@@ -913,6 +913,7 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
     # weak one from test_has_run_exports should be excluded, since it is a build dep
     assert 'weak_pinned_package 1.0.*' not in m.meta['requirements']['run']
+    # weak one from test_has_run_exports_implicit_weak should be present, since it is a host dep
     assert 'weak_pinned_package 2.0.*' in m.meta['requirements']['run']
 
 

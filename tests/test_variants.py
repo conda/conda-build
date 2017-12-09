@@ -183,8 +183,8 @@ def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, capl
     api.render(recipe, config=testing_config)
 
     text = caplog.text
-    assert "Adding .* to spec 'click  6'" in text
     assert "Adding .* to spec 'pytest  3.2'" in text
+    assert "Adding .* to spec 'click  6'" in text
     assert "Adding .* to spec 'pytest-cov  2.3'" not in text
     assert "Adding .* to spec 'pytest-mock  1.6'" not in text
 
@@ -250,7 +250,7 @@ def test_get_used_loop_vars(testing_config):
     #   some_package is explicitly used as a jinja2 variable
     assert m.get_used_loop_vars() == {'python', 'some_package'}
     # these are all used vars - including those with only one value (and thus not loop vars)
-    assert m.get_used_vars() == {'python', 'some_package', 'zlib'}
+    assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'zipped_var'}
 
 
 def test_reprovisioning_source(testing_config):
