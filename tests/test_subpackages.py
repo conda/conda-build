@@ -252,3 +252,16 @@ def test_pin_compatible_in_outputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_pin_compatible_in_output')
     m = api.render(recipe_dir, config=testing_config)[0][0]
     assert any(re.search('numpy\s*>=.*,<.*', req) for req in m.meta['requirements']['run'])
+
+
+def test_output_same_name_as_top_level_does_correct_output_regex(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_output_named_same_as_top_level')
+    ms = api.render(recipe_dir, config=testing_config)
+    # TODO: need to decide what best behavior is for saying whether the
+    # top-level build reqs or the output reqs for the similarly naemd output
+    # win. I think you could have both, but it means rendering a new, extra,
+    # build-only metadata in addition to all the outputs
+    for m, _, _ in ms:
+        if m.name() == 'ipp':
+            for env in ('build', 'host', 'run'):
+                assert not m.meta.get('requirements', {}).get(env)

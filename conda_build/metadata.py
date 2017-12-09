@@ -1443,8 +1443,7 @@ class MetaData(object):
         meta_path = self.meta_path or (os.path.join(is_output, 'meta.yaml') if is_output else '')
         if meta_path:
             recipe_text = read_meta_file(meta_path)
-            if (is_output and not force_top_level and
-                  self.name() != self.meta.get('extra', {}).get('parent_recipe', {}).get('name')):
+            if is_output and not force_top_level:
                 recipe_text = _filter_recipe_text(recipe_text, _output_filter_pattern(self.name()))
         else:
             recipe_text = yaml.dump(dict(self.meta), default_flow_style=False)
@@ -1839,12 +1838,12 @@ class MetaData(object):
         all_reqs = outside_reqs_used | requirements_only_used
         zip_reqs = set()
         if add_zip_keys:
-            zip_groups = variants._get_zip_groups(self.config.variant)
-            for req in all_reqs:
-                # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
-                for group in zip_groups:
-                    for group_key in group:
-                        zip_reqs.update(set(group_key.split('#')))
+            # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
+            for group in variants._get_zip_groups(self.config.variant):
+                # get the keys to each dict
+                for group_key in group:
+                    # break those keys into individual keys - these are the keys in the config
+                    zip_reqs.update(set(group_key.split('#')))
         return all_reqs | zip_reqs
 
     def get_variants_as_dict_of_lists(self):
