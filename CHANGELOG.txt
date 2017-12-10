@@ -1,3 +1,21 @@
+2017-12-9 3.1.2:
+
+Bug fixes:
+----------
+
+* fix copying of relative paths with source_files in test section  #2551
+* fix handling of too many x's in max_pin field.  If more x's than actual places were present, the incrementing broke.  #2552
+* refactor upstream pinning, fix extraction of outputs so that run_exports and pin_compatible work with them  #2556
+* fix bug that occurred when an output had the same name as the top level recipe.  Ended up extracting wrong part of recipe with wrong regex.  #2556
+* fix copying of recipe losing folder structure in the destination copy of the recipe  #2557
+
+Contributors:
+-------------
+
+* @msarahan
+* @nehaljwani
+
+
 2017-12-06 3.1.1:
 
 Bug fixes:
