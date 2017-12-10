@@ -5,7 +5,7 @@ package:
 outputs:
   - name: test1
     requirements:
-      build:
+      host:
         - python
         - numpy
       run:

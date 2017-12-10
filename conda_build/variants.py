@@ -117,11 +117,19 @@ def parse_config_file(path, config):
     return content
 
 
-def validate_variant(variant):
+def validate_spec(spec):
     errors = []
-    for key in variant:
+    for key in spec:
         if '-' in key:
             errors.append('"-" is a disallowed character in variant keys.  Key was: {}'.format(key))
+    zip_groups = _get_zip_groups(spec)
+    # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
+    for group in zip_groups:
+        for group_key in group:
+            for variant_key in group_key.split('#'):
+                if variant_key not in spec:
+                    errors.append('zip_key entry {} in group {} does not have any settings'.format(
+                        variant_key, group_key.split('#')))
     if errors:
         raise ValueError("Variant configuration errors: \n{}".format(errors))
 
@@ -192,6 +200,8 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                         if hasattr(v, 'keys'):
                             values[k] = v.copy()
                         else:
+                            # default "group" is just this one key.  We latch onto other groups if
+                            #     they exist
                             keys_in_group = [k]
                             if zip_keys:
                                 for group in zip_keys:
@@ -202,6 +212,12 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                             #    Otherwise, we filter later.
                             if all(group_item in spec for group_item in keys_in_group):
                                 for group_item in keys_in_group:
+                                    if len(ensure_list(spec[group_item])) != len(ensure_list(v)):
+                                        raise ValueError("All entries associated by a zip_key "
+                                    "field must be the same length.  In {}, {} and {} are "
+                                    "different ({} and {})".format(spec_source, k, group_item,
+                                                                len(ensure_list(v)),
+                                                                len(ensure_list(spec[group_item]))))
                                     values[group_item] = ensure_list(spec[group_item])
                             else:
                                 if k in values and any(subvalue not in values[k]
@@ -210,6 +226,7 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                                         "does not fully implement all zipped keys, or specifies "
                                         "a subspace that is not fully implemented.".format(
                                             spec_source))
+
     return values
 
 
@@ -449,11 +466,15 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     if variants:
         specs['argument_variants'] = variants
 
+    for f, spec in specs.items():
+        try:
+            validate_spec(spec)
+        except ValueError as e:
+            raise ValueError("Error in config {}: {}".format(f, str(e)))
+
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
     combined_spec, extend_keys = combine_specs(specs)
-
-    validate_variant(combined_spec)
 
     extend_keys.update({'zip_keys', 'extend_keys'})
 

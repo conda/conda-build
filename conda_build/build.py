@@ -48,8 +48,7 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs, try_download,
-                                add_upstream_pins)
+                                distribute_variants, expand_outputs, try_download)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (post_process, post_build,
@@ -199,8 +198,11 @@ def copy_recipe(m):
 
             src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
             if src_dir:
-                this_output = yaml.safe_load(m._get_contents(permit_undefined_jinja=True,
-                                              template_string=m.get_recipe_text())) or {}
+                this_output_text = m.get_recipe_text()
+                this_output = {}
+                if this_output_text:
+                    this_output = yaml.safe_load(m._get_contents(permit_undefined_jinja=True,
+                                                                 template_string=this_output_text))
                 if isinstance(this_output, list):
                     this_output = this_output[0]
                 install_script = this_output.get('script')
@@ -951,22 +953,14 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        # This must be done before "environ.create_env(m.config.build_prefix..)" as otherwise,
-        # if it excepts due to needing to build some dependencies, the build_prefix does
-        # not get cleaned out and that causes clobbers and failure to figure out the newly
-        # installed files at packaging-time.
-        host_ms_deps = None
-        build_ms_deps = None
-
-        for env in ('build', 'host'):
-            utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, env)
-
-        add_upstream_pins(m)
+        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'build')
+        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
 
         if (m.config.host_subdir != m.config.build_subdir and
                 m.config.host_subdir != "noarch"):
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
+
             host_ms_deps = m.ms_depends('host')
             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                        tuple(host_ms_deps), 'host',
@@ -987,8 +981,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         else:
             # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
             build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
+        build_ms_deps = tuple(utils.ensure_valid_spec(spec) for spec in build_ms_deps)
         build_actions = environ.get_install_actions(m.config.build_prefix,
-                                                    tuple(build_ms_deps), 'build',
+                                                    build_ms_deps, 'build',
                                                     subdir=m.config.build_subdir,
                                                     debug=m.config.debug,
                                                     verbose=m.config.verbose,

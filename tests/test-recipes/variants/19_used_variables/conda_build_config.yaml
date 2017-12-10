@@ -9,3 +9,10 @@ zlib:
 some_package:
   - mooo
   - llama
+# not directly used, but is "used" by virtue of being zipped
+zipped_var:
+  - chicken
+  - dog
+zip_keys:
+  - some_package
+  - zipped_var

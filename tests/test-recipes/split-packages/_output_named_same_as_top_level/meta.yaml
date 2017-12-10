@@ -1,0 +1,30 @@
+{% set version = "2018.0.1" %}
+{% set buildnumber = 3 %}
+{% set ipproot = 'localpath' %}
+
+package:
+  name: ipp
+  version: {{version}}
+
+build:
+  number: {{buildnumber}}
+  string: intel_{{buildnumber}}
+
+outputs:
+  - name: ipp
+    build:
+      script: echo "weee"
+  - name: ipp-include
+  - name: ipp-static
+    requirements:
+      - ipp-include =={{version}}
+  - name: ipp-devel
+    requirements:
+      - ipp =={{version}}
+      - ipp-include =={{version}}
+
+about:
+  home: http://software.intel.com/en-us/articles/intel-ipp/
+  license: proprietary - Intel
+  license_family: Proprietary
+  summary: Intel(R) Integrated Performance Primitives
