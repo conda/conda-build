@@ -284,3 +284,10 @@ def test_variants_used_in_jinja2_conditionals(testing_config):
     assert len(ms) == 2
     assert sum(m.config.variant['blas_impl'] == 'mkl' for m, _, _ in ms) == 1
     assert sum(m.config.variant['blas_impl'] == 'openblas' for m, _, _ in ms) == 1
+
+
+def test_build_run_exports_act_on_host(testing_config, caplog):
+    """Regression test for https://github.com/conda/conda-build/issues/2559"""
+    api.render(os.path.join(recipe_dir, '22_run_exports_rerendered_for_other_variants'),
+                    platform='win', arch='64')
+    assert "failed to get install actions, retrying" not in caplog.text

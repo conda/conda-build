@@ -297,6 +297,9 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
     # is there a 'host' section?
     if m.is_cross:
+        # this must come before we read upstream pins, because it will enforce things
+        #      like vc version from the compiler.
+        m.meta['requirements']['host'].extend(extra_run_specs_from_build.get('strong', []))
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
                                                     permit_unsatisfiable_variants, exclude_pattern)
         extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
@@ -314,7 +317,6 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []) +
                               extra_run_specs_from_build.get('weak', []))
 
-    host_deps.extend(extra_run_specs_from_build.get('strong', []))
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
 
     requirements.update({'build': [utils.ensure_valid_spec(spec, warn=True) for spec in build_deps],
