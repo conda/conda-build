@@ -1,0 +1,9 @@
+package:
+  name: test
+  version: 1.0.0
+
+requirements:
+  host:
+    - openssl
+  build:
+    - {{ compiler('c') }}
