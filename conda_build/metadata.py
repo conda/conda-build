@@ -542,7 +542,7 @@ def _get_dependencies_from_environment(env_name_or_path):
     return {'requirements': {'build': bootstrap_requirements}}
 
 
-def toposort(output_metadata_map, phase):
+def toposort(output_metadata_map):
     '''This function is used to work out the order to run the install scripts
        for split packages based on any interdependencies. The result is just
        a re-ordering of outputs such that we can run them in that order and
@@ -558,15 +558,20 @@ def toposort(output_metadata_map, phase):
     topodict = dict()
     order = dict()
     endorder = set()
+
     for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
         if output_d.get('type', 'conda') == 'conda':
+            deps = (output_m.get_value('requirements/run', []) +
+                    output_m.get_value('requirements/host', []))
+            if not output_m.is_cross:
+                deps.extend(output_m.get_value('requirements/build', []))
             name = output_d['name']
             order[name] = idx
             topodict[name] = set()
-            for run_dep in output_m.get_value('requirements/{}'.format(phase), []):
-                run_dep = run_dep.split(' ')[0]
-                if run_dep in these_packages:
-                    topodict[name].update((run_dep,))
+            for dep in deps:
+                dep = dep.split(' ')[0]
+                if dep in these_packages:
+                    topodict[name].update((dep,))
         else:
             endorder.add(idx)
     topo_order = list(_toposort(topodict))
@@ -1720,7 +1725,7 @@ class MetaData(object):
                     " on the conda-build tracker at https://github.com/conda/conda-build/issues")
 
             # format here is {output_dict: metadata_object}
-            render_order = toposort(out_metadata_map, phase='run')
+            render_order = toposort(out_metadata_map)
             check_circular_dependencies(render_order)
 
             conda_packages = OrderedDict()

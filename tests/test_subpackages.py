@@ -273,7 +273,6 @@ def test_subpackage_order_natural(testing_config):
     assert len(outputs) == 2
 
 
-@pytest.mark.xfail
 def test_subpackage_order_bad(testing_config):
     recipe = os.path.join(subpackage_dir, '_order_bad')
     outputs = api.build(recipe, config=testing_config)
