@@ -1,0 +1,11 @@
+package:
+  name: toplevel-dc
+  version: 1
+outputs:
+  - name: d
+    version: 1
+  - name: c
+    version: 1
+    requirements:
+      host:
+        - {{ pin_subpackage('d',  min_pin='x.x.x.x.x.x.x.x', max_pin='x.x.x.x.x.x.x.x') }}

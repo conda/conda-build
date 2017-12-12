@@ -265,3 +265,15 @@ def test_output_same_name_as_top_level_does_correct_output_regex(testing_config)
         if m.name() == 'ipp':
             for env in ('build', 'host', 'run'):
                 assert not m.meta.get('requirements', {}).get(env)
+
+
+def test_subpackage_order_natural(testing_config):
+    recipe = os.path.join(subpackage_dir, '_order')
+    outputs = api.build(recipe, config=testing_config)
+    assert len(outputs) == 2
+
+
+def test_subpackage_order_bad(testing_config):
+    recipe = os.path.join(subpackage_dir, '_order_bad')
+    outputs = api.build(recipe, config=testing_config)
+    assert len(outputs) == 2

@@ -1,0 +1,10 @@
+package:
+  name: toplevel-ab
+outputs:
+  - name: a
+    version: 1
+  - name: b
+    version: 1
+    requirements:
+      host:
+        - {{ pin_subpackage('a',  min_pin='x.x.x.x.x.x.x.x', max_pin='x.x.x.x.x.x.x.x') }}
