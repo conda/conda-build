@@ -721,7 +721,7 @@ def bundle_conda(output, metadata, env, **kw):
     except OSError:
         pass
 
-    if not files:
+    if not files or metadata.get_value('build/always_include_files'):
         if output.get('script'):
             with utils.path_prepended(metadata.config.build_prefix):
                 env = environ.get_dict(config=metadata.config, m=metadata)
@@ -740,8 +740,6 @@ def bundle_conda(output, metadata, env, **kw):
                                 cwd=metadata.config.work_dir, env=env_output)
         else:
             initial_files = utils.prefix_files(metadata.config.host_prefix)
-            keep_files = []
-            pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
@@ -750,6 +748,15 @@ def bundle_conda(output, metadata, env, **kw):
                             if not any(keep_file.startswith(item + os.path.sep)
                                        for keep_file in keep_files))
 
+    for pat in metadata.always_include_files():
+        has_matches = False
+        for f in set(initial_files):
+            if fnmatch.fnmatch(f, pat):
+                print("Including in package existing file", f)
+                initial_files.remove(f)
+                has_matches = True
+        if not has_matches:
+            log.warn("Glob %s from always_include_files does not match any files", pat)
     files = post_process_files(metadata, initial_files)
 
     if output.get('name') and output.get('name') != 'conda':
@@ -1056,7 +1063,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
-        # Save this for later
         with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
@@ -1246,11 +1252,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                            is_cross=m.is_cross,
                                            is_conda=m.name() == 'conda')
 
-                    for f in glob(os.path.join(m.config.host_prefix, 'conda-meta', '*.json')):
-                        with open(f) as fd:
-                            if 'files' in output_d:
-                                output_d['files'] -= set(json.load(fd).get('files', []))
-
                     to_remove = set()
                     for f in output_d.get('files', []):
                         if f.startswith('conda-meta'):
@@ -1258,14 +1259,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
                     if 'files' in output_d:
                         output_d['files'] = set(output_d['files']) - to_remove
-
-                    # add always_include_files back in
-                    for pat in m.always_include_files():
-                        matches = set(glob(os.path.join(m.config.host_prefix, pat)))
-                        output_d['files'].update(matches)
-                        if not matches:
-                            log.warn("Glob %s from always_include_files does not match any files",
-                                     pat)
 
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
