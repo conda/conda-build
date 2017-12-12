@@ -22,6 +22,7 @@ from .conda_interface import walk_prefix
 from .conda_interface import md5_file
 from .conda_interface import PY3
 from .conda_interface import TemporaryDirectory
+from .conda_interface import memoized
 
 from conda_build import utils
 from conda_build.os_utils.pyldd import is_codefile
@@ -235,16 +236,9 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
     rm_py_along_so(prefix)
 
 
-files_cache = {}
-
-
+@memoized
 def find_lib(link, prefix, path=None):
-    global files_cache
-    if prefix in files_cache:
-        files = files_cache[prefix]
-    else:
-        files = utils.prefix_files(prefix)
-        files_cache[prefix] = files
+    files = utils.prefix_files(prefix)
 
     if link.startswith(prefix):
         link = os.path.normpath(link[len(prefix) + 1:])
