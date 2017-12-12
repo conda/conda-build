@@ -23,6 +23,7 @@ from conda_build.cli.main_render import get_render_parser
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config
+from os.path import abspath, expanduser, expandvars
 
 on_win = (sys.platform == 'win32')
 
@@ -167,7 +168,7 @@ different sets of packages."""
     pypi_grp.add_argument(
         '--config-file',
         help="path to .pypirc file to use when uploading to pypi",
-        default=cc_conda_build.get('pypirc'),
+        default=abspath(expanduser(expandvars(cc_conda_build.get('pypirc')))) if cc_conda_build.get('pypirc') else None,
     )
     pypi_grp.add_argument(
         '--repository', '-r', help="PyPI repository to upload to",

@@ -7,7 +7,7 @@ import copy
 from collections import namedtuple
 import math
 import os
-from os.path import abspath, expanduser, join
+from os.path import abspath, expanduser, join, expandvars
 import shutil
 import sys
 import time
@@ -324,7 +324,7 @@ class Config(object):
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
-                self._croot = abspath(expanduser(_bld_root_rc))
+                self._croot = abspath(expanduser(expandvars(_bld_root_rc)))
             elif root_writable:
                 self._croot = join(root_dir, 'conda-bld')
             else:
