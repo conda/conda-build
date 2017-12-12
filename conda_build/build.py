@@ -1267,14 +1267,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     if 'files' in output_d:
                         output_d['files'] = set(output_d['files']) - to_remove
 
-                    # add always_include_files back in
-                    for pat in m.always_include_files():
-                        matches = set(glob(os.path.join(m.config.host_prefix, pat)))
-                        output_d['files'].update(matches)
-                        if not matches:
-                            log.warn("Glob %s from always_include_files does not match any files",
-                                     pat)
-
                     # copies the backed-up new prefix files into the newly created host env
                     for f in new_prefix_files:
                         utils.copy_into(os.path.join(prefix_files_backup, f),

@@ -8,12 +8,15 @@ build:
     - lib/libpng*.dylib  # [osx]
     - lib/libpng*.so*     # [linux]
     - Library/lib/libpng*.lib # [win]
+  ignore_run_exports:
+    - libpng
 
 requirements:
     build:
         - libpng 1.6.17
 
 outputs:
+  - name: conda-build-test-always_include_files-glob
   - name: subpackage
     requirements:
       build:
@@ -23,6 +26,8 @@ outputs:
         - lib/libjpeg*.dylib   # [osx]
         - lib/libjpeg*.so*     # [linux]
         - Library/lib/libjpeg*.lib # [win]
+      ignore_run_exports:
+        - jpeg
     script: echo_file.sh
     test:
       commands:
