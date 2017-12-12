@@ -22,7 +22,6 @@ from .conda_interface import walk_prefix
 from .conda_interface import md5_file
 from .conda_interface import PY3
 from .conda_interface import TemporaryDirectory
-from .conda_interface import memoized
 
 from conda_build import utils
 from conda_build.os_utils.pyldd import is_codefile
@@ -236,10 +235,7 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
     rm_py_along_so(prefix)
 
 
-@memoized
-def find_lib(link, prefix, path=None):
-    files = utils.prefix_files(prefix)
-
+def find_lib(link, prefix, files, path=None):
     if link.startswith(prefix):
         link = os.path.normpath(link[len(prefix) + 1:])
         if link not in files:
@@ -277,10 +273,10 @@ def find_lib(link, prefix, path=None):
     print("Don't know how to find %s, skipping" % link)
 
 
-def osx_ch_link(path, link_dict, prefix):
+def osx_ch_link(path, link_dict, prefix, files):
     link = link_dict['name']
     print("Fixing linking of %s in %s" % (link, path))
-    link_loc = find_lib(link, prefix, path)
+    link_loc = find_lib(link, prefix, files, path)
     if not link_loc:
         return
 
@@ -316,7 +312,7 @@ def osx_ch_link(path, link_dict, prefix):
     return ret
 
 
-def mk_relative_osx(path, prefix, build_prefix=None):
+def mk_relative_osx(path, prefix, files, build_prefix=None):
     '''
     if build_prefix is None, then this is a standard conda build. The path
     and all dependencies are in the build_prefix.
@@ -331,7 +327,7 @@ def mk_relative_osx(path, prefix, build_prefix=None):
         prefix = build_prefix
 
     assert sys.platform == 'darwin' and is_obj(path)
-    s = macho.install_name_change(path, partial(osx_ch_link, prefix=prefix))
+    s = macho.install_name_change(path, partial(osx_ch_link, prefix=prefix, files=files))
 
     names = macho.otool(path)
     if names:
@@ -403,7 +399,7 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
-def mk_relative(m, f, prefix):
+def mk_relative(m, f, prefix, files):
     assert sys.platform != 'win32'
     path = os.path.join(prefix, f)
     if not is_obj(path):
@@ -412,7 +408,7 @@ def mk_relative(m, f, prefix):
     if sys.platform.startswith('linux'):
         mk_relative_linux(f, prefix=prefix, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
-        mk_relative_osx(path, prefix=prefix)
+        mk_relative_osx(path, prefix=prefix, files=files)
 
 
 def fix_permissions(files, prefix):
@@ -455,13 +451,14 @@ def post_build(m, files, prefix, build_python, croot):
     osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
 
     check_symlinks(files, prefix, croot)
+    prefix_files = utils.prefix_files(prefix)
 
     for f in files:
         if f.startswith('bin/'):
             fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
         if binary_relocation is True or (isinstance(binary_relocation, list) and
                                          f in binary_relocation):
-            mk_relative(m, f, prefix)
+            mk_relative(m, f, prefix, prefix_files)
 
 
 def check_symlinks(files, prefix, croot):
