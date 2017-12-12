@@ -721,7 +721,7 @@ def bundle_conda(output, metadata, env, **kw):
     except OSError:
         pass
 
-    if not files:
+    if not files or metadata.get_value('build/always_include_files'):
         if output.get('script'):
             with utils.path_prepended(metadata.config.build_prefix):
                 env = environ.get_dict(config=metadata.config, m=metadata)
@@ -740,8 +740,6 @@ def bundle_conda(output, metadata, env, **kw):
                                 cwd=metadata.config.work_dir, env=env_output)
         else:
             initial_files = utils.prefix_files(metadata.config.host_prefix)
-            keep_files = []
-            pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
     else:
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
@@ -1253,11 +1251,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                            config=m.config, subdir=m.config.build_subdir,
                                            is_cross=m.is_cross,
                                            is_conda=m.name() == 'conda')
-
-                    for f in glob(os.path.join(m.config.host_prefix, 'conda-meta', '*.json')):
-                        with open(f) as fd:
-                            if 'files' in output_d:
-                                output_d['files'] -= set(json.load(fd).get('files', []))
 
                     to_remove = set()
                     for f in output_d.get('files', []):
