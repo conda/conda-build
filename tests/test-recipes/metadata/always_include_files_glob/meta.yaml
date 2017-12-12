@@ -34,7 +34,7 @@ outputs:
         - test -e $PREFIX/test.txt              # [unix]
         - test -e $PREFIX/lib/libjpeg.9.dylib   # [osx]
         - test -e $PREFIX/lib/libjpeg.dylib   # [osx]
-        - test -e $PREFIX/lib/libjpeg.9.so      # [linux]
+        - test -e $PREFIX/lib/libjpeg.so.9      # [linux]
         - test -e $PREFIX/lib/libjpeg.so      # [linux]
         - if not exist %PREFIX%\Library\lib\libjpeg.lib exit 1   # [win]
         - if not exist %PREFIX%\test.txt exit 1   # [win]
