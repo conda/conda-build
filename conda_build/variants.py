@@ -5,6 +5,7 @@ from collections import OrderedDict
 from itertools import product
 import logging
 import os
+from os.path import abspath, expanduser, expandvars
 from pkg_resources import parse_version
 import re
 import sys
@@ -142,9 +143,9 @@ def find_config_files(metadata_or_path, additional_files=None, ignore_system_con
 
     if not ignore_system_config:
         if cc_conda_build.get('config_file'):
-            system_path = cc_conda_build['config_file']
+            system_path = abspath(expanduser(expandvars(cc_conda_build['config_file'])))
         else:
-            system_path = os.path.join(os.path.expanduser('~'), "conda_build_config.yaml")
+            system_path = os.path.join(expanduser('~'), "conda_build_config.yaml")
         if os.path.isfile(system_path):
             files.append(system_path)
 

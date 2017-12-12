@@ -7,7 +7,7 @@ import copy
 from collections import namedtuple
 import math
 import os
-from os.path import abspath, expanduser, join
+from os.path import abspath, expanduser, join, expandvars
 import shutil
 import sys
 import time
@@ -83,7 +83,8 @@ DEFAULTS = [Setting('activate', True),
             Setting('filename_hashing', cc_conda_build.get('filename_hashing',
                                                            'true').lower() == 'true'),
             Setting('keep_old_work', False),
-            Setting('_src_cache_root', cc_conda_build.get('cache_dir')),
+            Setting('_src_cache_root', abspath(expanduser(expandvars(
+                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
             Setting('copy_test_source_files', True),
 
             Setting('index', None),
@@ -324,7 +325,7 @@ class Config(object):
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
-                self._croot = abspath(expanduser(_bld_root_rc))
+                self._croot = abspath(expanduser(expandvars(_bld_root_rc)))
             elif root_writable:
                 self._croot = join(root_dir, 'conda-bld')
             else:

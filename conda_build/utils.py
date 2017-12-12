@@ -12,7 +12,8 @@ import logging.config
 import mmap
 import operator
 import os
-from os.path import dirname, getmtime, getsize, isdir, join, isfile, abspath, islink
+from os.path import (dirname, getmtime, getsize, isdir, join, isfile, abspath, islink,
+                     expanduser, expandvars)
 import re
 import stat
 import subprocess
@@ -1100,7 +1101,9 @@ def reset_deduplicator():
 
 
 def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers=True):
-    config_file = cc_conda_build.get('log_config_file')
+    config_file = None
+    if cc_conda_build.get('log_config_file'):
+        config_file = abspath(expanduser(expandvars(cc_conda_build.get('log_config_file'))))
     # by loading config file here, and then only adding handlers later, people
     # should be able to override conda-build's logger settings here.
     if config_file:
