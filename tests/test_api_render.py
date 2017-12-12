@@ -152,6 +152,7 @@ def test_cross_recipe_with_only_build_section(testing_config):
     assert not metadata.config.build_prefix_override
 
 
+@pytest.mark.serial
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs('config')
     # python won't be used - the stuff in the recipe folder will override it
@@ -161,13 +162,19 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     with open(os.path.join('config', 'conda_build_config.yaml'), 'w') as f:
         yaml.dump(config, f, default_flow_style=False)
 
+    cc_conda_build_backup = cc_conda_build.copy()
     # hacky equivalent of changing condarc
+    # careful, this is global and affects other tests!  make sure to clear it!
     cc_conda_build.update({'config_file': '${TEST_WORKDIR}/config/conda_build_config.yaml'})
 
     os.environ['TEST_WORKDIR'] = testing_workdir
-    m = api.render(os.path.join(thisdir, 'test-recipes', 'variants', '19_used_variables'),
-                   bypass_env_check=True, finalize=False)[0][0]
-    # this one should have gotten clobbered by the values in the recipe
-    assert m.config.variant['python'] not in python_versions
-    # this confirms that we loaded the config file correctly
-    assert len(m.config.squished_variants['bzip2']) == 2
+    try:
+        m = api.render(os.path.join(thisdir, 'test-recipes', 'variants', '19_used_variables'),
+                    bypass_env_check=True, finalize=False)[0][0]
+        # this one should have gotten clobbered by the values in the recipe
+        assert m.config.variant['python'] not in python_versions
+        # this confirms that we loaded the config file correctly
+        assert len(m.config.squished_variants['bzip2']) == 2
+    finally:
+        cc_conda_build.clear()
+        cc_conda_build.update(cc_conda_build_backup)
