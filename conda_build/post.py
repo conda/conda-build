@@ -235,8 +235,17 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
     rm_py_along_so(prefix)
 
 
+files_cache = {}
+
+
 def find_lib(link, prefix, path=None):
-    files = utils.prefix_files(prefix)
+    global files_cache
+    if prefix in files_cache:
+        files = files_cache[prefix]
+    else:
+        files = utils.prefix_files(prefix)
+        files_cache[prefix] = files
+
     if link.startswith(prefix):
         link = os.path.normpath(link[len(prefix) + 1:])
         if link not in files:
