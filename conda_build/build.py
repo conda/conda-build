@@ -750,6 +750,15 @@ def bundle_conda(output, metadata, env, **kw):
                             if not any(keep_file.startswith(item + os.path.sep)
                                        for keep_file in keep_files))
 
+    for pat in metadata.always_include_files():
+        has_matches = False
+        for f in set(initial_files):
+            if fnmatch.fnmatch(f, pat):
+                print("Including in package existing file", f)
+                initial_files.remove(f)
+                has_matches = True
+        if not has_matches:
+            log.warn("Glob %s from always_include_files does not match any files", pat)
     files = post_process_files(metadata, initial_files)
 
     if output.get('name') and output.get('name') != 'conda':
@@ -1056,7 +1065,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
-        # Save this for later
         with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
             f.write(u'\n'.join(sorted(list(files1))))
             f.write(u'\n')
