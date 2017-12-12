@@ -753,7 +753,9 @@ def expand_globs(path_list, root_dir):
     for path in path_list:
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
-        if os.path.islink(path) or os.path.isfile(path):
+        if os.path.isfile(path):
+            files.append(path)
+        elif os.path.islink(path):
             files.append(path)
         elif os.path.isdir(path):
             files.extend(os.path.join(root, f) for root, _, fs in os.walk(path) for f in fs)
