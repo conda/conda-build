@@ -265,7 +265,9 @@ different sets of packages."""
     p.add_argument(
         '--cache-dir',
         help=('Path to store the source files (archives, git clones, etc.) during the build.'),
-        default=cc_conda_build.get('cache_dir'),
+        default=(abspath(expanduser(expandvars(cc_conda_build.get('cache_dir'))))
+                 if cc_conda_build.get('cache_dir')
+                 else cc_conda_build.get('cache_dir')),
     )
     p.add_argument(
         "--no-copy-test-source-files", dest="copy_test_source_files", action="store_false",

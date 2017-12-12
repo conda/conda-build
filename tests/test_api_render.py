@@ -8,11 +8,12 @@ import re
 
 import mock
 import pytest
+import yaml
 
 from conda_build import api, render
-from conda_build.conda_interface import subdir
+from conda_build.conda_interface import subdir, reset_context, cc_conda_build
 
-from .utils import metadata_dir
+from .utils import metadata_dir, thisdir
 
 
 def test_render_need_download(testing_workdir, testing_config):
@@ -149,3 +150,24 @@ def test_cross_recipe_with_only_build_section(testing_config):
     assert metadata.config.host_subdir != subdir
     assert metadata.config.build_prefix != metadata.config.host_prefix
     assert not metadata.config.build_prefix_override
+
+
+def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
+    os.makedirs('config')
+    # python won't be used - the stuff in the recipe folder will override it
+    python_versions = ['2.6', '3.4', '3.10']
+    config = {'python': python_versions,
+              'bzip2': ['0.9', '1.0']}
+    with open(os.path.join('config', 'conda_build_config.yaml'), 'w') as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+    # hacky equivalent of changing condarc
+    cc_conda_build.update({'config_file': '${TEST_WORKDIR}/config/conda_build_config.yaml'})
+
+    os.environ['TEST_WORKDIR'] = testing_workdir
+    m = api.render(os.path.join(thisdir, 'test-recipes', 'variants', '19_used_variables'),
+                   bypass_env_check=True, finalize=False)[0][0]
+    # this one should have gotten clobbered by the values in the recipe
+    assert m.config.variant['python'] not in python_versions
+    # this confirms that we loaded the config file correctly
+    assert len(m.config.squished_variants['bzip2']) == 2

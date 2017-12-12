@@ -83,7 +83,8 @@ DEFAULTS = [Setting('activate', True),
             Setting('filename_hashing', cc_conda_build.get('filename_hashing',
                                                            'true').lower() == 'true'),
             Setting('keep_old_work', False),
-            Setting('_src_cache_root', cc_conda_build.get('cache_dir')),
+            Setting('_src_cache_root', abspath(expanduser(expandvars(
+                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
             Setting('copy_test_source_files', True),
 
             Setting('index', None),
