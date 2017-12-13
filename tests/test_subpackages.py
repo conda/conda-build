@@ -277,3 +277,9 @@ def test_subpackage_order_bad(testing_config):
     recipe = os.path.join(subpackage_dir, '_order_bad')
     outputs = api.build(recipe, config=testing_config)
     assert len(outputs) == 2
+
+
+def test_build_script_and_script_env(testing_config):
+    recipe = os.path.join(subpackage_dir, '_build_script')
+    os.environ['TEST_FN'] = 'test'
+    api.build(recipe, config=testing_config)

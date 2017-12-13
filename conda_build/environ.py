@@ -370,7 +370,7 @@ def meta_vars(meta, config):
         else:
             d[var_name] = value
             warnings.warn(
-                "The environment variable '%s' is being passed through with value %s."
+                "The environment variable '%s' is being passed through with value %s.  "
                 "If you are splitting build and test phases with --no-test, please ensure "
                 "that this value is also set similarly at test time." % (var_name, value),
                 UserWarning
