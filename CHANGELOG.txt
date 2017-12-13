@@ -1,3 +1,31 @@
+2017-12-13 3.1.3:
+
+Enhancements:
+-------------
+
+* support environment variable expansion in path-related condarc settings  #2563
+* speed up "fixing linking" on MacOS by ~98%  #2564
+* Allow build/script and build/script_env entries in outputs, for simple scripts
+  and for passing env vars into output scripts  #2572
+
+Bug fixes:
+----------
+
+* fix run_exports from build section not applying to host early enough and causing conflicts  #2560
+* order outputs based on build, host, and run dependencies, not just run  #2561
+* fix always_include_files when used in output sections  #2569
+* add jinja2 to dependencies in setup.py (not just in conda.recipe)  #2570
+
+Contributors:
+-------------
+
+* @akovner
+* @mingwandroid
+* @msarahan
+* @nehaljwani
+* @rlizzo
+
+
 2017-12-9 3.1.2:
 
 Bug fixes:
