@@ -311,7 +311,6 @@ def osx_ch_link(path, link_dict, prefix, files):
 
     return ret
 
-
 def mk_relative_osx(path, prefix, files, build_prefix=None):
     '''
     if build_prefix is None, then this is a standard conda build. The path
@@ -327,9 +326,10 @@ def mk_relative_osx(path, prefix, files, build_prefix=None):
         prefix = build_prefix
 
     assert sys.platform == 'darwin' and is_obj(path)
-    s = macho.install_name_change(path, partial(osx_ch_link, prefix=prefix, files=files))
 
     names = macho.otool(path)
+    s = macho.install_name_change(path, partial(osx_ch_link, prefix=prefix, files=files), dylibs=names)
+
     if names:
         # Add an rpath to every executable to increase the chances of it
         # being found.
@@ -397,7 +397,6 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
 def assert_relative_osx(path, prefix):
     for name in macho.get_dylibs(path):
         assert not name.startswith(prefix), path
-
 
 def mk_relative(m, f, prefix, files):
     assert sys.platform != 'win32'
