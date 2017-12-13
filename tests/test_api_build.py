@@ -883,8 +883,9 @@ def test_append_python_app_osx(testing_config):
 
 @pytest.mark.serial
 def test_run_exports(testing_metadata, testing_config, testing_workdir):
-    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
-    api.build(os.path.join(metadata_dir, '_run_exports_implicit_weak'), config=testing_config)
+    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config, notest=True)
+    api.build(os.path.join(metadata_dir, '_run_exports_implicit_weak'), config=testing_config,
+              notest=True)
 
     # run_exports is tricky.  We mostly only ever want things in "host".  Here are the conditions:
 
@@ -919,9 +920,10 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
 
 @pytest.mark.serial
 def test_ignore_run_exports(testing_metadata, testing_config):
-    # need to clear conda's index, or else we somehow pick up the test_run_exports folder
-    #     above for our package here.
-    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config)
+    # build the package with run exports for ensuring that we ignore it
+    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config,
+              notest=True)
+    # customize our fixture metadata with our desired changes
     testing_metadata.meta['requirements']['host'] = ['test_has_run_exports']
     testing_metadata.meta['build']['ignore_run_exports'] = ['downstream_pinned_package']
     testing_metadata.config.index = None
