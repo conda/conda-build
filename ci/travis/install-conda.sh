@@ -33,6 +33,8 @@ install_conda_44() {
 
     conda info
 
+    echo "safety_checks: disabled" >> "$HOME/.condarc"
+
 }
 
 
