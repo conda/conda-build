@@ -349,6 +349,7 @@ default_structs = {
     'test/source_files': list,
     'test/commands': list,
     'test/imports': list,
+    'test/load_libs' : list,
     'package/version': text_type,
     'build/string': text_type,
     'build/pin_depends': text_type,

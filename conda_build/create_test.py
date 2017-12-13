@@ -13,6 +13,7 @@ import sys
 
 from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_rf
 from conda_build import source
+from conda_build.environ import get_shlib_ext
 
 
 def create_files(m, test_dir=None):
@@ -103,6 +104,26 @@ def create_shell_files(m, test_dir=None):
                     f.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
                 has_tests = True
             f.write('exit 0\n')
+
+    libs = ensure_list(m.get_value('test/load_libs', []))
+    if libs:
+        if sys.platform.startswith('win'):
+            lib_path = os.path.join(m.config.test_prefix, 'Library', 'bin')
+        else:
+            lib_path = os.path.join(m.config.test_prefix, 'lib')
+
+        with open(join(m.config.test_dir, name), 'a') as f:
+            f.write('\n\n')
+            for lib in libs:
+                lib_loc = os.path.join(lib_path, lib + get_shlib_ext())
+                # test existence
+                if sys.platform.startswith('win'):
+                    f.write('if not exist ' + lib_loc + ' exit 1\n')
+                else:
+                    f.write('test -f ' + lib_loc + '\n')
+                # test loading
+                f.write('python -c "import ctypes; ctypes.cdll[\'' + lib_loc + '\']" || exit 1\n')
+                has_tests = True
 
     return has_tests
 
