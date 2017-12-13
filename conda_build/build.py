@@ -721,6 +721,22 @@ def bundle_conda(output, metadata, env, **kw):
     except OSError:
         pass
 
+    # Use script from recipe?
+    script = utils.ensure_list(metadata.get_value('build/script', None))
+    # need to treat top-level stuff specially.  build/script in top-level stuff should not be
+    #     re-run for an output with a similar name to the top-level recipe
+    is_output = 'package:' not in metadata.get_recipe_text()
+    if script and is_output:
+        script = '\n'.join(script)
+
+        suffix = "bat" if utils.on_win else "sh"
+        script_fn = output.get('script') or 'output_script.{}'.format(suffix)
+        with open(os.path.join(metadata.config.work_dir, script_fn), 'a') as f:
+            f.write('\n')
+            f.write(script)
+            f.write('\n')
+        output['script'] = script_fn
+
     if not files or metadata.get_value('build/always_include_files'):
         if output.get('script'):
             with utils.path_prepended(metadata.config.build_prefix):
@@ -735,6 +751,11 @@ def bundle_conda(output, metadata, env, **kw):
             env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
             env_output['PKG_VERSION'] = metadata.version()
             env_output['PKG_NAME'] = metadata.get_value('package/name')
+            for var in utils.ensure_list(metadata.get_value('build/script_env')):
+                if var not in os.environ:
+                    raise ValueError("env var '{}' specified in script_env, but is not set."
+                                     .format(var))
+                env_output[var] = os.environ[var]
             utils.check_call_env(interpreter.split(' ') +
                         [os.path.join(metadata.config.work_dir, output['script'])],
                                 cwd=metadata.config.work_dir, env=env_output)

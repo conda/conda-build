@@ -1,0 +1,27 @@
+package:
+  name: test_build_script_in_output
+  version: 1.0
+
+# we test to make sure that this script is run only once
+build:
+  script:
+    - set -ex           # [unix]
+    - '[ ! -f "$PREFIX/top_level.txt" ] || exit 1  # [unix]'
+    - echo 'wee' > $PREFIX/top_level.txt  # [unix]
+    - if exist %PREFIX%\top_level.txt exit 1  # [win]
+    - echo 'wee' > %PREFIX%\top_level.txt  # [win]
+
+outputs:
+  - name: test_build_script_in_output
+  - name: test_1
+    build:
+      script_env:
+        # set to test in the test runner code
+        - TEST_FN
+      script:
+        - echo "test" > $PREFIX/$TEST_FN.txt  # [unix]
+        - echo "test" > %PREFIX%\%TEST_FN%.txt  # [win]
+    test:
+      commands:
+        - test -e $PREFIX/test.txt   # [unix]
+        - if not exist %PREFIX%\test.txt exit 1  # [win]
