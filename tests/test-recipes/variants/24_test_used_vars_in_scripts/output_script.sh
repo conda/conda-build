@@ -1,0 +1,1 @@
+echo ${OUTPUT_VAR}

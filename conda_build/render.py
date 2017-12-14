@@ -362,6 +362,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         requirements['run'] = specs_from_url(m.requirements_path)
 
     rendered_metadata = m.copy()
+
     rendered_metadata.meta['requirements'] = requirements
     utils.insert_variant_versions(rendered_metadata.meta['requirements'],
                                   rendered_metadata.config.variant, 'build')
@@ -416,7 +417,9 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         versioned_test_deps = [utils.ensure_valid_spec(spec, warn=True)
                                for spec in versioned_test_deps]
         rendered_metadata.meta['test']['requires'] = versioned_test_deps
-    rendered_metadata.meta['extra']['copy_test_source_files'] = m.config.copy_test_source_files
+    extra = rendered_metadata.meta.get('extra', {})
+    extra['copy_test_source_files'] = m.config.copy_test_source_files
+    rendered_metadata.meta['extra'] = extra
 
     # if source/path is relative, then the output package makes no sense at all.  The next
     #   best thing is to hard-code the absolute path.  This probably won't exist on any
@@ -507,41 +510,14 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 
     for variant in variants:
         mv = metadata.copy()
-
-        # this determines which variants were used, and thus which ones should be locked for
-        #     future rendering
-        mv.final = False
-        mv.config.variant = {}
-        mv.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True,
-                        bypass_env_check=True)
-        vars_in_recipe = set(mv.undefined_jinja_vars)
-
         mv.config.variant = variant
+        used_variables = mv.get_used_loop_vars()
         conform_dict = {}
-        for key in vars_in_recipe:
+        for key in used_variables:
             # We use this variant in the top-level recipe.
             # constrain the stored variants to only this version in the output
             #     variant mapping
-            if re.search(r"\s*\{\{\s*%s\s*(?:.*?)?\}\}" % key, recipe_text):
-                if key in variant:
-                    conform_dict[key] = variant[key]
-
-        conform_dict.update({key: val for key, val in variant.items()
-                if key in utils.ensure_list(mv.meta.get('requirements', {}).get('build', [])) +
-                        utils.ensure_list(mv.meta.get('requirements', {}).get('host', []))})
-
-        compiler_matches = re.findall(r"\{\{\s*compiler\([\'\"](.*)[\'\"].*\)\s*\}\}",
-                                        recipe_requirements)
-        if compiler_matches:
-            from conda_build.jinja_context import native_compiler
-            for match in compiler_matches:
-                compiler_key = '{}_compiler'.format(match)
-                conform_dict[compiler_key] = variant.get(compiler_key,
-                                        native_compiler(match, mv.config))
-
-        # target_platform is *always* a locked dimension, because top-level recipe is always
-        #    particular to a platform.
-        conform_dict['target_platform'] = variant.get('target_platform', metadata.config.subdir)
+            conform_dict[key] = variant[key]
 
         # handle grouping from zip_keys for everything in conform_dict
         if 'zip_keys' in variant:
@@ -599,6 +575,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         for env in ('build', 'host', 'run'):
             utils.insert_variant_versions(mv.meta.get('requirements', {}),
                                           mv.config.variant, env)
+
         fm = mv.copy()
         # HACK: trick conda-build into thinking this is final, and computing a hash based
         #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is

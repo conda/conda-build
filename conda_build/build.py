@@ -1802,13 +1802,16 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
 
-                variants_ = (dict_of_lists_to_list_of_dicts(variants) if variants else
-                            get_package_variants(metadata))
+                if not metadata.final:
+                    variants_ = (dict_of_lists_to_list_of_dicts(variants) if variants else
+                                get_package_variants(metadata))
 
-                # This is where reparsing happens - we need to re-evaluate the meta.yaml for any
-                #    jinja2 templating
-                metadata_tuples = distribute_variants(metadata, variants_,
-                                                      permit_unsatisfiable_variants=False)
+                    # This is where reparsing happens - we need to re-evaluate the meta.yaml for any
+                    #    jinja2 templating
+                    metadata_tuples = distribute_variants(metadata, variants_,
+                                                        permit_unsatisfiable_variants=False)
+                else:
+                    metadata_tuples = ((metadata, False, False), )
             else:
                 recipe_parent_dir = os.path.dirname(recipe)
                 recipe = recipe.rstrip("/").rstrip("\\")
