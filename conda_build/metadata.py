@@ -1275,7 +1275,7 @@ class MetaData(object):
         return self.get_value('build/skip', False)
 
     def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False,
-                      bypass_env_check=False, template_string=None):
+                      bypass_env_check=False, template_string=None, skip_build_id=False):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1323,7 +1323,8 @@ class MetaData(object):
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
                                              allow_no_other_outputs=allow_no_other_outputs,
-                                             bypass_env_check=bypass_env_check))
+                                             bypass_env_check=bypass_env_check,
+                                             skip_build_id=skip_build_id))
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1524,6 +1525,7 @@ class MetaData(object):
     def copy(self):
         new = copy.copy(self)
         new.config = self.config.copy()
+        new.config.variant = copy.deepcopy(self.config.variant)
         new.meta = copy.deepcopy(self.meta)
         return new
 
@@ -1799,6 +1801,30 @@ class MetaData(object):
                 if var in self.get_loop_vars()}
 
     def get_used_vars(self, force_top_level=False, add_zip_keys=True):
+
+        meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
+        is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+
+        if is_output:
+            script_reqs = self._get_used_vars_output_script()
+        else:
+            script_reqs = self._get_used_vars_build_scripts()
+
+        all_used = meta_yaml_reqs | script_reqs
+
+        zip_reqs = set()
+        if add_zip_keys:
+            # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
+            for group in variants._get_zip_groups(self.config.variant):
+                # get the keys to each dict
+                for group_key in group:
+                    # break those keys into individual keys - these are the keys in the config
+                    individual_keys = set(group_key.split('#'))
+                    if any(k in all_used for k in individual_keys):
+                        zip_reqs.update(individual_keys)
+        return all_used | zip_reqs
+
+    def _get_used_vars_meta_yaml(self, force_top_level=False):
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
         is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
@@ -1840,16 +1866,44 @@ class MetaData(object):
         if ('target_platform' in self.config.variant and
                 self.config.variant['target_platform'] != self.config.subdir):
             outside_reqs_used.add('target_platform')
-        all_reqs = outside_reqs_used | requirements_only_used
-        zip_reqs = set()
-        if add_zip_keys:
-            # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
-            for group in variants._get_zip_groups(self.config.variant):
-                # get the keys to each dict
-                for group_key in group:
-                    # break those keys into individual keys - these are the keys in the config
-                    zip_reqs.update(set(group_key.split('#')))
-        return all_reqs | zip_reqs
+        return outside_reqs_used | requirements_only_used
+
+    def _get_used_vars_build_scripts(self):
+        used_vars = set()
+        buildsh = os.path.join(self.path, 'build.sh')
+        if os.path.isfile(buildsh):
+            used_vars.update(variants.find_used_variables_in_shell_script(self.config.variant,
+                                                                          buildsh))
+        bldbat = os.path.join(self.path, 'bld.bat')
+        if self.config.platform == 'win' and os.path.isfile(bldbat):
+            used_vars.update(variants.find_used_variables_in_batch_script(self.config.variant,
+                                                                          bldbat))
+        return used_vars
+
+    def _get_used_vars_output_script(self):
+        this_output = {}
+        this_output_text = self.extract_single_output_text(self.name())
+        if this_output_text:
+            this_output = yaml.safe_load(self._get_contents(permit_undefined_jinja=True,
+                                                            template_string=this_output_text,
+                                                            skip_build_id=True))
+        if isinstance(this_output, list):
+            this_output = this_output[0]
+        used_vars = set()
+        if 'script' in this_output:
+            path = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+            script = os.path.join(path, this_output['script'])
+            if os.path.splitext(script)[1] == '.sh':
+                used_vars.update(variants.find_used_variables_in_shell_script(self.config.variant,
+                                                                              script))
+            elif os.path.splitext(script)[1] == '.bat':
+                used_vars.update(variants.find_used_variables_in_batch_script(self.config.variant,
+                                                                              script))
+            else:
+                log = utils.get_logger(__name__)
+                log.warn('Not detecting used variables in output script {}; conda-build only knows '
+                         'how to search .sh and .bat files right now.'.format(path))
+        return used_vars
 
     def get_variants_as_dict_of_lists(self):
         return variants.list_of_dicts_to_dict_of_lists(self.config.variants)

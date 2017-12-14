@@ -1,0 +1,1 @@
+echo %BAT_VAR%

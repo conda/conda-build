@@ -291,3 +291,42 @@ def test_build_run_exports_act_on_host(testing_config, caplog):
     api.render(os.path.join(recipe_dir, '22_run_exports_rerendered_for_other_variants'),
                     platform='win', arch='64')
     assert "failed to get install actions, retrying" not in caplog.text
+
+
+def test_detect_variables_in_build_and_output_scripts(testing_config):
+    ms = api.render(os.path.join(recipe_dir, '24_test_used_vars_in_scripts'),
+                    platform='linux', arch='64')
+    for m, _, _ in ms:
+        if m.name() == 'test_find_used_variables_in_scripts':
+            used_vars = m.get_used_vars()
+            assert used_vars
+            assert 'BASH_VAR1' in used_vars
+            assert 'BASH_VAR2' in used_vars
+            assert 'BAT_VAR' not in used_vars
+            assert 'OUTPUT_VAR' not in used_vars
+        else:
+            used_vars = m.get_used_vars()
+            assert used_vars
+            assert 'BASH_VAR1' not in used_vars
+            assert 'BASH_VAR2' not in used_vars
+            assert 'BAT_VAR' not in used_vars
+            assert 'OUTPUT_VAR' in used_vars
+    # on windows, we find variables in bat scripts as well as shell scripts
+    ms = api.render(os.path.join(recipe_dir, '24_test_used_vars_in_scripts'),
+                    platform='win', arch='64')
+    for m, _, _ in ms:
+        if m.name() == 'test_find_used_variables_in_scripts':
+            used_vars = m.get_used_vars()
+            assert used_vars
+            assert 'BASH_VAR1' in used_vars
+            assert 'BASH_VAR2' in used_vars
+            # bat is in addition to bash, not instead of
+            assert 'BAT_VAR' in used_vars
+            assert 'OUTPUT_VAR' not in used_vars
+        else:
+            used_vars = m.get_used_vars()
+            assert used_vars
+            assert 'BASH_VAR1' not in used_vars
+            assert 'BASH_VAR2' not in used_vars
+            assert 'BAT_VAR' not in used_vars
+            assert 'OUTPUT_VAR' in used_vars

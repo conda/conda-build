@@ -1,0 +1,8 @@
+package:
+  name: test_find_used_variables_in_scripts
+  version: 1.0
+
+outputs:
+  - name: test_find_used_variables_in_scripts
+  - name: test_output_1
+    script: output_script.sh

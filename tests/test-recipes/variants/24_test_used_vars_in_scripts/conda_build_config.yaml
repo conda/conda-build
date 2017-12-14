@@ -1,0 +1,12 @@
+BASH_VAR1:
+  - abc
+  - 123
+BASH_VAR2:
+  - abc
+  - 123
+BAT_VAR:
+  - abc
+  - 123
+OUTPUT_VAR:
+  - abc123
+  - 123

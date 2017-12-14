@@ -239,7 +239,7 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(config, m=None, prefix=None, for_env=True):
+def get_dict(config, m=None, prefix=None, for_env=True, skip_build_id=False):
     if not prefix:
         prefix = config.host_prefix
 
@@ -253,7 +253,7 @@ def get_dict(config, m=None, prefix=None, for_env=True):
     d.update(r_vars(config, prefix))
 
     if m:
-        d.update(meta_vars(m, config))
+        d.update(meta_vars(m, config, skip_build_id=skip_build_id))
 
     # system
     d.update(system_vars(d, prefix, config))
@@ -358,7 +358,7 @@ def r_vars(config, prefix):
     return vars_
 
 
-def meta_vars(meta, config):
+def meta_vars(meta, config, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value('build/script_env', [])):
         value = os.getenv(var_name)
@@ -416,7 +416,7 @@ def meta_vars(meta, config):
     d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
     d['PKG_BUILDNUM'] = str(meta.build_number() or 0)
-    if meta.final:
+    if meta.final and not skip_build_id:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
         d['PKG_HASH'] = meta.hash_dependencies()
     else:
