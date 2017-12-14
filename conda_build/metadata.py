@@ -832,6 +832,13 @@ class MetaData(object):
             if self.config.bootstrap:
                 dependencies = _get_dependencies_from_environment(self.config.bootstrap)
                 self.append_metadata_sections(dependencies, merge=True)
+            if (not self.meta.get('requirements', {}).get('host', []) and not
+                    self.uses_new_style_compiler_activation):
+                self.config.build_is_host = True
+            if ('split_build_host' in self.meta.get('build', {}) and
+                    self.meta['build']['split_build_host']):
+                self.config.build_is_host = False
+
         except:
             raise
         finally:

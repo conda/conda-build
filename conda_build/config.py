@@ -88,6 +88,9 @@ DEFAULTS = [Setting('activate', True),
             Setting('copy_test_source_files', True),
 
             Setting('index', None),
+            # support legacy recipes where only build is specified and expected to be the
+            #    folder that packaging is done on
+            Setting('build_is_host', False),
 
             # these are primarily for testing.  They override the native build platform/arch,
             #     which is useful in tests, but makes little sense on actual systems.
@@ -500,11 +503,10 @@ class Config(object):
         """The temporary folder where the build environment is created.  The build env contains
         libraries that may be linked, but only if the host env is not specified.  It is placed on
         PATH."""
-        if (self.host_subdir != self.build_subdir and self.host_subdir != 'noarch' and not
-                self.build_prefix_override):
-            prefix = join(self.build_folder, '_build_env')
-        else:
+        if self.build_is_host:
             prefix = self.host_prefix
+        else:
+            prefix = join(self.build_folder, '_build_env')
         return prefix
 
     @property
