@@ -118,7 +118,8 @@ class CondaDistribution(Distribution):
 
 class bdist_conda(install):
     description = "create a conda package"
-    config = Config(build_id="bdist_conda" + "_" + str(int(time.time() * 1000)))
+    config = Config(build_id="bdist_conda" + "_" + str(int(time.time() * 1000)),
+                    build_is_host=True)
 
     def initialize_options(self):
         if not PY3:
@@ -173,7 +174,7 @@ class bdist_conda(install):
 
         # XXX: I'm not really sure if it is correct to combine requires
         # and install_requires
-        d['requirements']['run'] = d['requirements']['host'] = \
+        d['requirements']['run'] = d['requirements']['build'] = \
             [spec_from_line(i) for i in
                 (metadata.requires or []) +
                 (getattr(self.distribution, 'install_requires', []) or
