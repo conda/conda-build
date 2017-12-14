@@ -20,5 +20,3 @@ outputs:
     test:
       script: test_subpackage1.py
       script_interpreter: python
-  # this is to make sure that wheel doesn't pick up a crazy file list
-  - type: wheel
