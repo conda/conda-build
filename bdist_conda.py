@@ -173,7 +173,7 @@ class bdist_conda(install):
 
         # XXX: I'm not really sure if it is correct to combine requires
         # and install_requires
-        d['requirements']['run'] = d['requirements']['build'] = \
+        d['requirements']['run'] = d['requirements']['host'] = \
             [spec_from_line(i) for i in
                 (metadata.requires or []) +
                 (getattr(self.distribution, 'install_requires', []) or
