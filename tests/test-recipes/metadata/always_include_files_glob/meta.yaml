@@ -10,6 +10,9 @@ build:
     - Library/lib/libpng*.lib # [win]
   ignore_run_exports:
     - libpng
+  script:
+    - echo "weee" > $PREFIX/top_level.txt
+    - echo "weee" > %PREFIX%\top_level.txt
 
 requirements:
     build:
