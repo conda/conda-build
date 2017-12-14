@@ -765,7 +765,7 @@ def expand_globs(path_list, root_dir):
             glob_files = glob(path)
             if not glob_files:
                 log = get_logger(__name__)
-                log.error('invalid recipe path: {}'.format(path))
+                log.error('Glob {} did not match in root_dir {}'.format(path, root_dir))
             files.extend(glob_files)
     prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
     files = [prefix_path_re.sub('', f, 1) for f in files]

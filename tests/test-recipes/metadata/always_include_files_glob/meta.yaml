@@ -10,6 +10,9 @@ build:
     - Library/lib/libpng*.lib # [win]
   ignore_run_exports:
     - libpng
+  script:
+    - echo "weee" > $PREFIX/top_level.txt
+    - echo "weee" > %PREFIX%\top_level.txt
 
 requirements:
     build:
@@ -38,3 +41,12 @@ outputs:
         - test -e $PREFIX/lib/libjpeg.so      # [linux]
         - if not exist %PREFIX%\Library\lib\libjpeg.lib exit 1   # [win]
         - if not exist %PREFIX%\test.txt exit 1   # [win]
+
+test:
+  commands:
+    # test that both the always_include_files and the build-created content are present
+    - test -e $PREFIX/lib/libpng.dylib  # [osx]
+    - test -e $PREFIX/lib/libpng.so  # [linux]
+    - if not exist %PREFIX%/bin/libpng.dll exit 1 # [win]
+    - test -e $PREFIX/top_level.txt   # [unix]
+    - if not exist %PREFIX%\top_level.txt   # [win]

@@ -14,17 +14,20 @@ def main():
     if sys.platform == 'darwin':
         assert set(info['files']) == {'lib/libpng.dylib',
                                       'lib/libpng16.16.dylib',
-                                      'lib/libpng16.dylib'}, info['files']
+                                      'lib/libpng16.dylib',
+                                      'top_level.txt'}, info['files']
     elif sys.platform.startswith('linux'):
         assert set(info['files']) == {'lib/libpng.so',
                                       'lib/libpng16.so',
                                       'lib/libpng16.so.16',
-                                      'lib/libpng16.so.16.17.0'}, info['files']
+                                      'lib/libpng16.so.16.17.0',
+                                      'top_level.txt'}, info['files']
     elif sys.platform == 'win32':
-        assert sorted(info['files']) == ['Library/lib/libpng.lib',
-                                         'Library/lib/libpng16.lib',
-                                         'Library/lib/libpng16_static.lib',
-                                         'Library/lib/libpng_static.lib']
+        assert set(info['files']) == {'Library/lib/libpng.lib',
+                                      'Library/lib/libpng16.lib',
+                                      'Library/lib/libpng16_static.lib',
+                                      'Library/lib/libpng_static.lib',
+                                      'top_level.txt'}
 
 if __name__ == '__main__':
     main()
