@@ -1,3 +1,24 @@
+2017-12-15 3.1.5:
+
+Enhancements:
+-------------
+
+* detect "used" variables in selectors  #2581
+
+Bug fixes:
+----------
+
+* Cache used variables for a given output on a given target platform to avoid
+  recomputing this too often. This dramatically speeds up operations relative to
+  3.1.4. #2581
+* fix used variable treatment of target_platform  #2581
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-12-14 3.1.4:
 
 Enhancements:
