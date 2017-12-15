@@ -1170,7 +1170,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
-                    utils.remove_pycache_from_scripts(m.config.build_prefix)
+                    utils.remove_pycache_from_scripts(m.config.host_prefix)
 
     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
     initial_files = set()
