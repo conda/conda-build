@@ -140,7 +140,7 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
     api.skeletonize('coconut', 'pypi', version='1.2.2')
     m = api.render('coconut')[0][0]
 
-    build_reqs = str(m.meta['requirements']['build'])
+    build_reqs = str(m.meta['requirements']['host'])
     run_reqs = str(m.meta['requirements']['run'])
     # should include the right dependencies for the right version
     if sys.version_info < (3,):

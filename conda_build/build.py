@@ -1170,7 +1170,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
                     # this should raise if any problems occur while building
                     utils.check_call_env(cmd, env=env, cwd=src_dir)
-                    utils.remove_pycache_from_scripts(m.config.build_prefix)
+                    utils.remove_pycache_from_scripts(m.config.host_prefix)
 
     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
     initial_files = set()
@@ -1220,6 +1220,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 # same thing, for test scripts
                 test_script = output_d.get('test', {}).get('script')
                 if test_script and meta_dir:
+                    if not os.path.isfile(os.path.join(meta_dir, test_script)):
+                        raise ValueError("test script specified as {} does not exist.  Please "
+                                         "check for typos or create the file and try again."
+                                         .format(test_script))
                     utils.copy_into(os.path.join(meta_dir, test_script),
                                     os.path.join(m.config.work_dir, test_script))
 

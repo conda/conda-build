@@ -273,7 +273,7 @@ def conda_build_vars(prefix, config):
     return {
         'CONDA_BUILD': '1',
         'PYTHONNOUSERSITE': '1',
-        'CONDA_DEFAULT_ENV': config.build_prefix,
+        'CONDA_DEFAULT_ENV': config.host_prefix,
         'ARCH': str(config.host_arch),
         # This is the one that is most important for where people put artifacts that get bundled.
         #     It is fed from our function argument, and can be any of:
@@ -812,9 +812,10 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                             log.warn("Your package will not install into prefixes > 80 characters.")
                             config.prefix_length = 80
 
+                            host = '_h_env' in prefix
                             # Set this here and use to create environ
                             #   Setting this here is important because we use it below (symlink)
-                            prefix = config.build_prefix
+                            prefix = config.host_prefix if host else config.build_prefix
                             actions['PREFIX'] = prefix
 
                             create_env(prefix, actions, config=config, subdir=subdir, env=env,

@@ -1222,13 +1222,14 @@ def remove_pycache_from_scripts(build_prefix):
     else:
         scripts_path = os.path.join(build_prefix, 'bin')
 
-    for entry in os.listdir(scripts_path):
-        entry_path = os.path.join(scripts_path, entry)
-        if os.path.isdir(entry_path) and entry.strip(os.sep) == '__pycache__':
-            shutil.rmtree(entry_path)
+    if os.path.isdir(scripts_path):
+        for entry in os.listdir(scripts_path):
+            entry_path = os.path.join(scripts_path, entry)
+            if os.path.isdir(entry_path) and entry.strip(os.sep) == '__pycache__':
+                shutil.rmtree(entry_path)
 
-        elif os.path.isfile(entry_path) and entry_path.endswith('.pyc'):
-            os.remove(entry_path)
+            elif os.path.isfile(entry_path) and entry_path.endswith('.pyc'):
+                os.remove(entry_path)
 
 
 def sort_list_in_nested_structure(dictionary, omissions=''):
