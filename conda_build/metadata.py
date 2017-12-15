@@ -1821,7 +1821,7 @@ class MetaData(object):
             # force target_platform to always be included, because it determines behavior
             if ('target_platform' in self.config.variant and
                     any(plat != self.config.subdir for plat in
-                        ensure_list(self.config.variant['target_platform']))):
+                        self.get_variants_as_dict_of_lists()['target_platform'])):
                 used_vars.add('target_platform')
             used_vars_cache[(self.name(), force_top_level, self.config.subdir)] = used_vars
 

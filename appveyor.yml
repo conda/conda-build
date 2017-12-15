@@ -43,13 +43,11 @@ install:
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda update -q --all
-  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl
-  - conda install -q pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo pytest-forked
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
   - pip install --no-deps .
-  - pip install pytest-xdist==1.16.0 pytest-catchlog pytest-env pytest-mock filelock pkginfo
   - set PATH
   - conda build --version
   - call ci\appveyor\setup_x64.bat
@@ -75,10 +73,10 @@ test_script:
   - set PYTHON=
   - set LUA=
   - set R=
-  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial" --durations=15
+  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
-  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --durations=15
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --forked
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
 #    However, it eats up a fair amount of time.  Better to disable until you need it.
