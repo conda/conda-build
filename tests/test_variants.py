@@ -330,3 +330,9 @@ def test_detect_variables_in_build_and_output_scripts(testing_config):
             assert 'BASH_VAR2' not in used_vars
             assert 'BAT_VAR' not in used_vars
             assert 'OUTPUT_VAR' in used_vars
+
+
+def test_target_platform_looping(testing_config):
+    outputs = api.get_output_file_paths(os.path.join(recipe_dir, '25_target_platform_looping'),
+                                   platform='win', arch='64')
+    assert len(outputs) == 2
