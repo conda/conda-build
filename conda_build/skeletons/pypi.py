@@ -63,7 +63,7 @@ Use the --pypi-url flag to point to a PyPI mirror url:
 
 # Definition of REQUIREMENTS_ORDER below are from
 # https://github.com/conda-forge/conda-smithy/blob/master/conda_smithy/lint_recipe.py#L16
-REQUIREMENTS_ORDER = ['build', 'run']
+REQUIREMENTS_ORDER = ['host', 'run']
 
 # Definition of ABOUT_ORDER reflects current practice
 ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
@@ -321,7 +321,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             # Always require python as a dependency
             ordered_recipe['requirements'] = ruamel_yaml.comments.CommentedMap()
-            ordered_recipe['requirements']['build'] = ['python'] + ensure_list(d['build_depends'])
+            ordered_recipe['requirements']['host'] = ['python'] + ensure_list(d['build_depends'])
             ordered_recipe['requirements']['run'] = ['python'] + ensure_list(d['run_depends'])
 
             if d['import_tests']:
@@ -994,7 +994,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     specs.extend(extra_specs)
 
-    create_env(config.host_prefix, specs_or_actions=specs, env='build',
+    create_env(config.host_prefix, specs_or_actions=specs, env='host',
                 subdir=config.host_subdir, clear_cache=False, config=config)
     stdlib_dir = join(config.host_prefix,
                       'Lib' if sys.platform == 'win32'
@@ -1030,7 +1030,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
         env[str('PYTHONPATH')] = str(src_dir)
     cwd = getcwd()
     chdir(src_dir)
-    cmdargs = [config.build_python, 'setup.py', 'install']
+    cmdargs = [config.host_python, 'setup.py', 'install']
     cmdargs.extend(setup_options)
     try:
         check_call_env(cmdargs, env=env)

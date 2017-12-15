@@ -35,9 +35,13 @@ def create_files(m, test_dir=None):
     else:
         src_dir = m.config.work_dir
 
+    recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+
     for fn in ensure_list(m.get_value('test/files', [])):
         has_files = True
-        path = join(m.path, fn)
+        path = join(recipe_dir, fn)
+        if not os.path.isdir(os.path.dirname(path)):
+            os.makedirs(os.path.dirname(path))
         # disable locking to avoid locking a temporary directory (the extracted test folder)
         copy_into(path, join(test_dir, fn), m.config.timeout, locking=False,
                   clobber=True)

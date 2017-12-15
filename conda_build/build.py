@@ -1220,6 +1220,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 # same thing, for test scripts
                 test_script = output_d.get('test', {}).get('script')
                 if test_script and meta_dir:
+                    if not os.path.isfile(os.path.join(meta_dir, test_script)):
+                        raise ValueError("test script specified as {} does not exist.  Please "
+                                         "check for typos or create the file and try again."
+                                         .format(test_script))
                     utils.copy_into(os.path.join(meta_dir, test_script),
                                     os.path.join(m.config.work_dir, test_script))
 
