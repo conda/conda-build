@@ -989,8 +989,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'build')
         utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
 
-        if (m.config.host_subdir != m.config.build_subdir and
-                m.config.host_subdir != "noarch"):
+        build_ms_deps = m.ms_depends('build')
+
+        if m.is_cross:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
 
@@ -1010,10 +1011,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
                                subdir=m.config.host_subdir, is_cross=m.is_cross,
                                is_conda=m.name() == 'conda')
-            build_ms_deps = m.ms_depends('build')
-        else:
-            # When not cross-compiling, the build deps are the aggregate of 'build' and 'host'.
-            build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
         build_ms_deps = tuple(utils.ensure_valid_spec(spec) for spec in build_ms_deps)
         build_actions = environ.get_install_actions(m.config.build_prefix,
                                                     build_ms_deps, 'build',
@@ -1058,9 +1055,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                 raise e
         if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
                 not os.listdir(m.config.build_prefix)):
-            environ.create_env(m.config.build_prefix, build_actions, env='build', config=m.config,
-                               subdir=m.config.build_subdir, is_cross=m.is_cross,
-                               is_conda=m.name() == 'conda')
+            environ.create_env(m.config.build_prefix, build_actions, env='build',
+                               config=m.config, subdir=m.config.build_subdir,
+                               is_cross=m.is_cross, is_conda=m.name() == 'conda')
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
