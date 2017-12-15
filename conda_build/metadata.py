@@ -44,6 +44,9 @@ on_win = (sys.platform == 'win32')
 ARCH_MAP = {'32': 'x86',
             '64': 'x86_64'}
 
+# used to avoid recomputing/rescanning recipe contents for used variables
+used_vars_cache = {}
+
 
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
@@ -669,20 +672,14 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
                             "{}".format(e.packages))
                 outputs[(metadata.name(), HashableDict(metadata.config.variant))] = (
                     output_d, metadata)
+    # in-place modification
     base_metadata.other_outputs = outputs
     base_metadata.final = False
     base_metadata.parse_until_resolved()
-    # in the final pass, we finalize each of the outputs.  Up to now, we have not been computing
-    #  the actual installed versions of their dependencies (aside from subpackages)
-    if pass_no == 2:
-        final_outputs = OrderedDict()
-        for k, (out_d, m) in outputs.items():
-            fm = finalize_metadata(m, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-            final_outputs[(m.name(), HashableDict(m.config.variant))] = out_d, fm
-        return final_outputs
-    else:
-        return finalize_outputs_pass(base_metadata, render_order, pass_no + 1, outputs,
-                                     permit_unsatisfiable_variants)
+    final_outputs = OrderedDict()
+    for k, (out_d, m) in outputs.items():
+        final_outputs[(m.name(), HashableDict(m.config.variant))] = out_d, m
+    return final_outputs
 
 
 def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
@@ -1808,16 +1805,20 @@ class MetaData(object):
                 if var in self.get_loop_vars()}
 
     def get_used_vars(self, force_top_level=False, add_zip_keys=True):
-
-        meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
-        is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-
-        if is_output:
-            script_reqs = self._get_used_vars_output_script()
+        global used_vars_cache
+        if (self.name(), force_top_level, self.config.subdir) in used_vars_cache:
+            used_vars = used_vars_cache[(self.name(), force_top_level, self.config.subdir)]
         else:
-            script_reqs = self._get_used_vars_build_scripts()
+            meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
+            is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
 
-        all_used = meta_yaml_reqs | script_reqs
+            if is_output:
+                script_reqs = self._get_used_vars_output_script()
+            else:
+                script_reqs = self._get_used_vars_build_scripts()
+
+            used_vars = meta_yaml_reqs | script_reqs
+            used_vars_cache[(self.name(), force_top_level, self.config.subdir)] = used_vars
 
         zip_reqs = set()
         if add_zip_keys:
@@ -1827,9 +1828,9 @@ class MetaData(object):
                 for group_key in group:
                     # break those keys into individual keys - these are the keys in the config
                     individual_keys = set(group_key.split('#'))
-                    if any(k in all_used for k in individual_keys):
+                    if any(k in used_vars for k in individual_keys):
                         zip_reqs.update(individual_keys)
-        return all_used | zip_reqs
+        return used_vars | zip_reqs
 
     def _get_used_vars_meta_yaml(self, force_top_level=False):
         # recipe text is the best, because variables can be used anywhere in it.
