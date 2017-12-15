@@ -476,8 +476,9 @@ def reparse(metadata):
     and activated."""
     metadata.final = False
     sys.path.insert(0, metadata.config.build_prefix)
+    sys.path.insert(0, metadata.config.host_prefix)
     py_ver = '.'.join(metadata.config.variant['python'].split('.')[:2])
-    sys.path.insert(0, utils.get_site_packages(metadata.config.build_prefix, py_ver))
+    sys.path.insert(0, utils.get_site_packages(metadata.config.host_prefix, py_ver))
     metadata.parse_until_resolved()
     metadata = finalize_metadata(metadata)
     return metadata

@@ -1228,7 +1228,7 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret, self.config.build_prefix)
+        return expand_globs(ret, self.config.host_prefix)
 
     def ignore_prefix_files(self):
         ret = self.get_value('build/ignore_prefix_files', False)
@@ -1239,7 +1239,7 @@ class MetaData(object):
             if type(ret) is list and any('\\' in i for i in ret):
                 raise RuntimeError("build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret, self.config.build_prefix) if type(ret) is list else ret
+        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
 
     def always_include_files(self):
         files = ensure_list(self.get_value('build/always_include_files', []))
@@ -1260,7 +1260,7 @@ class MetaData(object):
             if type(ret) is list and any('\\' in i for i in ret):
                 raise RuntimeError("build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret, self.config.build_prefix) if type(ret) is list else ret
+        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
 
     def include_recipe(self):
         return self.get_value('build/include_recipe', True)
@@ -1273,7 +1273,7 @@ class MetaData(object):
             if any('\\' in i for i in ret):
                 raise RuntimeError("build/binary_has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
-        return expand_globs(ret, self.config.build_prefix)
+        return expand_globs(ret, self.config.host_prefix)
 
     def skip(self):
         return self.get_value('build/skip', False)

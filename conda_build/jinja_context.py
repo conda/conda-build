@@ -425,7 +425,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_npm=load_npm,
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
-        installed=get_installed_packages(os.path.join(config.build_prefix, 'conda-meta')),
+        installed=get_installed_packages(os.path.join(config.host_prefix, 'conda-meta')),
         pin_compatible=partial(pin_compatible, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,
                                bypass_env_check=bypass_env_check),

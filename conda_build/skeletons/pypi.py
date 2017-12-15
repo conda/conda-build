@@ -994,9 +994,9 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     specs.extend(extra_specs)
 
-    create_env(config.build_prefix, specs_or_actions=specs, env='build',
-                subdir=config.build_subdir, clear_cache=False, config=config)
-    stdlib_dir = join(config.build_prefix,
+    create_env(config.host_prefix, specs_or_actions=specs, env='build',
+                subdir=config.host_subdir, clear_cache=False, config=config)
+    stdlib_dir = join(config.host_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)
 
