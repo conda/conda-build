@@ -1,3 +1,27 @@
+2017-12-14 3.1.4:
+
+Enhancements:
+-------------
+
+* detect "used" variables in build.sh, bld.bat and any output scripts, in
+  addition to what already existed in meta.yaml. Used variables end up in the
+  hash. #2576
+* don't merge build and host prefixes. We used to do this when host subdir ==
+  build subdir. Keep them separate, so that build tools in build prefix won't
+  ever interfere with software installed to host, to be packaged.  #2579
+
+Bug fixes:
+----------
+
+* exclude grouped keys from zip_keys when computing hashes.  Only direct dependencies affect the hash.  #2573
+* fix always_include_files usage omitting other ordinarily installed files  #2580
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-12-13 3.1.3:
 
 Enhancements:
