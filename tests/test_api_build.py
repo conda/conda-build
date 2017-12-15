@@ -264,7 +264,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
-    platforms = set(["32", ] + platforms)
+    platforms = sorted(list(set(["32", ] + platforms)))
     compilers = ["2.7", "3.5"]
     msvc_vers = ['9.0', '14.0']
 else:
