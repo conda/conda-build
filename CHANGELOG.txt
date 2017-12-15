@@ -1,3 +1,17 @@
+2017-12-15 3.1.6:
+
+Bug fixes:
+----------
+
+* fix test files in outputs (was losing reference to absolute path of recipe)  #2584
+* fix several incorrect references to build_prefix that needed to be host_prefix  #2584
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-12-15 3.1.5:
 
 Enhancements:
