@@ -1088,7 +1088,7 @@ class MetaData(object):
         dependencies = self.get_used_vars(add_zip_keys=False)
 
         # filter out ignored versions
-        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'numpy']
+        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'numpy', 'target_platform']
         build_string_excludes.extend(ensure_list(self.config.variant.get('ignore_version', [])))
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
@@ -1818,6 +1818,11 @@ class MetaData(object):
                 script_reqs = self._get_used_vars_build_scripts()
 
             used_vars = meta_yaml_reqs | script_reqs
+            # force target_platform to always be included, because it determines behavior
+            if ('target_platform' in self.config.variant and
+                    any(plat != self.config.subdir for plat in
+                        ensure_list(self.config.variant['target_platform']))):
+                used_vars.add('target_platform')
             used_vars_cache[(self.name(), force_top_level, self.config.subdir)] = used_vars
 
         zip_reqs = set()
@@ -1870,10 +1875,6 @@ class MetaData(object):
                 if dep not in build_reqs and dep in requirements_only_used:
                     to_remove.add(dep)
         requirements_only_used -= to_remove
-        # force target_platform to always be included, because it determines conda-build behavior
-        if ('target_platform' in self.config.variant and
-                self.config.variant['target_platform'] != self.config.subdir):
-            outside_reqs_used.add('target_platform')
         return outside_reqs_used | requirements_only_used
 
     def _get_used_vars_build_scripts(self):
