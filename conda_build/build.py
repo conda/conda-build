@@ -1456,8 +1456,15 @@ def _construct_metadata_for_test_from_package(package, config):
                                       'requirements': {'run': package_data['depends']}
                                       }, config=config)
 
-    utils.rm_rf(metadata.config.test_dir)
+    reqs = metadata.meta.get('requirements', {})
+    reqs['run'] = package_data.get('depends', [])
+    metadata.meta['requirements'] = reqs
 
+    return metadata, hash_input
+
+
+def _extract_test_files_from_package(metadata):
+    info_dir = os.path.normpath(os.path.join(metadata.config.recipe_dir, 'info'))
     test_files = os.path.join(info_dir, 'test')
     if os.path.exists(test_files) and os.path.isdir(test_files):
         # things are re-extracted into the test dir because that's cwd when tests are run,
@@ -1481,12 +1488,6 @@ def _construct_metadata_for_test_from_package(package, config):
         if metadata.meta.get('test', {}).get('source_files'):
             if not metadata.source_provided:
                 try_download(metadata, no_download_source=False)
-
-    reqs = metadata.meta.get('requirements', {})
-    reqs['run'] = package_data.get('depends', [])
-    metadata.meta['requirements'] = reqs
-
-    return metadata, hash_input
 
 
 def construct_metadata_for_test(recipedir_or_package, config):
@@ -1519,6 +1520,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     metadata.append_metadata_sections(hash_input, merge=False)
     metadata.config.compute_build_id(metadata.name())
+
+    # Must download *after* computing build id, or else computing build id will change
+    #     folder destination
+    utils.rm_rf(metadata.config.test_dir)
+    _extract_test_files_from_package(metadata)
+
     # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
     # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
     # I think we can remove this call to clean_pkg_cache().

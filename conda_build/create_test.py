@@ -11,7 +11,7 @@ from os.path import join, exists, isdir
 import re
 import sys
 
-from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_rf
+from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list
 from conda_build import source
 
 
