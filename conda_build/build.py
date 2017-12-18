@@ -790,7 +790,7 @@ def bundle_conda(output, metadata, env, **kw):
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
     output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
     for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
-        test_dest_path = os.path.join(metadata.config.info_dir, 'recipe', 'run_test' + ext)
+        test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)
         script = output.get('test', {}).get('script')
         if script and script.endswith(ext):
             utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
@@ -1376,6 +1376,9 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.recipe_dir = None
     hash_input = {}
     metadata = render_recipe(recipe_dir, config=config, reset_build_id=False)[0][0]
+
+    utils.rm_rf(metadata.config.test_dir)
+
     if metadata.meta.get('test', {}).get('source_files'):
         if not metadata.source_provided:
             try_download(metadata, no_download_source=False)
@@ -1453,6 +1456,8 @@ def _construct_metadata_for_test_from_package(package, config):
                                       'requirements': {'run': package_data['depends']}
                                       }, config=config)
 
+    utils.rm_rf(metadata.config.test_dir)
+
     test_files = os.path.join(info_dir, 'test')
     if os.path.exists(test_files) and os.path.isdir(test_files):
         # things are re-extracted into the test dir because that's cwd when tests are run,
@@ -1505,6 +1510,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
+        utils.rm_rf(metadata.config.test_dir)
     else:
         metadata, hash_input = construct_metadata_for_test(recipedir_or_package_or_metadata,
                                                                   config)

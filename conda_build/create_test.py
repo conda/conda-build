@@ -26,7 +26,6 @@ def create_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     has_files = False
-    rm_rf(test_dir)
     if not os.path.isdir(test_dir):
         os.makedirs(test_dir)
     info_test_dir = os.path.join(os.path.dirname(m.path), 'test')
@@ -108,7 +107,7 @@ def create_shell_files(m, test_dir=None):
                 has_tests = True
             f.write('exit 0\n')
 
-    return has_tests
+    return has_tests or os.path.isfile(os.path.join(m.config.test_dir, name))
 
 
 def _create_test_files(m, test_dir, ext, comment_char='# '):

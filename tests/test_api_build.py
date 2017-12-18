@@ -156,8 +156,12 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
     output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
-                            config=testing_config)[0]
+                            config=testing_config, notest=True)[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
+
+    with pytest.raises(SystemExit):
+        output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
+                                config=testing_config)[0]
 
 
 def test_early_abort(testing_config, capfd):
