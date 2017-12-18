@@ -74,7 +74,8 @@ test_script:
   - set LUA=
   - set R=
   # cache several files to avoid race condition errors
-  - conda config --set safety_checks disabled
+  #   safety checks is a conda 4.4 flag
+  # - conda config --set safety_checks disabled
   - conda config --set local_repodata_ttl 1800
   - conda create -n blarg1 -yq python=2.7
   - conda create -n blarg2 -yq python=3.4
