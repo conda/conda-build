@@ -1,5 +1,5 @@
 package:
-  name: test
+  name: test_variants_used_in_conditional_sections
   version: 0.0
 
 source:

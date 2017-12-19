@@ -1,0 +1,9 @@
+package:
+  name: test_no_hash_pure_python
+  version: 1.0
+
+requirements:
+  build:
+    - python
+  run:
+    - python
