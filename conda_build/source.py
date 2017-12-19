@@ -195,9 +195,10 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
                  % (mirror_dir, git_cache))
 
     # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
-    git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir)
-    git_checkout_dir = convert_path_for_cygwin_or_msys2(git, checkout_dir)
+    git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir).rstrip('/')
+    git_checkout_dir = convert_path_for_cygwin_or_msys2(git, checkout_dir).rstrip('/')
 
+    mirror_dir = mirror_dir.rstrip('/')
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
     if isdir(mirror_dir):
