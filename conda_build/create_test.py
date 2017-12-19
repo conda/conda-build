@@ -59,7 +59,7 @@ def create_files(m, test_dir=None):
             try:
                 # disable locking to avoid locking a temporary directory (the extracted test folder)
                 copy_into(f, f.replace(src_dir, test_dir), m.config.timeout,
-                          locking=False)
+                          locking=False, clobber=True)
             except OSError as e:
                 log = logging.getLogger(__name__)
                 log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
