@@ -1863,7 +1863,7 @@ class MetaData(object):
         build_reqs = (ensure_list(output_reqs.get('build', [])) +
                       ensure_list(output_reqs.get('host', [])))
         run_reqs = output_reqs.get('run', [])
-        build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs}
+        build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs if req}
 
         # things can be used as dependencies or elsewhere in the recipe.  If it's only used
         #    elsewhere, keep it. If it's a dep-related thing, only keep it if

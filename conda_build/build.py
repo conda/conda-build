@@ -1464,30 +1464,32 @@ def _construct_metadata_for_test_from_package(package, config):
 
 
 def _extract_test_files_from_package(metadata):
-    info_dir = os.path.normpath(os.path.join(metadata.config.recipe_dir, 'info'))
-    test_files = os.path.join(info_dir, 'test')
-    if os.path.exists(test_files) and os.path.isdir(test_files):
-        # things are re-extracted into the test dir because that's cwd when tests are run,
-        #    and provides the most intuitive experience.  This is a little tricky, because SRC_DIR
-        #    still needs to point at the original work_dir, for legacy behavior where people aren't
-        #    using test/source_files.  It would be better to change SRC_DIR in test phase to always
-        #    point to test_dir.  Maybe one day.
-        utils.copy_into(test_files, metadata.config.test_dir,
-                        metadata.config.timeout, symlinks=True,
-                        locking=metadata.config.locking, clobber=True)
-        dependencies_file = os.path.join(test_files, 'test_time_dependencies.json')
-        test_deps = []
-        if os.path.isfile(dependencies_file):
-            with open(dependencies_file) as f:
-                test_deps = json.load(f)
-        test_section = metadata.meta.get('test', {})
-        test_section['requires'] = test_deps
-        metadata.meta['test'] = test_section
+    if metadata.config.recipe_dir:
+        info_dir = os.path.normpath(os.path.join(metadata.config.recipe_dir, 'info'))
+        test_files = os.path.join(info_dir, 'test')
+        if os.path.exists(test_files) and os.path.isdir(test_files):
+            # things are re-extracted into the test dir because that's cwd when tests are run,
+            #    and provides the most intuitive experience. This is a little
+            #    tricky, because SRC_DIR still needs to point at the original
+            #    work_dir, for legacy behavior where people aren't using
+            #    test/source_files. It would be better to change SRC_DIR in
+            #    test phase to always point to test_dir. Maybe one day.
+            utils.copy_into(test_files, metadata.config.test_dir,
+                            metadata.config.timeout, symlinks=True,
+                            locking=metadata.config.locking, clobber=True)
+            dependencies_file = os.path.join(test_files, 'test_time_dependencies.json')
+            test_deps = []
+            if os.path.isfile(dependencies_file):
+                with open(dependencies_file) as f:
+                    test_deps = json.load(f)
+            test_section = metadata.meta.get('test', {})
+            test_section['requires'] = test_deps
+            metadata.meta['test'] = test_section
 
-    else:
-        if metadata.meta.get('test', {}).get('source_files'):
-            if not metadata.source_provided:
-                try_download(metadata, no_download_source=False)
+        else:
+            if metadata.meta.get('test', {}).get('source_files'):
+                if not metadata.source_provided:
+                    try_download(metadata, no_download_source=False)
 
 
 def construct_metadata_for_test(recipedir_or_package, config):
