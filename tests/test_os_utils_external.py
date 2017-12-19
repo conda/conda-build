@@ -56,8 +56,3 @@ def test_find_executable(testing_workdir, monkeypatch):
         find = find_executable('target_name')
 
         assert find == target_path, "Expected to find 'target_name' in '%s', but found it in '%s'" % (target_path, find)
-
-
-def test_find_executable_raises_on_not_found():
-    with pytest.raises(RecipeError):
-        find_executable('does_not_exist')

@@ -259,7 +259,8 @@ def test_reprovisioning_source(testing_config):
 
 def test_reduced_hashing_behavior(testing_config):
     # recipes using any compiler jinja2 function need a hash
-    m = api.render(os.path.join(recipe_dir, '09_cross'), finalize=False, bypass_env_check=True)[0][0]
+    m = api.render(os.path.join(recipe_dir, '26_reduced_hashing', 'hash_yes_compiler'),
+                   finalize=False, bypass_env_check=True)[0][0]
     assert 'c_compiler' in m.get_hash_contents(), "hash contents should contain c_compiler"
     assert re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id()), \
         "hash should be present when compiler jinja2 function is used"
@@ -268,12 +269,14 @@ def test_reduced_hashing_behavior(testing_config):
     #     versions are present at build time also must have a hash (except
     #     python, r_base, and the other stuff covered by legacy build string
     #     behavior)
-    m = api.render(os.path.join(recipe_dir, '19_used_variables'), finalize=False, bypass_env_check=True)[0][0]
+    m = api.render(os.path.join(recipe_dir, '26_reduced_hashing', 'hash_yes_pinned'),
+                   finalize=False, bypass_env_check=True)[0][0]
     assert 'zlib' in m.get_hash_contents()
     assert re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())
 
     # anything else does not get a hash
-    m = api.render(os.path.join(recipe_dir, '02_python_version'), finalize=False, bypass_env_check=True)[0][0]
+    m = api.render(os.path.join(recipe_dir, '26_reduced_hashing', 'hash_no_python'),
+                   finalize=False, bypass_env_check=True)[0][0]
     assert not m.get_hash_contents()
     assert not re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())
 

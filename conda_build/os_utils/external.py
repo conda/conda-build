@@ -5,7 +5,6 @@ import sys
 from os.path import isfile, join, expanduser
 
 from conda_build.conda_interface import root_dir
-from conda_build.exceptions import RecipeError
 
 
 def find_executable(executable, prefix=None):
@@ -40,7 +39,3 @@ def find_executable(executable, prefix=None):
             exp_path = expanduser(path)
             if isfile(exp_path) and os.access(exp_path, os.X_OK):
                 return expanduser(path)
-    raise RecipeError("Your recipe requires '{}', but this executable is unavailable.  Please "
-                      "install a package containing that executable into either your root "
-                      "environment or your build requirements, or otherwise make this executable "
-                      "available on PATH.".format(executable))

@@ -1,0 +1,18 @@
+python:
+  - 2.7
+  - 3.5
+unused_var:
+  - abc
+  - 123
+zlib:
+  - 1.2.11
+some_package:
+  - mooo
+  - llama
+# not directly used, but is "used" by virtue of being zipped
+zipped_var:
+  - chicken
+  - dog
+zip_keys:
+  - some_package
+  - zipped_var

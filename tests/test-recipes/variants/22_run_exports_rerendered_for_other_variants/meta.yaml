@@ -1,5 +1,5 @@
 package:
-  name: test
+  name: test_run_exports_rerendered_for_other_variants
   version: 1.0.0
 
 requirements:

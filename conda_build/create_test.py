@@ -11,7 +11,7 @@ from os.path import join, exists, isdir
 import re
 import sys
 
-from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list, rm_rf
+from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list
 from conda_build import source
 
 
@@ -26,7 +26,6 @@ def create_files(m, test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     has_files = False
-    rm_rf(test_dir)
     if not os.path.isdir(test_dir):
         os.makedirs(test_dir)
     info_test_dir = os.path.join(os.path.dirname(m.path), 'test')
@@ -60,7 +59,7 @@ def create_files(m, test_dir=None):
             try:
                 # disable locking to avoid locking a temporary directory (the extracted test folder)
                 copy_into(f, f.replace(src_dir, test_dir), m.config.timeout,
-                          locking=False)
+                          locking=False, clobber=True)
             except OSError as e:
                 log = logging.getLogger(__name__)
                 log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
@@ -108,7 +107,7 @@ def create_shell_files(m, test_dir=None):
                 has_tests = True
             f.write('exit 0\n')
 
-    return has_tests
+    return has_tests or os.path.isfile(os.path.join(m.config.test_dir, name))
 
 
 def _create_test_files(m, test_dir, ext, comment_char='# '):
