@@ -1453,13 +1453,10 @@ def _construct_metadata_for_test_from_package(package, config):
         #    yield a different result
         metadata = MetaData.fromdict({'package': {'name': package_data['name'],
                                                   'version': package_data['version']},
+                                      'build': {'number': int(package_data['build_number']),
+                                                'string': package_data['build']},
                                       'requirements': {'run': package_data['depends']}
                                       }, config=config)
-
-    reqs = metadata.meta.get('requirements', {})
-    reqs['run'] = package_data.get('depends', [])
-    metadata.meta['requirements'] = reqs
-
     return metadata, hash_input
 
 

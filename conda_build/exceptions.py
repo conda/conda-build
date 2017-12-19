@@ -71,7 +71,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
                     continue
                 pkg = line.lstrip('  - ').split(' -> ')[-1]
                 self.matchspecs.append(pkg)
-                pkg = pkg.strip().split(' ')[0]
+                pkg = pkg.strip().split(' ')[0].split('=')[0]
                 self.packages.append(pkg)
         if not self.packages:
             raise RuntimeError("failed to parse packages from exception:"
