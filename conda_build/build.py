@@ -704,12 +704,6 @@ can lead to packages that include their dependencies.""" % meta_files))
     return new_files
 
 
-def remove_prefix_file(filepath, prefix):
-    if not os.path.isabs(filepath):
-        filepath = os.path.abspath(os.path.normpath(os.path.join(prefix, filepath)))
-    utils.rm_rf(filepath)
-
-
 def bundle_conda(output, metadata, env, **kw):
     log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
@@ -806,8 +800,8 @@ def bundle_conda(output, metadata, env, **kw):
             # the test belongs to the parent recipe.  Don't include it in subpackages.
             utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
-    files = set(utils.prefix_files(metadata.config.host_prefix)) - initial_files
-    files = utils.filter_files(files, prefix=metadata.config.host_prefix)
+    prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
+    files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
 
     with TemporaryDirectory() as tmp:
         tmp_path = os.path.join(tmp, os.path.basename(output_filename))
@@ -868,10 +862,10 @@ def bundle_conda(output, metadata, env, **kw):
                      verbose=metadata.config.verbose, locking=metadata.config.locking,
                     timeout=metadata.config.timeout)
 
-    # remove info files from host prefix. We do not remove the actual package's files as subsequent
-    # builds may well need them. In other words, the caller manages the files in output['checksums']
-    for f in files:
-        remove_prefix_file(f, metadata.config.host_prefix)
+    # clean out host prefix so that this output's files don't interfere with other outputs
+    #   We have a backup of how things were before any output scripts ran.  That's
+    #   restored elsewhere.
+    utils.rm_rf(metadata.config.host_prefix)
 
     return final_output
 
@@ -1868,7 +1862,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
             # add the failed one back in at the beginning - but its deps may come before it
             recipe_list.extendleft([recipe])
             for pkg, matchspec in zip(e.packages, e.matchspecs):
-                pkg_name = pkg.split(' ')[0]
+                pkg_name = pkg.split(' ')[0].split('=')[0]
                 # if we hit missing dependencies at test time, the error we get says that our
                 #    package that we just built needs to be built.  Very confusing.  Bomb out
                 #    if any of our output metadatas are in the exception list of pkgs.
@@ -1888,14 +1882,14 @@ needs to be rebuilt (e.g., a conflict with 'python 3.5*'
 and 'x' means 'x' or one of 'x' dependencies isn't built
 for Python 3.5 and needs to be rebuilt."""
 
-                recipe_glob = glob(os.path.join(recipe_parent_dir, pkg))
+                recipe_glob = glob(os.path.join(recipe_parent_dir, pkg_name))
                 # conda-forge style.  meta.yaml lives one level deeper.
                 if not recipe_glob:
-                    recipe_glob = glob(os.path.join(recipe_parent_dir, '..', pkg))
-                feedstock_glob = glob(os.path.join(recipe_parent_dir, pkg + '-feedstock'))
+                    recipe_glob = glob(os.path.join(recipe_parent_dir, '..', pkg_name))
+                feedstock_glob = glob(os.path.join(recipe_parent_dir, pkg_name + '-feedstock'))
                 if not feedstock_glob:
                     feedstock_glob = glob(os.path.join(recipe_parent_dir, '..',
-                                                       pkg + '-feedstock'))
+                                                       pkg_name + '-feedstock'))
                 available = False
                 if recipe_glob or feedstock_glob:
                     for recipe_dir in recipe_glob + feedstock_glob:

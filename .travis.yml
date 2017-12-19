@@ -10,17 +10,17 @@ matrix:
   fast_finish: true
   exclude:
     - python: 2.7
-      env: CONDA_VERSION=4.4.x
+      env: CONDA_VERSION=4.3.x
   include:
     - python: 3.6
       env:
         - FLAKE8=true
-        - CONDA_VERSION=4.3.x
+        - CONDA_VERSION=4.4.x
       os: linux
   allow_failures:
     - env:
         - FLAKE8=true
-        - CONDA_VERSION=4.3.x
+        - CONDA_VERSION=4.4.x
       python: 3.6
 
 addons:
@@ -36,21 +36,24 @@ install:
     else
       wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - mkdir $HOME/miniconda/locks
+  - bash miniconda.sh -b -p /opt/conda
+  - mkdir /opt/conda/locks
   # make central lock directory not writable to simulate central "all-users" install
-  - chmod -w $HOME/miniconda/locks
-  - export PATH="$HOME/miniconda/bin:$PATH"
+  - chmod -w /opt/conda/locks
+  - export PATH="/opt/conda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      conda install -q futures;
+    fi
   - conda update -q --all
   - if [ -n "$CONDA_VERSION" ]; then
-        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
-        rm -rf $HOME/miniconda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
+        rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
+        rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
         pushd conda;
-        $HOME/miniconda/bin/python utils/setup-testing.py install;
+        /opt/conda/bin/python utils/setup-testing.py install;
         popd;
         hash -r;
         conda info;
