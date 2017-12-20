@@ -1234,8 +1234,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
 
-                        if (m.config.host_subdir != m.config.build_subdir and
-                                m.config.host_subdir != 'noarch'):
+                        if m.is_cross:
                             host_ms_deps = m.ms_depends('host')
                             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                     tuple(host_ms_deps), 'host',
@@ -1508,6 +1507,14 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     # we want to know if we're dealing with package input.  If so, we can move the input on success.
     hash_input = {}
 
+    # store this name to keep it consistent.  By changing files, we change the hash later.
+    #    It matches the build hash now, so let's keep it around.
+    test_package_name = (recipedir_or_package_or_metadata.dist()
+                        if hasattr(recipedir_or_package_or_metadata, 'dist')
+                        else recipedir_or_package_or_metadata)
+
+    print("TEST START:", test_package_name)
+
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
         utils.rm_rf(metadata.config.test_dir)
@@ -1535,20 +1542,12 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     if not in_pkg_cache:
         environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
-    # store this name to keep it consistent.  By changing files, we change the hash later.
-    #    It matches the build hash now, so let's keep it around.
-    test_package_name = (recipedir_or_package_or_metadata.dist()
-                        if hasattr(recipedir_or_package_or_metadata, 'dist')
-                        else recipedir_or_package_or_metadata)
-
     # this is also copying tests/source_files from work_dir to testing workdir
     _, pl_files, py_files, r_files, lua_files, shell_files = \
         create_all_test_files(metadata)
     if not any([py_files, shell_files, pl_files, lua_files, r_files]):
         print("Nothing to test for:", test_package_name)
         return True
-
-    print("TEST START:", test_package_name)
 
     if metadata.config.remove_work_dir:
         # nested if so that there's no warning when we just leave the empty workdir in place
