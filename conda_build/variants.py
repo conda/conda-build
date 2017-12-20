@@ -306,7 +306,9 @@ def _get_zip_key_set(combined_variant):
                 raise ValueError("All package in zip keys must belong to only one group.  "
                                 "'{}' is in more than one group.".format(_all_unique))
             for ks in zip_keys:
-                key_set.update(set(ks))
+                # sets with only a single member aren't actually zipped.  Ignore them.
+                if len(ks) > 1:
+                    key_set.update(set(ks))
     # omit
     key_set = {key for key in key_set if key in combined_variant}
     return key_set
