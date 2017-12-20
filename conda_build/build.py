@@ -17,6 +17,7 @@ import subprocess
 import sys
 import tarfile
 import hashlib
+import logging
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -282,13 +283,40 @@ def copy_license(m):
                         locking=m.config.locking)
 
 
-def copy_test_source_files(m):
-    test_dest = join(m.config.info_dir, 'test')
-    create_all_test_files(m, test_dest)
+def copy_test_source_files(m, destination):
+    create_all_test_files(m, destination)
     test_deps = m.meta.get('test', {}).get('requires', [])
     if test_deps:
-        with open(os.path.join(test_dest, 'test_time_dependencies.json'), 'w') as f:
+        with open(os.path.join(destination, 'test_time_dependencies.json'), 'w') as f:
             json.dump(test_deps, f)
+    src_dir = None
+    if os.listdir(m.config.work_dir):
+        src_dir = m.config.work_dir
+    elif hasattr(m.config, 'recipe_dir') and m.config.recipe_dir:
+        src_dir = os.path.join(m.config.recipe_dir, 'info', 'test')
+
+    if src_dir:
+        for pattern in utils.ensure_list(m.get_value('test/source_files', [])):
+            if utils.on_win and '\\' in pattern:
+                raise RuntimeError("test/source_files paths must use / "
+                                    "as the path delimiter on Windows")
+            files = glob(join(src_dir, pattern))
+            if not files:
+                raise RuntimeError("Did not find any source_files for test with pattern %s",
+                                   pattern)
+            for f in files:
+                try:
+                    # disable locking to avoid locking a temporary directory (the extracted
+                    #     test folder)
+                    utils.copy_into(f, f.replace(src_dir, destination), m.config.timeout,
+                            locking=False, clobber=True)
+                except OSError as e:
+                    log = logging.getLogger(__name__)
+                    log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f,
+                                                                                          str(e)))
+            for ext in '.pyc', '.pyo':
+                for f in utils.get_ext_files(destination, ext):
+                    os.remove(f)
 
 
 def write_hash_input(m):
@@ -525,7 +553,7 @@ def create_info_files(m, files, prefix):
     copy_readme(m)
     copy_license(m)
     if m.config.copy_test_source_files:
-        copy_test_source_files(m)
+        copy_test_source_files(m, join(m.config.info_dir, 'test'))
 
     write_info_files_file(m, files)
 
@@ -1545,6 +1573,7 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     # this is also copying tests/source_files from work_dir to testing workdir
     _, pl_files, py_files, r_files, lua_files, shell_files = \
         create_all_test_files(metadata)
+    copy_test_source_files(metadata, metadata.config.test_dir)
     if not any([py_files, shell_files, pl_files, lua_files, r_files]):
         print("Nothing to test for:", test_package_name)
         return True

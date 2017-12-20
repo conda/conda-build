@@ -4,15 +4,11 @@ Module to handle generating test files.
 
 from __future__ import absolute_import, division, print_function
 
-import glob
-import logging
 import os
-from os.path import join, exists, isdir
-import re
+from os.path import join, exists
 import sys
 
-from conda_build.utils import copy_into, get_ext_files, on_win, ensure_list
-from conda_build import source
+from conda_build.utils import copy_into, on_win, ensure_list
 
 
 def create_files(m, test_dir=None):
@@ -28,11 +24,6 @@ def create_files(m, test_dir=None):
     has_files = False
     if not os.path.isdir(test_dir):
         os.makedirs(test_dir)
-    info_test_dir = os.path.join(os.path.dirname(m.path), 'test')
-    if re.search("info[\\\\/]recipe$", m.path) and os.path.isdir(info_test_dir):
-        src_dir = info_test_dir
-    else:
-        src_dir = m.config.work_dir
 
     recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
 
@@ -44,28 +35,6 @@ def create_files(m, test_dir=None):
         # disable locking to avoid locking a temporary directory (the extracted test folder)
         copy_into(path, join(test_dir, fn), m.config.timeout, locking=False,
                   clobber=True)
-    # need to re-download source in order to do tests
-    if m.get_value('test/source_files') and not isdir(src_dir) or not os.listdir(src_dir):
-        source.provide(m)
-    for pattern in ensure_list(m.get_value('test/source_files', [])):
-        if on_win and '\\' in pattern:
-            raise RuntimeError("test/source_files paths must use / "
-                                "as the path delimiter on Windows")
-        has_files = True
-        files = glob.glob(join(src_dir, pattern))
-        if not files:
-            raise RuntimeError("Did not find any source_files for test with pattern %s", pattern)
-        for f in files:
-            try:
-                # disable locking to avoid locking a temporary directory (the extracted test folder)
-                copy_into(f, f.replace(src_dir, test_dir), m.config.timeout,
-                          locking=False, clobber=True)
-            except OSError as e:
-                log = logging.getLogger(__name__)
-                log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f, str(e)))
-        for ext in '.pyc', '.pyo':
-            for f in get_ext_files(test_dir, ext):
-                os.remove(f)
     return has_files
 
 
