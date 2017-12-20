@@ -64,9 +64,6 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
                          merge_build_host_on_same_platform=True):
     dash_or_under = re.compile("[-_]")
     specs = [ms.spec for ms in m.ms_depends(env)]
-    if (merge_build_host_on_same_platform and env == 'build' and m.is_cross and
-             m.config.build_subdir == m.config.host_subdir):
-        specs.extend([ms.spec for ms in m.ms_depends('host')])
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ('build', 'host'):
         no_xx_specs = []
@@ -285,7 +282,7 @@ def _read_upstream_pin_files(m, env, permit_unsatisfiable_variants, exclude_patt
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
     extra_run_specs = get_upstream_pins(m, actions, env)
-    return deps or m.meta.get('requirements', {}).get(env), unsat, extra_run_specs
+    return deps or m.meta.get('requirements', {}).get(env, []), unsat, extra_run_specs
 
 
 def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
@@ -344,42 +341,48 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in excludes | output_excludes))
 
-    # extract the topmost section where variables are defined, and put it on top of the
-    #     requirements for a particular output
-    # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
-    extract_pattern = r'(.*)package:'
-    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
-                                                   force_top_level=True),
-                                 # second item: the output text for this metadata
-                                 #    object (might be output)
-                                 m.extract_single_output_text(m.name()))).rstrip()
-
-    output = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
-                            template_string=template_string)) or {})
-    if isinstance(output, list):
-        output = output[0]
-
-    if 'package' in output or 'name' not in output:
-        # it's just a top-level recipe
-        output = {'name': m.name()}
-
     rendered_metadata = m.copy()
-    parent_recipe = m.meta.get('extra', {}).get('parent_recipe')
-    if not parent_recipe or parent_recipe['name'] == m.name():
-        combine_top_level_metadata_with_output(rendered_metadata, output)
-    requirements = utils.expand_reqs(output.get('requirements', {}))
+    parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
+    if parent_recipe:
+        # extract the topmost section where variables are defined, and put it on top of the
+        #     requirements for a particular output
+        # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
+        extract_pattern = r'(.*)package:'
+        template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
+                                                    force_top_level=True),
+                                    # second item: the output text for this metadata
+                                    #    object (might be output)
+                                    m.extract_outputs_text())).rstrip()
 
-    if isfile(m.requirements_path) and not requirements.get('run'):
-        requirements['run'] = specs_from_url(m.requirements_path)
+        outputs = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
+                                template_string=template_string)) or {}).get('outputs', [])
 
-    rendered_metadata.meta['requirements'] = requirements
-    utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                  rendered_metadata.config.variant, 'build')
-    utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                  rendered_metadata.config.variant, 'host')
+        output = None
+        for output_ in outputs:
+            if output_.get('name') == m.name():
+                output = output_
+                break
+
+        if output:
+            if 'package' in output or 'name' not in output:
+                # it's just a top-level recipe
+                output = {'name': m.name()}
+
+            if not parent_recipe or parent_recipe['name'] == m.name():
+                combine_top_level_metadata_with_output(rendered_metadata, output)
+            requirements = utils.expand_reqs(output.get('requirements', {}))
+
+            rendered_metadata.meta['requirements'] = requirements
+            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                        rendered_metadata.config.variant, 'build')
+            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                        rendered_metadata.config.variant, 'host')
 
     build_unsat, host_unsat = add_upstream_pins(rendered_metadata, permit_unsatisfiable_variants,
                                                  exclude_pattern)
+    # getting this AFTER add_upstream_pins is important, because that function adds deps
+    #     to the metadata.
+    requirements = rendered_metadata.meta.get('requirements', {})
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -402,13 +405,13 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
 
-    run_deps = rendered_metadata.meta.get('requirements', {}).get('run', [])
+    if isfile(m.requirements_path) and not requirements.get('run'):
+        requirements['run'] = specs_from_url(m.requirements_path)
+    run_deps = requirements.get('run', [])
 
     versioned_run_deps = [get_pin_from_build(rendered_metadata, dep, full_build_dep_versions)
                           for dep in run_deps]
     versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps]
-
-    requirements = rendered_metadata.meta.get('requirements', {})
     requirements['run'] = versioned_run_deps
 
     rendered_metadata.meta['requirements'] = requirements

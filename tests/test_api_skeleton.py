@@ -122,8 +122,8 @@ def test_pypi_with_extra_specs(testing_workdir):
     api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24')
     m = api.render('bigfile')[0][0]
     assert parse_version(m.version()) == parse_version("0.1.24")
-    assert any('cython' in req for req in m.meta['requirements']['build'])
-    assert any('mpi4py' in req for req in m.meta['requirements']['build'])
+    assert any('cython' in req for req in m.meta['requirements']['host'])
+    assert any('mpi4py' in req for req in m.meta['requirements']['host'])
 
 
 @pytest.mark.serial
